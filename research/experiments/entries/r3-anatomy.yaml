@@ -1,0 +1,35 @@
+id: r3-anatomy
+title: 'R3 anatomy: when the ORB family wins and loses (design indices)'
+family: orb
+date: '2026-10-14'
+doc: research/HUNT_R3_ORB_FAMILY.md
+data_version: Dhan lake data-20261014 (options_rolling_1m opt_<UND>_WEEK = nearest expiry on or after the day, ATM+-10; index_1m
+  incl. INDIAVIX) read by research/hunt/r3orb/r3data.py
+period:
+  design: BANKNIFTY 2021-09-03..2026-10-12 (1,255 sessions) + NIFTY 2021-08-02..2026-10-12 (1,284)
+  holdout: 'out-of-instrument: FINNIFTY 2021-09-03.. (1,254), MIDCPNIFTY 2022-02-21.. (906), SENSEX 2023-05-15.. (845), all
+    to 2026-10-12; read once 14 Oct 2026'
+prereg: research/hunt/r3orb/PREREG.md
+hypothesis: 'Descriptive: which day types, VIX, gap, range width, expiry, time, index and re-entries separate wins from losses.'
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- day type (hindsight)
+- VIX
+- VIX change
+- gap
+- width / ATR14
+- signal time
+- expiry
+- TWAP distance
+model_or_rule: terciles and buckets of each arm's baseline trades
+settings: research/hunt/r3orb/study.py anatomy
+variants_tried: null
+results:
+  summary: 'No point-in-time split makes any arm positive: the best third of every feature still loses for every arm (results/anatomy.md).
+    Even with hindsight, ORB loses on days that trended its way (Rs -52 a trade, 1,094 trades); Sweep / Fade win only on trend
+    days traded with the trend (known only after the close).'
+  costs: app charges at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+holdout_read: false
+verdict: not-a-test

@@ -481,6 +481,23 @@ Full study: `HUNT_R24_WHATIF_PATTERNS.md` (pre-registered `hunt/r24/PREREG.md`, 
 - Re-run on the full lake (incl. monthly series): `bash research/hunt/r24/refresh_lake.sh` (Steps 1-2; Step 3 needs a new
   pre-registration).
 
+## The ORB family on the full lake (R3, 14 Oct 2026) - every version loses; ORB, ORB Fresh, ORB Sweep and Range Fade stay paused
+Full study: `HUNT_R3_ORB_FAMILY.md` (pre-registered `hunt/r3orb/PREREG.md`; Dhan lake Aug 2021 - 12 Oct 2026; design
+BANKNIFTY + NIFTY, holdout out-of-instrument FINNIFTY + MIDCPNIFTY + SENSEX read once; app charges, liq fills, 1 lot).
+- Rebuilt exactly as the app has them (matches R14 / R12 within a few percent), BANKNIFTY + NIFTY over 5 years: ORB
+  -Rs 2,23,040 (2,489 trades), ORB Fresh -Rs 2,23,812, ORB Sweep -Rs 5,05,954 (3,156), Range Fade -Rs 5,10,978 (3,512);
+  0 of 6 years in profit for every arm. Unseen indices: ORB -Rs 1,13,993, Fresh -Rs 1,49,434, Sweep -Rs 5,85,798, Fade
+  -Rs 5,77,344.
+- Anatomy: no point-in-time feature (VIX, VIX change, gap, range width, time, expiry, distance from the morning TWAP)
+  has a third in which any arm makes money. Even on days that trended its way the ORB lost Rs 52 a trade (1,094 trades):
+  it buys after the move. Sweep and Fade win only on trend days traded with the trend (known only after the close).
+- 16 pre-registered versions (a day-type filter, Boss's R19c exits without a target, 1-ITM with 1 entry a side, all
+  three together): all lose in every design year and on the unseen indices; 0 of 16 pass. The least bad, ORB with all
+  three, lost Rs 1,69,567 on design and Rs 1,46,770 unseen. BH over 183 ORB-family tests.
+- 13 Oct's wide range: on BANKNIFTY days with a range of at least 0.8 x ATR14, price stayed inside until 13:55 on 28%
+  of days (33 of 119); not trading them saves money.
+- App: nothing changes; the four arms stay paused (code and settings kept); nothing goes on paper.
+
 ## Crypto: what is predictable? (C1, 13 Oct 2026) - only the size of the next hour / day, not its direction
 Full study: `CRYPTO_C1_PREDICTABILITY.md` (pre-registered `brain/crypto/PREREG.md`, commit 5adf2a6; 80 tests in one BH
 family). Built on the new crypto Data Brain (`research/brain/crypto`, 24x7 UTC cube of Binance spot, perp, funding, OI).

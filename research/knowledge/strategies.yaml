@@ -73,6 +73,11 @@
       costs: "app charges"
       src: android/app/src/main/assets/study/pages.txt
       sec: The ORB family
+    - text: "Rebuilt exactly as the app has them (matches R14 / R12 within a few percent), BANKNIFTY + NIFTY over 5 years: ORB -Rs 2,23,040 (2,489 trades); 0 of 6 years in profit; 16 pre-registered versions all lose (R3)."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
 
 - id: orb-fresh
   name: ORB Fresh
@@ -91,6 +96,11 @@
       costs: "app charges"
       src: research/FINDINGS.md
       sec: ORB re-entry churn
+    - text: "ORB Fresh -Rs 2,23,812 over 5 years on BANKNIFTY + NIFTY and -Rs 1,49,434 on the unseen indices; 0 of 16 R3 versions pass."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
 
 - id: orb-sweep
   name: ORB Sweep
@@ -104,6 +114,11 @@
       costs: "Rs 40 a trip, 1 lot of 30"
       src: research/FINDINGS.md
       sec: Every arm, one year
+    - text: "ORB Sweep -Rs 5,05,954 (3,156) over 5 years on BANKNIFTY + NIFTY and -Rs 5,85,798 on the unseen indices; 0 of 16 R3 versions pass."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
 
 - id: range-fade
   name: Range Fade
@@ -122,6 +137,11 @@
       costs: "Rs 40 a trip"
       src: research/FINDINGS.md
       sec: Every arm, one year
+    - text: "Range Fade -Rs 5,10,978 (3,512) over 5 years on BANKNIFTY + NIFTY and -Rs 5,77,344 on the unseen indices; 0 of 16 R3 versions pass."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
 
 - id: big-candle-pullback
   name: Big-candle pullback (Solo)

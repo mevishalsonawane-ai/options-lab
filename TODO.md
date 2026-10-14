@@ -113,7 +113,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   report the results first; only then add the Liquidity 15+5 arm to the app (engine rules in `orb/LiquidityRules.kt`).
 - [ ] R2. AFTER the Liquidity 15+5 arm is tested and pushed: run the same liquidity rules on XAUUSD (gold vs US dollar,
   forex) - the `forex/` folder has the fetch scripts. Note: forex is not tradable from Zerodha / the app; research only.
-- [ ] R3. ORB family deep study (owner, 13 Oct): ORB, ORB Fresh, ORB Sweep and Range Fade are PAUSED, not retired.
+- [x] R3. (done 14 Oct: research/HUNT_R3_ORB_FAMILY.md - all 4 arms and 16 pre-registered versions lose on 2021-2026 design and on unseen FINNIFTY / MIDCPNIFTY / SENSEX; they stay paused, nothing goes on paper) ORB family deep study (owner, 13 Oct): ORB, ORB Fresh, ORB Sweep and Range Fade are PAUSED, not retired.
   They were switched off on 13 Oct after losing in every backtest year. Their code, settings and history stay, and
   Boss can re-arm them at any time. Once the full Dhan download is in the data lake, study them deeply and try to
   enhance them:

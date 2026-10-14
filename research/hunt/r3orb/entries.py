@@ -63,7 +63,7 @@ def main():
             p = pb[a]["pick"]
             filt = f" Filter: skip {p['feature']} {p['worst']} ({p['skip'][0]:.4g} .. {p['skip'][1]:.4g})." if x in "FC" else ""
             ok = r.get("design_pass") and q.get("holdout_pass")
-            write(dict(id=i.replace("_", "-"), title=f"R3 {E.NAMES[a]} variant {x}: {WHAT[x]}", **base,
+            write(dict(id=i.replace("_", "-").lower(), title=f"R3 {E.NAMES[a]} variant {x}: {WHAT[x]}", **base,
                        hypothesis=f"{E.NAMES[a]} with {WHAT[x]} makes money after costs on unseen data (PREREG A8 gates D1-D4, H1-H5).",
                        instruments=["BANKNIFTY", "NIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"],
                        features=["1-minute index", "opening range", "VIX", "gap", "range width / ATR14", "signal time", "expiry day", "TWAP distance"],
