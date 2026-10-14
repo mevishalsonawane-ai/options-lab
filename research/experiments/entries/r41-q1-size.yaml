@@ -1,8 +1,8 @@
-id: r30-q1-size
-title: 'R30 neural nets: size (log range) of the next 15/30/60 minutes, 5 indices'
+id: r41-q1-size
+title: 'R41 neural nets: size (log range) of the next 15/30/60 minutes, 5 indices'
 family: ml
 date: '2026-10-14'
-doc: research/HUNT_R30_NEURAL_NETS.md
+doc: research/HUNT_R41_NEURAL_NETS.md
 hypothesis: Neural nets forecast the size of the next 15/30/60 minutes better than gradient-boosted trees and B1's 4-input
   formula.
 data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
@@ -23,8 +23,8 @@ features:
 model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
   3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; size head = log of the high-low
   range of the next h minutes (% of close); no trading rule
-settings: research/hunt/r30/PREREG.md
-prereg: research/hunt/r30/PREREG.md
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
 variants_tried: 3
 results:
   summary: 'PASSES for 30 and 60 minutes: holdout R2 NN 0.465 vs trees 0.440 (30 min, 40,071 forecasts) and 0.432 vs 0.382

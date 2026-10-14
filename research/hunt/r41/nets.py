@@ -1,7 +1,7 @@
-"""R30 models (PREREG section 4): MLP, TCN and GRU nets, their seed ensembles, and the baselines.
+"""R41 models (PREREG section 4): MLP, TCN and GRU nets, their seed ensembles, and the baselines.
 
 Every scaler, imputer and label scale here is fitted on the training rows passed to `fit` and nothing else
-(tests/test_r30.py checks it). Targets are a matrix Y (rows x k) with a kind per column: "bin" (0/1, BCE) or "reg"
+(tests/test_r41.py checks it). Targets are a matrix Y (rows x k) with a kind per column: "bin" (0/1, BCE) or "reg"
 (MSE on the training-standardised value). NaN in Y masks that row for that column (a multi-task net learns 15/30/60
 together; a row whose 60-minute window runs past the session has only the 15/30 labels).
 """
@@ -11,7 +11,7 @@ import time
 
 import numpy as np
 
-import r30cfg as K
+import r41cfg as K
 
 
 # ------------------------------------------------------------------------------------------------ preprocessing
@@ -68,7 +68,7 @@ class Seq:
 # ------------------------------------------------------------------------------------------------ the nets
 def _torch():
     import torch
-    torch.set_num_threads(int(__import__("os").environ.get("R30_THREADS", "1")))
+    torch.set_num_threads(int(__import__("os").environ.get("R41_THREADS", "1")))
     return torch
 
 

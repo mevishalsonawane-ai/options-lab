@@ -1,8 +1,11 @@
-"""R30 settings (PREREG.md): the neural-network arm for the running studies. 14 Oct 2026.
+"""R41 settings (PREREG.md): the neural-network arm for the running studies. 14 Oct 2026.
+Renumbered 14 Oct from R30 (the number R30 was already taken by R30 all parameters). The runs before the renumber
+wrote their caches to <cache>/r30 and gdrive:IraAlgo-data-lake/derived/r30/ (shared folder name with R30 all
+parameters); new runs use r41. The holdout lock also refuses a read whose result is already in results/ (run.py).
 
-    caches   R30_OUT (default <cache>/r30): datasets, predictions, model weights (never in git; a copy goes to
-             gdrive:IraAlgo-data-lake/derived/r30/)
-    results  research/hunt/r30/results (small JSON only)
+    caches   R41_OUT (default <cache>/r41): datasets, predictions, model weights (never in git; a copy goes to
+             gdrive:IraAlgo-data-lake/derived/r41/)
+    results  research/hunt/r41/results (small JSON only)
 
 Periods are F1 India's and F1 crypto's committed splits, unchanged (PREREG.md section 2).
 """
@@ -24,10 +27,10 @@ for p in (ROOT, ROOT / "research", HERE):
 from research.brain import config as BC  # noqa: E402
 
 CACHE = BC.paths()
-OUT = Path(os.environ.get("R30_OUT", CACHE.root / "r30")).expanduser()
+OUT = Path(os.environ.get("R41_OUT", CACHE.root / "r41")).expanduser()
 RESULTS = HERE / "results"
 LAKE = Path(os.environ.get("IRAALGO_LAKE", CACHE.root / "lake")).expanduser()     # the Dhan lake (Drive copy)
-DRIVE = "gdrive:IraAlgo-data-lake/derived/r30"
+DRIVE = "gdrive:IraAlgo-data-lake/derived/r41"
 CRYPTO_RAW = OUT / "crypto"              # BTCUSDT/<YYYY>/BTCUSDT-klines_1m-<YYYY-MM>.parquet (Drive copy)
 
 UNDS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")

@@ -582,8 +582,9 @@ NSE's data is anonymous: only types (Client, DII, FII, Pro), never a person, fir
   42-43% of 873 expiries, which is the no-magnet level of ~44%).
 - The app's own order-flow recordings: none uploaded yet (IraAlgo has 0 releases); `hunt/of1/footprints.py` is ready.
 
-## Neural networks on every running study (R30, 14 Oct 2026) - they forecast move SIZE better than trees; no trade passes
-Full study: `HUNT_R30_NEURAL_NETS.md` (pre-registered `hunt/r30/PREREG.md`, commit 36af9e9; India holdout 1 Jan 2023 -
+## Neural networks on every running study (R41, 14 Oct 2026) - they forecast move SIZE better than trees; no trade passes
+Renumbered 14 Oct from R30 (the number R30 was already taken by R30 all parameters).
+Full study: `HUNT_R41_NEURAL_NETS.md` (pre-registered `hunt/r41/PREREG.md`, commit 36af9e9; India holdout 1 Jan 2023 -
 30 Jun 2024 and crypto holdout 1 Apr - 30 Sep 2025, each read once). Models: MLP, causal TCN and GRU (3 seeds each,
 signal on the underlying, last 60 one-minute bars + the brain's features) against base rate, logistic and trees.
 - Index direction over 15/30/60 minutes (5 indices) is a coin for the networks too: holdout AUC 0.510-0.517, log-loss no

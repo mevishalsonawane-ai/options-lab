@@ -1,4 +1,4 @@
-"""R30 crypto data (PREREG Q5): BTC / ETH USDT-M perpetual 1-minute bars -> decisions every 15 minutes, point-in-time
+"""R41 crypto data (PREREG Q5): BTC / ETH USDT-M perpetual 1-minute bars -> decisions every 15 minutes, point-in-time
 inputs, labels and simulated perp trades, every one with a stop-loss and a profit lock (CLAUDE.md crypto rule).
 
     build(part) -> <OUT>/crypto/q5_<part>.pkl   (part "design" or "holdout"; the holdout only inside the one read)
@@ -13,7 +13,7 @@ import pickle
 import numpy as np
 import pandas as pd
 
-import r30cfg as K
+import r41cfg as K
 from india import HoldoutError, holdout_open
 
 SEQ_CH = ("ret", "hl", "logvolz", "taker", "mask")

@@ -1,14 +1,14 @@
-id: r30-q5-crypto-direction
-title: 'R30 neural nets: BTC/ETH next 15/60/240-minute direction, perp rules R14-R16 with stop-loss and profit lock'
+id: r41-q5-crypto-direction
+title: 'R41 neural nets: BTC/ETH next 15/60/240-minute direction, perp rules R14-R16 with stop-loss and profit lock'
 family: mcx-crypto
 date: '2026-10-14'
-doc: research/HUNT_R30_NEURAL_NETS.md
+doc: research/HUNT_R41_NEURAL_NETS.md
 hypothesis: Neural nets forecast BTC/ETH direction over 15/60/240 minutes better than baselines, and a confident-signal perp
   trade inside Boss's 00:00-09:00 IST window, with a 1-sigma stop-loss and a profit lock, pays after Delta India costs.
 data_version: Binance USDT-M perpetual 1-minute klines BTCUSDT / ETHUSDT from gdrive:IraAlgo-data-crypto (Oct 2023 - Oct 2026)
 period:
   design: 2023-11-01..2025-03-31 and 2025-11-01..2026-03-31; folds 2024H2, 2025Q1, 2025Q4-26Q1
-  holdout: 2025-04-01..2025-09-30 UTC (F1 crypto's block, already read by F1C for its own rules), read once by R30
+  holdout: 2025-04-01..2025-09-30 UTC (F1 crypto's block, already read by F1C for its own rules), read once by R41
 instruments:
 - CRYPTO
 features:
@@ -17,8 +17,8 @@ features:
 model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 120 one-minute bars + tabular features;
   3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; R14-R16 trade the top 10%
   confidence, stop 1 sigma_h, lock at +1 sigma_h to break-even then 1-sigma trail, time exit at h
-settings: research/hunt/r30/PREREG.md
-prereg: research/hunt/r30/PREREG.md
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
 variants_tried: 3
 results:
   summary: 'A tiny real signal: 60-minute direction NN log-loss beats the base rate in WF (q 0.011, 3/3 folds) and holdout

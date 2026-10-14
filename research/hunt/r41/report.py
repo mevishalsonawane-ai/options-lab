@@ -1,7 +1,7 @@
-"""R30 summary (PREREG sections 5-6): BH families over the model tests and the trading rules, the paper gates, and the
-markdown tables used in research/HUNT_R30_NEURAL_NETS.md.
+"""R41 summary (PREREG sections 5-6): BH families over the model tests and the trading rules, the paper gates, and the
+markdown tables used in research/HUNT_R41_NEURAL_NETS.md.
 
-    python research/hunt/r30/report.py          # -> results/summary.json + tables on stdout
+    python research/hunt/r41/report.py          # -> results/summary.json + tables on stdout
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import sys
 
 import numpy as np
 
-import r30cfg as K
+import r41cfg as K
 import evalx as E
 
 ARM_RULE = {"orb": "R7", "fade": "R8", "liq": "R9", "h0": "R10", "night": "R11", "l3": "R17", "solo": "R18"}

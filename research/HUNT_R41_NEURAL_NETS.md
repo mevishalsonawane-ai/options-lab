@@ -1,15 +1,18 @@
-# R30: neural networks on every running study (India indices, the arms, crypto)
+# R41: neural networks on every running study (India indices, the arms, crypto)
+
+Renumbered 14 Oct from R30 (the number R30 was already taken by R30 all parameters). Commits, cache and Drive paths
+made before the renumber still say r30 (`<cache>/r30`, `derived/r30/`); new runs use r41.
 
 Written 14 Oct 2026, for Boss: "make sure all the studies going on in other sessions use neural networks, and use this
 data for creating/testing."
 - The running studies (R3 ORB family, R26 blast, R27 Night, R28 GEX, R29 EMA ribbon, F1 India, F1 crypto) could not
   change mid-run.
-- So R30 adds the neural-network arm for all of them, on the same data, under the same rules: pre-registration,
+- So R41 adds the neural-network arm for all of them, on the same data, under the same rules: pre-registration,
   walk-forward, one holdout read, real charges and slippage, BH, and an experiment entry for every model.
 
 **Research only. Nothing in the app changes, and nothing trades.**
 
-- **Pre-registration:** `research/hunt/r30/PREREG.md`.
+- **Pre-registration:** `research/hunt/r41/PREREG.md`.
   - Commit `36af9e9`: written before any model was fitted.
   - Amendment 1, commit `d7ecbd0`: option bars come from the lake for all five indices. It was written before any
     India model was fitted.
@@ -17,13 +20,13 @@ data for creating/testing."
 - **Holdout reads, once each:**
   - India `79e2bb5`: lock file `<cache>/r30/HOLDOUT_READ_india.json`, 09:34-09:49 UTC, not resumed.
   - Crypto `dff38ed`: 11:06-11:48 UTC, not resumed.
-- **Code and tests:** `research/hunt/r30/` (`run.py`, `india.py`, `arms.py`, `crypto.py`, `nets.py`, `evalx.py`,
-  `report.py`, `test_r30.py`).
-- **Results:** every number below is in `research/hunt/r30/results/` (`wf_q1..q5.json`, `holdout_india.json`,
+- **Code and tests:** `research/hunt/r41/` (`run.py`, `india.py`, `arms.py`, `crypto.py`, `nets.py`, `evalx.py`,
+  `report.py`, `test_r41.py`).
+- **Results:** every number below is in `research/hunt/r41/results/` (`wf_q1..q5.json`, `holdout_india.json`,
   `holdout_crypto.json`, `summary.json`).
 - **Big tables, predictions and model weights:** on Drive, `gdrive:IraAlgo-data-lake/derived/r30/` (`india/`, `arms/`,
   `preds/`, `models/`, 946 MB), never in git.
-- **Experiment entries:** `research/experiments/entries/r30-*.yaml` (13, failures included).
+- **Experiment entries:** `research/experiments/entries/r41-*.yaml` (13, failures included).
 
 ## Verdict for Boss
 
@@ -36,7 +39,7 @@ minutes will be.**
    - Holdout: 36,462-41,967 forecasts on 368 sessions per index, AUC 0.510-0.517.
    - The networks' log-loss is no better than just saying "50%" (0.6928-0.6969 vs 0.6923-0.6926).
    - Every option-buying rule built on it loses after costs, or (R4, R6) trades too rarely to judge.
-   - This is the third time this answer has come out: R16, B1 and now R30.
+   - This is the third time this answer has come out: R16, B1 and now R41.
 2. **Size of the next 30 / 60 minutes: the networks beat the boosted trees on unseen data.**
    - Holdout R² for the log range of the next 60 minutes, 36,320 forecasts:
 
@@ -112,7 +115,7 @@ path. The size forecast is needed once a minute at most.
 | | India | crypto |
 |---|---|---|
 | data | Dhan lake on Drive: 1-minute index bars of 5 indices, VIX, and the rolling weekly option series ATM±10 (OHLC, volume, OI, IV), Aug 2021 - Apr 2026; brain features (cube v2, 150+ point-in-time features) | Binance USDT-M perpetual 1-minute bars, BTC and ETH, Oct 2023 - Oct 2026 |
-| holdout (read once) | **1 Jan 2023 - 30 Jun 2024**: F1 India's committed block (not read by F1); embargo 15-31 Dec 2022 and 1-14 Jul 2024 | **1 Apr - 30 Sep 2025**: F1 crypto's block. F1C read it earlier for its own rules; R30 used nothing from F1C's results |
+| holdout (read once) | **1 Jan 2023 - 30 Jun 2024**: F1 India's committed block (not read by F1); embargo 15-31 Dec 2022 and 1-14 Jul 2024 | **1 Apr - 30 Sep 2025**: F1 crypto's block. F1C read it earlier for its own rules; R41 used nothing from F1C's results |
 | design / walk-forward | Aug 2021 - 14 Dec 2022 and 15 Jul 2024 - 13 Apr 2026; folds 2022, 2024H2, 2025, 2026 (retrained each fold on data before it) | Nov 2023 - Mar 2025 and Nov 2025 - Mar 2026; folds 2024H2, 2025Q1, 2025Q4-26Q1 |
 | never touched | 14 Apr 2026 on (the brain's holdout) | Apr 2026 on (the crypto brain's holdout) |
 
@@ -129,6 +132,19 @@ path. The size forecast is needed once a minute at most.
   - Crypto trades the perpetual. Every trade has a 1-sigma stop-loss and a profit lock (break-even after costs at
     +1 sigma, then a 1-sigma trail).
   - Q3 reads the option's own premium and OI, so it is labelled "option-chart context".
+  - **Signal source of every rule** (added at the renumber, 14 Oct; no result changed):
+    - R1-R6 (Q1): the index itself (its last 60 minutes and the brain's features); buys the ATM option.
+    - R7 ORB, R8 Range Fade, R9 Liquidity, R11 Night (Q2): the arm's own signal on the index; the network's skip filter
+      reads index inputs, with option-chain data (NIFTY / BANKNIFTY only) as context. Skip-only: it can only lower
+      risk.
+    - R17 lottery L3 (Q2): no chart signal; a clock entry at 14:30 on expiry days, the option picked by its premium
+      band (the strike rule). The skip filter is as above.
+    - R10 Hero H0 (not modelled): its trigger reads the straddle premium, an option-derived signal. **Not the default.**
+    - R12 (Q3): **option-chart context, not the default.** It reads the 13:45 premium and OI of the option R26 trades,
+      is reported separately, and could only be switched on by Boss.
+    - R13 (Q4): the index's 15:20 state; buys the 1-ITM option.
+    - R14-R16 (Q5, crypto): the coin's own perpetual price (BTC / ETH); trades the perpetual itself. Every trade has
+      both a stop-loss (1 sigma) and a profit lock (break-even at +1 sigma, then a 1-sigma trail).
 - **Models.** Each one is a 3-seed ensemble with dropout 0.2, weight decay 1e-4, and early stopping on the last 20% of
   each training window.
   - MLP: 64-32 hidden units.
@@ -142,7 +158,8 @@ path. The size forecast is needed once a minute at most.
   - Scalers, imputers and the label scale are fitted on training rows only (validation and test rows changed: same
     fit).
   - The holdout lock; the trade simulators; the metrics.
-  - `python -m pytest research/hunt/r30/test_r30.py -q`: 30 tests.
+  - `python -m pytest research/hunt/r41/test_r41.py -q`: 32 tests (2 added at the renumber: a committed
+    holdout result also locks the read).
 
 ## Results
 
@@ -295,7 +312,7 @@ Three near-misses, in plain words:
      rule, threshold or model changed.
    - The buggy run's file was kept out of git (scratchpad `wf_q5_sigma_bug.json`).
 2. **Option prices: amendment 1.** The brain's cube has an option chain only for NIFTY / BANKNIFTY, because its calendar
-   lacks rules for the others. So R30 reads the lake's rolling weekly files for all five indices and finds expiry days
+   lacks rules for the others. So R41 reads the lake's rolling weekly files for all five indices and finds expiry days
    from the data (R25's rule). This was written and pushed before any India model was fitted.
 3. **How the code reads the pre-registration (no result was seen before these choices):**
    - Direction twins need both the call and the put priced at that minute, so a rule trade without both is skipped.
@@ -313,7 +330,7 @@ Three near-misses, in plain words:
      every FINNIFTY / MIDCPNIFTY / SENSEX session for the ORB family. All of this happened on 14 Oct, after F1 committed
      the block.
    - F1 crypto read the crypto block for its own rules.
-   - R30's models and rules were fixed before R30 read anything. Nothing from those studies' holdout results was used.
+   - R41's models and rules were fixed before R41 read anything. Nothing from those studies' holdout results was used.
 6. **Not covered.**
    - Hero H0: only 28 design trades.
    - Solo: its trades come from the old Dhan hunt cache, not the lake.
@@ -329,10 +346,10 @@ Three near-misses, in plain words:
 
 ```bash
 python -m research.brain.refresh --source lake --und NIFTY BANKNIFTY FINNIFTY MIDCPNIFTY SENSEX --no-models --no-tables
-# arm trades: R28's r28arms.py {orb,liq,hero,night} with R28_OUT=<cache>/r30/arms (needs R25 and R27 data builds)
-python research/hunt/r30/run.py build              # India design data, arm data, crypto design data
-python research/hunt/r30/run.py wf q1   # ... q2 q3 q4 q5
-python research/hunt/r30/run.py holdout india      # refused after the first read
-python research/hunt/r30/run.py holdout crypto
-python research/hunt/r30/report.py                 # BH, gates, the tables above
+# arm trades: R28's r28arms.py {orb,liq,hero,night} with R28_OUT=<cache>/r41/arms (needs R25 and R27 data builds)
+python research/hunt/r41/run.py build              # India design data, arm data, crypto design data
+python research/hunt/r41/run.py wf q1   # ... q2 q3 q4 q5
+python research/hunt/r41/run.py holdout india      # refused after the first read
+python research/hunt/r41/run.py holdout crypto
+python research/hunt/r41/report.py                 # BH, gates, the tables above
 ```

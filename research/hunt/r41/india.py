@@ -1,4 +1,4 @@
-"""R30 India data (PREREG section 3): decision rows, point-in-time inputs, labels and option-trade outcomes.
+"""R41 India data (PREREG section 3): decision rows, point-in-time inputs, labels and option-trade outcomes.
 
     build(und, part)  -> <OUT>/india/<UND>_<part>.pkl  dict of frames for Q1 / Q3 / Q4 (+ the minute arrays for Q2)
 
@@ -16,7 +16,7 @@ from datetime import date, datetime
 import numpy as np
 import pandas as pd
 
-import r30cfg as K
+import r41cfg as K
 from research.brain import cube, labels as brain_labels
 from research.obuy.config import LOT_SCHEDULE
 from research.obuy.costs import Costs, Fills
@@ -43,6 +43,10 @@ def holdout_gate(kind: str, status: str) -> None:
     p = flag_path(kind)
     old = json.loads(p.read_text()) if p.exists() else None
     if status == "start":
+        # 14 Oct 2026 (renumber R30 -> R41): the cache folder moved, so the committed result is the lock too
+        done = K.RESULTS / f"holdout_{kind}.json"
+        if done.exists():
+            raise HoldoutError(f"refused: the {kind} holdout was already read ({done.name} is committed)")
         if old and old.get("status") == "done":
             raise HoldoutError(f"refused: the {kind} holdout was already read at {old.get('done_at')}")
         rec = dict(status="started", started_at=datetime.utcnow().isoformat(timespec="seconds") + "Z",
@@ -129,7 +133,7 @@ class Minutes:
 class LakeOptions:
     """Option bars straight from the lake's rolling weekly series (opt_<UND>_WEEK_<YEAR>: the nearest expiry at
     ATM-10..+10, chosen each minute), for all five indices. The brain's cube has a chain only where its calendar has
-    rules (NIFTY, BANKNIFTY), so R30 reads the lake directly (14 Oct 2026). The files carry no expiry column: expiry
+    rules (NIFTY, BANKNIFTY), so R41 reads the lake directly (14 Oct 2026). The files carry no expiry column: expiry
     days are found from the data with R25's rule (ATM time value at 15:15 < 0.6% of spot and more than doubling the
     next session; research/hunt/r25/r25data.expiry_days). Within one session a strike is one contract. Rows more than
     12 strikes from that minute's spot are dropped (mislabelled strikes, R25)."""

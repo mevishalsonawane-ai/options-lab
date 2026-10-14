@@ -1,10 +1,10 @@
-"""R30 scoring (PREREG section 5-6): model metrics with session-block bootstrap CIs, calibration, BH, trade stats and
+"""R41 scoring (PREREG section 5-6): model metrics with session-block bootstrap CIs, calibration, BH, trade stats and
 random twins. Pure numpy; no data access."""
 from __future__ import annotations
 
 import numpy as np
 
-import r30cfg as K
+import r41cfg as K
 
 EPS = 1e-6
 

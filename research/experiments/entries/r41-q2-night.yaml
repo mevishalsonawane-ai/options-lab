@@ -1,10 +1,10 @@
-id: r30-q2-fade
-title: R30 neural-net trade filter (meta-labelling) on the Range Fade (R17) arm, rule R8
+id: r41-q2-night
+title: R41 neural-net trade filter (meta-labelling) on the Night R3 09:16 sale (R27) arm, rule R11
 family: ml
 date: '2026-10-14'
-doc: research/HUNT_R30_NEURAL_NETS.md
-hypothesis: Given the state at entry, a neural net predicts whether a Range Fade (R17) trade wins after costs, and skipping
-  its weakest 30% improves the arm.
+doc: research/HUNT_R41_NEURAL_NETS.md
+hypothesis: Given the state at entry, a neural net predicts whether a Night R3 09:16 sale (R27) trade wins after costs, and
+  skipping its weakest 30% improves the arm.
 data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
   brain cube v2 + point-in-time feature store, built 14 Oct 2026)
 period:
@@ -19,15 +19,15 @@ features:
 - side, index, time of day
 model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
   3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; label = trade net > 0 after
-  the arm's own costs; rule R8 skips trades whose P(win) is in the bottom 30% of validation scores (risk-lowering only)
-settings: research/hunt/r30/PREREG.md
-prereg: research/hunt/r30/PREREG.md
+  the arm's own costs; rule R11 skips trades whose P(win) is in the bottom 30% of validation scores (risk-lowering only)
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
 variants_tried: 1
 results:
-  summary: '1083 design trades scored in WF, 829 holdout trades. No model beats the base rate (WF 0.632 vs 0.626; holdout
-    0.617 vs 0.614). Filter: holdout -Rs 198/day vs unfiltered -306 (543 kept, 286 skipped, p 0.48, q 0.64); trees -190. The
-    arm still loses.'
+  summary: '315 design trades scored in WF, 243 holdout trades. Model log-loss not better than base rate (WF 0.706 vs 0.693;
+    holdout 0.686 vs 0.690, CI includes 0). Filter: holdout Rs 295/day vs unfiltered 174 (177 kept, 66 skipped, p 0.035, BH
+    q 0.14), WF 500 vs 396; trees'' filter 314 / 557. Fails BH and the 100-skip gate; trained on only 211 trades.'
   costs: each arm's own fills and charges (R28 r28arms.py rebuild)
 holdout_read: true
-verdict: rejected
+verdict: inconclusive
 notes: Trades rebuilt with R28's r28arms.py on the lake (the arm's own code).

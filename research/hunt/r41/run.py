@@ -1,10 +1,10 @@
-"""R30 runner (PREREG.md): design walk-forward, then ONE holdout read per market.
+"""R41 runner (PREREG.md): design walk-forward, then ONE holdout read per market.
 
-    python research/hunt/r30/run.py build              # India design data (5 indices), Q2 arm data, crypto design
-    python research/hunt/r30/run.py wf q1|q2|q3|q4|q5  # design walk-forward -> results/wf_<q>.json, <OUT>/preds
-    python research/hunt/r30/run.py holdout india      # the one India read (Q1-Q4)  -> results/holdout_india.json
-    python research/hunt/r30/run.py holdout crypto     # the one crypto read (Q5)    -> results/holdout_crypto.json
-    python research/hunt/r30/run.py summary            # BH families over everything -> results/summary.json
+    python research/hunt/r41/run.py build              # India design data (5 indices), Q2 arm data, crypto design
+    python research/hunt/r41/run.py wf q1|q2|q3|q4|q5  # design walk-forward -> results/wf_<q>.json, <OUT>/preds
+    python research/hunt/r41/run.py holdout india      # the one India read (Q1-Q4)  -> results/holdout_india.json
+    python research/hunt/r41/run.py holdout crypto     # the one crypto read (Q5)    -> results/holdout_crypto.json
+    python research/hunt/r41/run.py summary            # BH families over everything -> results/summary.json
 
 Each fold refits every network (3 seeds x MLP / TCN / GRU) and every baseline on rows strictly before the fold.
 Validation = the last 20% of the training window's sessions (1-session gap), used for early stopping and every rule
@@ -20,7 +20,7 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-import r30cfg as K
+import r41cfg as K
 import evalx as E
 import nets as NN
 

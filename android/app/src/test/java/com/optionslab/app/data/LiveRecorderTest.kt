@@ -160,8 +160,8 @@ class LiveRecorderTest : RobolectricTest() {
         ProblemsHost.resetForTest()
         val nowMs = at.toInstant().toEpochMilli()
         LiveRecorder.resetForTest(startedAt = nowMs - 30 * 60_000L)
-        // ProblemsHost stamps a problem with the real clock, so "open" is read at the real time too (14 Oct: read at the fixed
-        // 11:00, the test failed once the real time passed 11:00 IST on its own date - the stamp was then after "now").
+        // The board stamps a problem with the real clock, so it is read at the real clock (14 Oct: read at the fixed 11:00,
+        // a problem reported later in the real day was not "open" yet and the test failed after 11:00 IST).
         LiveRecorder.healthCheck(alive = false, nowMs = nowMs)
         assertTrue(ProblemsHost.open().none { it.key == LiveRecorder.PROBLEM })
         LiveRecorder.healthCheck(alive = true, nowMs = nowMs)

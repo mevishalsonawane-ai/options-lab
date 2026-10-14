@@ -1,8 +1,8 @@
-id: r30-q4-gap
-title: 'R30 neural nets: next-morning gap direction from the 15:20 state (Night arm), rule R13'
+id: r41-q4-gap
+title: 'R41 neural nets: next-morning gap direction from the 15:20 state (Night arm), rule R13'
 family: overnight
 date: '2026-10-14'
-doc: research/HUNT_R30_NEURAL_NETS.md
+doc: research/HUNT_R41_NEURAL_NETS.md
 hypothesis: From the day-end state a neural net predicts the next morning's 09:16 gap direction, and buying the 1-ITM option
   on the predicted side at 15:20 (R27's strike), selling at 09:16, pays after costs.
 data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
@@ -23,8 +23,8 @@ features:
 model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
   3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; R13 buys the 1-ITM CE/PE
   at 15:20 when |p-0.5| is in the top 20% of validation scores, sells at the next 09:16 open; no expiry-day entries
-settings: research/hunt/r30/PREREG.md
-prereg: research/hunt/r30/PREREG.md
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
 variants_tried: 1
 results:
   summary: 'Model not better than the base rate (WF log-loss 0.687 vs 0.692, q 0.54, 2,868 nights; holdout 0.681 vs 0.676,

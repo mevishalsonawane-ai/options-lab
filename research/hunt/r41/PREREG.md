@@ -1,4 +1,8 @@
-# R30 pre-registration: a neural-network arm for every running study
+# R41 pre-registration: a neural-network arm for every running study
+
+Renumbered 14 Oct from R30 (the number R30 was already taken by R30 all parameters). Only this title and note changed;
+the text below is as pre-registered and still calls the study R30. Its files now live in `research/hunt/r41/`; new
+runs write to `<cache>/r41` and `derived/r41/`.
 
 Written 14 Oct 2026. Committed and pushed **before any model was fitted** and before any test period's labels or trades
 were computed. Only data inventories, day counts and other studies' committed write-ups had been read. After this

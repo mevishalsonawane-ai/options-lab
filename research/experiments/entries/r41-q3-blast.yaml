@@ -1,8 +1,8 @@
-id: r30-q3-blast
-title: 'R30 neural nets: expiry-afternoon blast (R26 ATM+-1 option >= 4x from 13:45), rule R12 (option-chart context)'
+id: r41-q3-blast
+title: 'R41 neural nets: expiry-afternoon blast (R26 ATM+-1 option >= 4x from 13:45), rule R12 (option-chart context)'
 family: ml
 date: '2026-10-14'
-doc: research/HUNT_R30_NEURAL_NETS.md
+doc: research/HUNT_R41_NEURAL_NETS.md
 hypothesis: From the 13:45 state on an expiry day, a neural net predicts whether R26's ATM+1 CE / ATM-1 PE reaches 4x its
   13:45 price by 15:05, and buying the top 20% pays after costs.
 data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
@@ -24,8 +24,8 @@ features:
 model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
   3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; R12 buys the option at the
   next bar when P(blast) is in the top 20% of validation scores; resting sell at 4x, else out at 15:05
-settings: research/hunt/r30/PREREG.md
-prereg: research/hunt/r30/PREREG.md
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
 variants_tried: 1
 results:
   summary: 'Not predictable: WF log-loss NN 0.412 vs base rate 0.350 (576 option-days, 239 expiry sessions, 11.1% blasts);

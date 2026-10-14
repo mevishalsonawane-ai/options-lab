@@ -1,8 +1,8 @@
-id: r30-q1-direction
-title: 'R30 neural nets: next 15/30/60-minute index direction (5 indices) and option-buying rules R1-R6'
+id: r41-q1-direction
+title: 'R41 neural nets: next 15/30/60-minute index direction (5 indices) and option-buying rules R1-R6'
 family: ml
 date: '2026-10-14'
-doc: research/HUNT_R30_NEURAL_NETS.md
+doc: research/HUNT_R41_NEURAL_NETS.md
 hypothesis: Neural nets on the brain's features plus the raw minute sequence forecast the next 15/30/60-minute direction of
   the 5 indices better than the base rate, logistic regression and trees, and a confident-signal ATM option buy pays after
   costs.
@@ -25,8 +25,8 @@ model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the l
   3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; rules R1-R3 buy ATM CE/PE
   when |p-0.5| is in the top 10% of validation scores (premium stop -30%, exit at t+h), R4-R6 the same with a big-move forecast
   filter
-settings: research/hunt/r30/PREREG.md
-prereg: research/hunt/r30/PREREG.md
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
 variants_tried: 6
 results:
   summary: 'Direction is a coin: holdout AUC 0.510-0.517 and log-loss 0.6928-0.6969 vs base rate 0.6923-0.6926 (36,462-41,967
@@ -36,4 +36,4 @@ results:
   costs: Fills('liq') (app bps + volume-aware half-spread) + Costs('app'); stress = 2x spread
 holdout_read: true
 verdict: rejected
-notes: Third confirmation (R16, B1, R30) that intraday index direction is not predictable from these inputs.
+notes: Third confirmation (R16, B1, R41) that intraday index direction is not predictable from these inputs.

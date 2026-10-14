@@ -1,4 +1,4 @@
-"""R30 Q2 data: the arms' rebuilt trades (R28's r28arms.py, each arm's own code, fills and charges) with the
+"""R41 Q2 data: the arms' rebuilt trades (R28's r28arms.py, each arm's own code, fills and charges) with the
 point-in-time inputs at each trade's signal row.
 
     build(part) -> <OUT>/india/q2_<part>.pkl
@@ -13,7 +13,7 @@ import pickle
 import numpy as np
 import pandas as pd
 
-import r30cfg as K
+import r41cfg as K
 from india import HoldoutError, Minutes, feature_rows, holdout_open
 
 ARMS = {"orb": "R7", "fade": "R8", "liq": "R9", "h0": "R10", "night": "R11", "l3": "R17", "solo": "R18"}

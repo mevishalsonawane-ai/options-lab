@@ -1,4 +1,4 @@
-"""R30 tests on synthetic data (no lake needed): python -m pytest research/hunt/r30/test_r30.py -q
+"""R41 tests on synthetic data (no lake needed): python -m pytest research/hunt/r41/test_r41.py -q
 
 Look-ahead guard: a model's inputs at time t use only data <= t (sequence, crypto features); scaling / imputation /
 label scales are fitted on training rows only; the holdout lock; trade simulators (option buys, crypto stop + lock);
@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import r30cfg as K  # noqa: E402
+import r41cfg as K  # noqa: E402
 import evalx as E  # noqa: E402
 import nets as NN  # noqa: E402
 import india as I  # noqa: E402
@@ -209,6 +209,7 @@ def test_folds_train_strictly_before_the_test_block():
 # ------------------------------------------------------------------------------------------------ holdout lock
 def test_holdout_is_read_once(tmp_path, monkeypatch):
     monkeypatch.setattr(K, "OUT", tmp_path)
+    monkeypatch.setattr(K, "RESULTS", tmp_path / "results")
     with pytest.raises(I.HoldoutError):
         I.load("NIFTY", "holdout")
     with pytest.raises(I.HoldoutError):
@@ -357,3 +358,24 @@ def test_crypto_sigma_is_in_percent_like_the_simulator_expects():
     rows = np.arange(1500, 3500, 15)
     out = C.sim_perp(B, rows, 1, 15, sig.values[rows] * np.sqrt(15))
     assert 0.15 < np.mean(out["net"] > 0) < 0.6            # a 15-minute trade with a 1-sigma stop wins often
+
+
+def test_holdout_refused_when_its_result_is_committed(tmp_path, monkeypatch):
+    # 14 Oct 2026: the cache moved from <cache>/r30 to <cache>/r41 with the renumber; an empty cache must not reopen
+    # a holdout whose result is already in results/
+    monkeypatch.setattr(K, "OUT", tmp_path / "cache")
+    monkeypatch.setattr(K, "RESULTS", tmp_path / "results")
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "holdout_crypto.json").write_text("{}")
+    with pytest.raises(I.HoldoutError):
+        I.holdout_gate("crypto", "start")
+    assert not I.flag_path("crypto").exists()
+    I.holdout_gate("india", "start")                 # the other market has no committed result yet
+    assert I.holdout_open("india")
+
+
+def test_the_real_holdouts_stay_locked():
+    for kind in ("india", "crypto"):
+        assert (K.RESULTS / f"holdout_{kind}.json").exists()
+        with pytest.raises(I.HoldoutError):
+            I.holdout_gate(kind, "start")
