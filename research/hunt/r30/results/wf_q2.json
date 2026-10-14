@@ -45,19 +45,19 @@
          "seed": 0,
          "epochs": 25,
          "val_loss": 0.5789973735809326,
-         "seconds": 1.1
+         "seconds": 1.0
         },
         {
          "seed": 1,
          "epochs": 25,
          "val_loss": 0.5990043878555298,
-         "seconds": 1.2
+         "seconds": 0.9
         },
         {
          "seed": 2,
          "epochs": 25,
          "val_loss": 0.603165864944458,
-         "seconds": 1.1
+         "seconds": 1.0
         }
        ],
        "params": 6753
@@ -68,7 +68,7 @@
          "seed": 0,
          "epochs": 25,
          "val_loss": 0.5957085490226746,
-         "seconds": 1.3
+         "seconds": 1.4
         },
         {
          "seed": 1,
@@ -80,7 +80,7 @@
          "seed": 2,
          "epochs": 25,
          "val_loss": 0.5794564485549927,
-         "seconds": 1.2
+         "seconds": 1.6
         }
        ],
        "params": 9185
@@ -153,7 +153,7 @@
          "seed": 2,
          "epochs": 10,
          "val_loss": 0.681260883808136,
-         "seconds": 0.1
+         "seconds": 0.0
         }
        ],
        "params": 11009
@@ -170,13 +170,13 @@
          "seed": 1,
          "epochs": 7,
          "val_loss": 0.6721185445785522,
-         "seconds": 0.4
+         "seconds": 0.5
         },
         {
          "seed": 2,
          "epochs": 15,
          "val_loss": 0.6928109526634216,
-         "seconds": 0.8
+         "seconds": 0.9
         }
        ],
        "params": 6817
@@ -187,19 +187,19 @@
          "seed": 0,
          "epochs": 6,
          "val_loss": 0.6871488094329834,
-         "seconds": 0.7
+         "seconds": 0.6
         },
         {
          "seed": 1,
          "epochs": 5,
          "val_loss": 0.6860909461975098,
-         "seconds": 0.5
+         "seconds": 0.4
         },
         {
          "seed": 2,
          "epochs": 14,
          "val_loss": 0.6693971157073975,
-         "seconds": 1.2
+         "seconds": 1.1
         }
        ],
        "params": 9249
@@ -283,19 +283,19 @@
          "seed": 0,
          "epochs": 21,
          "val_loss": 0.6751055717468262,
-         "seconds": 1.7
+         "seconds": 1.8
         },
         {
          "seed": 1,
          "epochs": 5,
          "val_loss": 0.6614937782287598,
-         "seconds": 0.4
+         "seconds": 0.5
         },
         {
          "seed": 2,
          "epochs": 17,
          "val_loss": 0.6727886199951172,
-         "seconds": 1.3
+         "seconds": 1.5
         }
        ],
        "params": 6817
@@ -306,19 +306,19 @@
          "seed": 0,
          "epochs": 14,
          "val_loss": 0.6756681203842163,
-         "seconds": 1.5
+         "seconds": 1.6
         },
         {
          "seed": 1,
          "epochs": 14,
          "val_loss": 0.6683999300003052,
-         "seconds": 1.4
+         "seconds": 1.6
         },
         {
          "seed": 2,
          "epochs": 17,
          "val_loss": 0.675810694694519,
-         "seconds": 1.9
+         "seconds": 1.8
         }
        ],
        "params": 9249
@@ -1206,19 +1206,19 @@
          "seed": 0,
          "epochs": 13,
          "val_loss": 0.658401608467102,
-         "seconds": 0.7
+         "seconds": 0.9
         },
         {
          "seed": 1,
          "epochs": 17,
          "val_loss": 0.643873929977417,
-         "seconds": 1.0
+         "seconds": 1.1
         },
         {
          "seed": 2,
          "epochs": 15,
          "val_loss": 0.6534931063652039,
-         "seconds": 0.9
+         "seconds": 1.0
         }
        ],
        "params": 6753
@@ -1229,19 +1229,19 @@
          "seed": 0,
          "epochs": 13,
          "val_loss": 0.6366931200027466,
-         "seconds": 1.0
+         "seconds": 1.1
         },
         {
          "seed": 1,
          "epochs": 16,
          "val_loss": 0.6503955721855164,
-         "seconds": 1.3
+         "seconds": 1.4
         },
         {
          "seed": 2,
          "epochs": 11,
          "val_loss": 0.6326602697372437,
-         "seconds": 0.9
+         "seconds": 1.1
         }
        ],
        "params": 9185
@@ -1302,7 +1302,7 @@
          "seed": 0,
          "epochs": 16,
          "val_loss": 0.5964329838752747,
-         "seconds": 0.1
+         "seconds": 0.2
         },
         {
          "seed": 1,
@@ -1325,13 +1325,13 @@
          "seed": 0,
          "epochs": 20,
          "val_loss": 0.5911834239959717,
-         "seconds": 1.5
+         "seconds": 1.7
         },
         {
          "seed": 1,
          "epochs": 15,
          "val_loss": 0.6101115345954895,
-         "seconds": 1.1
+         "seconds": 1.2
         },
         {
          "seed": 2,
@@ -1348,19 +1348,19 @@
          "seed": 0,
          "epochs": 15,
          "val_loss": 0.6139898896217346,
-         "seconds": 1.5
+         "seconds": 1.7
         },
         {
          "seed": 1,
          "epochs": 14,
          "val_loss": 0.5948780179023743,
-         "seconds": 1.6
+         "seconds": 1.4
         },
         {
          "seed": 2,
          "epochs": 19,
          "val_loss": 0.6038354635238647,
-         "seconds": 1.9
+         "seconds": 2.0
         }
        ],
        "params": 9249
@@ -1444,19 +1444,19 @@
          "seed": 0,
          "epochs": 14,
          "val_loss": 0.6334436535835266,
-         "seconds": 1.8
+         "seconds": 2.1
         },
         {
          "seed": 1,
          "epochs": 10,
          "val_loss": 0.6329391598701477,
-         "seconds": 1.2
+         "seconds": 1.4
         },
         {
          "seed": 2,
          "epochs": 11,
          "val_loss": 0.6296983957290649,
-         "seconds": 1.4
+         "seconds": 1.7
         }
        ],
        "params": 6817
@@ -1473,7 +1473,7 @@
          "seed": 1,
          "epochs": 9,
          "val_loss": 0.6270735859870911,
-         "seconds": 1.7
+         "seconds": 1.6
         },
         {
          "seed": 2,
@@ -2371,7 +2371,7 @@
          "seed": 0,
          "epochs": 9,
          "val_loss": 0.6908571720123291,
-         "seconds": 0.2
+         "seconds": 0.3
         },
         {
          "seed": 1,
@@ -2383,7 +2383,7 @@
          "seed": 2,
          "epochs": 9,
          "val_loss": 0.705467700958252,
-         "seconds": 0.2
+         "seconds": 0.3
         }
        ],
        "params": 6817
@@ -2394,7 +2394,7 @@
          "seed": 0,
          "epochs": 7,
          "val_loss": 0.6789765954017639,
-         "seconds": 0.3
+         "seconds": 0.4
         },
         {
          "seed": 1,
@@ -2473,7 +2473,7 @@
          "seed": 1,
          "epochs": 15,
          "val_loss": 0.6717525720596313,
-         "seconds": 0.0
+         "seconds": 0.1
         },
         {
          "seed": 2,
@@ -2519,13 +2519,13 @@
          "seed": 1,
          "epochs": 19,
          "val_loss": 0.6819277405738831,
-         "seconds": 1.0
+         "seconds": 1.2
         },
         {
          "seed": 2,
          "epochs": 25,
          "val_loss": 0.6836655139923096,
-         "seconds": 1.4
+         "seconds": 1.5
         }
        ],
        "params": 9249
@@ -3095,7 +3095,7 @@
        "worst_day": -5540.949999999997,
        "max_drawdown": -12489.300000000007,
        "big_winners_cut_short": 0,
-       "pnl_per_day_stress": 0.0,
+       "pnl_per_day_stress": null,
        "p_vs_twins": 0.9500499500499501,
        "twin_mean_total": 66732.82788000001,
        "unfiltered": {
@@ -3128,7 +3128,7 @@
         "worst_day": -5509.949999999996,
         "max_drawdown": -12290.82999999999,
         "big_winners_cut_short": 0,
-        "pnl_per_day_stress": 0.0,
+        "pnl_per_day_stress": null,
         "p_vs_twins": 0.8311688311688312,
         "twin_mean_total": 37469.15035000001,
         "unfiltered": {
@@ -3159,7 +3159,7 @@
         "worst_day": -5540.949999999997,
         "max_drawdown": -12489.300000000003,
         "big_winners_cut_short": 0,
-        "pnl_per_day_stress": 0.0,
+        "pnl_per_day_stress": null,
         "p_vs_twins": 0.8651348651348651,
         "twin_mean_total": 27069.252320000007,
         "unfiltered": {
@@ -3193,7 +3193,7 @@
        "worst_day": -7190.649999999998,
        "max_drawdown": -18163.949999999997,
        "big_winners_cut_short": 0,
-       "pnl_per_day_stress": 0.0,
+       "pnl_per_day_stress": null,
        "p_vs_twins": 0.6573426573426573,
        "twin_mean_total": 65584.58204000002,
        "unfiltered": {
@@ -3226,7 +3226,7 @@
         "worst_day": -5267.759999999998,
         "max_drawdown": -18163.949999999997,
         "big_winners_cut_short": 0,
-        "pnl_per_day_stress": 0.0,
+        "pnl_per_day_stress": null,
         "p_vs_twins": 0.9400599400599401,
         "twin_mean_total": 38599.49000000001,
         "unfiltered": {
@@ -3257,7 +3257,7 @@
         "worst_day": -7190.649999999998,
         "max_drawdown": -9917.909999999989,
         "big_winners_cut_short": 0,
-        "pnl_per_day_stress": 0.0,
+        "pnl_per_day_stress": null,
         "p_vs_twins": 0.14785214785214784,
         "twin_mean_total": 27069.252320000007,
         "unfiltered": {
@@ -3424,7 +3424,7 @@
          "seed": 0,
          "epochs": 20,
          "val_loss": 0.6634424328804016,
-         "seconds": 0.0
+         "seconds": 0.1
         },
         {
          "seed": 1,
@@ -3459,7 +3459,7 @@
          "seed": 2,
          "epochs": 6,
          "val_loss": 0.6779978275299072,
-         "seconds": 0.2
+         "seconds": 0.1
         }
        ],
        "params": 6753
@@ -3470,13 +3470,13 @@
          "seed": 0,
          "epochs": 18,
          "val_loss": 0.6734928488731384,
-         "seconds": 0.7
+         "seconds": 0.6
         },
         {
          "seed": 1,
          "epochs": 13,
          "val_loss": 0.6751179695129395,
-         "seconds": 0.6
+         "seconds": 0.5
         },
         {
          "seed": 2,
@@ -4522,13 +4522,13 @@
          "seed": 1,
          "epochs": 25,
          "val_loss": 0.18177060782909393,
-         "seconds": 1.2
+         "seconds": 1.1
         },
         {
          "seed": 2,
          "epochs": 25,
          "val_loss": 0.27124226093292236,
-         "seconds": 1.2
+         "seconds": 1.1
         }
        ],
        "params": 9249
@@ -4612,19 +4612,19 @@
          "seed": 0,
          "epochs": 25,
          "val_loss": 0.40678516030311584,
-         "seconds": 0.9
+         "seconds": 1.0
         },
         {
          "seed": 1,
          "epochs": 25,
          "val_loss": 0.2665727436542511,
-         "seconds": 0.9
+         "seconds": 1.1
         },
         {
          "seed": 2,
          "epochs": 25,
          "val_loss": 0.31506025791168213,
-         "seconds": 0.9
+         "seconds": 1.0
         }
        ],
        "params": 6817
@@ -4635,13 +4635,13 @@
          "seed": 0,
          "epochs": 25,
          "val_loss": 0.36385074257850647,
-         "seconds": 1.2
+         "seconds": 1.5
         },
         {
          "seed": 1,
          "epochs": 25,
          "val_loss": 0.23245319724082947,
-         "seconds": 1.2
+         "seconds": 1.3
         },
         {
          "seed": 2,
