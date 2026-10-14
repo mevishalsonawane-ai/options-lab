@@ -387,12 +387,20 @@ object TickZoneRecorder {
     fun wipe() {
         queue.drain()
         lastSec = null
-        scope.launch { writeLock.withLock { flows = HashMap(); gaps = TickZone.Gaps(); day = null; written = null; listWritten = null } }
+        // Off the caller's thread (erase-everything runs on the main thread); kept so a test can wait for it (15 Oct: a reset
+        // still pending landed after a test's own drain and emptied its flows - TickZoneRecorderTest was flaky). The names
+        // (insts) go too, as the day's state does.
+        wiping = scope.launch { writeLock.withLock { flows = HashMap(); gaps = TickZone.Gaps(); day = null; written = null; listWritten = null; insts.clear() } }
     }
+
+    /** The last erase's reset, still running or done (tests wait for it before their own state is set). */
+    @Volatile private var wiping: Job? = null
 
     /** TEST ONLY: recording into [context]'s folder without the loops, with [l] as the watch-list. */
     internal fun attachForTest(context: Context, l: List<TickZone.Inst>) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        // An erase's reset still pending (LiveRecorder.resetForTest wipes) lands first, never after the test's own drain.
+        kotlinx.coroutines.runBlocking { wiping?.join() }
         testOff = true
         root = File(context.applicationContext.noBackupFilesDir, DIR)
         list = l

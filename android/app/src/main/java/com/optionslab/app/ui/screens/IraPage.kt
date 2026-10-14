@@ -1190,7 +1190,7 @@ private fun SoloCard() {
  */
 /** A behaviour with its own switch beneath its group (e.g. Market alerts → skipped Liquidity breaks): on only while the group is. */
 @Composable
-private fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
+internal fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
     val p = LocalPalette.current
     var own by remember { mutableStateOf(com.optionslab.app.ira.Automations.ownSwitch(a)) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 6.dp)) {

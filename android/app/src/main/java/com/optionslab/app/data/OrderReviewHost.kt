@@ -427,7 +427,9 @@ object OrderReviewHost {
         val quality = runCatching { LiquidityTest.reviewNotes(day) }.getOrDefault(emptyList())
         // The pre-trade checks in shadow (13 Oct, R17): the charges check and smart stop at each paper entry, as notes (facts).
         val pretrade = runCatching { PreTradeShadow.reviewNotes(day) }.getOrDefault(emptyList())
-        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live, fillNotes = quality + pretrade)
+        // The OI-wall check in shadow (14 Oct, R26 rule P): on an expiry day, whether it fired and its ticket in points (a record only).
+        val oiWall = if (com.optionslab.app.BuildConfig.GOLD) emptyList() else runCatching { OiWallShadowHost.reviewNotes(day) }.getOrDefault(emptyList())
+        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live, fillNotes = quality + pretrade + oiWall)
     }
 
     /** The ORB family's entry window on [day] (after its opening range, to its last entry and two minutes for the order); else null. */

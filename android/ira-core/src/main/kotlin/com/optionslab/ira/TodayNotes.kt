@@ -44,7 +44,8 @@ object TodayNotes {
 
     /** Each automation (by its name in the app's list) and the category its notes go under. */
     private val BY_SOURCE: Map<String, Category> = buildMap {
-        for (s in listOf("GAP", "ORB", "MOMENTS", "VIX", "SHARPMOVE", "OI", "EXPIRYDAY", "OPENING")) put(s, Category.MARKET)
+        // GAMMA and OIWALL (14 Oct): the morning gamma line and the OI-wall shadow check's evening line.
+        for (s in listOf("GAP", "ORB", "MOMENTS", "VIX", "SHARPMOVE", "OI", "EXPIRYDAY", "OPENING", "GAMMA", "OIWALL")) put(s, Category.MARKET)
         for (s in listOf("LIQUIDITY", "LIQSKIP")) put(s, Category.LIQUIDITY)
         put(SOLO, Category.SOLO_HERO)
         for (s in listOf("OVERTRADE", "TARGET", "HEADSUP", "USUAL", "PRETRADE", "WORDS", "BOTS", "HEALTH", "MIS", "EXPIRY", "TRAIL", "GUARD",

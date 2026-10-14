@@ -56,6 +56,13 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-14-gamma-line-oi-wall-shadow", OCT14, "Morning gamma line, and the OI-wall check in shadow",
+            "At 10:00 Jarvis says whether dealer gamma is negative or positive on each index whose chain is on the phone, how such days' " +
+                "rest-of-day range compared in the research, and the biggest call- and put-gamma strikes to watch; it says nothing about direction and is never a trade signal. " +
+                "On expiry days your OI-wall short-covering rule is checked from 13:45 to 14:30 and only written down, with what its ticket would have made in points " +
+                "and one evening line from Jarvis; it never places an order.",
+            "Settings → Jarvis → Market alerts (Morning gamma line; OI-wall check (shadow)); the OI-wall check is also in the evening Order Review and the diagnostics",
+            jarvisOnly = true, to = "jarvis"),
         Entry("2026-10-14-signal-on-the-index", OCT14, "Signals read from the index, then the option is bought",
             "Strategies read their signal from the index and then buy the option (the default); a Pine script set to an option chart is refused; option-derived ideas are labelled.",
             "Research → Pine → a script → Auto-trade (its symbol); Home → Strategies (Hero's row); Home → Automation card → Strategy lab"),

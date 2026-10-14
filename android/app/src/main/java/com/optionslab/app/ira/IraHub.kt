@@ -1758,6 +1758,7 @@ object IraHub {
                 com.optionslab.ira.FillQuality.asked(q) || com.optionslab.ira.LiquidityGoLive.asked(q) ||
                 com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.MoveEvents.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
                 com.optionslab.ira.Findings.asked(q) != null || com.optionslab.ira.TradeManager.asked(q) != null ||
+                com.optionslab.ira.GammaMorning.asked(q) != null || com.optionslab.ira.OiWallBlast.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
@@ -4026,6 +4027,28 @@ object IraHub {
                 // One strong lesson of Jarvis's about it, where he has one (11 Oct; memory only) - not on a locked phone (G4 L6).
                 (if (managerLocked) "" else (JarvisLearning.appendFor(managerAsk.family, if (managerAsk.family == null) com.optionslab.ira.AgentLessons.Topic.MANAGER else null)?.let { " $it" } ?: "")) }
                 .getOrElse { "I could not read the trade manager's record just now, Boss." })
+            return true
+        }
+        // "What's gamma saying?" (14 Oct, Boss approved; R28): the 10:00 dealer-gamma reading of each index whose chain is on the
+        // phone, else one read now and labelled with its time - information only, never a trade signal. The live regime's own
+        // words ("gamma regime", "zero gamma") stay the order flow's answer below. Memory only. Not in IraGoldAlgo.
+        val gammaAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.GammaMorning.asked(q) }.getOrNull() else null
+        if (gammaAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.GammaMorningHost.answer(gammaAsk.ifEmpty { null }) }
+                    .getOrElse { "I could not read the gamma just now, Boss." })
+            }
+            return true
+        }
+        // "Did the OI-wall check fire?" (14 Oct; R26 in shadow): today's line and the tally, in points. A record only.
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.OiWallBlast.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.OiWallShadowHost.answer() }.getOrElse { "I could not read the OI-wall log just now, Boss." })
+            }
             return true
         }
         // "What is the order flow on BankNifty?", "nifty me buyers or sellers?" (9 Oct): the live read of the index's near future

@@ -234,6 +234,25 @@ class TickZoneRecorderTest : RobolectricTest() {
         assertTrue(readme, "DECRYPTED" in readme && "orderflow_1m.jsonl.gz" in readme)
     }
 
+    /**
+     * 15 Oct: an erase's reset runs off the caller's thread; a test's own setup waits for it, so it can never land after
+     * the test's drain (the cause of this class's flaky run), and it lets the instruments' names go too.
+     */
+    @Test fun anErasesResetIsDoneBeforeATestsOwnStateAndClearsTheNames() {
+        var prev: Long? = null
+        for (i in 0L until 3L) { feed(base + i, 52_100.0, 1_000 + i); sample(base + i, prev); prev = base + i }
+        runBlocking { TickZoneRecorder.drain((base + 4) * 1000) }
+        assertEquals(3 to 3, TickZoneRecorder.heldForTest())
+        TickZoneRecorder.wipe()
+        TickZoneRecorder.attachForTest(context, list)
+        assertEquals(0 to 0, TickZoneRecorder.heldForTest())
+        // The test's own run afterwards is whole.
+        prev = null
+        for (i in 10L until 13L) { feed(base + i, 52_100.0, 2_000 + i); sample(base + i, prev); prev = base + i }
+        runBlocking { TickZoneRecorder.drain((base + 14) * 1000) }
+        assertEquals(3 to 3, TickZoneRecorder.heldForTest())
+    }
+
     /** Memory audit (14 Oct, item 6): once a run is closed, the instruments no longer on the watch-list are let go. */
     @Test fun aClosedRunLetsGoTheInstrumentsNoLongerWatched() {
         var prev: Long? = null

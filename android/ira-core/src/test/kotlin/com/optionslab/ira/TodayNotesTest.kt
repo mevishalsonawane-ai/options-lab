@@ -21,6 +21,8 @@ class TodayNotesTest {
         assertEquals(Category.LIQUIDITY, TodayNotes.categoryOf("LIQUIDITY"))
         assertEquals(Category.MARKET, TodayNotes.categoryOf("OPENING"))
         assertEquals(Category.MARKET, TodayNotes.categoryOf("SHARPMOVE"))
+        assertEquals(Category.MARKET, TodayNotes.categoryOf("GAMMA"))
+        assertEquals(Category.MARKET, TodayNotes.categoryOf("OIWALL"))
         assertEquals(Category.COACH, TodayNotes.categoryOf("SUMMARY"))
         assertEquals(Category.COACH, TodayNotes.categoryOf("FORWARD"))
         assertEquals(Category.COACH, TodayNotes.categoryOf("LIQINSIGHT"))
