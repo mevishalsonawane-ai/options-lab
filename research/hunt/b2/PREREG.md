@@ -161,3 +161,12 @@ input set (amendment 1) also gets, in `b2sweep.py`:
   Fibonacci levels (0.236 .. 0.786); returns over the last 1, 2, 5, 10, 20 days; gap; session TWAP distance; day of month,
   month.
 Nothing else changes (same targets, models, families of 48, rules and gates).
+
+## Amendment 3 (14 Oct 2026, after 19 of the 54 walk-forward AUCs were printed; before any importance, readable rule, anatomy, trading or holdout result)
+
+Section 6A's permutation importance of every single input (469 inputs x 5 repeats x 4 blocks) takes several hours per
+model on this machine (a 20,000-row scoring of the boosted model takes 1-3 s). It is replaced by **permutation importance of
+input families** (each family permuted together: e.g. "EMA distance, all charts", "Supertrend", "OI build-up", "gamma",
+"option volume profile", "order-flow proxy", "VIX", "time of day"), 2 repeats, 10,000 test rows, on the 2025 and 2026 test
+blocks. It is descriptive only (no gate uses it). The readable depth-3 rules (6A) still name single inputs. Nothing else
+changes.

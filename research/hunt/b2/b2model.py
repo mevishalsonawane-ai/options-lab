@@ -181,6 +181,54 @@ def tree_rules(Xs: pd.DataFrame, pred: np.ndarray, y: np.ndarray, depth=3, min_l
     return sorted(out, key=lambda r: -abs(r["actual"] - 0.5))
 
 
+KIND = (("ema", "EMA distance"), ("x", "EMA cross"), ("rsi", "RSI"), ("stoch", "stochastic"), ("willr", "Williams %R"),
+        ("cci", "CCI"), ("macdh", "MACD"), ("bbpb", "Bollinger"), ("bbw", "Bollinger"), ("st", "Supertrend"),
+        ("atr", "ATR"), ("adx", "ADX / DI"), ("di", "ADX / DI"), ("mom", "momentum"), ("don", "Donchian"))
+SWEEP = {"gx": "gamma (R28 GEX)", "vp": "option volume profile", "of": "order-flow proxy", "oi": "option OI by strike",
+         "oth": "other indices", "fib236": "levels", "fib382": "levels", "fib500": "levels", "fib618": "levels",
+         "fib786": "levels", "pd": "levels", "rn100": "levels", "rn500": "levels", "rn1000": "levels", "gap": "gap / days",
+         "r1d": "gap / days", "r2d": "gap / days", "r5d": "gap / days", "r10d": "gap / days", "r20d": "gap / days",
+         "twap": "session TWAP", "dom": "calendar", "month": "calendar", "row": "time of day", "dte": "calendar",
+         "is": "calendar", "und": "index"}
+
+
+def family(name: str) -> str:
+    """The input family a column belongs to (Amendment 3)."""
+    tok = name.split("_")
+    if tok[0] in ("t1", "t5", "t15") and len(tok) > 1:
+        k = tok[1]
+        for pre, fam in KIND:
+            if k.startswith(pre) and (pre != "x" or k[1:2].isdigit()) and (pre != "st" or k[2:3].isdigit()) \
+                    and (pre != "di" or k[2:3].isdigit()):
+                return f"chart {fam}"
+        return "chart other"
+    if tok[0] in SWEEP:
+        return SWEEP[tok[0]]
+    return f"brain: {tok[0]}"
+
+
+def group_importance(m, P, X, y, names, rows=10000, repeats=2, seed=SEED):
+    """Permutation importance of input families (Amendment 3): AUC drop when a whole family is shuffled together."""
+    rng = np.random.default_rng(seed)
+    if len(y) > rows:
+        k = rng.choice(len(y), rows, replace=False)
+        X, y = X[k], y[k]
+    base = auc_w(y, predict(m, P, X))
+    fams = {}
+    for j, nm in enumerate(names):
+        fams.setdefault(family(nm), []).append(j)
+    out = []
+    for f, js in fams.items():
+        drops = []
+        for _ in range(repeats):
+            Xp = X.copy()
+            perm = rng.permutation(len(y))
+            Xp[:, js] = Xp[perm][:, js]
+            drops.append(base - auc_w(y, predict(m, P, Xp)))
+        out.append((f, float(np.mean(drops)), len(js)))
+    return base, sorted(out, key=lambda r: -r[1])
+
+
 def perm_importance(m, P, X, y, names, rows=60000, repeats=5, seed=SEED):
     rng = np.random.default_rng(seed)
     if len(y) > rows:

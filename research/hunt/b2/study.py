@@ -75,10 +75,10 @@ def job(args):
             k = rng.choice(k, min(len(k), 60000), replace=False)
             ptr = M.predict(m, P, Xa[k])
             extra[blk] = dict(hi=float(np.percentile(ptr, 90)), lo=float(np.percentile(ptr, 10)))
-        if model == "GBM" and inp == "all" and target in IMPORT_TARGETS:
+        if model == "GBM" and inp == "all" and target in IMPORT_TARGETS and blk in ("2025", "2026"):
             names = list(cols) + [f"und_{u}" for u in D.UNDS]
-            base, im = M.perm_importance(m, P, Xa[te], y[te], names, rows=20000, repeats=3)
-            imp.append((int(te.sum()), dict(im)))
+            base, im = M.group_importance(m, P, Xa[te], y[te], names)
+            imp.append((int(te.sum()), {f: d for f, d, _ in im}))
         preds.append(part)
     Pd = pd.concat(preds, ignore_index=True)
     res = dict(target=target, inputs=inp, model=model, n=int(len(Pd)), days=int(Pd.day.nunique()),
@@ -89,7 +89,7 @@ def job(args):
     if imp:
         tot = sum(n for n, _ in imp)
         names = imp[0][1].keys()
-        res["importance"] = sorted(((nm, sum(n * d[nm] for n, d in imp) / tot) for nm in names), key=lambda r: -r[1])[:40]
+        res["importance"] = sorted(((nm, sum(n * d.get(nm, 0.0) for n, d in imp) / tot) for nm in names), key=lambda r: -r[1])
     res["thresholds"] = extra
     Pd.to_parquet(D.OUT / f"pred_{target}_{inp}_{model}.parquet", index=False)
     print(target, inp, model, round(res["auc"], 4), "p", round(res["p"], 4), res["n"], flush=True)
