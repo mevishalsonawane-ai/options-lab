@@ -63,7 +63,8 @@ class GitHubSyncWorkerTest : RobolectricTest() {
 
     /** The days whose diagnostics were sent (G3), in order. */
     private fun diags() = gh.seen.filter { it.url.startsWith("https://uploads.github.com/") && it.url.contains("name=diag-") }
-        .map { it.url.substringAfter("name=diag-").removeSuffix(".json.gz") }
+        // A day sent again goes up under its temporary ".new" name first (the safe replace), then takes the day's name.
+        .map { it.url.substringAfter("name=diag-").removeSuffix(".new").removeSuffix(".json.gz") }
 
     @Test fun notSetUpOrACheckSendsNothing() {
         for (k in listOf(GitHubSyncWorker.EVENING, GitHubSyncWorker.BACKUP, GitHubSyncWorker.NOW, GitHubSyncWorker.CHECK))
