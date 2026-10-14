@@ -612,3 +612,11 @@ Oct 2026, F1's holdout untouched).
   a week. Proposed: a pre-registered 40-session forward paper test, logged only.
 - What the models lean on (varies by period): IV skew and the ATM straddle price most often, then PCR; but also the
   weekday (2026 M1), VIX (M3) and EMA-ribbon slopes (3rd-4th in two models). A lead, not a finding.
+
+## Option-market signals alone (IV1, 14 Oct 2026) - none pass; not forward-tested
+Full study: `HUNT_IV1_OPTION_MARKET.md` (pre-registered `hunt/iv1/PREREG.md`, commit ff5f951; descriptive walk-forward,
+inputs chosen after R30).
+- IV skew, straddle, PCR, OI build-up on their own, 5 indices, Jul 2024 - Oct 2026 out of sample, Boss's lock: an
+  option-only model lost on all 5 indices (Rs -16 to -256 a trade); the best option-only pairs made +Rs 35 a trade on
+  SENSEX (915 trades) but lost in 2025; a fixed put-writing + PCR + straddle-expansion rule lost on all 5 (Rs -24 to
+  -245, 7,339 trades). The option chain helps only as part of R30's full model (M4-NIFTY, now in its forward test).
