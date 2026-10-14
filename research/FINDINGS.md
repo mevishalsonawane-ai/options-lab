@@ -293,6 +293,19 @@ Full study: `HUNT_R15_DAILY_FILTERS.md` (pre-registered `hunt/r15/PREREG.md`); s
   A3 Night R3 BANKNIFTY leg. Judged at 300 Liquidity trades (A1/A2) / 100 nights (A3) with Holm; the shadow alone is
   too small to prove A1 (expected +Rs 30-40 a trade vs a Rs 55-60 standard error) - it mainly guards against harm.
 
+## Dealer gamma exposure, intraday (R28, 14 Oct 2026) - size of the day only; no arm filter
+Full study: `HUNT_R28_GEX.md` (pre-registered `hunt/r28/PREREG.md`; lake Aug 2021 - Oct 2026; holdout read once).
+- GEX = Rs of index delta the option market-makers must trade per 1% move (gamma x OI x spot^2 x 1%), built every
+  minute from the ATM+-10 option prices and OI. 12 GEX features are in the Data Brain (`gex_*`).
+- Negative GEX at 10:00 (dealers long calls / short puts) came before a bigger rest-of-day range on all 5 indices
+  (e.g. BANKNIFTY 0.87% vs 0.75%, 199 / 397 design days). It does not tell trend from chop, ORB runs, expiry pins,
+  hero blasts or the next gap.
+- 0 of 10 GEX filters on the arms passed (ORB x4, Range Fade x2, Liquidity, Hero, lottery, Night). On a losing arm
+  any skip "loses less", and GEX skipped no better than random days. On Night R3 it cut the holdout from +Rs 249 to
+  -Rs 18 a day (224 trades). Do not filter any arm by GEX; Jarvis may mention it as information about the day's size.
+- R28b (Boss's follow-up): 378 patterns of the 30 one-minute candles before each arm's entry (alone or with the GEX
+  sign), walk-forward on design years: 0 passed BH, no forward candidate. On Night R3 every picked pattern cut profit.
+
 ## What is predictable? (R16, 12 Oct 2026) - only the size of the next 30-60 min move, not its direction
 Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 24 holdout tests, one BH family).
 - Data: release 1-min BANKNIFTY (Feb 2024 - Feb 2026) and NIFTY (Apr 2024 - Apr 2026), Yahoo daily index/VIX
