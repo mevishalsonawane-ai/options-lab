@@ -20,8 +20,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 R25 = ROOT / "research" / "hunt" / "r25"
 for p in (ROOT, ROOT / "research", R25, HERE):
-    if str(p) not in sys.path:
-        sys.path.insert(0, str(p))
+    if str(p) in sys.path:
+        sys.path.remove(str(p))
+    sys.path.insert(0, str(p))           # HERE ends first: R26's modules are never shadowed by R25's
 
 import r25cfg as K  # noqa: E402
 
