@@ -200,3 +200,28 @@ minute after the decision is replaced by noise.
 
 Paper only, on BANKNIFTY (the arm's index), logged in the Autopilot change timeline, labelled "R3", undoable in one
 tap, never live by itself. Its exact settings will be written in the report.
+
+---
+
+## Part B (14 Oct 2026, after the design-only rebuild and anatomy, BEFORE any variant is run on any period)
+
+Filled in by the fixed rule of A6 (`study.py partb` -> `results/partb.json`, design years 2021-2024, BANKNIFTY +
+NIFTY baseline trades). Nothing in Part A changes.
+
+| arm | chosen feature | worst tercile skipped | skip interval | tercile means Rs/trade (low / mid / high) | trades 2021-24 per tercile |
+|---|---|---|---|---|---|
+| ORB | VIX change 09:15 -> signal (%) | mid | -0.8638 <= x < 1.0372 | -101 / -148 / -63 | 549 / 549 / 549 |
+| ORB Fresh | VIX change (%) | mid | -0.8638 <= x < 1.0372 | -101 / -148 / -64 | 549 / 549 / 549 |
+| ORB Sweep | VIX change (%) | low | x < -0.9926 | -178 / -120 / -106 | 686 / 685 / 687 |
+| Range Fade | expiry day | expiry days | expiry = 1 | not expiry -116 / expiry -177 | 1,937 / 317 |
+
+Noted before any variant runs: on the 2021-2024 design trades, the BEST tercile of every candidate feature still loses
+money for every arm (the least bad: ORB, VIX change high third, Rs -63 a trade). A one-feature filter can therefore
+lose less but is not expected to turn an arm positive. The 16 variants are exactly A6 with these filters:
+
+- `r3-<arm>-F`: the baseline + the skip above.
+- `r3-<arm>-E`: no fixed target; the arm's ladder stays (on +P, Sweep +2P); step lock +Rs 1,000 -> keep +Rs 500 a lot;
+  give-back trail from +Rs 1,000, Rs 500 a lot below the peak; time stop: at 45 minutes, sell if the peak never
+  reached +25% of P (Sweep 2P).
+- `r3-<arm>-S`: 1 strike in the money and at most 1 entry a side a day.
+- `r3-<arm>-C`: F + E + S.
