@@ -1,0 +1,43 @@
+id: r33-b3
+title: 'Backwards study B3: the best 2-3 pattern combination mined on the training years (patterns in >= 15% of heroes), 25%
+  trail'
+hypothesis: Starting from every zero-to-hero, the most common indicator / candle / shape pattern (option and index) marks
+  tradable entries.
+features:
+- 310 option + index indicator variants
+- chain / pricing flags
+- 30-candle shape clusters
+model_or_rule: 'the best 2-3 pattern combination mined on the training years (patterns in >= 15% of heroes), 25% trail; choices
+  {''2023'': {''most_occurring'': ''op_vprof_below_poc'', ''hero_share_pct'': 98.5, ''its_test_10x_rate_pct'': 1.3, ''test_base_pct'':
+  1.34, ''combo'': [''ix_ema5_13_xdn3'', ''ch_wall_within1em'', ''ch_pcr_rising''], ''combo_train_10x_rate_pct'': 6.88, ''combo_train_rows'':
+  2428, ''candidates'': 128, ''combo_test_10x_rate_pct'': 1.22, ''trades_B1'': 85, ''trades_B3'': 50}, ''2024'': {''most_occurring'':
+  ''op_vwap_below'', ''hero_share_pct'': 96.4, ''its_test_10x_rate_pct'': 2.17, ''test_base_pct'': 2.18, ''combo'': [''ch_wall_within1em'',
+  ''pr_ivrv_le1'', ''pr_vix_rising''], ''combo_train_10x_rate_pct'': 7.71, ''combo_train_rows'': 2568, ''candidates'': 128,
+  ''combo_test_10x_rate_pct'': 3.71, ''trades_B1'': 103, ''trades_B3'': 54}, ''2025'': {''most_occurring'': ''op_vwap_lt1'',
+  ''hero_share_pct'': 98.1, ''its_test_10x_rate_pct'': 1.53, ''test_base_pct'': 1.51, ''combo'': [''op_mv30_dn70'', ''ch_pcr_lt0.7'',
+  ''ix_mv30_dn0.1''], ''combo_train_10x_rate_pct'': 9.7, ''combo_train_rows'': 2135, ''candidates'': 132, ''combo_test_10x_rate_pct'':
+  0.97, ''trades_B1'': 104, ''trades_B3'': 17}, ''2026'': {''most_occurring'': ''op_vwap_below'', ''hero_share_pct'': 98.5,
+  ''its_test_10x_rate_pct'': 1.62, ''test_base_pct'': 1.66, ''combo'': [''op_mv30_dn70'', ''ch_pcr_lt0.7'', ''ix_adx14_gt25''],
+  ''combo_train_10x_rate_pct'': 10.14, ''combo_train_rows'': 2080, ''candidates'': 127, ''combo_test_10x_rate_pct'': 0.0,
+  ''trades_B1'': 80, ''trades_B3'': 6}}'
+variants_tried: 4
+results:
+  summary: '127 trades (test years 2023-26), hit 18.9%, >= 10x 2.4%, net Rs -26,271 (-109 per Rs 1,000); by year {''2023'':
+    -19371.0, ''2024'': 1077.0, ''2025'': -5695.0, ''2026'': -2282.0}; random-time twin mean Rs -30,713, p 0.259, BH q 1.0
+    (family 86). FAILED the gates.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; x2 spread
+verdict: rejected
+notes: BH across R21-R33 (86).
+date: '2026-10-14'
+doc: research/HUNT_R33_BACKWARDS.md
+family: patterns-indicators
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK, index_1m, INDIAVIX, equity_1m (R32 rows: 936,286 one-minute rows;
+  310 option + index pattern variants + 13 chain flags + 16 shape clusters)'
+period:
+  design: 'anchored walk-forward: test years 2023-2026, each chosen on earlier NIFTY / SENSEX expiries only'
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r33/PREREG.md
+settings: research/hunt/r33/r33study.py
+holdout_read: null
