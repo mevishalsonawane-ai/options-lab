@@ -1,0 +1,33 @@
+id: r41-q5-crypto-direction
+title: 'R41 neural nets: BTC/ETH next 15/60/240-minute direction, perp rules R14-R16 with stop-loss and profit lock'
+family: mcx-crypto
+date: '2026-10-14'
+doc: research/HUNT_R41_NEURAL_NETS.md
+hypothesis: Neural nets forecast BTC/ETH direction over 15/60/240 minutes better than baselines, and a confident-signal perp
+  trade inside Boss's 00:00-09:00 IST window, with a 1-sigma stop-loss and a profit lock, pays after Delta India costs.
+data_version: Binance USDT-M perpetual 1-minute klines BTCUSDT / ETHUSDT from gdrive:IraAlgo-data-crypto (Oct 2023 - Oct 2026)
+period:
+  design: 2023-11-01..2025-03-31 and 2025-11-01..2026-03-31; folds 2024H2, 2025Q1, 2025Q4-26Q1
+  holdout: 2025-04-01..2025-09-30 UTC (F1 crypto's block, already read by F1C for its own rules), read once by R41
+instruments:
+- CRYPTO
+features:
+- returns 5-1440 min, realised vol, range, volume and trade-count z, taker-buy share, hour/day-of-week, distance to 24h high/low
+- last 120 one-minute bars
+model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 120 one-minute bars + tabular features;
+  3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; R14-R16 trade the top 10%
+  confidence, stop 1 sigma_h, lock at +1 sigma_h to break-even then 1-sigma trail, time exit at h
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
+variants_tried: 3
+results:
+  summary: 'A tiny real signal: 60-minute direction NN log-loss beats the base rate in WF (q 0.011, 3/3 folds) and holdout
+    (0.6915 vs 0.6928, CI excludes 0, q 0.006; AUC 0.533; 35,112 forecasts, 184 days); 15 and 240 minutes not confirmed. Every
+    rule loses: holdout R14 -Rs 301/day (773 trades), R15 -152 (386), R16 -4 (99); WF -493 / -283 / -77, no positive fold.
+    Trees'' rules lose too.'
+  costs: Delta India taker 0.05% + 18% GST per side, 2 bp slippage per side (stress x2); before tax (31.2% on each winning
+    trade reported separately)
+holdout_read: true
+verdict: rejected
+notes: 'Repeats NN_CRYPTO: direction signal real but far below costs. A stop-units bug (stops 100x too close) was found in
+  the first design run and fixed before the holdout.'
