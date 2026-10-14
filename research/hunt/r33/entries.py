@@ -44,7 +44,7 @@ def main():
          "Most occurring before heroes: " + "; ".join(f"{x['pattern']} {x['hero10_pct']}% (all rows {x['all_rows_pct']}%, 10x rate when present "
                                                      f"{x['row_10x_rate_pct']}%)" for x in top) +
          ". Highest lift: " + "; ".join(f"{x['pattern']} {x['hero10_pct']}% vs {x['all_rows_pct']}% (10x rate {x['row_10x_rate_pct']}%)" for x in lift) +
-         ". Base 10x rate 1.71%: no pattern lifts the forward 10x rate above 2.5%.")
+         ". Base 10x rate 1.71%: the best forward rate is 2.4% among patterns before >= 50 heroes and 3.8% for any pattern on >= 1,000 rows (fast index moves, few heroes).")
     e = dict(id="r33-frequency", title="Backwards study: pattern frequency before zero-to-hero (descriptive)",
              hypothesis="Descriptive: which patterns precede zero-to-hero most often and how much they lift the forward 10x rate.",
              features=["every R33 pattern"], model_or_rule="frequency scan (r33study.freq_table)", variants_tried=None,

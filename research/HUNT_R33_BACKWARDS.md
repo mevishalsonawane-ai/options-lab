@@ -63,8 +63,15 @@ every oscillator, below its VWAP and volume point of control, while the index pa
 **How to gain from it: in this data, you can't.**
 - **The pattern is real but not selective.** About 4 in 10 options at any minute look crashed and oversold, and nearly
   all of them keep dying.
-- **The best forward rate any single pattern reaches is 2.4%,** for an option down 50% in 5 minutes, against 1.7% for
-  any option. A hero is still about 1 in 40.
+- **No pattern lifts the forward 10× rate much.** The base rate is 1.7%.
+  - Among patterns present before at least 50 heroes, the best is 2.4% (an option down 50% in 5 minutes). That is
+    still about 1 hero in 40.
+  - Across all patterns with at least 1,000 rows, the best are fast index moves:
+    - the index 0.2% in the option's direction within 5 minutes: 3.8% (6,088 rows);
+    - 0.2% against it within 5 minutes: 3.4%;
+    - 0.2% toward it within 15 minutes: 3.2% (28,877 rows).
+  - Those are moves already under way: only 6-14 of the 487 heroes started that way. Fast markets make cheap options
+    explode more often, but still about 1 in 26.
 - **Part of the effect is hindsight.** Each hero is marked at its lowest point, so "crashed and oversold" looks stronger
   in the frequency table than it can be in real time.
 - **The trading tests** (walk-forward 2023-26: chosen on earlier years, traded on later ones, real costs):
@@ -122,7 +129,11 @@ every oscillator, below its VWAP and volume point of control, while the index pa
 ## Honest notes
 
 - **Heroes are marked at their lowest row**, which favours crashed and oversold readings. The forward 10× rate column is
-  the fair measure, and it never exceeds 2.5% (base 1.7%).
+  the fair measure: at most 2.4% for patterns before ≥ 50 heroes, and at most 3.8% for any pattern on ≥ 1,000 rows (fast
+  index moves); the base is 1.7%.
+- **The index VWAP flags use 0.1% / 0.3%, not the pre-registered 1% / 3%.** The index rarely moves 1% from its TWAP in an
+  afternoon, so the code uses index-sized thresholds under the same names (`ix_vwap_gt1` = 0.1% above, and so on). The
+  option's VWAP flags use 1% / 3% as registered. No index VWAP flag was picked by B1 or B3, so no verdict changes.
 - **"Heavyweights agree over 5 minutes"** was registered as "all 3 agree over 5 minutes", but only the three stocks'
   average 5-minute move is stored. The flag uses the average (disclosed in the code). It is one of 339 patterns and
   changes no conclusion.

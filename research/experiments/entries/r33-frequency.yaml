@@ -14,8 +14,8 @@ results:
     87.7% (all rows 85.5%, 10x rate when present 1.71%). Highest lift: op_mv5_dn50 12.5% vs 1.4% (10x rate 2.43%); shape_opt_c7
     10.5% vs 1.4% (10x rate 2.45%); op_mv15_dn50 35.7% vs 7.1% (10x rate 1.97%); op_mv30_dn70 21.1% vs 4.3% (10x rate 2.21%);
     op_donch30_low 57.7% vs 11.7% (10x rate 1.66%); op_donch20_low 59.1% vs 12.7% (10x rate 1.65%); op_mv5_dn30 38.2% vs 8.6%
-    (10x rate 2.21%); op_donch10_low 65.5% vs 15.2% (10x rate 1.68%). Base 10x rate 1.71%: no pattern lifts the forward 10x
-    rate above 2.5%.'
+    (10x rate 2.21%); op_donch10_low 65.5% vs 15.2% (10x rate 1.68%). Base 10x rate 1.71%: the best forward rate is 2.4% among
+    patterns before >= 50 heroes and 3.8% for any pattern on >= 1,000 rows (fast index moves, few heroes).'
   costs: none (descriptive)
 verdict: not-a-test
 notes: 'Heroes are taken at their run''s lowest row (hindsight): ''crashed / oversold'' patterns are inflated by that choice.'

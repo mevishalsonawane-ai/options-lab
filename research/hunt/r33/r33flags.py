@@ -269,6 +269,7 @@ def day_flags(day):
         else:
             lib = library(-oi_, -lo_, -hi_, -ci, (), vwap_ref=-tw, sgn=1)
             dv = tw / ci - 1                                  # in the put's direction: below the TWAP is "above"
+            # index-sized thresholds 0.1% / 0.3% under the option's names gt1 / gt3 (disclosed in HUNT_R33_BACKWARDS.md)
             lib["vwap_above"], lib["vwap_below"] = dv > 0, dv < 0
             lib["vwap_gt1"], lib["vwap_gt3"], lib["vwap_lt1"], lib["vwap_lt3"] = dv > 0.001, dv > 0.003, dv < -0.001, dv < -0.003
         if sgn > 0:
