@@ -40,6 +40,8 @@ class GitHubSyncTest : RobolectricTest() {
         /** What the write probe on options-lab answers (403: the token cannot write there; 422: it can). */
         var probeCode = 403
         val assets = ArrayList<Map<String, Any?>>()
+        /** Asset ids are never reused, even after a delete (as on GitHub). */
+        private var nextId = 100
         var releaseMade = false
         /** False: the token no longer sees the data repository (GitHub then answers 404). */
         var seesRepo = true
@@ -64,12 +66,28 @@ class GitHubSyncTest : RobolectricTest() {
                 u.endsWith("/releases/tags/phone-backup") -> if (releaseMade) json(200, mapOf("id" to 7)) else json(404, mapOf("message" to "Not Found"))
                 r.method == "POST" && u.endsWith("/repos/mevishalsonawane-ai/IraAlgo/releases") -> { releaseMade = true; json(201, mapOf("id" to 7)) }
                 u.contains("/releases/7/assets?per_page") -> json(200, assets)
+                // A replacement (GitHubReleases.upload): the old copy deleted, the new one renamed from its ".new" name (14 Oct).
+                r.method == "DELETE" && u.startsWith("https://api.github.com/repos/mevishalsonawane-ai/IraAlgo/releases/assets/") -> {
+                    val id = u.substringAfterLast('/').toLong()
+                    if (assets.removeAll { (it["id"] as Number).toLong() == id }) json(204, null) else json(404, mapOf("message" to "Not Found"))
+                }
+                r.method == "PATCH" && u.startsWith("https://api.github.com/repos/mevishalsonawane-ai/IraAlgo/releases/assets/") -> {
+                    val id = u.substringAfterLast('/').toLong()
+                    val i = assets.indexOfFirst { (it["id"] as Number).toLong() == id }
+                    if (i < 0) json(404, mapOf("message" to "Not Found"))
+                    else {
+                        val sent = java.io.ByteArrayOutputStream().also { out -> r.body!!.write(out) }.toString("UTF-8")
+                        val name = (Json.parse(sent) as Map<*, *>)["name"] as String
+                        val a = assets[i] + ("name" to name)
+                        assets[i] = a; json(200, a)
+                    }
+                }
                 u.startsWith("https://uploads.github.com/repos/mevishalsonawane-ai/IraAlgo/releases/7/assets") ->
                     run {
                         onUpload?.invoke(r)
                         if (uploadCode != 201) json(uploadCode, mapOf("message" to "Bad credentials"))
                         else {
-                            val a = mapOf("id" to 100 + assets.size, "name" to u.substringAfter("name="), "size" to (r.body?.length ?: 0))
+                            val a = mapOf("id" to nextId++, "name" to u.substringAfter("name="), "size" to (r.body?.length ?: 0))
                             assets += a; json(201, a)
                         }
                     }
