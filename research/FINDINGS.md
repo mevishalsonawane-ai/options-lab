@@ -581,3 +581,20 @@ NSE's data is anonymous: only types (Client, DII, FII, Pro), never a person, fir
   neither walls nor magnets (0 of 12 tests; max-OI strike closer to settlement than a same-distance random strike
   42-43% of 873 expiries, which is the no-magnet level of ~44%).
 - The app's own order-flow recordings: none uploaded yet (IraAlgo has 0 releases); `hunt/of1/footprints.py` is ready.
+
+## Many EMAs at once: EMA ribbons on 1/3/5/15-minute bars (R29, 14 Oct 2026) - no pattern passes
+Full study: `HUNT_R29_EMA_RIBBON.md` (pre-registered `hunt/r29/PREREG.md`, Part A commit 917651e, Part B c52eab0; 195
+tests, one BH family with F1).
+- Ribbon EMA 5/8/13/21/34/55/89/200 and EMA 9/21/50/200 on NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX: 12 pattern
+  types (stack onset, twist, pullback to 21/34, squeeze then fan-out, ribbon breakout, fan-out, 1/5/15-minute alignment
+  and combinations), traded with and against the trend, ATM, Boss's +Rs 1,000-keep-Rs 500 lock, app charges and spread.
+- Mining: 1 of 140 candidates made money in both 2021-22 (93,650 trades) and 2024 (134,455), on 2 and 9 trades; the index moves a median
+  2 bps beyond random in 30 minutes after an event. Boss's three ideas (15-min stack + 5-min pullback, squeeze then
+  fan-out, MTF alignment) lost in 2024 in every cell but one (15-min squeeze down +Rs 123 on 146 trades, Rs -297 in
+  2021-22).
+- The 10 best twin-beating candidates (all fades, all losing on their own) on unseen years: 1 of 10 positive in 2025,
+  1 of 10 in 2026, none in both; holdout 2023 (read once) 1 of 10 positive pooled (R6 +Rs 21 a trade on 264, sign
+  flipping by period on every index). 0 of 55 rule x index tests passed. EMA 9 x 21 cross: Rs -99 a trade in the
+  holdout (2,313 trades), negative on all five indices in every period.
+- Kept: 77 point-in-time ribbon features in the Data Brain (`rib*`, `cls*`, `rib_mtf_align`) as context. Nothing to
+  paper or live.

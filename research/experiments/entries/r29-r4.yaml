@@ -1,0 +1,35 @@
+date: '2026-10-14'
+doc: research/HUNT_R29_EMA_RIBBON.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m NIFTY/BANKNIFTY/FINNIFTY/MIDCPNIFTY/SENSEX (2017/2021-12 Oct
+  2026), options_rolling_1m opt_<UND>_WEEK (nearest expiry, ATM+-10; options from Aug 2021, MIDCPNIFTY Jan 2022, SENSEX May
+  2023); Data Brain ribbon features (research/brain/features/ribbon.py)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+settings: research/hunt/r29/PREREG.md
+prereg: research/hunt/r29/PREREG.md
+id: r29-r4
+title: 'R29 R4: P2_15 bear event, fade'
+family: patterns-indicators
+hypothesis: A Step-2 survivor (beats its random twins on 2021-22 and 2024) makes money after costs on unseen years.
+period:
+  design: discovery 2021-08..2022-12, selection 2024
+  walk_forward: 2025, 2026 (to 12 Oct)
+  holdout: 1 Jan - 31 Dec 2023 (locked, read once)
+features:
+- EMA ribbon 5..200
+model_or_rule: P2_15 bear event, fade; ATM, exit X1, 1 lot, one at a time, <= 3/day
+variants_tried: 1
+results:
+  summary: 'Discovery 166 trades, net Rs -18,495 (-111/trade; 1 of 4 indices > 0); Selection 241 trades, net Rs -16,584 (-69/trade;
+    2 of 5 indices > 0); WF 2025 246 trades, net Rs -4,903 (-20/trade; 1 of 5 indices > 0); WF 2026 243 trades, net Rs -38,557
+    (-159/trade; 1 of 5 indices > 0); Holdout 173 trades, net Rs -9,376 (-54/trade; 2 of 5 indices > 0); best holdout index
+    NIFTY: p 0.031, BH q 0.095. FAILED the gates'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    minute's open + 5 bps + a 1/2/4-tick half-spread by 5-min volume (stops 10 bps, 2x ticks); stress 2x spread
+holdout_read: true
+verdict: rejected
+notes: Confirmatory family 55 (11 rules x 5 indices); R29 total 195 with mining, plus F1's.
