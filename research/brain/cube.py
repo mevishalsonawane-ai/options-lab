@@ -330,10 +330,14 @@ def build(root: Path, und: str, frm: date, to: date, source: str = "auto", force
         print(f"no source available for {und}; nothing built")
         return dict(built=0, skipped=0)
     owner: dict[date, object] = {}
-    for a in ads:                                   # first adapter that has a day owns it
-        for d in a.sessions(und):
-            if frm <= d <= to and d not in owner:
-                owner[d] = a
+    # First adapter that has a FULL day (index + options) owns it; then the first that has the day at all. So a lake
+    # with only the index for a day does not take that day from a release that also has its chain (14 Oct 2026).
+    for full in (True, False):
+        for a in ads:
+            have = getattr(a, "full_sessions", a.sessions)(und) if full else a.sessions(und)
+            for d in have:
+                if frm <= d <= to and d not in owner:
+                    owner[d] = a
     sessions = set(owner)
     todo: dict[object, list[date]] = {}
     skipped = 0

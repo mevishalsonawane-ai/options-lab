@@ -21,7 +21,7 @@ import pandas as pd
 
 FORMULA_VERSION = 1
 VA_SHARE = 0.70
-BIN = {"BANKNIFTY": 10.0, "NIFTY": 5.0, "FINNIFTY": 5.0, "MIDCPNIFTY": 2.5, "SENSEX": 10.0}
+BIN = {"BANKNIFTY": 10.0, "NIFTY": 5.0, "FINNIFTY": 5.0, "MIDCPNIFTY": 2.5, "SENSEX": 10.0, "BANKEX": 10.0}
 
 
 def bin_size(und: str) -> float:

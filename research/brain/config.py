@@ -20,7 +20,8 @@ TZ = "Asia/Kolkata"            # all stored timestamps are naive IST
 
 # --- option chain ---------------------------------------------------------------------------------------------------
 CHAIN_OFFSETS = range(-10, 11)  # ATM-10 .. ATM+10 strikes
-STRIKE_STEP = {"BANKNIFTY": 100.0, "NIFTY": 50.0, "FINNIFTY": 50.0, "MIDCPNIFTY": 25.0, "SENSEX": 100.0}
+STRIKE_STEP = {"BANKNIFTY": 100.0, "NIFTY": 50.0, "FINNIFTY": 50.0, "MIDCPNIFTY": 25.0, "SENSEX": 100.0,
+               "BANKEX": 100.0}
 
 # --- Black-Scholes assumptions (documented in README "IV and Greeks") -----------------------------------------------
 # r: a flat 6.5% a year. India's 91-day T-bill ranged about 5.4-7.1% over 2024-2026; at a few days to expiry the

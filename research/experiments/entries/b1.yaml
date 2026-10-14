@@ -1,0 +1,32 @@
+id: b1
+title: 'India Data Brain v1: size of the next 30/60 min, day type and regime at 09:45, six indices'
+family: ml
+date: '2026-10-14'
+doc: research/BRAIN_V1.md
+hypothesis: On every India index, the brain's point-in-time features forecast the size of the next 30 and 60 minutes better than the best plain baseline, and the day type and the rest-of-day regime at 09:45 better than base rate, yesterday and VIX.
+data_version: Dhan lake on Google Drive (download of 12 Oct 2026; index_1m 7 indices, NIFTY weekly options, live futures) + research-data release (BANKNIFTY Feb 2024 - Feb 2026); cube v2, 154 features
+period:
+  design: up to 2026-04-13 (NIFTY from 2017-04-03, BANKNIFTY / FINNIFTY / SENSEX / BANKEX from 2021-08-04, MIDCPNIFTY from 2022-01-31); walk-forward 8 test folds after 2 training blocks
+  holdout: 2026-04-27 onwards (locked, not read; embargo 2026-04-14 .. 2026-04-26)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+- BANKEX
+features:
+- all 154 L4 features (research/brain/FEATURES.md)
+- usual range at this clock time (previous 20 sessions)
+- last 30/60-min range
+- VIX
+model_or_rule: gradient-boosted trees (primary) and a small linear model per index x target; 24 primary tests, one BH family
+settings: research/brain/models/PREREG.md (frozen before any fit); metrics in research/brain/models/metrics_v1.json
+prereg: research/brain/models/PREREG.md
+variants_tried: 48
+results:
+  summary: 'Range of the next 30 min predictable on all 6 indices (error 16.5-22.6% below the best baseline, q 0.001; 17,148-37,150 forecasts on 822-1775 sessions) and of the next 60 min (10.6-21.1%, q 0.001). Trend day vs range day at 09:45 not predictable (AUC 0.483-0.510, 718-1,773 sessions). Busy vs quiet rest of day: AUC 0.549-0.689 but over-confident, log-loss not below the baselines, fails (q >= 0.55). A units bug in the time-of-day baseline was fixed and the run redone once before reporting.'
+  costs: none (forecasts of market size; no trades)
+holdout_read: false
+verdict: inconclusive
+notes: "Design-only result; the range models confirm R16 on four more indices. The holdout (116 sessions per index by 12 Oct 2026) is to be read once, later, in its own step, for the 12 range tests only. The linear regime model's log-loss was below the base rate on 5 of 6 indices (AUC 0.575-0.666): a candidate for a new pre-registered test, not a finding. Nothing trades on these models."
