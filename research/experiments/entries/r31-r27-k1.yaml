@@ -1,0 +1,28 @@
+id: r31-r27-k1
+title: 25% trailing exit on R27-K1's entries
+family: trade-management
+date: '2026-10-14'
+doc: research/HUNT_R31_TRAIL25.md
+hypothesis: Selling when the premium falls 25% below its peak (from entry) turns the hero entries profitable.
+data_version: 'Dhan lake on Drive (R26 day files: NIFTY, SENSEX, BANKNIFTY, FINNIFTY weeklies); the entries are the published
+  trades of R26-R30'
+period:
+  design: the source study's expiries and entries (R26/R28/R30 all expiries; R27 walk-forward test years 2023-26 and all expiries
+    for K rules; R29 decision days)
+instruments:
+- NIFTY
+features:
+- the source study's entry
+model_or_rule: exit TR25 (research/hunt/r31/r31trail.py simulate)
+settings: research/hunt/r31/r31trail.py
+prereg: research/hunt/r31/PREREG.md
+variants_tried: 26
+results:
+  summary: 'R27-K1''s own entries with Boss''s 25% trail (stop = 75% of the confirmed peak, from entry): 194 expiry days (194
+    positions), hit 13.9%, net Rs -56,595 vs Rs -117,776 with the study''s own exit; per Rs 1,000 -153; average give-back
+    from the peak at the exit 52.2%; max DD Rs -68,555; without the best day Rs -69,382; 2x spread Rs -73,332; raw-high peak
+    Rs -70,068; bootstrap p 0.994, BH q 1.0 (family 78). FAILED the gates.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; x2 spread
+holdout_read: null
+verdict: rejected
+notes: One of 26 R31 entry sets; BH across R21-R31 (78). Sells at the next open after a close below the stop.
