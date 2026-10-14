@@ -20,17 +20,22 @@ import java.time.LocalTime
  * On an expiry day of NIFTY, BANKNIFTY or FINNIFTY (SENSEX too, should its BSE chain ever be on the phone - it is not
  * today), in Jarvis's words lane (a worker, about a round a minute; [watch]):
  *  - 11:59-14:30: each round copies from memory ([MemoryChain]) each option's OI, the stream's day volume and its price,
- *    filed under the minute each was TAKEN (never a later one: a reading taken at 14:13:40 belongs to the bar closing
- *    14:14, so the 14:13 decision never sees it), and spot's 1-minute closes from the stream's own candles (else its last
- *    few minutes' path). A volume or a "traded" price comes only from the stream (a chain read's is not this minute's); a
- *    chain read's OI counts, aged from the read. A strike stays "stored" for 5 rows after a reading, as a lake bar did.
+ *    each filed under the minute it became known (never a later one, so a decision never sees what came after its close):
+ *    a traded price under the minute of its trade; the OI and the day volume under the minute their packet ARRIVED (15 Oct
+ *    review: the exchange sends a new OI without a trade, so an OI is as new as its packet, not as old as the last trade);
+ *    and spot's 1-minute closes from the stream's own candles (else its last few minutes' path). A volume or a "traded"
+ *    price comes only from the stream (a chain read's is not this minute's); a chain read's OI counts, aged from the read.
+ *    A strike stays "stored" for 5 rows after a reading, as a lake bar did.
+ *  - The data must be watched from 12:00 (the OI peak's window) to the trigger: a day the app (re)started later is
+ *    flagged "partial data since restart at HH:MM"; switched off after a trigger, the day is closed then, as switched off.
  *  - 13:45-14:30: each minute is checked once, as it closes. The first trigger is written to the log at once, and the
  *    bought option is followed on the stream (one instrument under [OWNER]; it never starts or keeps the stream by itself).
  *  - From 15:21 (or 14:31 without a trigger): the ticket is priced with the app's paper cost model for all four exits from
  *    the option's own minute bars, the day written, the subscription dropped, and Jarvis's one evening line goes in the
- *    chat (aloud only by Boss's "Jarvis speaks" choice, never on a locked phone): "OI-wall check (shadow, not traded):
- *    fired / didn't fire; would have made X points". A trigger the app could not price that day (killed, switched off) is
- *    closed the next day as "not priced", so the record never silently drops one.
+ *    chat (aloud only by Boss's "Jarvis speaks" choice, never on a locked phone): "OI-wall check (shadow, not traded;
+ *    information only, not a trade signal): fired / didn't fire; would have made X points". Switched off mid-day, the
+ *    day is closed at once as switched off; a trigger the app could not price that day (killed) is closed the next day as
+ *    "not priced", so the record never silently drops one.
  *
  * Battery: on any other day a round costs one look at the calendar; only these windows read anything, and nothing is on
  * the order or tick path (open positions keep their stream priority: [OWNER] is not in the stream's first group). The log
@@ -58,7 +63,7 @@ object OiWallShadowHost {
     fun init(context: Context) { file = File(context.applicationContext.noBackupFilesDir, FILE) }
 
     /** One index's expiry day in memory: its rows, the trigger, the option followed, the minutes checked. */
-    private class Live(val index: String, val day: LocalDate) {
+    private class Live(val index: String, val day: LocalDate, /** When this process began watching the day (a later start misses part of the noon OI window). */ val startedAt: LocalTime) {
         val d = OiWallBlast.Day(index)
         /** The last closed row whose spot close was copied. */
         var lastRow = -1
@@ -193,17 +198,17 @@ object OiWallShadowHost {
             expiries = OiWallBlast.INDICES.filter { u ->
                 testExpiring?.invoke(u, day) ?: runCatching { Market.isExpiryDay(u, day) }.getOrDefault(false)
             }
-            restore(day)
+            restore(day, t)
         }
         return expiries
     }
 
     /** Today's triggers already in the log (a restart): picked up, their option followed again (their earlier minutes are gone). */
-    private fun restore(day: LocalDate) {
+    private fun restore(day: LocalDate, t: LocalTime) {
         for (p in log().filter { it.optString("day") == day.toString() }) {
             val idx = p.optString("index")
             if (idx !in expiries || live.containsKey(idx)) continue
-            val l = Live(idx, day)
+            val l = Live(idx, day, t)
             l.restarted = true
             l.signal = sigOf(p.optJSONObject("signal"))
             l.done = p.optBoolean("final")
@@ -223,7 +228,8 @@ object OiWallShadowHost {
 
     /**
      * One round of the words lane. Memory only, apart from the log's file when something is written (a trigger, a finished
-     * day). Never throws. Switched off: nothing is recorded, and an option it followed is let go.
+     * day). Never throws. Switched off: nothing more is recorded; a day still open is closed with a "switched off" record
+     * ([switchedOff]) and an option it followed is let go.
      */
     suspend fun watch() {
         if (com.optionslab.app.BuildConfig.GOLD) return
@@ -231,7 +237,7 @@ object OiWallShadowHost {
         // Battery: before 11:59 a round reads nothing at all, not even the settings vault.
         if (now.toLocalTime().isBefore(START)) return
         if (!Automations.ownSwitch(Automations.Auto.OIWALL)) {
-            runCatching { synchronized(lock) { if (followed().isNotEmpty()) { live.values.forEach { it.done = true }; follow() } } }
+            runCatching { synchronized(lock) { switchedOff(now) } }
             return
         }
         runCatching { round(now, System.currentTimeMillis()) }
@@ -246,7 +252,7 @@ object OiWallShadowHost {
         // The bar that closed at the start of this minute.
         val closed = OiWallBlast.minute(t) - 1
         for (idx in indices) {
-            val l = live.getOrPut(idx) { Live(idx, day) }
+            val l = live.getOrPut(idx) { Live(idx, day, t) }
             if (l.done) continue
             runCatching { step(l, closed, t, nowMs) }
         }
@@ -287,21 +293,33 @@ object OiWallShadowHost {
         if (!t.isBefore(TICKET_END)) finish(l)
     }
 
-    /** Each option read under [FRESH_MS] ago, filed under the row its reading was taken in (at most [current], the bar running now). */
+    /**
+     * The options as read now, each part filed under the row it became known in (at most [current], the bar running now):
+     * a traded price under the minute of its trade; the OI and the day volume under the minute their packet ARRIVED (15 Oct
+     * review: the exchange sends a new OI without a trade, so filing it under an older trade's minute would let that
+     * minute's decision see an OI from after its close). Parts older than [FRESH_MS] are left out.
+     */
     private fun readings(l: Live, nowMs: Long, current: Int) {
         val snap = MemoryChain.read(l.index, nowMs, each = 12)
         if (l.lot == null) l.lot = snap.lot
-        l.tokens = l.tokens + snap.legs.mapNotNull { g -> g.token?.let { (g.strike to g.right) to it } }.toMap()
-        val byRow = snap.legs.filter { it.ageMs <= FRESH_MS }.groupBy { minOf(rowAt(nowMs - it.ageMs), current) }
-        for ((row, legs) in byRow) {
+        l.tokens = l.tokens + snap.legs.mapNotNull { leg -> leg.token?.let { (leg.strike to leg.right) to it } }.toMap()
+        val parts = ArrayList<Pair<Int, OiWallBlast.Obs>>()
+        for (leg in snap.legs) {
+            // A price counts as traded in its minute only from the stream itself (a chain read's is not this minute's).
+            if (leg.fromTick && leg.ageMs <= FRESH_MS) {
+                val row = minOf(rowAt(nowMs - leg.ageMs), current)
+                val b = leg.token?.let { bar(it, rowStartMs(l.day, row)) }
+                parts += row to OiWallBlast.Obs(leg.strike, leg.right, close = b?.get(3) ?: leg.ltp, open = b?.get(0), high = b?.get(1), low = b?.get(2))
+            }
+            // The OI (and, from the stream, the day's volume) under the minute its packet arrived.
+            if (leg.packetAgeMs <= FRESH_MS) {
+                val row = minOf(rowAt(nowMs - leg.packetAgeMs), current)
+                parts += row to OiWallBlast.Obs(leg.strike, leg.right, oi = leg.oi, cumVol = if (leg.fromTick) leg.cumVol else null)
+            }
+        }
+        for ((row, obs) in parts.groupBy({ it.first }, { it.second })) {
             if (row < OiWallBlast.NOON - 5) continue
-            val start = rowStartMs(l.day, row)
-            l.d.record(row, null, legs.map { g ->
-                // A price counts as traded in its minute, and a volume as the day's total, only from the stream itself.
-                val b = if (g.fromTick) g.token?.let { bar(it, start) } else null
-                OiWallBlast.Obs(g.strike, g.right, g.oi, if (g.fromTick) g.cumVol else null, b?.get(3) ?: if (g.fromTick) g.ltp else null,
-                    b?.get(0), b?.get(1), b?.get(2))
-            })
+            l.d.record(row, null, obs)
         }
     }
 
@@ -319,17 +337,41 @@ object OiWallShadowHost {
         val s = l.signal
         val lot = l.lot
         val ticket = if (s != null && lot != null) runCatching { OiWallBlast.ticket(l.d, s, lot) }.getOrNull() else null
-        val note = when {
-            s == null -> OiWallBlast.gaps(l.d)?.let { if (l.restarted) "the app restarted today; $it" else it }
-            l.restarted -> "the app restarted after the trigger: some prices are missing"
+        val note = listOfNotNull(partialNote(l), when {
+            s == null -> OiWallBlast.gaps(l.d)
             lot == null -> "the lot size was not known"
             l.token == null -> "the option's own prices were not on the stream"
             ticket == null -> "the ticket would not have filled"
             else -> null
-        }
+        }).joinToString("; ").ifEmpty { null }
         put(record(l, final = true, ticket = ticket, note = note))
         // Memory: the day's minutes (about a megabyte an index) are let go once written; only "done" is kept.
-        live[l.index] = Live(l.index, l.day).also { it.done = true }
+        live[l.index] = Live(l.index, l.day, l.startedAt).also { it.done = true }
+        follow()
+    }
+
+    private fun hm(t: LocalTime) = "%02d:%02d".format(java.util.Locale.ENGLISH, t.hour, t.minute)
+
+    /**
+     * The noon OI window (12:00 to the trigger) was not fully watched: this process began the day at or after 12:00, or
+     * picked up a logged trigger after a restart (15 Oct review). Null when it was watched whole.
+     */
+    private fun partialNote(l: Live): String? =
+        if (l.restarted || !l.startedAt.isBefore(LocalTime.NOON)) "partial data since restart at ${hm(l.startedAt)}" else null
+
+    /**
+     * Switched off mid-day (15 Oct review): every index still open today is closed now with a final record saying so (a
+     * trigger as "switched off after the trigger", never priced; a day without one as not judged), its minutes let go and
+     * its option no longer followed. Switched on again the same day, the evening line reports these as they are.
+     */
+    private fun switchedOff(now: LocalDateTime) {
+        val open = live.values.filter { !it.done && it.day == now.toLocalDate() }
+        if (open.isEmpty()) return
+        for (l in open) {
+            val note = if (l.signal != null) "switched off at ${hm(now.toLocalTime())} after the trigger: not priced" else "switched off at ${hm(now.toLocalTime())}: not judged"
+            put(record(l, final = true, note = note))
+            live[l.index] = Live(l.index, l.day, l.startedAt).also { it.done = true }
+        }
         follow()
     }
 
@@ -361,7 +403,7 @@ object OiWallShadowHost {
 
     /** Order Review's notes for [day]: one line an index (points only). */
     fun reviewNotes(day: LocalDate): List<String> =
-        resultsOn(day).map { "OI-wall check (shadow, not traded), ${it.index}: ${OiWallBlast.summary(it)}" }
+        resultsOn(day).map { "${OiWallBlast.HEAD}, ${it.index}: ${OiWallBlast.summary(it)}" }
 
     /** The diagnostics line for [day] (points only; empty days say so). */
     fun diagLine(day: LocalDate): String = OiWallBlast.diagLine(resultsOn(day))
@@ -380,6 +422,10 @@ object OiWallShadowHost {
      */
     @Volatile internal var testExpiring: ((String, LocalDate) -> Boolean)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test calendar exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: [index]'s OI of a strike as the rule reads it at [row] (NaN: none, or the day not in memory). */
+    internal fun oiForTest(index: String, strike: Double, right: String, row: Int): Double =
+        synchronized(lock) { live[index]?.d?.oiAt(strike, right, row) ?: Double.NaN }
 
     /** TEST ONLY: forget the day in memory and the log's cache (the file stays), as a restart of the app would. */
     internal fun resetForTest() = synchronized(lock) {

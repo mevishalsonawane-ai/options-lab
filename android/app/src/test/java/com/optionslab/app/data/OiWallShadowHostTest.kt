@@ -149,14 +149,14 @@ class OiWallShadowHostTest : RobolectricTest() {
         assertTrue(f.exists())
         assertFalse(String(f.readBytes(), Charsets.ISO_8859_1).contains("NIFTY"))
         val note = OiWallShadowHost.reviewNotes(day).single()
-        assertTrue(note, note.startsWith("OI-wall check (shadow, not traded), NIFTY: fired at 14:13, 25200 CE at 20.00 (wall 25100)"))
+        assertTrue(note, note.startsWith("OI-wall check (shadow, not traded; information only, not a trade signal), NIFTY: fired at 14:13, 25200 CE at 20.00 (wall 25100)"))
         assertTrue(note, "points a unit after costs" in note)
         val diag = OiWallShadowHost.diagLine(day)
         assertFalse(diag, Regex("Rs|₹|rupee").containsMatchIn(diag))
         // The evening line is put once (remembered across a restart).
         assertEquals(day.toString(), SecurePrefs.getString("oiwall.told"))
         val answer = OiWallShadowHost.answer()
-        assertTrue(answer, answer.startsWith("OI-wall check (shadow, not traded): fired on Nifty at 14:13") && "1 trigger" in answer)
+        assertTrue(answer, answer.startsWith("OI-wall check (shadow, not traded; information only, not a trade signal): fired on Nifty at 14:13") && "1 trigger" in answer)
     }
 
     @Test fun withoutTheOiUnwindingItDoesNotFireAndSaysSo() {
@@ -181,28 +181,70 @@ class OiWallShadowHostTest : RobolectricTest() {
         run(LocalTime.of(14, 21), LocalTime.of(15, 20))
         val r = OiWallShadowHost.resultsOn(day).single()
         assertEquals(297, r.signal!!.row)
-        assertTrue(r.note.orEmpty(), "restarted after the trigger" in r.note.orEmpty())
+        assertTrue(r.note.orEmpty(), "partial data since restart at 14:22" in r.note.orEmpty())
     }
 
-    @Test fun aTriggerNotPricedThatDayIsClosedTheNextDayAndTheSwitchOffLetsItsOptionGo() {
+    @Test fun aRestartBeforeTheWindowWithNoTriggerYetIsFlaggedAsPartial() {
+        // 15 Oct review: restarted at 12:31, before any trigger was logged - the noon OI peak's window was not all watched.
+        run(LocalTime.of(11, 58), LocalTime.of(12, 30))
+        OiWallShadowHost.resetForTest()
+        run(LocalTime.of(12, 31), LocalTime.of(15, 20))
+        val r = OiWallShadowHost.resultsOn(day).single()
+        assertEquals(297, r.signal!!.row)
+        assertNotNull(r.ticket)
+        assertTrue(r.note.orEmpty(), "partial data since restart at 12:32" in r.note.orEmpty())
+        // Watched whole from 11:59: no such flag (the first test's day has no note at all).
+    }
+
+    @Test fun anOiPacketWithoutATradeIsFiledUnderTheMinuteItArrivedNotTheLastTrade() {
+        // 15 Oct review: the call wall last TRADED in the 13:19 minute, but a newer OI packet (no trade) reached the phone in
+        // the 13:20 minute. The 13:19 minute's decision must not see that OI: it is filed under 13:20.
+        val r19 = OiWallBlast.minute(LocalTime.of(13, 19)); val r20 = r19 + 1
+        fun wallTick(oi: Long, tradeAt: LocalTime, arriveAt: LocalTime) = KiteStream.feedForTest(listOf(
+            KiteTicks.Tick(niftyToken, 25_000.0, exchangeTime = ms(arriveAt) / 1000),
+            KiteTicks.Tick(tokenOf(wall, "CE"), 20.0, volume = 1_000_000, oi = oi, exchangeTime = ms(tradeAt) / 1000,
+                lastTradeTime = ms(tradeAt) / 1000)), ms(arriveAt))
+        wallTick(300_000, LocalTime.of(13, 19, 10), LocalTime.of(13, 19, 10))
+        OiWallShadowHost.round(day.atTime(13, 20, 3), ms(LocalTime.of(13, 20, 3)))
+        wallTick(150_000, LocalTime.of(13, 19, 10), LocalTime.of(13, 20, 40))
+        OiWallShadowHost.round(day.atTime(13, 21, 3), ms(LocalTime.of(13, 21, 3)))
+        assertEquals(300_000.0, OiWallShadowHost.oiForTest("NIFTY", wall, "CE", r19), 0.0)
+        assertEquals(150_000.0, OiWallShadowHost.oiForTest("NIFTY", wall, "CE", r20), 0.0)
+    }
+
+    @Test fun switchedOffAfterTheTriggerAndOnAgainTheDayIsReportedAsSwitchedOff() {
         run(LocalTime.of(11, 58), LocalTime.of(14, 20))
         val option = tokenOf(25_200.0, "CE")
         assertTrue(option in KiteStream.followedNow())
-        // Switched off mid-afternoon: the option is let go at the next round, nothing more is recorded.
+        // Switched off at 14:22: a final record saying so at once, the option let go.
         Automations.set(Automations.Auto.OIWALL, false)
         Market.testClock = java.time.Clock.fixed(day.atTime(14, 22, 3).atZone(zone).toInstant(), zone)
         runBlocking { OiWallShadowHost.watch() }
         assertFalse(option in KiteStream.followedNow())
-        assertTrue(OiWallShadowHost.resultsOn(day).isEmpty())
+        val r = OiWallShadowHost.resultsOn(day).single()
+        assertEquals(297, r.signal!!.row)
+        assertNull(r.ticket)
+        assertEquals("switched off at 14:22 after the trigger: not priced", r.note)
+        // On again before 15:21: the day is not restarted, and the evening line says what happened (never "no expiry").
         Automations.set(Automations.Auto.OIWALL, true)
-        // The next trading day's first round closes it as not priced: never silently dropped from the record.
+        run(LocalTime.of(14, 30), LocalTime.of(15, 20))
+        assertEquals(r.note, OiWallShadowHost.resultsOn(day).single().note)
+        assertEquals(day.toString(), SecurePrefs.getString("oiwall.told"))
+        val line = OiWallBlast.eveningLine(OiWallShadowHost.resultsOn(day))
+        assertTrue(line, "fired on Nifty at 14:13" in line && "switched off at 14:22 after the trigger" in line && "no expiry" !in line)
+        assertTrue(OiWallShadowHost.answer(), "1 trigger" in OiWallShadowHost.answer())
+    }
+
+    @Test fun aTriggerNotPricedThatDayIsClosedTheNextDay() {
+        run(LocalTime.of(11, 58), LocalTime.of(14, 20))
+        // The app is not running at 15:21 (killed): the next trading day's first round closes it as not priced.
+        OiWallShadowHost.resetForTest()
         val next = LocalDate.of(2026, 10, 14)
         OiWallShadowHost.round(next.atTime(12, 0, 3), next.atTime(12, 0, 3).atZone(zone).toInstant().toEpochMilli())
         val r = OiWallShadowHost.resultsOn(day).single()
         assertEquals(297, r.signal!!.row)
         assertNull(r.ticket)
-        assertTrue(r.note.orEmpty(), "not priced" in r.note.orEmpty())
-        assertTrue(OiWallShadowHost.answer(), "1 trigger" in OiWallShadowHost.answer())
+        assertTrue(r.note.orEmpty(), "not priced: the app was not running at 15:21" in r.note.orEmpty())
     }
 
     @Test fun aDayWithoutAnExpiryOrWithTheSwitchOffRecordsNothing() {

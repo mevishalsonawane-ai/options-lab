@@ -49,7 +49,7 @@ class GammaAskRoutingTest {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         compose.setContent { IraAlgoTheme("light") { Text("Jarvis") } }
         IraHub.ask("did the oi wall check fire today")
-        compose.until(60_000, "the OI-wall answer") { lastReply()?.startsWith("OI-wall check (shadow, not traded)") == true }
+        compose.until(60_000, "the OI-wall answer") { lastReply()?.startsWith("OI-wall check (shadow, not traded; information only, not a trade signal)") == true }
         assertTrue(lastReply()!!, "nothing trades on it" in lastReply()!!)
         assertTrue(IraHub.state.value.pending.isEmpty())
     }

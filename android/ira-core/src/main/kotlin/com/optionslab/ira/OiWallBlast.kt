@@ -404,6 +404,13 @@ object OiWallBlast {
 
     // ---- the words (points only; no rupee amount leaves the encrypted log) ------------------------------------------
 
+    /**
+     * How every line of the log starts (15 Oct review): a shadow, never traded, and information only - never a trade signal.
+     */
+    const val HEAD = "OI-wall check (shadow, not traded; information only, not a trade signal)"
+    /** The diagnostics line's start (points only). */
+    const val DIAG = "oi_wall (shadow; information only, not a trade signal)"
+
     /** One index's day in the log: fired (with its ticket), or not, or why it could not be judged. */
     data class Result(val index: String, val day: LocalDate, val signal: Signal?, val ticket: Ticket?, val note: String? = null)
 
@@ -434,7 +441,7 @@ object OiWallBlast {
 
     /** Jarvis's evening line on an expiry day (points only). */
     fun eveningLine(results: List<Result>): String {
-        if (results.isEmpty()) return "OI-wall check (shadow, not traded): no expiry today for the indices it watches."
+        if (results.isEmpty()) return "$HEAD: no expiry today for the indices it watches."
         val parts = results.map { r ->
             val who = OrderFlow.label(r.index)
             val s = r.signal
@@ -451,19 +458,19 @@ object OiWallBlast {
                 }
             }
         }
-        return "OI-wall check (shadow, not traded): " + parts.joinToString("; ") + ". A record only: R26 found no edge, so nothing trades on it."
+        return "$HEAD: " + parts.joinToString("; ") + ". A record only: R26 found no edge, so nothing trades on it."
     }
 
     /** The diagnostics line (points only): "oi_wall 2026-10-14: NIFTY fired 14:12 CE 25100 @ 22.40 4x +12.00 ...". */
     fun diagLine(results: List<Result>): String =
-        if (results.isEmpty()) "oi_wall: no expiry watched today" else "oi_wall: " + results.joinToString("; ") { "${it.index} ${summary(it)}" }
+        if (results.isEmpty()) "$DIAG: no expiry watched today" else "$DIAG: " + results.joinToString("; ") { "${it.index} ${summary(it)}" }
 
     /** The tally over every logged day: triggers, and the rule's (4x) points total, for "how is the OI-wall check doing". */
     fun tally(results: List<Result>): String {
         val fired = results.filter { it.signal != null }
         val tickets = fired.mapNotNull { it.ticket }
         val total = tickets.sumOf { it.of(Exit.TARGET_4X)?.points ?: 0.0 }
-        return "OI-wall check (shadow, not traded): ${results.size} expiry-index day${if (results.size == 1) "" else "s"} logged, " +
+        return "$HEAD: ${results.size} expiry-index day${if (results.size == 1) "" else "s"} logged, " +
             "${fired.size} trigger${if (fired.size == 1) "" else "s"}" +
             (if (tickets.isEmpty()) "" else ", ${pts(total)} points a unit after costs by its rule over ${tickets.size} ticket${if (tickets.size == 1) "" else "s"}") +
             ". R26 asked to look again after 30 triggers; nothing trades on it."

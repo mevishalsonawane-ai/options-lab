@@ -16,10 +16,12 @@ object MemoryChain {
     /**
      * One option: its token when the day's list has it, last price, how old it is (ms), OI and the day's volume (units).
      * [fromTick]: from the price stream (its age is the last trade's; its volume the exchange's day total), else from the
-     * last chain read (aged from the read; a candle chain's volume is only the minutes read).
+     * last chain read (aged from the read; a candle chain's volume is only the minutes read). [packetAgeMs]: how old the
+     * packet that carried the OI and the volume is (15 Oct review: the exchange sends a new OI without a trade, so a tick's
+     * OI is as new as its arrival, not as old as its last trade); for a chain read, the read's age.
      */
     data class Leg(val strike: Double, val right: String, val token: Long?, val ltp: Double, val ageMs: Long, val oi: Long?, val cumVol: Long?,
-                   val fromTick: Boolean = false)
+                   val fromTick: Boolean = false, val packetAgeMs: Long = ageMs)
 
     /** The chain: spot and how old it is, the expiry, the lot, and the options at most [each] strikes either side. */
     data class Snap(val index: String, val spot: Double?, val spotAgeMs: Long?, val expiry: LocalDate?, val lot: Int?, val legs: List<Leg>)
@@ -53,7 +55,7 @@ object MemoryChain {
         for (o in ins) if (o.strike in strikes) KiteStream.seen(o.token)?.takeIf { it.tick.last > 0 }?.let { s ->
             val traded = s.tick.lastTradeTime?.takeIf { it > 0 }?.let { it * 1000 } ?: s.at
             legs += Leg(o.strike, o.right.name, o.token, s.tick.last, (nowMs - traded).coerceAtLeast(0), s.tick.oi.takeIf { it > 0 },
-                s.tick.volume.takeIf { it > 0 }, fromTick = true)
+                s.tick.volume.takeIf { it > 0 }, fromTick = true, packetAgeMs = (nowMs - s.at).coerceAtLeast(0))
             seen += o.strike to o.right.name
         }
         // Then the last chain read (the same expiry only), aged from when it was read.

@@ -335,11 +335,11 @@ class OiWallBlastTest {
 
     @Test fun theEveningLineSaysFiredOrNotInPoints() {
         val yes = B.eveningLine(listOf(result(true)))
-        assertTrue(yes.startsWith("OI-wall check (shadow, not traded): fired on BankNifty at 14:05 (55200 CE at 22.40); would have made +"), yes)
+        assertTrue(yes.startsWith("OI-wall check (shadow, not traded; information only, not a trade signal): fired on BankNifty at 14:05 (55200 CE at 22.40); would have made +"), yes)
         assertTrue("points a unit after costs" in yes && "held to 15:20" in yes && "half at 2x, step lock" in yes, yes)
         assertTrue("nothing trades on it" in yes)
         val no = B.eveningLine(listOf(result(false, "NIFTY")))
-        assertEquals("OI-wall check (shadow, not traded): didn't fire on Nifty. A record only: R26 found no edge, so nothing trades on it.", no)
+        assertEquals("OI-wall check (shadow, not traded; information only, not a trade signal): didn't fire on Nifty. A record only: R26 found no edge, so nothing trades on it.", no)
         assertTrue("no expiry today" in B.eveningLine(emptyList()))
         val gap = B.eveningLine(listOf(OiWallBlast.Result("NIFTY", LocalDate.of(2026, 10, 20), null, null, "no option chain at 13:00")))
         assertTrue("didn't fire on Nifty (no option chain at 13:00)" in gap, gap)
@@ -347,10 +347,14 @@ class OiWallBlastTest {
             OiWallBlast.Signal(B.FIRST, -1, 24900.0, 18.0, 25000.0, true, 20.0), null)))
         assertTrue("would not have filled" in unfilled, unfilled)
         // No rupee amount anywhere (the diagnostics' privacy rule).
-        for (s in listOf(yes, no, B.diagLine(listOf(result(true), result(false, "NIFTY"))), B.tally(listOf(result(true), result(false)))))
+        // And every output says it is a shadow and information only (15 Oct review).
+        for (s in listOf(yes, no, gap, unfilled, B.eveningLine(emptyList()), B.diagLine(listOf(result(true), result(false, "NIFTY"))),
+            B.diagLine(emptyList()), B.tally(listOf(result(true), result(false))), B.tally(emptyList()))) {
             assertFalse(Regex("Rs|₹|rupee").containsMatchIn(s), s)
-        assertTrue(B.diagLine(listOf(result(true))).startsWith("oi_wall: BANKNIFTY fired at 14:05, 55200 CE at 22.40 (wall 55100)"))
-        assertEquals("oi_wall: no expiry watched today", B.diagLine(emptyList()))
+            assertTrue("information only, not a trade signal" in s && "shadow" in s, s)
+        }
+        assertTrue(B.diagLine(listOf(result(true))).startsWith("oi_wall (shadow; information only, not a trade signal): BANKNIFTY fired at 14:05, 55200 CE at 22.40 (wall 55100)"))
+        assertEquals("oi_wall (shadow; information only, not a trade signal): no expiry watched today", B.diagLine(emptyList()))
         val tally = B.tally(listOf(result(true), result(false)))
         assertTrue("2 expiry-index days logged, 1 trigger" in tally && "over 1 ticket" in tally && "30 triggers" in tally, tally)
         assertTrue(B.summary(OiWallBlast.Result("NIFTY", LocalDate.of(2026, 10, 20),
