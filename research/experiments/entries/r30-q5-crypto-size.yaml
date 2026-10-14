@@ -9,8 +9,7 @@ period:
   design: 2023-11-01..2025-03-31 and 2025-11-01..2026-03-31; folds 2024H2, 2025Q1, 2025Q4-26Q1
   holdout: 2025-04-01..2025-09-30 UTC (F1 crypto's block, already read by F1C for its own rules), read once by R30
 instruments:
-- BTCUSDT
-- ETHUSDT
+- CRYPTO
 features:
 - as r30-q5-crypto-direction
 model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 120 one-minute bars + tabular features;
