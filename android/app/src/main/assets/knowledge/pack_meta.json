@@ -1,21 +1,21 @@
 {
   "app_lessons": 0,
   "built_from": "2026-10-14",
-  "bytes": 997939,
+  "bytes": 1007276,
   "counts": {
     "answer": 1296,
-    "doc": 10138,
-    "experiment": 377,
-    "finding": 272,
+    "doc": 10227,
+    "experiment": 385,
+    "finding": 280,
     "model": 6,
     "open": 10,
     "strategy": 52,
     "study": 60
   },
-  "experiments": 377,
-  "facts": 12211,
+  "experiments": 385,
+  "facts": 12316,
   "model_cards": 1,
   "schema": 1,
-  "shared_items": 577,
-  "version": "1472950f3ee3"
+  "shared_items": 590,
+  "version": "c051c83f9021"
 }
