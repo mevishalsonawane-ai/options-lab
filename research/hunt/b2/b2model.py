@@ -124,13 +124,24 @@ def auc_w(y, s, w=None):
 
 
 def boot_p(y, s, days, n=BOOT, seed=SEED):
-    """One-sided p for AUC > 0.5 by resampling whole days (2,000 resamples); also the 90% interval."""
+    """One-sided p for AUC > 0.5 by resampling whole days (2,000 resamples); also the 90% interval. The scores are
+    sorted once; each resample only re-weights rows by how often their day was drawn."""
     rng = np.random.default_rng(seed)
     ud, inv = np.unique(days, return_inverse=True)
+    y = np.asarray(y, dtype=bool)
+    o = np.argsort(np.asarray(s, dtype=float), kind="mergesort")
+    ss, yy, ii = np.asarray(s, dtype=float)[o], y[o], inv[o]
+    _, start = np.unique(ss, return_index=True)
+    grp = np.repeat(np.arange(len(start)), np.diff(np.r_[start, len(ss)]))
+    ng = len(start)
     vals = np.empty(n)
-    for i in range(n):
-        cnt = np.bincount(rng.integers(0, len(ud), len(ud)), minlength=len(ud))
-        vals[i] = auc_w(y, s, cnt[inv])
+    for k in range(n):
+        w = np.bincount(rng.integers(0, len(ud), len(ud)), minlength=len(ud))[ii].astype(float)
+        gn = np.bincount(grp, weights=np.where(~yy, w, 0.0), minlength=ng)
+        gp = np.bincount(grp, weights=np.where(yy, w, 0.0), minlength=ng)
+        below = np.r_[0.0, np.cumsum(gn)[:-1]]
+        den = gp.sum() * gn.sum()
+        vals[k] = (gp * (below + 0.5 * gn)).sum() / den if den > 0 else np.nan
     return float((1 + (vals <= 0.5).sum()) / (n + 1)), float(np.nanpercentile(vals, 5)), float(np.nanpercentile(vals, 95))
 
 
