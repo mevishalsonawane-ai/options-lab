@@ -75,12 +75,21 @@ def signals(F: pd.DataFrame, fz: dict) -> np.ndarray:
     return np.where(np.maximum(pc, pp) >= fz["threshold"], side, "")
 
 
+TRADE_COLS = ["und", "day", "m", "side", "net", "exit_row", "net_2x", "post", "exit_px", "entry", "qty"]
+
+
+def open_forward():
+    """Lift both date limits (R29's lake reader and R30's allowed days) so sessions after 12 Oct 2026 are read."""
+    K.K29.LAST_DAY = date(2100, 1, 1)
+    K.LAST = date(2100, 1, 1)
+
+
 def score():
     fz = load_frozen()
     import r29data as D29
+    open_forward()                                             # before the rebuild: R29's reader cuts at LAST_DAY
     for u in (UND, "BANKNIFTY"):
         D29.build(u)                                           # refresh R29's index / option tables from the lake
-    K.LAST = date(2100, 1, 1)                                  # forward days are allowed from here on
     tabs = {}
     for u in (UND, "BANKNIFTY"):
         F = RD.features(u)
@@ -91,7 +100,7 @@ def score():
         return
     Ch = RD.chain_features(UND)
     Ch["day"] = pd.to_datetime(Ch.day).dt.date
-    L = RD.labels(UND)
+    L = RD.labels(UND, since=FORWARD_FROM)
     L["day"] = pd.to_datetime(L.day).dt.date
     c = tabs["BANKNIFTY"][["day", "m", "ret_15m", "ret_day", "rib5_stack"]].rename(
         columns={"ret_15m": "x_ret_15m", "ret_day": "x_ret_day", "rib5_stack": "x_rib5_stack"})
@@ -101,32 +110,41 @@ def score():
     T["und"], T["und_id"] = UND, K.UNDS.index(UND)
     side = signals(T, fz)
     Tr = MO.trade(T, side, "X1")
-    days = sorted(T.day.unique())[:SESSIONS]
+    if not len(Tr):
+        Tr = pd.DataFrame(columns=TRADE_COLS)
+    all_days = sorted(T.day.unique())
+    days = all_days[:SESSIONS]
     Tr = Tr[Tr.day.isin(days)]
     K.RESULTS.mkdir(exist_ok=True)
     Tr.to_csv(LOG, index=False)
     T[T.day.isin(days)][["day", "m", "C_X1", "P_X1"]].to_parquet(FWD / "forward_labels.parquet")
-    print(f"{len(days)} forward sessions scored ({days[0]} .. {days[-1]}), {len(Tr)} trades, net Rs {Tr.net.sum():+,.0f}")
+    # the newest session's expiry flag needs the NEXT session (R25's rule), so the verdict waits for session 41
+    (FWD / "forward_state.json").write_text(json.dumps(dict(sessions_in_lake=len(all_days), scored=len(days))))
+    net = float(pd.to_numeric(Tr.net).sum()) if len(Tr) else 0.0
+    print(f"{len(days)} forward sessions scored ({days[0]} .. {days[-1]}), {len(Tr)} trades, net Rs {net:+,.0f}")
 
 
 def verdict():
     flag = K.RESULTS / "FORWARD_VERDICT"
     if flag.exists():
         raise SystemExit("the forward verdict has been read already")
-    Tr = pd.read_csv(LOG, parse_dates=["day"])
-    Tr["day"] = Tr.day.dt.date
+    Tr = pd.read_csv(LOG)
+    Tr["day"] = pd.to_datetime(Tr.day).dt.date
     lab = pd.read_parquet(FWD / "forward_labels.parquet")
     lab["day"] = pd.to_datetime(lab.day).dt.date
     if lab.day.nunique() < SESSIONS:
         raise SystemExit(f"only {lab.day.nunique()} of {SESSIONS} sessions scored; the verdict waits")
-    flag.write_text(pd.Timestamp.now(tz="Asia/Kolkata").isoformat() + "\n")
+    state = json.loads((FWD / "forward_state.json").read_text())
+    if state["sessions_in_lake"] <= SESSIONS:
+        raise SystemExit("session 41 is not in the lake yet (the 40th session's expiry flag needs it); the verdict waits")
     lab["und"] = UND
-    p, tw = MO.twin_p(Tr.assign(und=UND), lab, "X1")
+    p, tw = MO.twin_p(Tr.assign(und=UND), lab, "X1") if len(Tr) else (np.nan, np.nan)
     r = dict(sessions=int(lab.day.nunique()), trades=len(Tr), net=float(Tr.net.sum()),
              per_trade=float(Tr.net.mean()) if len(Tr) else np.nan, net_2x=float(np.nansum(Tr.net_2x)),
              p_twins=p, twin_per_trade=tw)
     r["passes"] = bool(len(Tr) and r["net"] > 0 and p < 0.05 and r["net_2x"] > 0)
     (K.RESULTS / "forward_verdict.json").write_text(json.dumps(r, indent=1, default=float))
+    flag.write_text(pd.Timestamp.now(tz="Asia/Kolkata").isoformat() + "\n")       # only after the result is saved
     print(r)
 
 

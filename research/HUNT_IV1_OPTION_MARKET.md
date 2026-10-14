@@ -42,7 +42,8 @@ none goes to the forward test. R30's NIFTY model stays the only forward candidat
 O2 FINNIFTY reached q 0.030 against random entries while losing Rs 42 a trade. Random entries lose even more here, so
 beating them is not enough.
 
-The O1 model leans on the straddle price above all, then days to expiry, IV skew and the straddle's change since 09:20.
+The O1 model leans on the straddle price most in 2025 and 2026 (IV skew in Jul–Dec 2024), then days to expiry, IV
+skew and the straddle's change since 09:20.
 
 ## Files
 

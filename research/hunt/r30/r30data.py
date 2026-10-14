@@ -213,7 +213,7 @@ def _spread_trade(op, paths, und, d_ord, t, side, qty, sq, mult=1.0):
     return gross - ch, debit * qty
 
 
-def labels(und: str) -> pd.DataFrame:
+def labels(und: str, since: date | None = None) -> pd.DataFrame:
     op = D29.load_options(und)
     if op is None:
         return pd.DataFrame()
@@ -223,7 +223,7 @@ def labels(und: str) -> pd.DataFrame:
     rec = []
     bse = und in K.BSE
     for d in sorted(grid.pos):
-        if not K.allowed(d) or d.toordinal() not in op.atm:
+        if not K.allowed(d) or d.toordinal() not in op.atm or (since and d < since):
             continue
         K.check_day(d)
         d_ord, qty, sq = d.toordinal(), K.lot(und, d), S29.sq_row(op, d.toordinal())

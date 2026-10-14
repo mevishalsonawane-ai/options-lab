@@ -193,3 +193,33 @@ def test_forward_refuses_a_changed_model(tmp_path, monkeypatch):
         FW.load_frozen()
     assert FW.recorded_sha() and len(FW.recorded_sha()) == 64
     assert FW.FORWARD_FROM > K.LAST and FW.SESSIONS == 40
+
+
+def test_forward_opens_both_date_limits(monkeypatch):
+    """Review fix: R29's lake reader cuts at its LAST_DAY, so the forward run must lift it as well as R30's."""
+    monkeypatch.setattr(K.K29, "LAST_DAY", K.K29.LAST_DAY)
+    monkeypatch.setattr(K, "LAST", K.LAST)
+    FW.open_forward()
+    assert K.K29.LAST_DAY > date(2027, 1, 1) and K.LAST > date(2027, 1, 1)
+    assert K.allowed(date(2026, 10, 14)) and not K.allowed(date(2023, 6, 1))
+
+
+def test_forward_verdict_waits_and_survives_no_trades(tmp_path, monkeypatch):
+    monkeypatch.setattr(FW, "FWD", tmp_path)
+    monkeypatch.setattr(FW, "LOG", tmp_path / "t.csv")
+    monkeypatch.setattr(K, "RESULTS", tmp_path)
+    pd.DataFrame(columns=FW.TRADE_COLS).to_csv(tmp_path / "t.csv", index=False)
+    days = pd.bdate_range("2026-10-13", periods=40).date
+    lab = pd.DataFrame([dict(day=d, m=m, C_X1=-10.0, P_X1=-10.0) for d in days for m in K.GRID])
+    lab.to_parquet(tmp_path / "forward_labels.parquet")
+    import json as _j
+    (tmp_path / "forward_state.json").write_text(_j.dumps(dict(sessions_in_lake=40, scored=40)))
+    with pytest.raises(SystemExit):
+        FW.verdict()                                            # session 41 not in the lake yet
+    assert not (tmp_path / "FORWARD_VERDICT").exists()          # a refused read does not burn the one read
+    (tmp_path / "forward_state.json").write_text(_j.dumps(dict(sessions_in_lake=41, scored=40)))
+    FW.verdict()                                                # no trades: no crash, a fail
+    r = _j.loads((tmp_path / "forward_verdict.json").read_text())
+    assert r["trades"] == 0 and r["passes"] is False and (tmp_path / "FORWARD_VERDICT").exists()
+    with pytest.raises(SystemExit):
+        FW.verdict()                                            # read once
