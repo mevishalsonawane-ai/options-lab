@@ -251,8 +251,8 @@ def q4_trades(R: pd.DataFrame) -> pd.DataFrame:
             continue
         s, o = ("C", "P") if r._side > 0 else ("P", "C")
         rows.append(dict(und=r.und, day=r.day, net=r[f"tr_{s}_net"], net_x2=r[f"tr_{s}_net_x2"],
-                         other=r[f"tr_{o}_net"], cut=r[f"tr_{s}_cut"]))
-    return pd.DataFrame(rows, columns=["und", "day", "net", "net_x2", "other", "cut"])
+                         other=r[f"tr_{o}_net"], cut=r[f"tr_{s}_cut"], call=nc, is_call=s == "C"))
+    return pd.DataFrame(rows, columns=["und", "day", "net", "net_x2", "other", "cut", "call", "is_call"])
 
 
 def rules_for_fold(q: str, D: pd.DataFrame, fit: dict, te: np.ndarray, model: str) -> dict:
@@ -304,6 +304,9 @@ def rule_report(rule: dict, all_days) -> dict:
     else:
         tw = E.twins_skip(rule["all"], rule["n_skip"])
     st["p_vs_twins"] = E.twin_p(tot, tw) if len(t) else np.nan
+    if "call" in t:              # not pre-registered (reported only): the same nights, always the call (gap-up drift)
+        st["share_calls"] = float(t.is_call.mean()) if len(t) else np.nan
+        st["same_nights_all_calls_pnl_per_day"] = float(t.call.sum() / max(len(set(all_days)), 1))
     st["twin_mean_total"] = float(np.mean(tw))
     if "base" in rule:
         st["unfiltered"] = rule["base"]

@@ -176,7 +176,7 @@ def trade_stats(net, days, all_days, cut_short=None, net_x2=None) -> dict:
         out["big_winners_cut_short"] = int(np.nansum(cut_short))
     if net_x2 is not None:
         x = np.asarray(net_x2, float)
-        out["pnl_per_day_stress"] = float(np.nansum(x) / n_days) if n_days else 0.0
+        out["pnl_per_day_stress"] = float(np.nansum(x) / n_days) if n_days and np.isfinite(x).any() else np.nan
     return out
 
 

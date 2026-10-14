@@ -16,7 +16,7 @@
        "seed": 0,
        "epochs": 25,
        "val_loss": 0.596874475479126,
-       "seconds": 0.2
+       "seconds": 0.1
       },
       {
        "seed": 1,
@@ -39,19 +39,19 @@
        "seed": 0,
        "epochs": 25,
        "val_loss": 0.6069290637969971,
-       "seconds": 1.2
+       "seconds": 0.7
       },
       {
        "seed": 1,
        "epochs": 25,
        "val_loss": 0.5903810858726501,
-       "seconds": 1.5
+       "seconds": 0.8
       },
       {
        "seed": 2,
        "epochs": 25,
        "val_loss": 0.6086337566375732,
-       "seconds": 1.2
+       "seconds": 0.6
       }
      ],
      "params": 6657
@@ -62,19 +62,19 @@
        "seed": 0,
        "epochs": 25,
        "val_loss": 0.5878113508224487,
-       "seconds": 1.6
+       "seconds": 1.2
       },
       {
        "seed": 1,
        "epochs": 25,
        "val_loss": 0.5897722840309143,
-       "seconds": 2.0
+       "seconds": 1.0
       },
       {
        "seed": 2,
        "epochs": 25,
        "val_loss": 0.6023409366607666,
-       "seconds": 1.9
+       "seconds": 1.1
       }
      ],
      "params": 9089
@@ -135,19 +135,19 @@
        "seed": 0,
        "epochs": 15,
        "val_loss": 0.6511251330375671,
-       "seconds": 0.3
+       "seconds": 0.1
       },
       {
        "seed": 1,
        "epochs": 14,
        "val_loss": 0.655720055103302,
-       "seconds": 0.2
+       "seconds": 0.1
       },
       {
        "seed": 2,
        "epochs": 22,
        "val_loss": 0.6490586996078491,
-       "seconds": 0.3
+       "seconds": 0.2
       }
      ],
      "params": 10689
@@ -158,19 +158,19 @@
        "seed": 0,
        "epochs": 25,
        "val_loss": 0.6438071131706238,
-       "seconds": 4.6
+       "seconds": 2.8
       },
       {
        "seed": 1,
        "epochs": 13,
        "val_loss": 0.6628433465957642,
-       "seconds": 1.7
+       "seconds": 1.3
       },
       {
        "seed": 2,
        "epochs": 22,
        "val_loss": 0.6507377624511719,
-       "seconds": 3.5
+       "seconds": 2.3
       }
      ],
      "params": 6657
@@ -181,19 +181,19 @@
        "seed": 0,
        "epochs": 25,
        "val_loss": 0.6517229080200195,
-       "seconds": 5.9
+       "seconds": 3.6
       },
       {
        "seed": 1,
        "epochs": 14,
        "val_loss": 0.6570952534675598,
-       "seconds": 4.4
+       "seconds": 2.1
       },
       {
        "seed": 2,
        "epochs": 22,
        "val_loss": 0.654104471206665,
-       "seconds": 5.9
+       "seconds": 3.2
       }
      ],
      "params": 9089
@@ -254,19 +254,19 @@
        "seed": 0,
        "epochs": 5,
        "val_loss": 0.6925897598266602,
-       "seconds": 0.2
+       "seconds": 0.1
       },
       {
        "seed": 1,
        "epochs": 5,
        "val_loss": 0.7009141445159912,
-       "seconds": 0.2
+       "seconds": 0.1
       },
       {
        "seed": 2,
        "epochs": 5,
        "val_loss": 0.6970829367637634,
-       "seconds": 0.2
+       "seconds": 0.1
       }
      ],
      "params": 10689
@@ -277,19 +277,19 @@
        "seed": 0,
        "epochs": 12,
        "val_loss": 0.7123748064041138,
-       "seconds": 2.7
+       "seconds": 1.5
       },
       {
        "seed": 1,
        "epochs": 7,
        "val_loss": 0.6945227384567261,
-       "seconds": 1.5
+       "seconds": 0.8
       },
       {
        "seed": 2,
        "epochs": 7,
        "val_loss": 0.7034798860549927,
-       "seconds": 1.5
+       "seconds": 1.0
       }
      ],
      "params": 6657
@@ -300,19 +300,19 @@
        "seed": 0,
        "epochs": 6,
        "val_loss": 0.7007888555526733,
-       "seconds": 1.5
+       "seconds": 1.1
       },
       {
        "seed": 1,
        "epochs": 7,
        "val_loss": 0.7075219750404358,
-       "seconds": 2.2
+       "seconds": 1.2
       },
       {
        "seed": 2,
        "epochs": 7,
        "val_loss": 0.6939108371734619,
-       "seconds": 2.4
+       "seconds": 1.1
       }
      ],
      "params": 9089
@@ -396,19 +396,19 @@
        "seed": 0,
        "epochs": 6,
        "val_loss": 0.6888673305511475,
-       "seconds": 1.4
+       "seconds": 1.2
       },
       {
        "seed": 1,
        "epochs": 6,
        "val_loss": 0.6940242052078247,
-       "seconds": 1.6
+       "seconds": 1.3
       },
       {
        "seed": 2,
        "epochs": 7,
        "val_loss": 0.6937878131866455,
-       "seconds": 1.9
+       "seconds": 1.5
       }
      ],
      "params": 6721
@@ -419,19 +419,19 @@
        "seed": 0,
        "epochs": 6,
        "val_loss": 0.69329833984375,
-       "seconds": 1.8
+       "seconds": 1.7
       },
       {
        "seed": 1,
        "epochs": 7,
        "val_loss": 0.6931583881378174,
-       "seconds": 2.4
+       "seconds": 2.2
       },
       {
        "seed": 2,
        "epochs": 7,
        "val_loss": 0.6931371688842773,
-       "seconds": 2.8
+       "seconds": 2.1
       }
      ],
      "params": 9153
@@ -1095,6 +1095,8 @@
      "big_winners_cut_short": 76,
      "pnl_per_day_stress": 57.997364457831466,
      "p_vs_twins": 0.001998001998001998,
+     "share_calls": 0.9907063197026023,
+     "same_nights_all_calls_pnl_per_day": -1.4370783132529865,
      "twin_mean_total": -211590.12360999995,
      "positive_folds": "3/4"
     },
@@ -1114,6 +1116,8 @@
       "big_winners_cut_short": 31,
       "pnl_per_day_stress": 178.4812820512821,
       "p_vs_twins": 0.052947052947052944,
+      "share_calls": 0.9813664596273292,
+      "same_nights_all_calls_pnl_per_day": 43.98230769230772,
       "twin_mean_total": -33853.97377
      },
      "2024H2": {
@@ -1131,6 +1135,8 @@
       "big_winners_cut_short": 9,
       "pnl_per_day_stress": 257.1513043478262,
       "p_vs_twins": 0.000999000999000999,
+      "share_calls": 0.9722222222222222,
+      "same_nights_all_calls_pnl_per_day": 111.01556521739134,
       "twin_mean_total": -15104.349050000004
      },
      "2025": {
@@ -1148,6 +1154,8 @@
       "big_winners_cut_short": 33,
       "pnl_per_day_stress": 164.07967741935502,
       "p_vs_twins": 0.002997002997002997,
+      "share_calls": 1.0,
+      "same_nights_all_calls_pnl_per_day": 191.57705645161295,
       "twin_mean_total": -89919.08504999998
      },
      "2026": {
@@ -1165,6 +1173,8 @@
       "big_winners_cut_short": 3,
       "pnl_per_day_stress": -1097.291492537313,
       "p_vs_twins": 0.5324675324675324,
+      "share_calls": 1.0,
+      "same_nights_all_calls_pnl_per_day": -1067.5220895522386,
       "twin_mean_total": -68903.66758999998
      }
     }
@@ -1185,6 +1195,8 @@
      "big_winners_cut_short": 90,
      "pnl_per_day_stress": -74.69816265060228,
      "p_vs_twins": 0.04795204795204795,
+     "share_calls": 0.8432122370936902,
+     "same_nights_all_calls_pnl_per_day": -234.22530120481915,
      "twin_mean_total": -175391.74665999998,
      "positive_folds": "2/4"
     },
@@ -1204,6 +1216,8 @@
       "big_winners_cut_short": 31,
       "pnl_per_day_stress": 126.41688034188037,
       "p_vs_twins": 0.09290709290709291,
+      "share_calls": 0.9846153846153847,
+      "same_nights_all_calls_pnl_per_day": 147.06589743589743,
       "twin_mean_total": -26757.8909
      },
      "2024H2": {
@@ -1221,6 +1235,8 @@
       "big_winners_cut_short": 26,
       "pnl_per_day_stress": -88.0862608695648,
       "p_vs_twins": 0.33266733266733267,
+      "share_calls": 0.75,
+      "same_nights_all_calls_pnl_per_day": -537.0254782608694,
       "twin_mean_total": -18400.537099999987
      },
      "2025": {
@@ -1238,6 +1254,8 @@
       "big_winners_cut_short": 29,
       "pnl_per_day_stress": 42.93649193548403,
       "p_vs_twins": 0.03596403596403597,
+      "share_calls": 0.8202764976958525,
+      "same_nights_all_calls_pnl_per_day": -195.44495967741926,
       "twin_mean_total": -69242.87774999997
      },
      "2026": {
@@ -1255,6 +1273,8 @@
       "big_winners_cut_short": 4,
       "pnl_per_day_stress": -1189.544179104478,
       "p_vs_twins": 0.6413586413586414,
+      "share_calls": 0.8035714285714286,
+      "same_nights_all_calls_pnl_per_day": -1189.7125373134331,
       "twin_mean_total": -63160.77661000001
      }
     }
