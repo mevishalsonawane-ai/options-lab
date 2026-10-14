@@ -102,4 +102,21 @@ class HotPathTest {
         assertEquals(t0 + 275_000, RouteWarm.next(t0 + 270_000, t0 + 255_000, liveActive = true, armed = true))
         assertEquals(t0 + 295_000, RouteWarm.next(t0 + 285_000, t0 + 280_000, liveActive = true, armed = true))
     }
+
+    @Test fun aTickThatReadTheClockJustBeforeTheScheduledEmissionIsHeldNotEmitted() {
+        // 14 Oct CI: the scheduled redraw ran at 5714; a tick that read the clock at 5713 took the lock just after it and,
+        // seen as "the clock went back", emitted again 1 ms later. A few ms back is now within the gap: held for the next one.
+        val c = Coalescer()
+        assertTrue(c.offer(5_463).now)
+        val d = c.offer(5_473)
+        assertEquals(5_713L, d.scheduleAt)
+        c.fired(5_714)
+        val late = c.offer(5_713)
+        assertFalse(late.now, "a tick 1 ms 'before' the scheduled emission is not shown at once")
+        assertEquals(5_964L, late.scheduleAt)
+        // A real backward jump (more than the gap) still starts afresh.
+        val c2 = Coalescer()
+        assertTrue(c2.offer(10_000).now)
+        assertTrue(c2.offer(9_000).now)
+    }
 }

@@ -80,7 +80,9 @@ class Coalescer(private val gapMs: Long = GAP_MS) {
 
     /** An event at [nowMs]. */
     fun offer(nowMs: Long): Decision {
-        if (lastEmit == Long.MIN_VALUE || nowMs - lastEmit >= gapMs || nowMs < lastEmit) {
+        // A clock that went back by more than the gap starts afresh; a few ms "back" is only two threads reading the clock in
+        // a different order from taking the lock (14 Oct: it let a tick emit 1 ms after the scheduled one) - within the gap.
+        if (lastEmit == Long.MIN_VALUE || nowMs - lastEmit >= gapMs || lastEmit - nowMs > gapMs) {
             if (held) return Decision(false, null)     // the scheduled one carries it, at most [gapMs] after the last
             lastEmit = nowMs
             return Decision(true, null)
