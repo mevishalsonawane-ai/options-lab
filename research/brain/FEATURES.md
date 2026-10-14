@@ -4,6 +4,8 @@
 
 166 features, signature `124f3f21dd0c` (cube v2). Every feature at minute t uses only cube rows with ts <= t (checked by `tests/test_lookahead.py`). Labels are not features: see `labels.py`.
 
+231 features, signature `16af52f70b48` (cube v2). Every feature at minute t uses only cube rows with ts <= t (checked by `tests/test_lookahead.py`). Labels are not features: see `labels.py`.
+
 201 features, signature `ea7c7ba6417b` (cube v2). Every feature at minute t uses only cube rows with ts <= t (checked by `tests/test_lookahead.py`). Labels are not features: see `labels.py`.
 
 ## Price (27)
@@ -105,6 +107,8 @@
 
 ## Indicators (41)
 
+## Indicators (102)
+
 | name | v | lookback | inputs | description |
 |---|---|---|---|---|
 | `adx14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | ADX(14), Wilder, on 1-minute bars across sessions (0-100). |
@@ -117,6 +121,15 @@
 | `c5_rsi14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | RSI(14), Wilder, of 5-minute closes (last complete bar). |
 | `c5_squeeze_fire` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | 5-minute squeeze release: +1 (-1) when the squeeze (BB 20,2 inside KC 20,1.5 of 5-minute bars) was on at one of the 3 bars before the last complete bar and is off now with the close above (below) the EMA20; else 0. |
 | `c5_supertrend_dir` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Supertrend(10, 3) direction on 5-minute bars (last complete bar): +1 up, -1 down. |
+
+| `cls15_order` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 15-minute bars: (pairs in bullish order - pairs in bearish order) / 3. |
+| `cls15_stack` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 15-minute bars: +1 fully bullish stacked, -1 fully bearish, 0 mixed. |
+| `cls1_order` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 1-minute bars: (pairs in bullish order - pairs in bearish order) / 3. |
+| `cls1_stack` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 1-minute bars: +1 fully bullish stacked, -1 fully bearish, 0 mixed. |
+| `cls3_order` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 3-minute bars: (pairs in bullish order - pairs in bearish order) / 3. |
+| `cls3_stack` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 3-minute bars: +1 fully bullish stacked, -1 fully bearish, 0 mixed. |
+| `cls5_order` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 5-minute bars: (pairs in bullish order - pairs in bearish order) / 3. |
+| `cls5_stack` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | EMA 9/21/50/200 on 5-minute bars: +1 fully bullish stacked, -1 fully bearish, 0 mixed. |
 | `di_minus14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | -DI(14), Wilder, 1-minute bars. |
 | `di_plus14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | +DI(14), Wilder, 1-minute bars. |
 | `di_spread14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | +DI(14) minus -DI(14) on 1-minute bars (> 0: up-moves dominate). |
@@ -140,6 +153,75 @@
 | `macd_hist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | MACD histogram (MACD - signal), % of the close. |
 | `macd_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | MACD(12, 26): EMA12 - EMA26 of the 1-minute close, % of the close. |
 | `macd_signal_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | MACD signal line (EMA9 of MACD), % of the close. |
+| `rib15_order` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 15-minute bars: (adjacent pairs in bullish order - pairs in bearish order) / 7, from -1 to +1. |
+| `rib15_pos` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the EMA ribbon 5..200 on 15-minute bars: +1 above every EMA, -1 below every EMA, 0 inside. |
+| `rib15_pos_frac` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Where the close sits in the EMA ribbon 5..200 on 15-minute bars: 0 at the lowest EMA, 1 at the highest (outside the ribbon: below 0 / above 1). |
+| `rib15_pullback` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Pullback to the ribbon on 15-minute bars: +1 fully bullish stack, the low touched EMA21 and the bar closed back above EMA21/34; -1 the bearish mirror; else 0. |
+| `rib15_slope_e13` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(13) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_slope_e200` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(200) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_slope_e21` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(21) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_slope_e34` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(34) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_slope_e5` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(5) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_slope_e55` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(55) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_slope_e8` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(8) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_slope_e89` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(89) of 15-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib15_sqz_break` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Compression then expansion on 15-minute bars: the ribbon (in ATRs) was the narrowest of 50 bars within the last 5, widened on each of the last 2, has >= 6 of 7 pairs in order and the close is outside it on that side: +1 up, -1 down, else 0. |
+| `rib15_stack` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5/8/13/21/34/55/89/200 on 15-minute bars (last complete bar): +1 fully bullish stacked (each faster EMA above the next slower), -1 fully bearish, 0 mixed. |
+| `rib15_twist` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 15-minute bars: +1 on the bar it becomes fully bullish after its last full stack was bearish (a full order flip), -1 the reverse, else 0. |
+| `rib15_width_atr` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 15-minute bars: highest EMA - lowest EMA, in ATR(14) of those bars. |
+| `rib15_width_chg` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 15-minute bars: width (in ATRs) now minus 5 bars ago; > 0 fanning out, < 0 compressing. |
+| `rib1_order` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 1-minute bars: (adjacent pairs in bullish order - pairs in bearish order) / 7, from -1 to +1. |
+| `rib1_pos` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the EMA ribbon 5..200 on 1-minute bars: +1 above every EMA, -1 below every EMA, 0 inside. |
+| `rib1_pos_frac` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Where the close sits in the EMA ribbon 5..200 on 1-minute bars: 0 at the lowest EMA, 1 at the highest (outside the ribbon: below 0 / above 1). |
+| `rib1_pullback` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Pullback to the ribbon on 1-minute bars: +1 fully bullish stack, the low touched EMA21 and the bar closed back above EMA21/34; -1 the bearish mirror; else 0. |
+| `rib1_slope_e13` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(13) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_slope_e200` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(200) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_slope_e21` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(21) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_slope_e34` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(34) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_slope_e5` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(5) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_slope_e55` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(55) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_slope_e8` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(8) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_slope_e89` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(89) of 1-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib1_sqz_break` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Compression then expansion on 1-minute bars: the ribbon (in ATRs) was the narrowest of 50 bars within the last 5, widened on each of the last 2, has >= 6 of 7 pairs in order and the close is outside it on that side: +1 up, -1 down, else 0. |
+| `rib1_stack` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5/8/13/21/34/55/89/200 on 1-minute bars (last complete bar): +1 fully bullish stacked (each faster EMA above the next slower), -1 fully bearish, 0 mixed. |
+| `rib1_twist` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 1-minute bars: +1 on the bar it becomes fully bullish after its last full stack was bearish (a full order flip), -1 the reverse, else 0. |
+| `rib1_width_atr` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 1-minute bars: highest EMA - lowest EMA, in ATR(14) of those bars. |
+| `rib1_width_chg` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 1-minute bars: width (in ATRs) now minus 5 bars ago; > 0 fanning out, < 0 compressing. |
+| `rib3_order` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 3-minute bars: (adjacent pairs in bullish order - pairs in bearish order) / 7, from -1 to +1. |
+| `rib3_pos` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the EMA ribbon 5..200 on 3-minute bars: +1 above every EMA, -1 below every EMA, 0 inside. |
+| `rib3_pos_frac` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Where the close sits in the EMA ribbon 5..200 on 3-minute bars: 0 at the lowest EMA, 1 at the highest (outside the ribbon: below 0 / above 1). |
+| `rib3_pullback` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Pullback to the ribbon on 3-minute bars: +1 fully bullish stack, the low touched EMA21 and the bar closed back above EMA21/34; -1 the bearish mirror; else 0. |
+| `rib3_slope_e13` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(13) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_slope_e200` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(200) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_slope_e21` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(21) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_slope_e34` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(34) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_slope_e5` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(5) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_slope_e55` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(55) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_slope_e8` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(8) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_slope_e89` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(89) of 3-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib3_sqz_break` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | Compression then expansion on 3-minute bars: the ribbon (in ATRs) was the narrowest of 50 bars within the last 5, widened on each of the last 2, has >= 6 of 7 pairs in order and the close is outside it on that side: +1 up, -1 down, else 0. |
+| `rib3_stack` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5/8/13/21/34/55/89/200 on 3-minute bars (last complete bar): +1 fully bullish stacked (each faster EMA above the next slower), -1 fully bearish, 0 mixed. |
+| `rib3_twist` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 3-minute bars: +1 on the bar it becomes fully bullish after its last full stack was bearish (a full order flip), -1 the reverse, else 0. |
+| `rib3_width_atr` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 3-minute bars: highest EMA - lowest EMA, in ATR(14) of those bars. |
+| `rib3_width_chg` | 1 | 30d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 3-minute bars: width (in ATRs) now minus 5 bars ago; > 0 fanning out, < 0 compressing. |
+| `rib5_order` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 5-minute bars: (adjacent pairs in bullish order - pairs in bearish order) / 7, from -1 to +1. |
+| `rib5_pos` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the EMA ribbon 5..200 on 5-minute bars: +1 above every EMA, -1 below every EMA, 0 inside. |
+| `rib5_pos_frac` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Where the close sits in the EMA ribbon 5..200 on 5-minute bars: 0 at the lowest EMA, 1 at the highest (outside the ribbon: below 0 / above 1). |
+| `rib5_pullback` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Pullback to the ribbon on 5-minute bars: +1 fully bullish stack, the low touched EMA21 and the bar closed back above EMA21/34; -1 the bearish mirror; else 0. |
+| `rib5_slope_e13` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(13) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_slope_e200` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(200) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_slope_e21` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(21) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_slope_e34` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(34) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_slope_e5` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(5) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_slope_e55` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(55) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_slope_e8` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(8) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_slope_e89` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Slope of EMA(89) of 5-minute closes over the last bar, in ATR(14) of those bars. |
+| `rib5_sqz_break` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | Compression then expansion on 5-minute bars: the ribbon (in ATRs) was the narrowest of 50 bars within the last 5, widened on each of the last 2, has >= 6 of 7 pairs in order and the close is outside it on that side: +1 up, -1 down, else 0. |
+| `rib5_stack` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5/8/13/21/34/55/89/200 on 5-minute bars (last complete bar): +1 fully bullish stacked (each faster EMA above the next slower), -1 fully bearish, 0 mixed. |
+| `rib5_twist` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 5-minute bars: +1 on the bar it becomes fully bullish after its last full stack was bearish (a full order flip), -1 the reverse, else 0. |
+| `rib5_width_atr` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 5-minute bars: highest EMA - lowest EMA, in ATR(14) of those bars. |
+| `rib5_width_chg` | 1 | 50d | minutes.open, minutes.high, minutes.low, minutes.close | EMA ribbon 5..200 on 5-minute bars: width (in ATRs) now minus 5 bars ago; > 0 fanning out, < 0 compressing. |
+| `rib_mtf_align` | 1 | 150d | minutes.open, minutes.high, minutes.low, minutes.close | Multi-timeframe EMA-ribbon agreement: the sum of the 1-, 5- and 15-minute ribbon stacks (+3 all fully bullish, -3 all fully bearish). |
 | `rsi14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | RSI(14), Wilder, of the 1-minute close across sessions (0-100). |
 | `squeeze_on` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | 1 when the Bollinger bands (20, 2) sit inside the Keltner channel (20, 1.5) on 1-minute bars (TTM squeeze). |
 | `squeeze_run` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | How many 1-minute bars in a row (with prices) the squeeze has been on, 0 when off; capped at 375. |

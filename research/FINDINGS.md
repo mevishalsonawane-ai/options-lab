@@ -641,3 +641,42 @@ features, on NIFTY, BANKNIFTY, FINNIFTY and SENSEX (771 / 768 / 760 / 432 design
 
 **Brain fix.** FINNIFTY and SENSEX had no option chain in the brain (no expiry calendar). Their expiries are now
 inferred from the lake (`brain/expiry_infer.py`). MIDCPNIFTY still has none (unreliable dates).
+
+## Many EMAs at once: EMA ribbons on 1/3/5/15-minute bars (R29, 14 Oct 2026) - no pattern passes
+Full study: `HUNT_R29_EMA_RIBBON.md` (pre-registered `hunt/r29/PREREG.md`, Part A commit 917651e, Part B c52eab0; 195
+tests, one BH family with F1).
+- Ribbon EMA 5/8/13/21/34/55/89/200 and EMA 9/21/50/200 on NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX: 12 pattern
+  types (stack onset, twist, pullback to 21/34, squeeze then fan-out, ribbon breakout, fan-out, 1/5/15-minute alignment
+  and combinations), traded with and against the trend, ATM, Boss's +Rs 1,000-keep-Rs 500 lock, app charges and spread.
+- Mining: 1 of 140 candidates made money in both 2021-22 (93,650 trades) and 2024 (134,455), on 2 and 9 trades; the index moves a median
+  2 bps (either way; signed median -0.1) beyond random in 30 minutes after an event. Boss's three ideas (15-min stack + 5-min pullback, squeeze then
+  fan-out, MTF alignment) lost in 2024 in every cell but one (15-min squeeze down +Rs 123 on 146 trades, Rs -297 in
+  2021-22).
+- The 10 best twin-beating candidates (all fades, all losing on their own) on unseen years: 1 of 10 positive in 2025,
+  1 of 10 in 2026, none in both; holdout 2023 (read once) 1 of 10 positive pooled (R6 +Rs 21 a trade on 264, sign
+  flipping by period on every index). 0 of 55 rule x index tests passed. EMA 9 x 21 cross: Rs -110 a trade in the
+  holdout (1,785 trades), negative on all five indices except NIFTY 2026.
+- Kept: 77 point-in-time ribbon features in the Data Brain (`rib*`, `cls*`, `rib_mtf_align`) as context. Nothing to
+  paper or live.
+
+## Every parameter at once for CE / PE buying (R30, 14 Oct 2026) - 0 of 30 pass; one near miss
+Full study: `HUNT_R30_ALL_PARAMETERS.md` (pre-registered `hunt/r30/PREREG.md`, commit a570202; walk-forward Jul 2024 -
+Oct 2026, F1's holdout untouched).
+- 164 Data Brain indicators (incl. the EMA ribbon) + option chain (IV, skew, PCR, OI build-up, straddle, volume, max-OI)
+  + VIX + calendar + other indices, at 249,414 decision moments on 5 indices; 4 models and 2 combination miners, trained
+  on earlier years, tested on later ones, real charges and Boss's lock.
+- 0 of 30 strategy x index tests passed. All trades together lost (Rs -35 to -196 a trade by strategy). EMA x everything
+  combinations (C2) were +Rs 300-520 a trade on training years and Rs -111 out of sample: over-fitting.
+- Near miss: M4 (win-chance model) on NIFTY, 77 trades, +Rs 277 a trade, positive in all three test periods
+  (+48 / +536 / +162), p 0.025 vs random entries, still positive at 2x spread; fails only BH q (0.109). About one trade
+  a week. Proposed: a pre-registered 40-session forward paper test, logged only.
+- What the models lean on (varies by period): IV skew and the ATM straddle price most often, then PCR; but also the
+  weekday (2026 M1), VIX (M3) and EMA-ribbon slopes (3rd-4th in two models). A lead, not a finding.
+
+## Option-market signals alone (IV1, 14 Oct 2026) - none pass; not forward-tested
+Full study: `HUNT_IV1_OPTION_MARKET.md` (pre-registered `hunt/iv1/PREREG.md`, commit ff5f951; descriptive walk-forward,
+inputs chosen after R30).
+- IV skew, straddle, PCR, OI build-up on their own, 5 indices, Jul 2024 - Oct 2026 out of sample, Boss's lock: an
+  option-only model lost on all 5 indices (Rs -16 to -256 a trade); the best option-only pairs made +Rs 35 a trade on
+  SENSEX (915 trades) but lost in 2025; a fixed put-writing + PCR + straddle-expansion rule lost on all 5 (Rs -24 to
+  -245, 7,339 trades). The option chain helps only as part of R30's full model (M4-NIFTY, now in its forward test).

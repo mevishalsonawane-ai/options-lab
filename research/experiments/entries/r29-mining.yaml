@@ -1,0 +1,33 @@
+date: '2026-10-14'
+doc: research/HUNT_R29_EMA_RIBBON.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m NIFTY/BANKNIFTY/FINNIFTY/MIDCPNIFTY/SENSEX (2017/2021-12 Oct
+  2026), options_rolling_1m opt_<UND>_WEEK (nearest expiry, ATM+-10; options from Aug 2021, MIDCPNIFTY Jan 2022, SENSEX May
+  2023); Data Brain ribbon features (research/brain/features/ribbon.py)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+settings: research/hunt/r29/PREREG.md
+prereg: research/hunt/r29/PREREG.md
+id: r29-mining
+title: 'R29 Steps 1-2: 140 multi-EMA pattern candidates mined on 2021-22, ranked on 2024'
+family: patterns-indicators
+hypothesis: Multi-EMA patterns (ribbon state + trigger, compression-expansion, pullback in a stacked trend, MTF agreement)
+  carry an edge after costs that single EMA signals (H25) did not.
+period:
+  design: discovery 2021-08..2022-12, selection 2024
+features:
+- ribbon events P1-P12 on 1/3/5/15-minute bars
+model_or_rule: 35 events x bull/bear x follow/fade; ATM, exit X1 (Boss's lock), 1 lot; twins 20/trade
+variants_tried: 140
+results:
+  summary: '93,650 discovery / 134,455 selection trades. No candidate made money after costs in both splits (one exception
+    with 2 and 9 trades). 45 passed the twin gate (BH q <= 0.10); all are fades that still lose on their own (selection Rs
+    -10 to -203 a trade). Random-minute trade: Rs -99 (selection).'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    minute's open + 5 bps + a 1/2/4-tick half-spread by 5-min volume (stops 10 bps, 2x ticks); stress 2x spread
+holdout_read: false
+verdict: rejected
+notes: 'BH family: 140 mining + 55 confirmatory = 195 R29 tests, plus F1''s count.'

@@ -1,0 +1,32 @@
+id: iv1-o3
+title: 'IV1 O3: fixed rule: put writing + call covering near ATM, PCR rising, straddle expanding -> CE; mirror -> PE'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_IV1_OPTION_MARKET.md
+hypothesis: Option-market signals (IV skew, straddle, PCR, OI build-up) pick CE/PE buys that make money after costs.
+data_version: R30 decision table (Dhan lake, 5 indices, chain OI/IV/volume)
+period:
+  design: train expanding from Aug 2021 (F1 holdout Jan 2023 - Jun 2024 never used)
+  walk_forward: 'Jul-Dec 2024, 2025, Jan-12 Oct 2026 (descriptive: inputs chosen after R30)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- option chain OI/IV/PCR/straddle/volume
+- time
+- dte
+- VIX
+model_or_rule: 'fixed rule: put writing + call covering near ATM, PCR rising, straddle expanding -> CE; mirror -> PE'
+settings: research/hunt/iv1/PREREG.md
+prereg: research/hunt/iv1/PREREG.md
+variants_tried: 5
+results:
+  summary: 'Out of sample: NIFTY 1571 trades -24/trade (p 0.337, q 0.562); BANKNIFTY 1558 trades -162/trade (p 0.788, q 0.909);
+    FINNIFTY 1350 trades -219/trade (p 0.989, q 0.989); MIDCPNIFTY 1371 trades -245/trade (p 0.972, q 0.989); SENSEX 1489
+    trades -40/trade (p 0.075, q 0.197). None positive in every test period; none frozen for the forward test.'
+  costs: app charges at today's rates; fills next open + 5 bps + 1/2/4-tick half-spread; Boss's lock exit
+holdout_read: null
+verdict: rejected

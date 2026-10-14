@@ -1,0 +1,37 @@
+date: '2026-10-14'
+doc: research/HUNT_R29_EMA_RIBBON.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m NIFTY/BANKNIFTY/FINNIFTY/MIDCPNIFTY/SENSEX (2017/2021-12 Oct
+  2026), options_rolling_1m opt_<UND>_WEEK (nearest expiry, ATM+-10; options from Aug 2021, MIDCPNIFTY Jan 2022, SENSEX May
+  2023); Data Brain ribbon features (research/brain/features/ribbon.py)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+settings: research/hunt/r29/PREREG.md
+prereg: research/hunt/r29/PREREG.md
+id: r29-named-squeeze-fanout
+title: 'Boss''s idea: ribbon compression then fan-out breakout, follow'
+family: patterns-indicators
+hypothesis: Boss's named multi-EMA entry makes money after costs on unseen data.
+period:
+  design: discovery 2021-08..2022-12, selection 2024
+features:
+- EMA ribbon 5..200
+model_or_rule: 'Boss''s idea: ribbon compression then fan-out breakout, follow; ATM, exit X1, 1 lot'
+variants_tried: 10
+results:
+  summary: 'Failed the mining gate (stays a note): P5_1 bull: disc 1247 trades -148/trade, sel 1679 trades -4/trade (adj -14,
+    q 0.71); P5_15 bear: disc 112 trades -297/trade, sel 146 trades +123/trade (adj -30, q 0.92); P11_5 bull: disc 181 trades
+    +74/trade, sel 270 trades -144/trade (adj -54, q 1.00); P5_5 bull: disc 331 trades +8/trade, sel 462 trades -111/trade
+    (adj -90, q 1.00); P5_1 bear: disc 1151 trades -94/trade, sel 1511 trades -50/trade (adj -96, q 1.00); P5_5 bear: disc
+    297 trades -270/trade, sel 441 trades -104/trade (adj -121, q 1.00); P5_3 bull: disc 458 trades -84/trade, sel 598 trades
+    -144/trade (adj -138, q 1.00); P5_3 bear: disc 437 trades -226/trade, sel 594 trades -110/trade (adj -153, q 1.00); P11_5
+    bear: disc 125 trades -226/trade, sel 174 trades -209/trade (adj -174, q 1.00); P5_15 bull: disc 119 trades -201/trade,
+    sel 183 trades -144/trade (adj -206, q 1.00)'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    minute's open + 5 bps + a 1/2/4-tick half-spread by 5-min volume (stops 10 bps, 2x ticks); stress 2x spread
+holdout_read: false
+verdict: rejected
+notes: Mined as a candidate in r29-mining; not a survivor, so not run on the holdout.
