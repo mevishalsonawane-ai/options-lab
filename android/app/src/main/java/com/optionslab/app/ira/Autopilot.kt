@@ -327,7 +327,14 @@ internal object Autopilot {
             }
             // Boss's 13 Oct park ([logBossPark]): only its Undo applies here - the arm switched back on, ON PAPER (never cleared
             // for Zerodha: in Live an ordinary arm asks for the PIN, which is never given here, so nothing changes). Never re-parked.
-            AutoChange.Kind.ARM_PARK -> {
+            // 14 Oct: the MCX paper arm switched off on Boss's OK (research R42, [logMcxPark], target "mcx:"): its Undo switches it
+            // back on - the MCX arms are paper only, always (nothing there can reach Zerodha). Only the SILVERM morning call.
+            AutoChange.Kind.ARM_PARK -> if (c.target.startsWith(AutoChange.MCX_ARM)) {
+                val source = c.target.removePrefix(AutoChange.MCX_ARM)
+                if (c.to != AutoChange.ON || source != com.optionslab.engine.mcx.McxMorningPark.SOURCE) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.McxPaperArms.setArmed(source, true) }
+                said.takeIf { it.contains("on, paper only") || it.contains("already on") }
+            } else {
                 val source = c.target.removePrefix("arm:")
                 if ((c.to != AutoChange.ON && c.to != AutoChange.ON_APPROVE) || !com.optionslab.engine.orb.FamilyPark.covers(source)) return null
                 val said = kotlinx.coroutines.runBlocking {
@@ -654,15 +661,64 @@ internal object Autopilot {
         val note = "your choice, 13 Oct" +
             (if (wasLive) "; it was armed for Zerodha - in Live, switch it on with your PIN on its row" else "") +
             (if (holding) "; its open position is still managed to its exit" else "")
+        logBossOwnOnce(c, note)
+    }
+
+    /** How long a park logged at start-up waits for [init] (the arms' books are read before Autopilot's own init runs). */
+    private const val INIT_WAIT_MS = 120_000L
+
+    /**
+     * Boss's own change [c] (an arm's park, [AutoChange.bossOwn]) logged once, kept, by "your choice", with [note]: never twice
+     * for the same target (a second load of an old book, a restore). In the background, on Autopilot's own worker. 14 Oct
+     * review: it first waits for [init] - the arms' books are read at start-up before Autopilot's init, and reading the log
+     * before its file is known would load an empty log, mark it read and later save over Boss's real change history.
+     */
+    private fun logBossOwnOnce(c: AutoChange.Change, note: String) {
         scope.launch {
             runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
-                    // Once: a second load of an old book (a restore) never logs it twice.
-                    if (_book.value.entries.none { it.change.kind == AutoChange.Kind.ARM_PARK && it.change.target == c.target })
+                    if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target }) {
                         _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
-                    save()
+                        save()
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 14 Oct (research R42, Boss's OK; [com.optionslab.engine.mcx.McxMorningPark]): the SILVERM morning call, an MCX PAPER
+     * arm, just switched off by the MCX arms' one-time change. Logged as Boss's (kept, not on probation) so "Today's changes"
+     * and the change log show it with R42's reason, and one tap undoes it (back on, paper only - no PIN: the MCX arms never
+     * reach Zerodha). [holding]: its open position still closes by its own exit. Once: never logged twice (a second load, a
+     * restart). In the background, on Autopilot's own worker: the arms' load never waits for the log's disk.
+     */
+    fun logMcxPark(source: String, label: String, holding: Boolean) {
+        if (!enabled()) return
+        val mp = com.optionslab.engine.mcx.McxMorningPark
+        val c = AutoChange.mcxArmPark(source, label, mp.REASON, mp.WALK_FORWARD_TRADES, mp.WALK_FORWARD_RS.toDouble())
+        logBossOwnOnce(c, "your OK, 14 Oct (research R42); paper only" + (if (holding) "; its open position still closes by its own exit" else ""))
+    }
+
+    /**
+     * Boss switched the MCX arm [source] back on from its own row after its 14 Oct switch-off ([logMcxPark]): the change log's
+     * entry is closed as undone, so it no longer shows "on → parked" with an Undo that could switch the arm on again later
+     * (after Boss switched it off by hand). Its own Undo lands here too; marking it undone twice changes nothing.
+     */
+    fun mcxUnparkedByBoss(source: String) {
+        if (!enabled()) return
+        scope.launch {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.ARM_PARK && it.change.target == AutoChange.MCX_ARM + source }
+                    if (e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
                 }
             }
         }

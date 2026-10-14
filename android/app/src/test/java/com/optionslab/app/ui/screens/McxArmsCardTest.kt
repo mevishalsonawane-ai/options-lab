@@ -132,6 +132,25 @@ class McxArmsCardTest {
         compose.onNodeWithText(keepNumbersWhole("am_dte 9 (needs 11-20)")).assertExists()
     }
 
+    /** 14 Oct (research R42, Boss's OK): the SILVERM morning call switched off once: its row says why; its switch turns it back on. */
+    @Test fun theMorningCallSwitchedOffByR42SaysWhyOnItsRow() {
+        val asked = ArrayList<Pair<String, Boolean>>()
+        home(off.copy(parked = setOf(McxMorningRules.SOURCE))) { a, on -> asked += a to on }
+        compose.waitForIdle()
+        val row = keepNumbersWhole(com.optionslab.engine.mcx.McxMorningPark.ROW)
+        compose.onNodeWithText(row).assertExists()
+        assertEquals(1, compose.onAllNodesWithText(row).fetchSemanticsNodes().size)
+        compose.onNodeWithContentDescription("Paper only: switch ${McxMorningRules.LABEL}").assertIsOff().performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(McxMorningRules.SOURCE to true), asked)
+    }
+
+    @Test fun theSwitchedOffLineIsNotShownWhileTheMorningCallIsOn() {
+        home(off.copy(armed = mapOf(McxMorningRules.SOURCE to true), parked = setOf(McxMorningRules.SOURCE)))
+        compose.waitForIdle()
+        assertEquals(0, compose.onAllNodesWithText(keepNumbersWhole(com.optionslab.engine.mcx.McxMorningPark.ROW)).fetchSemanticsNodes().size)
+    }
+
     @Test fun theCommoditiesPageSaysTheBotsAreOnHome() {
         compose.setContent {
             IraAlgoTheme("light") { CommoditiesContent(Load.Done(emptyList<McxMarket.Quote>()), "MCX is open now", {}, {}) }

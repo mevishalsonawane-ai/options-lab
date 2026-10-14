@@ -322,6 +322,19 @@ object AutoChange {
         "your choice (13 Oct): $label lost money after costs in every tested year ($tested)", Evidence(2, rs, AgentLessons.Confidence.STRONG, -1),
         Risk.LOWER, Scope.PAPER, what = "$label's switch")
 
+    /** The target prefix of an MCX paper arm switched off on Boss's OK ([mcxArmPark]); "arm:" stays the NSE arms'. */
+    const val MCX_ARM = "mcx:"
+
+    /**
+     * An MCX PAPER arm [source] ([label]) switched off on Boss's OK (14 Oct: the SILVERM morning call, research R42), for the
+     * change timeline: "on → parked", lowering risk, on paper (the MCX arms never reach Zerodha, so its Undo - the arm back on,
+     * paper only - needs no PIN). [reason]: why, with the sample sizes; [n] trades and [rs] rupees of the losing test it
+     * avoids (R42's walk-forward), as [armPark] keeps the tested losses (sign -1: what it avoided). Logged as Boss's
+     * ([Kind.ARM_PARK]): never Autopilot's own change, undone only by its own tap.
+     */
+    fun mcxArmPark(source: String, label: String, reason: String, n: Int, rs: Double): Change = Change(Kind.ARM_PARK, "$MCX_ARM$source",
+        ON, PARKED, reason, Evidence(n, rs, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch")
+
     /** The target of Boss's Liquidity paper trail switch ([Kind.LIQ_TRAIL]; no "liquidity" in it, so the paper-test freeze never holds its Undo). */
     const val TRAIL_TARGET = "trail:liq_paper"
 

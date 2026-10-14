@@ -56,6 +56,11 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-14-silverm-morning-off", OCT14, "SILVERM morning call switched off (paper)",
+            "On your OK, the SILVERM morning call paper bot is switched off once: research R42 found no proven edge on cleaned prices " +
+                "(+₹336 a trade over 53 holdout trades, no better than a random minute; walk-forward −₹44.6k over 129 trades). " +
+                "An open position still closes by its own exit, and one tap on the change undoes it, on paper only.",
+            "Home → Strategies → MCX (commodities) (its row and switch); the change is also in Home → Automation card → Autopilot → Change log"),
         Entry("2026-10-14-gamma-line-oi-wall-shadow", OCT14, "Morning gamma line, and the OI-wall check in shadow",
             "At 10:00 Jarvis says whether dealer gamma is negative or positive on each index whose chain is on the phone, how such days' " +
                 "rest-of-day range compared in the research, and the biggest call- and put-gamma strikes to watch; it says nothing about direction and is never a trade signal. " +

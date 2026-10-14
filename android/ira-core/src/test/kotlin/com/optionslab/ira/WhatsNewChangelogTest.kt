@@ -98,13 +98,24 @@ class WhatsNewChangelogTest {
             "chart is refused; option-derived ideas are labelled.", x.what)
         assertTrue("Pine" in x.where && "Strategies" in x.where && "Strategy lab" in x.where, x.where)
         assertNull(x.ask)
-        assertEquals(1, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day)")
+        assertEquals(2, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day)")
+    }
+
+    @Test fun theSilvermMorningCallSwitchOffIsSaidWithR42sNumbersAndTheUndo() {
+        // 14 Oct (research R42, Boss's OK): the newest entry; a paper bot switched off once, as the 13 Oct ORB park was told.
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-silverm-morning-off" }
+        assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(LocalDate.of(2026, 10, 14), x.date)
+        for (w in listOf("R42", "53 holdout trades", "random minute", "129 trades", "open position still closes by its own exit", "one tap", "paper only"))
+            assertTrue(w in x.what, w)
+        assertTrue("MCX (commodities)" in x.where && "Autopilot → Change log" in x.where, x.where)
+        assertNull(x.ask); assertFalse(x.jarvisOnly); assertFalse(x.gold)
     }
 
     @Test fun theGammaLineAndTheOiWallShadowAreSaidAsInformationOnly() {
-        // 14 Oct (Boss approved): two non-trading additions, the newest entry.
+        // 14 Oct (Boss approved): two non-trading additions, right under the SILVERM morning call's switch-off (later that day).
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-gamma-line-oi-wall-shadow" }
-        assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(1, WhatsNew.ENTRIES.indexOf(x), "under the SILVERM morning call's entry")
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
         for (w in listOf("10:00", "dealer gamma", "says nothing about direction", "never a trade signal", "expiry days", "13:45 to 14:30",
             "only written down", "in points", "never places an order"))

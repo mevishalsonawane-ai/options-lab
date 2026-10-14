@@ -89,6 +89,9 @@ private fun McxArmRow(arm: String, v: McxPaperArms.View, onArm: (String, Boolean
                     style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
             }
             if (on) v.status[arm]?.let { s -> Text(keepNumbersWhole(s), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp)) }
+            // 14 Oct (research R42, Boss's OK): switched off once; the row says why, and its switch turns it back on (paper only).
+            if (!on && arm in v.parked)
+                Text(keepNumbersWhole(com.optionslab.engine.mcx.McxMorningPark.ROW), style = Type.bodySmall.copy(color = p.amber, fontSize = 11.sp))
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "Paper only: switch ${McxPaperArms.label(arm)}" },
