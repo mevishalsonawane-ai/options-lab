@@ -93,3 +93,12 @@ live from this). F2, 2x spread, M4-style p and the extra days are reported but d
 
 One rule is tested (the frozen M4 rule), nothing is selected, so there is no multiple-testing search here (m = 1 for
 the decision; the variants are robustness checks). The filter thresholds above are not tuned after seeing results.
+
+## Amendment 1 (14 Oct 2026, ~16:40 UTC; after the synthetic unit tests, before any real data was filtered)
+
+- F1/F2 use two one-sided medians instead of one pooled median: ref_prev = median close of the up-to-5 priced
+  neighbours before, ref_next = median of the up-to-5 after (same 15-minute window, same contract and day). Flag if
+  close > 1.5 x max(ref_prev, ref_next) or close < min(ref_prev, ref_next) / 1.5; F2 adds high > 1.5 x max(...) or
+  low < min(...) / 1.5. Reason: with the pooled median of an even count, the last minute before a genuine >= 2.25x
+  re-pricing (100 -> 300 that stays) was flagged, and a minute next to one far-away spike in sparse trading was
+  flagged too. This matches the brief's wording ("jumps from both its neighbours"). Thresholds unchanged.
