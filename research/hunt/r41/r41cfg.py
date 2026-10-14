@@ -1,7 +1,8 @@
 """R41 settings (PREREG.md): the neural-network arm for the running studies. 14 Oct 2026.
 Renumbered 14 Oct from R30 (the number R30 was already taken by R30 all parameters). The runs before the renumber
 wrote their caches to <cache>/r30 and gdrive:IraAlgo-data-lake/derived/r30/ (shared folder name with R30 all
-parameters); new runs use r41. The holdout lock also refuses a read whose result is already in results/ (run.py).
+parameters); new runs use r41. The holdout lock (india.holdout_gate) also refuses a read whose result is already in
+results/.
 
     caches   R41_OUT (default <cache>/r41): datasets, predictions, model weights (never in git; a copy goes to
              gdrive:IraAlgo-data-lake/derived/r41/)
