@@ -1,0 +1,37 @@
+id: r30-c2
+title: 'R30 C2: EMA ribbon x every other parameter, pairs and triples (20 per side)'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_R30_ALL_PARAMETERS.md
+hypothesis: Every parameter at once (brain indicators incl. EMA ribbon, option chain OI/IV/PCR/straddle, VIX, calendar, other
+  indices) picks CE/PE buys that make money after costs on later, unseen years.
+data_version: 'Dhan lake on Drive: index_1m NIFTY/BANKNIFTY/FINNIFTY/MIDCPNIFTY/SENSEX/INDIAVIX, options_rolling_1m opt_<UND>_WEEK
+  with OI/IV/volume; 164 Data Brain features + 17 chain + cross-index'
+period:
+  design: train expanding from Aug 2021 (F1's holdout Jan 2023 - Jun 2024 never used)
+  walk_forward: Jul-Dec 2024, 2025, Jan-12 Oct 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- all Data Brain minute features
+- option chain
+- VIX
+- calendar
+- cross-index
+model_or_rule: EMA ribbon x every other parameter, pairs and triples (20 per side)
+settings: research/hunt/r30/PREREG.md
+prereg: research/hunt/r30/PREREG.md
+variants_tried: 5
+results:
+  summary: 'Out of sample (3 walk-forward test periods): NIFTY 740 trades -82/trade (folds -2 / -128 / -15), p 0.569, q 0.657;
+    BANKNIFTY 799 trades -92/trade (folds -57 / -195 / +104), p 0.077, q 0.160; FINNIFTY 793 trades -140/trade (folds -167
+    / -168 / -34), p 0.086, q 0.161; MIDCPNIFTY 842 trades -164/trade (folds +73 / -237 / -253), p 0.457, q 0.548; SENSEX
+    765 trades -69/trade (folds -78 / -81 / -36), p 0.368, q 0.483. 0 of 5 indices pass the gate.'
+  costs: app charges at today's rates; fills next open + 5 bps + 1/2/4-tick half-spread by 5-min volume; stress 2x spread
+holdout_read: null
+verdict: rejected
+notes: R30 family 30 tests (6 strategies x 5 indices).

@@ -598,3 +598,16 @@ tests, one BH family with F1).
   holdout (1,785 trades), negative on all five indices except NIFTY 2026.
 - Kept: 77 point-in-time ribbon features in the Data Brain (`rib*`, `cls*`, `rib_mtf_align`) as context. Nothing to
   paper or live.
+
+## Every parameter at once for CE / PE buying (R30, 14 Oct 2026) - 0 of 30 pass; one near miss
+Full study: `HUNT_R30_ALL_PARAMETERS.md` (pre-registered `hunt/r30/PREREG.md`, commit a570202; walk-forward Jul 2024 -
+Oct 2026, F1's holdout untouched).
+- 164 Data Brain indicators (incl. the EMA ribbon) + option chain (IV, skew, PCR, OI build-up, straddle, volume, max-OI)
+  + VIX + calendar + other indices, at 249,414 decision moments on 5 indices; 4 models and 2 combination miners, trained
+  on earlier years, tested on later ones, real charges and Boss's lock.
+- 0 of 30 strategy x index tests passed. All trades together lost (Rs -35 to -196 a trade by strategy). EMA x everything
+  combinations (C2) were +Rs 300-520 a trade on training years and Rs -111 out of sample: over-fitting.
+- Near miss: M4 (win-chance model) on NIFTY, 77 trades, +Rs 277 a trade, positive in all three test periods
+  (+48 / +536 / +162), p 0.025 vs random entries, still positive at 2x spread; fails only BH q (0.109). About one trade
+  a week. Proposed: a pre-registered 40-session forward paper test, logged only.
+- What the models lean on most: IV skew, the ATM straddle price and its change since 09:20, PCR; EMAs rank low.
