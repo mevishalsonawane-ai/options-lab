@@ -1,0 +1,308 @@
+{
+ "T1": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "params": [
+     [
+      "dist_em_max",
+      "=",
+      1.25
+     ]
+    ],
+    "exits": "hold",
+    "trades": 81,
+    "net": -54123.3,
+    "hit_pct": 6.2
+   },
+   {
+    "test_year": 2025,
+    "params": [
+     [
+      "dist_em_max",
+      "=",
+      1.25
+     ]
+    ],
+    "exits": "app",
+    "trades": 78,
+    "net": 7806.83,
+    "hit_pct": 14.1
+   },
+   {
+    "test_year": 2026,
+    "params": [
+     [
+      "dist_em_max",
+      "=",
+      1.0
+     ]
+    ],
+    "exits": "hold",
+    "trades": 44,
+    "net": -7667.8,
+    "hit_pct": 11.4
+   }
+  ],
+  "sum": -53984.27,
+  "years_positive": 1
+ },
+ "T2": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "params": [
+     [
+      "dist_rng_max",
+      "=",
+      1.08
+     ],
+     [
+      "maxpain_max",
+      "=",
+      -0.1
+     ]
+    ],
+    "exits": "hold",
+    "trades": 127,
+    "net": -77493.84,
+    "hit_pct": 6.3
+   },
+   {
+    "test_year": 2025,
+    "params": [
+     [
+      "dist_rng_max",
+      "=",
+      1.0
+     ],
+     [
+      "maxpain_max",
+      "=",
+      -0.1
+     ]
+    ],
+    "exits": "app",
+    "trades": 98,
+    "net": -410.8,
+    "hit_pct": 13.3
+   },
+   {
+    "test_year": 2026,
+    "params": [
+     [
+      "dist_rng_max",
+      "=",
+      1.0
+     ],
+     [
+      "maxpain_max",
+      "=",
+      -0.1
+     ]
+    ],
+    "exits": "app",
+    "trades": 85,
+    "net": -11503.54,
+    "hit_pct": 12.9
+   }
+  ],
+  "sum": -89408.18,
+  "years_positive": 0
+ },
+ "T3": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "params": [
+     [
+      "mv15_min",
+      "=",
+      0.1
+     ],
+     [
+      "opp_oi_min",
+      "=",
+      0.0
+     ]
+    ],
+    "exits": "app",
+    "trades": 105,
+    "net": -14357.54,
+    "hit_pct": 7.6
+   },
+   {
+    "test_year": 2025,
+    "params": [
+     [
+      "mv15_min",
+      "=",
+      0.25
+     ],
+     [
+      "opp_oi_min",
+      "=",
+      2.86
+     ]
+    ],
+    "exits": "app",
+    "trades": 15,
+    "net": -1550.4,
+    "hit_pct": 20.0
+   },
+   {
+    "test_year": 2026,
+    "params": [
+     [
+      "mv15_min",
+      "=",
+      0.25
+     ],
+     [
+      "opp_oi_min",
+      "=",
+      2.86
+     ]
+    ],
+    "exits": "app",
+    "trades": 14,
+    "net": -7328.86,
+    "hit_pct": 0.0
+   }
+  ],
+  "sum": -23236.8,
+  "years_positive": 0
+ },
+ "H0": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "trades": 15,
+    "net": 119755.39
+   },
+   {
+    "test_year": 2025,
+    "trades": 9,
+    "net": -17087.62
+   },
+   {
+    "test_year": 2026,
+    "trades": 3,
+    "net": -6832.52
+   }
+  ],
+  "sum": 95835.25,
+  "years_positive": 1,
+  "note": "fixed rule: per-year result"
+ },
+ "L1": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "trades": 196,
+    "net": -2445.77
+   },
+   {
+    "test_year": 2025,
+    "trades": 152,
+    "net": -51892.3
+   },
+   {
+    "test_year": 2026,
+    "trades": 121,
+    "net": -35048.34
+   }
+  ],
+  "sum": -89386.41,
+  "years_positive": 0,
+  "note": "fixed rule: per-year result"
+ },
+ "L2": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "trades": 196,
+    "net": -38710.41
+   },
+   {
+    "test_year": 2025,
+    "trades": 152,
+    "net": -50934.41
+   },
+   {
+    "test_year": 2026,
+    "trades": 121,
+    "net": -33413.83
+   }
+  ],
+  "sum": -123058.65,
+  "years_positive": 0,
+  "note": "fixed rule: per-year result"
+ },
+ "L3": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "trades": 206,
+    "net": -42506.94
+   },
+   {
+    "test_year": 2025,
+    "trades": 153,
+    "net": -58003.61
+   },
+   {
+    "test_year": 2026,
+    "trades": 123,
+    "net": -24308.62
+   }
+  ],
+  "sum": -124819.17,
+  "years_positive": 0,
+  "note": "fixed rule: per-year result"
+ },
+ "L4": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "trades": 206,
+    "net": -60811.81
+   },
+   {
+    "test_year": 2025,
+    "trades": 153,
+    "net": -52941.35
+   },
+   {
+    "test_year": 2026,
+    "trades": 123,
+    "net": -23485.39
+   }
+  ],
+  "sum": -137238.55,
+  "years_positive": 0,
+  "note": "fixed rule: per-year result"
+ },
+ "V4": {
+  "folds": [
+   {
+    "test_year": 2024,
+    "trades": 50,
+    "net": 129560.15
+   },
+   {
+    "test_year": 2025,
+    "trades": 23,
+    "net": -5472.25
+   },
+   {
+    "test_year": 2026,
+    "trades": 29,
+    "net": -60687.45
+   }
+  ],
+  "sum": 63400.45,
+  "years_positive": 1,
+  "note": "fixed rule: per-year result"
+ }
+}

@@ -51,9 +51,10 @@ def evaluate(rule, ds, with_grid=True) -> dict:
         out["exit_grid"] = {ex: RU.metrics(RU.run(ds, rule, exits=ex), ds, rule)["net"] for ex in RU.EXITS}
     out["per_year"] = {str(y): {k: v[k] for k in ("expiries", "trades", "net", "hit_pct")}
                        for y, v in RU.per_year(tr, ds, rule).items()}
+    # sig = the signal bar's CLOSE time; fills and exits happen at a bar's OPEN, so they carry its START time
     out["trades_list"] = [dict(und=t.und, day=str(t.day), side=t.side, strike=t.strike, sig=_hm(t.sig_row),
-                               fill=_hm(t.fill_row), entry=t.entry, lots=t.lots, net=t.net, peak_x=round(t.peak_mult, 2),
-                               exits=[(_hm(r), q, p, w) for r, q, p, w in t.exits]) for t in tr]
+                               fill=_hm(t.fill_row - 1), entry=t.entry, lots=t.lots, net=t.net, peak_x=round(t.peak_mult, 2),
+                               exits=[(_hm(r - 1), q, p, w) for r, q, p, w in t.exits]) for t in tr]
     return out
 
 
