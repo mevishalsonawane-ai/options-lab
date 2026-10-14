@@ -1,0 +1,40 @@
+id: r44-rsi-fade
+title: 'RSI(14) fade: CE when RSI crosses below 30, PE above 70 (5-minute index)'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_R44_SWEEP_RETEST.md
+hypothesis: Boss's sweep found this rule loses after costs in 2021-23 and 2024-26; an independent re-test with our code and
+  data agrees (and no cell passes the gates).
+data_version: Dhan lake on Drive gdrive:IraAlgo-data-lake (index_1m 2021-2026; options_rolling_1m nearest-expiry WEEK series
+  for NSE/BSE, CRUDEOIL MONTH Aug 2025 - Oct 2026), to 12 Oct 2026
+period:
+  design: IS 2021-2023, OOS design 1 Jan 2024 - 13 Apr 2026 (CRUDEOIL Aug 2025 - 13 Apr 2026)
+  holdout: 27 Apr - 12 Oct 2026 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+- CRUDEOIL
+features:
+- 5-minute underlying OHLC (index spot / CRUDEOIL future)
+- signal on the underlying; ATM option bought
+model_or_rule: rsi_fade (research/hunt/r44/r44cfg.py STRATS, ind.py signals, sim.py exits)
+settings: 'research/hunt/r44/PREREG.md (Boss''s spec: stop -25%, target +50%, 60-min exit, 15:15 square-off, max 2 a day a
+  side)'
+prereg: research/hunt/r44/PREREG.md
+variants_tried: 14
+results:
+  summary: 'NSE/BSE (5 indices x CE/PE, expiry days skipped, current lots): in-sample 2021-23: 2,357 trades, real Rs -405,107,
+    Boss costs Rs -456,333, 0 of 10 index-side cells positive; OOS design 1 Jan 2024 - 13 Apr 2026: 3,573 trades, real Rs
+    -743,167, Boss costs Rs -774,079, 0 of 10 index-side cells positive; holdout 27 Apr - 12 Oct 2026: 775 trades, real Rs
+    -253,053, Boss costs Rs -249,946, 0 of 10 index-side cells positive; Boss''s OOS 2024-26: 4,407 trades, real Rs -1,021,997,
+    Boss costs Rs -1,049,032, 0 of 10 index-side cells positive. CRUDEOIL (morning + full, Aug 2025 - Oct 2026): 1,151 trades,
+    real Rs -319,807, 0 of 4 cells positive. Lowest OOS-design BH q 0.019 (family 112). 0 of 14 cells pass the gates.'
+  costs: 'Boss Rs 95 (NSE) / Rs 200 (MCX) a round trip on raw fills; real: Fills(''liq'') slippage + dated charges (Zerodha
+    MCX charges for CRUDEOIL)'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. One of 8 R44 strategy ids; BH across all 112 R44 cells (strategy x index x side x session);
+  2,000 random-entry twins per cell.
