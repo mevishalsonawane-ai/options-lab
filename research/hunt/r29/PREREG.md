@@ -180,6 +180,48 @@ Trades / day, win rate, average win and loss, P&L / day, % green days, worst day
 short, the 4 exits and 1-ITM side by side, discovery / selection / 2025 / 2026 / holdout, p vs twins, BH q, the sample
 sizes (trades and days) with every number.
 
-## Part B
+## Part B (14 Oct 2026, after Steps 1-2 on discovery + selection only; before any walk-forward or holdout read)
 
-(Added after Steps 1-2, before Step 3. Empty at the Part A commit.)
+What Steps 1-2 found (`results/mining.json`, `results/mining.csv`; 93,650 discovery and 134,455 selection trades over the
+140 candidates, ATM, X1):
+
+- **No candidate made money after costs in both discovery and selection** except one with 2 and 9 trades (P12_5 bear
+  fade), which is noise by any count. A random minute's trade lost Rs 169 (discovery) and Rs 99 (selection) per lot.
+- **45 candidates passed Part A's survivor gate. All 45 are "fade" candidates, and every one of them LOSES money on its
+  own** (selection mean Rs -10 to -203 a trade). They pass because their random twins lose even more.
+- **Twin caveat** (seen in Step 2; it changes no gate): a twin keeps the trade's day AND direction. A ribbon event's sign
+  says which way the day has been going, so a twin of a FOLLOW trade is a random entry in the day's own direction
+  (selection twins +Rs 41 on average), and a twin of a FADE trade is a random entry against it (-Rs 241). The twin test
+  therefore flatters fades and is harsh on follows. Part A's pass gate also needs net P&L > 0 on its own, so a fade that
+  merely loses less than its twins cannot pass. From here on the report also shows, as a description only, a random
+  minute with a random direction on the same day (`rand_any_per_trade`).
+- Boss's three named ideas were mined as candidates and failed on selection (2024), both signs, ATM X1:
+  15-min stacked + 5-min pullback (P9_5 follow) Rs -62 / -209 a trade; compression then fan-out (P5_5, P5_15, P11_5
+  follow) Rs -104 to -209 except P5_15 bear +123 on 146 trades (q = 0.92, and -297 in discovery); multi-timeframe
+  alignment (P8_1 follow) Rs -72 / -78. They stay notes (CLAUDE.md: ideas that failed the gates stay notes only).
+
+**The rules (mechanical, as Part A fixes): the 10 best survivors by selection twin-adjusted expectancy**, each on all
+five indices, ATM, exit X1, no filters, one trade at a time, at most 3 a day:
+
+| rule | event | traded | discovery n / adj / net | selection n / adj / net | selection q |
+|---|---|---|---|---|---|
+| R1 | P3_3 twist, bearish (3-min) | fade (buy CE) | 162 / +173 / -174 | 244 / +227 / -85 | 0.009 |
+| R2 | P3_5 twist, bullish (5-min) | fade (buy PE) | 104 / +155 / -226 | 157 / +218 / -10 | 0.050 |
+| R3 | P5_15 compression-expansion, bullish (15-min) | fade | 111 / +104 / -229 | 182 / +213 / -37 | 0.015 |
+| R4 | P2_15 CLS 9/21/50/200 stack onset, bearish (15-min) | fade | 166 / +194 / -111 | 241 / +194 / -69 | 0.056 |
+| R5 | P5_3 compression-expansion, bullish (3-min) | fade | 457 / +151 / -141 | 603 / +192 / -11 | 0.0002 |
+| R6 | P9_5 5-min pullback in a 15-min stack, bearish | fade | 206 / +151 / -159 | 338 / +159 / -29 | 0.010 |
+| R7 | P3_3 twist, bullish (3-min) | fade | 160 / +238 / -143 | 232 / +156 / -127 | 0.050 |
+| R8 | P10_1 1-min pullback in 5+15-min stacks, bearish | fade | 388 / +174 / -233 | 529 / +154 / -128 | 0.002 |
+| R9 | P2_5 CLS stack onset, bearish (5-min) | fade | 486 / +189 / -56 | 661 / +154 / -111 | 0.063 |
+| R10 | P1_5 RIB stack onset, bullish (5-min) | fade | 805 / +130 / -111 | 1,267 / +150 / -68 | 3e-6 |
+
+(n trades pooled over the indices with options in that part; adj = mean net minus the mean of its 20 twins; net = mean
+ATM X1 net per lot, Rs.)
+
+Plus **B0** (EMA 9 × EMA 21 on 5-minute bars, follow, ATM, X1) and the random twins. Confirmatory family on the
+holdout: 11 × 5 indices = **55 tests**; R29's whole family = 140 mining + 55 = **195**, to be added to F1's count.
+**Expected result, written down before the read:** every rule loses money on its own in the walk-forward years and in
+the holdout, so none passes Part A's gate.
+
+Run order: `study.py design` (any time), `study.py wf` (2025, 2026), then `study.py holdout` once.
