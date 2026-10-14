@@ -427,6 +427,12 @@ Later (when profitable):
 - W1 India brain v1 started 14 Oct on the data available then (branch claude/india-brain-v1). When the Dhan lake
   completes, the watchdog runs that branch's REFRESH command (not a new build). The crypto brain is on claude/crypto-brain.
   The Strategy Factory (F1) starts after the refresh.
+- F1 India started 14 Oct 06:03 UTC on Boss's request (branch claude/f1-india-factory: EMA, VWAP, OI, PCR, IV, GEX...),
+  with sister studies R3 (ORB family), R26 (OI wall), R27 (Night exit), R28 (gamma exposure), R29 (multi-EMA patterns).
+- F1 crypto started 14 Oct 06:35 UTC: the crypto options lake finished (Deribit trades, Delta India 1-minute candles
+  Jan 2024 to now, DVOL; branch claude/crypto-options-lake, merged). One session refreshes the crypto brain on the full
+  crypto lake, then runs the crypto part of the factory (branch claude/f1-crypto-factory). Still filling: Dhan stock options
+  (paced under Dhan's rate limit) and 13-14 Oct index data, on the renewed token (claude/data-lake-gdrive).
 
 ## C. Crypto Data Brain (owner, 2026-10-13: "the same model ... for crypto")
 Built 13 Oct: `research/brain/crypto` (README there), study `research/CRYPTO_C1_PREDICTABILITY.md`. Research only;
