@@ -89,3 +89,14 @@ Reported for every strategy and index: trades / day, win rate, average win / los
 max drawdown, big winners cut short, per fold and out of sample, p, q, sample sizes; and which features drive each model
 (permutation importance on the test fold). A pass becomes a forward-paper candidate behind an off switch; a fail stays a
 note.
+
+## Amendment 1 (14 Oct 2026, before any R30 label or outcome was computed)
+
+- **C2 triples:** "ribbon × 2 others" is about 490,000 triples per side per fold, too slow to run. The triples are
+  (ribbon feature × a pair of the 30 non-ribbon features whose training-fold terciles separate the training net
+  the most; mean over CE and PE of the best minus the worst tercile mean). This is chosen inside each training fold
+  only. C2 pairs are unchanged (ribbon × every non-ribbon feature).
+- **F1's holdout rows** are dropped as soon as they are read (index minutes, option rows; the 2023 option file is
+  skipped). No grid row, feature value or label from it is used, and the guard asserts that.
+- **M2's one-trade-at-a-time gate** uses the spread's 45-minute limit as the busy time (its exit minute is not stored).
+  Its 2× spread stress is re-simulated for the trades taken.
