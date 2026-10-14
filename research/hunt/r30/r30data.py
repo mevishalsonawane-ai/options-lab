@@ -150,6 +150,8 @@ def features(und: str) -> pd.DataFrame:
     F["day"] = M.day.values
     F["m"] = M.minute.values
     F = F[F.m.isin(K.GRID)].copy()
+    # the lake has a few minutes stamped twice (two seconds in one minute): keep the later row of the minute
+    F = F.drop_duplicates(["day", "m"], keep="last")
     F["day"] = pd.to_datetime(F.day).dt.date
     assert not F.day.map(lambda d: K.F1_HOLD[0] <= d <= K.F1_HOLD[1]).any()
     return F.drop(columns=["ts"])
@@ -249,11 +251,11 @@ def table() -> pd.DataFrame:
     parts = []
     ctx = {}
     for u in K.UNDS:
-        F = pd.read_parquet(K.OUT / f"feats_{u}.parquet")
+        F = pd.read_parquet(K.OUT / f"feats_{u}.parquet").drop_duplicates(["day", "m"], keep="last")
         ctx[u] = F[["day", "m", "ret_15m", "ret_day", "rib5_stack"]].rename(
             columns={"ret_15m": "x_ret_15m", "ret_day": "x_ret_day", "rib5_stack": "x_rib5_stack"})
     for i, u in enumerate(K.UNDS):
-        F = pd.read_parquet(K.OUT / f"feats_{u}.parquet")
+        F = pd.read_parquet(K.OUT / f"feats_{u}.parquet").drop_duplicates(["day", "m"], keep="last")
         Ch = pd.read_parquet(K.OUT / f"chain_{u}.parquet")
         L = pd.read_parquet(K.OUT / f"labels_{u}.parquet")
         for X in (F, Ch, L):
@@ -267,6 +269,7 @@ def table() -> pd.DataFrame:
         X["und_id"] = i
         parts.append(X)
     T = pd.concat(parts, ignore_index=True)
+    assert not T.duplicated(["und", "day", "m"]).any()
     assert not T.day.map(lambda d: K.F1_HOLD[0] <= d <= K.F1_HOLD[1]).any()
     T.to_parquet(K.OUT / "table.parquet")
     return T

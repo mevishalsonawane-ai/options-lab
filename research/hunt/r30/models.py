@@ -176,14 +176,14 @@ def sig_combo(tr, te, X, kind):
 def trade(te: pd.DataFrame, side: np.ndarray, label: str) -> pd.DataFrame:
     """One trade at a time per index, at most 3 a day, in grid order. Exit row from the label table (SPR: 45-minute
     upper bound)."""
-    te = te.assign(_side=side)
+    te = te.assign(sig_side=side)
     rows = []
-    for (u, d), g in te[te._side != ""].groupby(["und", "day"], sort=True):
+    for (u, d), g in te[te.sig_side != ""].groupby(["und", "day"], sort=True):
         busy, n = -1, 0
         for r in g.sort_values("m").itertuples(index=False):
             if n >= K.MAX_PER_DAY or r.m + 1 <= busy:
                 continue
-            s = r._side
+            s = r.sig_side
             net = getattr(r, f"{s}_{label}")
             if not np.isfinite(net):
                 continue
