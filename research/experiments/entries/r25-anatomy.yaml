@@ -1,0 +1,41 @@
+id: r25-anatomy
+title: 'Hero R25 step 2: what precedes jackpots vs duds (lift and expectancy, design only)'
+family: market-facts
+date: '2026-10-14'
+doc: research/HUNT_R25_HERO_DEEP.md
+hypothesis: Describe the jackpots and what precedes them (no trading claim).
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,SENSEX}_WEEK (ATM+-10, nearest
+  expiry), index_1m NIFTY/BANKNIFTY/SENSEX/INDIAVIX; expiry days found from the data; BANKNIFTY weeklies to 2024-11-13; 13
+  Oct 2026 not in the lake (ends 2026-10-12)'
+period:
+  design: 'expiry days 2023-01-01..2026-10-12: NIFTY 197, BANKNIFTY 98, SENSEX 175 (470)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+features:
+- index move 5/15/30
+- speed
+- day high/low break
+- opening range
+- distance in % / range / ATR / expected move
+- IV
+- OI change own / other side
+- PCR change
+- straddle change
+- volume burst
+- VIX
+- max pain
+- gap
+- trend
+model_or_rule: descriptive
+settings: research/hunt/r25/anatomy.py
+prereg: research/hunt/r25/PREREG.md
+variants_tried: null
+results:
+  summary: 173,624 decision rows on 467 days; base jackpot 2.42%, dud 80.9%; best pair lift 2.29; every state has negative
+    expectancy (best Rs -359.6 per Rs 1,000)
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    open + 5 bps + a 1/2/4-tick half-spread by 5-min volume; stress x2 spread; out-of-range prices at 0
+holdout_read: null
+verdict: not-a-test

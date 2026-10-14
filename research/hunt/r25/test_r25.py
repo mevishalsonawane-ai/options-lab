@@ -347,6 +347,15 @@ def test_census_counts_a_10x_unit():
     assert cov["C_min"] > 0
 
 
+def test_masked_day_shares_no_cache():
+    import triggers as TG
+    day = make_day(rally())
+    RU.signals(day, TG.make(TG.SPECS[0], {"dist_em_max": 1.44}, "hold"))
+    R.stored_range(day)
+    m = R.masked(day, 250)
+    assert "_tg" not in m.__dict__ and getattr(m, "_rng", None) is None
+
+
 def test_look_ahead_guard_triggers():
     import triggers as TG
     for sp in (rally(start=minute(12, 30)), rally(pts=-300.0, start=minute(13, 10)), flat()):
@@ -370,3 +379,30 @@ def test_trigger_fires_on_a_breakout_and_choose_respects_minimum_trades():
     assert s and all(x.side == 1 for x in s)           # only the up side broke out
     r = TG.choose(TG.SPECS[0], [day])                   # 1 day: no combination reaches 15 trades -> the strictest, held
     assert r.exits == "hold" and dict((k, v) for k, _, v in r.params) == {"dist_em_max": 1.0}
+
+
+@pytest.mark.skipif(not D.path("NIFTY").exists(), reason="the lake day files are not built here")
+def test_look_ahead_guard_on_real_design_days():
+    """The rules and the anatomy features on real design days (one per index), every 10th window minute."""
+    import anatomy as A
+    import triggers as TG
+    rules = list(RU.FIXED) + [TG.make(s, {k: v[1] for k, v in s["grid"].items()}, "app") for s in TG.SPECS]
+    n = 0
+    for u in K.UNDS:
+        ds = D.load(u, "design")
+        day = ds[len(ds) // 2]
+        for rule in rules:
+            full = [(s.row, s.side, s.strike) for s in RU.signals(day, rule)]
+            a, b = rule.window()
+            for t in range(a, b + 1, 10):
+                got = [(s.row, s.side, s.strike) for s in RU.signals(R.masked(day, t), rule) if s.row <= t]
+                assert got == [x for x in full if x[0] <= t], (u, rule.id, t)
+                n += 1
+        for t in A.DECISIONS[::6]:
+            want, got = A.features(day, t), A.features(R.masked(day, t), t)
+            assert len(want) == len(got)
+            for x, y in zip(want, got):
+                for k, v in x.items():
+                    assert (v == y[k]) or (isinstance(v, float) and math.isnan(v) and math.isnan(y[k])), (u, t, k)
+            n += 1
+    assert n > 100

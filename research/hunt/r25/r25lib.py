@@ -58,8 +58,10 @@ def masked(day: Day, t: int) -> Day:
         b = a.copy()
         b[t + 1:] = np.nan
         d.opts[k] = b
-    if hasattr(d, "_rng"):
-        del d._rng
+    # per-day caches (stored range, trigger candidates) belong to the full day: a shallow copy would share them and
+    # let the masked day read the future through them
+    for c in ("_rng", "_tg"):
+        d.__dict__.pop(c, None)
     return d
 
 
