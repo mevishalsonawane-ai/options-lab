@@ -166,3 +166,19 @@ For design, walk-forward and holdout separately, each with trades and days:
 - p vs twins and BH q.
 
 Crypto: a placeholder section in the write-up; the data watchdog adds it.
+
+## Amendment 1 (14 Oct 2026, before any outcome; only fills gaps, changes nothing above)
+
+- C1 and C2 trade 1-ITM with exit X1. They are scored like the screen rules (one entry a side a day, decisions every
+  5 minutes 09:30 .. 14:30).
+- Design results of a rule = its four walk-forward folds (2022, 2024H2, 2025, 2026) put together. 2021 is reference
+  data only.
+- A level (0/1) survivor becomes a rule only where it names an action:
+  - level present -> trade the side its sign says;
+  - a level survivor with a negative sign on an arm target ("trade when the level is absent") is not a rule.
+- Pair scores in rules: each feature becomes its percentile in the reference data (earlier design data in the
+  walk-forward; all design data for the holdout). The score is the mean of the two direction-signed percentiles.
+  Its quintiles come from the same reference.
+- P&L a day, % green days, worst day and max drawdown are on the rule's daily P&L over every session in the period
+  that has a chain for at least one traded index; a day without a trade counts as 0.
+- Holdout BH: m = every rule in the list (at most 20), whether or not it passed the design gates.
