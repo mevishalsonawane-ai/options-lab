@@ -1,0 +1,164 @@
+{
+ "day": "2026-10-12",
+ "underlying": "BTC",
+ "delta_products_alive": 577,
+ "matched_strike_expiry": 212,
+ "comparisons": 6814,
+ "method": "One day: every Delta India option that traded (1m candle with volume) vs Deribit trades on the same strike and",
+ "median_iv_diff_pts": 0.3,
+ "mean_abs_iv_diff_pts": 4.04,
+ "share_within_5pts": 0.791,
+ "share_within_10pts": 0.934,
+ "sample": [
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:32Z",
+   "delta_close_usd": 18.0,
+   "delta_iv": 34.07,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 29.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:33Z",
+   "delta_close_usd": 17.1,
+   "delta_iv": 33.76,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 28.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:34Z",
+   "delta_close_usd": 17.0,
+   "delta_iv": 33.75,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 27.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:35Z",
+   "delta_close_usd": 17.0,
+   "delta_iv": 33.78,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 26.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:36Z",
+   "delta_close_usd": 20.0,
+   "delta_iv": 34.9,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 25.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:37Z",
+   "delta_close_usd": 18.0,
+   "delta_iv": 34.21,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 24.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:38Z",
+   "delta_close_usd": 17.0,
+   "delta_iv": 33.86,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 23.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:39Z",
+   "delta_close_usd": 18.0,
+   "delta_iv": 34.26,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 22.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:40Z",
+   "delta_close_usd": 17.0,
+   "delta_iv": 33.91,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 21.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:41Z",
+   "delta_close_usd": 18.0,
+   "delta_iv": 34.32,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 20.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:42Z",
+   "delta_close_usd": 19.0,
+   "delta_iv": 34.71,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 19.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:43Z",
+   "delta_close_usd": 19.0,
+   "delta_iv": 34.74,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 18.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:44Z",
+   "delta_close_usd": 20.0,
+   "delta_iv": 35.12,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 17.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:46Z",
+   "delta_close_usd": 24.0,
+   "delta_iv": 36.52,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 15.8
+  },
+  {
+   "symbol": "P-BTC-82000-121026",
+   "minute": "2026-10-12T01:47Z",
+   "delta_close_usd": 22.5,
+   "delta_iv": 36.06,
+   "deribit_iv": 39.38,
+   "deribit_price_usd": 8.37,
+   "spot": 83654.56,
+   "gap_min": 14.8
+  }
+ ]
+}

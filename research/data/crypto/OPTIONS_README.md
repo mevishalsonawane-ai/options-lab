@@ -53,6 +53,9 @@ Things to know before using the data:
   settled in INR at the exchange's rate. They expire at **17:30 IST = 12:00 UTC**. The candle stamped exactly at expiry
   (the settlement print) and the flat candles after it are dropped.
 - Delta's candle API also returns minutes with no trade (volume 0, price carried); use `volume > 0` for traded minutes.
+- Delta candles are fetched from the product's launch, at most the last 120 days before expiry.
+- DVOL: Deribit keeps **1-minute DVOL for only ~6 months**; `dvol/{coin}.parquet` (1m) starts 10 Apr 2026 and grows on every
+  run, `dvol/{coin}_1h.parquet` (hourly) goes back to DVOL's start, 24 Mar 2021.
 
 ## Read it
 
@@ -156,6 +159,40 @@ jobs:
   and expiry date; Delta IV is solved with Black-Scholes from the candle close, Deribit's index as spot and Delta's own
   expiry time.
 
-## What is on Drive
+## What is on Drive (13 Oct 2026; `status` prints the live numbers)
 
-(filled in by the build run below)
+| data | range | files | rows | size |
+|---|---|---|---|---|
+| Deribit BTC option trades | 29 Nov 2016 → 13 Oct 2026 (every month) | 120 | 24,795,116 | 625 MB |
+| Deribit ETH option trades | 21 Mar 2019 → 13 Oct 2026 (every month) | 92 | 16,452,911 | 358 MB |
+| Deribit instruments | BTC 124,536 (expiries Jul 2016 → Sep 2027), ETH 126,437 | 2 | 250,973 | 2 MB |
+| Deribit DVOL | 1m: 10 Apr 2026 →; 1h: 24 Mar 2021 → | 4 | 632,547 | 6 MB |
+| Deribit delivery index | BTC 18 Mar 2016 →, ETH 29 Mar 2019 → (daily) | 2 | 5,114 | <1 MB |
+| Delta India products | 150,762 BTC/ETH options, expiries 28 Dec 2023 → 25 Dec 2026 (807 live) | 1 | 150,762 | 6 MB |
+| Delta India fees | fetched 13 Oct 2026 (also `research/data/crypto/delta_india_fees.json`) | 1 | | |
+| Delta India 1m candles, BTC | expiry days 12 Jan 2024 → 13 Oct 2026 (993 of 1,018 days have candles) | 1,018 | 570,210,234 | 937 MB |
+| Delta India 1m candles, ETH | expiry days 6 Feb 2024 → 13 Oct 2026 (961 of 982 days have candles) | 982 | 312,357,834 | 477 MB |
+
+**How far back Delta India goes:** the product list starts with expiries on 28 Dec 2023. The candle API serves 1-minute
+candles from the first options in **mid-January 2024** (BTC expiry 13 Jan 2024, ETH 6 Feb 2024) to today, for each
+option's whole life (capped here at its last 120 days). Of 149,955 expired BTC/ETH options, 135,206 have candles.
+Minutes without trades are filled with the last price and volume 0. 8 expiry days carry a few candles with a close of
+0 (8,428 of 882M rows, mostly 5–7 Aug 2024); they are kept and those days have `ok = false`.
+
+**Checks, all months:** no duplicate trade_ids (0 dropped at page edges, 0 left), time order strictly kept, 0 saturated
+pages (no possible paging gap), every instrument name parsed. Days without trades exist only in each coin's launch
+months (BTC Nov 2016 – Feb 2017, ETH Mar 2019). IV outside (0, 500]: BTC 95,859 of 24.8M trades (0.39%: 89,507 with
+IV 0 and 6,352 over 500), ETH 72,315 of 16.5M (0.44%). Price above its no-arbitrage bound: 19 BTC trades in 8 months of
+2017–2019 (e.g. 6 trades of a 3,400 call at exactly 1.0 BTC on 11 Jun 2017, IV 500); kept in the data, and those
+months have `ok = false`. 12,025 BTC and 17,901 ETH trades cost ≥ 1 coin; they are deep in-the-money puts, which is
+legal. The current month (Oct 2026) is `complete = false` and is rebuilt on the next run.
+
+**Cross-check (12 Oct 2026, BTC, `options_crosscheck.json`):** 212 Delta India contracts had a Deribit twin (same strike,
+same expiry date); 60 of them were compared minute by minute. Over 6,814 traded Delta minutes with a Deribit trade
+within ±30 minutes, the Delta IV minus the Deribit IV had a median of +0.3 vol points and a mean absolute gap of 4.0
+points; 79% were within 5 points and 93% within 10. The two venues price alike; Delta's expiry is 4 hours later
+(12:00 vs 08:00 UTC).
+
+**Gaps / not available:** Deribit 1-minute DVOL before Apr 2026 (hourly only); Deribit has no historical order book or
+quotes in this public API (trades carry `mark_price`, `iv` and `index_price`); Delta India has no history of bid/ask,
+IV, OI or Greeks (the nightly snapshot builds it from now) and no candles before Jan 2024.

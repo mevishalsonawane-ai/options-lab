@@ -429,11 +429,24 @@ def page_products(get, states, coins=COINS, page_size=500):
             if after:
                 p["after"] = after
             r = get(f"{DELTA}/products", p)
-            out += r.get("result") or []
+            out += [slim_product(x) for x in r.get("result") or []]
             after = (r.get("meta") or {}).get("after")
             if not after or not r.get("result"):
                 break
     return out
+
+
+_ASSET_KEYS = ("underlying_asset", "quoting_asset", "settling_asset", "spot_index")
+
+
+def slim_product(p):
+    """A product without the bulky nested asset records (deposit networks, withdrawal limits, UI config): those
+    repeat on every one of ~150k products and took >4 GB of memory (13 Oct). Each asset keeps its symbol and id."""
+    q = {k: v for k, v in p.items() if k not in _ASSET_KEYS and k != "ui_config"}
+    for k in _ASSET_KEYS:
+        if isinstance(p.get(k), dict):
+            q[k] = {kk: p[k].get(kk) for kk in ("symbol", "id") if kk in p[k]}
+    return q
 
 
 def products_frame(raw, inr_per_usd=None, fetched_ms=None):
@@ -476,30 +489,36 @@ def merge_products(old, new):
 
 def inr_per_usd(get):
     try:
-        v = get(f"{DELTA}/settings")["result"].get("fiat_to_usd")
-        return float(v.get("INR") if isinstance(v, dict) else v)
+        v = get(f"{DELTA}/settings")["result"].get("fiat_to_usd")     # {'asset_to_fiat_value': 85, 'precision': 2}
+        return float(v.get("asset_to_fiat_value") if isinstance(v, dict) else v)
     except Exception:  # noqa: BLE001 — optional context, never fatal
         return None
 
 
 def fee_schedule(products, today, inr):
     """The option fee schedule as Delta's API states it per product (maker/taker rate on the notional, capped at a
-    share of the premium), grouped so each distinct schedule appears once. GST (18% in India) is charged on top of
-    fees and is not in the API."""
+    share of the premium). Each distinct schedule appears once with the expiries it covered, so rate changes over
+    time are visible; `current` is the schedule of the live products. GST (18% in India) is charged on top of fees
+    and is not in the API."""
     sched = {}
     for p in products:
         u = (p.get("underlying_asset") or {}).get("symbol")
         key = (u, p.get("maker_commission_rate"), p.get("taker_commission_rate"),
                (p.get("product_specs") or {}).get("premium_commission_rate"), p.get("contract_value"))
-        sched.setdefault(key, 0)
-        sched[key] += 1
+        x = sched.setdefault(key, dict(products=0, live=0, first_expiry=None, last_expiry=None))
+        x["products"] += 1
+        x["live"] += p.get("state") == "live"
+        e = (p.get("settlement_time") or "")[:10] or None
+        if e:
+            x["first_expiry"] = min(x["first_expiry"] or e, e)
+            x["last_expiry"] = max(x["last_expiry"] or e, e)
+    rows = [dict(underlying=k[0], maker_rate=k[1], taker_rate=k[2], premium_commission_cap=k[3], contract_value=k[4],
+                 **v) for k, v in sorted(sched.items(), key=lambda kv: (str(kv[0][0]), kv[1]["first_expiry"] or ""))]
     return dict(fetched=today, source=f"{DELTA}/products (maker_commission_rate, taker_commission_rate, "
                                       "product_specs.premium_commission_rate)",
                 note="fee = rate × notional (contract_value × underlying price × contracts), capped at "
                      "premium_commission_cap × premium; GST 18% on top (not in the API). Rates as fractions.",
-                inr_per_usd=inr,
-                schedules=[dict(underlying=k[0], maker_rate=k[1], taker_rate=k[2], premium_commission_cap=k[3],
-                                contract_value=k[4], products=n) for k, n in sorted(sched.items(), key=str)])
+                inr_per_usd=inr, current=[r for r in rows if r["live"]], schedules=rows)
 
 
 CANDLE_SCHEMA = pa.schema([("timestamp", pa.int64()), ("symbol", pa.string()), ("product_id", pa.int64()),
@@ -520,16 +539,20 @@ def fetch_candles(get, symbol, start_ms, end_ms, resolution="1m", limit=4000, st
         for c in data:
             t = int(c["time"]) * 1000
             if start_ms <= t < end_ms:
-                rows[t] = c
+                rows[t] = tuple(None if c.get(k) is None else float(c[k])
+                                for k in ("open", "high", "low", "close", "volume"))
         hi = lo
-    return [dict(timestamp=t, **{k: rows[t].get(k) for k in ("open", "high", "low", "close", "volume")})
-            for t in sorted(rows)]
+    return [dict(timestamp=t, open=v[0], high=v[1], low=v[2], close=v[3], volume=v[4])
+            for t, v in sorted(rows.items())]
 
 
 def build_candles_day(get, products, work, rel, max_days=120):
     """1m candles for every product in `products` (one underlying, one expiry day) → one Parquet. Candles after the
-    settlement time are dropped (the API keeps printing a flat post-expiry price). Returns (path, qa)."""
-    cols = {f.name: [] for f in CANDLE_SCHEMA}
+    settlement time are dropped (the API keeps printing a flat post-expiry price). Each product becomes a small Arrow
+    table straight away (a day can hold ~1M candles; as Python objects 16 such days took 14 GB, 13 Oct).
+    Returns (path, qa)."""
+    import pyarrow.compute as pc
+    tables = []
     qa = dict(products=len(products), products_with_candles=0, dropped_after_expiry=0, rows=0)
     for p in products:
         exp = int(p["expiry_ts"])
@@ -538,25 +561,26 @@ def build_candles_day(get, products, work, rel, max_days=120):
         got = fetch_candles(get, p["symbol"], start, exp + 2 * 3_600_000)
         keep = [c for c in got if c["timestamp"] < exp]
         qa["dropped_after_expiry"] += len(got) - len(keep)
-        if keep:
-            qa["products_with_candles"] += 1
+        del got
+        if not keep:
+            continue
+        qa["products_with_candles"] += 1
         s = parse_delta_symbol(p["symbol"]) or {}
-        for c in keep:
-            for k in ("timestamp", "open", "high", "low", "close", "volume"):
-                cols[k].append(None if c[k] is None else (int(c[k]) if k == "timestamp" else float(c[k])))
-            cols["symbol"].append(p["symbol"])
-            cols["product_id"].append(int(p["id"]))
-            cols["underlying"].append(p.get("underlying") or s.get("underlying"))
-            cols["option_type"].append(s.get("option_type"))
-            cols["strike"].append(float(p["strike_price"]) if pd.notna(p.get("strike_price")) else s.get("strike"))
-            cols["expiry_ts"].append(exp)
-    t = pa.table({f.name: pa.array(cols[f.name], f.type) for f in CANDLE_SCHEMA}, schema=CANDLE_SCHEMA)
+        n = len(keep)
+        strike = float(p["strike_price"]) if pd.notna(p.get("strike_price")) else s.get("strike")
+        cols = {k: [c[k] for c in keep] for k in ("timestamp", "open", "high", "low", "close", "volume")}
+        cols |= dict(symbol=[p["symbol"]] * n, product_id=[int(p["id"])] * n,
+                     underlying=[p.get("underlying") or s.get("underlying")] * n,
+                     option_type=[s.get("option_type")] * n, strike=[strike] * n, expiry_ts=[exp] * n)
+        tables.append(pa.table({f.name: pa.array(cols[f.name], f.type) for f in CANDLE_SCHEMA}, schema=CANDLE_SCHEMA))
+        del keep, cols
+    t = pa.concat_tables(tables) if tables else CANDLE_SCHEMA.empty_table()
+    del tables
     t = t.sort_by([("timestamp", "ascending"), ("symbol", "ascending")])
     qa["rows"] = t.num_rows
-    ts = t.column("timestamp").to_pylist()
-    qa["first_ts"], qa["last_ts"] = (ts[0], ts[-1]) if ts else (None, None)
-    closes = [x for x in t.column("close").to_pylist() if x is not None]
-    qa["price_nonpositive"] = sum(1 for x in closes if x <= 0)
+    qa["first_ts"] = pc.min(t.column("timestamp")).as_py()
+    qa["last_ts"] = pc.max(t.column("timestamp")).as_py()
+    qa["price_nonpositive"] = int(pc.sum(pc.less_equal(t.column("close"), 0)).as_py() or 0)
     qa["ok"] = qa["price_nonpositive"] == 0
     out = os.path.join(work, rel)
     write_parquet(t, out)
@@ -657,31 +681,32 @@ def load_catalog(path=CATALOG, remote=None, run=subprocess.run):
     return {}, {}
 
 
-def merge_catalog(files, failures, path, resolved=()):
-    """Fold in what another process (e.g. a Delta run beside a Deribit run) saved meanwhile: rows on disk that this
-    process does not have are kept; this process wins for its own paths. Changes `files` and `failures` in place."""
+def merge_catalog(files, failures, path, mine=()):
+    """Fold in what other processes (e.g. a Delta run beside a Deribit run) saved meanwhile. For every path this
+    process did not build or fail itself (`mine`), the copy on disk wins, so a long run never writes back the stale
+    rows it loaded at start. Changes `files` and `failures` in place."""
     if not os.path.exists(path):
         return
     disk_files, disk_fail = load_catalog(path)
     for k, v in disk_files.items():
-        files.setdefault(k, v)
+        if k not in mine:
+            files[k] = v
+    for k in [k for k in failures if k not in mine]:
+        failures.pop(k)
     for k, v in disk_fail.items():
-        if k not in files and k not in resolved:
-            failures.setdefault(k, v)
-    for k in list(failures):
-        if k in files and k in resolved:
-            failures.pop(k)
+        if k not in mine:
+            failures[k] = v
 
 
-def save_catalog(files, failures, path=CATALOG, remote=REMOTE, resolved=None):
-    """Write the catalog (JSON + CSV) atomically. With `resolved` (a set, even empty) the file on disk is merged in
-    first, under a lock file, so two processes can share one catalog."""
+def save_catalog(files, failures, path=CATALOG, remote=REMOTE, mine=None):
+    """Write the catalog (JSON + CSV) atomically. With `mine` (the paths this process wrote, a set, even empty) the
+    file on disk is merged in first, under a lock file, so several processes can share one catalog."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    if resolved is not None:
+    if mine is not None:
         import fcntl
         with open(path + ".lock", "w") as lk:
             fcntl.flock(lk, fcntl.LOCK_EX)
-            merge_catalog(files, failures, path, resolved)
+            merge_catalog(files, failures, path, mine)
             _write_catalog(files, failures, path, remote)
         return
     _write_catalog(files, failures, path, remote)
@@ -750,13 +775,13 @@ class Lake:
     def __init__(self, a, run=subprocess.run, deribit=None, delta=None, now_ms=None, today=None):
         self.a, self.run = a, run
         self.deribit = deribit or Http(min_interval=0.3)        # ≈3 req/s, far under Deribit's public limits
-        self.delta = delta or Http(min_interval=0.2)            # ≈5 req/s
+        self.delta = delta or Http(min_interval=getattr(a, "delta_interval", 0.2))   # ≈5 req/s by default
         self.now_ms = now_ms or int(time.time() * 1000)
         self.today = today or utc(self.now_ms, "%Y-%m-%d")
         self.files, self.failures = load_catalog(a.catalog, None if a.dry_run else a.remote, run)
         self.lock = threading.Lock()
         self.upload_lock = threading.Lock()
-        self.resolved = set()
+        self.mine = set()                    # catalog paths this process built, failed or re-checked
         self.saved = self.published = 0.0
         self._listing = {}
 
@@ -775,10 +800,10 @@ class Lake:
         with self.upload_lock:     # one upload at a time: Drive makes duplicate folders when two create one at once
             ok = upload(local, self.a.remote, rel, self.run)
         with self.lock:
+            self.mine.add(rel)
             if ok:
                 self.files[rel] = e
                 self.failures.pop(rel, None)
-                self.resolved.add(rel)
             else:
                 self.failures[rel] = dict(path=rel, error="upload or rclone check failed", when=self.today)
         if os.path.exists(local):
@@ -788,6 +813,7 @@ class Lake:
 
     def fail(self, rel, e):
         with self.lock:
+            self.mine.add(rel)
             self.failures[rel] = dict(path=rel, error=f"{type(e).__name__}: {str(e)[:300]}", when=self.today)
         print(f"FAILED {rel}: {e}", flush=True)
 
@@ -795,7 +821,7 @@ class Lake:
         with self.lock:
             now = time.time()
             if force or now - self.saved >= 30:
-                save_catalog(self.files, self.failures, self.a.catalog, self.a.remote, self.resolved)
+                save_catalog(self.files, self.failures, self.a.catalog, self.a.remote, self.mine)
                 self.saved = now
             if not self.a.dry_run and (force or now - self.published >= 600):
                 for f in (self.a.catalog, self.a.catalog[:-5] + ".csv"):
@@ -843,6 +869,8 @@ class Lake:
                 qa = trades_qa(pq.read_table(local), tuple(e["window"]))
                 with self.lock:
                     self.files[rel] = {**e, **qa}
+                    self.failures.pop(rel, None)
+                    self.mine.add(rel)
                 print(f"  requa {rel}: ok={qa['ok']} iv_out={qa['iv_out_of_range']} "
                       f"above_bound={qa['price_above_bound']}", flush=True)
             except Exception as ex:  # noqa: BLE001
@@ -876,25 +904,28 @@ class Lake:
                 self.fail(rel, ex)
 
     def dvol(self):
-        """DVOL 1m per coin, resumed from the last timestamp of the copy already on Drive."""
+        """DVOL per coin, resumed from the last timestamp of the copy already on Drive. Deribit keeps 1-minute DVOL
+        for only ~6 months (checked 13 Oct 2026), so the 1m file grows from there on every run; the hourly file goes
+        back to DVOL's start (Mar 2021)."""
         for c in COINS:
-            rel = f"{ROOT}/deribit/dvol/{c}.parquet"
-            local = os.path.join(self.a.work, rel)
-            try:
-                old = None
-                e = self.files.get(rel)
-                if e and not self.a.dry_run and fetch_remote(self.a.remote, rel, local, self.run):
-                    old = pd.read_parquet(local)
-                start = int(old["timestamp"].max()) + 1 if old is not None and len(old) else 1_609_459_200_000
-                new = fetch_dvol(self.deribit, c, start, self.now_ms)
-                df = pd.concat([old, new]) if old is not None else new
-                df = df.drop_duplicates("timestamp").sort_values("timestamp").reset_index(drop=True)
-                print(f"deribit/dvol/{c}: +{len(new):,} rows, {len(df):,} total from {utc(df['timestamp'].min())}",
-                      flush=True)
-                if not self.a.dry_run:
-                    self.single(rel, df, "dvol", c)
-            except Exception as ex:  # noqa: BLE001
-                self.fail(rel, ex)
+            for res, name in ((60, f"{c}.parquet"), (3600, f"{c}_1h.parquet")):
+                rel = f"{ROOT}/deribit/dvol/{name}"
+                local = os.path.join(self.a.work, rel)
+                try:
+                    old = None
+                    if self.files.get(rel) and not self.a.dry_run and fetch_remote(self.a.remote, rel, local, self.run):
+                        old = pd.read_parquet(local)
+                    # restart AT the last stored candle: it may have been the unfinished current minute/hour
+                    start = int(old["timestamp"].max()) if old is not None and len(old) else 1_609_459_200_000
+                    new = fetch_dvol(self.deribit, c, start, self.now_ms, res)
+                    df = pd.concat([old, new]) if old is not None else new
+                    df = df.drop_duplicates("timestamp", keep="last").sort_values("timestamp").reset_index(drop=True)
+                    print(f"deribit/dvol/{name}: +{len(new):,} rows, {len(df):,} total from "
+                          f"{utc(df['timestamp'].min())}", flush=True)
+                    if not self.a.dry_run:
+                        self.single(rel, df, "dvol_1m" if res == 60 else "dvol_1h", c)
+                except Exception as ex:  # noqa: BLE001
+                    self.fail(rel, ex)
 
     def index(self):
         for name in ("btc_usd", "eth_usd"):
@@ -917,7 +948,9 @@ class Lake:
             local = os.path.join(self.a.work, rel)
             old = None
             if not self.a.dry_run and self.files.get(rel) and fetch_remote(self.a.remote, rel, local, self.run):
-                old = pd.read_parquet(local)
+                gone = pq.read_table(local, filters=[("id", "not in", [int(x) for x in df["id"]])])
+                old = gone.to_pandas() if gone.num_rows else None      # only delisted rows, not all 150k raw rows
+                os.remove(local)
             df = merge_products(old, df)
             print(f"delta_india/products: {len(df):,} BTC/ETH options ({(df['state'] == 'live').sum()} live), expiries "
                   f"{utc(df['expiry_ts'].min(), '%Y-%m-%d')}..{utc(df['expiry_ts'].max(), '%Y-%m-%d')}", flush=True)
@@ -942,6 +975,8 @@ class Lake:
             self.fail(rel, ex)
             return None
 
+    CANDLE_PRODUCT_COLS = ["id", "symbol", "underlying", "strike_price", "expiry_ts", "launch_ts"]
+
     def delta_candles(self, products=None):
         """One file per underlying per expiry day, newest expiries first; only expiries already settled."""
         if products is None:
@@ -950,9 +985,11 @@ class Lake:
             if not fetch_remote(self.a.remote, rel, local, self.run):
                 products = self.delta_products()
             else:
-                products = pd.read_parquet(local)
+                products = pd.read_parquet(local, columns=self.CANDLE_PRODUCT_COLS)
+                os.remove(local)
         if products is None or products.empty:
             return []
+        products = products[self.CANDLE_PRODUCT_COLS]
         done = products[products["expiry_ts"] < self.now_ms]
         groups = []
         for (und, exp_day), g in done.groupby([done["underlying"], done["expiry_ts"] // DAY_MS]):
@@ -980,7 +1017,7 @@ class Lake:
                 e = entry(rel, out, "delta_india", "candles_1m", und, day, True, qa, self.today)
                 if self.publish(out, rel, e):
                     print(f"  {rel}: {qa['rows']:,} candles, {qa['products_with_candles']}/{qa['products']} "
-                          f"products traded", flush=True)
+                          f"products with candles", flush=True)
             except Exception as ex:  # noqa: BLE001
                 self.fail(rel, ex)
 
@@ -1118,6 +1155,8 @@ def main(argv=None, run=subprocess.run, deribit=None, delta=None, now_ms=None):
     ap.add_argument("--work", default=os.path.join(tempfile.gettempdir(), "crypto-options-lake"))
     ap.add_argument("--catalog", default=CATALOG)
     ap.add_argument("--workers", type=int, default=3, help="months / expiry days fetched at the same time")
+    ap.add_argument("--delta-interval", type=float, default=0.2,
+                    help="seconds between Delta requests (0.2 ≈ 5/s; Delta allows ~10k weight per 5 min per IP)")
     ap.add_argument("--dry-run", action="store_true", help="plan only: no uploads")
     ap.add_argument("--no-upload", action="store_true", help="snapshot: save locally only")
     a = ap.parse_args(argv)

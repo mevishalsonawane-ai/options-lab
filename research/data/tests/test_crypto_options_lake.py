@@ -10,7 +10,6 @@ import sys
 import urllib.error
 from pathlib import Path
 
-import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
@@ -253,6 +252,7 @@ def test_products_frame_merge_and_fees():
     assert sorted(merged["id"].tolist()) == [1, 2, 9]                                     # delisted rows kept
     fees = L.fee_schedule(raw, "2026-10-13", 88.0)
     assert fees["fetched"] == "2026-10-13" and fees["schedules"][0]["products"] == 3
+    assert fees["schedules"][0]["first_expiry"] == "2026-10-13" and fees["current"] == []
     assert fees["schedules"][0]["premium_commission_cap"] == 0.035
 
 
@@ -370,15 +370,18 @@ def test_failed_check_is_recorded_and_retried(tmp_path):
     assert cat["files"] == [] and "rclone check" in cat["failures"][0]["error"]
 
 
-def test_catalog_merge_keeps_another_process_rows(tmp_path):
+def test_catalog_merge_keeps_another_process_rows_and_never_writes_back_stale_ones(tmp_path):
     path = str(tmp_path / "options_catalog.json")
-    a = dict(path="a", bytes=1, rows=1, source="s", dataset="d", key="k", period="p")
-    b = dict(path="b", bytes=2, rows=2, source="s", dataset="d", key="k", period="p")
-    L.save_catalog({"a": a}, {"x": dict(path="x", error="e")}, path)
-    files, fails = {"b": b}, {}
-    L.save_catalog(files, fails, path, resolved={"x"})
+    row = lambda p, n: dict(path=p, bytes=n, rows=n, source="s", dataset="d", key="k", period="p")  # noqa: E731
+    # process A loaded {a: 1, d: 1} at start; meanwhile process B rebuilt a (2), added c, and fixed failure x
+    L.save_catalog({"a": row("a", 2), "c": row("c", 3), "d": row("d", 1)}, {}, path)
+    files = {"a": row("a", 1), "d": row("d", 1), "b": row("b", 5)}
+    fails = {"x": dict(path="x", error="old"), "y": dict(path="y", error="mine")}
+    L.save_catalog(files, fails, path, mine={"b", "y"})
     got, gf = L.load_catalog(path)
-    assert set(got) == {"a", "b"} and gf == {}                                            # x resolved here
+    assert set(got) == {"a", "b", "c", "d"}
+    assert got["a"]["rows"] == 2                                                          # B's newer row wins
+    assert set(gf) == {"y"}                                                               # stale x not resurrected
 
 
 def test_priority_plan_newest_two_years_first():
@@ -418,3 +421,51 @@ def test_http_retries_a_cut_off_response():
             raise x
         return x
     assert L.Http(min_interval=0, opener=opener, sleep=lambda s: None)("https://x") == dict(result=2)
+
+
+def test_inr_per_usd_reads_delta_settings():
+    assert L.inr_per_usd(lambda u, p=None: dict(result=dict(fiat_to_usd=dict(asset_to_fiat_value=85)))) == 85.0
+    assert L.inr_per_usd(lambda u, p=None: dict(result={})) is None
+
+
+def test_crosscheck_matches_strike_and_expiry_and_compares_iv(tmp_path):
+    day0 = L.iso_ms("2026-10-12T00:00:00Z")
+    exp = L.iso_ms("2026-10-13T12:00:00Z")
+    spot, k = 83_000.0, 84_000.0
+    minute = day0 + 10 * 3_600_000
+    t_years = (exp - minute) / (365 * L.DAY_MS)
+    delta_px = L.bs_price(spot, k, t_years, 0.40, "C")
+    der = trade(0, minute + 60_000, name="BTC-13OCT26-84000-C", price=0.004, iv=41.0)
+    der["index_price"] = spot
+
+    def delta(url, p):
+        if url.endswith("/products"):
+            return dict(result=[product(1, "C-BTC-84000-131026", strike="84000")] if p["states"] == "expired" else [],
+                        meta={})
+        return dict(result=[dict(time=minute // 1000, open=delta_px, high=delta_px, low=delta_px, close=delta_px,
+                                 volume=5)])
+    a = argparse.Namespace(work=str(tmp_path), remote="gdrive:IraAlgo-data-crypto", dry_run=True,
+                           catalog=str(tmp_path / "c.json"))
+    lake = L.Lake(a, run=FakeRclone(), deribit=FakeDeribit([der]), delta=delta, now_ms=exp + L.DAY_MS)
+    res = L.crosscheck(lake, "2026-10-12", "BTC")
+    assert res["matched_strike_expiry"] == 1 and res["comparisons"] == 1
+    assert res["sample"][0]["delta_iv"] == pytest.approx(40.0, abs=0.01)
+    assert res["median_iv_diff_pts"] == pytest.approx(-1.0, abs=0.01)
+
+
+def test_slim_product_drops_bulky_asset_records_but_keeps_symbols():
+    p = product(1, "C-BTC-85400-131026")
+    p["settling_asset"] = dict(symbol="USD", id=14, networks=[dict(network="INR_BANKING")] * 50)
+    p["ui_config"] = dict(leverage_slider_values=[1, 2, 5])
+    q = L.slim_product(p)
+    assert q["settling_asset"] == dict(symbol="USD", id=14) and "ui_config" not in q
+    assert q["underlying_asset"] == dict(symbol="BTC") and q["strike_price"] == "85400"
+    assert L.products_frame([q])["settling_asset"].iloc[0] == "USD"
+
+
+def test_build_candles_day_with_no_candles_writes_an_empty_file(tmp_path):
+    p = L.products_frame([product(1, "C-BTC-43000-281223", settle="2023-12-28T12:00:00Z",
+                                  launch="2023-12-20T12:00:00Z")]).to_dict("records")
+    out, qa = L.build_candles_day(lambda u, q: dict(result=[]), p, str(tmp_path), "x/2023-12-28.parquet")
+    assert qa["rows"] == 0 and qa["products_with_candles"] == 0 and qa["first_ts"] is None and qa["ok"]
+    assert pq.read_table(out).schema.equals(L.CANDLE_SCHEMA)
