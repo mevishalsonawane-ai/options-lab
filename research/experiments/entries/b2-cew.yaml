@@ -27,7 +27,7 @@ variants_tried: 6
 results:
   summary: 'Walk-forward AUC (LR / boosted trees / neural net, base and all inputs): base-LR 0.614, base-GBM 0.603, base-NN
     0.544, all-LR 0.602, all-GBM 0.600, all-NN 0.541 (186,908 test rows). Holdout (25,784 rows, 116 days): best all-GBM AUC
-    0.626 (p 0.000, q 0.001); pattern gate passed by 6 of 6. Timing of volatility, not direction (calls and puts score alike);
+    0.626 (p 0.000, q 0.001); pattern gate passed by 6 of 6. Timing of volatility, not which way (calls and puts score alike);
     the trading rule built on it lost.'
   costs: none for AUC; option targets use F1's outcomes (app fees, liq fills)
 holdout_read: true
