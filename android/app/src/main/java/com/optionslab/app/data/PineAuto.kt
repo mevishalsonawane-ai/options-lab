@@ -224,6 +224,24 @@ object PineAuto {
     }
 
     /**
+     * 14 Oct: the armed scripts the saved file's load switched off for a chart that is not an index
+     * ([PineScripts.takeRefused]). One holding an option is put in [Book.winding] at once, before anything else looks at
+     * it: its stop, target, profit lock, 15:15 and the day's stop keep being watched ([watchOnlyLocked], [one]) and it is
+     * never sold at market by the switch-off; nothing more is bought. Memory only (never reads the vault): safe on the
+     * fast position path. True when [b] changed.
+     */
+    private fun refusedHeld(b: Book): Boolean {
+        var changed = false
+        for (id in PineScripts.takeRefused()) {
+            if (!b.held.containsKey(id) || id in b.winding) continue
+            b.winding[id] = "its chart is not an index"
+            note(b, id, "Its open option is managed to its exit (its stop, target and profit lock); nothing more is bought.")
+            changed = true
+        }
+        return changed
+    }
+
+    /**
      * 14 Oct: two armed scripts saved under two spellings of one index ("NIFTY 50" and "NIFTY") with the same code and chart
      * were not the same to the one-time 06 Oct check ([dedupe]); written the index's own way on load they are, and both
      * would trade every signal. Once per load: of each such pair the first armed (the oldest) keeps trading and the later one
@@ -301,7 +319,13 @@ object PineAuto {
         save(b); publish(b)
     }
 
-    suspend fun load() = lock.withLock { val b = book(); if (ruleNotes(b) or renamedDupes(b)) save(b); Unit }
+    suspend fun load() = lock.withLock {
+        val b = book()
+        // 14 Oct: the scripts are read first, so a refused one's holding is in winding (watched) before any pass looks at it.
+        PineScripts.loadNow()
+        if (refusedHeld(b) or ruleNotes(b) or renamedDupes(b)) save(b)
+        Unit
+    }
 
     /**
      * The lines Boss's 06 Oct rule left when it protected an armed script on load ("Pine 'EMA': stop-loss 30 and target 60
@@ -347,6 +371,10 @@ object PineAuto {
         // A restore not yet disarmed: every script counts as switched off (what it holds is still sold).
         val disarm = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         val b = book()
+        // 14 Oct: a script refused on load for a chart that is not an index: its holding managed to its exit, never sold by
+        // the switch-off (before the "no longer auto-trading" sale below).
+        PineScripts.loadNow()
+        if (refusedHeld(b)) save(b)
         if (ruleNotes(b)) save(b)
         // The one-time switch-off of duplicate scripts (Boss's 06 Oct diagnostics), before anything trades.
         if (!disarm && dedupe(b)) save(b)
@@ -417,6 +445,8 @@ object PineAuto {
         // [fast]: an event-driven look ([FastPath]). Only the best premium seen changed (peak): kept in memory and written with
         // the next save, never a Keystore write per tick; a stop moved, a sale or a note is written now as before.
         val before = if (fast) untracked(b) else null
+        // 14 Oct: a script refused on load for a non-index chart: its holding is watched from the first look (memory only).
+        refusedHeld(b)
         // A restore not yet disarmed: the full pass sells what is held.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) return
         val stopped = dayStopped()
@@ -500,6 +530,9 @@ object PineAuto {
         // Stopped for the day or the kill switch: a real pause - on the way back a signal that changed meanwhile is not chased.
         if (stopped) { b.lastBar.remove(id); noteStopOnce(b, id); return }
         if (!isOpen() || mins >= 15 * 60 + 15) return
+        // 14 Oct: a script refused for a chart that is not an index never reads a signal there - not even to exit; what it
+        // holds goes only by its own stop, target, profit lock, 15:15 or the day's stop (above).
+        if (!entries && com.optionslab.ira.PineUnderlying.rootOf(item.auto.symbol) == null) return
         val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
         val now = epochSecondNow()

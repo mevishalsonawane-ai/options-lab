@@ -689,10 +689,44 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(lines.toString(), lines.contains("Pine 'On an option': switched off - Pine scripts run on the index chart and then buy the option: $ce is not an index."))
         assertTrue(lines.toString(), lines.contains("Pine 'Blank': switched off - Pine scripts run on the index chart and then buy the option: (no symbol) is not an index."))
         assertTrue("an off one is not told", lines.none { it.startsWith("Pine 'MCX, off'") })
+        assertTrue("no holding: simply off", lines.none { it.contains("managed to its exit") })
+        assertTrue(PineAuto.held.value.isEmpty())
         // Written back: read again, nothing more is said and nothing changes.
         val again = PineScripts.parseNoting(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
         assertTrue(again.second.isEmpty()); assertFalse(again.third)
         assertEquals("NIFTY", again.first.single { it.id == 2L }.auto.symbol)
+    }
+
+    @Test fun aLiveHoldingOfAScriptRefusedOnLoadIsManagedToItsOwnExitNeverDumped() {
+        bought()                                                   // 30 at 300 on Zerodha, its stop resting at 270
+        // As after an update and a restart: the saved script names an option's chart.
+        val f = java.io.File(context.filesDir, "pine.vault")
+        val saved = org.json.JSONArray(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
+        saved.getJSONObject(0).getJSONObject("auto").put("symbol", ce)
+        PineScripts.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, saved.toString().toByteArray(Charsets.UTF_8))
+        PineScripts::class.java.getDeclaredField("loaded").apply { isAccessible = true }.set(null, false)
+        runBlocking { PineAuto.load() }
+        assertFalse("refused: off", PineScripts.get(id)!!.auto.on)
+        assertNotNull("still held", held())
+        assertTrue(log(), log().contains("Its open option is managed to its exit (its stop, target and profit lock); nothing more is bought."))
+        // The position watch looks at it from the first look; at 300 nothing is due.
+        runBlocking { PineAuto.watchOnly() }
+        assertNotNull(held())
+        // A full pass never sells it for being switched off, and never reads a signal on the option's chart (the index's
+        // signal turning SELL would have sold it before).
+        pass(51_900.0)
+        pass(52_010.0)
+        pass(51_900.0)
+        assertNotNull(held())
+        assertTrue("no market sale", side("SELL").isEmpty())
+        assertFalse(log(), log().contains("no longer auto-trading"))
+        assertEquals("nothing more bought", 1, side("BUY").size)
+        // Its own target still sells it, from the position watch.
+        kite.quote("NFO:$ce", 361.0, 360.95, 361.05)
+        runBlocking { PineAuto.watchOnly() }
+        assertEquals(1, side("SELL").size)
+        assertTrue(log(), log().contains("at 361.00: target"))
     }
 
     @Test fun twoSpellingsOfOneIndexAreOneScriptAfterLoadAndOnlyTheFirstKeepsTrading() {
