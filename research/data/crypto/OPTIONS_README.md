@@ -170,11 +170,14 @@ jobs:
 | Deribit delivery index | BTC 18 Mar 2016 →, ETH 29 Mar 2019 → (daily) | 2 | 5,114 | <1 MB |
 | Delta India products | 150,762 BTC/ETH options, expiries 28 Dec 2023 → 25 Dec 2026 (807 live) | 1 | 150,762 | 6 MB |
 | Delta India fees | fetched 13 Oct 2026 (also `research/data/crypto/delta_india_fees.json`) | 1 | | |
-| Delta India 1m candles | newest expiry first, still being filled; see the catalog | | | |
+| Delta India 1m candles, BTC | expiry days 12 Jan 2024 → 13 Oct 2026 (993 of 1,018 days have candles) | 1,018 | 570,210,234 | 937 MB |
+| Delta India 1m candles, ETH | expiry days 6 Feb 2024 → 13 Oct 2026 (961 of 982 days have candles) | 982 | 312,357,834 | 477 MB |
 
-**How far back Delta India goes:** the product list starts with expiries on 28 Dec 2023, but the candle API returns
-nothing for options that expired before about **April 2024**; from then on it serves 1-minute candles for the whole life
-of each option (minutes without trades are filled with the last price and volume 0).
+**How far back Delta India goes:** the product list starts with expiries on 28 Dec 2023. The candle API serves 1-minute
+candles from the first options in **mid-January 2024** (BTC expiry 13 Jan 2024, ETH 6 Feb 2024) to today, for each
+option's whole life (capped here at its last 120 days). Of 149,955 expired BTC/ETH options, 135,206 have candles.
+Minutes without trades are filled with the last price and volume 0. 8 expiry days carry a few candles with a close of
+0 (8,428 of 882M rows, mostly 5–7 Aug 2024); they are kept and those days have `ok = false`.
 
 **Checks, all months:** no duplicate trade_ids (0 dropped at page edges, 0 left), time order strictly kept, 0 saturated
 pages (no possible paging gap), every instrument name parsed. Days without trades exist only in each coin's launch
@@ -192,4 +195,4 @@ points; 79% were within 5 points and 93% within 10. The two venues price alike; 
 
 **Gaps / not available:** Deribit 1-minute DVOL before Apr 2026 (hourly only); Deribit has no historical order book or
 quotes in this public API (trades carry `mark_price`, `iv` and `index_price`); Delta India has no history of bid/ask,
-IV, OI or Greeks (the nightly snapshot builds it from now) and no candles before ~Apr 2024.
+IV, OI or Greeks (the nightly snapshot builds it from now) and no candles before Jan 2024.
