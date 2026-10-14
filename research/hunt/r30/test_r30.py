@@ -320,3 +320,31 @@ def test_trade_stats_counts_no_trade_days_as_zero():
 def test_side_twins_are_centred_on_the_two_sides():
     tw = E.twins_side(np.full(100, 10.0), np.full(100, -10.0), n=2000)
     assert abs(tw.mean()) < 20
+
+
+# ------------------------------------------------------------------------------------------------ lake options
+def _lake_day(d, spot, atm_tv):
+    rows = []
+    for m in range(I.N):
+        ts = pd.Timestamp(d) + pd.Timedelta(minutes=9 * 60 + 15 + m)
+        for off in (-1, 0, 1):
+            k = 1000.0 + off * 50
+            for s in ("CE", "PE"):
+                intr = max(spot - k, 0) if s == "CE" else max(k - spot, 0)
+                rows.append(dict(ts=ts, offset=off, side=s, strike=k, open=intr + atm_tv / 2, high=intr + atm_tv / 2,
+                                 low=intr + atm_tv / 2, close=intr + atm_tv / 2, volume=100.0, oi=1000.0, iv=0.2,
+                                 spot=spot))
+    return rows
+
+
+def test_lake_options_find_expiry_days_from_the_time_value(tmp_path, monkeypatch):
+    rows = _lake_day("2024-01-03", 1000.0, 20.0) + _lake_day("2024-01-04", 1000.0, 2.0) + \
+        _lake_day("2024-01-05", 1000.0, 25.0)                  # 4 Jan: tiny time value, then it jumps: an expiry
+    pd.DataFrame(rows).to_parquet(tmp_path / "opt_NIFTY_WEEK_2024.parquet")
+    monkeypatch.setattr(K, "LAKE", tmp_path)
+    LO = I.LakeOptions("NIFTY")
+    assert LO.expiry_days == {date(2024, 1, 4)}
+    a = LO.day(date(2024, 1, 3))
+    assert set(a) == {(s, k) for s in "CP" for k in (950.0, 1000.0, 1050.0)}
+    assert a[("C", 1000.0)].shape == (I.N, 7) and a[("C", 1000.0)][100, I.C_] == 10.0
+    assert LO.day(date(2024, 1, 8)) == {}
