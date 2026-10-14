@@ -111,8 +111,6 @@ class Minutes:
         mask = np.isfinite(ch[:, 0]) & np.isfinite(ch[:, 1])
         ch = np.where(np.isfinite(ch), ch, 0.0)
         self.ch = np.column_stack([ch, mask.astype(float)]).astype(np.float32)
-        self.is_exp = M.is_expiry_day.values.astype(bool)
-        self.expiry = M.expiry.values
 
     def pos(self, d: date, r: int):
         return self.idx.get((d, r))
@@ -128,30 +126,71 @@ class Minutes:
 
 
 # ------------------------------------------------------------------------------------------------ option arrays
-def chain_arrays(und: str, d: date) -> tuple[dict, pd.Timestamp | None]:
-    """{(side, strike): (375, 7) O H L C V OI IV}, the chain's expiry. Missing bars stay NaN."""
-    _, pc, _ = cube.day_paths(K.CACHE.root, und, d)
-    if not pc.exists():
-        return {}, None
-    ch = pd.read_parquet(pc, columns=["ts", "side", "strike", "open", "high", "low", "close", "volume", "oi", "iv",
-                                      "expiry", "flag"])
-    ch = ch[ch.strike.notna()]
-    m = ((ch.ts.dt.hour - 9) * 60 + ch.ts.dt.minute - 15).values
-    traded = ch.flag.eq("ok").values
-    out = {}
-    for (s, k), g in ch.assign(m=m, tr=traded).groupby(["side", "strike"]):
-        a = np.full((N, 7), np.nan)
-        gg = g[g.tr]
-        a[gg.m.values, O_] = gg.open.values
-        a[gg.m.values, H_] = gg.high.values
-        a[gg.m.values, L_] = gg.low.values
-        a[gg.m.values, C_] = gg.close.values
-        a[gg.m.values, V_] = gg.volume.values
-        a[g.m.values, OI_] = g.oi.values                         # last reported OI (point in time)
-        a[gg.m.values, IV_] = gg.iv.values
-        out[(s, float(k))] = a
-    exp = ch.expiry.dropna()
-    return out, (pd.Timestamp(exp.iloc[0]) if len(exp) else None)
+class LakeOptions:
+    """Option bars straight from the lake's rolling weekly series (opt_<UND>_WEEK_<YEAR>: the nearest expiry at
+    ATM-10..+10, chosen each minute), for all five indices. The brain's cube has a chain only where its calendar has
+    rules (NIFTY, BANKNIFTY), so R30 reads the lake directly (14 Oct 2026). The files carry no expiry column: expiry
+    days are found from the data with R25's rule (ATM time value at 15:15 < 0.6% of spot and more than doubling the
+    next session; research/hunt/r25/r25data.expiry_days). Within one session a strike is one contract. Rows more than
+    12 strikes from that minute's spot are dropped (mislabelled strikes, R25)."""
+
+    COLS = ["ts", "offset", "side", "strike", "open", "high", "low", "close", "volume", "oi", "iv", "spot"]
+
+    def __init__(self, und: str):
+        self.und = und
+        self.files = sorted((K.LAKE).rglob(f"opt_{und}_WEEK_*.parquet"))
+        self.year = None
+        self.days: dict = {}
+        tv = []
+        for p in self.files:
+            o = self._read(p, ["ts", "offset", "side", "strike", "close", "spot"])
+            x = o[(o.offset == 0) & (o.m == K.row(15, 15))]
+            if x.empty:
+                continue
+            pv = x.pivot_table(index="d", columns="side", values="close", aggfunc="first")
+            sp = x.groupby("d").agg(spot=("spot", "first"), k=("strike", "first"))
+            j = pv.join(sp)
+            if "C" in j and "P" in j:
+                tv.append((j.C + j.P - (j.spot - j.k).abs()) / j.spot * 100)
+        t = pd.concat(tv).sort_index() if tv else pd.Series(dtype=float)
+        t = t[~t.index.duplicated()]
+        nxt = t.shift(-1)
+        ok = (t < 0.6) & (nxt > 2.0 * t.clip(lower=1e-6)) & nxt.notna()
+        self.expiry_days = {d for d, v in ok.items() if v}
+
+    def _read(self, p, cols):
+        df = pd.read_parquet(p, columns=cols)
+        ts = pd.to_datetime(df.ts)
+        if ts.dt.tz is not None:
+            ts = ts.dt.tz_convert("Asia/Kolkata").dt.tz_localize(None)
+        df["d"] = ts.dt.date
+        df["m"] = ((ts - ts.dt.normalize()).dt.total_seconds() // 60).astype(int) - (9 * 60 + 15)
+        df = df[(df.m >= 0) & (df.m < N)]
+        if "side" in df:
+            df["side"] = df.side.astype(str).str[0].str.upper()
+        if "spot" in df and "strike" in df:
+            df = df[(df.strike - df.spot).abs() <= 12 * K.STEP[self.und]]
+        return df
+
+    def day(self, d: date) -> dict:
+        """{(side, strike): (375, 7) O H L C V OI IV} for one session (NaN where no bar)."""
+        if self.year != d.year:
+            ps = [p for p in self.files if p.stem.endswith(str(d.year))]
+            o = self._read(ps[0], self.COLS) if ps else pd.DataFrame(columns=self.COLS + ["d", "m"])
+            o = o.drop_duplicates(["d", "m", "strike", "side"], keep="first")
+            self.days = dict(tuple(o.groupby("d"))) if len(o) else {}
+            self.year = d.year
+        g = self.days.get(d)
+        out = {}
+        if g is None:
+            return out
+        for (s, k), h in g.groupby(["side", "strike"]):
+            a = np.full((N, 7), np.nan)
+            m = h.m.values
+            for j, c in enumerate(("open", "high", "low", "close", "volume", "oi", "iv")):
+                a[m, j] = h[c].values.astype(float)
+            out[(s, float(k))] = a
+        return out
 
 
 def vol5(a: np.ndarray, r: int, lt: int) -> float:
@@ -257,13 +296,14 @@ def build(und: str, part: str) -> dict:
     lab = brain_labels.compute(sub[["ts", "day", "flag", "close", "high", "low"]])
     lab.index = sub.index
     step = K.STEP[und]
+    LO = LakeOptions(und)
     q1, q3, q4, seq1, seq3, seq4 = [], [], [], [], [], []
     all_days = cube.built_days(K.CACHE.root, und)
     nxt_day = {a: b for a, b in zip(all_days[:-1], all_days[1:])}
     for d in days:
         lt = lot(und, d)
-        arr, exp = chain_arrays(und, d)
-        is_exp = bool(MM.is_exp[MM.pos(d, 0)]) if MM.pos(d, 0) is not None else False
+        arr = LO.day(d)
+        is_exp = d in LO.expiry_days
         # ---- Q1
         for t in K.Q1_ROWS:
             p = MM.pos(d, t)
@@ -315,11 +355,11 @@ def build(und: str, part: str) -> dict:
             if pn is not None and np.isfinite(MM.o[pn]):
                 y = float(MM.o[pn] > MM.c[p]) if MM.o[pn] != MM.c[p] else np.nan
             rec = dict(und=und, day=d, row=K.Q4_ROW, y_gap=y)
-            narr, nexp = chain_arrays(und, nd) if arr else ({}, None)
+            narr = LO.day(nd) if arr else {}             # today is not an expiry day: the same contract tomorrow
             k = atm(MM.c[p], step)
             for s, kk in (("C", k - step), ("P", k + step)):
                 tr = None
-                if (s, kk) in arr and (s, kk) in narr and exp is not None and nexp == exp:
+                if (s, kk) in arr and (s, kk) in narr:
                     tr = sim_buy(arr[(s, kk)], K.Q4_ROW, N - 1, lot(und, d), und, nxt=narr[(s, kk)],
                                  exit_next_open=1, cut_until=K.EXIT_LAST)
                 for f in ("net", "net_x2", "cut"):

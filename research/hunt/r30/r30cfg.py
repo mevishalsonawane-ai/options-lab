@@ -26,6 +26,7 @@ from research.brain import config as BC  # noqa: E402
 CACHE = BC.paths()
 OUT = Path(os.environ.get("R30_OUT", CACHE.root / "r30")).expanduser()
 RESULTS = HERE / "results"
+LAKE = Path(os.environ.get("IRAALGO_LAKE", CACHE.root / "lake")).expanduser()     # the Dhan lake (Drive copy)
 DRIVE = "gdrive:IraAlgo-data-lake/derived/r30"
 CRYPTO_RAW = OUT / "crypto"              # BTCUSDT/<YYYY>/BTCUSDT-klines_1m-<YYYY-MM>.parquet (Drive copy)
 

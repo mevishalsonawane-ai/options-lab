@@ -264,3 +264,26 @@ Thresholds such as "under 1 MB and 5 ms" are reported, not gated.
 3. Design walk-forward for every question. Commit the results JSON.
 4. Read each holdout once (India once for Q1-Q4, crypto once for Q5), with the models trained before it.
 5. Report, entries, knowledge pack.
+
+## Amendment 1 (14 Oct 2026, before any India model was fitted): where option prices come from
+
+What was known when it was written:
+- No India model had been fitted and no India walk-forward or holdout result existed.
+- The crypto walk-forward (Q5) was running; its first fold had finished, and no score had been looked at.
+- For MIDCPNIFTY design only, coverage counts had been read: the share of decisions with a priced option, the number
+  of expiry days, and the mean net of all Q1 / Q4 option trades as a sanity check. Nothing was chosen on them.
+
+The change:
+- The brain's cube has an option chain only where its expiry calendar has rules (NIFTY, BANKNIFTY).
+  FINNIFTY, MIDCPNIFTY and SENSEX cubes were built index-only.
+- R30 therefore reads option bars for all five indices **straight from the lake's rolling weekly files**
+  (`opt_<UND>_WEEK_<YEAR>`, nearest expiry, ATM-10..+10), as R25 / R26 / R28 do.
+- **Expiry days come from the data with R25's rule**: the ATM time value at 15:15 is < 0.6% of spot and more than
+  doubles the next session. This replaces the cube's `is_expiry_day` in Q1 (the 15:05 square-off), Q3 (the population)
+  and Q4 (no entry on an expiry day). BANKNIFTY's monthly expiries after Nov 2024 count as expiry days. They are real
+  expiries, so the square-off applies.
+- Within a session a strike is one contract. Q4 never enters on an expiry day, so the next morning's bar of the same
+  strike is the same contract.
+- Brain features are unchanged: the three index-only indices have no option-context features, as in B1.
+
+Nothing else changes.
