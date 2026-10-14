@@ -1,0 +1,830 @@
+{
+ "spreads": {
+  "BTC": [
+   {
+    "expiry / strike": "6-24h / ITM >1%",
+    "n": 195,
+    "spread_med": 0.011454753722794959,
+    "mid_bp_of_spot": 232.50900867377436,
+    "ask_size": 4998.0
+   },
+   {
+    "expiry / strike": "6-24h / ITM .25-1%",
+    "n": 56,
+    "spread_med": 0.013259243562273865,
+    "mid_bp_of_spot": 78.057078928273,
+    "ask_size": 4949.0
+   },
+   {
+    "expiry / strike": "6-24h / ATM +-.25%",
+    "n": 38,
+    "spread_med": 0.011300877893056664,
+    "mid_bp_of_spot": 37.77507166487868,
+    "ask_size": 4922.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM .25-1%",
+    "n": 56,
+    "spread_med": 0.02390590028096576,
+    "mid_bp_of_spot": 15.79860588148495,
+    "ask_size": 4934.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM 1-2%",
+    "n": 76,
+    "spread_med": 0.04780952380952381,
+    "mid_bp_of_spot": 5.765716606490811,
+    "ask_size": 6995.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM 2-4%",
+    "n": 110,
+    "spread_med": 0.1644144144144144,
+    "mid_bp_of_spot": 0.8803667342759969,
+    "ask_size": 17312.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM 4-8%",
+    "n": 9,
+    "spread_med": 0.11764705882352937,
+    "mid_bp_of_spot": 0.1802133004624273,
+    "ask_size": 2417.0
+   },
+   {
+    "expiry / strike": "1-2d / ITM >1%",
+    "n": 204,
+    "spread_med": 0.011102682586815555,
+    "mid_bp_of_spot": 252.232721808099,
+    "ask_size": 8168.0
+   },
+   {
+    "expiry / strike": "1-2d / ITM .25-1%",
+    "n": 56,
+    "spread_med": 0.010550039649599562,
+    "mid_bp_of_spot": 119.74336247048453,
+    "ask_size": 8176.0
+   },
+   {
+    "expiry / strike": "1-2d / ATM +-.25%",
+    "n": 38,
+    "spread_med": 0.008016064257028112,
+    "mid_bp_of_spot": 85.81686230706987,
+    "ask_size": 8167.0
+   },
+   {
+    "expiry / strike": "1-2d / OTM .25-1%",
+    "n": 56,
+    "spread_med": 0.011274014477003933,
+    "mid_bp_of_spot": 58.23663166991291,
+    "ask_size": 8167.0
+   },
+   {
+    "expiry / strike": "1-2d / OTM 1-2%",
+    "n": 76,
+    "spread_med": 0.017323519923173304,
+    "mid_bp_of_spot": 32.378093396473055,
+    "ask_size": 8282.0
+   },
+   {
+    "expiry / strike": "1-2d / OTM 2-4%",
+    "n": 110,
+    "spread_med": 0.02857207646431892,
+    "mid_bp_of_spot": 14.450706399099447,
+    "ask_size": 9619.5
+   },
+   {
+    "expiry / strike": "1-2d / OTM 4-8%",
+    "n": 27,
+    "spread_med": 0.045112781954887216,
+    "mid_bp_of_spot": 6.672974932458673,
+    "ask_size": 16212.0
+   },
+   {
+    "expiry / strike": "2-8d / ITM >1%",
+    "n": 240,
+    "spread_med": 0.01104175871315065,
+    "mid_bp_of_spot": 403.92164678541326,
+    "ask_size": 4086.5
+   },
+   {
+    "expiry / strike": "2-8d / ITM .25-1%",
+    "n": 72,
+    "spread_med": 0.010263339697874678,
+    "mid_bp_of_spot": 147.96138418343884,
+    "ask_size": 4082.0
+   },
+   {
+    "expiry / strike": "2-8d / ATM +-.25%",
+    "n": 42,
+    "spread_med": 0.01000016000256004,
+    "mid_bp_of_spot": 114.94349613388272,
+    "ask_size": 4078.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM .25-1%",
+    "n": 72,
+    "spread_med": 0.01302103201851428,
+    "mid_bp_of_spot": 85.58170461366585,
+    "ask_size": 4078.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM 1-2%",
+    "n": 60,
+    "spread_med": 0.01714696406038802,
+    "mid_bp_of_spot": 59.50726210708275,
+    "ask_size": 4078.5
+   },
+   {
+    "expiry / strike": "2-8d / OTM 2-4%",
+    "n": 71,
+    "spread_med": 0.0218408736349454,
+    "mid_bp_of_spot": 27.10056412438137,
+    "ask_size": 4078.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM 4-8%",
+    "n": 73,
+    "spread_med": 0.047619047619047616,
+    "mid_bp_of_spot": 9.84845391283878,
+    "ask_size": 4082.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM >8%",
+    "n": 45,
+    "spread_med": 0.2857142857142857,
+    "mid_bp_of_spot": 0.8403341168448575,
+    "ask_size": 4078.0
+   },
+   {
+    "expiry / strike": ">8d / ITM >1%",
+    "n": 1053,
+    "spread_med": 0.012189683365541847,
+    "mid_bp_of_spot": 1017.6587356455892,
+    "ask_size": 4206.0
+   },
+   {
+    "expiry / strike": ">8d / ITM .25-1%",
+    "n": 96,
+    "spread_med": 0.007174048331149513,
+    "mid_bp_of_spot": 309.80284868051774,
+    "ask_size": 4302.0
+   },
+   {
+    "expiry / strike": ">8d / ATM +-.25%",
+    "n": 24,
+    "spread_med": 0.007991169489008111,
+    "mid_bp_of_spot": 277.50638268425155,
+    "ask_size": 4287.5
+   },
+   {
+    "expiry / strike": ">8d / OTM .25-1%",
+    "n": 96,
+    "spread_med": 0.009627595303848059,
+    "mid_bp_of_spot": 248.4087673258888,
+    "ask_size": 4305.0
+   },
+   {
+    "expiry / strike": ">8d / OTM 1-2%",
+    "n": 54,
+    "spread_med": 0.011527379475393389,
+    "mid_bp_of_spot": 209.53742456833066,
+    "ask_size": 4135.5
+   },
+   {
+    "expiry / strike": ">8d / OTM 2-4%",
+    "n": 206,
+    "spread_med": 0.016018495366339952,
+    "mid_bp_of_spot": 161.31622819621404,
+    "ask_size": 4268.5
+   },
+   {
+    "expiry / strike": ">8d / OTM 4-8%",
+    "n": 226,
+    "spread_med": 0.02880125757829833,
+    "mid_bp_of_spot": 114.66053855238297,
+    "ask_size": 4231.0
+   },
+   {
+    "expiry / strike": ">8d / OTM >8%",
+    "n": 837,
+    "spread_med": 0.058823529411764705,
+    "mid_bp_of_spot": 54.965056641040334,
+    "ask_size": 4229.0
+   }
+  ],
+  "ETH": [
+   {
+    "expiry / strike": "6-24h / ITM >1%",
+    "n": 189,
+    "spread_med": 0.014500836586726124,
+    "mid_bp_of_spot": 354.59296554528373,
+    "ask_size": 4045.0
+   },
+   {
+    "expiry / strike": "6-24h / ITM .25-1%",
+    "n": 35,
+    "spread_med": 0.01996007984031936,
+    "mid_bp_of_spot": 95.59428110705761,
+    "ask_size": 4927.0
+   },
+   {
+    "expiry / strike": "6-24h / ATM +-.25%",
+    "n": 20,
+    "spread_med": 0.02047876987593918,
+    "mid_bp_of_spot": 58.99483104825417,
+    "ask_size": 6308.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM .25-1%",
+    "n": 35,
+    "spread_med": 0.03208556149732628,
+    "mid_bp_of_spot": 33.328277546719455,
+    "ask_size": 4039.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM 1-2%",
+    "n": 45,
+    "spread_med": 0.07142857142857134,
+    "mid_bp_of_spot": 13.547543909980556,
+    "ask_size": 4029.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM 2-4%",
+    "n": 63,
+    "spread_med": 0.23602484472049698,
+    "mid_bp_of_spot": 3.4126559643646868,
+    "ask_size": 4022.0
+   },
+   {
+    "expiry / strike": "6-24h / OTM 4-8%",
+    "n": 72,
+    "spread_med": 0.5524707525755195,
+    "mid_bp_of_spot": 0.5975358001502475,
+    "ask_size": 1876.0
+   },
+   {
+    "expiry / strike": "1-2d / ITM >1%",
+    "n": 144,
+    "spread_med": 0.013952530697813752,
+    "mid_bp_of_spot": 414.82635774635685,
+    "ask_size": 5782.0
+   },
+   {
+    "expiry / strike": "1-2d / ITM .25-1%",
+    "n": 17,
+    "spread_med": 0.013986013986013986,
+    "mid_bp_of_spot": 134.92076145531072,
+    "ask_size": 5781.0
+   },
+   {
+    "expiry / strike": "1-2d / OTM .25-1%",
+    "n": 17,
+    "spread_med": 0.016877637130801627,
+    "mid_bp_of_spot": 95.23126454368685,
+    "ask_size": 5781.0
+   },
+   {
+    "expiry / strike": "1-2d / OTM 1-2%",
+    "n": 27,
+    "spread_med": 0.02499999999999991,
+    "mid_bp_of_spot": 62.57772392461975,
+    "ask_size": 5781.0
+   },
+   {
+    "expiry / strike": "1-2d / OTM 2-4%",
+    "n": 45,
+    "spread_med": 0.05128205128205125,
+    "mid_bp_of_spot": 27.299211311836697,
+    "ask_size": 5781.0
+   },
+   {
+    "expiry / strike": "1-2d / OTM 4-8%",
+    "n": 72,
+    "spread_med": 0.13846973193680093,
+    "mid_bp_of_spot": 8.171009427386656,
+    "ask_size": 5786.0
+   },
+   {
+    "expiry / strike": "2-8d / ITM >1%",
+    "n": 207,
+    "spread_med": 0.01349072512647562,
+    "mid_bp_of_spot": 473.7655796754965,
+    "ask_size": 2797.0
+   },
+   {
+    "expiry / strike": "2-8d / ITM .25-1%",
+    "n": 17,
+    "spread_med": 0.011862396204033215,
+    "mid_bp_of_spot": 168.17908282620564,
+    "ask_size": 2799.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM .25-1%",
+    "n": 17,
+    "spread_med": 0.01560062402496089,
+    "mid_bp_of_spot": 128.52548391339175,
+    "ask_size": 2795.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM 1-2%",
+    "n": 36,
+    "spread_med": 0.021459326287674704,
+    "mid_bp_of_spot": 88.77919498458598,
+    "ask_size": 2795.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM 2-4%",
+    "n": 54,
+    "spread_med": 0.03147967694518308,
+    "mid_bp_of_spot": 53.346823245559506,
+    "ask_size": 2795.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM 4-8%",
+    "n": 45,
+    "spread_med": 0.06211180124223613,
+    "mid_bp_of_spot": 21.321281827492893,
+    "ask_size": 2795.0
+   },
+   {
+    "expiry / strike": "2-8d / OTM >8%",
+    "n": 81,
+    "spread_med": 0.2857142857142858,
+    "mid_bp_of_spot": 2.5867661046088215,
+    "ask_size": 2795.0
+   },
+   {
+    "expiry / strike": ">8d / ITM >1%",
+    "n": 423,
+    "spread_med": 0.01216216216216224,
+    "mid_bp_of_spot": 1174.2291381014636,
+    "ask_size": 2954.0
+   },
+   {
+    "expiry / strike": ">8d / ITM .25-1%",
+    "n": 32,
+    "spread_med": 0.011434158481204845,
+    "mid_bp_of_spot": 563.0933435496959,
+    "ask_size": 2942.0
+   },
+   {
+    "expiry / strike": ">8d / ATM +-.25%",
+    "n": 8,
+    "spread_med": 0.011489499993045053,
+    "mid_bp_of_spot": 512.6966767516304,
+    "ask_size": 3103.5
+   },
+   {
+    "expiry / strike": ">8d / OTM .25-1%",
+    "n": 32,
+    "spread_med": 0.013188703130215137,
+    "mid_bp_of_spot": 481.2986523850519,
+    "ask_size": 3293.0
+   },
+   {
+    "expiry / strike": ">8d / OTM 1-2%",
+    "n": 18,
+    "spread_med": 0.010666666666666819,
+    "mid_bp_of_spot": 254.43397544204925,
+    "ask_size": 3009.5
+   },
+   {
+    "expiry / strike": ">8d / OTM 2-4%",
+    "n": 54,
+    "spread_med": 0.01604166823323582,
+    "mid_bp_of_spot": 237.78349961596473,
+    "ask_size": 2943.5
+   },
+   {
+    "expiry / strike": ">8d / OTM 4-8%",
+    "n": 108,
+    "spread_med": 0.020367581411707365,
+    "mid_bp_of_spot": 150.67574579504904,
+    "ask_size": 2962.0
+   },
+   {
+    "expiry / strike": ">8d / OTM >8%",
+    "n": 486,
+    "spread_med": 0.05881492059409192,
+    "mid_bp_of_spot": 69.47023010302709,
+    "ask_size": 3084.0
+   }
+  ]
+ },
+ "hero": [
+  {
+   "coin": "BTC",
+   "start_h": 1,
+   "count": 2034.0,
+   "mean": 1.8433342594301871,
+   "std": 3.8303703521846395,
+   "min": 0.03512317271682944,
+   "25%": 0.7917265217676077,
+   "50%": 1.1470971196271293,
+   "75%": 1.7557578605580901,
+   "max": 130.686744654413
+  },
+  {
+   "coin": "BTC",
+   "start_h": 2,
+   "count": 3010.0,
+   "mean": 2.162304765070791,
+   "std": 4.124225910797456,
+   "min": 0.1487814959256024,
+   "25%": 0.9260007399010058,
+   "50%": 1.1900500146019724,
+   "75%": 1.8310706626218034,
+   "max": 97.38290843602668
+  },
+  {
+   "coin": "BTC",
+   "start_h": 3,
+   "count": 3554.0,
+   "mean": 2.5378995885812006,
+   "std": 4.70493384255134,
+   "min": 0.21487986841813694,
+   "25%": 1.0047920234926153,
+   "50%": 1.3155611581077769,
+   "75%": 2.129725581125022,
+   "max": 115.91147835754393
+  },
+  {
+   "coin": "BTC",
+   "start_h": 4,
+   "count": 4184.0,
+   "mean": 2.6061318399540783,
+   "std": 4.778284024045016,
+   "min": 0.12372934882314861,
+   "25%": 0.9840993576606233,
+   "50%": 1.2828642272728967,
+   "75%": 2.11964898432662,
+   "max": 80.45179651511283
+  },
+  {
+   "coin": "BTC",
+   "start_h": 6,
+   "count": 5024.0,
+   "mean": 3.1901000681274914,
+   "std": 7.267553293453736,
+   "min": 0.37108175557925877,
+   "25%": 1.0639566736645953,
+   "50%": 1.3818384793279403,
+   "75%": 2.4357899440278112,
+   "max": 163.62769685301495
+  },
+  {
+   "coin": "ETH",
+   "start_h": 1,
+   "count": 1346.0,
+   "mean": 1.781767511972763,
+   "std": 3.429448465205117,
+   "min": 0.14601583162480375,
+   "25%": 0.8625040531205038,
+   "50%": 1.055190524851366,
+   "75%": 1.4814113024925293,
+   "max": 78.56527105967761
+  },
+  {
+   "coin": "ETH",
+   "start_h": 2,
+   "count": 1879.0,
+   "mean": 2.1394726194223574,
+   "std": 4.322448966449918,
+   "min": 0.06919826423436773,
+   "25%": 0.986792467482019,
+   "50%": 1.1302855834142798,
+   "75%": 1.6674305660084348,
+   "max": 75.76419065757933
+  },
+  {
+   "coin": "ETH",
+   "start_h": 3,
+   "count": 2185.0,
+   "mean": 2.5668377389691646,
+   "std": 5.390859346984321,
+   "min": 0.21413509753161894,
+   "25%": 1.0135175710163657,
+   "50%": 1.182547041252339,
+   "75%": 1.829113749342714,
+   "max": 74.69996707654306
+  },
+  {
+   "coin": "ETH",
+   "start_h": 4,
+   "count": 2460.0,
+   "mean": 2.966168278456243,
+   "std": 7.09943955590357,
+   "min": 0.21630835871782006,
+   "25%": 1.0201205880691524,
+   "50%": 1.1904070431458371,
+   "75%": 2.0198503319269254,
+   "max": 116.75495228801269
+  },
+  {
+   "coin": "ETH",
+   "start_h": 6,
+   "count": 2740.0,
+   "mean": 3.289938239935992,
+   "std": 7.293136768617778,
+   "min": 0.09340451499324587,
+   "25%": 1.0509841589931108,
+   "50%": 1.2652339018858592,
+   "75%": 2.259588546659656,
+   "max": 96.95784978123503
+  }
+ ],
+ "time_of_day": {
+  "BTC": [
+   {
+    "BTC hour": "23-00 UTC (04:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.19118833286597692,
+    "realised_vs_implied": 0.7510169461569317
+   },
+   {
+    "BTC hour": "00-01 UTC (05:30 IST)",
+    "n": 772,
+    "median_abs_move_pct": 0.23705133101374898,
+    "realised_vs_implied": 0.9407170259794728
+   },
+   {
+    "BTC hour": "01-02 UTC (06:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.23697918719598476,
+    "realised_vs_implied": 1.0550275415044679
+   },
+   {
+    "BTC hour": "02-03 UTC (07:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.23798581951695041,
+    "realised_vs_implied": 0.8938253785770508
+   },
+   {
+    "BTC hour": "03-04 UTC (08:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.19958495724896608,
+    "realised_vs_implied": 0.7398652534761078
+   },
+   {
+    "BTC hour": "04-05 UTC (09:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.1812843285076582,
+    "realised_vs_implied": 0.6974441720736615
+   },
+   {
+    "BTC hour": "05-06 UTC (10:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.18528505932202677,
+    "realised_vs_implied": 0.6736190277184465
+   },
+   {
+    "BTC hour": "06-07 UTC (11:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.18306564403154368,
+    "realised_vs_implied": 0.8697166845417401
+   },
+   {
+    "BTC hour": "07-08 UTC (12:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.19453291556832397,
+    "realised_vs_implied": 0.7855223247506751
+   },
+   {
+    "BTC hour": "08-09 UTC (13:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.19543997797022428,
+    "realised_vs_implied": 0.7776227647415739
+   },
+   {
+    "BTC hour": "09-10 UTC (14:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.18950977776786004,
+    "realised_vs_implied": 0.6990661027994223
+   },
+   {
+    "BTC hour": "10-11 UTC (15:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.18202253809818103,
+    "realised_vs_implied": 0.6814193353823443
+   },
+   {
+    "BTC hour": "11-12 UTC (16:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.18632899702346606,
+    "realised_vs_implied": 0.6651041045220722
+   },
+   {
+    "BTC hour": "12-13 UTC (17:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.21162792773985473,
+    "realised_vs_implied": 0.7756624427108966
+   },
+   {
+    "BTC hour": "13-14 UTC (18:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.30664556730695125,
+    "realised_vs_implied": 1.1207162983500132
+   },
+   {
+    "BTC hour": "14-15 UTC (19:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.400808041478129,
+    "realised_vs_implied": 1.4626622655164838
+   },
+   {
+    "BTC hour": "15-16 UTC (20:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.3070304733228113,
+    "realised_vs_implied": 1.3207275747237817
+   },
+   {
+    "BTC hour": "16-17 UTC (21:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2801355619270751,
+    "realised_vs_implied": 1.0394429091765112
+   },
+   {
+    "BTC hour": "17-18 UTC (22:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2795217949509876,
+    "realised_vs_implied": 1.1204872053791057
+   },
+   {
+    "BTC hour": "18-19 UTC (23:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2592193285517297,
+    "realised_vs_implied": 1.0231190020617575
+   },
+   {
+    "BTC hour": "19-20 UTC (00:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.22566022422854104,
+    "realised_vs_implied": 1.0438691619405263
+   },
+   {
+    "BTC hour": "20-21 UTC (01:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.23247615723391846,
+    "realised_vs_implied": 0.9282608828116223
+   },
+   {
+    "BTC hour": "21-22 UTC (02:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.20838953533104387,
+    "realised_vs_implied": 0.8834715596270082
+   },
+   {
+    "BTC hour": "22-23 UTC (03:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.21301612464501574,
+    "realised_vs_implied": 0.8987640160004282
+   }
+  ],
+  "ETH": [
+   {
+    "ETH hour": "23-00 UTC (04:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2701450531942484,
+    "realised_vs_implied": 0.7478413626083231
+   },
+   {
+    "ETH hour": "00-01 UTC (05:30 IST)",
+    "n": 772,
+    "median_abs_move_pct": 0.33457429071317435,
+    "realised_vs_implied": 1.0319774431296727
+   },
+   {
+    "ETH hour": "01-02 UTC (06:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.34798731266398875,
+    "realised_vs_implied": 1.2976189947750385
+   },
+   {
+    "ETH hour": "02-03 UTC (07:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.3344617101914693,
+    "realised_vs_implied": 0.9323377351005273
+   },
+   {
+    "ETH hour": "03-04 UTC (08:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2943013224369295,
+    "realised_vs_implied": 0.8029208621326038
+   },
+   {
+    "ETH hour": "04-05 UTC (09:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.26501029315664226,
+    "realised_vs_implied": 0.7290756453752875
+   },
+   {
+    "ETH hour": "05-06 UTC (10:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2655981152575926,
+    "realised_vs_implied": 0.8001500705586561
+   },
+   {
+    "ETH hour": "06-07 UTC (11:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.270066141716363,
+    "realised_vs_implied": 0.8970596116042555
+   },
+   {
+    "ETH hour": "07-08 UTC (12:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.27808578560293284,
+    "realised_vs_implied": 0.8669153093487136
+   },
+   {
+    "ETH hour": "08-09 UTC (13:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2803543089028082,
+    "realised_vs_implied": 0.9021501027526122
+   },
+   {
+    "ETH hour": "09-10 UTC (14:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.25834485438807064,
+    "realised_vs_implied": 0.7621141354427173
+   },
+   {
+    "ETH hour": "10-11 UTC (15:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.25765389520042703,
+    "realised_vs_implied": 0.7366332205729433
+   },
+   {
+    "ETH hour": "11-12 UTC (16:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2573160404239161,
+    "realised_vs_implied": 0.8056358209987452
+   },
+   {
+    "ETH hour": "12-13 UTC (17:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2818971411688409,
+    "realised_vs_implied": 0.8719244695092118
+   },
+   {
+    "ETH hour": "13-14 UTC (18:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.43381793057610807,
+    "realised_vs_implied": 1.123181235610987
+   },
+   {
+    "ETH hour": "14-15 UTC (19:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.5258888838979736,
+    "realised_vs_implied": 1.4003170745494165
+   },
+   {
+    "ETH hour": "15-16 UTC (20:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.4782140220481068,
+    "realised_vs_implied": 1.3325956623827002
+   },
+   {
+    "ETH hour": "16-17 UTC (21:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.36951583359288165,
+    "realised_vs_implied": 1.164677100447961
+   },
+   {
+    "ETH hour": "17-18 UTC (22:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.4095181231747347,
+    "realised_vs_implied": 1.2374945585954975
+   },
+   {
+    "ETH hour": "18-19 UTC (23:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.3592244938696254,
+    "realised_vs_implied": 1.0575519666384974
+   },
+   {
+    "ETH hour": "19-20 UTC (00:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.32582270652774525,
+    "realised_vs_implied": 1.1492629166294994
+   },
+   {
+    "ETH hour": "20-21 UTC (01:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.3271360530860079,
+    "realised_vs_implied": 1.0462327267450886
+   },
+   {
+    "ETH hour": "21-22 UTC (02:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.2780483441068071,
+    "realised_vs_implied": 1.0155018523554642
+   },
+   {
+    "ETH hour": "22-23 UTC (03:30 IST)",
+    "n": 773,
+    "median_abs_move_pct": 0.3073596287168634,
+    "realised_vs_implied": 0.9990197481632093
+   }
+  ]
+ }
+}
