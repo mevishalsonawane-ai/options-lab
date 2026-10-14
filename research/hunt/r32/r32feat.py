@@ -267,7 +267,9 @@ def option_block(a: np.ndarray) -> dict:
     out["op_vol12"] = vol12
     # labels: the highest confirmed price after t, up to the bar starting 15:04
     nxt = np.r_[o[1:], np.nan]
-    conf = np.fmin(h, np.fmax(c, nxt))
+    # R25's confirmed(): only a bar with a high counts, up to max(its close, the next open) (review fix, 14 Oct: fmin over
+    # a NaN high let an untraded bar take the next bar's open unconfirmed)
+    conf = np.where(np.isfinite(h), np.fmin(h, np.fmax(c, nxt)), np.nan)
     conf[LAST_LABEL + 1:] = np.nan
     fut = np.full(N, np.nan)
     m = np.nan

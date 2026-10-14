@@ -79,3 +79,16 @@ def test_rows_only_otm_rs_1_to_30_traded():
     calls = df[df.side == "C"]
     assert (calls.strike > 25000 - 1e-9).all()
     assert df.t.between(X.T0, X.T1).all()
+
+
+def test_label_ignores_an_untraded_bar():
+    """An untraded bar (no high) never takes the next bar's open as a confirmed price."""
+    day = make_day(rally(start=minute(13, 30)))
+    a = day.opts[(25150.0, "C")].copy()
+    t = R.close_row(13, 0)
+    a[t + 1, :] = np.nan                                  # no trade
+    a[t + 2, 0] = 1e4                                     # a freak open, closing back
+    a[t + 2, 1] = 1e4
+    a[t + 3, 0] = a[t + 2, 3]
+    fut = X.option_block(a)["_fut"][t]
+    assert fut < 1e4

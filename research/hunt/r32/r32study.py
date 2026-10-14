@@ -345,11 +345,11 @@ def main():
         te = df[df.year == y]
         m, p = scores[y]
         tr = df[df.year < y]
-        for rid, ex in (("P1", "TR25"), ("P2", "E1")):
-            q, tau = choose_q(df, y, ex)
-            idx = first_rows(te, p > tau, p)
-            picks[rid] += [(i, ex) for i in idx]
-            choices.setdefault(rid, {})[y] = {"q": q, "tau": round(tau, 4)}
+        q, tau = choose_q(df, y, "TR25")                 # P2 = P1's entries held to 15:05 (PREREG)
+        idx = first_rows(te, p > tau, p)
+        picks["P1"] += [(i, "TR25") for i in idx]
+        picks["P2"] += [(i, "E1") for i in idx]
+        choices.setdefault("P1", {})[y] = {"q": q, "tau": round(tau, 4), "trades": len(idx)}
         conds, cuts, lift, n = mine(tr)
         if conds:
             mm = match(te, conds, cuts)
@@ -360,7 +360,7 @@ def main():
         else:
             tl = None
         choices.setdefault("pattern", {})[y] = {"conds": [(f, int(b)) for f, b in conds] if conds else None,
-                                                "train_lift": lift, "train_rows": n, "test_lift": round(tl, 2) if tl else None,
+                                                "train_lift": lift, "train_rows": n, "test_lift": round(tl, 2) if tl is not None else None,
                                                 "test_rows": int(mm.sum()) if conds else 0}
         print(y, choices["pattern"][y], flush=True)
     out["choices"] = choices
