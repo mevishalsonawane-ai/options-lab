@@ -71,7 +71,8 @@ def write():
                  results=dict(summary=summ, costs=COSTS[f.arm]), holdout_read=read, verdict=verdict,
                  notes="One of 10 R28 filters; BH across the 10 and in the joined family (R9's 68 gamma tests + the "
                        "arm families' recorded holdout p-values). Random-filter twins skip the same number of "
-                       "index-days at random.")
+                       "index-days at random." + (" Post-hoc review correction (results/correction.json): design twin "
+                       "p 0.274 -> 0.017, q R28 0.17, joined 0.81, holdout p 0.85; still fails." if f.id == "G7" else ""))
         out.append(e)
     n_desc = ds.get("m")
     out.append(dict(id="r28-describe", title="R28 describe: does the intraday GEX regime separate days (range, trend, "

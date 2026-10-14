@@ -27,5 +27,6 @@ results:
   costs: R19b engine charges and fills (as the app); no spread stress in that code
 holdout_read: true
 verdict: rejected
-notes: One of 10 R28 filters; BH across the 10 and in the joined family (R9's 68 gamma tests + the arm families' recorded
-  holdout p-values). Random-filter twins skip the same number of index-days at random.
+notes: 'One of 10 R28 filters; BH across the 10 and in the joined family (R9''s 68 gamma tests + the arm families'' recorded
+  holdout p-values). Random-filter twins skip the same number of index-days at random. Post-hoc review correction (results/correction.json):
+  design twin p 0.274 -> 0.017, q R28 0.17, joined 0.81, holdout p 0.85; still fails.'

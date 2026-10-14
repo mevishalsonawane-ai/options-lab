@@ -125,18 +125,49 @@ def metrics(t: pd.DataFrame, days: list, big_cut: float | None = None, skipped: 
 
 def twin_p(t: pd.DataFrame, keep: np.ndarray, days: list, n=K.TWINS, seed=K.SEED, tag="") -> tuple[float, float]:
     """Random-filter twins: skip the same number of (index, day) units at random among the units with trades.
-    Returns (p, the twins' mean change in P&L/day)."""
+    Returns (p, the twins' mean change in P&L/day). The filter's own change is its real skipped trades' P&L. When the
+    filter skips only some trades of a unit (Liquidity reads GEX per trade), the twins skip the same number of single
+    trades instead (correction of 14 Oct 2026, review: the unit version compared a different number with the twins)."""
+    real = -float(t.net.values[~keep].sum()) / len(days)
     unit = list(zip(t.und, t.day))
     net_u = pd.Series(t.net.values).groupby(pd.Index(unit)).sum()
     skip_u = pd.Series(~keep).groupby(pd.Index(unit)).any()
-    k = int(skip_u.sum())
-    real = -float(net_u[skip_u].sum()) / len(days)
-    if k == 0 or k == len(net_u):
+    all_u = pd.Series(~keep).groupby(pd.Index(unit)).all()
+    partial = bool((skip_u & ~all_u).any())
+    v = t.net.values if partial else net_u.values
+    k = int((~keep).sum()) if partial else int(skip_u.sum())
+    if k == 0 or k == len(v):
         return np.nan, real
     rng = np.random.default_rng([K.SEED, int(hashlib.md5(tag.encode()).hexdigest()[:8], 16)])
-    v = net_u.values
     tw = np.array([-v[rng.choice(len(v), k, replace=False)].sum() / len(days) for _ in range(n)])
     return float((1 + (tw >= real - 1e-9).sum()) / (n + 1)), float(tw.mean())
+
+
+def cmd_correct():
+    """Post-hoc correction (14 Oct 2026, after the review): the corrected twin p of every filter in design and in the
+    already-read holdout, and the BH q again. It reads no new period and changes no gate input except the twin p; the
+    original design.json / holdout.json stay as written. -> results/correction.json"""
+    des = json.load(open(K.RESULTS / "design.json"))
+    out, ps = {}, {}
+    for f in FILTERS:
+        t = trades(f.arm)
+        r = {}
+        for part in ("design", "holdout"):
+            dd = period_days(f.arm, f.family, part)
+            x = subset(t, dd)
+            keep = kept_mask(f, x)
+            p, m = twin_p(x, keep, dd, tag=f.id + str(len(dd)))
+            r[part] = dict(twin_p=p, twin_mean_delta=m, delta_day=-float(x.net.values[~keep].sum()) / len(dd),
+                           old_twin_p=des["filters"][f.id]["design"]["twin_p"] if part == "design" else None)
+        out[f.id] = r
+        ps[f.id] = r["design"]["twin_p"]
+    q_own = bh(ps)
+    jf = joined_family()
+    q_join = bh(dict(jf["p"], **{f"R28 {k}": v for k, v in ps.items()}))
+    for k in out:
+        out[k]["q_r28"], out[k]["q_joined"] = q_own.get(k), q_join.get(f"R28 {k}")
+        print(k, out[k])
+    json.dump(_js(out), open(K.RESULTS / "correction.json", "w"), indent=1)
 
 
 def evaluate(f: Filter, t: pd.DataFrame, days: list, twins: bool = True) -> dict:
@@ -352,4 +383,4 @@ def md_holdout(out, des) -> str:
 
 
 if __name__ == "__main__":
-    {"design": cmd_design, "holdout": cmd_holdout}[sys.argv[1]]()
+    {"design": cmd_design, "holdout": cmd_holdout, "correct": cmd_correct}[sys.argv[1]]()

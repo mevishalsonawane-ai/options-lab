@@ -151,6 +151,14 @@ def test_twin_p_small_when_the_filter_skips_the_worst_days():
     assert np.isnan(S.twin_p(t, S.kept_mask(S.FILTERS[0], t), days, n=50)[0])
 
 
+def test_twin_p_uses_the_real_change_when_a_day_is_partly_skipped():
+    days = [date(2023, 3, 1) + pd.Timedelta(days=i) for i in range(40)]
+    t = pd.DataFrame(dict(und="BANKNIFTY", day=[d for d in days for _ in (0, 1)], net=np.tile([-500.0, 300.0], 40)))
+    keep = np.tile([False, True], 40)                    # skips the losing trade of every day, keeps the winner
+    p, _ = S.twin_p(t, keep, days, n=500, tag="partial")
+    assert p < 0.05                                      # the unit version called this "skip whole days": +200/day lost
+
+
 def test_metrics_drawdown_and_green_days():
     t, days = frame([100, -300, 50, 0], [0, 0, 0, 0])
     m = S.metrics(t, days + [date(2030, 1, 1)])

@@ -25,7 +25,8 @@ Written 14 Oct 2026, for Boss's request: "Use gamma exposure too".
   "short gamma" they chase the move, which speeds it up.
 - **Does it predict anything on Indian indices?** Only the SIZE of the rest of the day, not its direction.
   - When GEX is negative at 10:00 (the common US sign: dealers long calls, short puts), the rest of the day's range is
-    bigger on all 5 indices. Design days only, 519-597 days per index:
+    bigger on all 5 indices (NIFTY is clear at 09:20, q 0.007, but not at 10:00, q 0.17). Design days only, 519-597
+    days per index:
 
     | index | range negative GEX | range positive GEX |
     |---|---|---|
@@ -46,10 +47,11 @@ Written 14 Oct 2026, for Boss's request: "Use gamma exposure too".
     GEX filters did that better than skipping the same number of days at random** (twin p 0.12 to 0.99 in design).
     Even filtered, both arms still lose in the locked holdout.
   - **Liquidity 15+5 BANKNIFTY:** skipping strongly positive GEX gave +Rs 6 a day in design and **-Rs 17 a day in the
-    holdout**.
-  - **Hero H0:** keeping only negative-GEX expiries would have **skipped the one big winner** in its holdout:
-    -Rs 1,186 an expiry. Only 16 trades, too few to judge.
-  - **Lottery basket at 14:30:** it loses less under negative GEX, because it skips 72% of expiries. That is no
+    holdout**. After a review fix, its design twin p is 0.017. That is still not significant once all the tries are
+    counted (q 0.17 within R28, 0.81 joined), and the holdout went the wrong way.
+  - **Hero H0:** keeping only negative-GEX expiries would have **skipped 2 of its 3 winners** in the holdout (about
+    Rs 1 lakh together; it kept the biggest, Rs 57.7k): -Rs 1,186 an expiry. Only 16 trades, too few to judge.
+  - **Lottery basket at 14:30:** it loses less under negative GEX, because it skips 72% of its trades (736 → 203 in design). That is no
     better than random skipping (p 0.67 design, 0.14 holdout), and it still loses.
   - **Night R3 is a WINNING arm** (+Rs 206 a day in design). The GEX filter cut it to +Rs 119 in design and **from
     +Rs 249 to -Rs 18 a day in the holdout**. Do not filter Night by GEX.
@@ -162,8 +164,9 @@ blocks had been seen by earlier studies; a GEX filter had never been run on them
 | G10 | Night R3: keep S1 < 0 at 15:15 | 632 → 173 | +206 → +119 | -87 | 0.08 | 0.60 | 1.00 | 1/4 | 15 | no |
 
 - Every positive change on ORB, Range Fade, Hero and the lottery is the "skip a losing arm" effect. The random twins
-  skip the same number of days and gain just as much on average: +47 to +506 Rs a day.
-- On the two winning arms the filter either adds nothing beyond noise (Liquidity) or cuts profit (Night).
+  skip the same number of days and gain just as much on average: +25 to +506 Rs a day.
+- On the two winning arms the filter either adds a little that does not survive the multiple-testing count or the
+  holdout (Liquidity) or cuts profit (Night).
 - Joined family, m = 162: R28's 10, R9's 68 gamma tests (the 6 printed p-values, the rest entered as 1.0), R22's
   58, R25's 18 and R27's 8 recorded holdout p-values.
 
@@ -186,6 +189,23 @@ Per-year walk-forward rows, average win and loss, % green days and missing-GEX c
 `results/design.md` and `results/holdout.md`.
 
 ## Honest notes
+
+- **Correction after the review (14 Oct 2026, after the holdout read): G7's twin p.**
+  - The twins skipped whole index-days, but Liquidity reads GEX per trade, so G7 skipped only some trades of a day (56
+    days). The p-value therefore compared the twins with the wrong number (-Rs 52 a day instead of the real +Rs 6).
+  - `study.py` now uses the real change, and twins skip single trades when a filter skips part of a day.
+  - `study.py correct` recomputed every filter's twin p in design and in the already-read holdout. No new period was
+    read and no rule changed: `results/correction.json`.
+  - Only G7 moved. Design p 0.274 → 0.017; q within R28 0.17, joined 0.81. Holdout p 0.86 → 0.85, change -Rs 17 a day.
+    It still fails gates 2 and 5. The original `design.json` / `holdout.json` are kept as written.
+- **Deviation from PREREG: stale contracts.** PREREG says a contract whose last trade is over 30 minutes old (or that
+  has not traded today) is left out. The code sets its price to NaN, but then gives it the nearest strike's IV, so it
+  still counts with its OI. That is the same fallback PREREG gives for a contract with no IV.
+  - The effect: such contracts (mostly far OTM, little gamma) are included rather than dropped.
+  - It applies to both the brain features and the study. It was found after the holdout read, so it was not changed:
+    changing it would need a new holdout.
+- **Gate 6 (2× spread) defaults to a pass when the stressed run is missing** (Range Fade, Liquidity). No filter reached
+  gate 6, so this changed nothing.
 
 - **Count of tries:**
   - 1 feature;
