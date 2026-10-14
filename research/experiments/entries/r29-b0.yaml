@@ -25,10 +25,10 @@ model_or_rule: 'Baseline: plain single-EMA cross (EMA 9 x EMA 21, 5-minute bars)
   <= 3/day'
 variants_tried: 1
 results:
-  summary: 'Discovery 1988 trades, net Rs -263,392 (-132/trade; 0 of 4 indices > 0); Selection 2787 trades, net Rs -182,367
-    (-65/trade; 0 of 5 indices > 0); WF 2025 2750 trades, net Rs -435,969 (-159/trade; 0 of 5 indices > 0); WF 2026 1943 trades,
-    net Rs -76,299 (-39/trade; 1 of 5 indices > 0); Holdout 2313 trades, net Rs -228,089 (-99/trade; 0 of 5 indices > 0);
-    best holdout index MIDCPNIFTY: p 0.080, BH q 0.163. FAILED the gates'
+  summary: 'Discovery 1525 trades, net Rs -174,015 (-114/trade; 0 of 4 indices > 0); Selection 2102 trades, net Rs -109,542
+    (-52/trade; 0 of 5 indices > 0); WF 2025 2073 trades, net Rs -332,951 (-161/trade; 0 of 5 indices > 0); WF 2026 1488 trades,
+    net Rs -80,083 (-54/trade; 1 of 5 indices > 0); Holdout 1785 trades, net Rs -195,778 (-110/trade; 0 of 5 indices > 0);
+    best holdout index MIDCPNIFTY: p 0.033, BH q 0.093. FAILED the gates'
   costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
     minute's open + 5 bps + a 1/2/4-tick half-spread by 5-min volume (stops 10 bps, 2x ticks); stress 2x spread
 holdout_read: true

@@ -225,3 +225,16 @@ holdout: 11 × 5 indices = **55 tests**; R29's whole family = 140 mining + 55 = 
 the holdout, so none passes Part A's gate.
 
 Run order: `study.py design` (any time), `study.py wf` (2025, 2026), then `study.py holdout` once.
+
+## Erratum 1 (14 Oct 2026, after the holdout read; found by the pre-push code review)
+
+- **B0 was gated per sign.** It trades both directions, so a bull and a bear cross could be held at once (up to 6
+  trades a day, 511 overlapping holdout trades). That breaks Part A's "one trade at a time, at most 3 a day".
+  R1-R10 have one sign each and are not affected.
+- **The fix:** `study.py erratum1` re-runs **B0 alone**, gated across signs, unchanged in every other way, on every
+  period including the holdout. This touches 2023 a second time for B0 only. No rule, threshold or choice depends on
+  B0, and the R1-R10 holdout results are not recomputed. BH q of the 55-test family is recomputed with B0's corrected
+  p-values.
+- **"Big winners cut short"** is recounted over every closed trade, as Part A defines it. The first run left out stop
+  exits. It is recounted from the saved R1-R10 trades, with no new data read.
+- Runs once (`results/ERRATUM1_DONE`).

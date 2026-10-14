@@ -323,3 +323,13 @@ def test_rule_events_filters_and_dedup(monkeypatch):
     one = RU.rule_events(dict(rule, sign=1, filters=()), "NIFTY", M, E, None, {})
     assert (one.sign == 1).all()
     assert len(RU.RULES) <= 10 and RU.B0["mode"] == "follow"
+
+
+def test_rule_gate_spans_both_signs():
+    """Erratum 1: a rule that trades both signs (B0) holds one trade at a time and at most 3 a day across signs."""
+    d = date(2024, 3, 5)
+    T = pd.DataFrame(dict(und="NIFTY", pattern="B0", mode="follow", day=d, sign=[1, -1, 1, -1, 1, -1],
+                          m=[20, 25, 70, 75, 120, 200], ATM_X1_row=[60, 65, 100, 105, 150, 230], ATM_X1_entry=100.0))
+    assert len(EN.gate(T)) == 6                                       # the old per-sign keys: overlapping trades
+    G = EN.gate(T, keys=("und", "pattern", "mode"))
+    assert list(G.m) == [20, 70, 120]

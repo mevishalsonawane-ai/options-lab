@@ -27,7 +27,7 @@ results:
   summary: 'Discovery 111 trades, net Rs -25,442 (-229/trade; 1 of 3 indices > 0); Selection 182 trades, net Rs -6,818 (-37/trade;
     2 of 5 indices > 0); WF 2025 160 trades, net Rs -2,981 (-19/trade; 3 of 5 indices > 0); WF 2026 106 trades, net Rs +3,466
     (+33/trade; 2 of 5 indices > 0); Holdout 169 trades, net Rs -22,987 (-136/trade; 0 of 5 indices > 0); best holdout index
-    BANKNIFTY: p 0.077, BH q 0.163. FAILED the gates'
+    BANKNIFTY: p 0.077, BH q 0.159. FAILED the gates'
   costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
     minute's open + 5 bps + a 1/2/4-tick half-spread by 5-min volume (stops 10 bps, 2x ticks); stress 2x spread
 holdout_read: true

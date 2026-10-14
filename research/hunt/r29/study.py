@@ -70,7 +70,7 @@ def metrics(G: pd.DataFrame, n_days: int) -> dict:
     daily = G.groupby("day").net.sum()
     eq = daily.sort_index().cumsum()
     dd = float((eq - eq.cummax().clip(lower=0)).min())
-    cut = (G.post >= G.exit_px + 0.5 * G.entry) & G.why.isin([S.R_LOCK, S.R_TIME, S.R_TARGET])
+    cut = G.post >= G.exit_px + 0.5 * G.entry                 # any closed trade (PREREG), stops included (erratum 1)
     return dict(trades=len(G), days=n_days, trade_days=int(daily.size), per_day=len(G) / max(n_days, 1),
                 win=float((net > 0).mean()), avg_win=float(net[net > 0].mean()) if (net > 0).any() else np.nan,
                 avg_loss=float(net[net <= 0].mean()) if (net <= 0).any() else np.nan,
@@ -92,7 +92,8 @@ def run_rule(rule, und, part, M, op, E_all, B_all, cache):
     opt, x = rule["opt"], rule["exit"]
     T["ATM_X1_row"] = T[f"{opt}_{x}_row"]
     T["ATM_X1_entry"] = T[f"{opt}_{x}_entry"]
-    G = EN.gate(T)
+    # one trade at a time per rule and index, whatever the sign (B0 trades both ways; erratum 1, 14 Oct 2026)
+    G = EN.gate(T, keys=("und", "pattern", "mode"))
     G["net"], G["entry"], G["exit_px"] = G[f"{opt}_{x}_net"], G[f"{opt}_{x}_entry"], G[f"{opt}_{x}_exit"]
     G["post"], G["why"] = G[f"{opt}_{x}_post"], G[f"{opt}_{x}_why"]
     S2 = EN.simulate_events(und, E, M, op, modes=(rule["mode"],), opts=(opt,), exits=(x,), spread_mult=2.0)
@@ -101,10 +102,10 @@ def run_rule(rule, und, part, M, op, E_all, B_all, cache):
     return G
 
 
-def evaluate(parts, tag):
+def evaluate(parts, tag, rules=None, trades_file=None):
     out = {}
     all_trades = []
-    rules = RU.RULES + [RU.B0]
+    rules = rules or RU.RULES + [RU.B0]
     for und in K.UNDS:
         op = D.load_options(und)
         if op is None:
@@ -147,7 +148,7 @@ def evaluate(parts, tag):
                                  if k in ("trades", "per_trade", "pnl_day", "win", "p_twins", "twin_per_trade")},
                       flush=True)
     if all_trades:
-        pd.concat(all_trades, ignore_index=True).to_parquet(K.OUT / f"rule_trades_{tag}.parquet")
+        pd.concat(all_trades, ignore_index=True).to_parquet(trades_file or K.OUT / f"rule_trades_{tag}.parquet")
     return out
 
 
@@ -185,8 +186,48 @@ def main(cmd):
         res = evaluate(("holdout",), "holdout")
         fam = family_q(res)
         (K.RESULTS / "holdout.json").write_text(json.dumps(dict(family=fam, results=res), indent=1, default=float))
+    elif cmd == "erratum1":
+        erratum1()
     else:
         raise SystemExit(__doc__)
+
+
+ERRATUM_FLAG = K.RESULTS / "ERRATUM1_DONE"
+
+
+def erratum1():
+    """Erratum 1 (14 Oct 2026, found by the pre-push review, AFTER the holdout read): B0 trades both signs but was gated
+    per sign, so it could hold a bull and a bear trade at once (up to 6 a day), against PREREG "one trade at a time, at
+    most 3 a day". R1-R10 have one sign each and are unaffected. B0 alone is re-run, unchanged in every other way, on
+    every period incl. the holdout (no choice depends on it; disclosed in PREREG.md). 'Cut short' is recounted over
+    every closed trade, as PREREG defines it (stops were left out), from the saved R1-R10 trades. Runs once."""
+    if ERRATUM_FLAG.exists():
+        raise SystemExit("erratum 1 has been applied already")
+    ERRATUM_FLAG.write_text(pd.Timestamp.now(tz="Asia/Kolkata").isoformat() + "\n")
+    for tag, parts, name in (("design", K.DESIGN, "design.json"), ("wf", ("wf2025", "wf2026"), "wf.json"),
+                             ("holdout", ("holdout",), "holdout.json")):
+        doc = json.loads((K.RESULTS / name).read_text())
+        res = doc["results"] if tag == "holdout" else doc
+        if tag == "holdout":
+            D.ALLOW_HOLDOUT = True
+        T = pd.read_parquet(K.OUT / f"rule_trades_{tag}.parquet")
+        T = T[T.rule != "B0"]
+        for key, r in res.items():
+            rid, und, part = key.split("|")
+            if rid == "B0" or not r.get("trades"):
+                continue
+            g = T[(T.rule == rid) & (T.und == und) & (T.part == part)]
+            m = metrics(g, r["days"])
+            assert m["trades"] == r["trades"] and abs(m["net"] - r["net"]) < 1e-6, key
+            r["cut_short"], r["cut_share"] = m["cut_short"], m["cut_share"]
+        b0 = evaluate(parts, tag + "_b0", rules=[RU.B0], trades_file=K.OUT / f"rule_trades_{tag}_b0.parquet")
+        res.update(b0)
+        B = pd.read_parquet(K.OUT / f"rule_trades_{tag}_b0.parquet")
+        pd.concat([T, B], ignore_index=True).to_parquet(K.OUT / f"rule_trades_{tag}.parquet")
+        if tag == "holdout":
+            doc["family"] = family_q(res)
+            doc["erratum1"] = "B0 re-gated one trade at a time across signs; cut short over all closed trades"
+        (K.RESULTS / name).write_text(json.dumps(doc, indent=1, default=float))
 
 
 if __name__ == "__main__":

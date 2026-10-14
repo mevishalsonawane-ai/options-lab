@@ -27,7 +27,7 @@ results:
   summary: 'Discovery 160 trades, net Rs -22,949 (-143/trade; 0 of 4 indices > 0); Selection 232 trades, net Rs -29,398 (-127/trade;
     1 of 5 indices > 0); WF 2025 255 trades, net Rs -50,828 (-199/trade; 0 of 5 indices > 0); WF 2026 185 trades, net Rs -10,438
     (-56/trade; 1 of 5 indices > 0); Holdout 184 trades, net Rs -41,046 (-223/trade; 0 of 5 indices > 0); best holdout index
-    SENSEX: p 0.063, BH q 0.149. FAILED the gates'
+    SENSEX: p 0.063, BH q 0.143. FAILED the gates'
   costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
     minute's open + 5 bps + a 1/2/4-tick half-spread by 5-min volume (stops 10 bps, 2x ticks); stress 2x spread
 holdout_read: true

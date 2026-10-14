@@ -589,12 +589,12 @@ tests, one BH family with F1).
   types (stack onset, twist, pullback to 21/34, squeeze then fan-out, ribbon breakout, fan-out, 1/5/15-minute alignment
   and combinations), traded with and against the trend, ATM, Boss's +Rs 1,000-keep-Rs 500 lock, app charges and spread.
 - Mining: 1 of 140 candidates made money in both 2021-22 (93,650 trades) and 2024 (134,455), on 2 and 9 trades; the index moves a median
-  2 bps beyond random in 30 minutes after an event. Boss's three ideas (15-min stack + 5-min pullback, squeeze then
+  2 bps (either way; signed median -0.1) beyond random in 30 minutes after an event. Boss's three ideas (15-min stack + 5-min pullback, squeeze then
   fan-out, MTF alignment) lost in 2024 in every cell but one (15-min squeeze down +Rs 123 on 146 trades, Rs -297 in
   2021-22).
 - The 10 best twin-beating candidates (all fades, all losing on their own) on unseen years: 1 of 10 positive in 2025,
   1 of 10 in 2026, none in both; holdout 2023 (read once) 1 of 10 positive pooled (R6 +Rs 21 a trade on 264, sign
-  flipping by period on every index). 0 of 55 rule x index tests passed. EMA 9 x 21 cross: Rs -99 a trade in the
-  holdout (2,313 trades), negative on all five indices in every period.
+  flipping by period on every index). 0 of 55 rule x index tests passed. EMA 9 x 21 cross: Rs -110 a trade in the
+  holdout (1,785 trades), negative on all five indices except NIFTY 2026.
 - Kept: 77 point-in-time ribbon features in the Data Brain (`rib*`, `cls*`, `rib_mtf_align`) as context. Nothing to
   paper or live.

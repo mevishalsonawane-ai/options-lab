@@ -25,7 +25,7 @@ or holdout read. Generated tables: `research/hunt/r29/results/report.md` and `mi
   1 lot of the ATM option at the next minute's price, with the app's charges and a realistic spread. The main exit was
   your lock (stop −30%; once the trade is +Rs 1,000, keep at least +Rs 500; out after 60 minutes).
 - **Mining (2021-22, then checked on 2024): only 1 of 140 made money in both periods, on 2 and 9 trades, which is
-  noise.** 228,105 trades in total. An average pattern trade lost Rs 56 (follow) to Rs 123 (fade) per
+  noise.** 228,105 trades in total. An average pattern trade lost Rs 74 (follow) to Rs 126 (fade) per
   lot on 2024. A random-minute trade lost Rs 99.
 - **Your three ideas, plainly:**
   - **15-min fully stacked + 5-min pullback, buy with the trend:** Rs −62 a trade on up-trends (771 trades) and Rs −209
@@ -43,11 +43,12 @@ or holdout read. Generated tables: `research/hunt/r29/results/report.md` and `mi
   - R6 is not an edge: on every index its result flips sign from period to period. On BANKNIFTY it went +106, −70,
     −168, +42, +62 a trade; on FINNIFTY −489, −82, −250, −266, +58. **0 of 55 rule × index tests passed Part A's gate**
     (needs holdout profit, p < 0.05, BH q ≤ 0.10, both walk-forward years positive and profit at 2× spread).
-- **The plain EMA 9 × 21 cross (5-min, buy with the cross) lost on all five indices in every period.** Holdout Rs −99
-  a trade on 2,313 trades, about Rs −1,030 a day across the five indices.
+- **The plain EMA 9 × 21 cross (5-min, buy with the cross) lost too.** It lost on all five indices in the holdout and in
+  every period except NIFTY 2026 (+Rs 84 a trade on 299). Holdout: Rs −110 a trade on 1,785 trades, about Rs −877 a
+  day across the five indices.
 - **Why this keeps failing.** A ribbon is just smoothed past prices: by the time 8 EMAs line up, the move they describe
-  has happened. The index moved only about ±2 bps more than random over the next 30 minutes after a ribbon event
-  (median, 2024). An ATM option's round trip costs far more than that.
+  has happened. Over the next 30 minutes after a ribbon event, the index moved a median 2 bps (either way) more than at
+  random minutes (2024); the signed median is −0.1 bps. An ATM option's round trip costs far more than that.
   - This repeats H25 (every MA, cross and ribbon alone: Rs −146 a trade). Combining many EMAs adds nothing that a
     single one did not.
 - **What R29 leaves behind.** 77 point-in-time EMA-ribbon features in the Data Brain (`rib*`, `cls*`,
@@ -69,17 +70,18 @@ or holdout read. Generated tables: `research/hunt/r29/results/report.md` and `mi
   square-off, so a wrong expiry date only moves that exit time.
 - **R29's tests:** 140 mining candidates + 55 confirmatory (10 rules + B0, × 5 indices) = **195**. F1's own count is
   up to 20 holdout rules plus its screen tests, still unknown. The combined family is 195 + F1's count.
-- On R29's own 55-test holdout family, 19 rule × index results reach BH q ≤ 0.10 against their twins. Each is listed
+- On R29's own 55-test holdout family, 21 rule × index results reach BH q ≤ 0.10 against their twins. Each is listed
   with the largest combined family it would survive (`max_family_for_q10` in `results/holdout.json`; best 200, for R6
-  BANKNIFTY and R5 FINNIFTY). It makes no difference: 14 of the 19 lose money on their own. The 5 that make money (R2
+  BANKNIFTY and R5 FINNIFTY). It makes no difference: 16 of the 21 lose money on their own (incl. B0 MIDCPNIFTY). The 5 that make money (R2
   BANKNIFTY, R4 NIFTY, R6 BANKNIFTY / FINNIFTY / MIDCPNIFTY) each lost in at least one walk-forward year.
 
 ## Why "beats random twins" is not "makes money" here
 
 - Part A's twin keeps the trade's day and direction (as in H25), and picks a random minute.
 - A ribbon event's sign tells you which way the day has been going. So:
-  - a follow trade's twin is a random entry in the day's own direction (+Rs 41 a trade on 2024);
-  - a fade trade's twin is a random entry against it (−Rs 241).
+  - a follow trade's twin is a random entry in the day's own direction (+Rs 26 a trade on 2024, per trade);
+  - a fade trade's twin is a random entry against it (−Rs 224). (PREREG Part B quotes +41 / −241, the mean over
+    candidates rather than over trades.)
 - The twin test therefore flatters fades and is harsh on follows. Every one of the 45 mining survivors is a fade that
   loses less than its twins.
 - Part A's pass gate also needs profit on its own, so this could not let a losing rule through. From Part B on, the
@@ -144,29 +146,29 @@ or holdout read. Generated tables: `research/hunt/r29/results/report.md` and `mi
 - Trades: discovery 93,650 and selection 134,455, over 4 indices (SENSEX has no options before May 2023, so it appears
   in selection only).
 - Random-minute trade: Rs −169 (discovery) and Rs −99 (selection) a lot.
-- By pattern family, the mean selection net per trade (Rs, ATM, lock):
+- By pattern family, the selection net per trade (Rs, ATM, lock; all trades of the family's cells):
 
 | family | follow | fade |
 |---|---|---|
-| P1 ribbon stack onset | −54 | −145 |
-| P2 9/21/50/200 stack onset | −71 | −108 |
-| P3 twist (full flip) | +19 | −168 |
-| P4 pullback to 21/34 | −94 | −105 |
-| P5 squeeze → expansion | −68 | −132 |
-| P6 price leaves the ribbon | −89 | −115 |
-| P7 fan-out starts | −44 | −169 |
-| P8 1/5/15-min alignment | −75 | −146 |
-| P9 5-min pullback in 15-min stack | −135 | −73 |
-| P10 1-min pullback in 5+15-min stacks | −119 | −130 |
-| P11 5-min squeeze with 15-min order | −177 | −19 |
-| P12 twist back with the 15-min stack | +52 | −60 |
+| P1 ribbon stack onset | −65 | −136 |
+| P2 9/21/50/200 stack onset | −66 | −119 |
+| P3 twist (full flip) | −38 | −129 |
+| P4 pullback to 21/34 | −93 | −116 |
+| P5 squeeze → expansion | −60 | −135 |
+| P6 price leaves the ribbon | −89 | −110 |
+| P7 fan-out starts | −49 | −168 |
+| P8 1/5/15-min alignment | −74 | −144 |
+| P9 5-min pullback in 15-min stack | −107 | −91 |
+| P10 1-min pullback in 5+15-min stacks | −105 | −131 |
+| P11 5-min squeeze with 15-min order | −170 | −38 |
+| P12 twist back with the 15-min stack | −26 | −61 |
 
-- The two "positive" cells are noise:
-  - P3 follow is driven by the 15-minute twist: +297 / +124 a trade on 64 / 63 trades in 2024, but −20 / −403 in
+- Every family loses both ways. The best single cells are noise:
+  - P3 follow's 15-minute twist: +297 / +124 a trade on 64 / 63 trades in 2024, but −20 / −403 in
     2021-22. The 1/3/5-minute twists are −129 to +31.
   - P12 has 9-13 trades a cell (the 15-minute stack rarely flips back).
-- **The index barely moves after these events.** The median move beyond random over 30 minutes is 2.0 bps. 56 of 140
-  candidates are positive in both splits; chance alone gives about 35.
+- **The index barely moves after these events.** The move beyond random over 30 minutes is a median 2.0 bps in size
+  (signed median −0.1 bps). 56 of 140 candidates are positive in both splits; chance alone gives about 35.
 - After an average event the index moves as far for the trade as against it within the hour: mean MFE +22.1 bps,
   mean MAE −22.1 bps (2024, over the 140 candidates).
 
@@ -186,7 +188,7 @@ Pooled over the indices, ATM, lock exit, net per trade in Rs (trades in brackets
 | R8 | fade bearish 1-min pullback in 5+15 stacks | −233 (388) | −128 (529) | −116 (625) | −193 (646) | −117 (402) |
 | R9 | fade bearish 5-min 9/21/50/200 stack | −56 (486) | −111 (661) | −300 (728) | −345 (526) | −75 (505) |
 | R10 | fade bullish 5-min ribbon stack | −111 (805) | −68 (1,267) | −140 (1,120) | −140 (789) | −111 (1,033) |
-| B0 | EMA 9×21 cross, 5-min, follow | −132 (1,988) | −65 (2,787) | −159 (2,750) | −39 (1,943) | −99 (2,313) |
+| B0 | EMA 9×21 cross, 5-min, follow | −114 (1,525) | −52 (2,102) | −161 (2,073) | −54 (1,488) | −110 (1,785) |
 
 Holdout details per index (`results/report.md` has every column for every period):
 
@@ -194,16 +196,22 @@ Holdout details per index (`results/report.md` has every column for every period
   p vs twins, BH q, 2× spread.
 - Win rates are 19-52% (one 7-trade cell 71%). Average wins are Rs 225-1,139 and average losses Rs −278 to −936.
 - Worst days are Rs −549 to −8,173 a lot. The worst max drawdown among R1-R10 was Rs −29,225 (R10 BANKNIFTY); B0
-  BANKNIFTY reached Rs −81,486.
-- Big winners cut short (the option rose ≥ 50% of the entry price above the exit within 2 hours): 0-20% of trades,
-  typically 10% (one 7-trade cell 57%). The lock is not what kills these rules: hold-longer exits (X2 trail, 1-ITM) lose too. The one
+  BANKNIFTY reached Rs −83,274.
+- Big winners cut short (after any exit, stops included, the option rose ≥ 50% of the entry price above the exit
+  within 2 hours): 2-23% of trades, median 18% (one 7-trade cell 57%). The lock is not what kills these rules: hold-longer exits (X2 trail, 1-ITM) lose too. The one
   exception is R6, positive under every exit in the holdout (best ITM1 + trail, +Rs 152 a day), which is the same
   noise as above.
 - Holdout P&L a day summed over the 5 indices, by exit:
   - R10 (most active): Rs −333 to −690;
-  - B0: Rs −955 to −1,219.
+  - B0: Rs −804 to −937.
 
 ## Honest caveats
+
+- **Erratum 1 (found by the pre-push review, after the holdout read):** B0 had been gated per sign, so it could hold a
+  bull and a bear trade at once. It was re-run alone, gated one at a time across signs; every B0 number here is the
+  corrected one (PREREG.md, Erratum 1). R1-R10 were not affected. 'Cut short' is counted over every closed trade.
+- Green days and worst day are over days with a trade; trades a day and P&L a day are over every session in the period.
+- A minute with no option print delays the 60-minute time stop to the next printed minute (rare).
 
 - 2023 was design data for other studies (H25 ran single MAs and ribbons on it; OBUY printed 2023; R24 mined it). No
   multi-EMA combination had been run on it before R29's one read.
