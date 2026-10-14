@@ -136,7 +136,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   candles are below support"). Event study first (follow-through vs fake-out at 15/30/60 min, 1 vs 2 vs 3 closes, by
   level, timeframe, time, VIX, expiry, index), then at most 4 pre-registered rules with random-level and random-time
   twins, BH counted with R20 and R20b. Branch claude/r20c-sr-break.
-- [x] R22. (done 14 Oct: research/HUNT_OF1_ORDERFLOW_INDIA.md; nothing to follow, no app change) Order-flow forensics
+- [x] OF1. (done 14 Oct: research/HUNT_OF1_ORDERFLOW_INDIA.md; nothing to follow, no app change) Order-flow forensics
   (owner, 13 Oct: "reverse-engineer the order flow: what was placed, why, who made good profit"): NSE participant
   OI/volume 2012-2026, who profited by type, 36 follow-the-group signals (15 passed design, 0 of 15 held on the holdout),
   build-up and walls/magnets (no wall, no pin), R0-R3 option-buying rules (all fail). Open follow-ups:
