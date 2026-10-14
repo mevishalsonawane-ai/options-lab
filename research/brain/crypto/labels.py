@@ -42,6 +42,13 @@ def _path(root: Path, sym: str, d: date) -> Path:
     return config.paths(root).labels(sym) / str(d.year) / f"{d}.parquet"
 
 
+def _has_horizons(p: Path, horizons=HORIZONS) -> bool:
+    """A label file written before a horizon was added (15 minutes, 14 Oct 2026) lacks its columns: rebuild it."""
+    import pyarrow.parquet as pq
+    names = set(pq.read_schema(p).names)
+    return all(f"y_ret_{h}m" in names for h in horizons)
+
+
 def build(root: Path, sym: str, frm: date, to: date) -> int:
     days = [d for d in cube.built_days(root, sym) if frm <= d <= to]
     n = 0
@@ -51,7 +58,7 @@ def build(root: Path, sym: str, frm: date, to: date) -> int:
     for _, ds in sorted(by_month.items()):
         pm = [cube.day_paths(root, sym, d)[0] for d in ds]
         if all(_path(root, sym, d).exists() and _path(root, sym, d).stat().st_mtime >= p.stat().st_mtime
-               for d, p in zip(ds, pm)):
+               and _has_horizons(_path(root, sym, d)) for d, p in zip(ds, pm)):
             nxt = cube.day_paths(root, sym, ds[-1] + timedelta(days=1))[0]
             if not nxt.exists() or nxt.stat().st_mtime <= _path(root, sym, ds[-1]).stat().st_mtime:
                 continue

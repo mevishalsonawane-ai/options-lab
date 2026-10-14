@@ -434,3 +434,18 @@ def test_options_pull_respects_the_holdout_lock():
     assert not any("2026-04" in p or "2026-05" in p for p in pats)              # the brain's holdout is not copied
     assert "deribit/dvol/**" in pats
     assert any("2026-05" in p for p in fetch.options_includes("2026-02", "2026-05", allow_holdout=True)[1::2])
+
+
+def test_label_files_missing_a_new_horizon_are_rebuilt(tmp_path):
+    r = syn.raw(3, "2025-01-03")
+    syn.write_archive(tmp_path / "raw", r)
+    root = tmp_path / "cache"
+    cube.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5), adapter=ArchiveAdapter(tmp_path / "raw"),
+               dvol=DvolAdapter({}), verbose=False)
+    assert labels.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5)) == 3
+    assert labels.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5)) == 0          # up to date
+    p = labels._path(root, "BTCUSDT", date(2025, 1, 4))
+    old = pd.read_parquet(p)
+    old.drop(columns=[c for c in old.columns if c.endswith("_15m")]).to_parquet(p, index=False)   # an older file
+    assert labels.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5)) == 3
+    assert "y_ret_15m" in pd.read_parquet(p).columns
