@@ -1,0 +1,38 @@
+id: r30-q1-size
+title: 'R30 neural nets: size (log range) of the next 15/30/60 minutes, 5 indices'
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_R30_NEURAL_NETS.md
+hypothesis: Neural nets forecast the size of the next 15/30/60 minutes better than gradient-boosted trees and B1's 4-input
+  formula.
+data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
+  brain cube v2 + point-in-time feature store, built 14 Oct 2026)
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13; walk-forward folds 2022, 2024H2, 2025, 2026 (retrained each fold)
+  holdout: 2023-01-01..2024-06-30 (F1 India's block), read once 14 Oct 2026; embargo 2022-12-15..31 and 2024-07-01..14
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- all brain L4 point-in-time features at the decision minute
+- last 60 one-minute index bars (return, range, from-open, VIX change, mask)
+- index one-hot, time of day
+model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
+  3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; size head = log of the high-low
+  range of the next h minutes (% of close); no trading rule
+settings: research/hunt/r30/PREREG.md
+prereg: research/hunt/r30/PREREG.md
+variants_tried: 3
+results:
+  summary: 'PASSES for 30 and 60 minutes: holdout R2 NN 0.465 vs trees 0.440 (30 min, 40,071 forecasts) and 0.432 vs 0.382
+    (60 min, 36,320), B1 formula 0.384 / 0.353; WF q 0.005, NN better in 3/4 folds, holdout q 0.006; better on every index
+    (60 min: NIFTY 0.420 vs 0.327, SENSEX 0.352 vs 0.279). GRU 0.434 and TCN 0.430 edge the MLP 0.424 at 60 min. 15 minutes:
+    trees better in WF (q 1.0) though NN better in holdout (0.472 vs 0.464): fails.'
+  costs: none (forecast of move size; no trades)
+holdout_read: true
+verdict: inconclusive
+notes: A better volatility forecast, not a trade. Candidate to replace B1's range model as context (stops/targets, skip dead
+  half-hours) under its own pre-registered paper test; nothing tested here trades on it.

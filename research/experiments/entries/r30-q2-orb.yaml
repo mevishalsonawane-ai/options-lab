@@ -1,0 +1,33 @@
+id: r30-q2-orb
+title: R30 neural-net trade filter (meta-labelling) on the ORB (R20 V0 via R22) arm, rule R7
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_R30_NEURAL_NETS.md
+hypothesis: Given the state at entry, a neural net predicts whether a ORB (R20 V0 via R22) trade wins after costs, and skipping
+  its weakest 30% improves the arm.
+data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
+  brain cube v2 + point-in-time feature store, built 14 Oct 2026)
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13; walk-forward folds 2022, 2024H2, 2025, 2026 (retrained each fold)
+  holdout: 2023-01-01..2024-06-30 (F1 India's block), read once 14 Oct 2026; embargo 2022-12-15..31 and 2024-07-01..14
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- brain features at the arm's signal minute
+- last 60 one-minute index bars
+- side, index, time of day
+model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
+  3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; label = trade net > 0 after
+  the arm's own costs; rule R7 skips trades whose P(win) is in the bottom 30% of validation scores (risk-lowering only)
+settings: research/hunt/r30/PREREG.md
+prereg: research/hunt/r30/PREREG.md
+variants_tried: 1
+results:
+  summary: '726 design trades scored in WF, 566 holdout trades. No model beats the base rate (WF log-loss NN 0.671 vs 0.675,
+    q 0.55; holdout 0.647 vs 0.643). Skipping the weakest 30%: holdout -Rs 154/day vs unfiltered -193 (491 kept, 75 skipped,
+    p 0.17); the arm still loses.'
+  costs: each arm's own fills and charges (R28 r28arms.py rebuild)
+holdout_read: true
+verdict: rejected
+notes: Trades rebuilt with R28's r28arms.py on the lake (the arm's own code).

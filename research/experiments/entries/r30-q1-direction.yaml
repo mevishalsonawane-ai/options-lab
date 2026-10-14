@@ -1,0 +1,39 @@
+id: r30-q1-direction
+title: 'R30 neural nets: next 15/30/60-minute index direction (5 indices) and option-buying rules R1-R6'
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_R30_NEURAL_NETS.md
+hypothesis: Neural nets on the brain's features plus the raw minute sequence forecast the next 15/30/60-minute direction of
+  the 5 indices better than the base rate, logistic regression and trees, and a confident-signal ATM option buy pays after
+  costs.
+data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
+  brain cube v2 + point-in-time feature store, built 14 Oct 2026)
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13; walk-forward folds 2022, 2024H2, 2025, 2026 (retrained each fold)
+  holdout: 2023-01-01..2024-06-30 (F1 India's block), read once 14 Oct 2026; embargo 2022-12-15..31 and 2024-07-01..14
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- all brain L4 point-in-time features at the decision minute
+- last 60 one-minute index bars (return, range, from-open, VIX change, mask)
+- index one-hot, time of day
+model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
+  3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; rules R1-R3 buy ATM CE/PE
+  when |p-0.5| is in the top 10% of validation scores (premium stop -30%, exit at t+h), R4-R6 the same with a big-move forecast
+  filter
+settings: research/hunt/r30/PREREG.md
+prereg: research/hunt/r30/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Direction is a coin: holdout AUC 0.510-0.517 and log-loss 0.6928-0.6969 vs base rate 0.6923-0.6926 (36,462-41,967
+    forecasts, 368 sessions x 5 indices); WF the same (66,027-75,940 forecasts, 667 sessions). Rules: R1-R3 lose -Rs 106 to
+    -424/day in the holdout (1,499-2,752 trades); R4 +20/day on 172 trades (p 0.22), R5 -22 (56), R6 -10 (21 trades; its WF
+    +193/day came mostly from the 2026 fold). No rule passes (best BH q 0.096).'
+  costs: Fills('liq') (app bps + volume-aware half-spread) + Costs('app'); stress = 2x spread
+holdout_read: true
+verdict: rejected
+notes: Third confirmation (R16, B1, R30) that intraday index direction is not predictable from these inputs.

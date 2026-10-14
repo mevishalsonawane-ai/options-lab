@@ -1,0 +1,37 @@
+id: r30-q3-blast
+title: 'R30 neural nets: expiry-afternoon blast (R26 ATM+-1 option >= 4x from 13:45), rule R12 (option-chart context)'
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_R30_NEURAL_NETS.md
+hypothesis: From the 13:45 state on an expiry day, a neural net predicts whether R26's ATM+1 CE / ATM-1 PE reaches 4x its
+  13:45 price by 15:05, and buying the top 20% pays after costs.
+data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
+  brain cube v2 + point-in-time feature store, built 14 Oct 2026)
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13; walk-forward folds 2022, 2024H2, 2025, 2026 (retrained each fold)
+  holdout: 2023-01-01..2024-06-30 (F1 India's block), read once 14 Oct 2026; embargo 2022-12-15..31 and 2024-07-01..14
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- all brain L4 point-in-time features at the decision minute
+- last 60 one-minute index bars (return, range, from-open, VIX change, mask)
+- index one-hot, time of day
+- 'option context: log premium, premium/spot, OI change since 12:00, IV (labelled option-chart context)'
+model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
+  3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; R12 buys the option at the
+  next bar when P(blast) is in the top 20% of validation scores; resting sell at 4x, else out at 15:05
+settings: research/hunt/r30/PREREG.md
+prereg: research/hunt/r30/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Not predictable: WF log-loss NN 0.412 vs base rate 0.350 (576 option-days, 239 expiry sessions, 11.1% blasts);
+    holdout 0.439 vs 0.381 (685, 12.7% blasts), AUC 0.468. R12: holdout -Rs 156/day (210 trades, win rate 16%, p 0.87); WF
+    -79/day.'
+  costs: Fills('liq') (app bps + volume-aware half-spread) + Costs('app'); stress = 2x spread
+holdout_read: true
+verdict: rejected
+notes: Expiry days found from the data (R25 rule, amendment 1). The 10x (R25/R32) count was reported, not modelled.

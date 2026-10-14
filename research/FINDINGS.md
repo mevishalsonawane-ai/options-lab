@@ -581,3 +581,22 @@ NSE's data is anonymous: only types (Client, DII, FII, Pro), never a person, fir
   neither walls nor magnets (0 of 12 tests; max-OI strike closer to settlement than a same-distance random strike
   42-43% of 873 expiries, which is the no-magnet level of ~44%).
 - The app's own order-flow recordings: none uploaded yet (IraAlgo has 0 releases); `hunt/of1/footprints.py` is ready.
+
+## Neural networks on every running study (R30, 14 Oct 2026) - they forecast move SIZE better than trees; no trade passes
+Full study: `HUNT_R30_NEURAL_NETS.md` (pre-registered `hunt/r30/PREREG.md`, commit 36af9e9; India holdout 1 Jan 2023 -
+30 Jun 2024 and crypto holdout 1 Apr - 30 Sep 2025, each read once). Models: MLP, causal TCN and GRU (3 seeds each,
+signal on the underlying, last 60 one-minute bars + the brain's features) against base rate, logistic and trees.
+- Index direction over 15/30/60 minutes (5 indices) is a coin for the networks too: holdout AUC 0.510-0.517, log-loss no
+  better than the base rate (36,462-41,967 forecasts, 368 sessions). Every ATM option rule built on it loses after
+  costs (R1-R3: -Rs 106 to -424 a day) or trades too rarely to judge (R4-R6: 21-172 holdout trades).
+- Move size is where networks help: holdout R2 of the next 60-minute range 0.432 vs trees 0.382 and B1's formula 0.353
+  (36,320 forecasts); 30 minutes 0.465 vs 0.440; better on every index; q 0.006. GRU / TCN (raw minutes) edge the MLP.
+- Filters on the arms' trades (ORB, Range Fade, Liquidity, Night, lottery L3; 195-1,083 design trades each): no net
+  beats the base rate. Night's filter lifted the holdout from Rs 174 to Rs 295 a day but fails BH (q 0.14) and the
+  100-skip gate, and the trees' filter did as well (Rs 314). The Liquidity filter made the arm worse (Rs 234 -> -70).
+- Expiry blast from 13:45 (R26's 4x) is not predictable (holdout log-loss 0.439 vs base rate 0.381, 685 option-days).
+- Next-morning gap from 15:20: the net only learned the gap-up base rate. Its overnight call rule made +Rs 24 a day
+  (208 trades, q 0.11) and plain "always the call" on the same nights +Rs 22.
+- Crypto: a tiny real 60-minute direction signal (holdout AUC 0.533, log-loss 0.6915 vs 0.6928, q 0.006, 35,112
+  forecasts), far below Delta India costs: every stop-and-lock perp rule loses (-Rs 4 to -301 a day before tax).
+- If ever used, the models are tiny: under 0.4 MB for all three, about 6 ms per forecast on a CPU.

@@ -1,0 +1,28 @@
+id: r30-q5-crypto-size
+title: 'R30 neural nets: BTC/ETH size of the next 15/60/240 minutes'
+family: mcx-crypto
+date: '2026-10-14'
+doc: research/HUNT_R30_NEURAL_NETS.md
+hypothesis: Neural nets forecast the size of BTC/ETH moves better than trees.
+data_version: Binance USDT-M perpetual 1-minute klines BTCUSDT / ETHUSDT from gdrive:IraAlgo-data-crypto (Oct 2023 - Oct 2026)
+period:
+  design: 2023-11-01..2025-03-31 and 2025-11-01..2026-03-31; folds 2024H2, 2025Q1, 2025Q4-26Q1
+  holdout: 2025-04-01..2025-09-30 UTC (F1 crypto's block, already read by F1C for its own rules), read once by R30
+instruments:
+- BTCUSDT
+- ETHUSDT
+features:
+- as r30-q5-crypto-direction
+model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 120 one-minute bars + tabular features;
+  3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; size head = log range of
+  the next h minutes
+settings: research/hunt/r30/PREREG.md
+prereg: research/hunt/r30/PREREG.md
+variants_tried: 3
+results:
+  summary: 'NN about equal to trees: holdout R2 0.656 vs 0.656 (15 min), 0.620 vs 0.618 (60), 0.574 vs 0.570 (240), none significant
+    (q 0.35-0.51); WF NN better at 15 min (q 0.005) only.'
+  costs: none (forecast of move size; no trades)
+holdout_read: true
+verdict: rejected
+notes: Size is very predictable for both (R2 0.57-0.66), the nets add nothing over trees.
