@@ -157,6 +157,14 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         assertTrue(run(GitHubSyncWorker.NOW) is ListenableWorker.Result.Success)
         assertEquals(2, uploads())
         assertEquals(listOf(WED.toString()), diags())
+        // 14 Oct review: before the close it is today's so far, said as partial on the card, not as the day's file.
+        assertEquals(WED, GitHubSync.status().lastDiagDay)
+        assertTrue(GitHubSync.status().diagPartial)
+        // The evening run sends the whole day.
+        Background.at(WED, 23, 31)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals(listOf(WED.toString(), WED.toString()), diags())
+        assertFalse(GitHubSync.status().diagPartial)
     }
 
     @Test fun aFailureIsTriedFourTimesInAll() {

@@ -251,8 +251,67 @@ object CloudSync {
         else -> null
     }
 
-    /** The later of the day kept and [day] (a re-run of an older day never moves the card's "last day uploaded" back). */
-    fun diagKept(kept: LocalDate?, day: LocalDate): LocalDate = if (kept != null && kept.isAfter(day)) kept else day
+    // ---- the diagnostics' record (14 Oct review of G3) ------------------------------------------------------------------
+    //
+    // A failed upload of a day's diagnostics used to be lost for good (the evening was marked done, and only that evening's
+    // day was ever sent), and a pre-close "Upload now" counted as the day's file. Each day's state is now kept: tried (the
+    // run meant to send it, nothing went up), partial (today's so far, before the evening gate) or full. The next run sends
+    // every day of the last [DIAG_RETRY_DAYS] that is not full, and the card names the days that never went up. A day sent
+    // later is built then: its decisions, trades, orders, errors and timeline are that day's (from the diary and the
+    // books), but the arms' switches, the mode and the health and workers' lines are as at its "generated_at" (a later day
+    // there marks such a catch-up; MAINTENANCE.md, "Daily diagnostics").
+
+    const val DIAG_TRIED = 0
+    const val DIAG_PARTIAL = 1
+    const val DIAG_FULL = 2
+    /** How many days before a run's own day it sends a missed day's diagnostics again. */
+    const val DIAG_RETRY_DAYS = 3
+    /** How many days back the card names a day whose diagnostics never went up in full. */
+    const val DIAG_SHOW_DAYS = 7
+
+    /**
+     * The days whose diagnostics a run for [day] sends, oldest first: the days of the [back] before it that are not full,
+     * from the first day the record holds (never before the diagnostics began), then [day] itself. Null [day]: none.
+     */
+    fun diagDays(day: LocalDate?, done: Map<LocalDate, Int>, back: Int = DIAG_RETRY_DAYS): List<LocalDate> {
+        if (day == null) return emptyList()
+        val since = done.keys.minOrNull() ?: return listOf(day)
+        return (back downTo 1).map { day.minusDays(it.toLong()) }.filter { !it.isBefore(since) && done[it] != DIAG_FULL } + day
+    }
+
+    /**
+     * The state a day's uploaded file has: [day] before [today], or today from its evening gate, is the whole day (full);
+     * today before the gate ("Upload now" during the day) is partial: the evening run replaces it.
+     */
+    fun diagState(day: LocalDate, today: LocalDate, minute: Int, eveningFrom: Int = EVENING): Int =
+        if (day.isBefore(today) || (day == today && minute >= eveningFrom)) DIAG_FULL else DIAG_PARTIAL
+
+    /** [done] with [day] at [state], never lowered (a failed re-run keeps a full day full, a partial never replaces a full). */
+    fun diagMark(done: Map<LocalDate, Int>, day: LocalDate, state: Int): Map<LocalDate, Int> =
+        done + (day to maxOf(state, done[day] ?: DIAG_TRIED))
+
+    /** The record as kept in the vault ("2026-10-13=2,2026-10-14=1"), and back; the newest [keep] only. */
+    fun diagEncode(m: Map<LocalDate, Int>, keep: Int = 60): String =
+        m.entries.sortedBy { it.key }.takeLast(keep).joinToString(",") { "${it.key}=${it.value}" }
+
+    fun diagDecode(s: String?): Map<LocalDate, Int> = s.orEmpty().split(",").mapNotNull { e ->
+        val (d, v) = e.split("=").takeIf { it.size == 2 } ?: return@mapNotNull null
+        runCatching { LocalDate.parse(d) to v.toInt().coerceIn(DIAG_TRIED, DIAG_FULL) }.getOrNull()
+    }.toMap()
+
+    /**
+     * The days whose diagnostics never went up in full, oldest first: from the record's first day (and at most [show] days
+     * back) to the last evening whose upload window has ended (yesterday's from 08:00, [MORNING_UNTIL]; else the day before).
+     * So a day is named only once its evening run and its morning catch-up are both over.
+     */
+    fun diagMissed(done: Map<LocalDate, Int>, today: LocalDate, minute: Int, show: Int = DIAG_SHOW_DAYS): List<LocalDate> {
+        val since = done.keys.minOrNull() ?: return emptyList()
+        val lastClosed = today.minusDays(if (minute >= MORNING_UNTIL) 1 else 2)
+        val out = ArrayList<LocalDate>()
+        var d = maxOf(since, today.minusDays(show.toLong()))
+        while (!d.isAfter(lastClosed)) { if (done[d] != DIAG_FULL) out += d; d = d.plusDays(1) }
+        return out
+    }
 
     /** The uploaded days as kept in the vault ("2026-10-13=1234,..."), and back; the newest [keep] only. */
     fun doneEncode(m: Map<LocalDate, Long>, keep: Int = 120): String =
@@ -356,6 +415,10 @@ object CloudSync {
         val repo: String = DEFAULT_REPO,
         /** The last day whose diagnostics went up ([DiagDay], G3); null: none yet. */
         val lastDiagDay: LocalDate? = null,
+        /** That day's file is today's so far ("Upload now" before the close): the evening run replaces it (14 Oct review). */
+        val diagPartial: Boolean = false,
+        /** The days whose diagnostics never went up in full ([diagMissed]; 14 Oct review). */
+        val diagMissed: List<LocalDate> = emptyList(),
     )
 
     /** When the automatic uploads run, for the reminders (G4, 13 Oct). */
@@ -391,7 +454,17 @@ object CloudSync {
         if (t != null && !t.ok && s.lastOk != null) out += "Last that worked" to "${day(toDay(s.lastOk.atMs))} · ${size(s.lastOk.bytes)} · ✓"
         out += "Days waiting" to if (s.waiting == 0) "none" else "${s.waiting}"
         out += "Last backup to GitHub" to (s.lastBackupOk?.let { "${day(toDay(it.atMs))} ✓" } ?: "none yet")
-        out += "Diagnostics" to (s.lastDiagDay?.let { "last day uploaded: ${day(it)} ✓" } ?: "last day uploaded: none yet")
+        out += "Diagnostics" to when {
+            s.lastDiagDay == null -> "last day uploaded: none yet"
+            // 14 Oct review: "Upload now" during the day sends the day so far; it is not the day's record.
+            s.diagPartial -> "last day uploaded: ${day(s.lastDiagDay)} · partial (sent before the close; the evening run replaces it)"
+            else -> "last day uploaded: ${day(s.lastDiagDay)} ✓"
+        }
+        if (s.diagMissed.isNotEmpty()) {
+            val retried = s.diagMissed.any { ChronoUnit.DAYS.between(it, today) <= DIAG_RETRY_DAYS }
+            out += "Diagnostics missed" to "✗ diagnostics ${s.diagMissed.joinToString(", ") { day(it) }} not uploaded" +
+                if (retried) " · the next run tries again" else ""
+        }
         expiryNote(s.expiry, today)?.let { out += "Token" to it }
         return out
     }

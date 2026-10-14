@@ -361,6 +361,119 @@ class DiagDayTest {
         assertEquals("", DiagDay.scrub(""))
     }
 
+    // ---- 14 Oct review: rupees in the other arms' lines, Kite's RMS text, live fills, lower-case ids, short name words -----
+
+    /** The other arms' diagLine() as they are written on the phone (NightArm, VixDivArm, McxPaperArms, GrammarArm). */
+    private val night = "Night (R3): armed (paper only) · open 1 · last 7 closed -2,340 after charges · NIFTY entered 25100 CE · BANKNIFTY no_signal"
+    private val vix = "VIX divergence: on (paper only) · open 0 · 4 closed 1,180 after charges · NIFTY waiting"
+    private val mcx = "MCX paper arms: SILVERM morning on (paper only), open 1, last 3 closed -540 after charges (holding) · " +
+        "CRUDEOIL evening off, open 0, last 2 closed 75 after charges"
+    private val grammar = "Grammar ideas: 2 of 3 on paper · g12 4 trades -1,250 (holding) · g7 2 trades 380 · 1 stopped"
+    private val rms = "RMS:Margin Exceeds,Required:95536.25, Available:32112.60 for entity account-AB1234 across exchange across segment across product"
+
+    @Test fun theOtherArmsLinesLoseTheirRupeeNetAndKeepTheirCounts() {
+        assertEquals("Night (R3): armed (paper only) · open 1 · last 7 closed (net hidden) · NIFTY entered 25100 CE · BANKNIFTY no_signal",
+            DiagDay.otherArmLine(night))
+        assertEquals("Grammar ideas: 2 of 3 on paper · g12 4 trades (holding) · g7 2 trades · 1 stopped", DiagDay.otherArmLine(grammar))
+        assertEquals("no figures here", DiagDay.otherArmLine("no figures here"))
+        assertEquals("", DiagDay.otherArmLine(""))
+        val r = json(input(others = listOf(night, vix, mcx, grammar)))
+        val lines = (r["other_arms"] as List<*>).map { it.toString() }
+        val all = lines.joinToString("\n")
+        for (amount in listOf("2,340", "2340", "1,180", "540", "1,250", "380", "75 after")) assertFalse(all.contains(amount), "leaked $amount: $all")
+        assertFalse(Regex("\\d\\s*after charges").containsMatchIn(all), all)
+        // The counts and the index level research needs are still there.
+        assertTrue(lines[0].contains("last 7 closed") && lines[0].contains("NIFTY entered 25100 CE"), lines[0])
+        assertTrue(lines[1].contains("4 closed"), lines[1])
+        assertTrue(lines[2].contains("last 3 closed") && lines[2].contains("last 2 closed"), lines[2])
+        assertTrue(lines[3].contains("g12 4 trades") && lines[3].contains("1 stopped"), lines[3])
+        // Even unstripped (a new arm's line), the scrub itself hides a figure before "after charges".
+        val raw = DiagDay.scrub(night)
+        assertFalse(raw.contains("2,340"), raw)
+        assertTrue(raw.contains("25100"), raw)
+    }
+
+    @Test fun anOrdersMessageKeepsOnlyItsReason() {
+        assertEquals("RMS:Margin Exceeds,Required", DiagDay.orderReason(rms))
+        assertEquals("Insufficient funds. Required margin is", DiagDay.orderReason("Insufficient funds. Required margin is 12,345.50 but available 1,002.25"))
+        assertEquals("Order price is out of the circuit range", DiagDay.orderReason("Order price is out of the circuit range"))
+        assertEquals("refused_premium_at_or_under_40", DiagDay.orderReason("refused_premium_at_or_under_40"))
+        assertEquals("Paper fill at", DiagDay.orderReason("Paper fill at ₹201.35"))
+        assertEquals("", DiagDay.orderReason("95536.25 needed"))
+        assertEquals("", DiagDay.orderReason(""))
+        assertTrue(DiagDay.orderReason("x".repeat(500)).length <= DiagDay.ORDER_REASON)
+        // A digit inside a word does not end it; the scrub then takes the id out.
+        assertEquals("entity ${Secrets.HIDDEN} blocked", DiagDay.scrub(DiagDay.orderReason("entity ab1234 blocked")))
+        // The scrub alone, on the whole RMS text, hides every figure and the id too.
+        val s = DiagDay.scrub(rms)
+        for (x in listOf("95536", "32112", "AB1234", ".25", ".60")) assertFalse(s.contains(x), "leaked $x: $s")
+    }
+
+    @Test fun everyFigureOfAMoneyClauseIsHidden() {
+        val cases = listOf(
+            "P&L 1,200 (2,300 realised)", "MTM -12,400", "Available: 32112.60", "available margin 52,310.25 and 1,002.25 used",
+            "Margin 1,200, 2,300, 3,400", "day loss of 540 today", "net 90", "Brokerage 20 + charges 15.75", "premium paid 12,000",
+            "premium received 4,500.50", "cash 32,112.60 and collateral 1,00,000", "unrealised -3,250 · realized 1,100",
+            "drawdown 38,500 so far", "profit 2,750", "funds 5k left", "pnl -1.2 lakh", "balance: 1,23,456.50", "INR 4,000",
+            "Rs 40,000", "₹ 2,500", "2,500 rupees", "-2,340 after charges", "1,250 P&L today", "Exceeds,Available,32112.60",
+            "required=95536 now", "MTM:-12,400;", "loss 1,200 (2,300)",
+        )
+        for (c in cases) {
+            val s = DiagDay.scrub(c)
+            assertFalse(Regex("\\d{2,}|\\d,\\d|\\d\\.\\d").containsMatchIn(s), "a figure survived in \"$c\": $s")
+        }
+        // A lakh-grouped figure is rupees wherever it is.
+        assertEquals("moved ${Secrets.HIDDEN} today", DiagDay.scrub("moved 1,23,456 today"))
+        // Not money: index levels, ranges, bars, times, counts before a money word, percent and points in a money clause,
+        // and words that only contain a money word.
+        val kept = listOf(
+            "NIFTY 25,100 · range 51200.0-51000.0 · bar 10:00 close 51250.5", "cash 15:30, 3 required, 2 available",
+            "drawdown 12% of the peak", "network lost for 12 s", "guard_refused: day lock: 2 losses", "last 7 closed",
+            "refused_premium_at_or_under_40", "MTM at 15:20:05", "Safety net with nothing held: every 30 s (every 5 s while held)",
+            "memory available 312 MB", "cash for 2 lots", "net of 4 trades",
+        )
+        for (k in kept) assertEquals(k, DiagDay.scrub(k))
+        assertEquals("", DiagDay.hideMoney(""))
+    }
+
+    @Test fun clientIdsInAnyCaseAndTheHoldersShortNameWordsAreTakenOut() {
+        for (id in listOf("ZQ4821", "zq4821", "Zq4821", "abc123456")) assertEquals("client ${Secrets.HIDDEN}", DiagDay.scrub("client $id"), id)
+        // Symbols and short codes are not ids.
+        assertEquals("BANKNIFTY25OCT51200CE R14 G3 n12", DiagDay.scrub("BANKNIFTY25OCT51200CE R14 G3 n12"))
+        val personal = listOf("Om Prakash Rao", "Om", "Prakash", "Rao", "S")
+        val s = DiagDay.scrub("Order by OM for rao's account, Prakash approved · Om Prakash Rao · Omkar Bloom zoom S", personal)
+        assertFalse(Regex("(?i)(?<![a-z])(om|rao|prakash)(?![a-z])").containsMatchIn(s), s)
+        // A short word goes only as a whole word: other words that hold it stay.
+        assertTrue(s.contains("Omkar") && s.contains("Bloom") && s.contains("zoom"), s)
+        // A one-letter word is never taken out (it would cut every text apart).
+        assertTrue(s.endsWith(" S"), s)
+        // A 3-letter name word inside a money word ("Ali" in "realised") neither cuts it nor hides it from the money rules.
+        val ali = DiagDay.scrub("realised 2,300 by Ali · valid device", listOf("Ali Dev Sharma", "Ali", "Dev", "Sharma"))
+        assertEquals("realised ${Secrets.HIDDEN} by ${Secrets.HIDDEN} · valid device", ali)
+    }
+
+    @Test fun aLiveOrderHasNoFillPriceAndNoRupeeFigureReachesTheFile() {
+        val orders = listOf(
+            DiagDay.Order(t(10, 5), false, "ORB", "BANKNIFTY25OCT51200CE", "BUY", 30, 30, "COMPLETE", "MARKET", 201.35),
+            DiagDay.Order(t(10, 6), true, "Liquidity 15+5", "BANKNIFTY25OCT51200PE", "BUY", 60, 60, "COMPLETE", "LIMIT", 187.4),
+            DiagDay.Order(t(10, 7), true, "Liquidity 15+5", "BANKNIFTY25OCT51200PE", "BUY", 60, 0, "REJECTED", "LIMIT", 0.0, rms),
+        )
+        val i = input(orders = orders, others = listOf(night, vix, mcx, grammar),
+            health = mapOf("zerodha_sync" to "Zerodha: funds 32,112.60 · margin used 95,536.25 · P&L 1,200 (2,300 realised) · MTM -12,400"),
+            workers = listOf("Available: 32112.60"), personal = listOf("Om Prakash Rao", "Om", "Prakash", "Rao"))
+        val r = json(i)
+        val os = r["orders"] as List<Map<String, Any?>>
+        assertEquals(201.35, os[0]["avg"])
+        assertTrue(os[1].containsKey("avg"))
+        assertNull(os[1]["avg"]); assertNull(os[2]["avg"])
+        assertEquals(60L, os[1]["qty"].num())
+        assertEquals("RMS:Margin Exceeds,Required", os[2]["message"])
+        val raw = text(i)
+        for (x in listOf("187.4", "95536", "95,536", "32112", "32,112", "AB1234", "1,200", "2,300", "12,400", "2,340", "1,180", "1,250"))
+            assertFalse(raw.contains(x), "leaked $x")
+        assertTrue(raw.contains("BANKNIFTY25OCT51200PE"))
+    }
+
     // ---- the research sample ------------------------------------------------------------------------------------------
 
     /**

@@ -81,11 +81,22 @@ class GitHubSyncCardTest {
         assertFalse(shows("last day uploaded: none yet"))
     }
 
+    @Test fun aPartialDayAndTheMissedDaysAreSaid() {
+        // 14 Oct review of G3: "Upload now" before the close is today's so far, and a day that never went up is named.
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        show(status().copy(lastDiagDay = today, diagPartial = true, diagMissed = listOf(today.minusDays(2), today.minusDays(1))))
+        assertTrue(shows("last day uploaded: 13 Oct · partial", sub = true))
+        assertFalse(shows("last day uploaded: 13 Oct ✓"))
+        assertTrue(shows("Diagnostics missed"))
+        assertTrue(shows("✗ diagnostics 11 Oct, 12 Oct not uploaded · the next run tries again"))
+    }
+
     @Test fun beforeAnyDiagnosticsTheCardSaysNoneYet() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         show(status())
         assertTrue(shows("Diagnostics"))
         assertTrue(shows("last day uploaded: none yet"))
+        assertFalse(shows("Diagnostics missed"))
     }
 
     @Test fun setUpOffersUploadAndRestore() {
