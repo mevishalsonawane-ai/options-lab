@@ -1384,7 +1384,7 @@ object OrbArms {
             "LIMIT order, up to Rs 5,000 of premium, once a day. It sells half at 5x the price paid and the rest at 20x or " +
             "15:05 (the expiry square-off), with a stop at -60% of the premium on a minute's close. With the old exits it " +
             "lost on all 13 trades out of sample (-Rs 64,190). It disarms itself after ${HeroRules.MAX_LOSING_DAYS} losing expiry " +
-            "days in a row or Rs 50,000 lost."
+            "days in a row or Rs 50,000 lost. ${HeroRules.SIGNAL_SOURCE}."
         else if (on && armOf(source).fade) "$label armed on paper (it never trades on Zerodha), fully automatic: when a 5-minute bar " +
             "reaches the outer ${if (kotlin.math.abs(ap.edge - 0.10) < 1e-9) "tenth" else pts(ap.edge * 100) + "%"} of the opening range and closes back inside, it buys the option toward the middle - 1 lot, " +
             "${pointsWith(ap.stopPoints)} stop, ${pointsWith(ap.targetPoints)} target and the 15:10 exit, at most ${RangeFadeRules.MAX_ENTRIES} a day, " +
@@ -1557,7 +1557,9 @@ object OrbArms {
                     if (s != "no_decision_bar" && s != b.status[arm.source]) runCatching {
                         val last = bars?.lastOrNull()
                         Diag.record("orb", "${arm.label}: $s" + (b.range?.let { " · range %.1f-%.1f".format(java.util.Locale.ENGLISH, it.second, it.first) } ?: "") +
-                            (last?.let { " · bar ${it.start.toLocalTime()} close %.1f".format(java.util.Locale.ENGLISH, it.close) } ?: ""))
+                            (last?.let { " · bar ${it.start.toLocalTime()} close %.1f".format(java.util.Locale.ENGLISH, it.close) } ?: "") +
+                            // 14 Oct: Hero's signal reads the straddle's premium, not the index alone (not the default): said.
+                            (if (arm.hero) " · ${HeroRules.SIGNAL_SOURCE}" else ""))
                     }
                     b.status[arm.source] = s
                 }

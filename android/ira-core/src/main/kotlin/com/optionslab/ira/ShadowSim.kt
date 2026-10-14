@@ -160,10 +160,15 @@ object ShadowSim {
 
     // ---- the rules ---------------------------------------------------------------------------------------------------------
 
-    /** The entry building blocks (the forge's grammar; every one is a rule the engine's arms already trade or research ran). */
-    enum class Entry(val words: String) {
+    /**
+     * The entry building blocks (the forge's grammar; every one is a rule the engine's arms already trade or research ran).
+     * [optionDerived] (14 Oct, Boss: "all the indicators and strategies should be on the regular funds/index"): the entry is
+     * read from the options themselves (OI_BUILDUP: the near-money options' OI), not from the index - not the default, so it
+     * is labelled wherever an idea is shown and left out of the forge unless asked for ([StrategyForge.entriesFor]).
+     */
+    enum class Entry(val words: String, val optionDerived: Boolean = false) {
         ORB_BREAK("ORB break"), ORB_SWEEP("opening-range sweep"), RANGE_FADE("range-edge fade"), VWAP_RECLAIM("VWAP reclaim"),
-        LEVEL_SWEEP("liquidity level sweep"), OI_BUILDUP("OI build-up"), GAP_FADE("gap fade"), TIME_OF_DAY("time-of-day momentum"),
+        LEVEL_SWEEP("liquidity level sweep"), OI_BUILDUP("OI build-up", optionDerived = true), GAP_FADE("gap fade"), TIME_OF_DAY("time-of-day momentum"),
         VIX_DIVERGENCE("VIX divergence"), PREV_DAY_BREAK("previous day high/low break"), SQUEEZE_BREAK("range compression then expansion"),
     }
 

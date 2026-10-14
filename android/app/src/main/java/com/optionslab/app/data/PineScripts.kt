@@ -107,8 +107,30 @@ object PineScripts {
     /** The lines [ensure] left for the auto-trader's log (each given once). */
     fun takeRuleNotes(): List<Pair<Long, String>> = synchronized(ruleNotes) { ruleNotes.toList().also { ruleNotes.clear() } }
 
+    /**
+     * 14 Oct: armed scripts whose symbol the load wrote the index's own way ("NIFTY 50" -> "NIFTY"): [PineAuto] takes them
+     * once and switches off a later repeat of the same script they now match ([com.optionslab.ira.PineDupes.extraArmedAfterRename]).
+     */
+    private val renamed = HashSet<Long>()
+
+    /** The armed scripts renamed on load (each given once). */
+    fun takeRenamed(): Set<Long> = synchronized(renamed) { renamed.toSet().also { renamed.clear() } }
+
+    /**
+     * 14 Oct: armed scripts the load switched off because their chart is not an index. [PineAuto] takes them once; an option
+     * one holds is then managed to its exit (its stop, target and lock watched), never sold at market by the switch-off.
+     */
+    private val refused = HashSet<Long>()
+
+    /** The armed scripts refused on load (each given once). */
+    fun takeRefused(): Set<Long> = synchronized(refused) { refused.toSet().also { refused.clear() } }
+
     private fun load(): Pair<List<Item>, List<Pair<Long, String>>> = runCatching {
-        val r = parseNoting(String(Vault.readFileSteady(file) ?: return emptyList<Item>() to emptyList<Pair<Long, String>>(), Charsets.UTF_8))
+        val found = HashSet<Long>()
+        val off = HashSet<Long>()
+        val r = parseNoting(String(Vault.readFileSteady(file) ?: return emptyList<Item>() to emptyList<Pair<Long, String>>(), Charsets.UTF_8), found, off)
+        synchronized(renamed) { renamed += found }
+        synchronized(refused) { refused += off }
         needsRewrite = r.third
         r.first to r.second
     }.getOrElse { if (file.exists()) Vault.setAside(file); emptyList<Item>() to emptyList<Pair<Long, String>>() }
@@ -121,14 +143,19 @@ object PineScripts {
      * A save from before [Auto.byJarvis] is known as Jarvis's by what the Strategy
      * Lab writes into every script it makes: its first comment ("// Written by Jarvis from the ... pattern") or its
      * name ("Jarvis: <pattern> <market> <chart>", StrategyLab.name).
+     * Its symbol (14 Oct): an index is kept as its root ("nifty" -> "NIFTY"); any other (an option, MCX, blank) is kept as
+     * written but the script is switched off, said once in its log ([com.optionslab.ira.PineUnderlying]).
      */
     internal fun parse(text: String): List<Item> = parseNoting(text).first
 
     /**
      * [parse], with the activity-log lines for armed scripts the rule protected (once each: the file is rewritten) and
-     * whether anything was changed at all.
+     * whether anything was changed at all. [renamed] (14 Oct) collects the armed scripts whose symbol was just written the
+     * index's own way, for the duplicates check ([takeRenamed]); [refused] the armed ones switched off for a chart that is
+     * not an index ([takeRefused]).
      */
-    internal fun parseNoting(text: String): Triple<List<Item>, List<Pair<Long, String>>, Boolean> {
+    internal fun parseNoting(text: String, renamed: MutableSet<Long>? = null, refused: MutableSet<Long>? = null):
+        Triple<List<Item>, List<Pair<Long, String>>, Boolean> {
         val a = JSONArray(text)
         val notes = ArrayList<Pair<Long, String>>()
         var changed = false
@@ -146,7 +173,18 @@ object PineScripts {
                     changed = true
                     if (x.optBoolean("on")) com.optionslab.ira.PineProtection.addedNote(o.getString("name"), e)?.let { notes += o.getLong("id") to it }
                 }
-                Auto(x.optBoolean("on"), x.optString("symbol", "BANKNIFTY"), x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
+                // 14 Oct (Boss: the signal is read on the index, then the option is bought): an index, however it was written,
+                // is kept as its root; an option, an MCX contract or anything else is never run - the script is switched off,
+                // its symbol kept so the Pine screen and its log say which one was refused ([com.optionslab.ira.PineUnderlying]).
+                val raw = x.optString("symbol", "BANKNIFTY")
+                val root = com.optionslab.ira.PineUnderlying.rootOf(raw)
+                if (root != null && root != raw) { changed = true; if (x.optBoolean("on")) renamed?.add(o.getLong("id")) }
+                if (root == null && x.optBoolean("on")) {
+                    changed = true
+                    refused?.add(o.getLong("id"))
+                    notes += o.getLong("id") to "Pine '${o.getString("name")}': switched off - ${com.optionslab.ira.PineUnderlying.refusal(raw)}."
+                }
+                Auto(x.optBoolean("on") && root != null, root ?: raw, x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
                     x.optString("buy", "strategy"), x.optString("sell", "strategy"), x.optBoolean("squareOff", true),
                     x.optString("shortWith", "put"), x.optString("mode", "trade").takeIf { it == "alert" } ?: "trade",
                     stop, target,
@@ -198,7 +236,9 @@ object PineScripts {
      */
     fun loadNow(): List<Item>? {
         if (!::file.isInitialized) return null
-        ensure()
+        // 14 Oct: once read, no lock is taken - the auto-trader's pass (which holds its own lock, and the position watch
+        // waits on it) never waits behind a vault write from the Pine screen.
+        if (!loaded) ensure()
         return _items.value
     }
 

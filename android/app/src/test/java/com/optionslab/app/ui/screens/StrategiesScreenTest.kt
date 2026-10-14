@@ -292,6 +292,19 @@ class StrategiesScreenTest {
         assertTrue(shown("Edit Straddle"))
     }
 
+    @Test fun aSignalStrategyOnAnOptionsChartIsLabelledNotTheDefault() {
+        // 14 Oct (Boss): by default a signal is read on the index, then the option is bought; an option leg is labelled.
+        fun leg(id: Int, segment: com.optionslab.engine.strategy.Segment, symbol: String) = com.optionslab.engine.strategy.LegDef(id, segment,
+            symbol = symbol, exchange = "NFO", side = com.optionslab.engine.strategy.LegSide.BOTH, qty = 1, qtyMode = com.optionslab.engine.strategy.QtyMode.LOTS)
+        val onOption = StrategyDef(id = 8, name = "Option alerts", kind = com.optionslab.engine.strategy.StrategyKind.SIGNAL, underlying = "NIFTY",
+            underlyingExchange = "NSE_INDEX", legs = listOf(leg(1, com.optionslab.engine.strategy.Segment.FUTURES, "NIFTY26OCT24500CE")))
+        val onIndex = onOption.copy(id = 9, name = "Index alerts", legs = listOf(leg(1, com.optionslab.engine.strategy.Segment.FUTURES, "NIFTY26OCTFUT")))
+        page(listOf(Strategies.Entry(onOption, null), Strategies.Entry(onIndex, null), Strategies.Entry(StrategyFakes.def(3, "Straddle"), null)))
+        assertTrue(shown("Not the default signal: leg 1 (NIFTY26OCT24500CE) names an option, so its alerts may come from an option's own chart."))
+        assertEquals("only the option's strategy is labelled", 1,
+            compose.onAllNodesWithText("Not the default signal", substring = true).fetchSemanticsNodes().size)
+    }
+
     @Test fun aLiveStartIsConfirmedThenTakesThePin() {
         page(listOf(Strategies.Entry(StrategyFakes.def(4, "Straddle", live = true), null)), liveAllowed = true)
         compose.onNodeWithText("Start live").assertIsEnabled()
@@ -465,6 +478,20 @@ class OrbRowsTest {
         assertTrue(shown("BANKNIFTY touch of the range edge, faded to the middle · paper only"))
         // The Hero arm stays off and says it is not proven.
         assertTrue(shown(com.optionslab.engine.orb.HeroRules.NOT_PROVEN))
+    }
+
+    @Test fun theHeroRowSaysItsSignalIsTheStraddlesPremiumNotTheDefaultArmedOrNot() {
+        // 14 Oct (Boss): by default a signal is read on the index; Hero's reads the straddle's premium, so its row says so.
+        val label = com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE
+        assertEquals("Signal uses the option straddle's premium (not the default index-only signal); paper only, armed by you", label)
+        rows(StrategyFakes.orbView(), live = false)
+        assertTrue("switched off", shown(label))
+    }
+
+    @Test fun theArmedHeroRowSaysItsSignalIsNotTheDefaultToo() {
+        val v = StrategyFakes.orbView()
+        rows(v.copy(arms = v.arms.map { if (it.arm.hero) it.copy(armed = true, status = "hero_not_expiry_day") else it }), live = false)
+        assertTrue(shown(OrbArms.describe("hero_not_expiry_day") + " " + com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE + "."))
     }
 
     @Test fun theFourArmedOnPaperShowItAndTheirRecordIsInTheDetailAsInformation() {

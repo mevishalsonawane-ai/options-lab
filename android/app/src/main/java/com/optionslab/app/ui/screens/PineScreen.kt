@@ -80,7 +80,7 @@ import java.util.Locale
 
 private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
 /** Indices a Pine script can run on (option data for premium backtests: NIFTY and BANKNIFTY). */
-private val PINE_SYMBOLS = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+private val PINE_SYMBOLS = com.optionslab.ira.PineUnderlying.ROOTS
 
 private val secureDialog get() = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 private val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 19.sp)
@@ -1014,6 +1014,8 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
             if (!locked) set { au -> au.copy(mode = if (i == 1) "alert" else "trade") }
         }
         ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == a.symbol) }) { if (!locked) set { au -> au.copy(symbol = PINE_SYMBOLS[it]) } }
+        // 14 Oct: a script saved on an option's or any other non-index chart is refused (it stays off) until an index is picked.
+        if (com.optionslab.ira.PineUnderlying.rootOf(a.symbol) == null) Note(com.optionslab.ira.PineUnderlying.refusal(a.symbol) + ". Pick an index above.")
         if (a.symbol == "SENSEX" && a.mode != "alert") Note("SENSEX options trade on BSE, where the app does not place orders: choose Alerts only for SENSEX.")
         ParamTokens("Candles", listOf("1m", "5m", "15m", "1h").map { it to (it == a.interval) }) { if (!locked) set { au -> au.copy(interval = listOf("1m", "5m", "15m", "1h")[it]) } }
         ParamTokens("Lots", listOf(1, 2, 3, 5, 10).map { "$it" to (it == a.lots) }) { if (!locked) set { au -> au.copy(lots = listOf(1, 2, 3, 5, 10)[it]) } }

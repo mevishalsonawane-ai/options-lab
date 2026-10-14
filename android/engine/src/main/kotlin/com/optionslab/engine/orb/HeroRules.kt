@@ -49,6 +49,12 @@ object HeroRules {
     const val OWNER = "Hero"
     /** Shown wherever the arm is. */
     const val NOT_PROVEN = "Not proven — paper only"
+    /**
+     * Where its signal comes from (14 Oct, Boss: by default a signal is read on the index, then the option is bought). Its
+     * pre-registered trigger reads the ATM straddle's premium beside NIFTY's move, so it is not the default: said on its row,
+     * in its diagnostics and by Jarvis. The rule itself is unchanged.
+     */
+    const val SIGNAL_SOURCE = "Signal uses the option straddle's premium (not the default index-only signal); paper only, armed by you"
 
     const val UNDERLYING = "NIFTY"
     const val STRIKE_STEP = 50

@@ -56,6 +56,9 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-14-signal-on-the-index", OCT14, "Signals read from the index, then the option is bought",
+            "Strategies read their signal from the index and then buy the option (the default); a Pine script set to an option chart is refused; option-derived ideas are labelled.",
+            "Research → Pine → a script → Auto-trade (its symbol); Home → Strategies (Hero's row); Home → Automation card → Strategy lab"),
         Entry("2026-10-14-memory-positions-first", OCT14, "Memory: open positions first, the rest gives way",
             "Memory: the app now gives back the memory it does not need (Jarvis's model, the research notes, old prices), so Android should stop closing it. " +
                 "Open positions and orders always come first: their prices and stop checks never slow down, and after any restart they are restored and watched before anything else.",

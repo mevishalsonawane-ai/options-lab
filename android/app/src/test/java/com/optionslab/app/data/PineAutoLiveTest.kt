@@ -623,4 +623,179 @@ class PineAutoLiveTest : RobolectricTest() {
         val saved = String(com.optionslab.app.security.Vault.readFileSteady(java.io.File(context.filesDir, "pine.vault"))!!, Charsets.UTF_8)
         assertEquals(mine.copy(profitLock = true), PineScripts.parse(saved).single { it.id == id }.auto)
     }
+
+    // ---- 14 Oct (Boss): the signal is read on the index chart, then the option is bought -------------------------------
+
+    @Test fun aScriptOnAnOptionMcxOrUnknownChartIsRefusedAndStaysOff() {
+        for (bad in listOf(ce, "CRUDEOIL26NOVFUT", "GOLDM26DEC72000CE", "RELIANCE", "", "?!")) {
+            auto { it.copy(symbol = bad) }
+            val r = runBlocking { PineAuto.arm(id, true, pinConfirmed = true) }
+            assertEquals(bad, "Pine scripts run on the index chart and then buy the option: ${bad.ifEmpty { "(no symbol)" }} is not an index", r)
+            assertFalse(bad, PineScripts.get(id)!!.auto.on)
+        }
+        pass(51_900.0)
+        pass(52_010.0)
+        assertTrue("nothing ran, nothing was sent", kite.requests.none { it.method == "POST" })
+        assertNull(held())
+    }
+
+    @Test fun anIndexWrittenAnotherWayIsArmedAsItsRootAndTrades() {
+        auto { it.copy(symbol = "bank nifty") }
+        switchOn()
+        assertEquals("BANKNIFTY", PineScripts.get(id)!!.auto.symbol)
+        assertTrue(PineScripts.get(id)!!.auto.on)
+        pass(51_900.0)
+        pass(52_010.0)
+        assertNotNull(held())
+        assertEquals("the index's signal bought the option", ce, side("BUY").single().form["tradingsymbol"])
+    }
+
+    @Test fun aScriptSwitchedOnSomeOtherWayOnANonIndexChartIsSwitchedOffBeforeItRuns() {
+        // Not through arm (which refuses it): the saved settings say on, on an option's chart.
+        PineScripts.setAuto(id, PineScripts.Auto(on = true, symbol = ce, interval = "5m", buy = "Buy", sell = "Sell", shortWith = "exit"))
+        pass(51_900.0)
+        pass(52_010.0)
+        assertFalse(PineScripts.get(id)!!.auto.on)
+        assertTrue(log(), log().contains("Switched off: Pine scripts run on the index chart and then buy the option: $ce is not an index."))
+        assertTrue(kite.requests.none { it.method == "POST" })
+    }
+
+    @Test fun aSavedFileWithAnOptionOrMcxSymbolIsReadSwitchedOffAndToldOnce() {
+        val f = java.io.File(context.filesDir, "pine.vault")
+        fun script(id: Int, name: String, auto: org.json.JSONObject) =
+            org.json.JSONObject().put("id", id).put("name", name).put("code", code).put("auto", auto.put("stopPts", 30.0).put("targetPts", 60.0))
+        val text = org.json.JSONArray()
+            .put(script(1, "On an option", org.json.JSONObject().put("on", true).put("symbol", ce)))
+            .put(script(2, "Lower case", org.json.JSONObject().put("on", true).put("symbol", "nifty")))
+            .put(script(3, "MCX, off", org.json.JSONObject().put("on", false).put("symbol", "CRUDEOIL26NOVFUT")))
+            .put(script(4, "No symbol saved", org.json.JSONObject().put("on", true)))
+            .put(script(5, "Blank", org.json.JSONObject().put("on", true).put("symbol", "")))
+            .put(script(6, "Valid index", org.json.JSONObject().put("on", true).put("symbol", "FINNIFTY")))
+            .toString()
+        PineScripts.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, text.toByteArray(Charsets.UTF_8))
+        // As after a restart: the scripts are read from the file again.
+        PineScripts::class.java.getDeclaredField("loaded").apply { isAccessible = true }.set(null, false)
+        val items = PineScripts.loadNow()!!.associateBy { it.id }
+        assertFalse("an option's chart is never run", items.getValue(1).auto.on)
+        assertEquals("its symbol is kept, to say which was refused", ce, items.getValue(1).auto.symbol)
+        assertTrue(items.getValue(2).auto.on); assertEquals("NIFTY", items.getValue(2).auto.symbol)
+        assertFalse(items.getValue(3).auto.on); assertEquals("CRUDEOIL26NOVFUT", items.getValue(3).auto.symbol)
+        assertTrue("an older save without a symbol keeps its index", items.getValue(4).auto.on); assertEquals("BANKNIFTY", items.getValue(4).auto.symbol)
+        assertFalse(items.getValue(5).auto.on)
+        assertTrue("a valid index keeps working", items.getValue(6).auto.on); assertEquals("FINNIFTY", items.getValue(6).auto.symbol)
+        runBlocking { PineAuto.load() }
+        val lines = PineAuto.log.value.map { it.text }
+        assertTrue(lines.toString(), lines.contains("Pine 'On an option': switched off - Pine scripts run on the index chart and then buy the option: $ce is not an index."))
+        assertTrue(lines.toString(), lines.contains("Pine 'Blank': switched off - Pine scripts run on the index chart and then buy the option: (no symbol) is not an index."))
+        assertTrue("an off one is not told", lines.none { it.startsWith("Pine 'MCX, off'") })
+        assertTrue("no holding: simply off", lines.none { it.contains("managed to its exit") })
+        assertTrue(PineAuto.held.value.isEmpty())
+        // Written back: read again, nothing more is said and nothing changes.
+        val again = PineScripts.parseNoting(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
+        assertTrue(again.second.isEmpty()); assertFalse(again.third)
+        assertEquals("NIFTY", again.first.single { it.id == 2L }.auto.symbol)
+    }
+
+    @Test fun aLiveHoldingOfAScriptRefusedOnLoadIsManagedToItsOwnExitNeverDumped() {
+        bought()                                                   // 30 at 300 on Zerodha, its stop resting at 270
+        // As after an update and a restart: the saved script names an option's chart.
+        val f = java.io.File(context.filesDir, "pine.vault")
+        val saved = org.json.JSONArray(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
+        saved.getJSONObject(0).getJSONObject("auto").put("symbol", ce)
+        PineScripts.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, saved.toString().toByteArray(Charsets.UTF_8))
+        PineScripts::class.java.getDeclaredField("loaded").apply { isAccessible = true }.set(null, false)
+        runBlocking { PineAuto.load() }
+        assertFalse("refused: off", PineScripts.get(id)!!.auto.on)
+        assertNotNull("still held", held())
+        assertTrue(log(), log().contains("Its open option is managed to its exit (its stop, target and profit lock); nothing more is bought."))
+        // The position watch looks at it from the first look; at 300 nothing is due.
+        runBlocking { PineAuto.watchOnly() }
+        assertNotNull(held())
+        // A full pass never sells it for being switched off, and never reads a signal on the option's chart (the index's
+        // signal turning SELL would have sold it before).
+        pass(51_900.0)
+        pass(52_010.0)
+        pass(51_900.0)
+        assertNotNull(held())
+        assertTrue("no market sale", side("SELL").isEmpty())
+        assertFalse(log(), log().contains("no longer auto-trading"))
+        assertEquals("nothing more bought", 1, side("BUY").size)
+        // Its own target still sells it, from the position watch.
+        kite.quote("NFO:$ce", 361.0, 360.95, 361.05)
+        runBlocking { PineAuto.watchOnly() }
+        assertEquals(1, side("SELL").size)
+        assertTrue(log(), log().contains("at 361.00: target"))
+    }
+
+    @Test fun aHoldingOfAScriptAlreadySavedOffOnANonIndexChartIsNeverDumpedAfterARestart() {
+        bought()                                                   // 30 at 300 on Zerodha, its stop resting at 270
+        // The process was killed after the scripts' file was rewritten (off, on the option's chart) and before the
+        // auto-trader saved anything: the file says off, nothing says "refused", and the auto-trader's book is read afresh.
+        val f = java.io.File(context.filesDir, "pine.vault")
+        val saved = org.json.JSONArray(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
+        saved.getJSONObject(0).getJSONObject("auto").put("symbol", ce).put("on", false)
+        PineScripts.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, saved.toString().toByteArray(Charsets.UTF_8))
+        PineScripts::class.java.getDeclaredField("loaded").apply { isAccessible = true }.set(null, false)
+        PineScripts.loadNow()
+        assertTrue("nothing remembered as refused", PineScripts.takeRefused().isEmpty())
+        AutomationSupport.reloadFromDisk(PineAuto)
+        pass(52_010.0)
+        pass(51_900.0)                                             // the index's signal turning would have sold it before
+        assertNotNull("not sold for being off", held())
+        assertTrue("no market sale", side("SELL").isEmpty())
+        assertFalse(log(), log().contains("no longer auto-trading"))
+        assertTrue(log(), log().contains("Its open option is managed to its exit"))
+        assertEquals("nothing more bought", 1, side("BUY").size)
+        // Its own target still sells it, from the position watch.
+        kite.quote("NFO:$ce", 361.0, 360.95, 361.05)
+        runBlocking { PineAuto.watchOnly() }
+        assertEquals(1, side("SELL").size)
+        assertTrue(log(), log().contains("at 361.00: target"))
+    }
+
+    @Test fun readingTheScriptsOnceLoadedTakesNoLockSoAPassNeverWaitsBehindAVaultWrite() {
+        assertNotNull(PineScripts.loadNow())
+        val holding = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        // A save from the Pine screen holds the scripts' lock (PineScripts.put / setAuto are synchronized on it).
+        val writer = Thread { synchronized(PineScripts) { holding.countDown(); release.await(10, java.util.concurrent.TimeUnit.SECONDS) } }
+        writer.start()
+        assertTrue(holding.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        val t0 = System.nanoTime()
+        val list = PineScripts.loadNow()
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        release.countDown(); writer.join(10_000)
+        assertNotNull(list)
+        assertTrue("loadNow waited $ms ms behind the lock", ms < 1_000)
+    }
+
+    @Test fun twoSpellingsOfOneIndexAreOneScriptAfterLoadAndOnlyTheFirstKeepsTrading() {
+        val f = java.io.File(context.filesDir, "pine.vault")
+        val other = "//@version=5\nindicator(\"Other\")\nplotshape(close > open, \"Buy\")\nplotshape(close < open, \"Sell\")"
+        fun script(id: Int, name: String, code: String, symbol: String, interval: String = "5m") = org.json.JSONObject().put("id", id).put("name", name)
+            .put("code", code).put("auto", org.json.JSONObject().put("on", true).put("symbol", symbol).put("interval", interval)
+                .put("stopPts", 30.0).put("targetPts", 60.0))
+        val text = org.json.JSONArray()
+            .put(script(1, "Level, as NIFTY 50", code, "NIFTY 50"))
+            .put(script(2, "Level, as NIFTY", "$code\n// the same, saved again", "NIFTY"))
+            .put(script(3, "Another script on NIFTY", other, "NIFTY"))
+            .put(script(4, "Level on 15m", code, "nifty", "15m"))
+            .toString()
+        PineScripts.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, text.toByteArray(Charsets.UTF_8))
+        PineScripts::class.java.getDeclaredField("loaded").apply { isAccessible = true }.set(null, false)
+        assertEquals(listOf("NIFTY", "NIFTY", "NIFTY", "NIFTY"), PineScripts.loadNow()!!.sortedBy { it.id }.map { it.auto.symbol })
+        runBlocking { PineAuto.load() }
+        val on = PineScripts.items.value.associate { it.id to it.auto.on }
+        assertEquals(mapOf(1L to true, 2L to false, 3L to true, 4L to true), on)
+        val lines = PineAuto.log.value.filter { it.script == 2L }.map { it.text }
+        assertEquals(listOf(com.optionslab.ira.PineDupes.note(1)), lines)
+        // Once: another load says nothing more and switches nothing else off.
+        runBlocking { PineAuto.load() }
+        assertEquals(1, PineAuto.log.value.count { it.script == 2L && it.text.startsWith("Switched off: the same strategy") })
+        assertEquals(mapOf(1L to true, 2L to false, 3L to true, 4L to true), PineScripts.items.value.associate { it.id to it.auto.on })
+    }
 }
