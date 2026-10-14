@@ -121,6 +121,8 @@ object PineScripts {
      * A save from before [Auto.byJarvis] is known as Jarvis's by what the Strategy
      * Lab writes into every script it makes: its first comment ("// Written by Jarvis from the ... pattern") or its
      * name ("Jarvis: <pattern> <market> <chart>", StrategyLab.name).
+     * Its symbol (14 Oct): an index is kept as its root ("nifty" -> "NIFTY"); any other (an option, MCX, blank) is kept as
+     * written but the script is switched off, said once in its log ([com.optionslab.ira.PineUnderlying]).
      */
     internal fun parse(text: String): List<Item> = parseNoting(text).first
 
@@ -146,7 +148,17 @@ object PineScripts {
                     changed = true
                     if (x.optBoolean("on")) com.optionslab.ira.PineProtection.addedNote(o.getString("name"), e)?.let { notes += o.getLong("id") to it }
                 }
-                Auto(x.optBoolean("on"), x.optString("symbol", "BANKNIFTY"), x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
+                // 14 Oct (Boss: the signal is read on the index, then the option is bought): an index, however it was written,
+                // is kept as its root; an option, an MCX contract or anything else is never run - the script is switched off,
+                // its symbol kept so the Pine screen and its log say which one was refused ([com.optionslab.ira.PineUnderlying]).
+                val raw = x.optString("symbol", "BANKNIFTY")
+                val root = com.optionslab.ira.PineUnderlying.rootOf(raw)
+                if (root != null && root != raw) changed = true
+                if (root == null && x.optBoolean("on")) {
+                    changed = true
+                    notes += o.getLong("id") to "Pine '${o.getString("name")}': switched off - ${com.optionslab.ira.PineUnderlying.refusal(raw)}."
+                }
+                Auto(x.optBoolean("on") && root != null, root ?: raw, x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
                     x.optString("buy", "strategy"), x.optString("sell", "strategy"), x.optBoolean("squareOff", true),
                     x.optString("shortWith", "put"), x.optString("mode", "trade").takeIf { it == "alert" } ?: "trade",
                     stop, target,

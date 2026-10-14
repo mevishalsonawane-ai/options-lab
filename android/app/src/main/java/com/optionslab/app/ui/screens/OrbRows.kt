@@ -174,8 +174,9 @@ internal fun OrbRowsContent(
                     !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15, MIDCPNIFTY 8) or not +5% in 20 min · else at the next liquidity"
 
                     a.arm.liquidity -> a.status
-                    !a.armed && a.arm.hero -> keepNumbersWhole("NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · ${com.optionslab.engine.orb.HeroRules.EXITS} · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}")
-                    a.arm.hero -> OrbArms.describe(a.status)
+                    // 14 Oct: its signal reads the straddle's premium, not the index alone (not the default): said on its row.
+                    !a.armed && a.arm.hero -> keepNumbersWhole("NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · ${com.optionslab.engine.orb.HeroRules.EXITS} · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN} · ${com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE}")
+                    a.arm.hero -> OrbArms.describe(a.status) + " " + com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE + "."
                     // The profit lock's rungs on the arm's own target (ORB Sweep's +80: +20 / +40 / +60), as the stop moves up.
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock ${rungsOf(a.arm)}"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock ${rungsOf(a.arm)}"

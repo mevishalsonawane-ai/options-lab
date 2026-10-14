@@ -91,6 +91,16 @@ class WhatsNewChangelogTest {
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
     }
 
+    @Test fun signalOnTheIndexIsSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-signal-on-the-index" }
+        assertEquals(LocalDate.of(2026, 10, 14), x.date)
+        assertEquals("Strategies read their signal from the index and then buy the option (the default); a Pine script set to an option " +
+            "chart is refused; option-derived ideas are labelled.", x.what)
+        assertTrue("Pine" in x.where && "Strategies" in x.where && "Strategy lab" in x.where, x.where)
+        assertNull(x.ask)
+        assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+    }
+
     @Test fun thePreTradeChecksAreSaidWithTheirTestResult() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-13-pretrade-checks" }
         assertEquals(LocalDate.of(2026, 10, 13), x.date)

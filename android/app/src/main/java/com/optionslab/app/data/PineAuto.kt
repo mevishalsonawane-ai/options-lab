@@ -205,6 +205,25 @@ object PineAuto {
     }
 
     /**
+     * 14 Oct (Boss: signal on the index, then buy the option): every switched-on script whose chart is not an index
+     * ([com.optionslab.ira.PineUnderlying]) is switched off - never deleted - and said in its log; an option it holds is
+     * managed to its exit (its stop, target, lock, 15:15; [Book.winding]), never dumped, and nothing more is bought. Reads the
+     * scripts already in memory; writes only when one is found. True when [b] changed (it is then saved).
+     */
+    private fun offNonIndex(b: Book): Boolean {
+        val bad = PineScripts.items.value.filter { it.auto.on && com.optionslab.ira.PineUnderlying.rootOf(it.auto.symbol) == null }
+        for (item in bad) {
+            PineScripts.setAuto(item.id, item.auto.copy(on = false))
+            b.liveOk.remove(item.id)
+            val holding = b.held.containsKey(item.id)
+            if (holding) b.winding[item.id] = "its chart is not an index"
+            note(b, item.id, "Switched off: ${com.optionslab.ira.PineUnderlying.refusal(item.auto.symbol)}." +
+                if (holding) " Its open option is managed to its exit; nothing more is bought." else "")
+        }
+        return bad.isNotEmpty()
+    }
+
+    /**
      * Switch a script off by the app's own rule (Boss's yes to switching a losing script off, [com.optionslab.ira.ArmCutoff]):
      * unlike [arm] off, what it holds is NOT sold now - it is managed to its exit, and nothing more is bought. Never
      * switches anything on. Returns "ok", or why not.
@@ -279,13 +298,17 @@ object PineAuto {
         val item = PineScripts.get(id) ?: return@withLock "not found"
         // Boss's 06 Oct rule: a script that places orders switches on only with a stop-loss and a target.
         if (on) com.optionslab.ira.PineProtection.armRefusal(item.auto.mode, item.auto.stopPts, item.auto.targetPts)?.let { return@withLock it }
+        // 14 Oct (Boss): the signal is read on the index chart, then the option is bought. An option's own chart, an MCX
+        // contract or any other symbol is refused and the script stays off; an index written another way is armed as its root.
+        val root = if (on) com.optionslab.ira.PineUnderlying.rootOf(item.auto.symbol)
+            ?: return@withLock com.optionslab.ira.PineUnderlying.refusal(item.auto.symbol) else item.auto.symbol
         val b = book()
         b.winding.remove(id)
         if (on) {
             b.liveOk[id] = pinConfirmed
             b.lastTarget.remove(id); b.lastBar.remove(id)
-            PineScripts.setAuto(id, item.auto.copy(on = true))
-            note(b, id, "Switched on (${if (item.auto.mode == "alert") "alerts only" else if (OrbArms.liveNow()) "Live" else "Paper"}): waiting for the next signal on ${item.auto.symbol} ${item.auto.interval}")
+            PineScripts.setAuto(id, item.auto.copy(on = true, symbol = root))
+            note(b, id, "Switched on (${if (item.auto.mode == "alert") "alerts only" else if (OrbArms.liveNow()) "Live" else "Paper"}): waiting for the next signal on $root ${item.auto.interval}")
         } else {
             PineScripts.setAuto(id, item.auto.copy(on = false))
             b.liveOk.remove(id)
@@ -306,6 +329,9 @@ object PineAuto {
         if (!disarm && dedupe(b)) save(b)
         // The one-time FINNIFTY breakdown switch-off (Boss's 08 Oct yes), before anything trades.
         if (!disarm && finniftyOff(b)) save(b)
+        // 14 Oct: a script switched on some other way on a chart that is not an index (the saved file and [arm] both refuse
+        // one) is switched off before anything runs, said once; an option it holds is managed to its exit.
+        if (!disarm && offNonIndex(b)) save(b)
         val all = PineScripts.items.value
         val on = if (disarm) emptyList() else all.filter { it.auto.on }
         // Switched off by the app's own rule while holding: managed to its exit, buying nothing more.

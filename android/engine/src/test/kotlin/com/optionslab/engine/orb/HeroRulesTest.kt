@@ -32,6 +32,13 @@ class HeroRulesTest {
         assertEquals("Hero (expiry)", HeroRules.ARM.label)
     }
 
+    @Test fun itsSignalSourceIsLabelledNotTheDefault() {
+        // 14 Oct (Boss): by default a signal is read on the index. Hero's pre-registered trigger reads the straddle's premium
+        // too: labelled, its rule unchanged (15% expansion, 0.25% in 15 minutes).
+        assertEquals("Signal uses the option straddle's premium (not the default index-only signal); paper only, armed by you", HeroRules.SIGNAL_SOURCE)
+        assertEquals(0.15, HeroRules.ST_EXP); assertEquals(0.0025, HeroRules.MOM); assertEquals(15L, HeroRules.MOM_MINUTES)
+    }
+
     @Test fun expiryDayComesFromTheMasterNeverTheWeekday() {
         val tue = LocalDate.of(2026, 10, 6)
         assertTrue(HeroRules.isExpiryDay(tue, listOf(tue, tue.plusDays(7))))

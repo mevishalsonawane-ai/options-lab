@@ -217,9 +217,11 @@ class BatteryRestTest {
     // ---- What's new --------------------------------------------------------------------------------------------------------
 
     @Test fun whatsNewSaysItInPlainEnglishFirst() {
-        // 14 Oct: the memory fix's entry sits above it (the same day, after it); the battery's is the one right below.
-        assertEquals("2026-10-14-memory-positions-first", WhatsNew.ENTRIES[0].id)
-        val x = WhatsNew.ENTRIES[1]
+        // 14 Oct: the signal-on-the-index entry, then the memory fix's, sit above it (the same day, after it); the battery's
+        // is the one right below them.
+        assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[0].id)
+        assertEquals("2026-10-14-memory-positions-first", WhatsNew.ENTRIES[1].id)
+        val x = WhatsNew.ENTRIES[2]
         assertEquals("2026-10-14-battery-rest", x.id)
         assertTrue(x.what.startsWith("Battery: the evening MCX watch, the order-flow recorder and other background work now rest when nothing needs them"), x.what)
         assertTrue("paper or live" in x.what && "Always stays the default" in x.what, x.what)

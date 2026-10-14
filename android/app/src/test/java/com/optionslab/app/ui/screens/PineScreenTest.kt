@@ -315,6 +315,23 @@ class PineScreenTest {
         compose.waitMain(5_000) { PineAuto.log.value.any { it.text.startsWith("Switched on (alerts only)") } }
     }
 
+    @Test fun aScriptSavedOnAnOptionChartSaysSoIsRefusedAndRunsOncePickedOnAnIndex() {
+        // 14 Oct (Boss): the signal is read on the index chart, then the option is bought; an option's own chart is refused.
+        val opt = "BANKNIFTY26OCT52000CE"
+        saved(auto = PineScripts.Auto(symbol = opt, buy = "Buy", sell = "Sell"))
+        page()
+        open("Level")
+        compose.pineTap("Auto-trade")
+        val why = "Pine scripts run on the index chart and then buy the option: $opt is not an index"
+        compose.pineWaitFor("$why. Pick an index above.")
+        compose.onAllNodes(isToggleable()).onFirst().areaCClick(); compose.waitForIdle()
+        compose.waitMain(5_000) { (Alerts.queue.value + Alerts.posted).any { it.text == why } }
+        assertFalse("refused: it stays off", PineScripts.items.value.single().auto.on)
+        compose.pineTap("NIFTY")
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.symbol == "NIFTY" }
+        compose.waitUntil(5_000) { !compose.pineShown("Pick an index above.") }
+    }
+
     @Test fun liveTradingIsSwitchedOnOnlyWithThePin() {
         AutomationSupport.liveSettings()
         saved(auto = PineScripts.Auto(buy = "Buy", sell = "Sell"))
