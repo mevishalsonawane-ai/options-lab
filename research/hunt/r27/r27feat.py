@@ -65,7 +65,9 @@ def seasonal(prior: list[tuple[np.ndarray, np.ndarray]]) -> np.ndarray:
         return np.ones(len(DECISIONS))
     p = np.array([x[0] for x in prior])
     q = np.array([x[1] for x in prior])
-    return np.nanmean(q, axis=0) / np.nanmean(p, axis=0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        r = np.nanmean(q, axis=0) / np.nanmean(p, axis=0)
+    return np.where(np.isfinite(r) & (r > 0), r, 1.0)        # a flat stretch (no variance) falls back to 1.0
 
 
 def mins_left(t: int) -> int:
