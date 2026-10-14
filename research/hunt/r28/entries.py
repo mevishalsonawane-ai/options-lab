@@ -81,7 +81,7 @@ def write():
                     data_version=DATA, period=dict(design="Step-2 days: 2023-01-16..2023-12-17 and 2025-04-15..2026-10-12"),
                     instruments=list(K.UNDS), features=["intraday GEX S1/S2/S3, norm, flip, walls", "index minutes", "VIX"],
                     model_or_rule="Descriptive comparisons (Mann-Whitney / proportion / Wilcoxon) with VIX and DTE strata",
-                    settings=PREREG, prereg=PREREG, variants_tried=n_desc,
+                    settings=PREREG, prereg=PREREG, variants_tried=None,
                     results=dict(summary=(f"{n_desc} tests, BH q<0.10: {len(ds.get('passed', []))}: "
                                           + "; ".join(ds.get("passed", [])[:12])) if ds else "pending",
                                  costs="none (descriptive)"),
