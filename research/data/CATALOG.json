@@ -7,8 +7,8 @@
  "timezone": "Asia/Kolkata (IST)",
  "format": "Parquet, zstd level 9",
  "release_notes": "Historical index, futures, equity and expired-option data from Dhan API v2. See research/data/README.md and research/data/VALIDATION.md.",
- "total_bytes": 6087726402,
- "total_rows": 387565135,
+ "total_bytes": 6089900992,
+ "total_rows": 387698985,
  "files": [
   {
    "file": "equity_1m_2017.parquet",
@@ -6083,11 +6083,11 @@
   {
    "file": "stkopt_ADANIENT_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4247005,
+   "rows": 4380855,
    "first": "2021-08-02 09:15:00+05:30",
    "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 70012428,
-   "sha256": "c7a58f76a7603d9d94e5056a25419abedb21419ee70997627baa187577d0586f",
+   "bytes": 72187018,
+   "sha256": "b8cd75537b039349341eaa954df523d00cd0091984aa721d70c6ad54c3210353",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6110,22 +6110,22 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7787,
+    "weekend_rows": 8592,
     "nonzero_seconds": 0,
     "trading_days": 1270,
     "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 100,
-    "series_days_total": 11483,
+    "series_days_lt_50pct_median": 102,
+    "series_days_total": 11842,
     "duplicates_dropped_series_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 5647,
+     "outside_session": 5719,
      "nonpositive_or_missing_price": 7,
      "date_not_a_trading_day_or_after_last_daily_close": 3343
     },
-    "iv_null_or_zero": 48258
+    "iv_null_or_zero": 48747
    },
    "underlying": "ADANIENT",
    "expiry_flag": "MONTH",

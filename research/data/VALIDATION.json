@@ -719,8 +719,8 @@
   }
  ],
  "stkopt_ADANIENT_bars": {
-  "series_days": 11483,
-  "full_375": 0.6508752068274841
+  "series_days": 11842,
+  "full_375": 0.6590947475088668
  },
  "opt_ADANIENT_MONTH": {
   "underlying": "ADANIENT",
@@ -728,26 +728,16 @@
   "days": 131,
   "contract-days": 652,
   "found in bhavcopy": "99.69%",
-  "high match": "67.33%",
-  "low match": "67.94%",
-  "open match": "84.51%",
-  "last price <=0.5% (2024-07+)": "57.87%",
-  "last price <=2% (2024-07+)": "74.07%",
+  "high match": "73.62%",
+  "low match": "73.77%",
+  "open match": "90.95%",
+  "last price <=0.5% (2024-07+)": "65.74%",
+  "last price <=2% (2024-07+)": "83.33%",
   "OI Dhan/NSE median": "1.003",
-  "OI within 1%": "61.35%",
-  "high&low match on expiry days": "45.45%"
+  "OI within 1%": "65.18%",
+  "high&low match on expiry days": "59.09%"
  },
  "opt_ADANIENT_MONTH_worst": [
-  {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "3200.0",
-   "side": "C",
-   "high": "77.95",
-   "high_n": "77.95",
-   "low": "18.6",
-   "low_n": "0.05"
-  },
   {
    "date": "2025-10-28",
    "expiry": "2025-10-28",
@@ -762,11 +752,21 @@
    "date": "2024-06-27",
    "expiry": "2024-06-27",
    "strike": "3200.0",
-   "side": "C",
-   "high": "12.5",
-   "high_n": "27.0",
-   "low": "0.25",
-   "low_n": "0.05"
+   "side": "P",
+   "high": "79.0",
+   "high_n": "59.25",
+   "low": "0.05",
+   "low_n": "20.0"
+  },
+  {
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "3000.0",
+   "side": "P",
+   "high": "74.65",
+   "high_n": "56.0",
+   "low": "0.05",
+   "low_n": "11.3"
   },
   {
    "date": "2024-06-27",
@@ -775,18 +775,18 @@
    "side": "C",
    "high": "74.5",
    "high_n": "57.75",
-   "low": "22.95",
+   "low": "0.8",
    "low_n": "5.1"
   },
   {
-   "date": "2024-04-25",
-   "expiry": "2024-04-25",
-   "strike": "3050.0",
-   "side": "C",
-   "high": "66.0",
-   "high_n": "66.0",
-   "low": "17.0",
-   "low_n": "4.95"
+   "date": "2023-08-30",
+   "expiry": "2023-08-31",
+   "strike": "2550.0",
+   "side": "P",
+   "high": "75.0",
+   "high_n": "75.0",
+   "low": "11.55",
+   "low_n": "34.65"
   }
  ],
  "stkopt_ADANIPORTS_bars": {
@@ -4913,11 +4913,11 @@
   "days": 96,
   "contract-days": 25459,
   "found in bhavcopy": "100.00%",
-  "high match": "67.33%",
-  "low match": "68.68%",
+  "high match": "67.39%",
+  "low match": "68.94%",
   "open match": "92.00%",
-  "last price <=0.5% (2024-07+)": "63.98%",
-  "last price <=2% (2024-07+)": "81.18%",
+  "last price <=0.5% (2024-07+)": "64.22%",
+  "last price <=2% (2024-07+)": "81.69%",
   "OI Dhan/NSE median": "1.001",
   "OI within 1%": "67.97%",
   "high&low match on expiry days": "41.67%"

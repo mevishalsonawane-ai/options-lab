@@ -90,10 +90,11 @@ weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices fo
 ## Known gaps in this download (2026-10-13/14)
 
 * **Stock options are incomplete.** Fetched share of the planned 30-day chunks: ATM 97% (58 of 59 stocks ≥90%),
-  ATM±1 100%, ATM±2 24%, ATM±3..±5 none (nearest strikes are fetched first). Per stock and offset:
+  ATM±1 over 99%, ATM±2 24%, ATM±3..±5 none (nearest strikes are fetched first). Per stock and offset:
   `STOCK_OPTIONS_COVERAGE.json` (1.0 = complete). The download stopped because Dhan answered every
-  `/charts/rollingoption` call with HTTP 429 DH-904 from about 02:55 UTC on 14 Oct (other data endpoints still
-  answered; the token expires at 05:39 UTC on 14 Oct). About 57,000 chunks remain.
+  `/charts/rollingoption` call with HTTP 429 DH-904 from about 02:55 UTC on 14 Oct, and again minutes after a retry
+  at 04:16 (other data endpoints still answered; the token expires at 05:39 UTC on 14 Oct). About 57,000 chunks
+  remain.
   Quality: index options match NSE bhavcopy contract-day high/low 86–98%, but stock options match only about 68%
   (median day exact, tails ±10%). Treat stock-option minutes with care (see VALIDATION.md section 3).
   **To finish:** set a fresh token and run `python -I research/data/lake_fetch.py $RAW stkopt`, then
