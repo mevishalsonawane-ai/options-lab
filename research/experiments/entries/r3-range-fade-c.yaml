@@ -10,7 +10,8 @@ period:
   holdout: 'out-of-instrument: FINNIFTY 2021-09-03.. (1,254), MIDCPNIFTY 2022-02-21.. (906), SENSEX 2023-05-15.. (845), all
     to 2026-10-12; read once 14 Oct 2026'
 prereg: research/hunt/r3orb/PREREG.md
-hypothesis: Range Fade with F + E + S together makes money after costs on unseen data (PREREG A8 gates D1-D4, H1-H5).
+hypothesis: Range Fade with F + E + S together makes money net of the app's fees and fills on unseen data (PREREG A8 gates
+  D1-D4, H1-H5).
 instruments:
 - BANKNIFTY
 - NIFTY
@@ -34,6 +35,6 @@ results:
     per year [-20012, -34347, -40440, -35390, -89245, -61420]; gates D1-D4 nnnn. Holdout: 2,312 trades, net Rs -355,105 (Rs
     -283 a day), win rate 32%, worst day Rs -9,497, max drawdown Rs -355,594; t p 1.000, twin mean Rs -437,155 p 0.015, BH
     q 1.00 / 0.21 (m 183); gates H1-H5 nyyyn. FAIL.'
-  costs: app charges at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
 holdout_read: true
 verdict: rejected

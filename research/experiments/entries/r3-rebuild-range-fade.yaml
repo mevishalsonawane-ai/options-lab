@@ -27,7 +27,7 @@ results:
   summary: 'Design: 3,512 trades, net Rs -510,978 (Rs -398 a day), win rate 30%, worst day Rs -4,751, max drawdown Rs -511,141;
     years > 0: 0 of 6. Holdout indices: 3,794 trades, net Rs -577,344 (Rs -460 a day), win rate 33%, worst day Rs -16,044,
     max drawdown Rs -577,344.'
-  costs: app charges at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
 holdout_read: true
 verdict: not-a-test
 notes: Baseline for the R3 variants. Matches R14 / R12 within a few percent (results/rebuild.md).

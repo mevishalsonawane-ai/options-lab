@@ -12,8 +12,8 @@ period:
     to 2026-10-12; read once 14 Oct 2026'
 prereg: research/hunt/r3orb/PREREG.md
 hypothesis: ORB Fresh with no fixed target, ladder kept, +Rs 1,000 -> keep +Rs 500 a lot, Rs 500 give-back trail from +Rs
-  1,000, 45-min time stop if the peak never reached +25% of the target makes money after costs on unseen data (PREREG A8 gates
-  D1-D4, H1-H5).
+  1,000, 45-min time stop if the peak never reached +25% of the target makes money net of the app's fees and fills on unseen
+  data (PREREG A8 gates D1-D4, H1-H5).
 instruments:
 - BANKNIFTY
 - NIFTY
@@ -38,6 +38,6 @@ results:
     per year [-6790, -75559, -54406, -34773, -26728, -32516]; gates D1-D4 nnnn. Holdout: 2,556 trades, net Rs -271,695 (Rs
     -217 a day), win rate 38%, worst day Rs -22,456, max drawdown Rs -282,534; t p 1.000, twin mean Rs -161,626 p 0.942, BH
     q 1.00 / 1.00 (m 183); gates H1-H5 nnnyn. FAIL.'
-  costs: app charges at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
 holdout_read: true
 verdict: rejected

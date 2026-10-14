@@ -30,6 +30,6 @@ results:
   summary: 'No point-in-time split makes any arm positive: the best third of every feature still loses for every arm (results/anatomy.md).
     Even with hindsight, ORB loses on days that trended its way (Rs -52 a trade, 1,094 trades); Sweep / Fade win only on trend
     days traded with the trend (known only after the close).'
-  costs: app charges at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
 holdout_read: false
 verdict: not-a-test

@@ -20,7 +20,7 @@ DATA = ("Dhan lake data-20261014 (options_rolling_1m opt_<UND>_WEEK = nearest ex
 PERIOD = {"design": "BANKNIFTY 2021-09-03..2026-10-12 (1,255 sessions) + NIFTY 2021-08-02..2026-10-12 (1,284)",
           "holdout": "out-of-instrument: FINNIFTY 2021-09-03.. (1,254), MIDCPNIFTY 2022-02-21.. (906), SENSEX 2023-05-15.. "
                      "(845), all to 2026-10-12; read once 14 Oct 2026"}
-COSTS = "app charges at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force"
+COSTS = "app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force"
 WHAT = {
     "F": "the baseline + skip the worst tercile of one point-in-time feature (Part B)",
     "E": "no fixed target, ladder kept, +Rs 1,000 -> keep +Rs 500 a lot, Rs 500 give-back trail from +Rs 1,000, 45-min time stop if the peak never reached +25% of the target",
@@ -64,7 +64,7 @@ def main():
             filt = f" Filter: skip {p['feature']} {p['worst']} ({p['skip'][0]:.4g} .. {p['skip'][1]:.4g})." if x in "FC" else ""
             ok = r.get("design_pass") and q.get("holdout_pass")
             write(dict(id=i.replace("_", "-").lower(), title=f"R3 {E.NAMES[a]} variant {x}: {WHAT[x]}", **base,
-                       hypothesis=f"{E.NAMES[a]} with {WHAT[x]} makes money after costs on unseen data (PREREG A8 gates D1-D4, H1-H5).",
+                       hypothesis=f"{E.NAMES[a]} with {WHAT[x]} makes money net of the app's fees and fills on unseen data (PREREG A8 gates D1-D4, H1-H5).",
                        instruments=["BANKNIFTY", "NIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"],
                        features=["1-minute index", "opening range", "VIX", "gap", "range width / ATR14", "signal time", "expiry day", "TWAP distance"],
                        model_or_rule=f"{E.NAMES[a]}: {WHAT[x]}.{filt}", settings="research/hunt/r3orb/PREREG.md A6 and Part B",

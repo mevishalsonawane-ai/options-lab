@@ -10,8 +10,8 @@ period:
   holdout: 'out-of-instrument: FINNIFTY 2021-09-03.. (1,254), MIDCPNIFTY 2022-02-21.. (906), SENSEX 2023-05-15.. (845), all
     to 2026-10-12; read once 14 Oct 2026'
 prereg: research/hunt/r3orb/PREREG.md
-hypothesis: ORB with the baseline + skip the worst tercile of one point-in-time feature (Part B) makes money after costs on
-  unseen data (PREREG A8 gates D1-D4, H1-H5).
+hypothesis: ORB with the baseline + skip the worst tercile of one point-in-time feature (Part B) makes money net of the app's
+  fees and fills on unseen data (PREREG A8 gates D1-D4, H1-H5).
 instruments:
 - BANKNIFTY
 - NIFTY
@@ -36,6 +36,6 @@ results:
     per year [-10406, -56673, -37514, -16947, -10856, -43087]; gates D1-D4 nnnn. Holdout: 2,289 trades, net Rs -70,250 (Rs
     -56 a day), win rate 41%, worst day Rs -21,250, max drawdown Rs -109,857; t p 0.895, twin mean Rs -67,081 p 0.573, BH
     q 1.00 / 1.00 (m 183); gates H1-H5 nynyn. FAIL.'
-  costs: app charges at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
 holdout_read: true
 verdict: rejected
