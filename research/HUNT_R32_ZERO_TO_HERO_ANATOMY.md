@@ -7,6 +7,10 @@ Written 14 Oct 2026, for Boss:
 
 - **Pre-registration:** `research/hunt/r32/PREREG.md`, commit `df487d9`, pushed before any label or outcome was
   computed.
+  - Review fixes (`383b80b`), with all rows rebuilt and everything re-run:
+    - the label's "confirmed" price now ignores untraded bars (it could have counted a freak opening print);
+    - P2 reuses P1's entries, as the plan says.
+  - Every number came out identical: the label case never occurred in this data.
   - Amendment 1 (`b58e244`) fixed how P1/P2's score threshold is set; the first run gave them 0 trades. It was made
     before any P1/P2 outcome existed.
 - **Code, tests and tables:** `research/hunt/r32/` (`results/results.json`). The 936,286 one-minute rows are on the
@@ -25,7 +29,8 @@ Written 14 Oct 2026, for Boss:
     options were 1.65×, which is normal decay. The launch option had lost about 63% in half an hour.
   - **The index was moving against it.** Index EMA9 above EMA21 in the option's direction was present on 34% of
     launches, against 61% of ordinary options. The index was beyond its average in that direction on 38% against 54%.
-  - **Every "confirmation" pattern is 7-14× RARER at the launch:**
+  - **Every "confirmation" pattern is RARER at the launch:** 6-16× for the candle, Supertrend, EMA and VWAP patterns,
+    2.3× for heavyweight agreement.
 
     | pattern at the launch minute | launches | ordinary options |
     |---|---|---|
@@ -51,8 +56,10 @@ Written 14 Oct 2026, for Boss:
     than chance: AUC 0.70 (2023), 0.61 (2024), 0.73 (2025), 0.59 (2026). Its top 1% of rows hit 10× 1.4-6.7× more often
     than average.
   - **But that lift comes from a few big days.** 2 Sep 2025 alone gave 195 of 2025's top-0.1% rows.
-  - Take only the model's best pick each expiry: it hits 10× on just **5-10% of expiries**, against 4-7.5% for an
-    average option. That is too little to pay for the losers.
+  - Take only the model's best pick each expiry: it hits 10× on **3.9-7.5% of expiries** (2023 4.7%, 2024 3.9%, 2025
+    4.8%, 2026 7.5%). An average option on those expiries hits 10× 1.5-2.9% of the time, and 21-29% of expiries have
+    *some* option going 10×. So the model's pick is 1.3-4× better than a random option, but its pick still fails about
+    19 times in 20. That is too little to pay for the losers.
   - **What the model leans on** (the AUC drop in 2026 when a family is scrambled):
     - pricing (iv_rv, distance, time, price): **0.111**, by far the biggest;
     - index trend: 0.015;
@@ -67,10 +74,14 @@ Written 14 Oct 2026, for Boss:
   | P3: the best mined 2-3-signal pattern, 25% trail | 119 | 16.0 | −37,413 | −20,821 | 0.80 |
   | P4: P3 held to 15:05 | 119 | 3.4 | −1,78,255 | −94,181 | 0.98 |
 
-  - **P1 is the closest yet**, and better than random entries, but still negative in every test year. It fails the
-    gates. The smallest BH q over 82 tests is 0.164.
+  - **P1 is the closest yet**, and better than random entries, but negative in every year it traded:
+    - 2023: 3 trades, −Rs 1,698;
+    - 2024: 5 trades, −Rs 1,963;
+    - 2025: 28 trades, −Rs 257;
+    - 2026: no score cleared the threshold.
+    - It fails the gates. The smallest BH q over 82 tests is 0.164.
   - **The mined patterns collapse out of sample.** The best pattern on the training years had 5-8× the base 10× rate;
-    on the next year it had 0.06-0.8×.
+    on the next year it had 0-0.8× (2026's pattern: 197 test rows, none reached 10×).
 - **What to do: no app change.** Two things carry forward:
   1. **Don't buy hero options on green candles, Supertrend flips, EMA crosses or heavyweight confirmation.** By then the
      move has happened; those signals mark the chase, not the start.
@@ -82,7 +93,7 @@ Written 14 Oct 2026, for Boss:
 
 - **Data:** NIFTY 271 and SENSEX 175 weekly expiries, plus the lake's HDFC Bank, Reliance and ICICI Bank minutes.
 - **Rows:** every 1-minute bar close 12:00-14:55, for every traded OTM option at Rs 1-30. That gives **936,286 rows**,
-  with 85 point-in-time features in 12 families:
+  with 68 point-in-time features in 12 families:
   - 2/3/4-candle patterns;
   - option momentum, volume, OI and IV;
   - option EMA, Supertrend and VWAP;
@@ -115,10 +126,11 @@ Written 14 Oct 2026, for Boss:
 
 ## Checks run
 
-- `python -m pytest research/hunt/r32/test_r32.py -q` passes 5 tests. They cover:
+- `python -m pytest research/hunt/r32/test_r32.py -q` passes 6 tests. They cover:
   - the past-only helpers (lag, EMA, rolling, streak, since, forward-fill);
   - ADX in a trend;
   - the option, index and chain features reading no future (with the hindsight label checked to differ);
-  - the row filter (OTM, Rs 1-30, 12:00-14:55).
+  - the row filter (OTM, Rs 1-30, 12:00-14:55);
+  - an untraded bar never confirming the next open in the label.
 - R26-R31 tests, the exit audit, the brain tests and the catalog check still pass. `python research/experiments/validate.py`,
   and `python3 research/knowledge/build_pack.py` then `--check`.

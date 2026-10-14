@@ -53,7 +53,7 @@ def main():
     s = ("Walk-forward y10 classifier: " + "; ".join(f"{y}: AUC {x['auc']}, base {x['base_y10_pct']}%, top 1% {x['top1pct_y10_pct']}%"
                                                       for y, x in md.items() if y.isdigit()) +
          f". Family importance (AUC drop, 2026): {md['family_importance_auc_drop_2026']}. Row-level lift is clustered on a few days "
-         "(2 Sep 2025 gave 195 of 2025's top-0.1% rows); the model's best row per expiry hit 10x on only 5-10% of expiries.")
+         "(2 Sep 2025 gave 195 of 2025's top-0.1% rows); the best row per expiry hit 10x on 3.9-7.5% of expiries vs 1.5-2.9% for an average option.")
     e = dict(id="r32-model", title="Zero-to-hero anatomy: walk-forward model of 10x launches (descriptive)", family="ml",
              hypothesis="Descriptive: how well every signal family together ranks 1-minute rows for a later 10x.",
              features=["every R32 feature"], model_or_rule="HistGradientBoostingClassifier (PREREG settings)", variants_tried=None,

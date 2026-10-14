@@ -13,7 +13,8 @@ results:
     walls, max pain)'': 0.0072, ''EMA / Supertrend / VWAP (option)'': 0.0049, ''option momentum'': 0.0038, ''option IV'':
     0.0026, ''option OI'': 0.0011, ''heavyweights'': -0.0003, ''candles (2/3/4 patterns)'': -0.0029, ''index volatility /
     VIX'': -0.0074, ''option volume'': -0.008, ''gamma exposure'': -0.014}. Row-level lift is clustered on a few days (2 Sep
-    2025 gave 195 of 2025''s top-0.1% rows); the model''s best row per expiry hit 10x on only 5-10% of expiries.'
+    2025 gave 195 of 2025''s top-0.1% rows); the best row per expiry hit 10x on 3.9-7.5% of expiries vs 1.5-2.9% for an average
+    option.'
   costs: none (descriptive)
 verdict: not-a-test
 notes: See P1-P4 for the tradable versions.
