@@ -1,0 +1,430 @@
+[
+ {
+  "id": "C1",
+  "name": "Trend stack: 5-min EMA9>EMA21, 5-min Supertrend up, index above option-volume VWAP (mirror for puts)",
+  "kind": "classic",
+  "scope": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "SENSEX"
+  ],
+  "exit": "x1",
+  "sides": [
+   "ce",
+   "pe"
+  ]
+ },
+ {
+  "id": "C2",
+  "name": "OI + VWAP: put-writing bias > 0 and index above option-volume VWAP (mirror for puts)",
+  "kind": "classic",
+  "scope": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "SENSEX"
+  ],
+  "exit": "x1",
+  "sides": [
+   "ce",
+   "pe"
+  ]
+ },
+ {
+  "id": "S1",
+  "kind": "single",
+  "feature": "atr_14m_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.099537,
+  "t_sel": 6.6859,
+  "q_screen": 1.2048e-09,
+  "name": "atr_14m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S2",
+  "kind": "single",
+  "feature": "rv_30m",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.10137,
+  "t_sel": 6.6252,
+  "q_screen": 1.7064e-09,
+  "name": "rv_30m top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S3",
+  "kind": "single",
+  "feature": "atr14_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.10359,
+  "t_sel": 6.5927,
+  "q_screen": 2.0575e-09,
+  "name": "atr14_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S4",
+  "kind": "single",
+  "feature": "range_15m_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.092295,
+  "t_sel": 6.4697,
+  "q_screen": 4.138e-09,
+  "name": "range_15m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S5",
+  "kind": "single",
+  "feature": "donchian20_width_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.092118,
+  "t_sel": 6.4216,
+  "q_screen": 5.4447e-09,
+  "name": "donchian20_width_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S6",
+  "kind": "single",
+  "feature": "range_30m_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.086414,
+  "t_sel": 5.6745,
+  "q_screen": 3.1831e-07,
+  "name": "range_30m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S7",
+  "kind": "single",
+  "feature": "range_60m_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.086753,
+  "t_sel": 5.6133,
+  "q_screen": 4.3677e-07,
+  "name": "range_60m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S8",
+  "kind": "pair",
+  "feature": "gex_near_share + bu_pe_long_unwinding_share",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.069136,
+  "t_sel": 5.5881,
+  "q_screen": 4.9494e-07,
+  "a": "gex_near_share",
+  "la": null,
+  "sa": -1.0,
+  "b": "bu_pe_long_unwinding_share",
+  "lb": null,
+  "sb": -1.0,
+  "name": "gex_near_share + bu_pe_long_unwinding_share top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S9",
+  "kind": "pair",
+  "feature": "gex_near_share + day_range_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.084774,
+  "t_sel": 5.4819,
+  "q_screen": 8.438e-07,
+  "a": "gex_near_share",
+  "la": null,
+  "sa": -1.0,
+  "b": "day_range_pct",
+  "lb": null,
+  "sb": 1.0,
+  "name": "gex_near_share + day_range_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S10",
+  "kind": "pair",
+  "feature": "bu_pe_long_unwinding_share + day_range_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.06415,
+  "t_sel": 4.8093,
+  "q_screen": 2.1549e-05,
+  "a": "bu_pe_long_unwinding_share",
+  "la": null,
+  "sa": -1.0,
+  "b": "day_range_pct",
+  "lb": null,
+  "sb": 1.0,
+  "name": "bu_pe_long_unwinding_share + day_range_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S11",
+  "kind": "pair",
+  "feature": "iv_skew_3 + ema20",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "SENSEX"
+  ],
+  "screen_scope": "POOLED",
+  "ic_sel": 0.061881,
+  "t_sel": 4.7886,
+  "q_screen": 2.3612e-05,
+  "a": "iv_skew_3",
+  "la": null,
+  "sa": 1.0,
+  "b": "ema20",
+  "lb": null,
+  "sb": -1.0,
+  "name": "iv_skew_3 + ema20 top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S12",
+  "kind": "pair",
+  "feature": "iv_skew_3 + ema50",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "SENSEX"
+  ],
+  "screen_scope": "POOLED",
+  "ic_sel": 0.061851,
+  "t_sel": 4.7855,
+  "q_screen": 2.3911e-05,
+  "a": "iv_skew_3",
+  "la": null,
+  "sa": 1.0,
+  "b": "ema50",
+  "lb": null,
+  "sb": -1.0,
+  "name": "iv_skew_3 + ema50 top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S13",
+  "kind": "single",
+  "feature": "greek_atmm2_delta_c",
+  "level": null,
+  "sign": -1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.073766,
+  "t_sel": 4.7471,
+  "q_screen": 2.8299e-05,
+  "name": "greek_atmm2_delta_c top quintile (low side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S14",
+  "kind": "single",
+  "feature": "greek_atmm2_delta_p",
+  "level": null,
+  "sign": -1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.073766,
+  "t_sel": 4.7471,
+  "q_screen": 2.8299e-05,
+  "name": "greek_atmm2_delta_p top quintile (low side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S15",
+  "kind": "single",
+  "feature": "lvl_near_count",
+  "level": null,
+  "sign": -1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.071449,
+  "t_sel": 4.7174,
+  "q_screen": 3.2342e-05,
+  "name": "lvl_near_count top quintile (low side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S16",
+  "kind": "single",
+  "feature": "tod_logrange_60m",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.074694,
+  "t_sel": 4.6507,
+  "q_screen": 4.3461e-05,
+  "name": "tod_logrange_60m top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ },
+ {
+  "id": "S17",
+  "kind": "single",
+  "feature": "range_30m_pct",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_pe_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "pe"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.068703,
+  "t_sel": 4.4605,
+  "q_screen": 0.00010093,
+  "name": "range_30m_pct top quintile (high side) -> PE (net_pe_atm_x1, x1)"
+ },
+ {
+  "id": "S18",
+  "kind": "single",
+  "feature": "iv_pct_252",
+  "level": null,
+  "sign": 1.0,
+  "target": "net_ce_atm_x1",
+  "exit": "x1",
+  "sides": [
+   "ce"
+  ],
+  "scope": [
+   "BANKNIFTY"
+  ],
+  "screen_scope": "BANKNIFTY",
+  "ic_sel": 0.070255,
+  "t_sel": 4.4318,
+  "q_screen": 0.0001131,
+  "name": "iv_pct_252 top quintile (high side) -> CE (net_ce_atm_x1, x1)"
+ }
+]

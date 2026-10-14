@@ -40,7 +40,8 @@ def by_feature(R: pd.DataFrame) -> pd.DataFrame:
             row[lab] = np.nan if x is None else float(x.ic_sel)      # already in the fit split's direction
         row["best_q"] = float(g.q.min()) if g.q.notna().any() else np.nan
         row["survivors"] = int(g.survivor.sum())
-        row["no_data_in"] = ",".join(sorted(set(g[g.get("no_data", False) == True].scope)))  # noqa: E712
+        nd = g["no_data"].fillna(False).astype(bool) if "no_data" in g else pd.Series(False, index=g.index)
+        row["no_data_in"] = ",".join(sorted(set(g[nd].scope)))
         rows.append(row)
     return pd.DataFrame(rows).sort_values(["survivors", "best_q"], ascending=[False, True])
 
@@ -102,7 +103,13 @@ def main():
     BF.to_csv(K.RESULTS / "screen_by_feature.csv", index=False, float_format="%.4g")
     sv = R[R.survivor].sort_values("t_sel", ascending=False)
     sv = sv.assign(lvl=sv.level.map(lambda v: "" if pd.isna(v) else f"{v:g}"), tgt=sv.target.map(TG))
-    out.append("### Survivors\n")
+    counts = R[R.survivor].groupby(["target", "scope"]).size().unstack(fill_value=0)
+    counts.index = [TG[t] for t in counts.index]
+    out.append("### Survivors by target and scope (counts)\n")
+    out.append(md_table(counts.reset_index().rename(columns={"index": "target"}), ["target"] + list(counts.columns),
+                        {c: str for c in counts.columns}))
+    sv = sv.groupby("target", group_keys=False).head(25)
+    out.append("\n### Survivors: the top 25 per target by selection-split t (all of them: results/screen.csv.gz)\n")
     out.append(md_table(sv, ["scope", "tgt", "feature", "lvl", "ic_fit", "ic_sel", "t_sel", "q", "n_rows", "n_days"],
                         dict(t_sel=lambda v: f"{v:.2f}", q=lambda v: f"{v:.4f}", n_rows=lambda v: f"{int(v):,}",
                              n_days=lambda v: f"{int(v)}")) if len(sv) else "(none)")
