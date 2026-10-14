@@ -7,8 +7,8 @@
  "timezone": "Asia/Kolkata (IST)",
  "format": "Parquet, zstd level 9",
  "release_notes": "Historical index, futures, equity and expired-option data from Dhan API v2. See research/data/README.md and research/data/VALIDATION.md.",
- "total_bytes": 6089900992,
- "total_rows": 387698985,
+ "total_bytes": 6089962789,
+ "total_rows": 387701629,
  "files": [
   {
    "file": "equity_1m_2017.parquet",
@@ -607,11 +607,11 @@
   {
    "file": "fut_daily_continuous.parquet",
    "dataset": "fut_daily_continuous",
-   "rows": 35433,
+   "rows": 35445,
    "first": "2009-03-30 00:00:00",
-   "last": "2026-10-12 00:00:00",
-   "bytes": 897114,
-   "sha256": "f7ced5017ef0f25fe3768e97c65181b11ef364d3f2f221324d6780f18d13d2ba",
+   "last": "2026-10-13 00:00:00",
+   "bytes": 896426,
+   "sha256": "8324dfdaf36ea0deae39fe87fe85279305d614dfb90a5d9bad68f64a36d7cb47",
    "source": "Dhan /v2/charts/historical",
    "columns": [
     "symbol",
@@ -675,9 +675,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 41113,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1145
+     "outside_session": 41114,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKEX",
@@ -718,9 +718,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 41113,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1145
+     "outside_session": 41114,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKEX",
@@ -761,9 +761,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 41113,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1145
+     "outside_session": 41114,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKEX",
@@ -804,9 +804,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 41113,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1145
+     "outside_session": 41114,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKEX",
@@ -847,9 +847,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 41113,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1145
+     "outside_session": 41114,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKEX",
@@ -858,11 +858,11 @@
   {
    "file": "index_1m_BANKEX_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72000,
+   "rows": 72375,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 2052456,
-   "sha256": "6ff16ad342114fa50e975b1903dd0733e7b03a41bfbcac05452a84d895a10c51",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 2062691,
+   "sha256": "0078c4389f7593c22682c43d954ed434cb4b31068d061b1e5058d6ac11873520",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -881,18 +881,18 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 192,
+    "series_days_total": 193,
     "duplicates_dropped_symbol_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 41113,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1145
+     "outside_session": 41114,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKEX",
@@ -933,9 +933,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63441,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63442,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKNIFTY",
@@ -976,9 +976,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63441,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63442,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKNIFTY",
@@ -1019,9 +1019,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63441,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63442,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKNIFTY",
@@ -1062,9 +1062,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63441,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63442,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKNIFTY",
@@ -1105,9 +1105,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63441,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63442,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKNIFTY",
@@ -1116,11 +1116,11 @@
   {
    "file": "index_1m_BANKNIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72000,
+   "rows": 72375,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 1869087,
-   "sha256": "951604cc126038b488caaa0d555cf1db505a108c68057682621e23a368fcb7a0",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 1878163,
+   "sha256": "a80ae67ac0038f325d817447d8dcc1c07e004c10bed3b8a65879751d7023ca55",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1139,18 +1139,18 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 192,
+    "series_days_total": 193,
     "duplicates_dropped_symbol_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63441,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63442,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "BANKNIFTY",
@@ -1191,9 +1191,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63326,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63327,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "FINNIFTY",
@@ -1234,9 +1234,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63326,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63327,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "FINNIFTY",
@@ -1277,9 +1277,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63326,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63327,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "FINNIFTY",
@@ -1320,9 +1320,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63326,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63327,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "FINNIFTY",
@@ -1363,9 +1363,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63326,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63327,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "FINNIFTY",
@@ -1374,11 +1374,11 @@
   {
    "file": "index_1m_FINNIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72000,
+   "rows": 72375,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 1704550,
-   "sha256": "c668f4c5dc647304a54dba47cedaf5486b23c6a89cc57e056f9d7913e8666b18",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 1712539,
+   "sha256": "8ab372b315937515e91e021d65fc89f5feecd33d07152b15c3627dd2e64f4776",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1397,18 +1397,18 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 192,
+    "series_days_total": 193,
     "duplicates_dropped_symbol_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63326,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1350
+     "outside_session": 63327,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "FINNIFTY",
@@ -1449,9 +1449,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 68841,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1357
+     "outside_session": 68842,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "INDIAVIX",
@@ -1492,9 +1492,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 68841,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1357
+     "outside_session": 68842,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "INDIAVIX",
@@ -1535,9 +1535,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 68841,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1357
+     "outside_session": 68842,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "INDIAVIX",
@@ -1578,9 +1578,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 68841,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1357
+     "outside_session": 68842,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "INDIAVIX",
@@ -1621,9 +1621,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 68841,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1357
+     "outside_session": 68842,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "INDIAVIX",
@@ -1632,11 +1632,11 @@
   {
    "file": "index_1m_INDIAVIX_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72000,
+   "rows": 72375,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 723376,
-   "sha256": "9c3bd6937fc096faf80b6455dd8f4debfb8976589edd05186c617f040acf27be",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 727080,
+   "sha256": "067effec83dfcaa3e48fa420920c82cc7a4126d87357609a3c007fad1fb780ce",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1655,18 +1655,18 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 192,
+    "series_days_total": 193,
     "duplicates_dropped_symbol_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 68841,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1357
+     "outside_session": 68842,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "INDIAVIX",
@@ -1707,9 +1707,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 25526,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 511
+     "outside_session": 25527,
+     "date_not_a_trading_day_or_after_last_daily_close": 886,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "MIDCPNIFTY",
@@ -1750,9 +1750,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 25526,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 511
+     "outside_session": 25527,
+     "date_not_a_trading_day_or_after_last_daily_close": 886,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "MIDCPNIFTY",
@@ -1793,9 +1793,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 25526,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 511
+     "outside_session": 25527,
+     "date_not_a_trading_day_or_after_last_daily_close": 886,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "MIDCPNIFTY",
@@ -1836,9 +1836,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 25526,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 511
+     "outside_session": 25527,
+     "date_not_a_trading_day_or_after_last_daily_close": 886,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "MIDCPNIFTY",
@@ -1847,11 +1847,11 @@
   {
    "file": "index_1m_MIDCPNIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72000,
+   "rows": 72375,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 1589158,
-   "sha256": "140cda3ea18a36718a098dee77ee801690fdc840a58480305422e1ba264cf93c",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 1595980,
+   "sha256": "d4103d4694a5606cb79800a3086f335929812711e1968b6014269c3125059f34",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1870,18 +1870,18 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 192,
+    "series_days_total": 193,
     "duplicates_dropped_symbol_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 25526,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 511
+     "outside_session": 25527,
+     "date_not_a_trading_day_or_after_last_daily_close": 886,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "MIDCPNIFTY",
@@ -1922,9 +1922,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -1965,9 +1965,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2008,9 +2008,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2051,9 +2051,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2094,9 +2094,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2137,9 +2137,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2180,9 +2180,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2223,9 +2223,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2266,9 +2266,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2277,11 +2277,11 @@
   {
    "file": "index_1m_NIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72000,
+   "rows": 72375,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 1647522,
-   "sha256": "73636921d811a19c91e2791a852d47c7564d506ab7d583bfb1c5e1eeb37d8c18",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 1655983,
+   "sha256": "daba23b8944a1ca374b28e2b162723ecb7c01ed42718088a66f3a90498478883",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -2300,18 +2300,18 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 192,
+    "series_days_total": 193,
     "duplicates_dropped_symbol_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63450,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1346
+     "outside_session": 63451,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "NIFTY",
@@ -2352,9 +2352,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 44724,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1468
+     "outside_session": 44725,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "SENSEX",
@@ -2395,9 +2395,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 44724,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1468
+     "outside_session": 44725,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "SENSEX",
@@ -2438,9 +2438,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 44724,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1468
+     "outside_session": 44725,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "SENSEX",
@@ -2481,9 +2481,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 44724,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1468
+     "outside_session": 44725,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "SENSEX",
@@ -2524,9 +2524,9 @@
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 44724,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1468
+     "outside_session": 44725,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "SENSEX",
@@ -2535,11 +2535,11 @@
   {
    "file": "index_1m_SENSEX_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72000,
+   "rows": 72375,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 2036190,
-   "sha256": "32343ef01e7238ed7ec40754b9706e419a92e4b608b6390479a4226822759af0",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 2046570,
+   "sha256": "54d864633175e17041e77374d2d095fd7edfac1a28f75f1d7be470a7ee301671",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -2558,18 +2558,18 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 192,
+    "series_days_total": 193,
     "duplicates_dropped_symbol_total": {
      "identical": 0,
      "conflicting_removed": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 44724,
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 1468
+     "outside_session": 44725,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843,
+     "nonpositive_or_missing_price": 0
     }
    },
    "symbol": "SENSEX",
@@ -2578,11 +2578,11 @@
   {
    "file": "index_daily.parquet",
    "dataset": "index_daily",
-   "rows": 31586,
+   "rows": 31593,
    "first": "2006-01-02 00:00:00",
-   "last": "2026-10-12 00:00:00",
-   "bytes": 831897,
-   "sha256": "19b62100711b3f045ceaaacb6d5a43662fc0f74727ff98f8cd707c477fc42c2e",
+   "last": "2026-10-13 00:00:00",
+   "bytes": 837715,
+   "sha256": "58cc8b1935ec9bb7cc9e74900d73a3a46d180e3d04e56ca5d994ef755b604be5",
    "source": "Dhan /v2/charts/historical",
    "columns": [
     "symbol",
