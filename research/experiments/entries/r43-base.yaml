@@ -1,0 +1,54 @@
+id: r43-base
+title: 'Sweep signal as zero-to-hero expiry trade: no signal: the same cheap option (CE and PE) at a fixed time every expiry
+  day'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_R43_SWEEP_SIGNALS_HERO.md
+hypothesis: Buying the same cheap option (CE and PE) at the same time every expiry day, no signal, pays after costs (the baseline
+  the signals must beat).
+data_version: 'Dhan lake on Drive: opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_WEEK (ATM+-10, 1-minute), index_1m of
+  the same; 5-minute index bars built from the 1-minute data; expiry days from the data (R25 rule); lake ends 12 Oct 2026'
+period:
+  design: expiry days 5 Aug 2021 - 31 Dec 2024 (per-year results = walk-forward of a fixed rule)
+  holdout: expiry days 1 Jan 2025 - 12 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- time of day
+model_or_rule: 'no signal: the same cheap option (CE and PE) at a fixed time every expiry day'
+settings: research/hunt/r43/r43cfg.py
+prereg: research/hunt/r43/PREREG.md
+variants_tried: 12
+results:
+  summary: '12 variants (strike cheap Rs 5-30 / OTM2 x window all-day / 12:30-14:45 x exit), Rs 5,000 a trade, 1 trade per
+    index-expiry-day max, on 670 design and 245 holdout index-expiry-days. 0 of 12 pass. Best holdout variant: base-cheap-hero-hold:
+    design 1268 trades net Rs -743,397; holdout 467 trades, win 11.3%, peak 5x/10x 38/11, net Rs +33,777 (+138 a day), max
+    DD Rs -199,053, p 0.012, q 0.176: fail. All variants: base-cheap-all-hold: design 1276 trades net Rs +46,309; holdout
+    460 trades, win 5.4%, peak 5x/10x 25/6, net Rs -420,864 (-1718 a day), max DD Rs -491,946, p 0.9341, q 0.9341: fail; base-cheap-all-trail:
+    design 1276 trades net Rs +136,626; holdout 460 trades, win 12.8%, peak 5x/10x 22/5, net Rs -387,416 (-1581 a day), max
+    DD Rs -471,777, p 0.8942, q 0.9045: fail; base-cheap-all-time: design 1276 trades net Rs +70,683; holdout 460 trades,
+    win 22.4%, peak 5x/10x 10/3, net Rs -309,795 (-1264 a day), max DD Rs -345,707, p 0.8004, q 0.8486: fail; base-cheap-hero-hold:
+    design 1268 trades net Rs -743,397; holdout 467 trades, win 11.3%, peak 5x/10x 38/11, net Rs +33,777 (+138 a day), max
+    DD Rs -199,053, p 0.012, q 0.176: fail; base-cheap-hero-trail: design 1268 trades net Rs -704,365; holdout 467 trades,
+    win 18.4%, peak 5x/10x 35/8, net Rs -37,878 (-155 a day), max DD Rs -168,526, p 0.006, q 0.132: fail; base-cheap-hero-time:
+    design 1268 trades net Rs -525,999; holdout 467 trades, win 25.7%, peak 5x/10x 25/6, net Rs -274 (-1 a day), max DD Rs
+    -175,100, p 0.004, q 0.132: fail; base-otm2-all-hold: design 1293 trades net Rs +335,522; holdout 459 trades, win 10.0%,
+    peak 5x/10x 21/4, net Rs -349,608 (-1427 a day), max DD Rs -380,996, p 0.8303, q 0.8698: fail; base-otm2-all-trail: design
+    1293 trades net Rs +325,430; holdout 459 trades, win 16.1%, peak 5x/10x 19/3, net Rs -242,270 (-989 a day), max DD Rs
+    -285,441, p 0.4212, q 0.7812: fail; base-otm2-all-time: design 1293 trades net Rs -49,548; holdout 459 trades, win 24.4%,
+    peak 5x/10x 9/2, net Rs -169,683 (-693 a day), max DD Rs -195,555, p 0.2196, q 0.773: fail; base-otm2-hero-hold: design
+    1316 trades net Rs -403,198; holdout 482 trades, win 11.4%, peak 5x/10x 40/6, net Rs -95,971 (-392 a day), max DD Rs -208,380,
+    p 0.006, q 0.132: fail; base-otm2-hero-trail: design 1316 trades net Rs -722,979; holdout 482 trades, win 17.4%, peak
+    5x/10x 36/4, net Rs -180,940 (-738 a day), max DD Rs -233,782, p 0.006, q 0.132: fail; base-otm2-hero-time: design 1316
+    trades net Rs -311,622; holdout 482 trades, win 24.5%, peak 5x/10x 24/3, net Rs -170,826 (-697 a day), max DD Rs -218,735,
+    p 0.012, q 0.176: fail.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; entry limit 1.2x + 0.10 for 3 min;
+    x2 spread stress reported
+holdout_read: true
+verdict: rejected
+notes: 'One family of the R43 BH family of 88 tests (BH over all 88 holdout p-values). Random-entry twins: 500 per rule, same
+  index-day, side, window, strike rule and exit. Signal source: the index spot.'

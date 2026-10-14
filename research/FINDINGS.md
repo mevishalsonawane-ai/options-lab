@@ -714,3 +714,19 @@ Full study: `HUNT_R42_SILVERM_SPIKES.md` (pre-registered `hunt/r42/PREREG.md`, c
   -Rs 44.6k (129 trades). Extra 9-12 Oct: 4 trades, -Rs 3.8k.
 - Pre-registered verdict: switch the M4 SILVERM paper arm off (risk-lowering paper change; Boss decides; R42 does not
   change the app).
+
+## Boss's 7 sweep signals as zero-to-hero expiry trades (R43, 14 Oct 2026) - no better than a random minute; 0 of 88 pass
+Full study: `HUNT_R43_SWEEP_SIGNALS_HERO.md` (pre-registered `hunt/r43/PREREG.md`, commit f4fc6f9; design = expiry days
+5 Aug 2021 - 31 Dec 2024, 670 index-days; locked holdout 1 Jan 2025 - 12 Oct 2026, 245 index-days, read once). Signal
+source: the 5-minute INDEX spot (EMA8/9 x 21/26 with ADX, RSI fade, RSI momentum, Donchian 20), buying a Rs 5-30 OTM or
+the OTM2 option on the index's own expiry day, Rs 5,000 a trade, -50% stop, no target, real charges and slippage.
+- 0 of 88 tests pass (7 families x strike x window x exit + 12 no-signal baselines); smallest holdout BH q 0.132 (a
+  baseline), 0.201 among signal rules.
+- Against 500 random-entry twins each, 39 of 76 signal variants beat the twin mean in design and 38 in the holdout: a coin.
+- Every profitable case (22 in design, 18 in the holdout, only 3 in both) turns into a loss without its 5 best trades.
+  Best both-period rule: EMA8x21 ADX>15, cheap, 12:30-14:45, hold: design +Rs 1,23,022 (324 trades, p 0.17), holdout
+  +Rs 87,534 (119 trades, p 0.34, q 0.78), -Rs 1,94,680 without its top 5 (one 29x SENSEX call +Rs 1,40,013).
+- Donchian 20 (OTM2, all day) was the design's best (+Rs 5.83 lakh, 662 trades) and lost in the holdout (-Rs 67,696, 245).
+- A stepped profit lock (+25/+50/+75/+100% ratchet) wins more often (31% vs 10%) but sells the heroes early: its 4 variants
+  banked one 10x in 667 holdout trades and all 4 lost (-Rs 19,993 to -Rs 47,088; 119-214 trades each).
+- No app change, nothing on paper or live. Across R21-R43, 0 of 170 hero rules pass.

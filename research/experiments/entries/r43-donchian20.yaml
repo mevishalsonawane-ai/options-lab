@@ -1,0 +1,54 @@
+id: r43-donchian20
+title: 'Sweep signal as zero-to-hero expiry trade: Donchian 20-bar breakout of the prior highs / lows'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_R43_SWEEP_SIGNALS_HERO.md
+hypothesis: 'Boss''s sweep signal, read on the 5-minute INDEX close (signal source: the index spot), buying a cheap OTM option
+  (Rs 5-30) or the OTM2 strike at the next 5-minute bar''s open on the index''s own expiry day and holding for a big multiple
+  with a -50% stop, catches zero-to-hero trades better than random entries after costs.'
+data_version: 'Dhan lake on Drive: opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_WEEK (ATM+-10, 1-minute), index_1m of
+  the same; 5-minute index bars built from the 1-minute data; expiry days from the data (R25 rule); lake ends 12 Oct 2026'
+period:
+  design: expiry days 5 Aug 2021 - 31 Dec 2024 (per-year results = walk-forward of a fixed rule)
+  holdout: expiry days 1 Jan 2025 - 12 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 5-minute index EMA / RSI / ADX / Donchian (signal on the underlying)
+model_or_rule: Donchian 20-bar breakout of the prior highs / lows
+settings: research/hunt/r43/r43cfg.py
+prereg: research/hunt/r43/PREREG.md
+variants_tried: 12
+results:
+  summary: '12 variants (strike cheap Rs 5-30 / OTM2 x window all-day / 12:30-14:45 x exit), Rs 5,000 a trade, 1 trade per
+    index-expiry-day max, on 670 design and 245 holdout index-expiry-days. 0 of 12 pass. Best holdout variant: donchian20-cheap-hero-hold:
+    design 596 trades net Rs -227,439; holdout 220 trades, win 12.7%, peak 5x/10x 15/5, net Rs +7,694 (+31 a day), max DD
+    Rs -158,984, p 0.5609, q 0.7812: fail. All variants: donchian20-cheap-all-hold: design 659 trades net Rs +359,911; holdout
+    245 trades, win 11.0%, peak 5x/10x 21/7, net Rs -57,065 (-233 a day), max DD Rs -156,729, p 0.5429, q 0.7812: fail; donchian20-cheap-all-trail:
+    design 659 trades net Rs -18,875; holdout 245 trades, win 16.7%, peak 5x/10x 19/5, net Rs -63,212 (-258 a day), max DD
+    Rs -128,386, p 0.5948, q 0.7812: fail; donchian20-cheap-all-time: design 659 trades net Rs -74,739; holdout 245 trades,
+    win 20.4%, peak 5x/10x 15/4, net Rs -72,904 (-298 a day), max DD Rs -107,065, p 0.5269, q 0.7812: fail; donchian20-cheap-hero-hold:
+    design 596 trades net Rs -227,439; holdout 220 trades, win 12.7%, peak 5x/10x 15/5, net Rs +7,694 (+31 a day), max DD
+    Rs -158,984, p 0.5609, q 0.7812: fail; donchian20-cheap-hero-trail: design 596 trades net Rs -272,790; holdout 220 trades,
+    win 18.6%, peak 5x/10x 13/3, net Rs -49,098 (-200 a day), max DD Rs -136,940, p 0.7505, q 0.8457: fail; donchian20-cheap-hero-time:
+    design 596 trades net Rs -344,170; holdout 220 trades, win 22.7%, peak 5x/10x 12/3, net Rs -66,071 (-270 a day), max DD
+    Rs -160,378, p 0.8483, q 0.8742: fail; donchian20-otm2-all-hold: design 662 trades net Rs +583,105; holdout 245 trades,
+    win 14.3%, peak 5x/10x 16/3, net Rs -67,696 (-276 a day), max DD Rs -131,331, p 0.6587, q 0.8141: fail; donchian20-otm2-all-trail:
+    design 662 trades net Rs +437,903; holdout 245 trades, win 17.6%, peak 5x/10x 15/2, net Rs -91,328 (-373 a day), max DD
+    Rs -152,229, p 0.6826, q 0.8141: fail; donchian20-otm2-all-time: design 662 trades net Rs -7,606; holdout 245 trades,
+    win 21.6%, peak 5x/10x 9/0, net Rs -99,762 (-407 a day), max DD Rs -140,225, p 0.5948, q 0.7812: fail; donchian20-otm2-hero-hold:
+    design 612 trades net Rs +360,115; holdout 226 trades, win 15.0%, peak 5x/10x 17/3, net Rs -54,747 (-224 a day), max DD
+    Rs -160,295, p 0.3553, q 0.7812: fail; donchian20-otm2-hero-trail: design 612 trades net Rs -325,867; holdout 226 trades,
+    win 19.5%, peak 5x/10x 16/2, net Rs -49,163 (-201 a day), max DD Rs -138,855, p 0.2635, q 0.7812: fail; donchian20-otm2-hero-time:
+    design 612 trades net Rs -351,296; holdout 226 trades, win 23.9%, peak 5x/10x 14/2, net Rs -78,857 (-322 a day), max DD
+    Rs -163,607, p 0.4491, q 0.7812: fail.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; entry limit 1.2x + 0.10 for 3 min;
+    x2 spread stress reported
+holdout_read: true
+verdict: rejected
+notes: 'One family of the R43 BH family of 88 tests (BH over all 88 holdout p-values). Random-entry twins: 500 per rule, same
+  index-day, side, window, strike rule and exit. Signal source: the index spot.'
