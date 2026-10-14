@@ -558,3 +558,26 @@ rule). Research, not financial advice.
   the time (897 options).
 - Data trap: Delta's first mark candle of a new strike is often stale (5.7% of 81,452 listings). One such trade (+4,889%)
   made a rule look like a winner until fixed. Never back-test an entry in a strike's first 15 minutes.
+
+## Who placed the orders and who made money: NSE participant data (OF1, 14 Oct 2026) - nothing to follow
+Full study: `HUNT_OF1_ORDERFLOW_INDIA.md` (pre-registered `hunt/of1/PREREG.md`, commit f969bc2; holdout read once).
+NSE's data is anonymous: only types (Client, DII, FII, Pro), never a person, firm or reason.
+- Data: participant OI 3,632 usable days (2 Jan 2012 - 13 Oct 2026), index F&O bhavcopy 3,644 days, NSDL FPI 3,560 days;
+  on Drive `IraAlgo-data-lake/participants/`. DII cash flows not reachable (NSE API 403).
+- Who profited, 2012-2026 (gross end-of-day MTM, Rs crore): Pro +8,921 on index options (+5,946 to +12,925 by strike
+  mix), -2,797 on futures; profit in 13 of 15 years. FII +3,235 to +7,062 on futures, made on trend days (+7,591 on
+  1,363 days vs -4,356 on 2,279 range days). DII +1,147 to +1,571 on futures. Client -2,009 to -4,973 futures and
+  -7,617 to -11,647 options (worst at low VIX: -9,661 on 1,949 days). End-of-day data misses intraday losses and costs,
+  so retail losses are far larger than this (SEBI's study counts both).
+- Behaviour (3,385 days): FII trend-follow (same-day corr +0.44); Client takes the other side (-0.35); DII buys the
+  day after falls (-0.22); Client and Pro are the net option writers (97% / 92% of days), FII holds long puts and calls.
+- Follow-the-group signals (36 tests): 15 passed BH on 2012-2025 (FII adds longs -> next day up, Client adds longs ->
+  down; 0.03-0.08% per sigma, n 3,322) but 0 of 15 held on the locked last 12 months (246 days; 13 flipped sign). FII
+  signal hit rate 33-39% in 2024-2025. FPI cash flow predicts nothing (p 0.66 / 0.97).
+- Rules (app option-buying arm, real charges): R0-R3 none pass the design gates (best twin p 0.076); holdout all lose
+  (Rs -32,212 on 39 trades to Rs -1,04,848 on 57).
+- Option chain: OI added on falling-premium days paid the writers ~23% of premium by expiry (NIFTY Rs 47,133 crore,
+  BANKNIFTY Rs 34,907 crore); far-OTM options added that way won for the buyer 1-2% of the time. Max-OI strikes are
+  neither walls nor magnets (0 of 12 tests; max-OI strike closer to settlement than a same-distance random strike
+  42-43% of 873 expiries, which is the no-magnet level of ~44%).
+- The app's own order-flow recordings: none uploaded yet (IraAlgo has 0 releases); `hunt/of1/footprints.py` is ready.

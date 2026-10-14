@@ -136,6 +136,15 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   candles are below support"). Event study first (follow-through vs fake-out at 15/30/60 min, 1 vs 2 vs 3 closes, by
   level, timeframe, time, VIX, expiry, index), then at most 4 pre-registered rules with random-level and random-time
   twins, BH counted with R20 and R20b. Branch claude/r20c-sr-break.
+- [x] R22. (done 14 Oct: research/HUNT_OF1_ORDERFLOW_INDIA.md; nothing to follow, no app change) Order-flow forensics
+  (owner, 13 Oct: "reverse-engineer the order flow: what was placed, why, who made good profit"): NSE participant
+  OI/volume 2012-2026, who profited by type, 36 follow-the-group signals (15 passed design, 0 of 15 held on the holdout),
+  build-up and walls/magnets (no wall, no pin), R0-R3 option-buying rules (all fail). Open follow-ups:
+  - run `research/hunt/of1/footprints.py` on the phone's tick-zone days once 2-4 weeks are uploaded (descriptive first,
+    with S7);
+  - DII cash flows need a source that does not block cloud machines (NSE's API returns 403); and
+  - rerun `python3 -I research/hunt/of1/fetch.py --from <last day>` then build/analyze `summary` to refresh the
+    who-profited tables (the holdout of OF1 is spent: any new test needs a new pre-registration and a new holdout).
 - [ ] R4. Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
