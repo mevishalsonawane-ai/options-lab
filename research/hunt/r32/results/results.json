@@ -389,30 +389,38 @@
  "choices": {
   "P1": {
    "2023": {
-    "q": 0.999
+    "q": 0.9999,
+    "tau": 0.502
    },
    "2024": {
-    "q": 0.9999
+    "q": 0.9999,
+    "tau": 0.3098
    },
    "2025": {
-    "q": 0.9999
+    "q": 0.999,
+    "tau": 0.0599
    },
    "2026": {
-    "q": 0.9999
+    "q": 0.9999,
+    "tau": 0.6828
    }
   },
   "P2": {
    "2023": {
-    "q": 0.999
+    "q": 0.9999,
+    "tau": 0.502
    },
    "2024": {
-    "q": 0.9999
+    "q": 0.9999,
+    "tau": 0.3098
    },
    "2025": {
-    "q": 0.9999
+    "q": 0.999,
+    "tau": 0.0599
    },
    "2026": {
-    "q": 0.9999
+    "q": 0.9999,
+    "tau": 0.6828
    }
   },
   "pattern": {
@@ -502,40 +510,381 @@
   "P1": {
    "m": {
     "expiries": 372,
-    "trades": 0,
-    "hit_pct": 0.0,
-    "avg_win": 0.0,
-    "avg_loss": 0.0,
-    "net": 0.0,
-    "per_expiry": 0.0,
-    "per_1000_risked": 0.0,
-    "green_expiries_pct": 0.0,
-    "worst_day": 0.0,
-    "best_day": 0.0,
-    "max_dd": 0.0,
-    "losing_streak_trades": 0,
-    "losing_streak_expiries": 0,
+    "trades": 34,
+    "hit_pct": 26.5,
+    "avg_win": 1061.7,
+    "avg_loss": -538.9,
+    "net": -3917.29,
+    "per_expiry": -10.53,
+    "per_1000_risked": -59.7,
+    "green_expiries_pct": 2.4,
+    "worst_day": -1269.16,
+    "best_day": 2693.42,
+    "max_dd": -4288.66,
+    "losing_streak_trades": 7,
+    "losing_streak_expiries": 7,
     "best_day_share_pct": null,
-    "net_without_best_day": 0.0,
-    "proxy_trades": 0,
-    "x10_pct": 0.0,
-    "x4_pct": 0.0,
+    "net_without_best_day": -6610.71,
+    "proxy_trades": 1,
+    "x10_pct": 2.9,
+    "x4_pct": 14.7,
     "years": {
-     "2023": 0,
-     "2024": 0,
-     "2025": 0,
+     "2023": -1698.0,
+     "2024": -1963.0,
+     "2025": -257.0,
      "2026": 0
     },
-    "x2_spread": 0
+    "x2_spread": -6604.0
    },
    "twins": {
-    "p": 1.0,
-    "mean": 0.0
+    "p": 0.148,
+    "mean": -8895.0
    },
-   "trades_list": [],
+   "trades_list": [
+    {
+     "und": "NIFTY",
+     "day": "2023-02-16",
+     "side": "PE",
+     "strike": 17950.0,
+     "sig": 232,
+     "entry": 2.5,
+     "peak": 1.0,
+     "net": -651.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-14",
+     "side": "PE",
+     "strike": 20050.0,
+     "sig": 335,
+     "entry": 1.8,
+     "peak": 1.0,
+     "net": -546.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-21",
+     "side": "CE",
+     "strike": 19800.0,
+     "sig": 168,
+     "entry": 3.95,
+     "peak": 1.29,
+     "net": -501.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-04-18",
+     "side": "CE",
+     "strike": 22150.0,
+     "sig": 337,
+     "entry": 2.15,
+     "peak": 1.0,
+     "net": -591.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-06",
+     "side": "PE",
+     "strike": 22300.0,
+     "sig": 185,
+     "entry": 4.65,
+     "peak": 1.62,
+     "net": -752.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-12-12",
+     "side": "CE",
+     "strike": 24650.0,
+     "sig": 247,
+     "entry": 5.55,
+     "peak": 1.07,
+     "net": -620.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-01-02",
+     "side": "PE",
+     "strike": 24150.0,
+     "sig": 332,
+     "entry": 3.8,
+     "peak": 1.05,
+     "net": -628.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-02-20",
+     "side": "CE",
+     "strike": 23000.0,
+     "sig": 181,
+     "entry": 6.35,
+     "peak": 1.25,
+     "net": -201.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-15",
+     "side": "PE",
+     "strike": 24950.0,
+     "sig": 304,
+     "entry": 8.65,
+     "peak": 1.09,
+     "net": -770.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-29",
+     "side": "PE",
+     "strike": 24550.0,
+     "sig": 169,
+     "entry": 5.8,
+     "peak": 1.74,
+     "net": -441.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-05",
+     "side": "PE",
+     "strike": 24600.0,
+     "sig": 172,
+     "entry": 5.9,
+     "peak": 2.01,
+     "net": -441.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-26",
+     "side": "CE",
+     "strike": 25600.0,
+     "sig": 164,
+     "entry": 3.55,
+     "peak": 6.3,
+     "net": 761.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-07-17",
+     "side": "PE",
+     "strike": 25050.0,
+     "sig": 201,
+     "entry": 2.75,
+     "peak": 1.07,
+     "net": -523.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-08-07",
+     "side": "PE",
+     "strike": 24350.0,
+     "sig": 206,
+     "entry": 6.35,
+     "peak": 5.38,
+     "net": -411.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-09-02",
+     "side": "PE",
+     "strike": 24600.0,
+     "sig": 164,
+     "entry": 4.85,
+     "peak": 15.92,
+     "net": -501.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-09-16",
+     "side": "CE",
+     "strike": 25300.0,
+     "sig": 164,
+     "entry": 2.55,
+     "peak": 2.06,
+     "net": 809.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-11-04",
+     "side": "PE",
+     "strike": 25550.0,
+     "sig": 236,
+     "entry": 2.0,
+     "peak": 3.27,
+     "net": 1116.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-11-11",
+     "side": "PE",
+     "strike": 25550.0,
+     "sig": 245,
+     "entry": 8.65,
+     "peak": 1.1,
+     "net": -467.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-11-25",
+     "side": "CE",
+     "strike": 26100.0,
+     "sig": 185,
+     "entry": 4.3,
+     "peak": 1.94,
+     "net": 173.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-12-23",
+     "side": "PE",
+     "strike": 26050.0,
+     "sig": 196,
+     "entry": 2.05,
+     "peak": 1.07,
+     "net": -538.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-01-21",
+     "side": "PE",
+     "strike": 75200.0,
+     "sig": 322,
+     "entry": 5.55,
+     "peak": 4.28,
+     "net": 2693.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-02-18",
+     "side": "CE",
+     "strike": 76200.0,
+     "sig": 339,
+     "entry": 9.25,
+     "peak": 1.0,
+     "net": -1269.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-18",
+     "side": "PE",
+     "strike": 74500.0,
+     "sig": 164,
+     "entry": 18.51,
+     "peak": 3.52,
+     "net": 2541.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-25",
+     "side": "PE",
+     "strike": 77800.0,
+     "sig": 289,
+     "entry": 6.7,
+     "peak": 1.7,
+     "net": -471.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-04-01",
+     "side": "CE",
+     "strike": 76900.0,
+     "sig": 167,
+     "entry": 24.56,
+     "peak": 1.88,
+     "net": 585.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-04-22",
+     "side": "CE",
+     "strike": 80000.0,
+     "sig": 164,
+     "entry": 19.41,
+     "peak": 1.0,
+     "net": -593.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-13",
+     "side": "PE",
+     "strike": 80700.0,
+     "sig": 180,
+     "entry": 16.01,
+     "peak": 4.33,
+     "net": -324.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-20",
+     "side": "CE",
+     "strike": 81400.0,
+     "sig": 327,
+     "entry": 6.35,
+     "peak": 1.38,
+     "net": -156.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-27",
+     "side": "CE",
+     "strike": 82500.0,
+     "sig": 226,
+     "entry": 18.61,
+     "peak": 2.69,
+     "net": 570.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-06-03",
+     "side": "PE",
+     "strike": 80700.0,
+     "sig": 321,
+     "entry": 10.46,
+     "peak": 3.78,
+     "net": -467.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-10-01",
+     "side": "CE",
+     "strike": 81400.0,
+     "sig": 182,
+     "entry": 9.6,
+     "peak": 1.0,
+     "net": -950.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-10-16",
+     "side": "PE",
+     "strike": 83300.0,
+     "sig": 326,
+     "entry": 9.9,
+     "peak": 1.79,
+     "net": -72.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-06",
+     "side": "CE",
+     "strike": 83600.0,
+     "sig": 329,
+     "entry": 3.25,
+     "peak": 1.83,
+     "net": 308.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-13",
+     "side": "CE",
+     "strike": 85200.0,
+     "sig": 273,
+     "entry": 8.45,
+     "peak": 1.0,
+     "net": -589.0
+    }
+   ],
    "q": 1.0,
    "gates": {
-    "1 >= 30 trades": false,
+    "1 >= 30 trades": true,
     "2 net > 0": false,
     "3 >= 3 of 4 years > 0": false,
     "4 BH q < 0.05": false,
@@ -548,46 +897,387 @@
   "P2": {
    "m": {
     "expiries": 372,
-    "trades": 0,
-    "hit_pct": 0.0,
-    "avg_win": 0.0,
-    "avg_loss": 0.0,
-    "net": 0.0,
-    "per_expiry": 0.0,
-    "per_1000_risked": 0.0,
-    "green_expiries_pct": 0.0,
-    "worst_day": 0.0,
-    "best_day": 0.0,
-    "max_dd": 0.0,
-    "losing_streak_trades": 0,
-    "losing_streak_expiries": 0,
+    "trades": 34,
+    "hit_pct": 5.9,
+    "avg_win": 4390.9,
+    "avg_loss": -1775.2,
+    "net": -48025.48,
+    "per_expiry": -129.1,
+    "per_1000_risked": -731.4,
+    "green_expiries_pct": 0.5,
+    "worst_day": -1971.87,
+    "best_day": 8235.04,
+    "max_dd": -48025.48,
+    "losing_streak_trades": 19,
+    "losing_streak_expiries": 19,
     "best_day_share_pct": null,
-    "net_without_best_day": 0.0,
-    "proxy_trades": 0,
-    "x10_pct": 0.0,
-    "x4_pct": 0.0,
+    "net_without_best_day": -56260.52,
+    "proxy_trades": 2,
+    "x10_pct": 2.9,
+    "x4_pct": 14.7,
     "years": {
-     "2023": 0,
-     "2024": 0,
-     "2025": 0,
+     "2023": -5795.0,
+     "2024": -5253.0,
+     "2025": -36978.0,
      "2026": 0
     },
-    "x2_spread": 0
+    "x2_spread": -48779.0
    },
    "twins": {
-    "p": 1.0,
-    "mean": 0.0
+    "p": 0.649,
+    "mean": -36602.0
    },
-   "trades_list": [],
+   "trades_list": [
+    {
+     "und": "NIFTY",
+     "day": "2023-02-16",
+     "side": "PE",
+     "strike": 17950.0,
+     "sig": 232,
+     "entry": 2.5,
+     "peak": 1.0,
+     "net": -1928.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-14",
+     "side": "PE",
+     "strike": 20050.0,
+     "sig": 335,
+     "entry": 1.8,
+     "peak": 1.0,
+     "net": -1918.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-21",
+     "side": "CE",
+     "strike": 19800.0,
+     "sig": 168,
+     "entry": 3.95,
+     "peak": 1.29,
+     "net": -1948.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-04-18",
+     "side": "CE",
+     "strike": 22150.0,
+     "sig": 337,
+     "entry": 2.15,
+     "peak": 1.0,
+     "net": -1624.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-06",
+     "side": "PE",
+     "strike": 22300.0,
+     "sig": 185,
+     "entry": 4.65,
+     "peak": 1.62,
+     "net": -1961.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-12-12",
+     "side": "CE",
+     "strike": 24650.0,
+     "sig": 247,
+     "entry": 5.55,
+     "peak": 1.07,
+     "net": -1668.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-01-02",
+     "side": "PE",
+     "strike": 24150.0,
+     "sig": 332,
+     "entry": 3.8,
+     "peak": 1.05,
+     "net": -1231.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-02-20",
+     "side": "CE",
+     "strike": 23000.0,
+     "sig": 181,
+     "entry": 6.35,
+     "peak": 1.25,
+     "net": -1908.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-15",
+     "side": "PE",
+     "strike": 24950.0,
+     "sig": 304,
+     "entry": 8.65,
+     "peak": 1.09,
+     "net": -1826.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-29",
+     "side": "PE",
+     "strike": 24550.0,
+     "sig": 169,
+     "entry": 5.8,
+     "peak": 1.74,
+     "net": -1713.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-05",
+     "side": "PE",
+     "strike": 24600.0,
+     "sig": 172,
+     "entry": 5.9,
+     "peak": 2.01,
+     "net": -1773.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-26",
+     "side": "CE",
+     "strike": 25600.0,
+     "sig": 164,
+     "entry": 3.55,
+     "peak": 6.3,
+     "net": -1388.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-07-17",
+     "side": "PE",
+     "strike": 25050.0,
+     "sig": 201,
+     "entry": 2.75,
+     "peak": 1.07,
+     "net": -1702.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-08-07",
+     "side": "PE",
+     "strike": 24350.0,
+     "sig": 206,
+     "entry": 6.35,
+     "peak": 5.38,
+     "net": -1908.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-09-02",
+     "side": "PE",
+     "strike": 24600.0,
+     "sig": 164,
+     "entry": 4.85,
+     "peak": 15.92,
+     "net": 8235.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-09-16",
+     "side": "CE",
+     "strike": 25300.0,
+     "sig": 164,
+     "entry": 2.55,
+     "peak": 2.06,
+     "net": -1811.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-11-04",
+     "side": "PE",
+     "strike": 25550.0,
+     "sig": 236,
+     "entry": 2.0,
+     "peak": 3.27,
+     "net": -1755.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-11-11",
+     "side": "PE",
+     "strike": 25550.0,
+     "sig": 245,
+     "entry": 8.65,
+     "peak": 1.1,
+     "net": -1972.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-11-25",
+     "side": "CE",
+     "strike": 26100.0,
+     "sig": 185,
+     "entry": 4.3,
+     "peak": 1.94,
+     "net": -1916.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-12-23",
+     "side": "PE",
+     "strike": 26050.0,
+     "sig": 196,
+     "entry": 2.05,
+     "peak": 1.07,
+     "net": -1950.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-01-21",
+     "side": "PE",
+     "strike": 75200.0,
+     "sig": 322,
+     "entry": 5.55,
+     "peak": 4.28,
+     "net": -1794.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-02-18",
+     "side": "CE",
+     "strike": 76200.0,
+     "sig": 339,
+     "entry": 9.25,
+     "peak": 1.0,
+     "net": -1728.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-18",
+     "side": "PE",
+     "strike": 74500.0,
+     "sig": 164,
+     "entry": 18.51,
+     "peak": 3.52,
+     "net": -1824.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-25",
+     "side": "PE",
+     "strike": 77800.0,
+     "sig": 289,
+     "entry": 6.7,
+     "peak": 1.7,
+     "net": -1561.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-04-01",
+     "side": "CE",
+     "strike": 76900.0,
+     "sig": 167,
+     "entry": 24.56,
+     "peak": 1.88,
+     "net": -1965.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-04-22",
+     "side": "CE",
+     "strike": 80000.0,
+     "sig": 164,
+     "entry": 19.41,
+     "peak": 1.0,
+     "net": -1949.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-13",
+     "side": "PE",
+     "strike": 80700.0,
+     "sig": 180,
+     "entry": 16.01,
+     "peak": 4.33,
+     "net": -1754.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-20",
+     "side": "CE",
+     "strike": 81400.0,
+     "sig": 327,
+     "entry": 6.35,
+     "peak": 1.38,
+     "net": -1684.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-27",
+     "side": "CE",
+     "strike": 82500.0,
+     "sig": 226,
+     "entry": 18.61,
+     "peak": 2.69,
+     "net": -1824.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-06-03",
+     "side": "PE",
+     "strike": 80700.0,
+     "sig": 321,
+     "entry": 10.46,
+     "peak": 3.78,
+     "net": 547.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-10-01",
+     "side": "CE",
+     "strike": 81400.0,
+     "sig": 182,
+     "entry": 9.6,
+     "peak": 1.0,
+     "net": -1918.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-10-16",
+     "side": "PE",
+     "strike": 83300.0,
+     "sig": 326,
+     "entry": 9.9,
+     "peak": 1.79,
+     "net": -1479.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-06",
+     "side": "CE",
+     "strike": 83600.0,
+     "sig": 329,
+     "entry": 3.25,
+     "peak": 1.83,
+     "net": -1609.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-13",
+     "side": "CE",
+     "strike": 85200.0,
+     "sig": 273,
+     "entry": 8.45,
+     "peak": 1.0,
+     "net": -1819.0
+    }
+   ],
    "q": 1.0,
    "gates": {
-    "1 >= 30 trades": false,
+    "1 >= 30 trades": true,
     "2 net > 0": false,
     "3 >= 3 of 4 years > 0": false,
     "4 BH q < 0.05": false,
     "5 x2 spread > 0": false,
     "6 w/o best day > 0": false,
-    "7 max DD > -40k": true
+    "7 max DD > -40k": false
    },
    "passes": false
   },

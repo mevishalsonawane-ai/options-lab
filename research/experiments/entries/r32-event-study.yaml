@@ -1,0 +1,34 @@
+id: r32-event-study
+title: 'Zero-to-hero anatomy: the 30 one-minute candles before a launch (descriptive)'
+family: ml
+hypothesis: 'Descriptive: what the 30 minutes before a 10x launch look like versus ordinary options.'
+features:
+- every R32 feature
+model_or_rule: event study (r32study.event_study)
+variants_tried: null
+results:
+  summary: '487 launches (an option at Rs 1-30 that later reached a confirmed 10x; the run''s lowest row) on 118 expiries
+    vs 2923 same-minute, same-band controls that never doubled. 30 bars before launch the option was 2.668x its launch price
+    (controls 1.654x). Pattern rates launch vs control: 2 green candles in a row 1.4% vs 14.6%; 3 green candles in a row 0.6%
+    vs 4.9%; 4 green candles in a row 0.2% vs 2.1%; 3 rising closes 0.4% vs 4.9%; 2+ higher highs 2.1% vs 13.5%; inside bar
+    1.4% vs 10.1%; bullish engulfing 0.4% vs 6.3%; volume >= 2x its EMA10 10.1% vs 6.1%; both Supertrends green 2.5% vs 15.9%;
+    option EMA9 > EMA21 3.3% vs 21.3%; option above its VWAP 1.0% vs 7.5%; strike OI falling (15 min) 32.9% vs 38.2%; strike
+    OI rising (15 min) 54.6% vs 46.0%; index EMA9 > EMA21 toward option 33.5% vs 61.4%; index beyond TWAP toward option 38.2%
+    vs 54.1%; index ADX > 25 37.0% vs 39.3%; all 3 heavyweights agree (1 min) 8.6% vs 19.7%; option cheap vs move (iv_rv <=
+    1) 33.1% vs 18.5%; wall within 1 expected move 34.7% vs 34.8%; GEX_short above its noon value 77.4% vs 70.1%; range compressed
+    (5 vs 30 bars < 0.3) 43.7% vs 43.5%.'
+  costs: none (descriptive)
+verdict: not-a-test
+notes: The launch is the run's lowest row (hindsight), which biases momentum features negative; descriptive only.
+date: '2026-10-14'
+doc: research/HUNT_R32_ZERO_TO_HERO_ANATOMY.md
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK (ATM+-10 with OI, IV, volume), index_1m, INDIAVIX, equity_1m HDFCBANK/RELIANCE/ICICIBANK;
+  R26 day files; 936,286 one-minute rows'
+period:
+  design: 'anchored walk-forward: test years 2023-2026, each fitted on earlier NIFTY / SENSEX expiries only'
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r32/PREREG.md
+settings: research/hunt/r32/r32study.py
+holdout_read: null

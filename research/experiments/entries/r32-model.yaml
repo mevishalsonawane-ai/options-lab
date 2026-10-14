@@ -1,0 +1,31 @@
+id: r32-model
+title: 'Zero-to-hero anatomy: walk-forward model of 10x launches (descriptive)'
+family: ml
+hypothesis: 'Descriptive: how well every signal family together ranks 1-minute rows for a later 10x.'
+features:
+- every R32 feature
+model_or_rule: HistGradientBoostingClassifier (PREREG settings)
+variants_tried: null
+results:
+  summary: 'Walk-forward y10 classifier: 2023: AUC 0.699, base 1.34%, top 1% 1.83%; 2024: AUC 0.607, base 2.18%, top 1% 4.22%;
+    2025: AUC 0.73, base 1.51%, top 1% 10.16%; 2026: AUC 0.594, base 1.66%, top 1% 6.82%. Family importance (AUC drop, 2026):
+    {''pricing (iv_rv, distance, time, price)'': 0.1112, ''index trend (returns, EMA, ADX, TWAP)'': 0.0153, ''chain OI (PCR,
+    walls, max pain)'': 0.0072, ''EMA / Supertrend / VWAP (option)'': 0.0049, ''option momentum'': 0.0038, ''option IV'':
+    0.0026, ''option OI'': 0.0011, ''heavyweights'': -0.0003, ''candles (2/3/4 patterns)'': -0.0029, ''index volatility /
+    VIX'': -0.0074, ''option volume'': -0.008, ''gamma exposure'': -0.014}. Row-level lift is clustered on a few days (2 Sep
+    2025 gave 195 of 2025''s top-0.1% rows); the model''s best row per expiry hit 10x on only 5-10% of expiries.'
+  costs: none (descriptive)
+verdict: not-a-test
+notes: See P1-P4 for the tradable versions.
+date: '2026-10-14'
+doc: research/HUNT_R32_ZERO_TO_HERO_ANATOMY.md
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK (ATM+-10 with OI, IV, volume), index_1m, INDIAVIX, equity_1m HDFCBANK/RELIANCE/ICICIBANK;
+  R26 day files; 936,286 one-minute rows'
+period:
+  design: 'anchored walk-forward: test years 2023-2026, each fitted on earlier NIFTY / SENSEX expiries only'
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r32/PREREG.md
+settings: research/hunt/r32/r32study.py
+holdout_read: null
