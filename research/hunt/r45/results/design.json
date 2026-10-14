@@ -1,0 +1,1650 @@
+{
+ "when": "2026-10-14T17:25:51.626968+00:00",
+ "part": "design",
+ "n_twins": 300,
+ "bh_family": 20,
+ "variants": {
+  "T0": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2843,
+    "days": 983,
+    "per_day": 2.89,
+    "win": 59.8,
+    "npt": 264.4,
+    "net": 751769,
+    "pf": 1.7,
+    "green": "51/57",
+    "max_dd": 25937,
+    "worst_month": -19982,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": 384.4,
+      "net": 93794
+     },
+     "2022": {
+      "n": 575,
+      "npt": 323.2,
+      "net": 185856
+     },
+     "2023": {
+      "n": 626,
+      "npt": 347.2,
+      "net": 217364
+     },
+     "2024": {
+      "n": 640,
+      "npt": 177.2,
+      "net": 113425
+     },
+     "2025": {
+      "n": 601,
+      "npt": 240.7,
+      "net": 144669
+     },
+     "2026": {
+      "n": 157,
+      "npt": -21.3,
+      "net": -3340
+     }
+    },
+    "why": {
+     "stop": 703,
+     "lock": 501,
+     "time": 1555,
+     "sq": 84,
+     "eod": 0
+    },
+    "roll_change_pct": 68.6,
+    "roll_change_npt": 340.6,
+    "no_change_npt": 98.2,
+    "expiry_trades": 124,
+    "expiry_npt": 46.6,
+    "twin_mean_npt": -189.7,
+    "twin_sd_npt": 18.4,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P1a-fixed-contract": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "fixed",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2826,
+    "days": 983,
+    "per_day": 2.87,
+    "win": 42.5,
+    "npt": -64.6,
+    "net": -182581,
+    "pf": 0.85,
+    "green": "17/57",
+    "max_dd": 187146,
+    "worst_month": -23425,
+    "worst_month_at": "2022-04",
+    "years": {
+     "2021": {
+      "n": 242,
+      "npt": -26.7,
+      "net": -6473
+     },
+     "2022": {
+      "n": 570,
+      "npt": -72.5,
+      "net": -41351
+     },
+     "2023": {
+      "n": 620,
+      "npt": -38.0,
+      "net": -23537
+     },
+     "2024": {
+      "n": 639,
+      "npt": -41.4,
+      "net": -26427
+     },
+     "2025": {
+      "n": 599,
+      "npt": -81.6,
+      "net": -48891
+     },
+     "2026": {
+      "n": 156,
+      "npt": -230.1,
+      "net": -35901
+     }
+    },
+    "why": {
+     "stop": 653,
+     "lock": 127,
+     "time": 1943,
+     "sq": 103,
+     "eod": 0
+    },
+    "roll_change_pct": 68.7,
+    "roll_change_npt": -140.0,
+    "no_change_npt": 101.1,
+    "expiry_trades": 124,
+    "expiry_npt": 30.4,
+    "twin_mean_npt": -107.7,
+    "twin_sd_npt": 16.4,
+    "p": 0.0066
+   },
+   "q": 0.0078
+  },
+  "P1b-0915-contract": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "k915",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2647,
+    "days": 947,
+    "per_day": 2.8,
+    "win": 42.3,
+    "npt": -109.0,
+    "net": -288534,
+    "pf": 0.73,
+    "green": "16/57",
+    "max_dd": 301831,
+    "worst_month": -18691,
+    "worst_month_at": "2022-04",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": -205.5,
+      "net": -50147
+     },
+     "2022": {
+      "n": 575,
+      "npt": -122.2,
+      "net": -70241
+     },
+     "2023": {
+      "n": 560,
+      "npt": -109.4,
+      "net": -61253
+     },
+     "2024": {
+      "n": 570,
+      "npt": -71.1,
+      "net": -40528
+     },
+     "2025": {
+      "n": 534,
+      "npt": -102.3,
+      "net": -54620
+     },
+     "2026": {
+      "n": 164,
+      "npt": -71.6,
+      "net": -11745
+     }
+    },
+    "why": {
+     "stop": 628,
+     "lock": 106,
+     "time": 1810,
+     "sq": 103,
+     "eod": 0
+    },
+    "roll_change_pct": 57.4,
+    "roll_change_npt": -112.5,
+    "no_change_npt": -104.3,
+    "expiry_trades": 127,
+    "expiry_npt": -32.5,
+    "twin_mean_npt": -181.8,
+    "twin_sd_npt": 17.1,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P2-gap-fills": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {
+     "gap": true,
+     "prev_lock": true
+    },
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2833,
+    "days": 983,
+    "per_day": 2.88,
+    "win": 55.3,
+    "npt": 132.8,
+    "net": 376306,
+    "pf": 1.34,
+    "green": "43/57",
+    "max_dd": 28511,
+    "worst_month": -21323,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 242,
+      "npt": 207.9,
+      "net": 50320
+     },
+     "2022": {
+      "n": 573,
+      "npt": 207.6,
+      "net": 118938
+     },
+     "2023": {
+      "n": 621,
+      "npt": 162.4,
+      "net": 100821
+     },
+     "2024": {
+      "n": 640,
+      "npt": 55.0,
+      "net": 35187
+     },
+     "2025": {
+      "n": 600,
+      "npt": 141.7,
+      "net": 85046
+     },
+     "2026": {
+      "n": 157,
+      "npt": -89.2,
+      "net": -14006
+     }
+    },
+    "why": {
+     "stop": 703,
+     "lock": 399,
+     "time": 1634,
+     "sq": 97,
+     "eod": 0
+    },
+    "roll_change_pct": 69.1,
+    "roll_change_npt": 162.7,
+    "no_change_npt": 65.9,
+    "expiry_trades": 124,
+    "expiry_npt": -76.7,
+    "twin_mean_npt": -256.0,
+    "twin_sd_npt": 16.4,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P3a-15min": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2856,
+    "days": 983,
+    "per_day": 2.91,
+    "win": 58.5,
+    "npt": 240.0,
+    "net": 685299,
+    "pf": 1.65,
+    "green": "52/57",
+    "max_dd": 24814,
+    "worst_month": -17267,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": 330.7,
+      "net": 80699
+     },
+     "2022": {
+      "n": 578,
+      "npt": 330.1,
+      "net": 190772
+     },
+     "2023": {
+      "n": 629,
+      "npt": 306.9,
+      "net": 193056
+     },
+     "2024": {
+      "n": 641,
+      "npt": 151.7,
+      "net": 97252
+     },
+     "2025": {
+      "n": 605,
+      "npt": 189.8,
+      "net": 114833
+     },
+     "2026": {
+      "n": 159,
+      "npt": 54.6,
+      "net": 8687
+     }
+    },
+    "why": {
+     "stop": 706,
+     "lock": 503,
+     "time": 1573,
+     "sq": 74,
+     "eod": 0
+    },
+    "roll_change_pct": 64.7,
+    "roll_change_npt": 326.4,
+    "no_change_npt": 81.2,
+    "expiry_trades": 124,
+    "expiry_npt": 55.2,
+    "twin_mean_npt": -172.8,
+    "twin_sd_npt": 18.4,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P3b-20min-checked": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {
+     "checked": 4,
+     "exit_at": 3
+    },
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2843,
+    "days": 983,
+    "per_day": 2.89,
+    "win": 59.6,
+    "npt": 261.8,
+    "net": 744188,
+    "pf": 1.69,
+    "green": "53/57",
+    "max_dd": 27530,
+    "worst_month": -21575,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": 392.7,
+      "net": 95830
+     },
+     "2022": {
+      "n": 575,
+      "npt": 320.8,
+      "net": 184441
+     },
+     "2023": {
+      "n": 626,
+      "npt": 344.0,
+      "net": 215352
+     },
+     "2024": {
+      "n": 640,
+      "npt": 164.6,
+      "net": 105321
+     },
+     "2025": {
+      "n": 601,
+      "npt": 246.6,
+      "net": 148218
+     },
+     "2026": {
+      "n": 157,
+      "npt": -31.7,
+      "net": -4975
+     }
+    },
+    "why": {
+     "stop": 752,
+     "lock": 539,
+     "time": 1468,
+     "sq": 84,
+     "eod": 0
+    },
+    "roll_change_pct": 68.6,
+    "roll_change_npt": 337.8,
+    "no_change_npt": 95.8,
+    "expiry_trades": 124,
+    "expiry_npt": 49.3,
+    "twin_mean_npt": -199.4,
+    "twin_sd_npt": 18.7,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P4-week-only": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1362,
+    "days": 824,
+    "per_day": 1.65,
+    "win": 57.5,
+    "npt": 302.9,
+    "net": 412518,
+    "pf": 1.87,
+    "green": "53/57",
+    "max_dd": 14220,
+    "worst_month": -9820,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 114,
+      "npt": 419.9,
+      "net": 47864
+     },
+     "2022": {
+      "n": 277,
+      "npt": 364.0,
+      "net": 100828
+     },
+     "2023": {
+      "n": 298,
+      "npt": 463.9,
+      "net": 138233
+     },
+     "2024": {
+      "n": 305,
+      "npt": 192.1,
+      "net": 58586
+     },
+     "2025": {
+      "n": 292,
+      "npt": 204.4,
+      "net": 59677
+     },
+     "2026": {
+      "n": 76,
+      "npt": 96.5,
+      "net": 7331
+     }
+    },
+    "why": {
+     "stop": 447,
+     "lock": 402,
+     "time": 481,
+     "sq": 32,
+     "eod": 0
+    },
+    "roll_change_pct": 65.5,
+    "roll_change_npt": 443.6,
+    "no_change_npt": 35.7,
+    "expiry_trades": 105,
+    "expiry_npt": 62.7,
+    "twin_mean_npt": -172.0,
+    "twin_sd_npt": 24.6,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P5-costs-slip0": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "dated",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2843,
+    "days": 983,
+    "per_day": 2.89,
+    "win": 60.6,
+    "npt": 288.1,
+    "net": 819132,
+    "pf": 1.79,
+    "green": "54/57",
+    "max_dd": 25971,
+    "worst_month": -19921,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": 413.6,
+      "net": 100916
+     },
+     "2022": {
+      "n": 575,
+      "npt": 346.9,
+      "net": 199440
+     },
+     "2023": {
+      "n": 626,
+      "npt": 377.7,
+      "net": 236425
+     },
+     "2024": {
+      "n": 640,
+      "npt": 198.8,
+      "net": 127203
+     },
+     "2025": {
+      "n": 601,
+      "npt": 261.3,
+      "net": 157037
+     },
+     "2026": {
+      "n": 157,
+      "npt": -12.0,
+      "net": -1889
+     }
+    },
+    "why": {
+     "stop": 703,
+     "lock": 501,
+     "time": 1555,
+     "sq": 84,
+     "eod": 0
+    },
+    "roll_change_pct": 68.6,
+    "roll_change_npt": 362.6,
+    "no_change_npt": 125.6,
+    "expiry_trades": 124,
+    "expiry_npt": 89.3,
+    "twin_mean_npt": -165.8,
+    "twin_sd_npt": 18.4,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P5-costs-slip0.5": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "dated",
+    "slip": 0.005,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2843,
+    "days": 983,
+    "per_day": 2.89,
+    "win": 55.8,
+    "npt": 157.9,
+    "net": 448940,
+    "pf": 1.38,
+    "green": "43/57",
+    "max_dd": 40687,
+    "worst_month": -29850,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": 310.6,
+      "net": 75778
+     },
+     "2022": {
+      "n": 575,
+      "npt": 212.7,
+      "net": 122330
+     },
+     "2023": {
+      "n": 626,
+      "npt": 282.2,
+      "net": 176642
+     },
+     "2024": {
+      "n": 640,
+      "npt": 57.1,
+      "net": 36520
+     },
+     "2025": {
+      "n": 601,
+      "npt": 116.7,
+      "net": 70156
+     },
+     "2026": {
+      "n": 157,
+      "npt": -206.9,
+      "net": -32486
+     }
+    },
+    "why": {
+     "stop": 703,
+     "lock": 501,
+     "time": 1555,
+     "sq": 84,
+     "eod": 0
+    },
+    "roll_change_pct": 68.6,
+    "roll_change_npt": 223.5,
+    "no_change_npt": 14.8,
+    "expiry_trades": 124,
+    "expiry_npt": 61.7,
+    "twin_mean_npt": -295.4,
+    "twin_sd_npt": 18.4,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P5-costs-slip1": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "dated",
+    "slip": 0.01,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2843,
+    "days": 983,
+    "per_day": 2.89,
+    "win": 51.9,
+    "npt": 27.7,
+    "net": 78747,
+    "pf": 1.06,
+    "green": "29/57",
+    "max_dd": 136524,
+    "worst_month": -39780,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": 207.5,
+      "net": 50641
+     },
+     "2022": {
+      "n": 575,
+      "npt": 78.6,
+      "net": 45219
+     },
+     "2023": {
+      "n": 626,
+      "npt": 186.7,
+      "net": 116860
+     },
+     "2024": {
+      "n": 640,
+      "npt": -84.6,
+      "net": -54164
+     },
+     "2025": {
+      "n": 601,
+      "npt": -27.8,
+      "net": -16726
+     },
+     "2026": {
+      "n": 157,
+      "npt": -401.8,
+      "net": -63083
+     }
+    },
+    "why": {
+     "stop": 703,
+     "lock": 501,
+     "time": 1555,
+     "sq": 84,
+     "eod": 0
+    },
+    "roll_change_pct": 68.6,
+    "roll_change_npt": 84.3,
+    "no_change_npt": -96.0,
+    "expiry_trades": 124,
+    "expiry_npt": 34.0,
+    "twin_mean_npt": -425.0,
+    "twin_sd_npt": 18.4,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P5-hist-lots": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "hist",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2843,
+    "days": 983,
+    "per_day": 2.89,
+    "win": 58.3,
+    "npt": 157.6,
+    "net": 448192,
+    "pf": 1.57,
+    "green": "46/57",
+    "max_dd": 23112,
+    "worst_month": -17824,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 244,
+      "npt": 224.6,
+      "net": 54803
+     },
+     "2022": {
+      "n": 575,
+      "npt": 183.8,
+      "net": 105696
+     },
+     "2023": {
+      "n": 626,
+      "npt": 199.8,
+      "net": 125086
+     },
+     "2024": {
+      "n": 640,
+      "npt": 35.8,
+      "net": 22935
+     },
+     "2025": {
+      "n": 601,
+      "npt": 240.5,
+      "net": 144556
+     },
+     "2026": {
+      "n": 157,
+      "npt": -31.1,
+      "net": -4883
+     }
+    },
+    "why": {
+     "stop": 703,
+     "lock": 501,
+     "time": 1555,
+     "sq": 84,
+     "eod": 0
+    },
+    "roll_change_pct": 68.6,
+    "roll_change_npt": 208.6,
+    "no_change_npt": 46.4,
+    "expiry_trades": 124,
+    "expiry_npt": -22.5,
+    "twin_mean_npt": -163.3,
+    "twin_sd_npt": 13.7,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "P6-real-expiry": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "real",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 2719,
+    "days": 971,
+    "per_day": 2.8,
+    "win": 61.1,
+    "npt": 274.4,
+    "net": 745988,
+    "pf": 1.72,
+    "green": "53/57",
+    "max_dd": 25948,
+    "worst_month": -19993,
+    "worst_month_at": "2026-03",
+    "years": {
+     "2021": {
+      "n": 234,
+      "npt": 417.5,
+      "net": 97685
+     },
+     "2022": {
+      "n": 546,
+      "npt": 322.3,
+      "net": 175950
+     },
+     "2023": {
+      "n": 598,
+      "npt": 361.9,
+      "net": 216410
+     },
+     "2024": {
+      "n": 607,
+      "npt": 182.9,
+      "net": 111034
+     },
+     "2025": {
+      "n": 579,
+      "npt": 256.1,
+      "net": 148260
+     },
+     "2026": {
+      "n": 155,
+      "npt": -21.6,
+      "net": -3351
+     }
+    },
+    "why": {
+     "stop": 620,
+     "lock": 465,
+     "time": 1550,
+     "sq": 84,
+     "eod": 0
+    },
+    "roll_change_pct": 69.6,
+    "roll_change_npt": 346.9,
+    "no_change_npt": 108.1,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -192.5,
+    "twin_sd_npt": 19.2,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "F-a": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "roll",
+    "price": "fixed",
+    "rules": {
+     "gap": true,
+     "prev_lock": true,
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "real",
+    "cost": "dated",
+    "slip": 0.005,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1250,
+    "days": 766,
+    "per_day": 1.63,
+    "win": 36.6,
+    "npt": -169.6,
+    "net": -212053,
+    "pf": 0.6,
+    "green": "9/57",
+    "max_dd": 213921,
+    "worst_month": -11960,
+    "worst_month_at": "2026-02",
+    "years": {
+     "2021": {
+      "n": 104,
+      "npt": -74.8,
+      "net": -7784
+     },
+     "2022": {
+      "n": 251,
+      "npt": -130.3,
+      "net": -32703
+     },
+     "2023": {
+      "n": 270,
+      "npt": -93.3,
+      "net": -25197
+     },
+     "2024": {
+      "n": 279,
+      "npt": -196.4,
+      "net": -54794
+     },
+     "2025": {
+      "n": 272,
+      "npt": -225.7,
+      "net": -61396
+     },
+     "2026": {
+      "n": 74,
+      "npt": -407.8,
+      "net": -30178
+     }
+    },
+    "why": {
+     "stop": 415,
+     "lock": 36,
+     "time": 757,
+     "sq": 42,
+     "eod": 0
+    },
+    "roll_change_pct": 64.6,
+    "roll_change_npt": -233.0,
+    "no_change_npt": -53.7,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -163.9,
+    "twin_sd_npt": 23.1,
+    "p": 0.588
+   },
+   "q": 0.6189
+  },
+  "F-b": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "k915",
+    "price": "roll",
+    "rules": {
+     "gap": true,
+     "prev_lock": true,
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "real",
+    "cost": "dated",
+    "slip": 0.005,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1125,
+    "days": 720,
+    "per_day": 1.56,
+    "win": 38.4,
+    "npt": -149.4,
+    "net": -168079,
+    "pf": 0.59,
+    "green": "12/57",
+    "max_dd": 173368,
+    "worst_month": -11389,
+    "worst_month_at": "2024-06",
+    "years": {
+     "2021": {
+      "n": 106,
+      "npt": -266.1,
+      "net": -28202
+     },
+     "2022": {
+      "n": 251,
+      "npt": -111.8,
+      "net": -28061
+     },
+     "2023": {
+      "n": 245,
+      "npt": -113.7,
+      "net": -27845
+     },
+     "2024": {
+      "n": 234,
+      "npt": -135.0,
+      "net": -31596
+     },
+     "2025": {
+      "n": 221,
+      "npt": -178.7,
+      "net": -39493
+     },
+     "2026": {
+      "n": 68,
+      "npt": -189.5,
+      "net": -12883
+     }
+    },
+    "why": {
+     "stop": 381,
+     "lock": 28,
+     "time": 681,
+     "sq": 35,
+     "eod": 0
+    },
+    "roll_change_pct": 50.6,
+    "roll_change_npt": -154.1,
+    "no_change_npt": -144.6,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -212.4,
+    "twin_sd_npt": 22.4,
+    "p": 0.0066
+   },
+   "q": 0.0078
+  },
+  "F-a-slip1": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "roll",
+    "price": "fixed",
+    "rules": {
+     "gap": true,
+     "prev_lock": true,
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "real",
+    "cost": "dated",
+    "slip": 0.01,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1250,
+    "days": 766,
+    "per_day": 1.63,
+    "win": 33.4,
+    "npt": -252.6,
+    "net": -315740,
+    "pf": 0.48,
+    "green": "5/57",
+    "max_dd": 316500,
+    "worst_month": -14423,
+    "worst_month_at": "2026-02",
+    "years": {
+     "2021": {
+      "n": 104,
+      "npt": -140.0,
+      "net": -14563
+     },
+     "2022": {
+      "n": 251,
+      "npt": -218.1,
+      "net": -54748
+     },
+     "2023": {
+      "n": 270,
+      "npt": -150.6,
+      "net": -40664
+     },
+     "2024": {
+      "n": 279,
+      "npt": -288.1,
+      "net": -80371
+     },
+     "2025": {
+      "n": 272,
+      "npt": -315.4,
+      "net": -85780
+     },
+     "2026": {
+      "n": 74,
+      "npt": -535.3,
+      "net": -39614
+     }
+    },
+    "why": {
+     "stop": 415,
+     "lock": 36,
+     "time": 757,
+     "sq": 42,
+     "eod": 0
+    },
+    "roll_change_pct": 64.6,
+    "roll_change_npt": -319.3,
+    "no_change_npt": -130.7,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -248.2,
+    "twin_sd_npt": 23.1,
+    "p": 0.5748
+   },
+   "q": 0.6189
+  },
+  "F-b-slip1": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "k915",
+    "price": "roll",
+    "rules": {
+     "gap": true,
+     "prev_lock": true,
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "real",
+    "cost": "dated",
+    "slip": 0.01,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1125,
+    "days": 720,
+    "per_day": 1.56,
+    "win": 34.5,
+    "npt": -227.2,
+    "net": -255568,
+    "pf": 0.44,
+    "green": "2/57",
+    "max_dd": 258577,
+    "worst_month": -13296,
+    "worst_month_at": "2024-06",
+    "years": {
+     "2021": {
+      "n": 106,
+      "npt": -329.8,
+      "net": -34956
+     },
+     "2022": {
+      "n": 251,
+      "npt": -193.5,
+      "net": -48574
+     },
+     "2023": {
+      "n": 245,
+      "npt": -169.1,
+      "net": -41418
+     },
+     "2024": {
+      "n": 234,
+      "npt": -221.4,
+      "net": -51813
+     },
+     "2025": {
+      "n": 221,
+      "npt": -263.9,
+      "net": -58320
+     },
+     "2026": {
+      "n": 68,
+      "npt": -301.3,
+      "net": -20487
+     }
+    },
+    "why": {
+     "stop": 381,
+     "lock": 28,
+     "time": 681,
+     "sq": 35,
+     "eod": 0
+    },
+    "roll_change_pct": 50.6,
+    "roll_change_npt": -237.9,
+    "no_change_npt": -216.2,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -293.9,
+    "twin_sd_npt": 22.4,
+    "p": 0.0066
+   },
+   "q": 0.0078
+  },
+  "F-a-hist-lots": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "roll",
+    "price": "fixed",
+    "rules": {
+     "gap": true,
+     "prev_lock": true,
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "real",
+    "cost": "dated",
+    "slip": 0.005,
+    "lot": "hist",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1250,
+    "days": 766,
+    "per_day": 1.63,
+    "win": 35.7,
+    "npt": -143.1,
+    "net": -178869,
+    "pf": 0.55,
+    "green": "7/57",
+    "max_dd": 179973,
+    "worst_month": -11124,
+    "worst_month_at": "2025-06",
+    "years": {
+     "2021": {
+      "n": 104,
+      "npt": -65.6,
+      "net": -6826
+     },
+     "2022": {
+      "n": 251,
+      "npt": -102.6,
+      "net": -25751
+     },
+     "2023": {
+      "n": 270,
+      "npt": -77.9,
+      "net": -21046
+     },
+     "2024": {
+      "n": 279,
+      "npt": -133.3,
+      "net": -37181
+     },
+     "2025": {
+      "n": 272,
+      "npt": -225.9,
+      "net": -61445
+     },
+     "2026": {
+      "n": 74,
+      "npt": -359.7,
+      "net": -26620
+     }
+    },
+    "why": {
+     "stop": 415,
+     "lock": 36,
+     "time": 757,
+     "sq": 42,
+     "eod": 0
+    },
+    "roll_change_pct": 64.6,
+    "roll_change_npt": -193.2,
+    "no_change_npt": -51.5,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -131.3,
+    "twin_sd_npt": 17.4,
+    "p": 0.7508
+   },
+   "q": 0.7508
+  },
+  "F-b-hist-lots": {
+   "v": {
+    "und": "NIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "k915",
+    "price": "roll",
+    "rules": {
+     "gap": true,
+     "prev_lock": true,
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "real",
+    "cost": "dated",
+    "slip": 0.005,
+    "lot": "hist",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1125,
+    "days": 720,
+    "per_day": 1.56,
+    "win": 36.4,
+    "npt": -120.8,
+    "net": -135914,
+    "pf": 0.54,
+    "green": "9/57",
+    "max_dd": 140029,
+    "worst_month": -7446,
+    "worst_month_at": "2026-01",
+    "years": {
+     "2021": {
+      "n": 106,
+      "npt": -193.1,
+      "net": -20469
+     },
+     "2022": {
+      "n": 251,
+      "npt": -90.3,
+      "net": -22656
+     },
+     "2023": {
+      "n": 245,
+      "npt": -91.5,
+      "net": -22418
+     },
+     "2024": {
+      "n": 234,
+      "npt": -82.4,
+      "net": -19285
+     },
+     "2025": {
+      "n": 221,
+      "npt": -178.7,
+      "net": -39493
+     },
+     "2026": {
+      "n": 68,
+      "npt": -170.5,
+      "net": -11593
+     }
+    },
+    "why": {
+     "stop": 381,
+     "lock": 28,
+     "time": 681,
+     "sq": 35,
+     "eod": 0
+    },
+    "roll_change_pct": 50.6,
+    "roll_change_npt": -123.5,
+    "no_change_npt": -118.0,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -165.3,
+    "twin_sd_npt": 16.6,
+    "p": 0.0066
+   },
+   "q": 0.0078
+  },
+  "BN-T0": {
+   "v": {
+    "und": "BANKNIFTY",
+    "series": [
+     "WEEK",
+     "MONTH"
+    ],
+    "signal": "roll",
+    "price": "roll",
+    "rules": {},
+    "expiry": "theirs",
+    "cost": "flat95",
+    "slip": 0.0,
+    "lot": "75",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 3066,
+    "days": 1018,
+    "per_day": 3.01,
+    "win": 55.1,
+    "npt": 237.0,
+    "net": 726667,
+    "pf": 1.25,
+    "green": "39/57",
+    "max_dd": 139428,
+    "worst_month": -47625,
+    "worst_month_at": "2023-02",
+    "years": {
+     "2021": {
+      "n": 273,
+      "npt": -161.0,
+      "net": -43960
+     },
+     "2022": {
+      "n": 625,
+      "npt": 174.6,
+      "net": 109118
+     },
+     "2023": {
+      "n": 632,
+      "npt": 602.7,
+      "net": 380892
+     },
+     "2024": {
+      "n": 662,
+      "npt": 97.7,
+      "net": 64652
+     },
+     "2025": {
+      "n": 684,
+      "npt": 357.9,
+      "net": 244829
+     },
+     "2026": {
+      "n": 190,
+      "npt": -151.9,
+      "net": -28863
+     }
+    },
+    "why": {
+     "stop": 696,
+     "lock": 259,
+     "time": 1993,
+     "sq": 118,
+     "eod": 0
+    },
+    "roll_change_pct": 79.1,
+    "roll_change_npt": 238.7,
+    "no_change_npt": 230.7,
+    "expiry_trades": 137,
+    "expiry_npt": 215.0,
+    "twin_mean_npt": -427.6,
+    "twin_sd_npt": 37.9,
+    "p": 0.0033
+   },
+   "q": 0.0055
+  },
+  "BN-F-a": {
+   "v": {
+    "und": "BANKNIFTY",
+    "series": [
+     "WEEK"
+    ],
+    "signal": "roll",
+    "price": "fixed",
+    "rules": {
+     "gap": true,
+     "prev_lock": true,
+     "checked": 3,
+     "exit_at": 2
+    },
+    "expiry": "real",
+    "cost": "dated",
+    "slip": 0.005,
+    "lot": "hist",
+    "boll": "cont",
+    "ddof": 0
+   },
+   "m": {
+    "trades": 1405,
+    "days": 844,
+    "per_day": 1.66,
+    "win": 37.9,
+    "npt": -123.8,
+    "net": -173919,
+    "pf": 0.7,
+    "green": "10/57",
+    "max_dd": 199288,
+    "worst_month": -23379,
+    "worst_month_at": "2026-02",
+    "years": {
+     "2021": {
+      "n": 118,
+      "npt": -48.0,
+      "net": -5667
+     },
+     "2022": {
+      "n": 270,
+      "npt": -108.8,
+      "net": -29372
+     },
+     "2023": {
+      "n": 277,
+      "npt": -137.3,
+      "net": -38028
+     },
+     "2024": {
+      "n": 307,
+      "npt": -125.9,
+      "net": -38657
+     },
+     "2025": {
+      "n": 339,
+      "npt": -117.2,
+      "net": -39743
+     },
+     "2026": {
+      "n": 94,
+      "npt": -238.9,
+      "net": -22454
+     }
+    },
+    "why": {
+     "stop": 356,
+     "lock": 36,
+     "time": 974,
+     "sq": 39,
+     "eod": 0
+    },
+    "roll_change_pct": 74.9,
+    "roll_change_npt": -138.5,
+    "no_change_npt": -79.8,
+    "expiry_trades": 0,
+    "expiry_npt": null,
+    "twin_mean_npt": -181.7,
+    "twin_sd_npt": 20.1,
+    "p": 0.0066
+   },
+   "q": 0.0078
+  }
+ },
+ "gates": {
+  "F-a": {
+   "G1_design_npt_pos": false,
+   "G2_years_pos": "0/5",
+   "G2": false,
+   "G3_q": 0.6189,
+   "G3": false,
+   "G5_slip1_pos": false,
+   "survives": false
+  },
+  "F-b": {
+   "G1_design_npt_pos": false,
+   "G2_years_pos": "0/5",
+   "G2": false,
+   "G3_q": 0.0078,
+   "G3": true,
+   "G5_slip1_pos": false,
+   "survives": false
+  }
+ },
+ "lookahead": {
+  "sessions": 200,
+  "prefixes": 14748,
+  "mismatches": 0,
+  "ok": true
+ }
+}

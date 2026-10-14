@@ -1,0 +1,29 @@
+id: r45-bn-t0
+title: 'Premium scalp audit BN-T0: T0 on BANKNIFTY (lot 75 as their code)'
+hypothesis: The claimed NIFTY premium mean-reversion scalp (+Rs 174/trade, 3,726 trades) survives this pre-registered fix.
+instruments:
+- BANKNIFTY
+features:
+- 5-minute ATM call premium
+- Bollinger(20, 2) lower band
+model_or_rule: T0 on BANKNIFTY (lot 75 as their code)
+variants_tried: 1
+results:
+  summary: Design 3066 trades, win 55.1%, Rs +237.0/trade, net Rs +726,667, PF 1.25, green months 39/57, max DD Rs 139,428,
+    worst month Rs -47,625; by year 2021 -161 (n 273), 2022 +175 (n 625), 2023 +603 (n 632), 2024 +98 (n 662), 2025 +358 (n
+    684), 2026 -152 (n 190); random-entry twins Rs -427.6/trade, p 0.0033, BH q 0.0055 (family 20). Holdout 278 trades, Rs
+    +162.9/trade, PF 1.17. The rolling ATM strike moved during 79.1% of the trades.
+  costs: Rs 95/trade (T0) or research/obuy Costs('dated') with 0 / 0.5 / 1% slippage a side, as named
+holdout_read: true
+verdict: rejected
+notes: 'SIGNAL SOURCE: the option''s own price chart (not the default kind of rule; only Boss can switch it on for paper).'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R45_PREMIUM_SCALP_AUDIT.md
+data_version: Drive lake gdrive:IraAlgo-data-lake/options_rolling_1m, opt_{NIFTY,BANKNIFTY}_{WEEK,MONTH}_2021-2026 (1-minute
+  rolling ATM+-10, Aug 2021 - 13 Oct 2026)
+period:
+  design: sessions Aug 2021 - 13 Apr 2026 (each year its own out-of-sample block; nothing fitted)
+  holdout: 27 Apr - 13 Oct 2026, read once (14-26 Apr embargo)
+prereg: research/hunt/r45/PREREG.md
+settings: research/hunt/r45/r45cfg.py
