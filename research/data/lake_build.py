@@ -248,6 +248,11 @@ def build_opt(raw, out, sub="opt"):
             df, dropped = clean(df, calendar(raw, "SENSEX" if und in ("SENSEX", "BANKEX") else "NIFTY"),
                                 (9 * 60 + 15, 15 * 60 + 29))
         df, dup = dedupe(df, ["offset", "side"])
+        sq = f"{os.path.dirname(d)}/seed_qa.json"  # chunks seeded from published files (lake_fetch --only-missing)
+        if os.path.exists(sq):
+            sq = json.load(open(sq))
+            dropped = {k: dropped.get(k, 0) + sq["rows_dropped"].get(k, 0) for k in {*dropped, *sq["rows_dropped"]}}
+            dup = {k: dup.get(k, 0) + sq["duplicates_dropped"].get(k, 0) for k in {*dup, *sq["duplicates_dropped"]}}
         groups = df.groupby(df.ts.dt.year) if sub == "opt" else [(None, df)]
         for y, g in groups:
             g = g.reset_index(drop=True)

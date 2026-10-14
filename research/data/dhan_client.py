@@ -18,18 +18,27 @@ def redact(s):
 
 class Pacer:
     """Global minimum gap between requests across threads. After many requests in a row that ended
-    rate-limited (e.g. a daily cap), every thread pauses for BREAK_S before trying again."""
-    BREAK_N, BREAK_S = 25, 600
+    rate-limited (e.g. HTTP 429 DH-904 for hours), every thread pauses before trying again: BREAK_S, then twice
+    as long each time it happens again (up to BREAK_MAX), until a request gets through (ok())."""
+    BREAK_N, BREAK_S, BREAK_MAX = 25, 600, 3600
 
     def __init__(self, gap):
         self.gap, self.t, self.lock = gap, 0.0, threading.Lock()
-        self.limited = 0
+        self.limited, self.breaks = 0, 0
 
-    def wait(self):
+    def pause_s(self):
+        return min(self.BREAK_MAX, self.BREAK_S * 2 ** self.breaks)
+
+    def ok(self):
+        self.limited, self.breaks = 0, 0
+
+    def wait(self, sleep=time.sleep):
         with self.lock:
             if self.limited >= self.BREAK_N:
-                print(f"rate limited {self.limited} times in a row; pausing {self.BREAK_S}s", flush=True)
-                time.sleep(self.BREAK_S)
+                p = self.pause_s()
+                print(f"rate limited {self.limited} times in a row; pausing {p}s", flush=True)
+                sleep(p)
+                self.breaks += 1
                 self.limited = self.BREAK_N // 2
             w = self.t + self.gap - time.time()
             if w > 0:
@@ -66,7 +75,7 @@ def post(path, body, retries=6):
             err = f"HTTP {r.status_code} {(js or {}).get('errorCode', '') if isinstance(js, dict) else ''}"
             time.sleep(min(60, 3 * 2 ** a))
             continue
-        PACE.limited = 0
+        PACE.ok()
         if not r.ok:
             e = {k: js.get(k) for k in ("errorCode", "errorType", "errorMessage")} if isinstance(js, dict) else (r.text[:200])
             return r.status_code, js, redact(f"HTTP {r.status_code} {e}")[:300]
