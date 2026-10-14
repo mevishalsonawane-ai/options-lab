@@ -315,7 +315,8 @@ object NightArm {
         b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
         runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${NightRules.LABEL} bought ${c.symbol} · Paper",
             "Bought ${fill.quantity} @ %.2f on a strong close (%s). Sells at 09:16 next session. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts), "almanac") }
-        return "${d.why} ${c.symbol} @ %.2f ($facts)".format(Locale.ENGLISH, fill.price)
+        // Text goes in as %s arguments (14 Oct: [facts] always holds a "%" - "day +1.20%" - and broke this line on every buy).
+        return "%s %s @ %.2f (%s)".format(Locale.ENGLISH, d.why, c.symbol, fill.price, facts)
     }
 
     /**

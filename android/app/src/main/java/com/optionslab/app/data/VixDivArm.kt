@@ -377,9 +377,9 @@ object VixDivArm {
 
     private fun closed(b: Book, p: Pos) {
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
-        note(b, "${p.symbol}: sold (${p.why}) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)))
+        note(b, "%s: sold (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0), Notifier.SELL, "${VixDivRules.LABEL} sold ${p.symbol} · Paper",
-            "Sold (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
+            "Sold (%s) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
     }
 
     /** For tests: the book forgotten (its file goes with the test's directory). */

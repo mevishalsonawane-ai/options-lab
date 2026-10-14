@@ -426,7 +426,7 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {},
                         val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs((t.grossPnl ?: 0.0) - t.charges)}"
                         // Liquidity 15+5's quantity said (its size can be 1-3 lots); the rupees are the trade's own at that quantity.
                         val qty = if (a.arm.liquidity) " ×${t.qty}" else ""
-                        val line = "%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right}$qty @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute)
+                        val line = "%02d:%02d".format(t.entryTime.hour, t.entryTime.minute) + " ${if (t.live) "LIVE" else "paper"} BUY ${t.right}$qty @ ${px(t.entry)} → $tail"  // no text in a format string (14 Oct)
                         if (replayable(a, t)) Text(line, style = small.copy(color = p.verdigris),
                             modifier = Modifier.heightIn(min = 48.dp).clickable(onClickLabel = "Replay this trade") { replaying = t }.padding(vertical = 4.dp))
                         else Text(line, style = small)

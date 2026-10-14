@@ -1097,7 +1097,7 @@ object Tasks {
                 fired += tag
                 Alarms.markFired(a.id, System.currentTimeMillis())
                 Notifier.post(context, 4000 + (a.id % 1000).toInt(), Notifier.RISK, "Alarm: ${a.describe()}",
-                    "${a.symbol} is at %,.2f.${if (a.note.isNotBlank()) " ${a.note}" else ""}".format(price), "alarms")
+                    "%s is at %,.2f.%s".format(a.symbol, price, if (a.note.isNotBlank()) " ${a.note}" else ""), "alarms")  // a typed note may hold a "%" (14 Oct)
             }
         }
     }

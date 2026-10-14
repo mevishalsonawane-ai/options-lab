@@ -273,7 +273,7 @@ object HeroRules {
     /** "signal 13:46 · bid 3.95 ×1,300 / ask 4.05 ×650 · spread 0.10 (2.5%)", or the last price alone. */
     fun seenLine(s: Seen): String {
         val l = java.util.Locale.ENGLISH
-        val head = "${s.what} %02d:%02d".format(l, s.at.hour, s.at.minute)
+        val head = "%s %02d:%02d".format(l, s.what, s.at.hour, s.at.minute)
         val sp = s.spread ?: return "$head · LTP ${s.ltp?.let { "%.2f".format(l, it) } ?: "-"} only (no depth in the feed)"
         fun q(x: Long?) = x?.takeIf { it > 0 }?.let { " ×%,d".format(l, it) } ?: ""
         val mid = (s.bid!! + s.ask!!) / 2

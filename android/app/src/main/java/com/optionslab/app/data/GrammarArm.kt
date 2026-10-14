@@ -285,7 +285,7 @@ object GrammarArm {
         val v = _view.value
         val act = v.active
         return "$LABEL: ${act.size} of ${GrammarPaper.MAX_HOSTED} on paper" + act.joinToString("") { iv ->
-            " · ${iv.idea.id} ${iv.nets.size} trades %,.0f".format(Locale.ENGLISH, iv.nets.sum()) + (if (iv.open != null) " (holding)" else "")
+            " · %s %d trades %,.0f".format(Locale.ENGLISH, iv.idea.id, iv.nets.size, iv.nets.sum()) + (if (iv.open != null) " (holding)" else "")
         } + (v.ideas.count { !it.idea.active }.takeIf { it > 0 }?.let { " · $it stopped" } ?: "")
     }
 
