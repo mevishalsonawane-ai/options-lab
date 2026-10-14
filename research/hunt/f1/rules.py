@@ -173,8 +173,10 @@ def metrics(T: pd.DataFrame, days: list, twin_tot: np.ndarray | None = None) -> 
 
 def period_days(X: pd.DataFrame, rule: dict, lo: date | None = None, hi: date | None = None) -> list:
     d = X[X.und.isin(rule["scope"])].day
-    d = d[(d.dt.date >= lo) if lo else True]
-    d = d[(d.dt.date <= hi) if hi else True]
+    if lo is not None:
+        d = d[d.dt.date >= lo]
+    if hi is not None:
+        d = d[d.dt.date <= hi]
     return sorted(d.unique())
 
 

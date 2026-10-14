@@ -229,3 +229,11 @@ def test_breadth_point_in_time_and_shares():
     B2 = BR.compute(cut).set_index("ts")
     common = B2.index
     pd.testing.assert_frame_equal(B.loc[common], B2, check_dtype=False)
+
+
+def test_period_days_with_and_without_bounds():
+    X = _X(10)
+    r = dict(scope=["NIFTY"])
+    assert len(RU.period_days(X, r)) == 10
+    assert len(RU.period_days(X, r, date(2025, 1, 3), date(2025, 1, 5))) == 3
+    assert RU.period_days(X, dict(scope=["SENSEX"])) == []

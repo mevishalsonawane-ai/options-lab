@@ -84,10 +84,11 @@ def main():
             summ_ += f" HOLDOUT: {m_line(h['holdout'])}, BH q {h['q_bh']:.3f}; {'PASSED' if h['gate']['pass'] else 'FAILED'}."
         out.append(dict(
             id=f"f1-{r['id'].lower()}", title=f"F1 rule {r['id']}: {r['name']}"[:200], family=family_of(r),
+            **{k: v for k, v in base.items() if k != "instruments"}, instruments=list(r["scope"]),
             hypothesis=("Boss's classic indicator stack picks better option-buying entries than random minutes."
                         if r["kind"] == "classic" else
                         f"The screen survivor ({r.get('screen_scope')}, {r.get('target')}, selection IC "
-                        f"{r.get('ic_sel', 0):+.3f}) turns into option-buying profit after costs."), **base,
+                        f"{r.get('ic_sel', 0):+.3f}) turns into option-buying profit after costs."),
             period=dict(design=DESIGN, holdout=HOLD) if h else dict(design=DESIGN),
             features=[r.get("feature") or "c5_ema9_21_spread_pct, c5_supertrend_dir, ovwap_dist_pct, bu_writing_bias_15m"],
             model_or_rule=f"{r['name']}; 1-ITM, exit {r['exit']} (stop -15%, lock +Rs1,000 keep Rs 500 / trail Rs 500"
