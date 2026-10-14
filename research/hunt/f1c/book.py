@@ -121,7 +121,11 @@ def summary(B: pd.DataFrame, days_traded_span: int, account: float = C.ACCOUNT) 
     lock_exits = B.reason == 1
     cut = lock_exits & (B.after_r >= 2.0)
     eq = by_day.cumsum()
-    return dict(trades=int(len(B)), trades_per_day=len(B) / max(days_traded_span, 1), win_rate=float((B.net > 0).mean()),
+    if {"entry", "exit"} <= set(B.columns) and B.entry.notna().all():   # perps: the move caught before costs, bps
+        edge = float((B.side * (B.exit / B.entry - 1)).mean() * 1e4)
+    else:                          # options: exit fill vs the entry mid (after the exit's half spread and slippage), bps
+        edge = float(((B.sell / B.mid - 1)).mean() * 1e4) if {"sell", "mid"} <= set(B.columns) else np.nan
+    return dict(trades=int(len(B)), edge_bps=edge, trades_per_day=len(B) / max(days_traded_span, 1), win_rate=float((B.net > 0).mean()),
                 avg_win=float(wins.mean()) if len(wins) else 0.0, avg_loss=float(losses.mean()) if len(losses) else 0.0,
                 net_pre_tax=float(B.net.sum()), tax_a=float(B.tax_a.sum()), net_a=float(B.net_a.sum()),
                 net_b=float(B.net.sum() - tax_b(B)), per_day_a=float(B.net_a.sum() / max(days_traded_span, 1)),

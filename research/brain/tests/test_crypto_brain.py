@@ -425,3 +425,12 @@ def test_truncated_ema_matches_a_direct_window_and_skips_gaps():
     z[:2000] = np.nan
     tz = tema(z, span)
     assert np.isnan(tz[2003]) and np.isfinite(tz[2010])     # 4 closes = 33% of the weight: NaN; 11 = 67%: a value
+
+
+def test_options_pull_respects_the_holdout_lock():
+    inc = fetch.options_includes("2026-02", "2026-05")
+    pats = inc[1::2]
+    assert "deribit/trades/*/*/2026-03.parquet" in pats and "delta_india/candles/*/*/2026-03-*.parquet" in pats
+    assert not any("2026-04" in p or "2026-05" in p for p in pats)              # the brain's holdout is not copied
+    assert "deribit/dvol/**" in pats
+    assert any("2026-05" in p for p in fetch.options_includes("2026-02", "2026-05", allow_holdout=True)[1::2])

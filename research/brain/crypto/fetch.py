@@ -1,13 +1,16 @@
 """L1 raw: get Binance bulk-archive files into the local raw mirror (never into git).
 
     python -m research.brain.crypto.fetch sample --symbols BTCUSDT ETHUSDT --from 2025-10 --to 2026-03
-    python -m research.brain.crypto.fetch drive --remote gdrive:IraAlgo-crypto-lake --symbols BTCUSDT --from 2024-01 --to 2024-03
+    python -m research.brain.crypto.fetch drive --symbols BTCUSDT ETHUSDT SOLUSDT BNBUSDT XRPUSDT --from 2023-10 --to 2026-03
+    python -m research.brain.crypto.fetch options --from 2023-09 --to 2026-03     # Deribit trades + DVOL, Delta candles
 
 `sample` downloads straight from data.binance.vision (reachable here; api.binance.com is geo-blocked) and checks each
 file against Binance's own .CHECKSUM (sha256). `drive` copies the same months from the crypto lake on Google Drive
 with rclone (remote `gdrive`, configured by the RCLONE_CONFIG_GDRIVE_* variables), so only the months being built are
 ever on disk. Both write the archive's own layout under <cache>/crypto/raw/ (data/spot/..., data/futures/um/...),
-which is what adapters.ArchiveAdapter reads.
+which is what adapters.ArchiveAdapter reads (it also reads the lake's own monthly Parquet names). `options` copies the
+options lake (gdrive:IraAlgo-data-crypto/options: Deribit trades by month, DVOL, Delta India candles by expiry day)
+to <cache>/crypto/options, which adapters.DvolAdapter / OptionsAdapter and research/hunt/f1c read.
 
 Neither fetches a month on or after the locked holdout (config.HOLDOUT_START) unless --allow-holdout is given: design
 work must not see it.
@@ -122,21 +125,45 @@ def drive(remote: str, symbols, frm, to, root=None, allow_holdout=False) -> int:
     return subprocess.call(cmd)
 
 
+OPTIONS_REMOTE = "gdrive:IraAlgo-data-crypto/options"
+
+
+def options_includes(frm: str, to: str, allow_holdout: bool = False) -> list[str]:
+    """rclone --include patterns for the options lake: the months asked for (cut before the holdout unless allowed),
+    plus the small whole-history files (DVOL, instruments, delivery index, Delta products)."""
+    inc = []
+    for m in months(frm, to, allow_holdout):
+        inc += ["--include", f"deribit/trades/*/*/{m}.parquet", "--include", f"delta_india/candles/*/*/{m}-*.parquet"]
+    for k in ("deribit/dvol/**", "deribit/instruments/**", "deribit/index/**", "delta_india/products.parquet"):
+        inc += ["--include", k]
+    return inc
+
+
+def options(remote: str, frm: str, to: str, root=None, allow_holdout: bool = False) -> int:
+    dest = config.paths(root).options
+    dest.mkdir(parents=True, exist_ok=True)
+    cmd = ["rclone", "copy", remote, str(dest), *options_includes(frm, to, allow_holdout), "--transfers", "8"]
+    print(" ".join(cmd[:4]), f"(+{len(cmd) // 2} patterns)")
+    return subprocess.call(cmd)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m research.brain.crypto.fetch")
-    ap.add_argument("cmd", choices=["sample", "drive"])
+    ap.add_argument("cmd", choices=["sample", "drive", "options"])
     ap.add_argument("--symbols", nargs="+", default=["BTCUSDT", "ETHUSDT"])
     ap.add_argument("--from", dest="frm", required=True, help="first month, YYYY-MM")
     ap.add_argument("--to", required=True, help="last month, YYYY-MM")
     ap.add_argument("--kinds", nargs="+", default=list(KINDS), choices=list(KINDS))
-    ap.add_argument("--remote", default="gdrive:IraAlgo-crypto-lake")
+    ap.add_argument("--remote", default=None, help="default gdrive:IraAlgo-data-crypto (options: .../options)")
     ap.add_argument("--cache", default=None)
     ap.add_argument("--allow-holdout", action="store_true", help="also fetch months in the locked holdout")
     a = ap.parse_args(argv)
     if a.cmd == "sample":
         c = sample(a.symbols, a.frm, a.to, a.kinds, a.cache, a.allow_holdout)
         return 1 if c["failed"] else 0
-    return drive(a.remote, a.symbols, a.frm, a.to, a.cache, a.allow_holdout)
+    if a.cmd == "options":
+        return options(a.remote or OPTIONS_REMOTE, a.frm, a.to, a.cache, a.allow_holdout)
+    return drive(a.remote or "gdrive:IraAlgo-data-crypto", a.symbols, a.frm, a.to, a.cache, a.allow_holdout)
 
 
 if __name__ == "__main__":

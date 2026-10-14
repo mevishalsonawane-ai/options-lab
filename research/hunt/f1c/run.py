@@ -26,12 +26,12 @@ TWIN_N = 1500
 
 
 def _coin_job(args):
-    sym, part = args
+    sym, part, venue = args
     F = engine.frame(sym, part)
     mk = engine.Market(sym, part)
     out = []
     for rid, rule in RULES.items():
-        if sym not in rule.coins:
+        if sym not in rule.coins or rule.venue != venue:
             continue
         dec = rule.signal(F, mk)
         dec = dec[engine.in_window(dec.ts)].reset_index(drop=True) if len(dec) else dec
@@ -50,19 +50,22 @@ def _coin_job(args):
                 tw.to_parquet(p, index=False)
         print(f"{part} {sym} {rid} done", flush=True)
     T = pd.concat(out, ignore_index=True) if out else pd.DataFrame()
-    p = TR / part / f"trades_{sym}.parquet"
+    p = TR / part / f"trades_{sym}_{venue}.parquet"
     p.parent.mkdir(parents=True, exist_ok=True)
     T.to_parquet(p, index=False)
-    return sym, len(T), engine.design_days(F)
+    return sym, len(T)
 
 
-def simulate(part: str):
-    jobs = [(s, part) for s in C.COINS]
-    with ProcessPoolExecutor(4) as ex:
-        res = list(ex.map(_coin_job, jobs))
-    days = {s: d for s, _, d in res}
+def simulate(part: str, coins=C.COINS):
+    """Runs the coins whose trade list is not written yet (a crashed or stopped run resumes per coin)."""
+    jobs = [(s, part, v) for s in coins for v in ("option", "perp")
+            if (v == "perp" or s in C.OPTION_COINS) and not (TR / part / f"trades_{s}_{v}.parquet").exists()]
+    if jobs:
+        with ProcessPoolExecutor(min(4, len(jobs))) as ex:
+            list(ex.map(_coin_job, jobs))
+    days = {s: engine.design_days(engine.frame(s, part)) for s in coins}
     (TR / part / "days.json").write_text(json.dumps(days))
-    print(res)
+    print(days)
 
 
 def load(part: str) -> tuple[pd.DataFrame, dict]:

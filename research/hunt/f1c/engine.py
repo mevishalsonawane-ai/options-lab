@@ -122,9 +122,7 @@ def option_trades(rule: Rule, mk: Market, dec: pd.DataFrame, ex, stress: float =
             continue
         ed = (t + ONE + C.IST).date()                        # the expiry at 12:00 UTC of the entry's IST date
         key = (mk.sym, ed)
-        if key not in _DAYS:
-            if len(_DAYS) > 400:
-                _DAYS.clear()
+        if key not in _DAYS:                                 # ~1.5 MB a day: the whole design fits (about 1 GB)
             _DAYS[key] = options.Day(mk.sym, ed)
         day = _DAYS[key]
         if not day.ok:

@@ -1,0 +1,38 @@
+id: f1c-o16
+title: 'F1 crypto O16: Delta India options: P01''s VWAP stretch fade, buy the ATM call/put'
+family: mcx-crypto
+date: '2026-10-14'
+doc: research/HUNT_F1_FACTORY.md
+hypothesis: '''Delta India options: P01''s VWAP stretch fade, buy the ATM call/put'' on Delta India BTC/ETH options (BTC,
+  ETH), inside 00:00-09:00 IST with a stop-loss and a profit lock, makes money after Delta India fees + GST, slippage, funding
+  and India''s crypto tax, beats random-entry twins after BH across 80 tests, and holds walk-forward and on the holdout.'
+data_version: Crypto brain cube v3 refreshed 14 Oct 2026 from the Drive crypto lake (Binance spot, USD-M perp, mark, index,
+  funding, 5-min metrics; premium-index klines and SOL/BNB/XRP mark/index/metrics from data.binance.vision), Oct 2023 - Mar
+  2026; Deribit DVOL and option trades and Delta Exchange India 1-minute option candles from the options lake. Raw data and
+  trade lists outside git.
+period:
+  design: 2023-11-01..2025-03-31 and 2025-11-01..2026-03-31 (inside 00:00-09:00 IST only)
+  holdout: 2025-04-01..2025-09-30 (clean earlier block; read once for all 20 rules)
+instruments:
+- CRYPTO
+features:
+- vwap24_z
+model_or_rule: 'Delta India options: P01''s VWAP stretch fade, buy the ATM call/put; time limit 60 min; max 2 a day; exits:
+  s40_step, s40_trail, s25_step, s25_trail'
+settings: research/hunt/f1c/rules.py, perp.py, options.py, f1ccfg.py
+prereg: research/hunt/f1c/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Pick s40_step (best design net after tax A). Design: 954 trades (1.42 a window day), win 30%, avg win Rs +689
+    / loss Rs -611, net pre-tax Rs -208,280, after tax A Rs -277,243 (Rs -414 a day), business reading Rs -208,280; green
+    days 27% of 366, worst day Rs -4,667, max DD Rs +278,619; walk-forward by quarter Rs -283,322 (0% green); stress Rs -370,897;
+    random twins p 0.912 (BH q 1.000). Gates G1-G4: none passed. All exits: s40_step: n 954 net A Rs -277,243 twin p 0.912;
+    s40_trail: n 956 net A Rs -279,361 twin p 0.997; s25_step: n 996 net A Rs -294,074 twin p 0.990; s25_trail: n 998 net
+    A Rs -293,143 twin p 0.983.'
+  costs: 'Delta India perps: 0.05% taker + 18% GST and 0.02% (BTC/ETH) / 0.05% slippage per side, Binance funding; options:
+    min(0.01% notional, 3.5% premium) + GST, RC2 spread model, exits less 1 tick + 1%. Tax A 31.2% of each winning trade,
+    no set-off; TDS 1% of sells tracked as a cash lock. Stress: slippage x2 (options spread x1.5, fee 0.03%).'
+holdout_read: false
+verdict: rejected
+notes: One of 20 F1C rules (80 variants, one BH family). Every trade had a stop-loss and a profit lock. Research only; nothing
+  in the app trades crypto.

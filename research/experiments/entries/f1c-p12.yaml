@@ -1,0 +1,40 @@
+id: f1c-p12
+title: 'F1 crypto P12: Day-extreme 4-hour fade: close within 0.1% of the UTC day''s high (short) / low (long)'
+family: mcx-crypto
+date: '2026-10-14'
+doc: research/HUNT_F1_FACTORY.md
+hypothesis: '''Day-extreme 4-hour fade: close within 0.1% of the UTC day''s high (short) / low (long)'' on perps (BTC, ETH,
+  SOL, BNB, XRP), inside 00:00-09:00 IST with a stop-loss and a profit lock, makes money after Delta India fees + GST, slippage,
+  funding and India''s crypto tax, beats random-entry twins after BH across 80 tests, and holds walk-forward and on the holdout.'
+data_version: Crypto brain cube v3 refreshed 14 Oct 2026 from the Drive crypto lake (Binance spot, USD-M perp, mark, index,
+  funding, 5-min metrics; premium-index klines and SOL/BNB/XRP mark/index/metrics from data.binance.vision), Oct 2023 - Mar
+  2026; Deribit DVOL and option trades and Delta Exchange India 1-minute option candles from the options lake. Raw data and
+  trade lists outside git.
+period:
+  design: 2023-11-01..2025-03-31 and 2025-11-01..2026-03-31 (inside 00:00-09:00 IST only)
+  holdout: 2025-04-01..2025-09-30 (clean earlier block; read once for all 20 rules)
+instruments:
+- CRYPTO
+features:
+- day_high_dist_pct
+- day_low_dist_pct
+- atr14_1h_pct (stop size)
+model_or_rule: 'Day-extreme 4-hour fade: close within 0.1% of the UTC day''s high (short) / low (long); time limit 240 min;
+  max 1 a day; exits: s10_step, s10_trail, s15_step, s15_trail'
+settings: research/hunt/f1c/rules.py, perp.py, options.py, f1ccfg.py
+prereg: research/hunt/f1c/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Pick s15_step (best design net after tax A). Design: 3319 trades (4.95 a window day), win 43%, avg win Rs +535
+    / loss Rs -687, net pre-tax Rs -525,431, after tax A Rs -808,710 (Rs -1,207 a day), business reading Rs -525,431; green
+    days 27% of 668, worst day Rs -6,846, max DD Rs +808,710; walk-forward by quarter Rs -719,939 (0% green); stress Rs -977,542;
+    random twins p 0.917 (BH q 1.000). Gates G1-G4: none passed. All exits: s10_step: n 3319 net A Rs -1,133,115 twin p 0.780;
+    s10_trail: n 3319 net A Rs -1,131,839 twin p 0.543; s15_step: n 3319 net A Rs -808,710 twin p 0.917; s15_trail: n 3319
+    net A Rs -813,567 twin p 0.773.'
+  costs: 'Delta India perps: 0.05% taker + 18% GST and 0.02% (BTC/ETH) / 0.05% slippage per side, Binance funding; options:
+    min(0.01% notional, 3.5% premium) + GST, RC2 spread model, exits less 1 tick + 1%. Tax A 31.2% of each winning trade,
+    no set-off; TDS 1% of sells tracked as a cash lock. Stress: slippage x2 (options spread x1.5, fee 0.03%).'
+holdout_read: false
+verdict: rejected
+notes: One of 20 F1C rules (80 variants, one BH family). Every trade had a stop-loss and a profit lock. Research only; nothing
+  in the app trades crypto.
