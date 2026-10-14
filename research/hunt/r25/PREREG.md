@@ -229,3 +229,62 @@ Each of these gets a holdout p as well. A second BH over all of them is reported
 - R25 changes no app code.
 
 If nothing passes: no app change. Say so plainly.
+
+---
+
+## Part B (written 14 Oct 2026, after the design-only census and anatomy, BEFORE any rule was run on any period)
+
+### What Steps 1-2 found (design days only; `results/census.json`, `results/anatomy.md`)
+
+- **Census:** 27,169 cheap-option units on 470 design expiries.
+  - Some Rs 1-10 unit reached 5× before 15:05 on 257 of 470 days, 10× on 119, 20× on 52 and 33× on 25.
+  - Per unit: 6.2% reached 5×, 2.6% 10×, 0.46% 33×. Close-confirmed: 4.8%, 2.1% and 0.31%.
+  - The average unit held to 15:05 lost Rs 919 per Rs 1,000 after costs. 3.0% of units were profitable.
+  - 10× units gave back a median 92.9% of the peak by 15:05. Only 46% were still ≥ 2× at 15:05.
+- **Anatomy:** 173,624 decision rows on 467 days. Base rates: 2.42% jackpot, 80.9% dud.
+  - The best lifts are:
+    - the strike near in expected-move or day-range units;
+    - a fresh break of the day's high/low or beyond the opening range;
+    - max pain behind the option;
+    - more time left.
+  - The best pairs reach lift 2.0-2.3, and the dud rate falls only to 64-71%.
+  - **Every state, single or pair, has negative expectancy**: the best is −Rs 330 per Rs 1,000. So the triggers below
+    are tested because Boss asked for them, not because the design data promises a profit.
+  - Own-strike OI *falling* (writers covering) has LOW jackpot lift (0.68). Jackpots come with OI *rising* on the strike
+    and on the other side. "OI unwinding" is therefore tested in its supported form: other-side OI building.
+
+### Data-quality fixes (found in the design census, fixed before any rule ran; they apply to every period)
+
+1. **Mislabelled rows.** Rows of another index sit in some files. On 5 Apr 2024 the SENSEX file has BANKEX rows, with
+   strikes near 54,000 and their own spot column. A row is kept only while its strike is within 12 strikes of this
+   index's own close in that minute (the store holds ±10).
+2. **Freak prints.** A further-OTM option cannot be worth more than a nearer one of the same side and expiry. Each bar's
+   high / open / close is capped at 1.25 × + Rs 0.10 the high of the nearest stored nearer strike in the same minute.
+   This is same-minute data only, so there is no look-ahead. It changed 0.028% of NIFTY bars, 0.006% of BANKNIFTY and
+   0.19% of SENSEX in design.
+3. **Targets need a confirmed price.** A target fills only when the high trades a tick through it AND the bar's close or
+   the next bar's open is at or above it. A single freak print fills nothing.
+
+SENSEX on 2 Feb 2024 (11:57-12:35) shows disorderly trading: every put traded far above fair value for a few minutes,
+and the neighbour rule cannot remove it because all strikes spiked together. Results are reported with and without that
+day wherever it matters.
+
+### T1-T3 (code: `triggers.py`; one entry per side per index per expiry; budget Rs 1,000; Rs 1-10 band)
+
+| id | trigger (checked at every bar close in the window) | window | strike | threshold grid |
+|---|---|---|---|---|
+| T1 | the index made a new day high (CE) / low (PE) within the last 15 minutes AND the strike's distance from spot ≤ θ expected moves (spot × VIX / 100 × √(minutes left / (252 × 375))) | 11:00-14:30 | the nearest-the-money eligible option meeting the distance | θ ∈ {1.0, 1.25, 1.44} |
+| T2 | distance ≤ θ1 × the day's range so far AND max pain (over the stored strikes) on the other side of spot by ≥ θ2 % of spot | 11:00-13:30 | as T1 | θ1 ∈ {0.8, 1.0, 1.08}; θ2 ∈ {0.03, 0.058, 0.10} |
+| T3 | the 15-minute index move with the option ≥ θ1 % AND the index beyond the 15-minute opening range on that side AND the mirror strike on the other side has 30-minute OI change ≥ θ2 % | 13:00-14:45 | the nearest-the-money eligible option | θ1 ∈ {0.10, 0.15, 0.25}; θ2 ∈ {0, 2.86} |
+
+- **Eligible** = OTM, Rs 1-10, traded in the last 5 bars, passing the app's stale-slack rule.
+- **Exit for T1-T3:** one of {hold to 15:05, the L2 ladder, the app's exits}, chosen together with the thresholds.
+- **Selection rule** (all design days for the final rule; the training years in each walk-forward fold):
+  - the best net per Rs 1,000 risked among combinations with at least max(15, 10% of the expiries) trades;
+  - ties go to fewer trades;
+  - if no combination qualifies, the strictest thresholds with hold to 15:05.
+- **Random-time twins for T1-T3** use the nearest-the-money eligible option at the random minute, without the distance
+  condition.
+- **Exit-grid p-values** (secondary) are the bootstrap of per-expiry net for every rule × exit, under their own BH.
+
+The family for gate 4 is the 9 R25 rules (H0, L1-L4, V4, T1-T3) plus R21's V0-V8 (18 p-values), as Part A says.

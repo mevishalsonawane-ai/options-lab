@@ -29,6 +29,7 @@ import r25cfg as K
 N = 375
 O, H, L, C, V, OI, IV = range(7)
 TV_MAX = 0.6          # % of spot: an expiry day's ATM time value at 15:15 is below this ...
+STRIKE_SLACK = 12     # strikes from the row's spot beyond which a row is a mislabel
 TV_JUMP = 2.0         # ... and the next session's is more than twice it (the roll to the next contract)
 
 
@@ -110,6 +111,9 @@ def build(und: str) -> list[Day]:
     for p in files:
         o = _read(p)
         o["side"] = o.side.astype(str).str[0].str.upper()
+        # the lake has a few mislabelled strikes (e.g. SENSEX "55300" rows with spot near 74,000): a stored strike is
+        # within ATM+-10 of that minute's spot, so anything beyond 12 strikes of it is dropped
+        o = o[(o.strike - o.spot).abs() <= STRIKE_SLACK * K.STEP[und]]
         tvs.append(_tv_1515(o))
         frames[p] = o
     tv = pd.concat(tvs).sort_index()
@@ -132,6 +136,10 @@ def build(und: str) -> list[Day]:
             if i > 0 and sess[i - 1] in vxd:
                 vprev = float(vxd[sess[i - 1]].close.iloc[-1])
             va = _grid(vxd[d], ["close"])[:, 0] if d in vxd else np.full(N, np.nan)
+            # rows of another index can sit in the file with their own spot (BANKEX rows in SENSEX, 5 Apr 2024): keep a
+            # strike only while it is within 12 strikes of THIS index's close in that minute
+            ixc = pd.Series(ixa[:, 3])
+            g = g[(g.strike - ixc.reindex(g.m.values).values).abs() <= STRIKE_SLACK * K.STEP[und]]
             g = g.drop_duplicates(["m", "strike", "side"], keep="first")
             opts = {}
             for (k, s), h in g.groupby(["strike", "side"]):
@@ -146,6 +154,38 @@ def build(und: str) -> list[Day]:
     return out
 
 
+CLEAN_MULT, CLEAN_ADD = 1.25, 0.10
+
+
+def clean(day: Day) -> int:
+    """Remove bad prints (in place) with a same-minute rule only (no look-ahead): an option cannot be worth more than a
+    nearer-the-money option of the same side and expiry (a call's price falls as the strike rises, a put's as it falls).
+    Each bar's high, open and close are capped at 1.25 x + Rs 0.10 the high of the nearest stored nearer strike in the
+    same minute (tolerance for trades at different seconds). Returns the number of bars changed. Idempotent."""
+    if getattr(day, "_clean", False):
+        return 0
+    n = 0
+    for side in ("C", "P"):
+        ks = sorted(k for k, s in day.opts if s == side)
+        if side == "P":
+            ks = ks[::-1]                        # from deep ITM to deep OTM
+        cap = np.full(N, np.nan)                 # the nearest nearer strike's high so far, per row
+        for k in ks:
+            a = day.opts[(k, side)]
+            lim = cap * CLEAN_MULT + CLEAN_ADD
+            bad = ~np.isnan(lim) & ~np.isnan(a[:, H]) & (a[:, H] > lim + 1e-9)
+            if bad.any():
+                n += int(bad.sum())
+                for j in (O, H, C):
+                    a[bad, j] = np.fmin(a[bad, j], lim[bad])
+                a[bad, L] = np.fmin(a[bad, L], a[bad, C])
+            ok = ~np.isnan(a[:, H])
+            cap[ok] = a[ok, H]
+    day._clean = True
+    day.n_clean = n
+    return n
+
+
 def path(und: str):
     return K.OUT / f"days_{und}.pkl"
 
@@ -154,12 +194,14 @@ def load(und: str, part: str = "design") -> list[Day]:
     """part: 'design' (after HOLDOUT_END), 'holdout' (on or before it; only study.py holdout may ask), or 'all'."""
     days = pickle.loads(path(und).read_bytes())
     if part == "design":
-        return [d for d in days if not K.is_holdout(d.day)]
-    if part == "holdout":
-        return [d for d in days if K.is_holdout(d.day)]
-    if part == "all":
-        return days
-    raise ValueError(part)
+        days = [d for d in days if not K.is_holdout(d.day)]
+    elif part == "holdout":
+        days = [d for d in days if K.is_holdout(d.day)]
+    elif part != "all":
+        raise ValueError(part)
+    for d in days:
+        clean(d)
+    return days
 
 
 def calendar_only(und: str) -> list[date]:
