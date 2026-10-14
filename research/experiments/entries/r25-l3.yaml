@@ -1,0 +1,34 @@
+id: r25-l3
+title: 'Hero lottery basket: CE + PE nearest Rs 3 at 14:30, Rs 500 a side, hold to 15:05'
+family: calendar-events
+date: '2026-10-14'
+doc: research/HUNT_R25_HERO_DEEP.md
+hypothesis: A later (14:30) lottery basket pays after costs (cheaper, less theta left).
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,SENSEX}_WEEK (ATM+-10, nearest
+  expiry), index_1m NIFTY/BANKNIFTY/SENSEX/INDIAVIX; expiry days found from the data; BANKNIFTY weeklies to 2024-11-13; 13
+  Oct 2026 not in the lake (ends 2026-10-12)'
+period:
+  design: 'expiry days 2023-01-01..2026-10-12: NIFTY 197, BANKNIFTY 98, SENSEX 175 (470)'
+  holdout: 'expiry days 2021-08-05..2022-12-29: NIFTY 74, BANKNIFTY 74 (148)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+features:
+- expiry-day Rs 1-10 OTM options
+- index minutes
+- VIX
+- option OI
+model_or_rule: 'Hero lottery basket: CE + PE nearest Rs 3 at 14:30, Rs 500 a side, hold to 15:05'
+settings: research/hunt/r25/PREREG.md
+prereg: research/hunt/r25/PREREG.md
+variants_tried: 1
+results:
+  summary: Design 732 trades, hit 5.2%, net Rs -212,662 (-610 per Rs 1,000 risked; 470 expiries). Walk-forward 2024/25/26
+    net Rs -124,819 (0 of 3 years positive). Holdout 257 trades, hit 5.8%, net Rs -74,852 (148 expiries; worst day Rs -970;
+    max DD Rs -80,150); p 1.000, BH q 1.000. FAILED the gates.
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    open + 5 bps + a 1/2/4-tick half-spread by 5-min volume; stress x2 spread; out-of-range prices at 0
+holdout_read: true
+verdict: rejected
+notes: One of 9 R25 rules; BH across the 9 plus R21's 9 (18). Exit grid reported separately with its own BH.
