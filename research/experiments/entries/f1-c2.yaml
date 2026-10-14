@@ -1,0 +1,37 @@
+id: f1-c2
+title: 'F1 rule C2: OI + VWAP: put-writing bias > 0 and index above option-volume VWAP (mirror for puts)'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_F1_FACTORY.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m, options_rolling_1m opt_<UND>_WEEK (ATM+-10, nearest expiry,
+  OI), INDIAVIX, equity_1m (58 stocks, breadth); brain cube + 201 features (research/brain/FEATURES.md); FINNIFTY/SENSEX expiries
+  inferred (research/brain/expiry_infer.py); lake to 2026-10-12'
+settings: research/hunt/f1/PREREG.md
+prereg: research/hunt/f1/PREREG.md
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+hypothesis: Boss's classic indicator stack picks better option-buying entries than random minutes.
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13 (walk-forward folds 2022, 2024H2, 2025, 2026)
+  holdout: 2023-01-01..2024-06-30, all four indices, read once for every F1 rule together
+features:
+- c5_ema9_21_spread_pct, c5_supertrend_dir, ovwap_dist_pct, bu_writing_bias_15m
+model_or_rule: 'OI + VWAP: put-writing bias > 0 and index above option-volume VWAP (mirror for puts); 1-ITM, exit x1 (stop
+  -15%, lock +Rs1,000 keep Rs 500 / trail Rs 500, 30-min time stop unless +5%, out 15:10 / 15:05 expiry); one entry a side
+  a day, decisions every 5 min 09:30-14:30; scope NIFTY, BANKNIFTY, FINNIFTY, SENSEX'
+variants_tried: 1
+results:
+  summary: 'DESIGN (walk-forward 2022/2024H2/2025/2026): 4526 trades on 667 sessions (6.79/day), win 53%, avg win Rs +977
+    / loss Rs -1,256, net Rs -306,768 (Rs -460/day), green days 46%, worst day Rs -18,093, max DD Rs -351,455, winners cut
+    short 1884, p vs twins 0.042; folds net 2022 Rs -13,249, 2024H2 Rs -109,862, 2025 Rs -128,860, 2026 Rs -54,796; design
+    gates FAILED. HOLDOUT: 2224 trades on 368 sessions (6.04/day), win 46%, avg win Rs +956 / loss Rs -1,073, net Rs -332,564
+    (Rs -904/day), green days 38%, worst day Rs -19,655, max DD Rs -350,940, winners cut short 789, p vs twins 1.000, BH q
+    1.000; FAILED.'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    open +-5 bps plus a 1/2/4-tick half-spread by 5-min volume in lots (stops 10 bps, double ticks); today's lot sizes
+holdout_read: true
+verdict: rejected
+notes: One of the F1 rules; BH over all of them on the holdout (m = the rule count).

@@ -1,0 +1,33 @@
+id: f1-s10
+title: 'F1 rule S10: bu_pe_long_unwinding_share + day_range_pct top quintile (high side) -> CE (net_ce_atm_x1, x1)'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_F1_FACTORY.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m, options_rolling_1m opt_<UND>_WEEK (ATM+-10, nearest expiry,
+  OI), INDIAVIX, equity_1m (58 stocks, breadth); brain cube + 201 features (research/brain/FEATURES.md); FINNIFTY/SENSEX expiries
+  inferred (research/brain/expiry_infer.py); lake to 2026-10-12'
+settings: research/hunt/f1/PREREG.md
+prereg: research/hunt/f1/PREREG.md
+instruments:
+- BANKNIFTY
+hypothesis: The screen survivor (BANKNIFTY, net_ce_atm_x1, selection IC +0.064) turns into option-buying profit after costs.
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13 (walk-forward folds 2022, 2024H2, 2025, 2026)
+  holdout: 2023-01-01..2024-06-30, all four indices, read once for every F1 rule together
+features:
+- bu_pe_long_unwinding_share + day_range_pct
+model_or_rule: bu_pe_long_unwinding_share + day_range_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, exit
+  x1 (stop -15%, lock +Rs1,000 keep Rs 500 / trail Rs 500, 30-min time stop unless +5%, out 15:10 / 15:05 expiry); one entry
+  a side a day, decisions every 5 min 09:30-14:30; scope BANKNIFTY
+variants_tried: 1
+results:
+  summary: 'DESIGN (walk-forward 2022/2024H2/2025/2026): 339 trades on 667 sessions (0.51/day), win 64%, avg win Rs +867 /
+    loss Rs -1,577, net Rs -4,192 (Rs -6/day), green days 64%, worst day Rs -4,687, max DD Rs -22,459, winners cut short 188,
+    p vs twins 0.064; folds net 2022 Rs -2,956, 2024H2 Rs -2,355, 2025 Rs +3,164, 2026 Rs -2,045; design gates FAILED. HOLDOUT:
+    151 trades on 368 sessions (0.41/day), win 54%, avg win Rs +1,008 / loss Rs -1,436, net Rs -16,407 (Rs -45/day), green
+    days 54%, worst day Rs -4,039, max DD Rs -20,959, winners cut short 61, p vs twins 0.423, BH q 0.769; FAILED.'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    open +-5 bps plus a 1/2/4-tick half-spread by 5-min volume in lots (stops 10 bps, double ticks); today's lot sizes
+holdout_read: true
+verdict: rejected
+notes: One of the F1 rules; BH over all of them on the holdout (m = the rule count).

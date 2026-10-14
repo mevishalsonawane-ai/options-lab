@@ -581,3 +581,36 @@ NSE's data is anonymous: only types (Client, DII, FII, Pro), never a person, fir
   neither walls nor magnets (0 of 12 tests; max-OI strike closer to settlement than a same-distance random strike
   42-43% of 873 expiries, which is the no-magnet level of ~44%).
 - The app's own order-flow recordings: none uploaded yet (IraAlgo has 0 releases); `hunt/of1/footprints.py` is ready.
+
+## Every indicator on the Indian indices: the F1 Strategy Factory screen (F1, 14 Oct 2026) - size yes, direction no; 0 of 20 rules pass
+Full study: `HUNT_F1_FACTORY.md` (pre-registered `hunt/f1/PREREG.md`, commit 33fc686 + amendments 0169252, 2d93ccd;
+design results committed 57b704c before the holdout; holdout 1 Jan 2023 - 30 Jun 2024 read once).
+
+**Scope.** 201 brain features (47 new: EMA crosses/slopes, 5-min EMA/Supertrend/RSI/MACD, squeeze, CPR, NR7,
+option-volume VWAP, OI build-up types per strike, PCR change, OI walls, GEX proxy, VIX percentile) plus 4 breadth
+features, on NIFTY, BANKNIFTY, FINNIFTY and SENSEX (771 / 768 / 760 / 432 design sessions with a chain).
+
+**Screen: 11,672 tests, 2,045 BH survivors.**
+- Move size (825 survivors): ATR, recent range, realised vol, VIX, IV, straddle. IC 0.2-0.37.
+- Direction: |IC| about 0.03-0.05. The 1-minute chart indicators (RSI, MACD, Supertrend distance, EMA distance, %B, the
+  last 15-min return) lean the WRONG way over the next 15 minutes (a small reversal, about -0.05 on all four indices),
+  and it is gone by 60 minutes.
+- IV skew (puts dearer -> index up over 30-60 min): the same sign everywhere, but only +0.01 to +0.08 on the later
+  split.
+- Breadth, VWAP, CPR, pivots, opening range, NR7, OI walls, max pain, PCR and the GEX proxy carry no usable direction.
+
+**Rules.** C1 (EMA 9/21 + Supertrend + VWAP), C2 (put writing + VWAP) and 18 screen survivors; 1-ITM with Boss's lock
+(+Rs 1,000 then keep Rs 500, trail Rs 500), -15% stop, 30-min time stop or none.
+- Design: 0 of 20 pass (15,508 walk-forward trades).
+- Holdout: 0 of 20 pass (8,782 trades):
+  - C1: -Rs 2.99 lakh on 2,256 trades; C2: -Rs 3.33 lakh on 2,224 trades. Both are worse than random entry minutes
+    (p 1.000).
+  - The best are S2 (BANKNIFTY call when realised vol is high), +Rs 15,354 on 228 trades, and S18 (BANKNIFTY call when
+    IV percentile is high), +Rs 12,319 on 158 trades. Both have BH q 0.279 and both lost in design.
+- Volatility features rank option-buying outcomes ("busy minutes lose less") but cannot make them positive: the average
+  loss is about 2x the average win under these exits.
+
+**Exits.** The lock closed 51% of 24,290 simulated trades and the stop 30%. Only 8 reached the 15:10 square-off.
+
+**Brain fix.** FINNIFTY and SENSEX had no option chain in the brain (no expiry calendar). Their expiries are now
+inferred from the lake (`brain/expiry_infer.py`). MIDCPNIFTY still has none (unreliable dates).
