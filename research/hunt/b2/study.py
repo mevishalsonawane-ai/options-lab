@@ -49,6 +49,9 @@ def column_sets(X: pd.DataFrame, base_cols: list[str]) -> dict:
 # ------------------------------------------------------------------------------------------------ one job
 def job(args):
     target, inp, model = args
+    done = D.OUT / f"res_{target}_{inp}_{model}.json"
+    if done.exists():                       # a finished job is kept (restart after an interruption)
+        return json.loads(done.read_text())
     X, cols = G["X"], G["cols"][inp]
     Z = M.targets_frame(X, target)
     preds, extra = [], {}
@@ -90,6 +93,7 @@ def job(args):
     res["thresholds"] = extra
     Pd.to_parquet(D.OUT / f"pred_{target}_{inp}_{model}.parquet", index=False)
     print(target, inp, model, round(res["auc"], 4), "p", round(res["p"], 4), res["n"], flush=True)
+    done.write_text(json.dumps(res, default=str))
     return res
 
 
