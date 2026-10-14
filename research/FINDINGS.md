@@ -303,6 +303,8 @@ Full study: `HUNT_R28_GEX.md` (pre-registered `hunt/r28/PREREG.md`; lake Aug 202
 - 0 of 10 GEX filters on the arms passed (ORB x4, Range Fade x2, Liquidity, Hero, lottery, Night). On a losing arm
   any skip "loses less", and GEX skipped no better than random days. On Night R3 it cut the holdout from +Rs 249 to
   -Rs 18 a day (224 trades). Do not filter any arm by GEX; Jarvis may mention it as information about the day's size.
+- R28b (Boss's follow-up): 378 patterns of the 30 one-minute candles before each arm's entry (alone or with the GEX
+  sign), walk-forward on design years: 0 passed BH, no forward candidate. On Night R3 every picked pattern cut profit.
 
 ## What is predictable? (R16, 12 Oct 2026) - only the size of the next 30-60 min move, not its direction
 Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 24 holdout tests, one BH family).

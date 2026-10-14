@@ -208,3 +208,29 @@ def test_orb_break_run_and_fail():
 def test_describe_bh_handles_nan():
     q = DS.bh([0.01, np.nan, 0.02])
     assert np.isnan(q[1]) and q[0] == pytest.approx(0.02) and q[2] == pytest.approx(0.02)
+
+
+# ------------------------------------------------------------------------------------------------ R28b patterns
+def test_window_features_use_only_the_30_bars_up_to_the_row():
+    import patterns as P
+    ix = np.full((375, 4), np.nan)
+    px = 100 + np.arange(375) * 0.1
+    ix[:, 0], ix[:, 1], ix[:, 2], ix[:, 3] = px, px + 0.05, px - 0.05, px + 0.02
+    f = P.window_features(ix, 44, 1, 2.0)
+    bad = ix.copy()
+    bad[45:] = 1e6                                            # corrupt everything after the decision row
+    assert f == P.window_features(bad, 44, 1, 2.0)
+    assert f["c_ret"] > 0 and f["c_bars"] == 6.0
+    assert P.window_features(ix, 44, -1, 2.0)["c_ret"] < 0    # aligned to the put side
+    assert np.isnan(P.window_features(ix, 20, 1, 2.0)["c_ret"])      # window starts before 09:15
+    assert np.isnan(P.window_features(ix, 44, 1, np.nan)["c_ret"])   # no ATR
+
+
+def test_pattern_keep_keeps_missing_windows_and_respects_the_gex_side():
+    import patterns as P
+    t = pd.DataFrame({f: [0.1, 0.5, 0.9, np.nan] for f in P.FEATS})
+    t["near_net_cr"] = [-1.0, -1.0, 1.0, 1.0]
+    cuts = {f: (0.3, 0.7) for f in P.FEATS}
+    assert P.keep(t, ("c_ret", 2, None), cuts).tolist() == [False, False, True, True]
+    assert P.keep(t, ("c_ret", 0, "neg"), cuts).tolist() == [True, False, False, True]
+    assert len(P.patterns()) == 63

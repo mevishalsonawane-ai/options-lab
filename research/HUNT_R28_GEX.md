@@ -55,6 +55,13 @@ Written 14 Oct 2026, for Boss's request: "Use gamma exposure too".
     better than random skipping (p 0.67 design, 0.14 holdout), and it still loses.
   - **Night R3 is a WINNING arm** (+Rs 206 a day in design). The GEX filter cut it to +Rs 119 in design and **from
     +Rs 249 to -Rs 18 a day in the holdout**. Do not filter Night by GEX.
+- **Boss's follow-up (R28b): the last 30 minutes of candles before each decision, alone or with GEX. No pattern
+  either.**
+  - 378 candle patterns were searched: 7 shapes of the 30 one-minute candles before each arm's entry × 3 sizes,
+    alone or with the GEX sign, on 6 arms. Design years only, walk-forward.
+  - **None passed** the multiple-testing count (lowest q 0.13), and no arm got a stable winner out of sample. Nothing
+    goes to forward paper.
+  - Details in section 4.
 - **What to change in the app: nothing.**
   - No filter goes to paper; nothing goes live.
   - The 12 GEX features are now in the Data Brain for research and for the models.
@@ -187,6 +194,60 @@ blocks had been seen by earlier studies; a GEX filter had never been run on them
 
 Per-year walk-forward rows, average win and loss, % green days and missing-GEX counts for every filter are in
 `results/design.md` and `results/holdout.md`.
+
+## 4. R28b: the 30 minutes of candles before each decision (Boss's follow-up, 14 Oct 2026)
+
+Boss: "Now use last 30 min candles before testing this, and find a pattern from there". Boss chose:
+- the 30 minutes right before each arm's decision;
+- confirmation on forward paper, because the lake holdouts are spent.
+
+Pre-registered in `research/hunt/r28/PREREG_B.md` (commit `f35da35`, before any number). Code:
+`research/hunt/r28/patterns.py`. Tables: `results/patterns.md` and `results/patterns.json` (all 378 patterns).
+
+- **The window:** the 30 one-minute index bars that end at the arm's decision bar:
+  - ORB and Range Fade: 09:30-10:00;
+  - Liquidity: the 30 minutes before its entry;
+  - Hero and lottery: to 13:45 (or the Hero signal);
+  - Night: 14:45-15:15.
+  Nothing after the decision is read (a test corrupts the later bars and checks the features do not change).
+- **7 shapes**, aligned to the trade's side:
+  - the 30-minute move in ATR;
+  - its range in ATR;
+  - body / range;
+  - where the close sits;
+  - the wick against the trade;
+  - how many of the six 5-minute bars went the trade's way;
+  - the last 10 minutes' push.
+  Each shape is cut into low / mid / high thirds, alone or with "GEX < 0" or "GEX >= 0": 63 patterns per arm, 378 in
+  all, BH over the 378.
+- **Walk-forward** (design years only; R28's holdout blocks excluded): pick the best pattern on the earlier years and
+  score it on the next year.
+
+| arm | patterns picked (one per test year) | out of sample: trades base → kept | Rs/day base → kept | change | twin p | full-design q of the pick |
+|---|---|---|---|---|---|---|
+| ORB | 5-min bars against, S1<0 / close mid-window, S1<0 / mid body, S1<0 | 1,137 → 146 | -107 → -26 | +81 | 0.85 | 0.80 |
+| Range Fade | move mid, S1<0 / 5+ of 6 bars our way, S1<0 (twice) | 1,701 → 142 | -373 → -13 | +360 | 0.07 | 0.61 |
+| Liquidity BN | strong last-10-min push, GEX >= 0 / strong last-10-min push (twice) | 653 → 346 | +243 → +238 | -5 | 0.007 | 0.13 |
+| Night R3 | mid range / few bars our way / low range | 479 → 192 | +225 → -47 | -272 | 0.99 | 0.55 |
+| Hero H0 | few bars our way (one fold only: 11 test trades) | 11 → 4 | -268 → -161 | +107 | 0.74 | 0.99 |
+| Lottery L3 | mid last-10-min push, S1<0 (twice) | 479 → 49 (0 winners kept; 24 big winners cut) | -611 → -78 | +533 | 0.72 | 0.79 |
+
+- **0 of 6 arms pass the 5 gates; 0 of 378 patterns pass BH with a positive change. No forward candidate**
+  (`results/forward_candidates.json` is empty).
+- **Losing arms (ORB, Range Fade, Hero, lottery).** The picked patterns keep only 10-15% of the trades, so they "lose
+  less". On ORB this is no better than random skipping (p 0.85). On Range Fade it comes closest (p 0.07: keep a fade
+  only when most of the last six 5-minute bars already moved its way and GEX is negative). It fails the 378-pattern
+  count (q 0.61), and the kept trades still lose.
+- **Liquidity BN (a winning arm).** "A strong push in the trade's direction in the last 10 minutes" was picked in 2
+  of 3 years and kept about the same profit with half the trades (p 0.007 vs random skipping, which costs). But out of
+  sample it made Rs 5 a day LESS, 2024 lost Rs 68 a day, and q is 0.13. Also 262 of its 799 design trades come before
+  09:45 and have no full window.
+- **Night R3 (winning).** Every picked candle pattern cut its profit (-Rs 272 a day out of sample). Keep Night
+  unfiltered.
+- **A bug the tests caught.** In the first run, a GEX-pair pattern could drop a trade whose candle window was missing,
+  against PREREG_B, which says such trades are always kept. That run named Liquidity "strong last-10-min push" as a
+  forward candidate. After the fix the 2024 pick changed and the candidate failed. The fixed run is the one reported;
+  the first run was not committed.
 
 ## Honest notes
 

@@ -1,5 +1,6 @@
 """Writes research/experiments/entries/r28-*.yaml: the GEX feature, the descriptive step and each of the 10 filters
-(failures included), from results/{describe,design,holdout}.json ("pending" where a step has not run).
+(failures included), from results/{describe,design,holdout}.json ("pending" where a step has not run), and the R28b
+entries r28b-<arm>.yaml from results/patterns.json.
 
     python3 research/hunt/r28/entries.py
 """
@@ -113,5 +114,37 @@ def _cov(ds) -> str:
                      f"{v['flip_found_share'] * 100:.0f}%" for u, v in c.items() if v.get("gamma_edge_median") is not None)
 
 
+def write_b():
+    """R28b entries: one per arm (63 patterns each) and the search as a whole."""
+    p = K.RESULTS / "patterns.json"
+    if not p.exists():
+        return
+    r = json.loads(p.read_text())
+    pre = "research/hunt/r28/PREREG_B.md"
+    period = dict(design="design years only, R28 holdouts and embargoes excluded; walk-forward folds per PREREG_B")
+    for arm, x in r["arms"].items():
+        o, g = x.get("oos"), x.get("gates")
+        summ = f"{x['trades']} design trades, {x['sessions']} sessions, {x['missing']} with no full 30-min window. "
+        if o:
+            summ += (f"Walk-forward picks: {[f['pattern'] for f in x['folds']]}. Out of sample: {o['base']['trades']} -> "
+                     f"{o['kept']['trades']} trades, Rs/day {o['base']['per_day']:+.1f} -> {o['kept']['per_day']:+.1f} "
+                     f"(change {o['delta']:+.1f}), twin p {o['twin_p']}, folds positive {o['folds_positive']}/{o['n_folds']}; "
+                     f"pick's q (m 378) {x['full'][g['pattern']]['q378']}. FAILED the gates.")
+        e = dict(id=f"r28b-{arm}", title=f"R28b: 30-min pre-decision candle patterns (+ GEX sign) as a filter on {arm}",
+                 family=FAMILY[arm], date="2026-10-14", doc=DOC,
+                 hypothesis="The shape of the 30 one-minute candles before the decision (alone or with GEX) separates "
+                            "the arm's good trades from bad ones, out of sample.",
+                 data_version=DATA, period=period, instruments=INSTR[arm],
+                 features=["30-min pre-decision index candle shape (7 features, terciles)", "GEX S1 sign"],
+                 model_or_rule="best of 63 patterns per training fold (keep only one tercile [and GEX side])",
+                 settings=pre, prereg=pre, variants_tried=63,
+                 results=dict(summary=summ, costs=COSTS[arm]), holdout_read=False, verdict="rejected",
+                 notes="No locked holdout left on the lake (R28 read them); a pattern passing all 5 gates would have "
+                       "gone to a forward paper/shadow test. None did.")
+        (ENT / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
+    print("wrote", len(r["arms"]), "R28b entries")
+
+
 if __name__ == "__main__":
     write()
+    write_b()
