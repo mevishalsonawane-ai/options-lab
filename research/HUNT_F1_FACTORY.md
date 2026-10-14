@@ -34,24 +34,26 @@ years or in the locked holdout. Nothing is proposed for paper.** Every trade had
    BTC +Rs 26,312: the market went up, and trading in and out still lost.
 4. **Why.** The data does hold a real pattern, and it is the same one C1 found: after a stretched move (far from the
    24-hour VWAP, at the day's high or low, far from the EMA ribbon, after one-sided taker buying) price tends to come
-   back a little, more so inside your window. But "a little" is 0-8 bps a trade, while a Delta India perp round
+   back a little, more so inside your window. But the rules caught only -13 to +8 bps a trade with it, while a Delta India perp round
    trip costs about 16 bps (BTC/ETH) to 22 bps (alts). The tax then takes 31.2% of every winning trade and gives
    nothing back for the losers, which turns even the two option rules that made money before tax into losses.
-5. **Options came closest.** O19 (volatility burst) and O18 (previous-day high/low break) are the only rules that beat
-   random entry times by a wide margin (BH q 0.002): buying right after a big move is far better than buying at random
-   and paying time decay for nothing. O19 made +Rs 1.42 lakh before tax at design and +Rs 12,245 in the holdout, but
-   after the VDA tax it is -Rs 16,848 and -Rs 26,192, its walk-forward is -Rs 26,178, and at slightly worse costs it
-   loses -Rs 1.18 lakh. Under the business-income tax reading it would be +Rs 91,808 (design) / +Rs 8,425 (holdout):
-   **whether crypto F&O losses can be set off is the whole difference; a CA must say which reading applies.**
+5. **Options came closest, and even that is mostly an artefact.** O19 (buy the call/put after a sharp 15-minute burst)
+   and O18 (previous-day high/low break) are the only rules that beat random entry times (BH q 0.002), and they made
+   money before tax (O19 +Rs 1.42 lakh at design, +Rs 12,245 in the holdout). But a review found the simulator bought
+   at the signal minute's last trade price, which on Delta's thin option book is often minutes old (5% of entries more
+   than 15 minutes). Re-run on design data with the fill one minute later and no stale prices, **O19 loses Rs 36,230
+   before tax and Rs 1.43 lakh after tax (845 trades); O18 loses Rs 11,272 / Rs 62,141 (380 trades)**. After the VDA
+   tax both lose either way, their walk-forwards are negative, and at slightly worse costs O19 loses Rs 1.18 lakh. So
+   there is nothing here even under the business-income tax reading. (A CA's view on the tax reading still matters for
+   any future crypto F&O idea: under reading A, 31.2% of every winner is lost with no set-off.)
 6. **TDS makes perps impossible on a small account.** If the 1% TDS applies to every perp sale (as the brief assumes),
    a Rs 1 lakh account trading these rules would have half its money locked as TDS within 10-60 days and Rs 2.4-17.8
    lakh locked at the peak. Options are fine on this point (Rs 3,900-14,100 locked at the peak).
 7. **What not to trust.** Funding, long/short ratios, DVOL, option skew, put/call and the time of day carry no
    information about where crypto goes next in this data; basis and open interest showed some on one coin of five only
    (basis on SOL, OI change on BTC and XRP), which is not something to trade. Size, not direction, is predictable.
-8. **Honest advice.** For crypto exposure, buy-and-hold or DCA (RC1) remains the baseline nothing here beat. If you
-   still want "in and out like the Indian market", the only thing worth watching is O19 as a watch-only paper log, and
-   only after a CA confirms the tax reading; it is not proposed as an arm because it failed the gates.
+8. **Honest advice.** For crypto exposure, buy-and-hold or DCA (RC1) remains the baseline nothing here beat. No rule
+   here is worth even a watch-only paper log: the closest one (O19) does not survive a realistic entry price.
 
 ### Data and the brain refresh
 
@@ -279,7 +281,25 @@ holding, by trading little.
   main run was not affected, it passed the decisions in). Fixed and re-run; no choice was made on it.
 - The holdout run may resume after a crash before writing any result (no result had been seen); it ran once, without a
   crash.
-- Random twins are independent trades (no one-at-a-time or day cap), compared on mean net per trade.
+- Random twins are independent trades (no one-at-a-time or day cap), compared on mean net per trade; the rules get
+  both, and the day cap trims their losing days, so twin p-values lean towards the rules (O18 / O19's G3 pass is
+  generous).
+- **Independent review (14 Oct, after the holdout read), all disclosed, none changes a verdict:**
+  - Option entries filled at the signal minute's candle close (not the next minute, as PREREG section 8 says), and
+    that close can be stale (in a 400-trade sample 16% had no trade for 5+ minutes, 5% for 15+). A design-only
+    re-run with the next minute's close and no print older than 2 minutes (`run.py strict`,
+    `results/strict_entry.json`, post hoc, not gated): every option variant loses before tax, O19 -Rs 11,638 to
+    -Rs 36,230, O18 -Rs 2,092 to -Rs 16,774, O16 / O17 / O20 still lose (O16 -Rs 85,652 to -Rs 1,16,008, fewer trades).  The holdout was not re-read.
+  - P12 fires mostly just after the UTC day rolls over (05:30 IST), when "the day's low" is minutes old: 50% of its
+    3,319 trades enter at 05:30-05:35 IST, 63% of those long. As run it is mostly a 05:30 IST long, not the fade it
+    describes. It loses either way.
+  - One at a time: a new perp trade may enter at the open of the bar in which the previous one was stopped mid-bar
+    (1,337 of 135,962 design rows).
+  - The option strike band is set from spot at 23:00 UTC for the whole window (a later price for entries before
+    23:00 UTC; the ATM strike must still be within 1% of the entry spot). Funding uses the rate known at entry, not
+    the next settled one. Reading B carries losses forward (not stated in PREREG section 4).
+  - The Rs 25,000 run's "TDS passes half the account" was measured against Rs 50,000 instead of Rs 12,500 (not quoted
+    here); fixed in code. Holdout readers now refuse to run before the one read is logged (`data.keep`).
 - Spreads: no Delta order-book history exists, so option fills are the last trade price (the candle close) plus RC2's
   modelled half spread; minutes without trades repeat the last price (Delta's convention), so stops on illiquid
   strikes may fill later than modelled. Perp slippage is an assumption (no bid/ask). INR fixed at Rs 85 per USD.

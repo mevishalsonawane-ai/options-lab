@@ -82,7 +82,10 @@ def rule_entry(rid, D, H):
         holdout_read=bool(H), verdict=("paper-only" if passed else "rejected") if H else
         ("inconclusive" if p["design_pass"] else "rejected"),
         notes="One of 20 F1C rules (80 variants, one BH family). Every trade had a stop-loss and a profit lock. "
-              "Research only; nothing in the app trades crypto.")
+              "Research only; nothing in the app trades crypto." + (
+                  " Review: options filled at the signal minute's (possibly stale) close; with the next minute's close "
+                  "and no stale prints (design, post hoc, results/strict_entry.json) every exit loses before tax."
+                  if rule.venue == "option" else ""))
 
 
 def write(D, H):

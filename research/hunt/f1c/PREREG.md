@@ -184,3 +184,7 @@ committed.
    option-day cache and jobs split by venue; the Rs 25,000 run (section 4) first called the ORB signal without its
    minute bars (P08, O20 showed 0 trades) and was re-run; the holdout command may resume a run that stopped before
    writing a result (it ran once, without stopping).
+3. 14 Oct 2026, independent review after the holdout read: option entries filled at the signal minute's close instead
+   of the next minute (section 8 says "entry the next minute"), and that close can be stale. A post-hoc design-only
+   re-run with the next minute's close and no print older than 2 minutes (`run.py strict`) turns every option
+   variant negative before tax. Disclosed in HUNT_F1_FACTORY.md; the holdout was not re-read; no verdict changes.

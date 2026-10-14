@@ -35,6 +35,10 @@ LISTING_WAIT = pd.Timedelta(minutes=15)     # RC2 amendment 4: no entry in a str
 TRADED_WITHIN = pd.Timedelta(minutes=30)
 JUMP_LIMIT = 2.0                            # nor on a candle more than 2x / under 0.5x the previous close
 EXITS = DIRECTIONAL                          # s40_step, s40_trail, s25_step, s25_trail
+# Entry fill. As run (PREREG results): the signal minute's candle close. STRICT (review, 14 Oct 2026, post hoc): the
+# next minute's close, and no entry when that option's last trade is older than STRICT_STALE_MIN (a design-only check).
+ENTRY = {"strict": False}
+STRICT_STALE_MIN = 2
 
 
 def opt_dir(sym: str) -> Path:
@@ -135,11 +139,20 @@ def trade(day: Day, T_sig: pd.Timestamp, side: int, spot: float, deadline: pd.Ti
     i = day.pos(T_sig)
     if i < 0:
         return None
+    if ENTRY["strict"]:
+        i += 1
+        T_sig = T_sig + pd.Timedelta(minutes=1)
+        if i >= len(day.grid):
+            return None
     K = day.atm(typ, spot, i, T_sig)
     if K is None:
         return None
     a = day.arr[(typ, K)]
     mid = a[i, 3]
+    if ENTRY["strict"]:
+        v = np.nan_to_num(a[max(0, i - STRICT_STALE_MIN):i + 1, 4])
+        if not (v > 0).any():
+            return None
     buy = rc2costs.buy_fill(day.coin, mid, spot, smodel, spread_mult)
     lots = int(np.floor(C.OPT_PREMIUM_FRAC * account / C.INR_PER_USD / (buy * RC.LOT[day.coin])))
     if lots < 1:
@@ -163,7 +176,7 @@ def trade(day: Day, T_sig: pd.Timestamp, side: int, spot: float, deadline: pd.Ti
     # after a lock exit: did the option go on to 2x the exit price before the deadline?
     after = np.nanmax(h[k + 1:dl]) if why == "lock" and k + 1 < dl else np.nan
     t_out = day.grid[min(i + 1 + k, len(day.grid) - 1)]
-    return dict(t_in=T_sig + pd.Timedelta(minutes=1), t_out=t_out, side=float(side), strike=K, mid=mid, buy=buy,
+    return dict(t_in=T_sig if ENTRY["strict"] else T_sig + pd.Timedelta(minutes=1), t_out=t_out, side=float(side), strike=K, mid=mid, buy=buy,
                 sell=sell, lots=lots, gross=gross, fees=fees, funding=0.0, net=net, tax_a=C.TAX * max(gross, 0.0),
                 net_a=net - C.TAX * max(gross, 0.0), tds=C.TDS * sell * q * C.INR_PER_USD,
                 reason={"stop": 0.0, "lock": 1.0, "time": 2.0, "data_end": 3.0}[why], peak_r=peak,

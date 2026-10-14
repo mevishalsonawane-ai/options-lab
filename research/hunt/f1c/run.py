@@ -172,7 +172,7 @@ def baselines(part: str) -> dict:
     return out
 
 
-HOLDOUT_IDEA = "f1c-rules-P01-O20"
+HOLDOUT_IDEA = data.HOLDOUT_IDEA
 
 
 def holdout():
@@ -241,6 +241,42 @@ def small():
         print(rid, d.get("trades"), round(d.get("net_a", 0)), h.get("trades"), round(h.get("net_a", 0)))
 
 
+def _strict_job(args):
+    sym, picks = args
+    from . import options
+    options.ENTRY["strict"] = True
+    F = engine.frame(sym, "design")
+    mk = engine.Market(sym, "design")
+    out = []
+    for rid, rule in RULES.items():
+        if rule.venue != "option" or sym not in rule.coins:
+            continue
+        for ex in rule.exits:
+            B = engine.trades(rule, sym, mk, F, ex, part="design")
+            if len(B):
+                B["rule"], B["exit_v"] = rid, ex.name
+                out.append(B)
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
+
+
+def strict():
+    """Review check (post hoc, design only): option rules with the entry one minute later and no stale prints."""
+    D = json.loads((C.RESULTS / "design.json").read_text())
+    picks = {k: v["pick"] for k, v in D["picks"].items()}
+    with ProcessPoolExecutor(2) as ex:
+        T = pd.concat(list(ex.map(_strict_job, [(s, picks) for s in C.OPTION_COINS])), ignore_index=True)
+    days = json.loads((TR / "design" / "days.json").read_text())
+    res = {}
+    for rid, rule in RULES.items():
+        if rule.venue != "option":
+            continue
+        res[rid] = {e.name: book.summary(T[(T.rule == rid) & (T.exit_v == e.name)], span_days(days, rule.coins))
+                    for e in rule.exits}
+    (C.RESULTS / "strict_entry.json").write_text(json.dumps(res, indent=1, default=str))
+    for rid, v in res.items():
+        print(rid, {k: (x.get("trades"), round(x.get("net_pre_tax", 0)), round(x.get("net_a", 0))) for k, x in v.items()})
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "design":
@@ -251,5 +287,7 @@ if __name__ == "__main__":
         holdout()
     elif cmd == "small":
         small()
+    elif cmd == "strict":
+        strict()
     else:
         print(__doc__)

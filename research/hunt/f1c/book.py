@@ -99,7 +99,7 @@ def tax_b(B: pd.DataFrame) -> float:
     return tax
 
 
-def tds_locked(B: pd.DataFrame) -> dict:
+def tds_locked(B: pd.DataFrame, account: float = C.ACCOUNT) -> dict:
     """Peak TDS cash locked (each withholding returns TDS_REFUND_DAYS later) and the first day it passes half the
     account."""
     if B.empty:
@@ -107,7 +107,7 @@ def tds_locked(B: pd.DataFrame) -> dict:
     ev = pd.concat([pd.Series(B.tds.values, index=B.t_out.values),
                     pd.Series(-B.tds.values, index=(B.t_out + pd.Timedelta(days=C.TDS_REFUND_DAYS)).values)])
     lock = ev.sort_index().cumsum()
-    half = lock[lock >= 0.5 * C.ACCOUNT]
+    half = lock[lock >= 0.5 * account]
     return dict(peak=float(lock.max()), first_half_day=str(half.index[0].date()) if len(half) else None)
 
 
@@ -132,4 +132,4 @@ def summary(B: pd.DataFrame, days_traded_span: int, account: float = C.ACCOUNT) 
                 per_trade_a=float(B.net_a.mean()), green_days=float((by_day > 0).mean()), days_with_trades=int(len(by_day)),
                 worst_day=float(by_day.min()), max_dd=float((eq.cummax().clip(lower=0) - eq).max()),
                 lock_exits=int(lock_exits.sum()), cut_short=int(cut.sum()), fees=float(B.fees.sum()),
-                funding=float(B.funding.sum()), gross=float(B.gross.sum()), tds=tds_locked(B))
+                funding=float(B.funding.sum()), gross=float(B.gross.sum()), tds=tds_locked(B, account))

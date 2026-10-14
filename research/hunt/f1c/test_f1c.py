@@ -282,3 +282,25 @@ def test_option_trade_stop_lock_fills_and_entry_rules():
     assert options.trade(_fake_day([150.0] * 40 + [500.0] * 20), T, 1, 95_000.0, dl, options.EXITS[0], 100_000) is None
     # a strike more than 1% from spot is not "at the money"
     assert options.trade(_fake_day([500.0] * 60), T, 1, 97_000.0, dl, options.EXITS[0], 100_000) is None
+
+
+def test_holdout_rows_stay_locked_until_the_read(tmp_path, monkeypatch):
+    monkeypatch.setattr(C, "HOLD_LOG", tmp_path / "HOLDOUT_READ.json")
+    t = pd.to_datetime(["2025-05-01 00:00"])
+    with pytest.raises(data.HoldoutError):
+        data.keep(t, "holdout", 0)
+    assert data.keep(t, "design", 0).tolist() == [False]
+    data.read_holdout(data.HOLDOUT_IDEA)
+    assert data.keep(t, "holdout", 0).tolist() == [True]
+
+
+def test_strict_option_entry_waits_a_minute_and_skips_stale_prints(monkeypatch):
+    from research.hunt.f1c import options
+    monkeypatch.setitem(options.ENTRY, "strict", True)
+    T = pd.Timestamp("2025-01-10 18:40")
+    dl = pd.Timestamp("2025-01-11 03:30")
+    path = [500.0] * 41 + [510.0] + [510.0] * 10
+    r = options.trade(_fake_day(path), T, 1, 95_000.0, dl, options.EXITS[0], 100_000)
+    assert r["mid"] == 510.0 and r["t_in"] == T + pd.Timedelta(minutes=1)
+    vols = np.r_[np.ones(30), np.zeros(30)]                   # last trade 12 minutes before the entry minute
+    assert options.trade(_fake_day([500.0] * 60, vols=vols), T, 1, 95_000.0, dl, options.EXITS[0], 100_000) is None

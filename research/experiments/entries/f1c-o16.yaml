@@ -34,5 +34,6 @@ results:
     no set-off; TDS 1% of sells tracked as a cash lock. Stress: slippage x2 (options spread x1.5, fee 0.03%).'
 holdout_read: true
 verdict: rejected
-notes: One of 20 F1C rules (80 variants, one BH family). Every trade had a stop-loss and a profit lock. Research only; nothing
-  in the app trades crypto.
+notes: 'One of 20 F1C rules (80 variants, one BH family). Every trade had a stop-loss and a profit lock. Research only; nothing
+  in the app trades crypto. Review: options filled at the signal minute''s (possibly stale) close; with the next minute''s
+  close and no stale prints (design, post hoc, results/strict_entry.json) every exit loses before tax.'

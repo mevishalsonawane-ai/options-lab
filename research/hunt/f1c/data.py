@@ -36,10 +36,20 @@ def read_holdout(idea: str) -> None:
     C.HOLD_LOG.write_text(json.dumps(reads, indent=1))
 
 
+HOLDOUT_IDEA = "f1c-rules-P01-O20"
+
+
+def assert_holdout_open() -> None:
+    """Holdout rows are readable only once the one read is logged (run.py holdout); review fix, 14 Oct 2026."""
+    if HOLDOUT_IDEA not in holdout_reads():
+        raise HoldoutError("the F1C holdout is locked: only `run.py holdout` opens it, once")
+
+
 def keep(ts, part: str, horizon_min: int) -> np.ndarray:
     if part == "design":
         return np.asarray(C.is_design(ts, horizon_min))
     if part == "holdout":
+        assert_holdout_open()
         return np.asarray(C.is_holdout(ts, horizon_min))
     raise ValueError(part)
 
