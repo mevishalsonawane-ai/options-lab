@@ -259,11 +259,11 @@ _PUB = {}
 
 
 def _read(fs):
-    for f in fs:
-        if f not in _PUB:
-            _PUB.clear() if len(_PUB) > 8 else None
-            _PUB[f] = pd.read_parquet(f)
-    return pd.concat([_PUB[f] for f in fs], ignore_index=True) if fs else pd.DataFrame()
+    """Concatenated published files; keeps only the last set read (fut_1m reads the same files per contract)."""
+    if tuple(fs) not in _PUB:
+        _PUB.clear()
+        _PUB[tuple(fs)] = pd.concat([pd.read_parquet(f) for f in fs], ignore_index=True) if fs else pd.DataFrame()
+    return _PUB[tuple(fs)]
 
 
 def published(lake, group, sid):
