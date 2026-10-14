@@ -1,0 +1,256 @@
+{
+ "sessions": {
+  "NIFTY": 116,
+  "BANKNIFTY": 116
+ },
+ "rules": [
+  {
+   "id": "r24-p1",
+   "rule": "put-call OI ratio = low AND option = PE -> exit liq",
+   "holdout": {
+    "trades": 134,
+    "sessions": 116,
+    "trades_per_day": 1.1551724137931034,
+    "net": -1594.8294854164124,
+    "per_day": -13.74853004669321,
+    "win_rate": 0.23880597014925373,
+    "avg_win": 3346.5428223609924,
+    "avg_loss": -1065.5313705977271,
+    "green_days": 0.3010752688172043,
+    "traded_days": 93,
+    "worst_day": -5337.750183105469,
+    "max_dd": -45850.39961481094,
+    "big_reached": 45,
+    "big_cut_short": 38
+   },
+   "holdout_x2_net": -6600.550258636475,
+   "entry_twin_p": 0.4905094905094905,
+   "entry_twin_mean": -1592.366943359375,
+   "pattern_twin_p": 0.31840796019900497,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -22589.25296508789,
+   "families_holdout": {
+    "orb": 12820.810546875,
+    "sweep": -21970.9609375,
+    "liq": -1594.830078125
+   }
+  },
+  {
+   "id": "r24-p2",
+   "rule": "levels within 0.2% = two+ AND ATM IV = high AND own-side OI build-up today = high -> exit liq",
+   "holdout": {
+    "trades": 45,
+    "sessions": 116,
+    "trades_per_day": 0.3879310344827586,
+    "net": -20777.309600830078,
+    "per_day": -179.11473793819033,
+    "win_rate": 0.13333333333333333,
+    "avg_win": 2203.1400451660156,
+    "avg_loss": -871.6961505596454,
+    "green_days": 0.11428571428571428,
+    "traded_days": 35,
+    "worst_day": -4132.679992675781,
+    "max_dd": -23831.699615478516,
+    "big_reached": 22,
+    "big_cut_short": 21
+   },
+   "holdout_x2_net": -21618.870025634766,
+   "entry_twin_p": 0.8101898101898102,
+   "entry_twin_mean": -11734.7041015625,
+   "pattern_twin_p": 0.5472636815920398,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -24962.07101715088,
+   "families_holdout": {
+    "orb": -8339.0205078125,
+    "sweep": -21030.5078125,
+    "liq": -20777.30859375
+   }
+  },
+  {
+   "id": "r24-p3",
+   "rule": "ATM IV = high AND opening gap, with the option = against -> exit liq",
+   "holdout": {
+    "trades": 47,
+    "sessions": 116,
+    "trades_per_day": 0.4051724137931034,
+    "net": 14065.769638061523,
+    "per_day": 121.2566348108752,
+    "win_rate": 0.19148936170212766,
+    "avg_win": 6743.788870917426,
+    "avg_loss": -1227.0613210577715,
+    "green_days": 0.20588235294117646,
+    "traded_days": 34,
+    "worst_day": -8284.8701171875,
+    "max_dd": -18400.770233154297,
+    "big_reached": 21,
+    "big_cut_short": 15
+   },
+   "holdout_x2_net": 12568.199340820312,
+   "entry_twin_p": 0.07292707292707293,
+   "entry_twin_mean": -7485.3896484375,
+   "pattern_twin_p": 0.04477611940298507,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -24159.235377807618,
+   "families_holdout": {
+    "orb": -7676.888671875,
+    "sweep": -28889.62109375,
+    "liq": 14065.7685546875
+   }
+  },
+  {
+   "id": "r24-p4",
+   "rule": "levels within 0.2% = two+ AND days to expiry = expiry day AND option = CE -> exit liq",
+   "holdout": {
+    "trades": 32,
+    "sessions": 116,
+    "trades_per_day": 0.27586206896551724,
+    "net": -18600.770065307617,
+    "per_day": -160.35146608023808,
+    "win_rate": 0.03125,
+    "avg_win": 3224.030029296875,
+    "avg_loss": -704.0258095033707,
+    "green_days": 0.04,
+    "traded_days": 25,
+    "worst_day": -3120.3699951171875,
+    "max_dd": -18704.430099487305,
+    "big_reached": 12,
+    "big_cut_short": 11
+   },
+   "holdout_x2_net": -18950.07012939453,
+   "entry_twin_p": 0.993006993006993,
+   "entry_twin_mean": -11441.9521484375,
+   "pattern_twin_p": 0.4975124378109453,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -22972.454444885254,
+   "families_holdout": {
+    "orb": -21534.380859375,
+    "sweep": -26981.2109375,
+    "liq": -18600.76953125
+   }
+  },
+  {
+   "id": "r24-p5",
+   "rule": "opening gap, with the option = against AND days to expiry = 1-2 -> exit liq",
+   "holdout": {
+    "trades": 18,
+    "sessions": 116,
+    "trades_per_day": 0.15517241379310345,
+    "net": 3186.9798102378845,
+    "per_day": 27.473963881361072,
+    "win_rate": 0.16666666666666666,
+    "avg_win": 5669.569905598958,
+    "avg_loss": -921.4486604372661,
+    "green_days": 0.2,
+    "traded_days": 15,
+    "worst_day": -3009.429931640625,
+    "max_dd": -6327.720031738281,
+    "big_reached": 7,
+    "big_cut_short": 5
+   },
+   "holdout_x2_net": 2878.790500640869,
+   "entry_twin_p": 0.11588411588411589,
+   "entry_twin_mean": -4253.4912109375,
+   "pattern_twin_p": 0.0945273631840796,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -25049.40645690918,
+   "families_holdout": {
+    "orb": -4884.1494140625,
+    "sweep": -17665.130859375,
+    "liq": 3186.97998046875
+   }
+  },
+  {
+   "id": "r24-p6",
+   "rule": "other-side OI build-up today = high AND realised vol, 30 min = high -> exit liq",
+   "holdout": {
+    "trades": 84,
+    "sessions": 116,
+    "trades_per_day": 0.7241379310344828,
+    "net": 15952.329308509827,
+    "per_day": 137.52008024577438,
+    "win_rate": 0.2619047619047619,
+    "avg_win": 3482.490432739258,
+    "avg_loss": -978.426777608933,
+    "green_days": 0.29577464788732394,
+    "traded_days": 71,
+    "worst_day": -7920.389892578125,
+    "max_dd": -17438.439922332764,
+    "big_reached": 26,
+    "big_cut_short": 18
+   },
+   "holdout_x2_net": 8573.449382781982,
+   "entry_twin_p": 0.48951048951048953,
+   "entry_twin_mean": 16287.4990234375,
+   "pattern_twin_p": 0.03980099502487562,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -29769.293980407714,
+   "families_holdout": {
+    "orb": -17159.28125,
+    "sweep": -17069.578125,
+    "liq": 15952.3291015625
+   }
+  },
+  {
+   "id": "r24-p7",
+   "rule": "room to the next level ahead = some AND ATM IV = high -> exit liq",
+   "holdout": {
+    "trades": 61,
+    "sessions": 116,
+    "trades_per_day": 0.5258620689655172,
+    "net": 804.1794385910034,
+    "per_day": 6.932581367163823,
+    "win_rate": 0.22950819672131148,
+    "avg_win": 4135.10998065131,
+    "avg_loss": -1214.6246870324967,
+    "green_days": 0.18181818181818182,
+    "traded_days": 44,
+    "worst_day": -7844.1201171875,
+    "max_dd": -37254.980407714844,
+    "big_reached": 29,
+    "big_cut_short": 25
+   },
+   "holdout_x2_net": -219.68936157226562,
+   "entry_twin_p": 0.2867132867132867,
+   "entry_twin_mean": -7213.458984375,
+   "pattern_twin_p": 0.11442786069651742,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -24161.649599609376,
+   "families_holdout": {
+    "orb": -4345.73828125,
+    "sweep": 2913.55029296875,
+    "liq": 804.1796875
+   }
+  },
+  {
+   "id": "r24-p8",
+   "rule": "distance to the level behind = far AND IV rank (252 sessions) = high -> exit liq",
+   "holdout": {
+    "trades": 62,
+    "sessions": 116,
+    "trades_per_day": 0.5344827586206896,
+    "net": 14736.979698181152,
+    "per_day": 127.04292843259614,
+    "win_rate": 0.22580645161290322,
+    "avg_win": 4675.591405596052,
+    "avg_loss": -1056.6937495867412,
+    "green_days": 0.2222222222222222,
+    "traded_days": 45,
+    "worst_day": -6703.509765625,
+    "max_dd": -35248.89015960693,
+    "big_reached": 26,
+    "big_cut_short": 19
+   },
+   "holdout_x2_net": 13746.059623718262,
+   "entry_twin_p": 0.13786213786213786,
+   "entry_twin_mean": -3589.74658203125,
+   "pattern_twin_p": 0.029850746268656716,
+   "pattern_twins": 200,
+   "pattern_twin_mean": -28455.280709228515,
+   "families_holdout": {
+    "orb": -11810.0419921875,
+    "sweep": -4383.7392578125,
+    "liq": 14736.98046875
+   }
+  }
+ ]
+}
