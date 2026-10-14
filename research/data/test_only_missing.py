@@ -116,3 +116,31 @@ def test_restore_qa_from_catalog(tmp_path):
     assert mc.restore_qa(lake, cat) == 1
     m = json.load(open(f"{lake}/_qa/x.parquet.json"))
     assert m["dataset"] == "d" and m["qa"] == {"weekend_rows": 0, "rows": 1, "first": "f", "last": "l"}
+
+
+def test_seed_index_minutes_and_live_futures(tmp_path):
+    raw, lake = str(tmp_path / "raw"), str(tmp_path / "lake")
+    os.makedirs(f"{lake}/_qa")
+    ts = pd.to_datetime(["2021-08-02 09:15", "2021-09-01 09:15", "2021-10-01 09:15"]).tz_localize("Asia/Kolkata")
+    pd.DataFrame({"open": [1.0, 2, 3], "high": 1.0, "low": 1.0, "close": 1.0, "volume": 0, "ts": ts}).to_parquet(
+        f"{lake}/index_1m_NIFTY_2021.parquet")
+    json.dump({"qa": {"rows_dropped_symbol_total": {"outside_session": 4}, "duplicates_dropped_symbol_total": {}}},
+              open(f"{lake}/_qa/index_1m_NIFTY_2021.parquet.json", "w"))
+    fut = pd.DataFrame({"symbol": ["NIFTY", "NIFTY", "GOLD"], "expiry": ["2021-08-26"] * 3, "security_id": [5, 5, 7],
+                        "ts": ts, "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1, "oi": [9, 8, 7]})
+    fut.to_parquet(f"{lake}/fut_1m_live_index.parquet")
+
+    def J(group, sub, starts=("2021-08-01", "2021-08-31", "2021-09-30")):
+        return [lf.Job(f"{raw}/{group}/{sub}/{a}", "/charts/intraday", dict(
+            fromDate=f"{a} 00:00:00", toDate=f"{dt.date.fromisoformat(a) + dt.timedelta(days=29)} 23:59:59"))
+            for a in starts]
+
+    ji = J("idx_1m", "NIFTY")
+    assert lf.seed(raw, lake, "idx_1m", ji) == {"seeded": 2, "missing": 1}   # last window holds the last day
+    ch = pd.read_parquet(ji[1].path + ".parquet")
+    assert list(ch.columns) == ["timestamp", "open", "high", "low", "close", "volume"] and list(ch.open) == [2.0]
+    assert json.load(open(f"{raw}/idx_1m/NIFTY.seed_qa.json"))["rows_dropped"] == {"outside_session": 4}
+    jf = J("fut_1m", "NIFTY/2021-08-26_5")
+    assert lf.seed(raw, lake, "fut_1m", jf) == {"seeded": 1, "missing": 2}   # its last day (1 Sep) is in window 2
+    ch = pd.read_parquet(jf[0].path + ".parquet")
+    assert list(ch.open_interest) == [9] and "symbol" not in ch

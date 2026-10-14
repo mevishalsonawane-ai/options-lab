@@ -6,7 +6,7 @@ short, redacted error) and is skipped next time. Credentials come from the envir
 dhan_client.py) and are never written anywhere.
 
 Usage:  python -I lake_fetch.py RAW_DIR [--only-missing LAKE_DIR] [--before YYYY-MM-DD] GROUP [GROUP ...]
-  --only-missing LAKE_DIR  for option groups, first turn the published files in LAKE_DIR (lake_build.py output,
+  --only-missing LAKE_DIR  for option groups, idx_1m and fut_1m, first turn the published files in LAKE_DIR (lake_build.py output,
                            e.g. downloaded from Drive) back into raw chunks, so only chunks with no published rows
                            are requested. Chunks whose window reaches the last published day are not seeded
                            (they are fetched again, to pick up the newer days).
@@ -254,51 +254,86 @@ def window(j):
     return (dt.date.fromisoformat(str(j.body["fromDate"])[:10]), dt.date.fromisoformat(str(j.body["toDate"])[:10]))
 
 
-def published_files(lake, sub, und, flag):
-    if sub == "stkopt":
-        return [f for f in [f"{lake}/stkopt_{und}_{flag}.parquet"] if os.path.exists(f)]
-    return sorted(f for f in glob.glob(f"{lake}/opt_{und}_{flag}_*.parquet") if f[:-8].rsplit("_", 1)[-1].isdigit())
+SEEDABLE = ("stkopt", "mcxopt", "idx_1m", "fut_1m")
+_PUB = {}
+
+
+def _read(fs):
+    for f in fs:
+        if f not in _PUB:
+            _PUB.clear() if len(_PUB) > 8 else None
+            _PUB[f] = pd.read_parquet(f)
+    return pd.concat([_PUB[f] for f in fs], ignore_index=True) if fs else pd.DataFrame()
+
+
+def published(lake, group, sid):
+    """Published rows of one raw series (directory of chunks) and where to keep its old QA counts.
+
+    Returns (df with ts and the raw value columns, key columns that split it into sub-series or [], qa file
+    or None, (rows-dropped key, duplicates key) in the published QA)."""
+    year = lambda f: f[:-8].rsplit("_", 1)[-1].isdigit()
+    if group == "idx_1m":
+        sym = os.path.basename(sid)
+        fs = sorted(f for f in glob.glob(f"{lake}/index_1m_{sym}_*.parquet") if year(f))
+        return fs, _read(fs), [], f"{sid}.seed_qa.json", ("rows_dropped_symbol_total", "duplicates_dropped_symbol_total")
+    if group == "fut_1m":
+        sym, es = sid.split("/")[-2:]
+        exp, secid = es.split("_")
+        fs = [f for f in (f"{lake}/fut_1m_live_index.parquet", f"{lake}/fut_1m_live_mcx.parquet") if os.path.exists(f)]
+        df = _read(fs)
+        if len(df):
+            df = df[(df.symbol.astype(str) == sym) & (df.expiry.astype(str) == exp) & (df.security_id == int(secid))]
+            df = df.drop(columns=["symbol", "expiry", "security_id"]).rename(columns={"oi": "open_interest"})
+        return fs, df, [], None, None
+    und, flag = sid.split("/")[-3:-1]
+    if sid.split("/")[-4] == "stkopt":
+        fs = [f for f in [f"{lake}/stkopt_{und}_{flag}.parquet"] if os.path.exists(f)]
+    else:
+        fs = sorted(f for f in glob.glob(f"{lake}/opt_{und}_{flag}_*.parquet") if year(f))
+    return (fs, _read(fs), ["offset", "side"], f"{os.path.dirname(sid)}/seed_qa.json",
+            ("rows_dropped_series_total", "duplicates_dropped_series_total"))
 
 
 def seed(raw, lake, group, J=None):
-    """Write raw chunks for jobs of an option group whose window is covered by the published files in LAKE.
+    """Write raw chunks for jobs whose window is covered by the published files in LAKE (lake_build.py output).
 
-    A chunk is seeded when the published file has rows of its series (offset, side) inside its window and the
-    window ends before the last published day. Windows with no published rows stay unfetched (they may have
-    been empty or never fetched; asking again is cheap). The published files' QA counts of dropped rows are
-    kept in RAW/<sub>/<und>/<flag>/seed_qa.json, so lake_build.py can still report them. Returns
-    {"seeded": n, "missing": m} (m = jobs still to fetch)."""
+    Works for option groups, idx_1m and fut_1m. A chunk is seeded when the published file has rows of its series
+    (for options: offset and side) inside its window and the window ends before the last published day. Windows
+    with no published rows stay unfetched (they may have been empty or never fetched). The published files' QA
+    counts of dropped rows are kept next to the raw series (seed_qa.json), so lake_build.py can still report
+    them. Returns {"seeded": n, "missing": m} (m = jobs still to fetch)."""
     J = jobs_for(group, raw) if J is None else J
+    opt = not group.endswith("_1m")
     series = {}
     for j in J:
-        series.setdefault(os.path.dirname(os.path.dirname(j.path)), []).append(j)
+        sid = os.path.dirname(j.path)
+        series.setdefault(os.path.dirname(sid) if opt else sid, []).append(j)
     st = {"seeded": 0, "missing": 0}
-    for c1, jobs in series.items():
-        und, flag = c1.split("/")[-3:-1]
-        sub = c1.split("/")[-4]
-        fs = published_files(lake, sub, und, flag)
-        df = pd.concat([pd.read_parquet(f) for f in fs], ignore_index=True) if fs else pd.DataFrame()
+    for sid, jobs in series.items():
+        fs, df, keys, qfile, qkeys = published(lake, group, sid)
+        grp, last = {}, None
         if len(df):
             last = df.ts.max().date()
             sec = (df.ts - pd.Timestamp(0, tz="UTC")) // pd.Timedelta(seconds=1)
-            df = df.assign(timestamp=sec.astype("int64")).sort_values("timestamp")
-            grp = {k: (g.reset_index(drop=True), g.timestamp.to_numpy())
-                   for k, g in df.groupby(["offset", "side"], observed=True)}
-            qa = {"rows_dropped": {}, "duplicates_dropped": {}}
-            for f in fs:
-                m = f"{lake}/_qa/{os.path.basename(f)}.json"
-                if os.path.exists(m):
-                    q = json.load(open(m))["qa"]
-                    qa = {"rows_dropped": q.get("rows_dropped_series_total") or {},
-                          "duplicates_dropped": q.get("duplicates_dropped_series_total") or {}}
-            os.makedirs(os.path.dirname(c1), exist_ok=True)
-            json.dump(dict(qa, files=[os.path.basename(f) for f in fs]), open(f"{os.path.dirname(c1)}/seed_qa.json", "w"))
+            df = df.assign(timestamp=sec.astype("int64")).sort_values("timestamp", kind="stable")
+            cols = ["timestamp", *[c for c in df.columns if c not in ("ts", "timestamp", *keys)]]
+            parts = df.groupby(keys, observed=True) if keys else [((), df)]
+            grp = {k: (g[cols].reset_index(drop=True), g.timestamp.to_numpy()) for k, g in parts}
+            if qfile:
+                qa = {"rows_dropped": {}, "duplicates_dropped": {}}
+                for f in fs:
+                    m = f"{lake}/_qa/{os.path.basename(f)}.json"
+                    if os.path.exists(m):
+                        q = json.load(open(m))["qa"]
+                        qa = {"rows_dropped": q.get(qkeys[0]) or {}, "duplicates_dropped": q.get(qkeys[1]) or {}}
+                os.makedirs(os.path.dirname(qfile), exist_ok=True)
+                json.dump(dict(qa, files=[os.path.basename(f) for f in fs]), open(qfile, "w"))
         for j in jobs:
             if j.done():
                 continue
             tag = os.path.basename(os.path.dirname(j.path))
             a, b = window(j)
-            g = grp.get((int(tag[:-1]), tag[-1])) if len(df) else None
+            g = grp.get((int(tag[:-1]), tag[-1]) if opt else ())
             rows = None
             if g is not None and b < last:  # rows from 00:00 IST on day a to the end of day b
                 lo, hi = (int(pd.Timestamp(d, tz=IST).timestamp()) for d in (a, b + dt.timedelta(days=1)))
@@ -307,8 +342,7 @@ def seed(raw, lake, group, J=None):
                 st["missing"] += 1
                 continue
             os.makedirs(os.path.dirname(j.path), exist_ok=True)
-            rows[["timestamp", *[c for c in RD if c in rows]]].reset_index(drop=True).to_parquet(
-                j.path + ".parquet.tmp", compression="zstd")
+            rows.reset_index(drop=True).to_parquet(j.path + ".parquet.tmp", compression="zstd")
             os.replace(j.path + ".parquet.tmp", j.path + ".parquet")
             st["seeded"] += 1
     return st
@@ -336,7 +370,7 @@ def main():
     threads = int(os.environ.get("LAKE_THREADS", "5"))
     for g in groups:
         J = jobs_for(g, raw)
-        if lake and (g in ("stkopt", "mcxopt") or g.startswith("opt_")):
+        if lake and (g in SEEDABLE or g.startswith("opt_")):
             log(f"[{g}] seeded from {lake}:", seed(raw, lake, g, J))
         J = todo(J, before, since)
         log(f"[{g}] {len(J)} chunks to fetch")
