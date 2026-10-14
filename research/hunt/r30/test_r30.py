@@ -348,3 +348,12 @@ def test_lake_options_find_expiry_days_from_the_time_value(tmp_path, monkeypatch
     assert set(a) == {(s, k) for s in "CP" for k in (950.0, 1000.0, 1050.0)}
     assert a[("C", 1000.0)].shape == (I.N, 7) and a[("C", 1000.0)][100, I.C_] == 10.0
     assert LO.day(date(2024, 1, 8)) == {}
+
+
+def test_crypto_sigma_is_in_percent_like_the_simulator_expects():
+    B = _bars(4000, seed=5)                                  # 1-minute log-return SD 0.1%
+    _, _, sig = C.features(B)
+    assert 0.08 < sig.iloc[-1] < 0.12
+    rows = np.arange(1500, 3500, 15)
+    out = C.sim_perp(B, rows, 1, 15, sig.values[rows] * np.sqrt(15))
+    assert 0.15 < np.mean(out["net"] > 0) < 0.6            # a 15-minute trade with a 1-sigma stop wins often

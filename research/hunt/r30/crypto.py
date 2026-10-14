@@ -34,8 +34,8 @@ def _roll(s: pd.Series, w: int, how: str) -> pd.Series:
 
 
 def features(B: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, pd.Series]:
-    """Tabular features (rows <= t only: trailing windows), the sequence channels, and sigma_1m (SD of 1-minute log
-    returns over the previous 1440 minutes, for the stop distances)."""
+    """Tabular features (rows <= t only: trailing windows), the sequence channels, and sigma_1m in % (SD of 1-minute
+    log returns over the previous 1440 minutes, for the stop distances)."""
     c, h, lo, v = B.close, B.high, B.low, B.volume
     lc = np.log(c)
     r1 = lc.diff()
@@ -64,8 +64,8 @@ def features(B: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, pd.Series]:
     mask = np.isfinite(ch[:, 0]) & np.isfinite(ch[:, 1])
     ch = np.where(np.isfinite(ch), ch, 0.0)
     S = np.column_stack([ch, mask]).astype(np.float32)
-    sig = _roll(r1, 1440, "std")
-    return F, S, sig
+    sig = _roll(r1, 1440, "std") * 100          # in % (14 Oct 2026: was a fraction, which put every stop 100x too
+    return F, S, sig                            # close; found in the design walk-forward, fixed before any holdout)
 
 
 def labels(B: pd.DataFrame, h: int) -> tuple[np.ndarray, np.ndarray]:
