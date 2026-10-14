@@ -1,10 +1,10 @@
 {
   "app_lessons": 0,
   "built_from": "2026-10-14",
-  "bytes": 863468,
+  "bytes": 863790,
   "counts": {
     "answer": 1296,
-    "doc": 9049,
+    "doc": 9053,
     "experiment": 207,
     "finding": 232,
     "model": 6,
@@ -13,9 +13,9 @@
     "study": 60
   },
   "experiments": 207,
-  "facts": 10911,
+  "facts": 10915,
   "model_cards": 1,
   "schema": 1,
   "shared_items": 385,
-  "version": "f08dca9fb447"
+  "version": "4be52c998a11"
 }

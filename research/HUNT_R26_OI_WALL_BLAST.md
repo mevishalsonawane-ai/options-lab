@@ -266,6 +266,26 @@ Notes:
 - It runs off the main thread, on data already in memory or on disk, never on the order or tick path.
 - SENSEX and FINNIFTY are not recorded by the phone. BANKNIFTY now has only a monthly expiry.
 
+## Appendix: lots per index under the Rs 2,000 cap (14 Oct 2026)
+
+Lots = floor(2,000 ÷ (premium × lot)), whole lots. In the Rs 15-30 band one lot always fits under Rs 2,000. Lot sizes as
+used by R26 for today's date:
+
+| index (expiry now) | lot | at Rs 15 | at Rs 30 | 2 lots fit up to |
+|---|---|---|---|---|
+| NIFTY (weekly) | 65 | 2 lots = Rs 1,950 | 1 lot = Rs 1,950 | Rs 15.38 |
+| SENSEX (weekly) | 20 | 6 lots = Rs 1,800 | 3 lots = Rs 1,800 | — (3-6 lots in the band) |
+| BANKNIFTY (monthly) | 35 | 3 lots = Rs 1,575 | 1 lot = Rs 1,050 | Rs 28.57 |
+| FINNIFTY (monthly) | 60 | 2 lots = Rs 1,800 | 1 lot = Rs 1,800 | Rs 16.67 |
+
+- **Charges:** about Rs 50 a round trip (Rs 20 an order plus GST, exchange fees and STT). That is about 2.5% of a
+  Rs 2,000 ticket, before the spread.
+- **Boss's account stops:** −Rs 13,000 a month and −Rs 40,000 total.
+  - A rule that bought on every NIFTY and SENSEX weekly (about 8-9 expiries a month) would break the monthly stop
+    after 7 full losses.
+  - This framework fired only 15 times in 5 years, so it would almost never come near that stop. Its problem is that
+    the trades it takes lose, not that it trades too often.
+
 ## Honest notes
 
 - **Small sample.** 15 trades for P (35 for A3) over 5 years and four indices. Any net, positive or negative, on 15
