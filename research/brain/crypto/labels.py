@@ -3,7 +3,7 @@ and no session: the windows run across midnight and weekends (one constant "day"
 
     python -m research.brain.crypto.labels build --symbols BTCUSDT ETHUSDT
 
--> <cache>/crypto/labels/<SYM>/<YYYY>/<day>.parquet: y_ret_{60,240,1440}m (log %, spot close t -> t+h), y_range_*,
+-> <cache>/crypto/labels/<SYM>/<YYYY>/<day>.parquet: y_ret_{15,60,240,1440}m (log %, spot close t -> t+h), y_range_*,
 y_mfe_*, y_mae_* over t+1 .. t+h (NaN when any of the window is missing at the end of the data). Joined to features
 only through research/brain/split.join_forward. A design row whose window reaches the holdout is dropped by
 holdout.design().
@@ -20,7 +20,7 @@ import pandas as pd
 from .. import labels as india
 from . import config, cube
 
-HORIZONS = (60, 240, 1440)
+HORIZONS = (15, 60, 240, 1440)          # 15 added for the F1 screen (14 Oct 2026)
 MAX_HORIZON_MIN = max(HORIZONS)
 
 
@@ -42,6 +42,13 @@ def _path(root: Path, sym: str, d: date) -> Path:
     return config.paths(root).labels(sym) / str(d.year) / f"{d}.parquet"
 
 
+def _has_horizons(p: Path, horizons=HORIZONS) -> bool:
+    """A label file written before a horizon was added (15 minutes, 14 Oct 2026) lacks its columns: rebuild it."""
+    import pyarrow.parquet as pq
+    names = set(pq.read_schema(p).names)
+    return all(f"y_ret_{h}m" in names for h in horizons)
+
+
 def build(root: Path, sym: str, frm: date, to: date) -> int:
     days = [d for d in cube.built_days(root, sym) if frm <= d <= to]
     n = 0
@@ -51,7 +58,7 @@ def build(root: Path, sym: str, frm: date, to: date) -> int:
     for _, ds in sorted(by_month.items()):
         pm = [cube.day_paths(root, sym, d)[0] for d in ds]
         if all(_path(root, sym, d).exists() and _path(root, sym, d).stat().st_mtime >= p.stat().st_mtime
-               for d, p in zip(ds, pm)):
+               and _has_horizons(_path(root, sym, d)) for d, p in zip(ds, pm)):
             nxt = cube.day_paths(root, sym, ds[-1] + timedelta(days=1))[0]
             if not nxt.exists() or nxt.stat().st_mtime <= _path(root, sym, ds[-1]).stat().st_mtime:
                 continue

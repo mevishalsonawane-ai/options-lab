@@ -268,3 +268,184 @@ def test_boss_window_is_midnight_to_nine_ist():
     inside, left = window_flags(t, config.WINDOW)
     assert list(inside) == [False, True, True, False, False]
     assert left[1] == 539 and left[2] == 0 and np.isnan(left[0]) and np.isnan(left[3])
+
+
+# --- F1 refresh (14 Oct 2026): the Drive lake's Parquet layout, Deribit DVOL for both coins, option-trade columns ----
+def _write_lake(root, frames, sym="BTCUSDT"):
+    """The same rows as the Drive crypto lake stores them: monthly Parquet, epoch ms, `count` for trades."""
+    def kl(d):
+        ot = d.ts.values.astype("datetime64[ms]").astype(np.int64)
+        return pd.DataFrame({"open_time": ot, "open": d.open, "high": d.high, "low": d.low, "close": d.close,
+                             "volume": d.volume, "close_time": ot + 59_999, "quote_volume": d.quote_volume,
+                             "count": d.trades.astype(int), "taker_buy_volume": d.taker_buy_volume,
+                             "taker_buy_quote_volume": d.taker_buy_volume * d.close})
+    where = {"spot": "spot/klines_1m", "perp": "futures_um/klines_1m", "mark": "futures_um/markprice_1m",
+             "index": "futures_um/indexprice_1m"}
+    tag = {"spot": "klines_1m", "perp": "klines_1m", "mark": "markprice_1m", "index": "indexprice_1m"}
+    for k, folder in where.items():
+        d = frames[k]
+        for per, part in d.groupby(d.ts.dt.to_period("M")):
+            p = root / folder / sym / str(per.year) / f"{sym}-{tag[k]}-{per}.parquet"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            kl(part).to_parquet(p, index=False)
+    f = frames["funding"]
+    for per, part in f.groupby(f.ts.dt.to_period("M")):
+        p = root / "futures_um/funding" / sym / str(per.year) / f"{sym}-funding-{per}.parquet"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(dict(calc_time=part.ts.values.astype("datetime64[ms]").astype(np.int64),
+                          funding_interval_hours=part.interval_h, last_funding_rate=part.rate)).to_parquet(p, index=False)
+    m = frames["metrics"]
+    for per, part in m.groupby(m.ts.dt.to_period("M")):
+        p = root / "futures_um/metrics" / sym / str(per.year) / f"{sym}-metrics-{per}.parquet"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(dict(create_time=part.ts.values.astype("datetime64[ms]").astype(np.int64),
+                          sum_open_interest=part.oi, sum_open_interest_value=part.oi_value,
+                          count_toptrader_long_short_ratio=part.top_ls_accounts,
+                          sum_toptrader_long_short_ratio=part.top_ls_positions, count_long_short_ratio=part.ls_accounts,
+                          sum_taker_long_short_vol_ratio=part.taker_ls_vol)).to_parquet(p, index=False)
+
+
+def test_lake_parquet_layout_builds_the_same_cube_as_the_archive(tmp_path):
+    r = syn.raw(4, "2024-12-30")
+    syn.write_archive(tmp_path / "arch", r)
+    _write_lake(tmp_path / "lake", r)
+    a = ArchiveAdapter(tmp_path / "arch")
+    b = ArchiveAdapter(tmp_path / "lake")
+    assert set(b.kinds("BTCUSDT")) == {"spot", "perp", "mark", "index", "funding", "metrics"}   # the lake has no premium
+    assert b.months("BTCUSDT") == ["2024-12", "2025-01"]
+    built = {}
+    for name, ad in (("arch", a), ("lake", b)):
+        root = tmp_path / f"cache_{name}"
+        cube.build(root, "BTCUSDT", date(2024, 12, 30), date(2025, 1, 2), adapter=ad, dvol=DvolAdapter({}), verbose=False)
+        built[name] = cube.load(root, "BTCUSDT")
+    A, B = built["arch"], built["lake"]
+    assert len(A) == len(B) == 4 * 1440
+    for c in ["close", "perp_close", "mark_close", "index_close", "funding_rate", "oi", "ls_accounts", "trades", "basis_bps"]:
+        assert np.allclose(A[c], B[c], equal_nan=True), c
+    assert B.premium_close.isna().all() and set(B.premium_flag) == {"gap"}
+    # both layouts in one root (lake klines + archive premium): every kind found, nothing doubled
+    _write_lake(tmp_path / "arch" / "lake", r)
+    both = ArchiveAdapter(tmp_path / "arch")
+    raw = both.load("BTCUSDT", pd.Timestamp("2024-12-31"), pd.Timestamp("2024-12-31 23:59"))
+    M, _ = cube.build_frame(raw, None, clean.grid(pd.Timestamp("2024-12-31"), pd.Timestamp("2024-12-31 23:59")))
+    assert set(M.flag) == {"ok"} and M.premium_close.notna().all()
+
+
+def test_dvol_adapter_reads_the_options_lake_for_both_coins(tmp_path):
+    t = pd.date_range("2025-01-01", periods=48, freq="h")
+    for coin, base in (("BTC", 50.0), ("ETH", 70.0)):
+        p = tmp_path / "deribit" / "dvol" / f"{coin}_1h.parquet"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(dict(timestamp=t.values.astype("datetime64[ms]").astype(np.int64), open=base, high=base,
+                          low=base, close=base + np.arange(48))).to_parquet(p, index=False)
+    ad = DvolAdapter(options_root=tmp_path)
+    assert ad.available("BTCUSDT") and ad.available("ETHUSDT") and not ad.available("SOLUSDT")
+    d = ad.load("ETHUSDT", pd.Timestamp("2025-01-01 05:00"), pd.Timestamp("2025-01-01 10:00"))
+    row = d[d.ts == pd.Timestamp("2025-01-01 07:00")].iloc[0]
+    assert row.avail == pd.Timestamp("2025-01-01 08:00") and row.dvol == 77.0      # known when its hour ends
+    assert DvolAdapter({}).available("BTCUSDT") is False                           # an explicit {} means none
+
+
+def test_option_hours_values_and_hour_end_stamp():
+    h0 = pd.Timestamp("2025-01-02 10:00")
+    ms = lambda t: int(pd.Timestamp(t).value // 10**6)                              # noqa: E731
+    rows = []
+    # 24 hours of one call buy (1 coin) and one put sell (0.5 coin) a hour, before and inside the hour of interest
+    for k in range(30):
+        t = h0 - pd.Timedelta(hours=26) + pd.Timedelta(hours=k, minutes=10)
+        rows.append(dict(timestamp=ms(t), iv=60.0, index_price=100.0, strike=100.0, expiry_ts=ms(t + pd.Timedelta(days=7)),
+                         option_type="C", direction="buy", amount=1.0))
+        rows.append(dict(timestamp=ms(t), iv=60.0, index_price=100.0, strike=100.0, expiry_ts=ms(t + pd.Timedelta(days=7)),
+                         option_type="P", direction="sell", amount=0.5))
+    # skew: puts at 90% IV 70, calls at 110% IV 55, over the 4 hours to 11:00; one IV-0 print that must be dropped
+    for j in range(6):
+        t = h0 - pd.Timedelta(hours=2) + pd.Timedelta(minutes=20 * j)
+        rows.append(dict(timestamp=ms(t), iv=70.0, index_price=100.0, strike=90.0, expiry_ts=ms(t + pd.Timedelta(days=10)),
+                         option_type="P", direction="buy", amount=0.0))
+        rows.append(dict(timestamp=ms(t), iv=55.0, index_price=100.0, strike=110.0, expiry_ts=ms(t + pd.Timedelta(days=10)),
+                         option_type="C", direction="buy", amount=0.0))
+    rows.append(dict(timestamp=ms(h0 + pd.Timedelta(minutes=30)), iv=0.0, index_price=100.0, strike=100.0,
+                     expiry_ts=ms(h0 + pd.Timedelta(days=5)), option_type="C", direction="buy", amount=0.0))
+    tr = pd.DataFrame(rows).sort_values("timestamp")
+    from research.brain.crypto.adapters import option_hours
+    out = option_hours(tr, h0 - pd.Timedelta(hours=5), h0 + pd.Timedelta(hours=2)).set_index("ts")
+    r = out.loc[h0 + pd.Timedelta(hours=1)]                    # the hour [10:00, 11:00) is stamped 11:00
+    assert r.opt_atm_iv == 60.0 and r.opt_n_1h == 2           # the IV-0 print is not a trade here
+    assert r.opt_skew == pytest.approx(15.0)
+    assert r.opt_pc_24h == pytest.approx(0.5)
+    assert r.opt_flow_24h == pytest.approx((24 * 1.0 + 24 * 0.5) / (24 * 1.5))      # call buys + put sells = bullish
+    # point in time: deleting every trade at or after 11:00 leaves every row stamped <= 11:00 unchanged
+    cut = option_hours(tr[tr.timestamp < ms(h0 + pd.Timedelta(hours=1))], h0 - pd.Timedelta(hours=5),
+                       h0 + pd.Timedelta(hours=2)).set_index("ts")
+    keep = out.index <= h0 + pd.Timedelta(hours=1)
+    pd.testing.assert_frame_equal(out[keep], cut[keep])
+    # the first trade is at 08:10 the day before: the hour 07:00-08:00 (row 08:00) has a full 24 hours behind it,
+    # the hour 06:00-07:00 (row 07:00) does not and is NaN, not a short-window ratio
+    assert np.isfinite(out.loc[h0 - pd.Timedelta(hours=2)].opt_pc_24h)
+    assert np.isnan(out.loc[h0 - pd.Timedelta(hours=3)].opt_pc_24h)
+
+
+def test_cube_guard_with_option_columns_and_carry_limit():
+    days, start = 3, "2025-01-03"
+    r = syn.raw(days, start)
+    g = clean.grid(pd.Timestamp(start), pd.Timestamp(start) + pd.Timedelta(days=days) - pd.Timedelta(minutes=1))
+    from research.brain.crypto.adapters import option_hours
+    tr = syn.option_trades(days, start)
+    tr = tr[~((tr.timestamp >= pd.Timestamp("2025-01-04 03:00").value // 10**6)
+              & (tr.timestamp < pd.Timestamp("2025-01-04 09:00").value // 10**6))]          # a 6-hour hole
+    r["options"] = option_hours(tr, g[0] - pd.Timedelta(hours=1), g[-1])
+    d = syn.dvol(days, start)
+    M, _ = cube.build_frame(r, d, g)
+    at = M.set_index("ts")
+    assert at.opt_age_min["2025-01-04 02:00"] == 0 and np.isfinite(at.opt_atm_iv["2025-01-04 02:00"])
+    assert at.opt_age_min["2025-01-04 02:59"] == 59                        # the 01:00-02:00 hour, carried
+    assert np.isfinite(at.opt_atm_iv["2025-01-04 05:00"])                   # 03:00 row (hour 02-03) + 120 min
+    assert np.isnan(at.opt_atm_iv["2025-01-04 05:01"])                      # never carried past 2 hours
+    cuts = [pd.Timestamp("2025-01-03 10:59"), pd.Timestamp("2025-01-03 11:00"), pd.Timestamp("2025-01-04 04:30")]
+    assert guard.check_cube(r, d, g, cuts) == []
+
+
+def test_truncated_ema_matches_a_direct_window_and_skips_gaps():
+    from research.brain.crypto.features.trend_f import TRUNC, tema
+    rng = np.random.default_rng(5)
+    x = 100 + np.cumsum(rng.normal(0, 0.1, 3000))
+    span = 20
+    a, L = 2 / (span + 1), TRUNC * span
+    w = a * (1 - a) ** np.arange(L)
+    direct = np.array([np.dot(w, x[t - np.arange(L)]) / w.sum() for t in range(L - 1, 3000)])
+    got = tema(x, span)
+    assert np.isnan(got[:L - 1]).all() and np.allclose(got[L - 1:], direct, rtol=1e-10)
+    y = x.copy()
+    y[1500:1510] = np.nan
+    gy = tema(y, span)
+    fin = np.isfinite(y[1505 - np.arange(L)])
+    exp = np.dot(w[fin], y[1505 - np.arange(L)][fin]) / w[fin].sum()
+    assert gy[1505] == pytest.approx(exp, rel=1e-10)                         # a gap drops out of the average
+    z = x.copy()
+    z[:2000] = np.nan
+    tz = tema(z, span)
+    assert np.isnan(tz[2003]) and np.isfinite(tz[2010])     # 4 closes = 33% of the weight: NaN; 11 = 67%: a value
+
+
+def test_options_pull_respects_the_holdout_lock():
+    inc = fetch.options_includes("2026-02", "2026-05")
+    pats = inc[1::2]
+    assert "deribit/trades/*/*/2026-03.parquet" in pats and "delta_india/candles/*/*/2026-03-*.parquet" in pats
+    assert not any("2026-04" in p or "2026-05" in p for p in pats)              # the brain's holdout is not copied
+    assert "deribit/dvol/**" in pats
+    assert any("2026-05" in p for p in fetch.options_includes("2026-02", "2026-05", allow_holdout=True)[1::2])
+
+
+def test_label_files_missing_a_new_horizon_are_rebuilt(tmp_path):
+    r = syn.raw(3, "2025-01-03")
+    syn.write_archive(tmp_path / "raw", r)
+    root = tmp_path / "cache"
+    cube.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5), adapter=ArchiveAdapter(tmp_path / "raw"),
+               dvol=DvolAdapter({}), verbose=False)
+    assert labels.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5)) == 3
+    assert labels.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5)) == 0          # up to date
+    p = labels._path(root, "BTCUSDT", date(2025, 1, 4))
+    old = pd.read_parquet(p)
+    old.drop(columns=[c for c in old.columns if c.endswith("_15m")]).to_parquet(p, index=False)   # an older file
+    assert labels.build(root, "BTCUSDT", date(2025, 1, 3), date(2025, 1, 5)) == 3
+    assert "y_ret_15m" in pd.read_parquet(p).columns

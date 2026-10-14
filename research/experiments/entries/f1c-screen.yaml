@@ -1,0 +1,33 @@
+id: f1c-screen
+title: 'F1 crypto screen: 78 brain features vs the next 15/60/240-minute move, 5 coins'
+family: mcx-crypto
+date: '2026-10-14'
+doc: research/HUNT_F1_FACTORY.md
+hypothesis: Some crypto brain features carry information about the direction or size of the next 15, 60 or 240 minutes (BTC,
+  ETH, SOL, BNB, XRP), confirmed on a separate selection split after BH.
+data_version: Crypto brain cube v3 refreshed 14 Oct 2026 from the Drive crypto lake (Binance spot, USD-M perp, mark, index,
+  funding, 5-min metrics; premium-index klines and SOL/BNB/XRP mark/index/metrics from data.binance.vision), Oct 2023 - Mar
+  2026; Deribit DVOL and option trades and Delta Exchange India 1-minute option candles from the options lake. Raw data and
+  trade lists outside git.
+period:
+  design: 2023-11-01..2025-03-31 and 2025-11-01..2026-03-31
+instruments:
+- CRYPTO
+features:
+- all 78 crypto brain features (research/brain/crypto/FEATURES.md)
+model_or_rule: Spearman rank correlation on non-overlapping rows; screen split Nov 2023-Sep 2024, selection split Oct 2024-Mar
+  2025 and Nov 2025-Mar 2026; BH per family (direction, size) at q < 0.05
+settings: research/hunt/f1c/screen.py
+prereg: research/hunt/f1c/PREREG.md
+variants_tried: null
+results:
+  summary: 'Direction: 1080 tests, 356 pass BH, 245 confirmed on the selection split (89% reversals: price stretched from
+    VWAP, the day''s range or the EMA ribbon, or after one-sided taker flow, comes back a little), median edge 0.7 bps against
+    a 15.8-21.8 bps round trip; 2 pay on paper (XRP, 240 minutes). Funding, premium, long/short ratios, DVOL, option skew,
+    put/call, ATM IV, option flow and the calendar: noise for direction; basis (SOL) and OI change (BTC, XRP) confirmed on
+    one coin only. Size: 1080 tests, 698 pass BH, 550 confirmed (realised vol and ranges). Rows per coin and test (15 / 60
+    / 240 min): screen 32,160 / 8,040 / 2,010, selection 31,936 / 7,984 / 1,996.'
+  costs: 'Round trip used for ''pays'': 2 x (0.05% x 1.18 + slippage 0.02% BTC/ETH, 0.05% others)'
+holdout_read: false
+verdict: not-a-test
+notes: 'A screen, not a trading test: its job was to choose the rules (PREREG part B).'

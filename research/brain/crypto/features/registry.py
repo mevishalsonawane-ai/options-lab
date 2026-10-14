@@ -21,7 +21,7 @@ from ...features import registry as india
 from ...markets import MARKETS
 from .. import config
 
-FAMILIES = ("price", "vol", "volume", "profile", "levels", "derivs", "calendar")
+FAMILIES = ("price", "trend", "vol", "volume", "profile", "levels", "derivs", "options", "calendar")
 REGISTRY: dict[str, india.Feature] = {}
 PENDING: dict[str, dict] = {}
 

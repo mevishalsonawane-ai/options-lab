@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 
 import crypto_synth as syn
-from research.brain.crypto import clean, cube, guard
+from research.brain.crypto import adapters, clean, cube, guard
 from research.brain.crypto.features import REGISTRY, load_all
 from research.brain.crypto.features import registry as R
 from research.brain.crypto.features.__main__ import FEATURES_MD
@@ -27,6 +27,10 @@ def minutes():
     r["spot"] = r["spot"][~((r["spot"].ts >= "2025-02-03 05:00") & (r["spot"].ts < "2025-02-03 05:20"))]
     r["funding"] = r["funding"][r["funding"].ts.dt.floor("min") != pd.Timestamp("2025-02-02 16:00")]
     g = clean.grid(pd.Timestamp(START), pd.Timestamp(START) + pd.Timedelta(days=DAYS) - pd.Timedelta(minutes=1))
+    tr = syn.option_trades(DAYS, START)
+    tr = tr[~((tr.timestamp >= pd.Timestamp("2025-02-04 10:00").value // 10**6)
+              & (tr.timestamp < pd.Timestamp("2025-02-04 14:00").value // 10**6))]      # a 4-hour hole in the trades
+    r["options"] = adapters.option_hours(tr, g[0] - pd.Timedelta(hours=1), g[-1])
     M, _ = cube.build_frame(r, syn.dvol(DAYS, START), g)
     return M
 

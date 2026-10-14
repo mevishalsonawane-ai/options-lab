@@ -23,8 +23,12 @@ python3.11 -m venv .venv && .venv/bin/pip install -r research/brain/requirements
 
 # L1: get months of raw data (never a month in the holdout unless --allow-holdout)
 python -m research.brain.crypto.fetch sample --symbols BTCUSDT ETHUSDT --from 2023-10 --to 2026-03   # archive direct
-python -m research.brain.crypto.fetch drive  --remote gdrive:<crypto-lake-folder> --symbols BTCUSDT --from 2024-01 --to 2024-06
-#   (rclone remote `gdrive`, configured by RCLONE_CONFIG_GDRIVE_*; copies only the months asked for)
+python -m research.brain.crypto.fetch drive  --symbols BTCUSDT ETHUSDT SOLUSDT BNBUSDT XRPUSDT --from 2023-10 --to 2026-03
+python -m research.brain.crypto.fetch options --from 2023-09 --to 2026-03       # Deribit trades + DVOL, Delta candles
+python -m research.brain.crypto.fetch sample --symbols BTCUSDT ETHUSDT SOLUSDT BNBUSDT XRPUSDT --from 2023-09 --to 2026-03 --kinds premium
+#   (rclone remote `gdrive`, configured by RCLONE_CONFIG_GDRIVE_*; gdrive:IraAlgo-data-crypto; only the months asked
+#    for, never the holdout unless --allow-holdout. The lake has no premium-index klines and no mark / index /
+#    metrics for SOL, BNB, XRP: `sample --kinds premium` (and `mark index metrics` for those three) fills them)
 
 # L2-L4
 python -m research.brain.crypto.cube build --symbols BTCUSDT ETHUSDT          # incremental: only changed months
@@ -50,6 +54,33 @@ months are not needed again unless CUBE_VERSION changes).
 
 Measured here (one CPU): cube 913 days per symbol in ~3.5 minutes (~0.23 s a day, 0.25 MB a day); features ~6 s a
 month; labels ~25 s per symbol; the study ~40 s for two symbols.
+
+## F1 refresh (14 Oct 2026): the Drive lake, five coins, cube v3, 78 features
+
+The refresh is the same incremental commands (`fetch drive` + `fetch options` + `cube build` + `features build` +
+`labels build`); nothing was rebuilt by hand. What changed:
+
+- **Source**: the Drive crypto lake (`gdrive:IraAlgo-data-crypto`), whose monthly Parquet names
+  (`<SYM>-klines_1m-<YYYY-MM>.parquet`, `-markprice_1m-`, `-indexprice_1m-`, `-funding-`, `-metrics-`) the adapter now
+  reads beside the archive's zips; when a month is in both, the lake wins. Premium-index klines (all five) and SOL /
+  BNB / XRP mark, index and metrics come from data.binance.vision (the lake does not hold them).
+- **Coins**: BTC, ETH, SOL, BNB, XRP; 913 cube days each (1 Oct 2023 - 31 Mar 2026), no gap minutes (SOL 9 stale).
+  The brain's holdout (1 Apr 2026 on) was not copied or built.
+- **Cube v3**: DVOL for BTC **and ETH** from the options lake (`deribit/dvol/<COIN>_1h.parquet`), and six option-market
+  columns from every Deribit option trade (`adapters.option_hours`): at-the-money IV (strike within 2%, 1-30 days),
+  put-call skew (OTM puts 85-97% minus calls 103-115%, 3-45 days, last 4 hours), 24-hour put/call amount and taker flow,
+  trade count. Each hour is stamped at its END, carried at most 2 hours; BTC and ETH only.
+- **14 new features** (78 in all, `FEATURES.md`): `trend` family: 15-minute and 1-hour EMA ribbons (spans 8/13/21/34/55
+  bars; order, width, distance, slope), built from truncated EMAs (5 x span) so warm-up independence holds exactly;
+  `options` family: `opt_atm_iv`, `opt_atm_iv_minus_rv`, `opt_skew`, `opt_skew_chg_24h`, `opt_pc_24h`, `opt_pc_z_7d`,
+  `opt_flow_24h`. Labels add a 15-minute horizon.
+- **Liquidations**: still not present (the archive and lake have no liquidation prints; aggTrades carry no flag), so
+  `liq_*` stay proxies. The lake's 5-minute metrics carry a few zero-OI prints (OI change -100% / inf); rules that read
+  OI change must bound it.
+- **Checks**: 24 + 7 brain crypto tests (lake layout = archive cube, DVOL for both coins, option hours at the hour's end
+  and point in time, the option columns under the cube guard, the truncated EMA against a direct window), and the
+  look-ahead guard on the real cube (BTC, ETH, SOL, last 40 days, 6 cuts x 2 modes): PASS.
+- Used by F1C (`research/hunt/f1c`, `research/HUNT_F1_FACTORY.md`).
 
 ## Boss's window: 00:00-09:00 IST (13 Oct 2026)
 

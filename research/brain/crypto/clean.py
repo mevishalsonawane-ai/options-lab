@@ -14,6 +14,8 @@
 """
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -40,8 +42,19 @@ def to_utc(x) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(t.dt.tz_convert("UTC").dt.tz_localize(None))
 
 
+def _is_parquet(path_or_buf) -> bool:
+    return isinstance(path_or_buf, (str, os.PathLike)) and str(path_or_buf).endswith(".parquet")
+
+
 def read_klines(path_or_buf) -> pd.DataFrame:
-    """A Binance kline CSV (zip or plain, with or without a header) -> ts (bar start) + BAR columns."""
+    """A Binance kline CSV (zip or plain, with or without a header), or a crypto-lake Parquet month (the archive's
+    columns, `count` for trades, times in ms) -> ts (bar start) + BAR columns."""
+    if _is_parquet(path_or_buf):
+        d = pd.read_parquet(path_or_buf).rename(columns={"count": "trades"})
+        out = pd.DataFrame({"ts": to_utc(d.open_time.astype(np.float64)).values})
+        for c in BAR:
+            out[c] = pd.to_numeric(d[c], errors="coerce").values if c in d else np.nan
+        return out
     d = pd.read_csv(path_or_buf, header=None, names=KLINE_COLS, dtype=str)
     d = d[pd.to_numeric(d.open_time, errors="coerce").notna()]
     out = pd.DataFrame({"ts": to_utc(d.open_time.astype(np.float64)).values})
@@ -51,8 +64,9 @@ def read_klines(path_or_buf) -> pd.DataFrame:
 
 
 def read_funding(path_or_buf) -> pd.DataFrame:
-    """fundingRate CSV (calc_time, funding_interval_hours, last_funding_rate) -> ts (settlement time), rate, interval_h."""
-    d = pd.read_csv(path_or_buf)
+    """fundingRate CSV or lake Parquet (calc_time, funding_interval_hours, last_funding_rate) -> ts (settlement time),
+    rate, interval_h."""
+    d = pd.read_parquet(path_or_buf) if _is_parquet(path_or_buf) else pd.read_csv(path_or_buf)
     iv = d["funding_interval_hours"] if "funding_interval_hours" in d else pd.Series(config.FUNDING_INTERVAL_H, index=d.index)
     return pd.DataFrame({"ts": to_utc(d.calc_time).values, "rate": d.last_funding_rate.astype(float).values,
                          "interval_h": pd.to_numeric(iv).values})
@@ -64,8 +78,8 @@ METRIC_MAP = {"sum_open_interest": "oi", "sum_open_interest_value": "oi_value",
 
 
 def read_metrics(path_or_buf) -> pd.DataFrame:
-    """metrics CSV (create_time = the snapshot time) -> ts + oi, oi_value and the long/short ratios."""
-    d = pd.read_csv(path_or_buf)
+    """metrics CSV or lake Parquet (create_time = the snapshot time) -> ts + oi, oi_value and the long/short ratios."""
+    d = pd.read_parquet(path_or_buf) if _is_parquet(path_or_buf) else pd.read_csv(path_or_buf)
     out = pd.DataFrame({"ts": to_utc(d.create_time).values})
     for k, v in METRIC_MAP.items():
         out[v] = pd.to_numeric(d[k], errors="coerce").values if k in d else np.nan
