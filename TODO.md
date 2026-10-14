@@ -296,6 +296,13 @@ Not possible yet:
 ## F. Strategy Factory (owner go-ahead 2026-10-13)
 
 - [ ] F1. Automatic strategy discovery from the Data Brain. Nothing goes live without Boss's PIN.
+      - 14 Oct, India part done (research/HUNT_F1_FACTORY.md, branch claude/f1-india-factory): 201 brain features +
+        breadth screened on NIFTY/BANKNIFTY/FINNIFTY/SENSEX. Move size is predictable; direction is not. 0 of 20 rules
+        pass (incl. Boss's EMA+Supertrend+VWAP and OI+VWAP stacks); nothing armed. The F1 holdout (Jan 2023 - Jun 2024)
+        is spent. Open:
+        - IV skew as a direction lean, SHADOW only, on sessions from 13 Oct 2026 (new pre-registration);
+        - breadth as a brain adapter; a MIDCPNIFTY expiry source; R28's GEX feature when pushed;
+        - the crypto part (data watchdog), and the nightly job.
       - Ideas (nightly): candidate rules built from the Data Brain features (`research/brain`: VWAP, profile, levels,
         OI, IV, indicators, regime, expected range) and from research findings (FINDINGS.md, the HUNT docs). Every idea is
         logged in the experiment log, failures included.

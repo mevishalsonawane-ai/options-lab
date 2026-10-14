@@ -139,7 +139,11 @@ def write_observed_expiries(frames: dict[str, pd.DataFrame]) -> Path:
         f = f.dropna()
         for d in sorted(set(f.expiry)):
             rows.append(dict(date=d, und=und, source="research-data release contracts"))
-    out = pd.DataFrame(rows).sort_values(["und", "date"])
+    out = pd.DataFrame(rows)
+    if EXPIRIES_CSV.exists():                         # keep other indices' rows (expiry_infer.py: lake-inferred days)
+        keep = pd.read_csv(EXPIRIES_CSV)
+        out = pd.concat([keep[~keep.und.isin(list(frames))], out.astype({"date": str})], ignore_index=True)
+    out = out.sort_values(["und", "date"])
     EXPIRIES_CSV.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(EXPIRIES_CSV, index=False)
     observed_expiries.cache_clear()

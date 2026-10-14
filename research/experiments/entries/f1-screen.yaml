@@ -1,0 +1,41 @@
+id: f1-screen
+title: 'F1 screen: 201 brain features + 4 breadth features vs the next 15/30/60-min move and the ATM arms (4 indices + pooled)'
+family: patterns-indicators
+hypothesis: Some point-in-time indicator (EMA, VWAP, Supertrend, RSI, MACD, ADX, squeeze, CPR, OI build-up, PCR, max pain,
+  OI walls, IV, skew, straddle, GEX proxy, VIX, breadth, calendar) ranks the next index move or the option-buying arms' outcome
+  out of sample.
+date: '2026-10-14'
+doc: research/HUNT_F1_FACTORY.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m, options_rolling_1m opt_<UND>_WEEK (ATM+-10, nearest expiry,
+  OI), INDIAVIX, equity_1m (58 stocks, breadth); brain cube + 201 features (research/brain/FEATURES.md); FINNIFTY/SENSEX expiries
+  inferred (research/brain/expiry_infer.py); lake to 2026-10-12'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+settings: research/hunt/f1/PREREG.md
+prereg: research/hunt/f1/PREREG.md
+period:
+  design: 'fit split 2021-08-01..2022-12-14 + 2024-07-15..2024-12-31; selection split 2025-01-01..2026-04-13; sessions with
+    a chain {''NIFTY'': 771, ''BANKNIFTY'': 768, ''FINNIFTY'': 760, ''SENSEX'': 432}'
+features:
+- all research/brain features
+- br_adv_share
+- br_above_vwap
+- br_adv_share_chg15
+- br_bank_adv_share
+model_or_rule: Rank IC, direction from the fit split, day-clustered one-sided t on the selection split; levels of few-valued
+  features; 2-feature pairs of the 12 strongest per target; BH q 0.10 over all
+variants_tried: 11672
+results:
+  summary: '11,672 tests; 2045 survivors (BH q<=0.10, |IC|>=0.02, same sign). By target: {''abs30'': 825, ''net_ce_atm_x1'':
+    193, ''net_ce_atm_x2'': 144, ''net_pe_atm_x1'': 221, ''net_pe_atm_x2'': 110, ''ret15'': 378, ''ret30'': 115, ''ret60'':
+    59}. By scope: {''BANKNIFTY'': 504, ''FINNIFTY'': 209, ''NIFTY'': 455, ''POOLED'': 409, ''SENSEX'': 468}. Details: research/HUNT_F1_FACTORY.md.'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    open +-5 bps plus a 1/2/4-tick half-spread by 5-min volume in lots (stops 10 bps, double ticks); today's lot sizes (arm
+    targets)
+holdout_read: false
+verdict: inconclusive
+notes: 'The screen only chooses which rules to test; its survivors are information, not trading rules. Full table: research/hunt/f1/results/screen_by_feature.csv
+  and Drive derived/f1_factory/screen.csv.gz.'

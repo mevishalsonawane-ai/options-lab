@@ -1,0 +1,27 @@
+{
+ "tests": 11672,
+ "survivors": 2045,
+ "by_target": {
+  "abs30": 825,
+  "net_ce_atm_x1": 193,
+  "net_ce_atm_x2": 144,
+  "net_pe_atm_x1": 221,
+  "net_pe_atm_x2": 110,
+  "ret15": 378,
+  "ret30": 115,
+  "ret60": 59
+ },
+ "by_scope": {
+  "BANKNIFTY": 504,
+  "FINNIFTY": 209,
+  "NIFTY": 455,
+  "POOLED": 409,
+  "SENSEX": 468
+ },
+ "days": {
+  "NIFTY": 771,
+  "BANKNIFTY": 768,
+  "FINNIFTY": 760,
+  "SENSEX": 432
+ }
+}

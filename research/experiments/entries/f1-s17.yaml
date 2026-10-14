@@ -1,0 +1,33 @@
+id: f1-s17
+title: 'F1 rule S17: range_30m_pct top quintile (high side) -> PE (net_pe_atm_x1, x1)'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_F1_FACTORY.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m, options_rolling_1m opt_<UND>_WEEK (ATM+-10, nearest expiry,
+  OI), INDIAVIX, equity_1m (58 stocks, breadth); brain cube + 201 features (research/brain/FEATURES.md); FINNIFTY/SENSEX expiries
+  inferred (research/brain/expiry_infer.py); lake to 2026-10-12'
+settings: research/hunt/f1/PREREG.md
+prereg: research/hunt/f1/PREREG.md
+instruments:
+- BANKNIFTY
+hypothesis: The screen survivor (BANKNIFTY, net_pe_atm_x1, selection IC +0.069) turns into option-buying profit after costs.
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13 (walk-forward folds 2022, 2024H2, 2025, 2026)
+  holdout: 2023-01-01..2024-06-30, all four indices, read once for every F1 rule together
+features:
+- range_30m_pct
+model_or_rule: range_30m_pct top quintile (high side) -> PE (net_pe_atm_x1, x1); 1-ITM, exit x1 (stop -15%, lock +Rs1,000
+  keep Rs 500 / trail Rs 500, 30-min time stop unless +5%, out 15:10 / 15:05 expiry); one entry a side a day, decisions every
+  5 min 09:30-14:30; scope BANKNIFTY
+variants_tried: 1
+results:
+  summary: 'DESIGN (walk-forward 2022/2024H2/2025/2026): 422 trades on 667 sessions (0.63/day), win 55%, avg win Rs +982 /
+    loss Rs -1,661, net Rs -82,507 (Rs -124/day), green days 55%, worst day Rs -4,768, max DD Rs -90,695, winners cut short
+    212, p vs twins 0.758; folds net 2022 Rs -70,949, 2024H2 Rs -10,438, 2025 Rs +5,163, 2026 Rs -6,283; design gates FAILED.
+    HOLDOUT: 255 trades on 368 sessions (0.69/day), win 54%, avg win Rs +977 / loss Rs -1,409, net Rs -29,928 (Rs -81/day),
+    green days 54%, worst day Rs -5,156, max DD Rs -37,800, winners cut short 101, p vs twins 0.629, BH q 0.935; FAILED.'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    open +-5 bps plus a 1/2/4-tick half-spread by 5-min volume in lots (stops 10 bps, double ticks); today's lot sizes
+holdout_read: true
+verdict: rejected
+notes: One of the F1 rules; BH over all of them on the holdout (m = the rule count).

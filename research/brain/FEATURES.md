@@ -4,12 +4,15 @@
 
 166 features, signature `124f3f21dd0c` (cube v2). Every feature at minute t uses only cube rows with ts <= t (checked by `tests/test_lookahead.py`). Labels are not features: see `labels.py`.
 
-## Price (23)
+201 features, signature `ea7c7ba6417b` (cube v2). Every feature at minute t uses only cube rows with ts <= t (checked by `tests/test_lookahead.py`). Labels are not features: see `labels.py`.
+
+## Price (27)
 
 | name | v | lookback | inputs | description |
 |---|---|---|---|---|
 | `atr_14m_pct` | 1 | 15m | minutes.open, minutes.high, minutes.low, minutes.close | Mean true range of the last 14 one-minute bars (within the session), % of the close. |
 | `day_range_pct` | 1 | day | minutes.open, minutes.high, minutes.low, minutes.close | Session high minus session low so far, % of the close. |
+| `day_range_vs_adr10` | 1 | 11d | minutes.open, minutes.high, minutes.low, minutes.close | The session's high-low range so far / the mean full high-low range of the previous 10 sessions (needs 8). |
 | `dist_pivot_pct` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the classic floor pivot (H+L+C)/3 of the previous session, %. |
 | `dist_prev_close_pct` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the previous session's last close, %. |
 | `dist_prev_high_pct` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the previous session's high, %. |
@@ -19,6 +22,8 @@
 | `gap_pct` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | Opening gap: the session's first open vs the previous session's last close, %. |
 | `mins_since_day_high` | 1 | day | minutes.open, minutes.high, minutes.low, minutes.close | Minutes since the session's high so far was made (ties: the latest). |
 | `mins_since_day_low` | 1 | day | minutes.open, minutes.high, minutes.low, minutes.close | Minutes since the session's low so far was made (ties: the latest). |
+| `ovwap_dist_pct` | 1 | day | minutes.open, minutes.high, minutes.low, minutes.close, chain.volume | Index close vs its session VWAP weighted by the option chain's traded volume (ATM-10..ATM+10, calls + puts) each minute, %. The index has no volume of its own. |
+| `ovwap_z` | 1 | day | minutes.open, minutes.high, minutes.low, minutes.close, chain.volume | Index close minus the option-volume VWAP in band units (weighted standard deviation of the typical price): +1 / +2 are the +1 / +2 sigma bands. NaN while sigma is 0. |
 | `pos_in_day_range` | 1 | day | minutes.open, minutes.high, minutes.low, minutes.close | Where the close sits in the session's range so far: 0 = at the low, 1 = at the high. |
 | `range_15m_pct` | 1 | 15m | minutes.open, minutes.high, minutes.low, minutes.close | High-low range of the last 15 minutes as % of the close. |
 | `range_30m_pct` | 1 | 30m | minutes.open, minutes.high, minutes.low, minutes.close | High-low range of the last 30 minutes as % of the close (NaN before 30 minutes have passed). |
@@ -31,11 +36,14 @@
 | `rv_30m` | 1 | 30m | minutes.close | Realised volatility: std of the last 30 one-minute log returns x sqrt(375), % (a session-scaled figure). |
 | `tod_logrange_30m` | 1 | 21d | minutes.open, minutes.high, minutes.low, minutes.close | The usual size of the next 30 minutes at this clock time: mean log(high-low of minutes t+1..t+30 / close at t) over the previous 20 sessions (needs 10). R16's time-of-day baseline. |
 | `tod_logrange_60m` | 1 | 21d | minutes.open, minutes.high, minutes.low, minutes.close | The usual size of the next 60 minutes at this clock time: mean log(high-low of minutes t+1..t+60 / close at t) over the previous 20 sessions (needs 10). R16's time-of-day baseline. |
+| `tpavg_2d_dist_pct` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | Close vs the equal-weight mean typical price anchored at the previous session's open (that session + today so far), %. An anchored-VWAP proxy for the index, which has no volume. |
 
-## Structure (14)
+## Structure (17)
 
 | name | v | lookback | inputs | description |
 |---|---|---|---|---|
+| `cpr_state` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | +1 close above the CPR's top, -1 below its bottom, 0 inside. |
+| `cpr_width_pct` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | Width of today's central pivot range (TC - BC from the previous session's H, L, C), % of the pivot. |
 | `liq_above_dist_pct` | 1 | 12d | minutes.open, minutes.high, minutes.low, minutes.close | Distance from the close up to the nearest active liquidity level above (swing high/pool top, 5-min, the app's settings), % of the close. NaN if none. |
 | `liq_below_dist_pct` | 1 | 12d | minutes.open, minutes.high, minutes.low, minutes.close | Distance from the close down to the nearest active liquidity level below (swing low/pool bottom), %. |
 | `liq_breaks_today` | 1 | 12d | minutes.open, minutes.high, minutes.low, minutes.close | How many liquidity levels 5-minute closes have taken so far this session. |
@@ -50,6 +58,7 @@
 | `or30_width_pct` | 1 | day | minutes.open, minutes.high, minutes.low, minutes.close | Width of the 30-minute opening range (09:15 + 30 min) as % of the close; NaN until it is complete. |
 | `prev_day_range_pct` | 1 | 1d | minutes.open, minutes.high, minutes.low, minutes.close | The previous session's high-low range, % of its close. |
 | `prev_inside_day` | 1 | 2d | minutes.open, minutes.high, minutes.low, minutes.close | 1 if the previous session's range was inside the range of the session before it, else 0. |
+| `prev_nr7` | 1 | 8d | minutes.open, minutes.high, minutes.low, minutes.close | 1 if the previous session's high-low range was the narrowest of the last 7 sessions (NR7), else 0. |
 
 ## Volume (14)
 
@@ -94,30 +103,46 @@
 | `lvl_below_type` | 1 | 110d | minutes.open, minutes.high, minutes.low, minutes.close, minutes.basis, minutes.expiry, minutes.oi_max_call_strike, minutes.oi_max_put_strike, minutes.fut_volume | Type code of the nearest level below (codes as lvl_above_type). |
 | `lvl_near_count` | 1 | 110d | minutes.open, minutes.high, minutes.low, minutes.close, minutes.basis, minutes.expiry, minutes.oi_max_call_strike, minutes.oi_max_put_strike, minutes.fut_volume | Number of valid levels within 0.2% of the close (a confluence count). |
 
-## Indicators (25)
+## Indicators (41)
 
 | name | v | lookback | inputs | description |
 |---|---|---|---|---|
 | `adx14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | ADX(14), Wilder, on 1-minute bars across sessions (0-100). |
 | `atr14_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | ATR(14), Wilder's smoothing of the 1-minute true range across sessions, % of the close. |
+| `atr_ratio_5_50` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Range expansion: Wilder ATR(5) / ATR(50) of 1-minute bars (> 1: bars are getting bigger). |
 | `bb_pctb` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Bollinger %B (20, 2) on 1-minute closes: 0 at the lower band, 1 at the upper band. |
 | `bb_width_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Bollinger band width (20, 2): (upper - lower) / middle, %. |
+| `c5_ema9_21_spread_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | 5-minute bars (session-anchored, continuous across sessions): EMA(9) minus EMA(21) of the closes, % of the last complete bar's close. |
+| `c5_macd_hist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | MACD(12, 26, 9) histogram of 5-minute closes, % of the close (last complete bar). |
+| `c5_rsi14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | RSI(14), Wilder, of 5-minute closes (last complete bar). |
+| `c5_squeeze_fire` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | 5-minute squeeze release: +1 (-1) when the squeeze (BB 20,2 inside KC 20,1.5 of 5-minute bars) was on at one of the 3 bars before the last complete bar and is off now with the close above (below) the EMA20; else 0. |
+| `c5_supertrend_dir` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Supertrend(10, 3) direction on 5-minute bars (last complete bar): +1 up, -1 down. |
 | `di_minus14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | -DI(14), Wilder, 1-minute bars. |
 | `di_plus14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | +DI(14), Wilder, 1-minute bars. |
+| `di_spread14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | +DI(14) minus -DI(14) on 1-minute bars (> 0: up-moves dominate). |
 | `donchian20_pos` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Where the close sits in the Donchian(20) channel of 1-minute bars (incl. this one): 0 low, 1 high. |
 | `donchian20_width_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Donchian(20) channel width, % of the close. |
 | `ema20` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA(20) of the 1-minute index close, index points. |
 | `ema200` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA(200) of the 1-minute index close, index points. |
 | `ema200_dist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Index close vs its EMA(200), %. |
+| `ema20_50_spread_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA(20) minus EMA(50) of the 1-minute close, % of the close (> 0: the fast EMA is above). |
 | `ema20_dist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Index close vs its EMA(20), %. |
+| `ema20_slope_5m_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Change of EMA(20) over the last 5 minutes (same session), % of the close. |
 | `ema50` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA(50) of the 1-minute index close, index points. |
+| `ema50_200_spread_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA(50) minus EMA(200) of the 1-minute close, % of the close (> 0: the fast EMA is above). |
 | `ema50_dist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Index close vs its EMA(50), %. |
+| `ema50_slope_15m_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Change of EMA(50) over the last 15 minutes (same session), % of the close. |
 | `ema9` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA(9) of the 1-minute index close, index points. |
+| `ema9_20_cross_age` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | 1-minute bars (with prices) since EMA(9) last crossed EMA(20), counting the crossing bar as 1, signed: + while EMA9 is above, - below; capped at 375. |
+| `ema9_20_spread_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | EMA(9) minus EMA(20) of the 1-minute close, % of the close (> 0: the fast EMA is above). |
 | `ema9_dist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Index close vs its EMA(9), %. |
+| `kc_pos` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Where the close sits in the Keltner channel (EMA20 +- 1.5 x ATR20, 1-minute): 0 lower, 1 upper. |
 | `macd_hist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | MACD histogram (MACD - signal), % of the close. |
 | `macd_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | MACD(12, 26): EMA12 - EMA26 of the 1-minute close, % of the close. |
 | `macd_signal_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | MACD signal line (EMA9 of MACD), % of the close. |
 | `rsi14` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | RSI(14), Wilder, of the 1-minute close across sessions (0-100). |
+| `squeeze_on` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | 1 when the Bollinger bands (20, 2) sit inside the Keltner channel (20, 1.5) on 1-minute bars (TTM squeeze). |
+| `squeeze_run` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | How many 1-minute bars in a row (with prices) the squeeze has been on, 0 when off; capped at 375. |
 | `supertrend_dir` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Supertrend(10, 3) direction on 1-minute bars: +1 up, -1 down. |
 | `supertrend_dist_pct` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Index close vs the Supertrend(10, 3) line, %. |
 | `trend_15m` | 1 | 10d | minutes.open, minutes.high, minutes.low, minutes.close | Sign of the slope of EMA(20) of 15-minute closes (last complete bar): +1 rising, -1 falling. |
@@ -145,10 +170,23 @@
 
 ## Options (51)
 
+## Options (60)
+
 | name | v | lookback | inputs | description |
 |---|---|---|---|---|
 | `atm_iv` | 1 | 5m | chain.iv | ATM implied volatility, % a year: mean of the ATM call and put IV that traded this minute; else the last value from up to 5 minutes earlier in the session. |
 | `atm_iv_chg_15m` | 1 | 20m | chain.iv | Change in atm_iv over the last 15 minutes, IV points. |
+| `bu_atm_ce_15m` | 1 | 20m | chain.oi, chain.ltp, chain.strike | OI build-up type of the ATM call over the last 15 minutes (same strike): 1 long build-up, 2 short build-up, 3 short covering, 4 long unwinding, 0 no change. |
+| `bu_atm_pe_15m` | 1 | 20m | chain.oi, chain.ltp, chain.strike | OI build-up type of the ATM put over the last 15 minutes (same strike): 1 long build-up, 2 short build-up, 3 short covering, 4 long unwinding, 0 no change. |
+| `bu_ce_long_buildup_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the call OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is long build-up. |
+| `bu_ce_long_unwinding_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the call OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is long unwinding. |
+| `bu_ce_short_buildup_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the call OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is short build-up. |
+| `bu_ce_short_covering_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the call OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is short covering. |
+| `bu_pe_long_buildup_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the put OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is long build-up. |
+| `bu_pe_long_unwinding_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the put OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is long unwinding. |
+| `bu_pe_short_buildup_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the put OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is short build-up. |
+| `bu_pe_short_covering_share` | 1 | 20m | chain.oi, chain.ltp, chain.strike | Share of the put OI change of the last 15 minutes over ATM-5..ATM+5 (same strikes) that is short covering. |
+| `bu_writing_bias_15m` | 1 | 20m | chain.oi, chain.ltp, chain.strike | (put short build-up OI - call short build-up OI) / all |OI change| over ATM-5..ATM+5 in the last 15 minutes: > 0 puts being written (read as support), < 0 calls being written. |
 | `chain_ok_share` | 1 | 0m | minutes.chain_ok_share | Share of the 42 chain rows that traded this minute (data quality: low = stale/illiquid chain). |
 | `em_straddle_1d_pct` | 1 | 0m | chain.ltp, minutes.close, minutes.expiry | Expected 1-sigma move over one calendar day implied by the ATM straddle, % of the index: straddle / (index x sqrt(2/pi)) scaled from the time to expiry to one day. NaN within an hour of expiry. |
 | `em_straddle_vs_vix` | 1 | 0m | chain.ltp, minutes.close, minutes.expiry, minutes.vix | em_straddle_1d_pct / em_vix_1d_pct: >1 the chain prices more movement than VIX. |
@@ -165,6 +203,9 @@
 | `gex_wall_abs_dist_pct` | 1 | 30m | chain.ltp, chain.ltp_age, chain.oi, chain.strike, minutes.close, minutes.expiry | The strike with the largest gross (call + put) gamma exposure vs spot, % (the expiry 'pin' candidate). |
 | `gex_wall_neg_dist_pct` | 1 | 30m | chain.ltp, chain.ltp_age, chain.oi, chain.strike, minutes.close, minutes.expiry | Negative gamma wall: the strike with the most negative per-strike S1 (put gamma dominant) vs spot, %. |
 | `gex_wall_pos_dist_pct` | 1 | 30m | chain.ltp, chain.ltp_age, chain.oi, chain.strike, minutes.close, minutes.expiry | Positive gamma wall: the strike with the largest per-strike S1 (call gamma dominant) vs spot, %. |
+
+| `gex_near_share` | 1 | 5m | chain.gamma, chain.oi | Share of the chain's gamma x OI that sits at ATM-2..ATM+2 (gamma concentrated near the money: pinning). |
+| `gex_net_norm` | 1 | 5m | chain.gamma, chain.oi | Gamma-exposure PROXY: (sum call gamma x OI - sum put gamma x OI) / (sum of both) over ATM-10..ATM+10, gamma carried <= 5 min. Dealers assumed long calls / short puts: > 0 dealers long gamma (moves damped), < 0 short gamma (moves amplified). Needs gamma on 10 of the 42 rows. |
 | `greek_atm_delta_c` | 1 | 5m | chain.iv, chain.strike, minutes.close, minutes.expiry | Black-Scholes call delta at the ATM strike, with that strike's IV (bs.py). |
 | `greek_atm_delta_p` | 1 | 5m | chain.iv, chain.strike, minutes.close, minutes.expiry | Black-Scholes put delta at the ATM strike, with that strike's IV (bs.py). |
 | `greek_atm_gamma` | 1 | 5m | chain.iv, chain.strike, minutes.close, minutes.expiry | Black-Scholes gamma (per index point) at the ATM strike, with that strike's IV (bs.py). |
@@ -186,28 +227,40 @@
 | `iv_pct_252` | 1 | 252d | minutes.atm_iv | IV percentile: share of the previous 252 session-close ATM IVs below the ATM IV now, %. |
 | `iv_rank_252` | 1 | 252d | minutes.atm_iv | IV rank: (ATM IV now - lowest of the previous 252 session-close ATM IVs) / (highest - lowest), 0-100 (can leave 0-100 when IV makes a new extreme). |
 | `iv_skew_3` | 1 | 5m | chain.iv | Skew: IV of the put 3 strikes below ATM minus IV of the call 3 strikes above ATM, IV points (ffill <= 5 min). |
+| `iv_skew_chg_15m` | 1 | 20m | chain.iv | iv_skew_3 now minus 15 minutes earlier, IV points. |
 | `iv_smile_3` | 1 | 5m | chain.iv | Smile: mean IV of the 3-strike OTM put and call minus atm_iv, IV points. |
 | `max_pain_dist_pct` | 1 | 0m | chain.oi, chain.strike, minutes.close | Max-pain strike over the chain's ATM-10..ATM+10 strikes (last reported OI) minus the close, % of the close. |
 | `oi_build_ce_pct` | 1 | day | chain.oi, chain.oi_chg_day | Call OI build-up today over ATM-5..ATM+5: sum of OI change since each contract's first OI today / that first OI, %. Positive = writing/adding, negative = unwinding. |
 | `oi_build_pe_pct` | 1 | day | chain.oi, chain.oi_chg_day | Put OI build-up today over ATM-5..ATM+5, % (as oi_build_ce_pct). |
 | `oi_edge_share` | 1 | 0m | chain.oi | Coverage check: share of the stored OI (calls + puts) at the edge strikes ATM+-9, +-10. |
+
+| `oi_call_wall_dist_pct` | 1 | 0m | minutes.oi_max_call_strike, minutes.open, minutes.high, minutes.low, minutes.close | The call OI wall (strike with the most call OI over ATM-10..ATM+10) vs the close, %. |
+| `oi_call_wall_shift_day` | 1 | day | minutes.oi_max_call_strike, minutes.open, minutes.high, minutes.low, minutes.close | How far the call OI wall has moved since its first value today, % of the close (+ = moved up). |
 | `oi_net_build` | 1 | day | chain.oi, chain.oi_chg_day | (put OI added today - call OI added today) / total OI over ATM-5..ATM+5: >0 puts being added faster. |
+| `oi_put_wall_dist_pct` | 1 | 0m | minutes.oi_max_put_strike, minutes.open, minutes.high, minutes.low, minutes.close | The put OI wall (strike with the most put OI over ATM-10..ATM+10) vs the close, %. |
+| `oi_put_wall_shift_day` | 1 | day | minutes.oi_max_put_strike, minutes.open, minutes.high, minutes.low, minutes.close | How far the put OI wall has moved since its first value today, % of the close (+ = moved up). |
 | `pcr_oi` | 1 | 0m | chain.oi | Put-call ratio of open interest over ATM-10..ATM+10 (last reported OI). |
+| `pcr_oi_chg_15m` | 1 | 15m | chain.oi | pcr_oi now minus 15 minutes earlier (same session). |
+| `pcr_oi_chg_day` | 1 | day | chain.oi | pcr_oi now minus its first value of the session. |
 | `pcr_oi_near` | 1 | 0m | chain.oi | Put-call OI ratio over ATM-3..ATM+3 only. |
 | `pcr_vol_15m` | 1 | 15m | chain.volume | Put-call ratio of traded volume over ATM-10..ATM+10 in the last 15 minutes of the session. |
 | `pcr_vol_day` | 1 | day | chain.volume | Put-call ratio of traded volume over ATM-10..ATM+10, summed over the session so far. |
+| `straddle_chg_15m_pct` | 1 | 15m | chain.ltp, minutes.close | ATM straddle (% of the index) now vs 15 minutes earlier, % change (decay < 0, expansion > 0). |
 | `straddle_pct` | 1 | 0m | chain.ltp, minutes.close | ATM straddle (call + put last traded price) as % of the index. |
 | `straddle_vs_0920` | 1 | day | chain.ltp, minutes.close | ATM straddle % of index now / its value at 09:20, minus 1 (decay or expansion since the open). |
 
-## Market (5)
+## Market (8)
 
 | name | v | lookback | inputs | description |
 |---|---|---|---|---|
 | `basis_chg_day` | 1 | day | minutes.basis_pct | basis_pct now minus the session's first basis_pct, percentage points. |
 | `basis_pct` | 1 | 0m | minutes.basis_pct | Near-month future minus index, % of the index (both bars ok this minute; NaN otherwise). Jumps at the roll. |
+| `fut_buildup_15m` | 1 | 15m | minutes.fut_close, minutes.fut_oi, minutes.fut_flag | Futures OI build-up type over the last 15 minutes: 1 long build-up, 2 short build-up, 3 short covering, 4 long unwinding, 0 no change. |
+| `fut_oi_chg_day_pct` | 1 | day | minutes.fut_oi, minutes.fut_flag | Near-month futures OI now vs its first value today, % (lake futures minutes start in 2026; NaN before). |
 | `vix` | 1 | 0m | minutes.vix | India VIX at this minute. |
 | `vix_chg_15m_pct` | 1 | 15m | minutes.vix | India VIX change over the last 15 minutes, %. |
 | `vix_chg_day_pct` | 1 | 1d | minutes.vix | India VIX now vs the previous session's last VIX, %. |
+| `vix_pct_252` | 1 | 252d | minutes.vix | India VIX percentile: share of the previous 252 session-close VIX values below VIX now, % (needs 200). |
 
 ## Calendar (6)
 
