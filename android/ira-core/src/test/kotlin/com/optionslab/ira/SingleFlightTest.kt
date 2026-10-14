@@ -33,7 +33,9 @@ class SingleFlightTest {
         val answers = (1..5).map {
             async(Dispatchers.IO) { f.run(7L, 2_000) { reads.incrementAndGet(); gate.await(); "book" } }
         }
-        delay(150)
+        // Wait until the four others have joined the first read (14 Oct: a fixed 150 ms wait failed on a slow CI runner,
+        // when a worker started after the read had already ended and so read again).
+        assertTrue(withTimeoutOrNull(10_000) { while (f.joins < 4L) delay(5) } != null, "the four others joined in time")
         gate.complete(Unit)
         val got = answers.awaitAll()
         assertEquals(1, reads.get(), "one read for five workers")
