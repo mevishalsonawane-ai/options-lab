@@ -45,7 +45,7 @@ or to zero".
     sold at 4× for **+Rs 5,879**. Held to 15:05 the same ticket made +Rs 17,958. This is the same day that made the app's
     Hero rule look good in R25.
   - Worst: 20 Jul 2023, BANKNIFTY. The 46300 CE was bought at 14:23 and never moved: **−Rs 1,859**.
-  - Every BANKNIFTY trade lost (6 trades, −Rs 6,279). FINNIFTY lost both of its trades. SENSEX never triggered with the
+  - No BANKNIFTY trade made money (6 trades, −Rs 6,279; one ended at −Rs 0). FINNIFTY lost both of its trades. SENSEX never triggered with the
     price filter.
 - **13 Oct 2026 is not in the lake** (it ends 12 Oct). Without that day's OI chain, nobody can say whether the call wall broke
   and unwound. From R25's notes, the ATM+1 CE that afternoon was in single digits (the 22700 CE was
