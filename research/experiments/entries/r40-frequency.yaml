@@ -1,0 +1,34 @@
+id: r40-frequency
+title: 'Backwards study: pattern frequency before zero-to-hero (descriptive)'
+hypothesis: 'Descriptive: which patterns precede zero-to-hero most often and how much they lift the forward 10x rate.'
+features:
+- every R40 pattern
+model_or_rule: frequency scan (r40study.freq_table)
+variants_tried: null
+results:
+  summary: '487 10x heroes (1234 at 5x) vs 2923 matched controls and 936,286 rows, 339 patterns. Most occurring before heroes:
+    op_vwap_below 98.6% (all rows 93.5%, 10x rate when present 1.71%); op_vwap_lt1 98.6% (all rows 93.3%, 10x rate when present
+    1.71%); op_vwap_lt3 98.4% (all rows 92.9%, 10x rate when present 1.71%); op_adx7_gt20 94.5% (all rows 90.1%, 10x rate
+    when present 1.71%); op_pos30_bot20 94.0% (all rows 51.0%, 10x rate when present 1.75%); op_vprof_below_poc 94.0% (all
+    rows 69.5%, 10x rate when present 1.57%); op_stoch14_lt20 93.0% (all rows 39.9%, 10x rate when present 1.83%); ix_adx7_gt20
+    87.7% (all rows 85.5%, 10x rate when present 1.71%). Highest lift: op_mv5_dn50 12.5% vs 1.4% (10x rate 2.43%); shape_opt_c7
+    10.5% vs 1.4% (10x rate 2.45%); op_mv15_dn50 35.7% vs 7.1% (10x rate 1.97%); op_mv30_dn70 21.1% vs 4.3% (10x rate 2.21%);
+    op_donch30_low 57.7% vs 11.7% (10x rate 1.66%); op_donch20_low 59.1% vs 12.7% (10x rate 1.65%); op_mv5_dn30 38.2% vs 8.6%
+    (10x rate 2.21%); op_donch10_low 65.5% vs 15.2% (10x rate 1.68%). Base 10x rate 1.71%: the best forward rate is 2.4% among
+    patterns before >= 50 heroes and 3.8% for any pattern on >= 1,000 rows (fast index moves, few heroes).'
+  costs: none (descriptive)
+verdict: not-a-test
+notes: 'Heroes are taken at their run''s lowest row (hindsight): ''crashed / oversold'' patterns are inflated by that choice.'
+date: '2026-10-14'
+doc: research/HUNT_R40_BACKWARDS.md
+family: patterns-indicators
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK, index_1m, INDIAVIX, equity_1m (R39 rows: 936,286 one-minute rows;
+  310 option + index pattern variants + 13 chain flags + 16 shape clusters)'
+period:
+  design: 'anchored walk-forward: test years 2023-2026, each chosen on earlier NIFTY / SENSEX expiries only'
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r40/PREREG.md
+settings: research/hunt/r40/r40study.py
+holdout_read: null

@@ -1,0 +1,29 @@
+id: r36-describe
+title: Gamma exposure vs the afternoon move (descriptive)
+hypothesis: 'Descriptive: does GEX at 14:00 relate to how much the afternoon moves versus what options price?'
+features:
+- GEX
+- ATM implied vol
+- realized vol
+model_or_rule: descriptive
+variants_tried: null
+results:
+  summary: '341 decision days: afternoon realized / ATM-implied variance, mean 1.371, median 0.996. GEX_short Spearman with
+    it 0.329 (p 0.0); terciles median T1 0.859, T2 0.979, T3 1.294. GEX vs ATM IV -0.688, IV vs move -0.574; partial GEX-move
+    given IV -0.111. The pair loses in every tercile.'
+  costs: none (descriptive)
+verdict: not-a-test
+notes: The apparent GEX effect is mostly an implied-vol effect (cheap options relative to the move).
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_R36_GAMMA_EXPOSURE.md
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK (ATM+-10 with OI), index_1m, INDIAVIX; R26 day files'
+period:
+  design: 'ALL expiries with >= 20 earlier GEX values and >= 10 earlier regime values (expanding, point-in-time): NIFTY 241,
+    SENSEX 100 decision days (2021-2026)'
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r36/PREREG.md
+settings: research/hunt/r36/r36gex.py
+holdout_read: null

@@ -1,5 +1,5 @@
 """Exit-engine audit (14 Oct 2026, Boss: "check if your entry / exit / trailing profit lock / profit lock / stop are correct
-for all the study you have done"). Every engine used by R25-R30 is run on hand-made option paths whose fills, locks,
+for all the study you have done"). Every engine used by R25, R26 and R34-R37 is run on hand-made option paths whose fills, locks,
 quantities and P&L are worked out here by hand. python3 -m pytest research/hunt/audit -q
 """
 from __future__ import annotations
@@ -13,10 +13,10 @@ import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-for p in (ROOT / "research" / "hunt" / "r27", ROOT / "research" / "hunt" / "r28", ROOT / "research" / "hunt" / "r30"):
+for p in (ROOT / "research" / "hunt" / "r34", ROOT / "research" / "hunt" / "r35", ROOT / "research" / "hunt" / "r37"):
     sys.path.insert(0, str(p))
 
-import r27cfg  # noqa: E402,F401
+import r34cfg  # noqa: E402,F401
 import r25lib as R  # noqa: E402
 import r26lib as L26  # noqa: E402
 from r25data import C, H, L, N, O, OI, V, minute  # noqa: E402
@@ -192,9 +192,9 @@ def test_r25_trail_arms_at_plus_50pct_and_gives_back_half():
     assert t.exits[-1][3] == "trail" and t.exits[-1][0] == 216
 
 
-# ------------------------------------------------------------------------------------------------ R30 T2 and R28 skip
-def test_r30_t2_breakeven_at_2x_and_half_of_each_doubling():
-    import r30flip as X
+# ------------------------------------------------------------------------------------------------ R37 T2 and R35 skip
+def test_r37_t2_breakeven_at_2x_and_half_of_each_doubling():
+    import r37flip as X
     e = buy(20.0)
     px = np.full(N, 20.0)
     px[290:295] = 170.0                                                    # 8.47x: lock = 0.5 x 8 x e = 4e = 80.24
@@ -203,17 +203,17 @@ def test_r30_t2_breakeven_at_2x_and_half_of_each_doubling():
     assert not sk and tr.exits == [(296, tr.qty, sell(80.0), "lock")]
 
 
-def test_r28_and_r30_skip_when_one_lot_costs_more_than_2000():
-    import r28lib as S
-    import r30flip as X
+def test_r35_and_r37_skip_when_one_lot_costs_more_than_2000():
+    import r35lib as S
+    import r37flip as X
     d = day_with(np.full(N, 20.0), lot=150)
     assert S.trade(d, K, 1, 285, 20.0, "E3") == (None, True)
     assert X.simulate(d, K, 1, 285, 20.0, "T2") == (None, True)
 
 
-# ------------------------------------------------------------------------------------------------ R27 K rules (KS stop)
-def test_r27_ks_stop_is_an_index_close_beyond_the_range_then_next_open():
-    import r27late as KL
+# ------------------------------------------------------------------------------------------------ R34 K rules (KS stop)
+def test_r34_ks_stop_is_an_index_close_beyond_the_range_then_next_open():
+    import r34late as KL
     spot = np.full(N, 25000.0)
     spot[minute(14, 50):] = 25100.0                                        # breaks above the 14:30-14:45 range
     spot[minute(14, 58):] = 24990.0                                        # back below its low: the stop

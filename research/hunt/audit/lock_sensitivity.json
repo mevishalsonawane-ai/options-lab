@@ -8,7 +8,7 @@
   "trades_whose_exit_changed": 2,
   "mismatches": []
  },
- "R27-M2 (E3)": {
+ "R34-M2 (E3)": {
   "trades": 141,
   "stored_net": -72303,
   "recomputed_net": -72304,
@@ -17,7 +17,7 @@
   "trades_whose_exit_changed": 18,
   "mismatches": []
  },
- "R28-S1 (E3)": {
+ "R35-S1 (E3)": {
   "trades": 114,
   "stored_net": -76767,
   "recomputed_net": -76771,
@@ -26,7 +26,7 @@
   "trades_whose_exit_changed": 11,
   "mismatches": []
  },
- "R28-S3 (E3)": {
+ "R35-S3 (E3)": {
   "trades": 163,
   "stored_net": -116656,
   "recomputed_net": -116661,
@@ -35,7 +35,7 @@
   "trades_whose_exit_changed": 20,
   "mismatches": []
  },
- "R28-S4 (E3)": {
+ "R35-S4 (E3)": {
   "trades": 35,
   "stored_net": -31634,
   "recomputed_net": -31637,
@@ -44,7 +44,7 @@
   "trades_whose_exit_changed": 1,
   "mismatches": []
  },
- "R28-S5 (E3)": {
+ "R35-S5 (E3)": {
   "trades": 70,
   "stored_net": -56247,
   "recomputed_net": -56251,
@@ -53,7 +53,7 @@
   "trades_whose_exit_changed": 9,
   "mismatches": []
  },
- "R30-G1 (T2)": {
+ "R37-G1 (T2)": {
   "trades": 42,
   "stored_net": -40001,
   "recomputed_net": -40003,
@@ -62,7 +62,7 @@
   "trades_whose_exit_changed": 3,
   "mismatches": []
  },
- "R30-G2 (T2)": {
+ "R37-G2 (T2)": {
   "trades": 34,
   "stored_net": -34875,
   "recomputed_net": -34878,
@@ -71,7 +71,7 @@
   "trades_whose_exit_changed": 2,
   "mismatches": []
  },
- "R30-G4 (T2)": {
+ "R37-G4 (T2)": {
   "trades": 65,
   "stored_net": -37922,
   "recomputed_net": -37924,
@@ -80,7 +80,7 @@
   "trades_whose_exit_changed": 4,
   "mismatches": []
  },
- "R29 pairs (E3)": {
+ "R36 pairs (E3)": {
   "published_recomputed": {
    "B0": -103781.0,
    "X1": -32226.0,
