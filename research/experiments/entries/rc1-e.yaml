@@ -1,0 +1,28 @@
+id: rc1-e
+title: Crypto day-of-week / weekend effect (design-only screen)
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/HUNT_RC1_CRYPTO_SMALL_ACCOUNT.md
+hypothesis: Some weekday or the weekend has a reliably different BTC/ETH return.
+data_version: 'Binance public archive (data.binance.vision): spot BTCUSDT/ETHUSDT 1d+1h 2017-08-17..2026-10-12, USD-M perps
+  1d+1h 2020-01-01..2026-10-12, funding 2020-01..2026-09-30; USD/INR ECB (frankfurter.dev); parquet cache outside git'
+period:
+  design: 2017-08-17..2025-10-12 daily UTC returns
+instruments:
+- CRYPTO
+features:
+- BTC / ETH prices in INR
+model_or_rule: Welch t per weekday and Sat+Sun vs the rest; BH over 16 tests
+settings: research/hunt/rc1/config.py
+prereg: research/hunt/rc1/PREREG.md
+variants_tried: 16
+results:
+  summary: 'Design 425-852 days per test: smallest p were Thursday (BTC -28.5 bp, p 0.044; ETH -42.2 bp, p 0.037); lowest
+    BH q 0.355. Nothing passed, so no strategy was built and the holdout was not read for it.'
+  costs: Indian spot taker 0.25% + 18% GST + 0.15% half-spread per side (low 0.168% / high 0.890%); INR perps 0.05% + GST
+    + 0.02% (0.079%); real funding; 31.2% VDA tax per profitable sale, no loss set-off; 1% TDS locked 365 d; perps tax readings
+    A (VDA) and B (business)
+holdout_read: null
+verdict: rejected
+notes: 'RC1 (Boss 13 Oct 2026, small Indian account). BH across 8 active tests (b x2, c, c-perp, d, f, g, g-perp). Tax figures
+  are modelling assumptions; confirm with a CA. Research only: nothing in the app trades crypto.'
