@@ -1,0 +1,35 @@
+id: r27-m2
+title: NIFTY hero ML ranker, exit half at 2x + step lock
+family: calendar-events
+date: '2026-10-14'
+doc: research/HUNT_R27_NIFTY_ZERO_TO_HERO.md
+hypothesis: A NIFTY expiry-day cheap-option rule catches zero-to-hero moves often enough to pay after costs.
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_NIFTY_WEEK (ATM+-10, nearest expiry, OHLC, volume,
+  OI, IV), index_1m NIFTY/INDIAVIX; 271 NIFTY expiries 2021-08-05..2026-10-06 found from the data (R25 loader, R26 day files);
+  13 Oct 2026 not in the lake'
+period:
+  design: 'walk-forward test years 2023-2026 (anchored; every choice on NIFTY expiries before the test year; training from
+    Aug 2021): 197 expiries'
+instruments:
+- NIFTY
+features:
+- NIFTY expiry-day OTM options Rs 1-30
+- index minutes
+- India VIX
+- option OI (gamma)
+- realized vol
+model_or_rule: 'NIFTY hero ML ranker, exit half at 2x + step lock; walk-forward choices {''2023'': {''tau'': 500.0, ''exit'':
+  ''E3''}, ''2024'': {''tau'': 0.0, ''exit'': ''E3''}, ''2025'': {''tau'': 0.0, ''exit'': ''E3''}, ''2026'': {''tau'': 100.0,
+  ''exit'': ''E3''}}'
+settings: research/hunt/r27/r27rules.py
+prereg: research/hunt/r27/PREREG.md
+variants_tried: 11
+results:
+  summary: 141 trades, hit 29.1%, >= 10x 3.5%, net Rs -72,304 (-296 per Rs 1,000); worst day Rs -2,164, max DD Rs -72,304,
+    net without the best day Rs -77,635; 2x spread Rs -74,801; random-twin p 0.002, BH q 0.078 (family 39). FAILED the gates.
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange, SEBI, stamp, GST); fills at the next open +
+    5 bps + a 1/2/4-tick half-spread by 5-min volume; entry limit 1.2x signal + 0.10 for 3 minutes; stress x2 spread
+holdout_read: null
+verdict: rejected
+notes: One of 11 R27 rules; BH across R21 9 + R25 9 + R26 10 + R27 11 = 39. No virgin holdout exists for NIFTY expiries; the
+  forward shadow log is the clean test.
