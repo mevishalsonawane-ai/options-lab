@@ -20,7 +20,8 @@ breakout), which is tested here too.
     Then we compare it with the volatility the option's price implies (`iv_rv`).
   - Over 92,289 decision rows on 271 NIFTY expiries, a cheap option priced **2× richer** than the forecast loses
     **−Rs 778 per Rs 1,000** held to 15:05. One priced **at or below** the forecast loses only **−Rs 110 to −Rs 168**.
-  - At Rs 10-30, the fairly priced ones are about break-even: −Rs 8 to +Rs 37 per Rs 1,000, on 785-1,182 rows.
+  - At Rs 15-30, the fairly priced ones (`iv_rv` 0.8-1.0) are about break-even: −Rs 8 and +Rs 38 per Rs 1,000, on 1,182
+    and 785 rows. At Rs 10-15, only the 0.9-1.0 bucket is (+Rs 24, 792 rows).
   - This is what the research literature predicts. Expiry options carry a large "volatility premium"; buyers lose most
     when they pay the most for it. Every bucket still loses or breaks even on average.
 - **F1, the rule built on that clue, is the best hero rule we have ever tested, and still not good enough.**
@@ -30,8 +31,9 @@ breakout), which is tested here too.
   - It caught 4 real 10×+ days:
     - 7 Sep 2023, 19650 CE at Rs 6 → 17×, +Rs 23,801;
     - 22 Feb 2024, 22000 CE at Rs 15.55 → 13.5×, +Rs 18,927;
-    - 12 Sep 2024, 25250 CE → 9.5×, +Rs 14,242;
-    - 8 May 2025, 24400 PE → 10.9×, +Rs 13,631.
+    - 8 May 2025, 24400 PE → 10.9×, +Rs 13,631;
+    - 2 Sep 2025, 24700 PE → 11.6×, +Rs 8,531.
+  - Its third-best trade, 12 Sep 2024 (25250 CE, +Rs 14,242), peaked at 9.5×.
   - But it is still a lottery:
     - 75% of trades lose;
     - without its best day it is −Rs 109;
@@ -160,6 +162,8 @@ shadow logger (log only, behind a switch that is off by default, never on the or
 - **A fix during the run.** R25's entry routine stops working orders at 15:05. The K rules enter up to 15:21, so at first
   K3 had 0 trades and K2 only breaks before 15:04. The entry now runs to 15:25 for the K rules only. This was found from
   the trade count and fixed before the K results were read. Both runs lost.
+- **The K rules' random twins** use every break signal, including 1 K1 day whose order never filled (195 signals,
+  194 trades). That makes the twins very slightly more negative; it changes no verdict.
 - **The K rules' 15:25 exit is research only.** The app squares off expiry positions at 15:05. Since 3 Aug 2026 the
   closing auction settles index options; the data has about 10 such expiries.
 - **The `iv_rv` forecast is simple:** the last hour's variance × an expiry-afternoon seasonal factor. A better forecast
@@ -177,14 +181,15 @@ shadow logger (log only, behind a switch that is off by default, never on the or
 
 ## Checks run
 
-- `python -m pytest research/hunt/r27/test_r27.py -q` passes 12 tests. They cover:
+- `python -m pytest research/hunt/r27/test_r27.py -q` passes 13 tests. They cover:
   - the look-ahead guard for every feature (synthetic, plus 2 real NIFTY days with the future set to absurd values);
   - the seasonal ratio reading earlier days only, with a fallback for flat stretches;
   - the fair-value, gamma-pin and momentum features;
   - empty and closed days;
   - the rule picker (first qualifying minute, best score) and the 14:30 momentum and reversal rules;
   - the fallback to the strictest choice;
-  - Boss's range, the first break, no future read, window 3 exiting after the fill, and the 15:05 version.
+  - Boss's range, the first break, no future read, window 3 exiting after the fill, and the 15:05 version;
+  - the K rules leaving R25's 15:05 entry limit untouched (found by the independent review; fixed).
 - R26's and R25's tests still pass. Brain checks: `python -m pytest research/brain/tests -q` and
   `python -m research.brain.features catalog --check`.
 - `python research/experiments/validate.py`, and `python3 research/knowledge/build_pack.py` then `--check`.

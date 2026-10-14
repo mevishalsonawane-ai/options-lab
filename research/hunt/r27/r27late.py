@@ -25,9 +25,10 @@ from r25data import N, minute
 
 L26.EXIT_ROWS["X25"] = minute(15, 25)
 # R25's entry works the order only while the bar is before its EXIT_ROW (15:05). The K rules enter as late as 15:21, so
-# the entry may now run to 15:25. (Found 14 Oct: without it K3 had 0 trades and K2 only breaks before 15:04.) E1 trades
-# still need the signal before 15:04 (trade_at).
-R.EXIT_ROW = minute(15, 25)
+# their entry may run to 15:25. (Found 14 Oct: without it K3 had 0 trades and K2 only breaks before 15:04.) The value is
+# set only inside trade_at and restored after, so no other module (R25's simulator, the census) ever sees it (review,
+# 14 Oct). E1 trades still need the signal before 15:01 (trade_at).
+K_ENTRY_END = minute(15, 25)
 L26.EXIT_ROWS["KS"] = minute(15, 25)
 WINDOWS = {1: (R.close_row(14, 31), R.close_row(14, 45), R.close_row(15, 0)),
            2: (R.close_row(14, 46), R.close_row(15, 0), R.close_row(15, 15)),
@@ -67,6 +68,15 @@ def signal(day, w: int, offset: int = 1):
 
 def trade_at(day, w: int, t: int, sgn: int, ex: str, mult: float = 1.0, offset: int = 1):
     """Buy the ATM+-offset option at row t in direction sgn with exit ex (KS: X25 plus the range stop)."""
+    saved = R.EXIT_ROW
+    R.EXIT_ROW = K_ENTRY_END
+    try:
+        return _trade_at(day, w, t, sgn, ex, mult, offset)
+    finally:
+        R.EXIT_ROW = saved
+
+
+def _trade_at(day, w: int, t: int, sgn: int, ex: str, mult: float = 1.0, offset: int = 1):
     c = day.ix[t, 3]
     if math.isnan(c) or (ex == "E1" and t >= minute(15, 1)):     # E1: the fill (within 3 bars) must precede 15:05
         return None

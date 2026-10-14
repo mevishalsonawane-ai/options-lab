@@ -171,3 +171,11 @@ def test_feature_guard_on_real_nifty_days():
                         assert _same(v, y[k]), (day.day, t, k)
                 n += 1
     assert n > 50
+
+
+def test_k_rules_leave_r25_exit_row_alone():
+    before = R.EXIT_ROW
+    spot = np.full(N, 25000.0)
+    spot[minute(15, 18):] = 24900.0
+    assert KL.trade(make_day(spot), 3, "X25") is not None
+    assert R.EXIT_ROW == before == minute(15, 5)
