@@ -227,12 +227,18 @@ object PineAuto {
      * 14 Oct: the armed scripts the saved file's load switched off for a chart that is not an index
      * ([PineScripts.takeRefused]). One holding an option is put in [Book.winding] at once, before anything else looks at
      * it: its stop, target, profit lock, 15:15 and the day's stop keep being watched ([watchOnlyLocked], [one]) and it is
-     * never sold at market by the switch-off; nothing more is bought. Memory only (never reads the vault): safe on the
-     * fast position path. True when [b] changed.
+     * never sold at market by the switch-off; nothing more is bought. Also without that note (a restart after the file
+     * was rewritten switched off but before this book saved its winding): any holding of a switched-off script on a chart
+     * that is not an index is managed the same way. Memory only (never reads the vault): safe on the fast position path.
+     * True when [b] changed.
      */
     private fun refusedHeld(b: Book): Boolean {
         var changed = false
-        for (id in PineScripts.takeRefused()) {
+        val items = PineScripts.items.value
+        val offNonIndex = b.held.keys.filter { id ->
+            items.firstOrNull { it.id == id }?.let { !it.auto.on && com.optionslab.ira.PineUnderlying.rootOf(it.auto.symbol) == null } == true
+        }
+        for (id in PineScripts.takeRefused() + offNonIndex) {
             if (!b.held.containsKey(id) || id in b.winding) continue
             b.winding[id] = "its chart is not an index"
             note(b, id, "Its open option is managed to its exit (its stop, target and profit lock); nothing more is bought.")

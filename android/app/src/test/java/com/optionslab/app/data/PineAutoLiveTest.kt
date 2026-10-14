@@ -729,6 +729,49 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(log(), log().contains("at 361.00: target"))
     }
 
+    @Test fun aHoldingOfAScriptAlreadySavedOffOnANonIndexChartIsNeverDumpedAfterARestart() {
+        bought()                                                   // 30 at 300 on Zerodha, its stop resting at 270
+        // The process was killed after the scripts' file was rewritten (off, on the option's chart) and before the
+        // auto-trader saved anything: the file says off, nothing says "refused", and the auto-trader's book is read afresh.
+        val f = java.io.File(context.filesDir, "pine.vault")
+        val saved = org.json.JSONArray(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
+        saved.getJSONObject(0).getJSONObject("auto").put("symbol", ce).put("on", false)
+        PineScripts.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, saved.toString().toByteArray(Charsets.UTF_8))
+        PineScripts::class.java.getDeclaredField("loaded").apply { isAccessible = true }.set(null, false)
+        PineScripts.loadNow()
+        assertTrue("nothing remembered as refused", PineScripts.takeRefused().isEmpty())
+        AutomationSupport.reloadFromDisk(PineAuto)
+        pass(52_010.0)
+        pass(51_900.0)                                             // the index's signal turning would have sold it before
+        assertNotNull("not sold for being off", held())
+        assertTrue("no market sale", side("SELL").isEmpty())
+        assertFalse(log(), log().contains("no longer auto-trading"))
+        assertTrue(log(), log().contains("Its open option is managed to its exit"))
+        assertEquals("nothing more bought", 1, side("BUY").size)
+        // Its own target still sells it, from the position watch.
+        kite.quote("NFO:$ce", 361.0, 360.95, 361.05)
+        runBlocking { PineAuto.watchOnly() }
+        assertEquals(1, side("SELL").size)
+        assertTrue(log(), log().contains("at 361.00: target"))
+    }
+
+    @Test fun readingTheScriptsOnceLoadedTakesNoLockSoAPassNeverWaitsBehindAVaultWrite() {
+        assertNotNull(PineScripts.loadNow())
+        val holding = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        // A save from the Pine screen holds the scripts' lock (PineScripts.put / setAuto are synchronized on it).
+        val writer = Thread { synchronized(PineScripts) { holding.countDown(); release.await(10, java.util.concurrent.TimeUnit.SECONDS) } }
+        writer.start()
+        assertTrue(holding.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        val t0 = System.nanoTime()
+        val list = PineScripts.loadNow()
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        release.countDown(); writer.join(10_000)
+        assertNotNull(list)
+        assertTrue("loadNow waited $ms ms behind the lock", ms < 1_000)
+    }
+
     @Test fun twoSpellingsOfOneIndexAreOneScriptAfterLoadAndOnlyTheFirstKeepsTrading() {
         val f = java.io.File(context.filesDir, "pine.vault")
         val other = "//@version=5\nindicator(\"Other\")\nplotshape(close > open, \"Buy\")\nplotshape(close < open, \"Sell\")"

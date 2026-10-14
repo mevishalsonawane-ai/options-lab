@@ -236,7 +236,9 @@ object PineScripts {
      */
     fun loadNow(): List<Item>? {
         if (!::file.isInitialized) return null
-        ensure()
+        // 14 Oct: once read, no lock is taken - the auto-trader's pass (which holds its own lock, and the position watch
+        // waits on it) never waits behind a vault write from the Pine screen.
+        if (!loaded) ensure()
         return _items.value
     }
 
