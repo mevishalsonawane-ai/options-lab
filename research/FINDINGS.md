@@ -610,4 +610,5 @@ Oct 2026, F1's holdout untouched).
 - Near miss: M4 (win-chance model) on NIFTY, 77 trades, +Rs 277 a trade, positive in all three test periods
   (+48 / +536 / +162), p 0.025 vs random entries, still positive at 2x spread; fails only BH q (0.109). About one trade
   a week. Proposed: a pre-registered 40-session forward paper test, logged only.
-- What the models lean on most: IV skew, the ATM straddle price and its change since 09:20, PCR; EMAs rank low.
+- What the models lean on (varies by period): IV skew and the ATM straddle price most often, then PCR; but also the
+  weekday (2026 M1), VIX (M3) and EMA-ribbon slopes (3rd-4th in two models). A lead, not a finding.

@@ -42,21 +42,20 @@ and is worth watching live.**
   - It beat random entries on the same days (p 0.025). It missed only the multiple-testing bar: q 0.109, where the gate
     needs 0.10. With 30 tests, one result this good can still be luck.
   - It trades rarely: about one trade every 7 NIFTY sessions, about +Rs 38 a day per lot on average.
-- **Two more that were positive in every test period, but weaker:**
-  - **M1 on SENSEX:** +Rs 85 / +43 / +43 a trade (149 trades, p 0.19).
-  - **M4 on SENSEX:** positive overall (+Rs 96 a trade, 83 trades, p 0.08), but it lost in 2025.
+- **One more that was positive in every test period, but weaker: M1 on SENSEX**, +Rs 85 / +43 / +43 a trade (149
+  trades, p 0.19). Its first period (Jul–Dec 2024) was traded by a model that had no SENSEX training rows (see the
+  caveats). M4 on SENSEX was positive overall (+Rs 96 a trade, 83 trades, p 0.08), but it lost in 2025.
 - **Everything else lost money out of sample.** C1 and C2 lost Rs 77–111 a trade. C2 is the "EMA × everything"
-  combinations: they looked excellent on the training years (+Rs 300–520 a trade) and lost on the next year. That is
+  combinations: the cells kept looked excellent on the training years (Rs 290–548 per row, ATM, lock) and lost on
+  the next year. That is
   what over-fitting looks like.
-- **What actually drives the models is the option chain, not the EMAs.** In every period, the most important inputs
-  were:
-  - **IV skew** (put IV vs call IV two strikes out);
-  - **the ATM straddle price** and how it has moved since 09:20;
-  - **PCR**;
-  - then distance to the day's levels and time of day.
+- **What the models lean on (permutation importance, varies by period and model):**
+  - option-chain inputs rank high most often: IV skew is in the top 2 for M1 and M4 in every period, and the ATM
+    straddle price is the top input of M4 in 2025 and 2026, with PCR next;
+  - but not always: the 2026 M1 model's top input is the weekday, M3 leans on VIX, and EMA-ribbon slopes rank 3rd to
+    4th in two models.
 
-  EMA-ribbon slopes appear lower down. That fits R29: EMAs alone carry little; the option market's own pricing
-  carries more.
+  So the option market's own pricing looks more useful than EMAs, but this is a lead, not a finding.
 - **What I recommend next:**
   - Run M4-NIFTY (the frozen model trained to 2025) **forward on paper, logged only, for 40 sessions** from 15 Oct, and
     pre-register that test now. If it stays positive and beats random entries over those unseen days, it earns a paper
@@ -75,8 +74,7 @@ and is worth watching live.**
 | C1 best pairs | −106 (1,198) | −55 (1,173) | −76 (1,044) | −133 (1,132) | −20 (1,207) | −77 (5,754) |
 | C2 EMA × everything | −82 (740) | −92 (799) | −140 (793) | −164 (842) | −69 (765) | −111 (3,939) |
 
-Net per trade (trades in brackets). The test periods have 566 sessions for NIFTY, BANKNIFTY and FINNIFTY, and fewer
-for MIDCPNIFTY and SENSEX. For each strategy and index, `results/table.md` has:
+Net per trade (trades in brackets). The test periods have 566 sessions for every index. For each strategy and index, `results/table.md` has:
 - trades a day, win rate, average win / loss, P&L a day, % green days, worst day, max drawdown, big winners cut short;
 - the result per fold, random twins, p, BH q and the 2× spread net.
 
@@ -104,8 +102,10 @@ Results closest to it:
 
 - **Data:** the Dhan lake for NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX: index minutes, India VIX, and
   nearest-expiry options ATM±10 with OI, IV and volume.
-- **Periods:** Aug 2021 – Dec 2022 and Jul 2024 – 12 Oct 2026. **F1's locked holdout (Jan 2023 – Jun 2024) was never
-  used.** Its rows are dropped on read, and the guard asserts it.
+- **Periods:** Aug 2021 – Dec 2022 and Jul 2024 – 12 Oct 2026. **No decision row, feature or label comes from
+  F1's locked holdout (Jan 2023 – Jun 2024).** Its index and chain rows are dropped on read, and the guard asserts it.
+  The trade simulator's option file still holds those days. Only the expiry calendar reads it: the 29 Dec 2022 expiry
+  flag uses the 2 Jan 2023 session, and expiry dates are published by NSE in advance.
 - **Decision grid:** 64 bar closes a day. Every feature uses only data up to that minute:
   - the brain features are covered by the look-ahead guard;
   - the option-chain features have their own test with the future deleted or perturbed (`test_r30.py`).
@@ -130,12 +130,23 @@ Results closest to it:
 
 ## Honest caveats
 
+- **Departures from PREREG found by the review** (none changes a verdict):
+  - SENSEX was also traded in the first test period (Jul–Dec 2024), by models with no SENSEX training rows (PREREG said
+    its first test fold is F2). MIDCPNIFTY had only 44 training days in that fold.
+  - The gate ignores test periods with no trades.
+  - M2's "cut short" column reuses the option-buy columns, so it means nothing for the spread.
+  - Feature importance is read from the CE model only.
+- Random-entry trades lose Rs 45–385 each here, so even losing strategies can beat them (p 0.003–0.004, e.g. M4
+  BANKNIFTY at Rs −1 a trade). Those small p-values also lower M4-NIFTY's q. Beating random is necessary, not
+  sufficient.
+- Raw EMA price levels (ema9 … ema200) are model inputs. Across pooled indices they partly act as an index/era tag.
+
 - Many earlier studies read 2024-26 (R29 included), and I saw R29's results before writing R30's plan. The plan and
   every setting were fixed before R30's own outcomes, but only a forward test is truly unseen.
 - The lake has no bid / ask, so the spread is modelled; the 2× spread check covers part of that.
 - The debit spread's one-trade-at-a-time gate uses its 45-minute limit as the busy time.
 - A few lake minutes are stamped twice. The later row of the minute is kept.
-- 77 trades is a small sample: the 95% range of M4-NIFTY's average trade is wide, about Rs −20 to +560 (bootstrap).
+- 77 trades is a small sample: the 95% range of M4-NIFTY's average trade is wide, about Rs −21 to +559 (bootstrap).
 
 ## Files
 
