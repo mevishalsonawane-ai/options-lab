@@ -172,8 +172,16 @@ def baselines(part: str) -> dict:
     return out
 
 
+HOLDOUT_IDEA = "f1c-rules-P01-O20"
+
+
 def holdout():
-    data.read_holdout("f1c-rules-P01-O20")           # raises on a second read
+    if (C.RESULTS / "holdout.json").exists():
+        raise data.HoldoutError("the F1C holdout was already read (results/holdout.json exists)")
+    if HOLDOUT_IDEA not in data.holdout_reads():
+        data.read_holdout(HOLDOUT_IDEA)               # the one read; a later call raises
+    else:                                             # a run that stopped before writing any result: resume it
+        print("resuming the holdout run logged at", data.holdout_reads()[HOLDOUT_IDEA])
     simulate("holdout")
     T, days = load("holdout")
     D = json.loads((C.RESULTS / "design.json").read_text())
@@ -200,6 +208,39 @@ def holdout():
                      indent=0))
 
 
+def _small_job(args):
+    sym, part, picks = args
+    F = engine.frame(sym, part)
+    mk = engine.Market(sym, part)
+    out = []
+    for rid, rule in RULES.items():
+        if sym not in rule.coins:
+            continue
+        ex = next(e for e in rule.exits if e.name == picks[rid])
+        B = engine.trades(rule, sym, mk, F, ex, part=part, account=C.ACCOUNT_SMALL)
+        if len(B):
+            B["rule"] = rid
+            out.append(B)
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
+
+
+def small():
+    """The picks on a Rs 25,000 account (PREREG section 4): design and holdout, base costs. No choice is made here."""
+    D = json.loads((C.RESULTS / "design.json").read_text())
+    picks = {k: v["pick"] for k, v in D["picks"].items()}
+    res = {}
+    for part in ("design", "holdout"):
+        with ProcessPoolExecutor(4) as ex:
+            T = pd.concat(list(ex.map(_small_job, [(s, part, picks) for s in C.COINS])), ignore_index=True)
+        days = json.loads((TR / part / "days.json").read_text())
+        res[part] = {rid: book.summary(T[T.rule == rid], span_days(days, RULES[rid].coins), C.ACCOUNT_SMALL)
+                     for rid in RULES}
+    (C.RESULTS / "small_account.json").write_text(json.dumps(res, indent=1, default=str))
+    for rid in RULES:
+        d, h = res["design"][rid], res["holdout"][rid]
+        print(rid, d.get("trades"), round(d.get("net_a", 0)), h.get("trades"), round(h.get("net_a", 0)))
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "design":
@@ -208,5 +249,7 @@ if __name__ == "__main__":
         gates()
     elif cmd == "holdout":
         holdout()
+    elif cmd == "small":
+        small()
     else:
         print(__doc__)

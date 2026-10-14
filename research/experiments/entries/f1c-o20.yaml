@@ -26,13 +26,13 @@ results:
   summary: 'Pick s25_trail (best design net after tax A). Design: 994 trades (1.48 a window day), win 28%, avg win Rs +944
     / loss Rs -609, net pre-tax Rs -176,639, after tax A Rs -264,541 (Rs -395 a day), business reading Rs -176,639; green
     days 25% of 526, worst day Rs -2,662, max DD Rs +265,056; walk-forward by quarter Rs -266,619 (0% green); stress Rs -366,242;
-    random twins p 0.230 (BH q 0.709). Gates G1-G4: none passed. All exits: s40_step: n 994 net A Rs -281,898 twin p 0.003;
-    s40_trail: n 994 net A Rs -273,201 twin p 0.169; s25_step: n 994 net A Rs -270,125 twin p 0.018; s25_trail: n 994 net
-    A Rs -264,541 twin p 0.230.'
+    random twins p 0.230 (BH q 0.709). Gates G1-G4: none passed. Holdout (read once): 358 trades, net A Rs -75,740 (pre-tax
+    Rs -39,400). All exits: s40_step: n 994 net A Rs -281,898 twin p 0.003; s40_trail: n 994 net A Rs -273,201 twin p 0.169;
+    s25_step: n 994 net A Rs -270,125 twin p 0.018; s25_trail: n 994 net A Rs -264,541 twin p 0.230.'
   costs: 'Delta India perps: 0.05% taker + 18% GST and 0.02% (BTC/ETH) / 0.05% slippage per side, Binance funding; options:
     min(0.01% notional, 3.5% premium) + GST, RC2 spread model, exits less 1 tick + 1%. Tax A 31.2% of each winning trade,
     no set-off; TDS 1% of sells tracked as a cash lock. Stress: slippage x2 (options spread x1.5, fee 0.03%).'
-holdout_read: false
+holdout_read: true
 verdict: rejected
 notes: One of 20 F1C rules (80 variants, one BH family). Every trade had a stop-loss and a profit lock. Research only; nothing
   in the app trades crypto.

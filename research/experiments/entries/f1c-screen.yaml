@@ -23,10 +23,10 @@ variants_tried: null
 results:
   summary: 'Direction: 1080 tests, 356 pass BH, 245 confirmed on the selection split (89% reversals: price stretched from
     VWAP, the day''s range or the EMA ribbon, or after one-sided taker flow, comes back a little), median edge 0.7 bps against
-    a 15.8-21.8 bps round trip; 2 pay on paper (XRP, 240 minutes). Funding, basis, premium, long/short ratios, DVOL, option
-    skew, put/call, ATM IV, option flow and the calendar: noise for direction. Size: 1080 tests, 698 pass BH, 550 confirmed
-    (realised vol and ranges). Rows per test: {''15'': ''32160'', ''60'': ''8040'', ''240'': ''2010''} screen, {''15'': ''31936'',
-    ''60'': ''7984'', ''240'': ''1996''} selection by horizon.'
+    a 15.8-21.8 bps round trip; 2 pay on paper (XRP, 240 minutes). Funding, premium, long/short ratios, DVOL, option skew,
+    put/call, ATM IV, option flow and the calendar: noise for direction; basis (SOL) and OI change (BTC, XRP) confirmed on
+    one coin only. Size: 1080 tests, 698 pass BH, 550 confirmed (realised vol and ranges). Rows per coin and test (15 / 60
+    / 240 min): screen 32,160 / 8,040 / 2,010, selection 31,936 / 7,984 / 1,996.'
   costs: 'Round trip used for ''pays'': 2 x (0.05% x 1.18 + slippage 0.02% BTC/ETH, 0.05% others)'
 holdout_read: false
 verdict: not-a-test

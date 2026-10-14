@@ -139,7 +139,7 @@ def trades(rule: Rule, sym: str, mk: Market, F: pd.DataFrame, ex, stress: float 
            part: str = "design", dec: pd.DataFrame | None = None) -> pd.DataFrame:
     """The rule's selected trades (one at a time, day cap, max per day) for one coin and exit variant."""
     if dec is None:
-        dec = rule.signal(F)
+        dec = rule.signal(F, mk)
     if dec is None or dec.empty:
         return pd.DataFrame()
     dec = dec[in_window(dec.ts)].sort_values("ts").reset_index(drop=True)

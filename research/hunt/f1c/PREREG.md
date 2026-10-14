@@ -175,4 +175,12 @@ committed.
 
 ## Amendments
 
-(none yet)
+1. 14 Oct 2026, after the holdout read (wording only, no rule or number changes): section 8's summary says funding,
+   basis, premium, long/short ratios, DVOL and the option features "confirmed nothing for direction". That holds for
+   funding, premium, long/short, DVOL and every option feature; the basis level (SOL), the OI change (24 h on BTC,
+   60 min on XRP), the liquidation proxies and minutes-to-funding (XRP) were confirmed on one coin each
+   (`results/screen.csv`). P13 (OI divergence) was in the rule list throughout.
+2. 14 Oct 2026, implementation notes (no rule changes): the design run was restarted for BTC/ETH with a larger
+   option-day cache and jobs split by venue; the Rs 25,000 run (section 4) first called the ORB signal without its
+   minute bars (P08, O20 showed 0 trades) and was re-run; the holdout command may resume a run that stopped before
+   writing a result (it ran once, without stopping).

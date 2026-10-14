@@ -105,12 +105,15 @@ def write(D, H):
                               f"{S['direction']['confirmed']} confirmed on the selection split (89% reversals: price "
                               "stretched from VWAP, the day's range or the EMA ribbon, or after one-sided taker flow, "
                               "comes back a little), median edge 0.7 bps against a 15.8-21.8 bps round trip; "
-                              f"{S['direction']['pays']} pay on paper (XRP, 240 minutes). Funding, basis, premium, "
-                              "long/short ratios, DVOL, option skew, put/call, ATM IV, option flow and the calendar: "
-                              f"noise for direction. Size: {S['size']['tests']} tests, {S['size']['bh_pass']} pass BH, "
-                              f"{S['size']['confirmed']} confirmed (realised vol and ranges). Rows per test: "
-                              f"{S['direction']['rows_screen']} screen, {S['direction']['rows_select']} selection by "
-                              "horizon."),
+                              f"{S['direction']['pays']} pay on paper (XRP, 240 minutes). Funding, premium, long/short "
+                              "ratios, DVOL, option skew, put/call, ATM IV, option flow and the calendar: noise for "
+                              "direction; basis (SOL) and OI change (BTC, XRP) confirmed on one coin only. "
+                              f"Size: {S['size']['tests']} tests, {S['size']['bh_pass']} pass BH, "
+                              f"{S['size']['confirmed']} confirmed (realised vol and ranges). Rows per coin and test (15 / 60 / "
+                              "240 min): screen " + " / ".join(f"{int(S['direction']['rows_screen'][h]):,}" for h in
+                                                               ("15", "60", "240")) +
+                              ", selection " + " / ".join(f"{int(S['direction']['rows_select'][h]):,}" for h in
+                                                          ("15", "60", "240")) + "."),
                      costs="Round trip used for 'pays': 2 x (0.05% x 1.18 + slippage 0.02% BTC/ETH, 0.05% others)"),
         holdout_read=False, verdict="not-a-test",
         notes="A screen, not a trading test: its job was to choose the rules (PREREG part B).")
