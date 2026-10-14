@@ -160,15 +160,17 @@ class LiveRecorderTest : RobolectricTest() {
         ProblemsHost.resetForTest()
         val nowMs = at.toInstant().toEpochMilli()
         LiveRecorder.resetForTest(startedAt = nowMs - 30 * 60_000L)
+        // The board stamps a problem with the real clock, so it is read at the real clock (14 Oct: read at the fixed 11:00,
+        // a problem reported later in the real day was not "open" yet and the test failed after 11:00 IST).
         LiveRecorder.healthCheck(alive = false, nowMs = nowMs)
-        assertTrue(ProblemsHost.open(nowMs = nowMs).none { it.key == LiveRecorder.PROBLEM })
+        assertTrue(ProblemsHost.open().none { it.key == LiveRecorder.PROBLEM })
         LiveRecorder.healthCheck(alive = true, nowMs = nowMs)
-        assertTrue(ProblemsHost.open(nowMs = nowMs).any { it.key == LiveRecorder.PROBLEM })
+        assertTrue(ProblemsHost.open().any { it.key == LiveRecorder.PROBLEM })
         // Written again: cleared.
         feed()
         runBlocking { LiveRecorder.minute(System.currentTimeMillis()) }
         LiveRecorder.healthCheck(alive = true, nowMs = LiveRecorder.lastWriteMs!! + 1_000)
-        assertTrue(ProblemsHost.open(nowMs = nowMs).none { it.key == LiveRecorder.PROBLEM })
+        assertTrue(ProblemsHost.open().none { it.key == LiveRecorder.PROBLEM })
     }
 
     @Test fun theExportZipsTheFolderAsStoredAndRotationKeepsTheSetting() {

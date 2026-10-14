@@ -93,7 +93,9 @@ internal fun ComposeTestRule.waitMain(ms: Long, condition: () -> Boolean) =
     waitUntil(ms) { org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); condition() }
 
 internal fun ComposeTestRule.pineShown(text: String) = onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
-internal fun ComposeTestRule.pineWaitFor(text: String, ms: Long = 20_000) = waitUntil(ms) { pineShown(text) }
+// The main looper is run between checks, as in [waitMain] (14 Oct: the script list and the compile note are written by
+// the page's main-thread coroutines; without running the looper a slow CI runner timed out waiting for them).
+internal fun ComposeTestRule.pineWaitFor(text: String, ms: Long = 20_000) = waitMain(ms) { pineShown(text) }
 internal fun ComposeTestRule.pineTap(text: String, exact: Boolean = true) {
     val n = onAllNodesWithText(text, substring = !exact).onFirst()
     runCatching { n.performScrollTo() }
