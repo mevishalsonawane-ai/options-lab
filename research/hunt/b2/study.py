@@ -21,6 +21,10 @@ import b2model as M
 TARGETS = D.TARGETS
 INPUTS = ("base", "all")
 TRADE_TARGETS = ("G15", "G30", "G60")
+import re
+# inputs that are the index's own price in another form (excluded from "what else moves with the candle")
+PRICE = re.compile(r"(^t(1|5|15)_|dist|fib|^or\d|^pd_|^rn\d|twap|vwap|ema|^ret|^r\d+d|pos_in|range|^c\d+m|candle|pivot|cpr|"
+                   r"supertrend|^st_|rsi|macd|^bb|keltner|donch|mom|^gap|high|low|^oth_|day_)")
 IMPORT_TARGETS = ("G15", "G30", "G60", "GEOD", "DAY0930")
 G = {}
 
@@ -124,7 +128,8 @@ def readable(X):
     cols = G["cols"]["all"]
     for t in IMPORT_TARGETS:
         Pd = pd.read_parquet(D.OUT / f"pred_{t}_all_GBM.parquet")
-        Z = Pd.merge(X[["und", "day", "row"] + cols], on=["und", "day", "row"], how="left")
+        extra = [c for c in cols if c not in ("und", "day", "row")]
+        Z = Pd.merge(X[["und", "day", "row"] + extra], on=["und", "day", "row"], how="left")
         rng = np.random.default_rng(M.SEED)
         k = rng.choice(len(Z), min(len(Z), 60000), replace=False) if len(Z) > 60000 else np.arange(len(Z))
         Z = Z.iloc[k]
@@ -168,6 +173,7 @@ def anatomy():
     out = {}
     # B. what moves WITH the 15-minute candle: change of each input from t to t + 15
     X = X.sort_values(["und", "day", "row"])
+    X[cols] = X[cols].astype(float)
     nxt = X.groupby(["und", "day"])[cols].shift(-3)          # rows are 5 minutes apart: t + 15 = 3 rows on
     dX = (nxt - X[cols])
     ok = X.G15.notna()
@@ -179,12 +185,15 @@ def anatomy():
         if f.sum() < 5000 or np.nanstd(v[f]) == 0:
             continue
         rows.append((c, int(f.sum()), M.auc_w(y[f], v[f])))
-    out["concurrent"] = sorted(rows, key=lambda r: -abs(r[2] - 0.5))[:40]
+    out["concurrent"] = sorted(rows, key=lambda r: -abs(r[2] - 0.5))
+    # the same without the index's own price (distances, levels, chart indicators, returns): what ELSE moves with the candle
+    out["concurrent_nonprice"] = [r for r in out["concurrent"] if not PRICE.search(r[0])]
     # the same changes all at once: walk-forward GBM on the changes (how much of a candle's colour they "explain")
     Z = pd.concat([X.loc[ok, ["und", "day", "row"]].reset_index(drop=True),
                    dX.loc[ok].reset_index(drop=True).add_prefix("d_")], axis=1)
     Z["y"] = y
     dcols = [c for c in Z.columns if c.startswith("d_")]
+    dnon = [c for c in dcols if not PRICE.search(c[2:])]
     preds = []
     for blk in D.BLOCKS:
         tr, te = M.fold_masks(Z.day, blk)
@@ -193,6 +202,15 @@ def anatomy():
         preds.append(pd.DataFrame(dict(y=Z.y.values[te], p=M.predict(m, P, Xa[te]), day=Z.day.values[te])))
     Pd = pd.concat(preds)
     out["concurrent_model_auc"] = dict(auc=M.auc_w(Pd.y.values, Pd.p.values), n=int(len(Pd)), days=int(Pd.day.nunique()))
+    preds = []
+    for blk in D.BLOCKS:
+        tr, te = M.fold_masks(Z.day, blk)
+        Xa = M.design_matrix(Z, dnon)
+        m, P = M.fit("GBM", Xa[tr], Z.y.values[tr])
+        preds.append(pd.DataFrame(dict(y=Z.y.values[te], p=M.predict(m, P, Xa[te]), day=Z.day.values[te])))
+    Pd = pd.concat(preds)
+    out["concurrent_nonprice_model_auc"] = dict(auc=M.auc_w(Pd.y.values, Pd.p.values), n=int(len(Pd)),
+                                                days=int(Pd.day.nunique()), inputs=len(dnon))
     # C. green vs red days (one row per index-day, at 09:30; features known then + the first 15 minutes)
     Dd = X[(X.row == 15) & X.DAYG.notna()].copy()
     tabs = {}
@@ -223,8 +241,8 @@ def anatomy():
     out["after_last15"] = [(str(k), int(n), float(m)) for k, (n, m) in
                            X[ok2].groupby(np.sign(X.ret_15m[ok2])).G15.agg(["size", "mean"]).iterrows()]
     (D.RESULTS / "anatomy.json").write_text(json.dumps(out, indent=1, default=str))
-    print(json.dumps({k: v for k, v in out.items() if k != "concurrent"}, indent=1, default=str)[:3000])
-    print(out["concurrent"][:15])
+    print(out["concurrent_model_auc"], out["concurrent_nonprice_model_auc"])
+    print(out["concurrent_nonprice"][:25])
 
 
 # ------------------------------------------------------------------------------------------------ holdout (one read)
