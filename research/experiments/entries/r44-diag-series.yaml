@@ -1,0 +1,29 @@
+id: r44-diag-series
+title: 'Why Boss''s sweep has about 2x our trades: WEEK + MONTH series counted twice?'
+family: diagnosis
+date: '2026-10-14'
+doc: research/HUNT_R44_SWEEP_RETEST.md
+hypothesis: Boss's per-session trade counts match ours only when both the WEEK and MONTH series are traded.
+data_version: Dhan lake on Drive gdrive:IraAlgo-data-lake (index_1m 2021-2026; options_rolling_1m nearest-expiry WEEK series
+  for NSE/BSE, CRUDEOIL MONTH Aug 2025 - Oct 2026), to 12 Oct 2026; MONTH files of NIFTY, BANKNIFTY, FINNIFTY for the diagnostic
+period:
+  design: OOS design 1 Jan 2024 - 13 Apr 2026 only (the holdout was not read again)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- trade counts
+model_or_rule: research/hunt/r44/diag_series.py
+settings: Boss's comparable cells, both series, +-expiry days
+prereg: null
+variants_tried: null
+results:
+  summary: 'ema821_adx15_plock|BANKNIFTY|CE: Boss 1.928/session vs ours WEEK 0.908, WEEK+MONTH incl. expiry 2.074; ema921_adx20|BANKNIFTY|CE:
+    Boss 1.029/session vs ours WEEK 0.501, WEEK+MONTH incl. expiry 1.15; ema821_adx15_plock|FINNIFTY|CE: Boss 0.654/session
+    vs ours WEEK 0.929, WEEK+MONTH incl. expiry 2.028; ema921_adx20|NIFTY|CE: Boss 1.113/session vs ours WEEK 0.517, WEEK+MONTH
+    incl. expiry 1.301. Consistent within 7-17% on 3 of 4 cells; FINNIFTY ''weekly'' differs.'
+  costs: Boss Rs 95 and real costs (as R44)
+holdout_read: false
+verdict: not-a-test
+notes: Explains trade counts only; changes no verdict.

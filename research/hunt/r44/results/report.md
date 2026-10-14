@@ -5,19 +5,75 @@ Cells passing every gate: none.
 
 - IS NSE/BSE, all cells: 25,737 trades, net real Rs -3,025,905, net Boss costs Rs -3,601,162; 12 of 80 cells positive (real). CRUDEOIL: 0 trades, real Rs 0, Boss Rs 0, 0 of 0 positive.
 - OOS_design NSE/BSE, all cells: 38,783 trades, net real Rs -3,835,061, net Boss costs Rs -4,195,089; 8 of 80 cells positive (real). CRUDEOIL: 6,669 trades, real Rs -895,309, Boss Rs -1,262,042, 3 of 32 positive.
+- holdout NSE/BSE: 8,557 trades, real Rs -187,262, Boss Rs -154,633; 41 of 80 positive. CRUDEOIL: 4,780 trades, real Rs -815,780, 6 of 32 positive.
+- OOS_boss NSE/BSE: 47,927 trades, real Rs -4,089,111, Boss Rs -4,409,987; 11 of 80 positive. CRUDEOIL: 11,790 trades, real Rs -1,911,072, 2 of 32 positive.
+- JanAug2026 NSE/BSE: 11,945 trades, real Rs -370,229, Boss Rs -299,891; 30 of 80 positive. CRUDEOIL: 6,723 trades, real Rs -1,129,143, 7 of 32 positive.
+- SepOct2026 NSE/BSE: 1,783 trades, real Rs -20,331, Boss Rs -21,465; 37 of 80 positive. CRUDEOIL: 993 trades, real Rs -105,653, 14 of 32 positive.
+- ALL NSE/BSE: 73,664 trades, real Rs -7,115,016, Boss Rs -8,011,149; 10 of 80 positive. CRUDEOIL: 11,790 trades, real Rs -1,911,072, 2 of 32 positive.
+- Sep-Oct window: 2026-09-04 .. 2026-10-12 (25 sessions). Design numbers moved when the holdout was opened: none.
 
 ## Per strategy, NSE/BSE totals (current lots; hist = lot in force on the day, real costs)
 
-| strategy | IS: trades / net real / net Boss / net hist lots | OOS_design: trades / net real / net Boss / net hist lots |
-|---|---|---|
-| ema821_adx15 | 3,294 / -344,012 / -418,618 / -302,864 | 4,982 / -471,752 / -521,331 / -413,654 |
-| ema821_adx15_plock | 3,294 / -357,392 / -431,087 / -313,318 | 4,982 / -490,596 / -538,734 / -440,153 |
-| ema821_adx15_plock_nt | 3,294 / -364,605 / -435,483 / -316,223 | 4,982 / -475,881 / -520,154 / -440,117 |
-| ema921_adx20 | 1,791 / -166,399 / -206,481 / -144,584 | 2,900 / -283,391 / -309,331 / -227,216 |
-| ema926_adx20 | 1,488 / -147,167 / -180,748 / -127,206 | 2,491 / -255,214 / -276,895 / -243,778 |
-| rsi_fade | 2,357 / -405,107 / -456,333 / -346,968 | 3,573 / -743,167 / -774,079 / -837,858 |
-| rsi_momo | 5,362 / -741,918 / -863,336 / -644,298 | 7,894 / -652,621 / -728,160 / -537,734 |
-| donchian20 | 4,857 / -499,304 / -609,075 / -431,479 | 6,979 / -462,439 / -526,404 / -340,145 |
+| strategy | IS: trades / net real / net Boss / net hist lots | OOS_design: trades / net real / net Boss / net hist lots | holdout: trades / net real / net Boss / net hist lots | OOS_boss: trades / net real / net Boss / net hist lots |
+|---|---|---|---|---|
+| ema821_adx15 | 3,294 / -344,012 / -418,618 / -302,864 | 4,982 / -471,752 / -521,331 / -413,654 | 1,104 / -0 / 3,741 / 9,466 | 6,161 / -482,912 / -527,914 / -416,736 |
+| ema821_adx15_plock | 3,294 / -357,392 / -431,087 / -313,318 | 4,982 / -490,596 / -538,734 / -440,153 | 1,104 / 2,025 / 5,868 / 11,165 | 6,161 / -499,731 / -543,189 / -441,537 |
+| ema821_adx15_plock_nt | 3,294 / -364,605 / -435,483 / -316,223 | 4,982 / -475,881 / -520,154 / -440,117 | 1,104 / 39,905 / 44,349 / 52,003 | 6,161 / -447,076 / -486,060 / -400,600 |
+| ema921_adx20 | 1,791 / -166,399 / -206,481 / -144,584 | 2,900 / -283,391 / -309,331 / -227,216 | 684 / 45,630 / 48,607 / 62,975 | 3,630 / -239,608 / -262,148 / -166,017 |
+| ema926_adx20 | 1,488 / -147,167 / -180,748 / -127,206 | 2,491 / -255,214 / -276,895 / -243,778 | 577 / 69,129 / 71,884 / 89,183 | 3,106 / -186,501 / -205,012 / -152,447 |
+| rsi_fade | 2,357 / -405,107 / -456,333 / -346,968 | 3,573 / -743,167 / -774,079 / -837,858 | 775 / -253,053 / -249,946 / -349,726 | 4,407 / -1,021,997 / -1,049,032 / -1,221,495 |
+| rsi_momo | 5,362 / -741,918 / -863,336 / -644,298 | 7,894 / -652,621 / -728,160 / -537,734 | 1,688 / -61,333 / -54,873 / -40,420 | 9,694 / -715,451 / -783,278 / -578,614 |
+| donchian20 | 4,857 / -499,304 / -609,075 / -431,479 | 6,979 / -462,439 / -526,404 / -340,145 | 1,521 / -29,564 / -24,262 / -25,115 | 8,607 / -495,835 / -553,354 / -368,998 |
+
+## Side by side with Boss's sweep (OOS 2024 - 12 Oct 2026)
+
+| cell | Boss trades | Boss net | our trades | our net (Boss costs) | our net (real) | our incl. expiry: trades / net Boss |
+|---|---|---|---|---|---|---|
+| ema821_adx15_plock BANKNIFTY CE full | 1,330 | -52,483 | 634 | -6,156 | -13,774 | 716 / -20,794 |
+| ema921_adx20 BANKNIFTY CE full | 710 | -34,313 | 360 | 21,140 | 16,098 | 406 / 7,944 |
+| ema821_adx15_plock FINNIFTY CE full | 451 | -33,714 | 659 | -30,532 | -26,241 | 740 / -46,344 |
+| ema921_adx20 NIFTY CE full | 768 | -58,515 | 363 | -56,103 | -52,954 | 459 / -75,190 |
+| rsi_fade CRUDEOIL PE morning | 497 | -2,750 | 221 | -115,590 | -109,056 | 227 / -118,460 |
+
+Champion family (ema821_adx15 + ema821_adx15_plock, NSE/BSE, 2021 - 12 Oct 2026): 18,910 trades, Boss costs Rs -1,920,807, real Rs -1,684,048 (Boss: 42,347 trades, Rs -86,03,171).
+
+## October champion ema821_adx15: SepOct2026
+
+| strategy | index | side | session | trades | win | net real | net Boss | exp/trade | net/session | worst day | max DD | p | q |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ema821_adx15 | NIFTY | CE | full | 19 | 36.8% | 2,630 | 2,470 | 138 | 131 | -3,017 | 7,063 | - | - |
+| ema821_adx15 | NIFTY | PE | full | 21 | 33.3% | 1,142 | 857 | 54 | 57 | -3,435 | 7,375 | - | - |
+| ema821_adx15 | BANKNIFTY | CE | full | 22 | 22.7% | -13,343 | -12,760 | -607 | -556 | -3,682 | 18,207 | - | - |
+| ema821_adx15 | BANKNIFTY | PE | full | 24 | 58.3% | 18,989 | 19,170 | 791 | 791 | -2,981 | 3,199 | - | - |
+| ema821_adx15 | FINNIFTY | CE | full | 27 | 25.9% | -10,508 | -10,384 | -389 | -438 | -2,833 | 12,318 | - | - |
+| ema821_adx15 | FINNIFTY | PE | full | 26 | 50.0% | 4,103 | 3,912 | 158 | 171 | -1,491 | 3,896 | - | - |
+| ema821_adx15 | MIDCPNIFTY | CE | full | 25 | 40.0% | -2,872 | -2,547 | -115 | -120 | -7,081 | 9,537 | - | - |
+| ema821_adx15 | MIDCPNIFTY | PE | full | 26 | 38.5% | -969 | -953 | -37 | -40 | -3,218 | 7,524 | - | - |
+| ema821_adx15 | SENSEX | CE | full | 22 | 27.3% | -3,928 | -4,340 | -179 | -196 | -2,648 | 10,569 | - | - |
+| ema821_adx15 | SENSEX | PE | full | 20 | 50.0% | 5,679 | 5,178 | 284 | 284 | -1,537 | 2,354 | - | - |
+| ema821_adx15 | CRUDEOIL | CE | morning | 24 | 62.5% | 25,204 | 24,690 | 1,050 | 1,050 | -4,128 | 5,103 | - | - |
+| ema821_adx15 | CRUDEOIL | CE | full | 43 | 53.5% | 6,661 | 5,520 | 155 | 278 | -5,885 | 16,784 | - | - |
+| ema821_adx15 | CRUDEOIL | PE | morning | 21 | 47.6% | -25,333 | -25,390 | -1,206 | -1,056 | -15,070 | 30,921 | - | - |
+| ema821_adx15 | CRUDEOIL | PE | full | 43 | 37.2% | -38,944 | -39,690 | -906 | -1,623 | -15,070 | 41,975 | - | - |
+
+## October champion ema821_adx15: JanAug2026
+
+| strategy | index | side | session | trades | win | net real | net Boss | exp/trade | net/session | worst day | max DD | p | q |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ema821_adx15 | NIFTY | CE | full | 144 | 43.8% | 9,634 | 9,188 | 67 | 74 | -7,530 | 24,292 | - | - |
+| ema821_adx15 | NIFTY | PE | full | 143 | 39.2% | -11,675 | -12,823 | -82 | -90 | -6,392 | 38,158 | - | - |
+| ema821_adx15 | BANKNIFTY | CE | full | 156 | 41.0% | 18,537 | 24,017 | 119 | 119 | -8,864 | 31,937 | - | - |
+| ema821_adx15 | BANKNIFTY | PE | full | 150 | 41.3% | -28,337 | -25,630 | -189 | -182 | -7,552 | 46,134 | - | - |
+| ema821_adx15 | FINNIFTY | CE | full | 163 | 39.3% | -7,391 | -5,852 | -45 | -47 | -3,754 | 14,901 | - | - |
+| ema821_adx15 | FINNIFTY | PE | full | 152 | 40.1% | 1,912 | 1,917 | 13 | 12 | -4,063 | 25,546 | - | - |
+| ema821_adx15 | MIDCPNIFTY | CE | full | 160 | 43.1% | -16,330 | -13,854 | -102 | -105 | -6,775 | 31,198 | - | - |
+| ema821_adx15 | MIDCPNIFTY | PE | full | 162 | 48.1% | 15,183 | 16,552 | 94 | 97 | -7,985 | 32,452 | - | - |
+| ema821_adx15 | SENSEX | CE | full | 147 | 43.5% | -5,510 | -7,517 | -37 | -42 | -6,761 | 34,278 | - | - |
+| ema821_adx15 | SENSEX | PE | full | 138 | 42.0% | -15,073 | -17,511 | -109 | -116 | -8,517 | 26,883 | - | - |
+| ema821_adx15 | CRUDEOIL | CE | morning | 157 | 47.8% | -26,256 | -27,555 | -167 | -161 | -17,403 | 42,945 | - | - |
+| ema821_adx15 | CRUDEOIL | CE | full | 297 | 45.5% | -66,988 | -69,240 | -226 | -411 | -17,403 | 117,587 | - | - |
+| ema821_adx15 | CRUDEOIL | PE | morning | 161 | 52.8% | 23,634 | 23,607 | 147 | 145 | -9,374 | 20,112 | - | - |
+| ema821_adx15 | CRUDEOIL | PE | full | 285 | 48.1% | -18,041 | -18,482 | -63 | -111 | -10,934 | 45,773 | - | - |
 
 ## Every cell: IS (expiry days skipped)
 
@@ -221,6 +277,240 @@ Cells passing every gate: none.
 | donchian20 | CRUDEOIL | PE | morning | 246 | 41.5% | -4,726 | -18,565 | -19 | -28 | -11,822 | 30,264 | 0.351 | 0.958 |
 | donchian20 | CRUDEOIL | PE | full | 313 | 41.9% | -18,625 | -36,020 | -60 | -112 | -11,822 | 43,354 | 0.146 | 0.866 |
 
+## Every cell: holdout (expiry days skipped)
+
+| strategy | index | side | session | trades | win | net real | net Boss | exp/trade | net/session | worst day | max DD | p | q |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ema821_adx15 | NIFTY | CE | full | 101 | 45.5% | 17,840 | 17,368 | 177 | 194 | -5,320 | 16,340 | 0.150 | 0.583 |
+| ema821_adx15 | NIFTY | PE | full | 105 | 34.3% | -34,987 | -36,127 | -333 | -380 | -6,392 | 43,473 | 0.920 | 0.940 |
+| ema821_adx15_plock | NIFTY | CE | full | 101 | 43.6% | 17,809 | 17,361 | 176 | 194 | -5,320 | 16,592 | 0.141 | 0.583 |
+| ema821_adx15_plock | NIFTY | PE | full | 105 | 33.3% | -33,209 | -34,308 | -316 | -361 | -6,392 | 41,695 | 0.919 | 0.940 |
+| ema821_adx15_plock_nt | NIFTY | CE | full | 101 | 43.6% | 24,378 | 24,071 | 241 | 265 | -5,320 | 18,974 | 0.095 | 0.583 |
+| ema821_adx15_plock_nt | NIFTY | PE | full | 105 | 33.3% | -35,864 | -36,887 | -342 | -390 | -6,392 | 43,646 | 0.923 | 0.940 |
+| ema921_adx20 | NIFTY | CE | full | 65 | 43.1% | 13,826 | 13,550 | 213 | 150 | -4,117 | 14,233 | 0.197 | 0.583 |
+| ema921_adx20 | NIFTY | PE | full | 59 | 33.9% | -16,871 | -17,490 | -286 | -183 | -3,229 | 25,871 | 0.864 | 0.934 |
+| ema926_adx20 | NIFTY | CE | full | 59 | 42.4% | 6,798 | 6,591 | 115 | 74 | -4,117 | 19,152 | 0.353 | 0.617 |
+| ema926_adx20 | NIFTY | PE | full | 53 | 35.9% | -9,470 | -9,977 | -179 | -103 | -3,205 | 24,387 | 0.632 | 0.813 |
+| rsi_fade | NIFTY | CE | full | 67 | 41.8% | -814 | -1,095 | -12 | -9 | -3,968 | 18,476 | 0.068 | 0.583 |
+| rsi_fade | NIFTY | PE | full | 71 | 45.1% | -4,603 | -5,388 | -65 | -50 | -3,373 | 16,101 | 0.085 | 0.583 |
+| rsi_momo | NIFTY | CE | full | 148 | 45.3% | 3,474 | 2,733 | 23 | 38 | -7,175 | 24,044 | 0.347 | 0.617 |
+| rsi_momo | NIFTY | PE | full | 155 | 37.4% | -40,802 | -42,411 | -263 | -444 | -6,968 | 56,078 | 0.941 | 0.949 |
+| donchian20 | NIFTY | CE | full | 141 | 41.1% | -11,707 | -12,436 | -83 | -127 | -5,183 | 38,126 | 0.745 | 0.867 |
+| donchian20 | NIFTY | PE | full | 142 | 42.2% | -7,736 | -9,140 | -54 | -84 | -6,022 | 35,212 | 0.598 | 0.797 |
+| ema821_adx15 | BANKNIFTY | CE | full | 112 | 37.5% | 9,950 | 13,868 | 89 | 90 | -7,765 | 25,663 | 0.299 | 0.583 |
+| ema821_adx15 | BANKNIFTY | PE | full | 113 | 45.1% | 9,551 | 11,342 | 85 | 87 | -7,552 | 46,134 | 0.150 | 0.583 |
+| ema821_adx15_plock | BANKNIFTY | CE | full | 112 | 37.5% | 9,950 | 13,868 | 89 | 90 | -7,765 | 25,663 | 0.297 | 0.583 |
+| ema821_adx15_plock | BANKNIFTY | PE | full | 113 | 45.1% | 11,658 | 13,461 | 103 | 106 | -7,552 | 45,379 | 0.129 | 0.583 |
+| ema821_adx15_plock_nt | BANKNIFTY | CE | full | 112 | 37.5% | 14,988 | 18,969 | 134 | 136 | -7,765 | 25,663 | 0.236 | 0.583 |
+| ema821_adx15_plock_nt | BANKNIFTY | PE | full | 113 | 45.1% | 14,371 | 16,203 | 127 | 131 | -7,552 | 45,379 | 0.106 | 0.583 |
+| ema921_adx20 | BANKNIFTY | CE | full | 72 | 38.9% | 22,521 | 25,089 | 313 | 205 | -5,367 | 19,719 | 0.148 | 0.583 |
+| ema921_adx20 | BANKNIFTY | PE | full | 68 | 47.1% | 11,013 | 12,097 | 162 | 100 | -5,812 | 29,606 | 0.106 | 0.583 |
+| ema926_adx20 | BANKNIFTY | CE | full | 59 | 44.1% | 47,636 | 49,934 | 807 | 433 | -4,616 | 11,915 | 0.018 | 0.583 |
+| ema926_adx20 | BANKNIFTY | PE | full | 56 | 44.6% | -464 | 550 | -8 | -4 | -6,622 | 25,902 | 0.398 | 0.666 |
+| rsi_fade | BANKNIFTY | CE | full | 83 | 47.0% | -11,262 | -8,230 | -136 | -102 | -7,221 | 20,595 | 0.209 | 0.583 |
+| rsi_fade | BANKNIFTY | PE | full | 79 | 39.2% | -36,428 | -35,148 | -461 | -331 | -5,179 | 38,244 | 0.449 | 0.689 |
+| rsi_momo | BANKNIFTY | CE | full | 185 | 41.1% | -15,101 | -8,744 | -82 | -137 | -6,611 | 35,264 | 0.608 | 0.801 |
+| rsi_momo | BANKNIFTY | PE | full | 183 | 42.1% | -20,725 | -17,708 | -113 | -188 | -8,008 | 37,433 | 0.645 | 0.814 |
+| donchian20 | BANKNIFTY | CE | full | 148 | 44.6% | 35,660 | 40,700 | 241 | 324 | -6,886 | 33,504 | 0.225 | 0.583 |
+| donchian20 | BANKNIFTY | PE | full | 167 | 38.3% | -38,747 | -35,640 | -232 | -352 | -9,205 | 75,425 | 0.900 | 0.940 |
+| ema821_adx15 | FINNIFTY | CE | full | 125 | 36.8% | -7,659 | -6,271 | -61 | -68 | -2,833 | 28,893 | 0.261 | 0.583 |
+| ema821_adx15 | FINNIFTY | PE | full | 108 | 39.8% | -10,379 | -10,544 | -96 | -93 | -4,063 | 26,903 | 0.489 | 0.712 |
+| ema821_adx15_plock | FINNIFTY | CE | full | 125 | 36.8% | -7,659 | -6,271 | -61 | -68 | -2,833 | 28,893 | 0.262 | 0.583 |
+| ema821_adx15_plock | FINNIFTY | PE | full | 108 | 39.8% | -10,379 | -10,544 | -96 | -93 | -4,063 | 26,903 | 0.483 | 0.712 |
+| ema821_adx15_plock_nt | FINNIFTY | CE | full | 125 | 36.8% | -6,210 | -4,792 | -50 | -55 | -2,833 | 27,835 | 0.213 | 0.583 |
+| ema821_adx15_plock_nt | FINNIFTY | PE | full | 108 | 39.8% | -9,949 | -10,098 | -92 | -89 | -4,063 | 27,926 | 0.475 | 0.710 |
+| ema921_adx20 | FINNIFTY | CE | full | 83 | 37.4% | 3,830 | 4,884 | 46 | 34 | -4,170 | 18,000 | 0.194 | 0.583 |
+| ema921_adx20 | FINNIFTY | PE | full | 71 | 35.2% | -10,481 | -10,539 | -148 | -94 | -3,194 | 22,512 | 0.696 | 0.847 |
+| ema926_adx20 | FINNIFTY | CE | full | 63 | 42.9% | 12,419 | 13,244 | 197 | 111 | -4,276 | 11,542 | 0.094 | 0.583 |
+| ema926_adx20 | FINNIFTY | PE | full | 53 | 43.4% | -5,469 | -5,500 | -103 | -49 | -3,046 | 16,012 | 0.523 | 0.742 |
+| rsi_fade | FINNIFTY | CE | full | 82 | 31.7% | -68,405 | -67,311 | -834 | -611 | -9,824 | 74,745 | 0.999 | 0.999 |
+| rsi_fade | FINNIFTY | PE | full | 73 | 30.1% | -39,651 | -39,682 | -543 | -354 | -4,806 | 39,651 | 0.841 | 0.934 |
+| rsi_momo | FINNIFTY | CE | full | 180 | 41.1% | -2,962 | -981 | -16 | -26 | -3,812 | 26,434 | 0.183 | 0.583 |
+| rsi_momo | FINNIFTY | PE | full | 172 | 47.1% | 1,652 | 1,469 | 10 | 15 | -4,508 | 24,185 | 0.241 | 0.583 |
+| donchian20 | FINNIFTY | CE | full | 155 | 41.3% | 10,433 | 12,114 | 67 | 93 | -4,658 | 15,289 | 0.206 | 0.583 |
+| donchian20 | FINNIFTY | PE | full | 161 | 46.6% | -5,075 | -5,124 | -32 | -45 | -5,172 | 17,203 | 0.574 | 0.780 |
+| ema821_adx15 | MIDCPNIFTY | CE | full | 115 | 47.8% | 2,551 | 4,263 | 22 | 23 | -7,081 | 12,167 | 0.245 | 0.583 |
+| ema821_adx15 | MIDCPNIFTY | PE | full | 120 | 45.0% | -2,017 | -1,540 | -17 | -18 | -4,514 | 18,571 | 0.289 | 0.583 |
+| ema821_adx15_plock | MIDCPNIFTY | CE | full | 115 | 47.8% | 2,551 | 4,263 | 22 | 23 | -7,081 | 12,167 | 0.247 | 0.583 |
+| ema821_adx15_plock | MIDCPNIFTY | PE | full | 120 | 44.2% | -2,757 | -2,268 | -23 | -25 | -4,514 | 18,309 | 0.307 | 0.583 |
+| ema821_adx15_plock_nt | MIDCPNIFTY | CE | full | 115 | 47.8% | 2,092 | 3,821 | 18 | 19 | -7,081 | 12,167 | 0.256 | 0.583 |
+| ema821_adx15_plock_nt | MIDCPNIFTY | PE | full | 120 | 44.2% | -217 | 330 | -2 | -2 | -4,514 | 18,309 | 0.294 | 0.583 |
+| ema921_adx20 | MIDCPNIFTY | CE | full | 73 | 43.8% | -1,463 | -298 | -20 | -13 | -4,936 | 10,627 | 0.411 | 0.667 |
+| ema921_adx20 | MIDCPNIFTY | PE | full | 68 | 48.5% | 12,676 | 13,024 | 186 | 115 | -3,413 | 9,883 | 0.113 | 0.583 |
+| ema926_adx20 | MIDCPNIFTY | CE | full | 65 | 44.6% | -7,993 | -6,945 | -123 | -73 | -4,936 | 14,264 | 0.647 | 0.814 |
+| ema926_adx20 | MIDCPNIFTY | PE | full | 56 | 46.4% | 11,321 | 11,647 | 202 | 103 | -3,829 | 10,357 | 0.188 | 0.583 |
+| rsi_fade | MIDCPNIFTY | CE | full | 90 | 38.9% | -50,898 | -49,595 | -566 | -463 | -8,735 | 50,898 | 0.751 | 0.867 |
+| rsi_fade | MIDCPNIFTY | PE | full | 83 | 43.4% | -23,073 | -22,768 | -278 | -210 | -3,868 | 25,058 | 0.199 | 0.583 |
+| rsi_momo | MIDCPNIFTY | CE | full | 178 | 50.0% | 2,523 | 5,020 | 14 | 23 | -7,081 | 24,477 | 0.165 | 0.583 |
+| rsi_momo | MIDCPNIFTY | PE | full | 184 | 44.0% | 2,501 | 3,395 | 14 | 23 | -7,283 | 31,776 | 0.231 | 0.583 |
+| donchian20 | MIDCPNIFTY | CE | full | 163 | 46.6% | -24,276 | -22,122 | -149 | -221 | -5,884 | 34,743 | 0.868 | 0.934 |
+| donchian20 | MIDCPNIFTY | PE | full | 162 | 45.7% | -5,168 | -4,387 | -32 | -47 | -5,685 | 30,206 | 0.677 | 0.843 |
+| ema821_adx15 | SENSEX | CE | full | 105 | 43.8% | 10,633 | 8,940 | 101 | 114 | -3,010 | 14,474 | 0.139 | 0.583 |
+| ema821_adx15 | SENSEX | PE | full | 100 | 45.0% | 4,516 | 2,440 | 45 | 49 | -3,610 | 11,556 | 0.219 | 0.583 |
+| ema821_adx15_plock | SENSEX | CE | full | 105 | 43.8% | 11,623 | 9,936 | 111 | 125 | -3,010 | 13,485 | 0.113 | 0.583 |
+| ema821_adx15_plock | SENSEX | PE | full | 100 | 43.0% | 2,439 | 369 | 24 | 26 | -3,610 | 11,556 | 0.300 | 0.583 |
+| ema821_adx15_plock_nt | SENSEX | CE | full | 105 | 43.8% | 29,684 | 28,105 | 283 | 319 | -3,010 | 10,569 | 0.017 | 0.583 |
+| ema821_adx15_plock_nt | SENSEX | PE | full | 100 | 43.0% | 6,631 | 4,628 | 66 | 71 | -3,610 | 11,718 | 0.215 | 0.583 |
+| ema921_adx20 | SENSEX | CE | full | 67 | 37.3% | 1,887 | 765 | 28 | 20 | -3,209 | 15,327 | 0.387 | 0.656 |
+| ema921_adx20 | SENSEX | PE | full | 58 | 50.0% | 8,692 | 7,526 | 150 | 93 | -3,610 | 10,590 | 0.162 | 0.583 |
+| ema926_adx20 | SENSEX | CE | full | 60 | 38.3% | 39 | -934 | 1 | 0 | -3,209 | 15,699 | 0.473 | 0.710 |
+| ema926_adx20 | SENSEX | PE | full | 53 | 49.1% | 14,311 | 13,272 | 270 | 154 | -3,026 | 9,405 | 0.082 | 0.583 |
+| rsi_fade | SENSEX | CE | full | 82 | 36.6% | -6,958 | -8,372 | -85 | -75 | -3,323 | 20,769 | 0.041 | 0.583 |
+| rsi_fade | SENSEX | PE | full | 65 | 36.9% | -10,960 | -12,357 | -169 | -118 | -2,983 | 15,190 | 0.217 | 0.583 |
+| rsi_momo | SENSEX | CE | full | 151 | 43.0% | 743 | -1,809 | 5 | 8 | -5,602 | 24,184 | 0.302 | 0.583 |
+| rsi_momo | SENSEX | PE | full | 152 | 42.8% | 7,365 | 4,162 | 48 | 79 | -3,992 | 14,264 | 0.283 | 0.583 |
+| donchian20 | SENSEX | CE | full | 132 | 46.2% | 13,263 | 11,102 | 100 | 143 | -5,290 | 12,427 | 0.209 | 0.583 |
+| donchian20 | SENSEX | PE | full | 150 | 45.3% | 3,790 | 670 | 25 | 41 | -3,927 | 15,342 | 0.521 | 0.742 |
+| ema821_adx15 | CRUDEOIL | CE | morning | 111 | 51.3% | 11,020 | 9,170 | 99 | 96 | -12,616 | 23,792 | 0.243 | 0.583 |
+| ema821_adx15 | CRUDEOIL | CE | full | 215 | 45.1% | -45,992 | -49,155 | -214 | -400 | -14,453 | 83,267 | 0.337 | 0.615 |
+| ema821_adx15 | CRUDEOIL | PE | morning | 106 | 53.8% | -10,105 | -10,698 | -95 | -88 | -15,070 | 30,921 | 0.722 | 0.851 |
+| ema821_adx15 | CRUDEOIL | PE | full | 207 | 47.3% | -48,067 | -50,003 | -232 | -418 | -15,070 | 48,067 | 0.438 | 0.681 |
+| ema821_adx15_plock | CRUDEOIL | CE | morning | 111 | 51.3% | 11,020 | 9,170 | 99 | 96 | -12,616 | 23,792 | 0.244 | 0.583 |
+| ema821_adx15_plock | CRUDEOIL | CE | full | 215 | 45.1% | -45,992 | -49,155 | -214 | -400 | -14,453 | 83,267 | 0.340 | 0.615 |
+| ema821_adx15_plock | CRUDEOIL | PE | morning | 106 | 53.8% | -10,105 | -10,698 | -95 | -88 | -15,070 | 30,921 | 0.716 | 0.851 |
+| ema821_adx15_plock | CRUDEOIL | PE | full | 207 | 46.4% | -47,242 | -49,163 | -228 | -411 | -15,070 | 47,242 | 0.420 | 0.672 |
+| ema821_adx15_plock_nt | CRUDEOIL | CE | morning | 111 | 51.3% | 10,874 | 9,060 | 98 | 95 | -12,616 | 23,939 | 0.243 | 0.583 |
+| ema821_adx15_plock_nt | CRUDEOIL | CE | full | 215 | 45.1% | -46,215 | -49,310 | -215 | -402 | -14,453 | 83,414 | 0.323 | 0.604 |
+| ema821_adx15_plock_nt | CRUDEOIL | PE | morning | 106 | 53.8% | -8,222 | -8,758 | -78 | -72 | -15,070 | 30,921 | 0.693 | 0.847 |
+| ema821_adx15_plock_nt | CRUDEOIL | PE | full | 207 | 46.4% | -46,557 | -48,403 | -225 | -405 | -15,070 | 46,557 | 0.404 | 0.666 |
+| ema921_adx20 | CRUDEOIL | CE | morning | 73 | 50.7% | -4,515 | -5,690 | -62 | -39 | -12,316 | 25,314 | 0.570 | 0.780 |
+| ema921_adx20 | CRUDEOIL | CE | full | 144 | 43.1% | -54,884 | -56,870 | -381 | -477 | -14,019 | 64,749 | 0.620 | 0.807 |
+| ema921_adx20 | CRUDEOIL | PE | morning | 63 | 52.4% | -3,740 | -4,188 | -59 | -33 | -9,394 | 19,370 | 0.707 | 0.851 |
+| ema921_adx20 | CRUDEOIL | PE | full | 138 | 44.2% | -46,316 | -47,240 | -336 | -403 | -12,983 | 47,406 | 0.558 | 0.780 |
+| ema926_adx20 | CRUDEOIL | CE | morning | 54 | 48.1% | 12,996 | 12,080 | 241 | 113 | -10,753 | 16,607 | 0.292 | 0.583 |
+| ema926_adx20 | CRUDEOIL | CE | full | 118 | 43.2% | -24,898 | -26,678 | -211 | -216 | -10,756 | 55,257 | 0.362 | 0.623 |
+| ema926_adx20 | CRUDEOIL | PE | morning | 55 | 47.3% | -9,443 | -9,870 | -172 | -82 | -6,777 | 17,434 | 0.776 | 0.886 |
+| ema926_adx20 | CRUDEOIL | PE | full | 121 | 45.5% | -43,069 | -43,745 | -356 | -375 | -10,391 | 45,339 | 0.578 | 0.780 |
+| rsi_fade | CRUDEOIL | CE | morning | 96 | 52.1% | -16,836 | -18,115 | -175 | -146 | -8,165 | 19,587 | 0.028 | 0.583 |
+| rsi_fade | CRUDEOIL | CE | full | 154 | 51.9% | 7,853 | 5,605 | 51 | 68 | -11,480 | 37,434 | 0.012 | 0.583 |
+| rsi_fade | CRUDEOIL | PE | morning | 89 | 40.5% | -48,844 | -49,670 | -549 | -425 | -8,449 | 48,844 | 0.136 | 0.583 |
+| rsi_fade | CRUDEOIL | PE | full | 142 | 38.7% | -108,642 | -109,810 | -765 | -945 | -12,726 | 113,469 | 0.878 | 0.936 |
+| rsi_momo | CRUDEOIL | CE | morning | 179 | 46.4% | -35,000 | -37,010 | -196 | -304 | -12,697 | 81,329 | 0.865 | 0.934 |
+| rsi_momo | CRUDEOIL | CE | full | 227 | 43.2% | -110,444 | -113,430 | -487 | -960 | -18,538 | 155,383 | 0.864 | 0.934 |
+| rsi_momo | CRUDEOIL | PE | morning | 176 | 48.3% | -22,516 | -24,138 | -128 | -196 | -8,486 | 27,965 | 0.864 | 0.934 |
+| rsi_momo | CRUDEOIL | PE | full | 228 | 47.8% | -14,219 | -16,270 | -62 | -124 | -8,486 | 39,057 | 0.136 | 0.583 |
+| donchian20 | CRUDEOIL | CE | morning | 178 | 52.8% | 26,138 | 23,973 | 147 | 227 | -8,877 | 33,197 | 0.437 | 0.681 |
+| donchian20 | CRUDEOIL | CE | full | 227 | 49.3% | -21,155 | -24,087 | -93 | -184 | -15,673 | 73,046 | 0.201 | 0.583 |
+| donchian20 | CRUDEOIL | PE | morning | 174 | 52.9% | -18,626 | -20,295 | -107 | -162 | -8,306 | 25,355 | 0.903 | 0.940 |
+| donchian20 | CRUDEOIL | PE | full | 227 | 52.4% | -4,039 | -6,005 | -18 | -35 | -8,453 | 38,975 | 0.088 | 0.583 |
+
+## Every cell: OOS_boss (expiry days skipped)
+
+| strategy | index | side | session | trades | win | net real | net Boss | exp/trade | net/session | worst day | max DD | p | q |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ema821_adx15 | NIFTY | CE | full | 598 | 40.5% | -91,254 | -97,010 | -153 | -168 | -7,530 | 114,825 | - | - |
+| ema821_adx15 | NIFTY | PE | full | 580 | 38.6% | -34,735 | -42,323 | -60 | -64 | -6,392 | 52,378 | - | - |
+| ema821_adx15_plock | NIFTY | CE | full | 598 | 37.6% | -94,710 | -100,233 | -158 | -174 | -7,530 | 115,932 | - | - |
+| ema821_adx15_plock | NIFTY | PE | full | 580 | 36.0% | -34,836 | -42,090 | -60 | -64 | -6,392 | 51,387 | - | - |
+| ema821_adx15_plock_nt | NIFTY | CE | full | 598 | 37.6% | -97,720 | -102,526 | -163 | -180 | -7,530 | 123,975 | - | - |
+| ema821_adx15_plock_nt | NIFTY | PE | full | 580 | 36.0% | -51,774 | -58,120 | -89 | -95 | -6,392 | 61,441 | - | - |
+| ema921_adx20 | NIFTY | CE | full | 363 | 40.2% | -52,954 | -56,103 | -146 | -97 | -7,396 | 85,306 | - | - |
+| ema921_adx20 | NIFTY | PE | full | 340 | 40.3% | -138 | -4,407 | -0 | -0 | -5,731 | 26,978 | - | - |
+| ema926_adx20 | NIFTY | CE | full | 309 | 39.5% | -62,924 | -65,513 | -204 | -116 | -6,569 | 79,919 | - | - |
+| ema926_adx20 | NIFTY | PE | full | 278 | 42.4% | 21,016 | 17,737 | 76 | 39 | -7,719 | 24,387 | - | - |
+| rsi_fade | NIFTY | CE | full | 392 | 35.5% | -144,678 | -147,519 | -369 | -266 | -15,752 | 151,783 | - | - |
+| rsi_fade | NIFTY | PE | full | 421 | 40.1% | -27,455 | -33,144 | -65 | -50 | -8,557 | 54,995 | - | - |
+| rsi_momo | NIFTY | CE | full | 893 | 42.4% | -107,395 | -115,547 | -120 | -197 | -8,427 | 120,354 | - | - |
+| rsi_momo | NIFTY | PE | full | 898 | 40.0% | -104,599 | -116,251 | -116 | -192 | -10,264 | 136,084 | - | - |
+| donchian20 | NIFTY | CE | full | 836 | 40.8% | -146,656 | -154,132 | -175 | -270 | -7,997 | 183,484 | - | - |
+| donchian20 | NIFTY | PE | full | 770 | 41.4% | 41,680 | 32,068 | 54 | 77 | -7,724 | 56,742 | - | - |
+| ema821_adx15 | BANKNIFTY | CE | full | 634 | 41.2% | -1,994 | 5,521 | -3 | -3 | -9,911 | 58,833 | - | - |
+| ema821_adx15 | BANKNIFTY | PE | full | 653 | 42.3% | -74,847 | -75,021 | -115 | -121 | -7,552 | 119,183 | - | - |
+| ema821_adx15_plock | BANKNIFTY | CE | full | 634 | 39.0% | -13,774 | -6,156 | -22 | -22 | -9,911 | 64,245 | - | - |
+| ema821_adx15_plock | BANKNIFTY | PE | full | 653 | 40.4% | -77,104 | -77,153 | -118 | -124 | -7,552 | 119,035 | - | - |
+| ema821_adx15_plock_nt | BANKNIFTY | CE | full | 634 | 39.0% | -5,403 | 2,515 | -9 | -9 | -9,911 | 66,052 | - | - |
+| ema821_adx15_plock_nt | BANKNIFTY | PE | full | 653 | 40.4% | -42,168 | -41,848 | -65 | -68 | -7,552 | 100,449 | - | - |
+| ema921_adx20 | BANKNIFTY | CE | full | 360 | 40.3% | 16,098 | 21,140 | 45 | 26 | -9,911 | 42,530 | - | - |
+| ema921_adx20 | BANKNIFTY | PE | full | 377 | 42.7% | -21,766 | -21,260 | -58 | -35 | -5,812 | 56,541 | - | - |
+| ema926_adx20 | BANKNIFTY | CE | full | 309 | 41.1% | 2,666 | 7,412 | 9 | 4 | -9,848 | 68,415 | - | - |
+| ema926_adx20 | BANKNIFTY | PE | full | 326 | 42.9% | -2,056 | -1,515 | -6 | -3 | -6,622 | 45,102 | - | - |
+| rsi_fade | BANKNIFTY | CE | full | 438 | 45.0% | -98,329 | -92,264 | -224 | -159 | -12,752 | 124,784 | - | - |
+| rsi_fade | BANKNIFTY | PE | full | 464 | 40.3% | -96,600 | -95,713 | -208 | -156 | -11,139 | 138,244 | - | - |
+| rsi_momo | BANKNIFTY | CE | full | 1,050 | 41.0% | -125,230 | -112,252 | -119 | -202 | -11,656 | 133,895 | - | - |
+| rsi_momo | BANKNIFTY | PE | full | 1,025 | 41.5% | -100,495 | -99,973 | -98 | -162 | -8,008 | 142,848 | - | - |
+| donchian20 | BANKNIFTY | CE | full | 915 | 42.1% | -18,292 | -7,240 | -20 | -30 | -7,709 | 142,070 | - | - |
+| donchian20 | BANKNIFTY | PE | full | 872 | 41.3% | -92,811 | -91,385 | -106 | -150 | -10,184 | 132,464 | - | - |
+| ema821_adx15 | FINNIFTY | CE | full | 659 | 42.0% | -29,423 | -33,798 | -45 | -47 | -7,926 | 49,073 | - | - |
+| ema821_adx15 | FINNIFTY | PE | full | 639 | 39.1% | -64,048 | -73,390 | -100 | -103 | -11,188 | 76,953 | - | - |
+| ema821_adx15_plock | FINNIFTY | CE | full | 659 | 40.5% | -26,241 | -30,532 | -40 | -42 | -7,926 | 49,073 | - | - |
+| ema821_adx15_plock | FINNIFTY | PE | full | 639 | 37.4% | -69,112 | -78,374 | -108 | -111 | -11,188 | 79,681 | - | - |
+| ema821_adx15_plock_nt | FINNIFTY | CE | full | 659 | 40.5% | -19,676 | -23,746 | -30 | -32 | -7,926 | 47,800 | - | - |
+| ema821_adx15_plock_nt | FINNIFTY | PE | full | 639 | 37.4% | -69,467 | -78,456 | -109 | -112 | -11,188 | 80,413 | - | - |
+| ema921_adx20 | FINNIFTY | CE | full | 399 | 42.4% | -15,871 | -17,904 | -40 | -26 | -5,969 | 32,219 | - | - |
+| ema921_adx20 | FINNIFTY | PE | full | 367 | 40.6% | -26,173 | -31,200 | -71 | -42 | -11,188 | 36,625 | - | - |
+| ema926_adx20 | FINNIFTY | CE | full | 341 | 42.5% | 216 | -1,793 | 1 | 0 | -4,276 | 22,270 | - | - |
+| ema926_adx20 | FINNIFTY | PE | full | 303 | 42.2% | -19,679 | -24,087 | -65 | -32 | -11,125 | 32,495 | - | - |
+| rsi_fade | FINNIFTY | CE | full | 424 | 38.4% | -117,423 | -119,379 | -277 | -189 | -12,011 | 139,866 | - | - |
+| rsi_fade | FINNIFTY | PE | full | 460 | 38.3% | -118,396 | -124,778 | -257 | -191 | -6,551 | 132,191 | - | - |
+| rsi_momo | FINNIFTY | CE | full | 1,033 | 42.5% | -63,935 | -71,085 | -62 | -103 | -7,079 | 68,321 | - | - |
+| rsi_momo | FINNIFTY | PE | full | 993 | 41.3% | -49,112 | -63,578 | -49 | -79 | -10,700 | 86,280 | - | - |
+| donchian20 | FINNIFTY | CE | full | 912 | 43.3% | -6,838 | -13,401 | -8 | -11 | -6,407 | 58,113 | - | - |
+| donchian20 | FINNIFTY | PE | full | 853 | 42.0% | -59,730 | -71,338 | -70 | -96 | -5,529 | 89,901 | - | - |
+| ema821_adx15 | MIDCPNIFTY | CE | full | 623 | 43.3% | -68,890 | -67,915 | -111 | -111 | -7,506 | 88,710 | - | - |
+| ema821_adx15 | MIDCPNIFTY | PE | full | 614 | 44.1% | 9,135 | 6,995 | 15 | 15 | -9,243 | 37,583 | - | - |
+| ema821_adx15_plock | MIDCPNIFTY | CE | full | 623 | 42.0% | -67,023 | -65,939 | -108 | -108 | -7,506 | 87,755 | - | - |
+| ema821_adx15_plock | MIDCPNIFTY | PE | full | 614 | 42.2% | 3,780 | 1,768 | 6 | 6 | -9,243 | 38,727 | - | - |
+| ema821_adx15_plock_nt | MIDCPNIFTY | CE | full | 623 | 42.0% | -66,416 | -65,092 | -107 | -107 | -7,506 | 88,851 | - | - |
+| ema821_adx15_plock_nt | MIDCPNIFTY | PE | full | 614 | 42.2% | 4,451 | 2,952 | 7 | 7 | -9,243 | 36,189 | - | - |
+| ema921_adx20 | MIDCPNIFTY | CE | full | 394 | 43.1% | -39,283 | -38,092 | -100 | -63 | -9,068 | 63,927 | - | - |
+| ema921_adx20 | MIDCPNIFTY | PE | full | 355 | 46.2% | 4,442 | 3,602 | 13 | 7 | -9,243 | 28,095 | - | - |
+| ema926_adx20 | MIDCPNIFTY | CE | full | 353 | 40.8% | -70,745 | -69,611 | -200 | -114 | -9,808 | 76,964 | - | - |
+| ema926_adx20 | MIDCPNIFTY | PE | full | 306 | 43.8% | 1,787 | 934 | 6 | 3 | -7,049 | 33,854 | - | - |
+| rsi_fade | MIDCPNIFTY | CE | full | 484 | 40.7% | -182,378 | -181,025 | -377 | -295 | -10,977 | 182,378 | - | - |
+| rsi_fade | MIDCPNIFTY | PE | full | 515 | 39.8% | -69,850 | -72,192 | -136 | -113 | -5,286 | 75,332 | - | - |
+| rsi_momo | MIDCPNIFTY | CE | full | 1,028 | 46.0% | -70,448 | -69,172 | -69 | -114 | -7,659 | 94,120 | - | - |
+| rsi_momo | MIDCPNIFTY | PE | full | 976 | 43.5% | 15,104 | 11,327 | 15 | 24 | -10,043 | 49,503 | - | - |
+| donchian20 | MIDCPNIFTY | CE | full | 954 | 45.2% | -92,119 | -90,853 | -97 | -149 | -10,464 | 105,879 | - | - |
+| donchian20 | MIDCPNIFTY | PE | full | 873 | 42.7% | -44,522 | -47,139 | -51 | -72 | -12,834 | 81,684 | - | - |
+| ema821_adx15 | SENSEX | CE | full | 591 | 41.3% | -59,495 | -70,666 | -101 | -109 | -6,815 | 77,363 | - | - |
+| ema821_adx15 | SENSEX | PE | full | 570 | 37.7% | -67,362 | -80,308 | -118 | -123 | -8,517 | 81,571 | - | - |
+| ema821_adx15_plock | SENSEX | CE | full | 591 | 38.6% | -66,628 | -77,629 | -113 | -122 | -6,815 | 84,496 | - | - |
+| ema821_adx15_plock | SENSEX | PE | full | 570 | 35.4% | -54,082 | -66,850 | -95 | -99 | -8,517 | 67,645 | - | - |
+| ema821_adx15_plock_nt | SENSEX | CE | full | 591 | 38.6% | -50,741 | -61,348 | -86 | -93 | -6,815 | 84,882 | - | - |
+| ema821_adx15_plock_nt | SENSEX | PE | full | 570 | 35.4% | -48,161 | -60,390 | -84 | -88 | -8,517 | 71,357 | - | - |
+| ema921_adx20 | SENSEX | CE | full | 358 | 40.8% | -49,608 | -56,348 | -139 | -91 | -7,438 | 57,393 | - | - |
+| ema921_adx20 | SENSEX | PE | full | 317 | 36.3% | -54,356 | -61,577 | -171 | -100 | -4,530 | 74,021 | - | - |
+| ema926_adx20 | SENSEX | CE | full | 308 | 39.0% | -53,782 | -59,445 | -175 | -98 | -7,128 | 65,224 | - | - |
+| ema926_adx20 | SENSEX | PE | full | 273 | 37.4% | -3,000 | -9,131 | -11 | -5 | -3,715 | 30,418 | - | - |
+| rsi_fade | SENSEX | CE | full | 414 | 39.9% | -94,880 | -102,271 | -229 | -174 | -6,244 | 97,489 | - | - |
+| rsi_fade | SENSEX | PE | full | 395 | 38.2% | -72,008 | -80,747 | -182 | -132 | -9,897 | 80,290 | - | - |
+| rsi_momo | SENSEX | CE | full | 898 | 42.1% | -40,668 | -57,724 | -45 | -74 | -7,128 | 60,505 | - | - |
+| rsi_momo | SENSEX | PE | full | 900 | 39.0% | -68,672 | -89,023 | -76 | -126 | -10,468 | 101,116 | - | - |
+| donchian20 | SENSEX | CE | full | 818 | 42.2% | -68,057 | -83,416 | -83 | -125 | -7,128 | 111,518 | - | - |
+| donchian20 | SENSEX | PE | full | 804 | 40.3% | -8,490 | -26,518 | -11 | -16 | -7,416 | 56,787 | - | - |
+| ema821_adx15 | CRUDEOIL | CE | morning | 284 | 46.5% | -15,132 | -26,182 | -53 | -52 | -17,403 | 49,161 | - | - |
+| ema821_adx15 | CRUDEOIL | CE | full | 516 | 44.8% | -90,036 | -109,177 | -174 | -310 | -17,403 | 127,245 | - | - |
+| ema821_adx15 | CRUDEOIL | PE | morning | 282 | 45.0% | -27,540 | -36,173 | -98 | -95 | -15,070 | 35,983 | - | - |
+| ema821_adx15 | CRUDEOIL | PE | full | 505 | 43.6% | -89,870 | -106,597 | -178 | -310 | -15,070 | 92,578 | - | - |
+| ema821_adx15_plock | CRUDEOIL | CE | morning | 284 | 46.5% | -15,132 | -26,182 | -53 | -52 | -17,403 | 49,161 | - | - |
+| ema821_adx15_plock | CRUDEOIL | CE | full | 516 | 44.8% | -90,036 | -109,177 | -174 | -310 | -17,403 | 127,245 | - | - |
+| ema821_adx15_plock | CRUDEOIL | PE | morning | 282 | 45.0% | -27,540 | -36,173 | -98 | -95 | -15,070 | 35,983 | - | - |
+| ema821_adx15_plock | CRUDEOIL | PE | full | 505 | 43.2% | -89,045 | -105,757 | -176 | -307 | -15,070 | 91,754 | - | - |
+| ema821_adx15_plock_nt | CRUDEOIL | CE | morning | 284 | 46.5% | -14,480 | -25,477 | -51 | -50 | -17,403 | 48,509 | - | - |
+| ema821_adx15_plock_nt | CRUDEOIL | CE | full | 516 | 44.8% | -89,461 | -108,517 | -173 | -308 | -17,403 | 126,593 | - | - |
+| ema821_adx15_plock_nt | CRUDEOIL | PE | morning | 282 | 45.0% | -25,656 | -34,233 | -91 | -88 | -15,070 | 35,983 | - | - |
+| ema821_adx15_plock_nt | CRUDEOIL | PE | full | 505 | 43.2% | -89,089 | -105,697 | -176 | -307 | -15,070 | 91,974 | - | - |
+| ema921_adx20 | CRUDEOIL | CE | morning | 168 | 45.8% | -16,256 | -21,590 | -97 | -56 | -16,226 | 38,681 | - | - |
+| ema921_adx20 | CRUDEOIL | CE | full | 341 | 41.6% | -121,650 | -133,530 | -357 | -419 | -21,841 | 131,632 | - | - |
+| ema921_adx20 | CRUDEOIL | PE | morning | 161 | 47.8% | 7,268 | 2,717 | 45 | 25 | -9,394 | 22,037 | - | - |
+| ema921_adx20 | CRUDEOIL | PE | full | 330 | 42.1% | -66,427 | -76,100 | -201 | -229 | -12,983 | 69,670 | - | - |
+| ema926_adx20 | CRUDEOIL | CE | morning | 125 | 45.6% | 15,258 | 11,185 | 122 | 53 | -10,753 | 27,278 | - | - |
+| ema926_adx20 | CRUDEOIL | CE | full | 274 | 42.3% | -80,674 | -90,313 | -294 | -278 | -13,647 | 104,538 | - | - |
+| ema926_adx20 | CRUDEOIL | PE | morning | 137 | 46.0% | -18,741 | -22,680 | -137 | -65 | -9,485 | 32,976 | - | - |
+| ema926_adx20 | CRUDEOIL | PE | full | 282 | 43.3% | -74,988 | -82,975 | -266 | -259 | -10,391 | 77,491 | - | - |
+| rsi_fade | CRUDEOIL | CE | morning | 198 | 50.5% | -4,643 | -11,095 | -23 | -16 | -8,165 | 22,639 | - | - |
+| rsi_fade | CRUDEOIL | CE | full | 366 | 46.7% | -24,076 | -38,982 | -66 | -83 | -13,611 | 65,729 | - | - |
+| rsi_fade | CRUDEOIL | PE | morning | 221 | 38.9% | -109,056 | -115,590 | -493 | -376 | -10,966 | 113,329 | - | - |
+| rsi_fade | CRUDEOIL | PE | full | 366 | 37.7% | -182,031 | -193,465 | -497 | -628 | -12,726 | 190,188 | - | - |
+| rsi_momo | CRUDEOIL | CE | morning | 465 | 43.9% | -72,691 | -89,210 | -156 | -251 | -12,697 | 95,565 | - | - |
+| rsi_momo | CRUDEOIL | CE | full | 565 | 43.4% | -163,624 | -183,523 | -290 | -564 | -18,538 | 188,800 | - | - |
+| rsi_momo | CRUDEOIL | PE | morning | 455 | 40.4% | -77,874 | -94,023 | -171 | -269 | -11,822 | 80,332 | - | - |
+| rsi_momo | CRUDEOIL | PE | full | 567 | 40.0% | -90,276 | -109,425 | -159 | -311 | -11,822 | 114,151 | - | - |
+| donchian20 | CRUDEOIL | CE | morning | 456 | 47.8% | -19,154 | -34,852 | -42 | -66 | -39,925 | 87,563 | - | - |
+| donchian20 | CRUDEOIL | CE | full | 564 | 46.1% | -72,281 | -91,955 | -128 | -249 | -39,925 | 113,929 | - | - |
+| donchian20 | CRUDEOIL | PE | morning | 432 | 45.8% | -41,599 | -56,440 | -96 | -143 | -11,822 | 47,791 | - | - |
+| donchian20 | CRUDEOIL | PE | full | 556 | 46.0% | -34,540 | -53,165 | -62 | -119 | -11,822 | 66,758 | - | - |
+
 ## Every cell: OOS_design incl. expiry days (labelled separately)
 
 | strategy | index | side | session | trades | win | net real | net Boss | exp/trade | net/session | worst day | max DD | p | q |
@@ -340,18 +630,18 @@ Cells passing every gate: none.
 
 ## Gates
 
-| cell | trades>=100 | IS>0 | OOS_design>0 | boss_OOS_design>0 | q<0.05 | maxDD<40k | ex_best_day>0 | pass |
-|---|---|---|---|---|---|---|---|---|
-| ema921_adx20|NIFTY|PE|full | yes | no | yes | yes | no | yes | yes | no |
-| ema926_adx20|NIFTY|PE|full | yes | no | yes | yes | no | yes | yes | no |
-| donchian20|NIFTY|PE|full | yes | no | yes | yes | no | no | yes | no |
-| ema926_adx20|BANKNIFTY|PE|full | yes | no | yes | no | no | no | no | no |
-| ema821_adx15|MIDCPNIFTY|PE|full | yes | yes | yes | yes | no | yes | yes | no |
-| ema821_adx15_plock|MIDCPNIFTY|PE|full | yes | no | yes | yes | no | yes | no | no |
-| ema821_adx15_plock_nt|MIDCPNIFTY|PE|full | yes | no | yes | yes | no | yes | no | no |
-| rsi_momo|MIDCPNIFTY|PE|full | yes | no | yes | yes | no | no | no | no |
-| ema921_adx20|CRUDEOIL|PE|morning | no | yes | yes | yes | no | yes | no | no |
-| ema926_adx20|CRUDEOIL|CE|morning | no | yes | yes | yes | no | yes | yes | no |
-| rsi_fade|CRUDEOIL|CE|morning | no | yes | yes | yes | no | yes | yes | no |
+| cell | trades>=100 | IS>0 | OOS_design>0 | boss_OOS_design>0 | q<0.05 | maxDD<40k | ex_best_day>0 | holdout>0 | pass |
+|---|---|---|---|---|---|---|---|---|---|
+| ema921_adx20|NIFTY|PE|full | yes | no | yes | yes | no | yes | yes | no | no |
+| ema926_adx20|NIFTY|PE|full | yes | no | yes | yes | no | yes | yes | no | no |
+| donchian20|NIFTY|PE|full | yes | no | yes | yes | no | no | yes | no | no |
+| ema926_adx20|BANKNIFTY|PE|full | yes | no | yes | no | no | no | no | no | no |
+| ema821_adx15|MIDCPNIFTY|PE|full | yes | yes | yes | yes | no | yes | yes | no | no |
+| ema821_adx15_plock|MIDCPNIFTY|PE|full | yes | no | yes | yes | no | yes | no | no | no |
+| ema821_adx15_plock_nt|MIDCPNIFTY|PE|full | yes | no | yes | yes | no | yes | no | no | no |
+| rsi_momo|MIDCPNIFTY|PE|full | yes | no | yes | yes | no | no | no | yes | no |
+| ema921_adx20|CRUDEOIL|PE|morning | no | yes | yes | yes | no | yes | no | no | no |
+| ema926_adx20|CRUDEOIL|CE|morning | no | yes | yes | yes | no | yes | yes | yes | no |
+| rsi_fade|CRUDEOIL|CE|morning | no | yes | yes | yes | no | yes | yes | no | no |
 
 (Only cells with a positive OOS-design net are listed; every other cell fails gate 2.)

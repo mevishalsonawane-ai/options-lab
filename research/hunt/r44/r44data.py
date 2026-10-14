@@ -14,6 +14,7 @@ The cache holds every day (like the brain's cubes); periods and the holdout guar
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass
 from datetime import date
@@ -39,8 +40,8 @@ def _read(path, cols) -> pd.DataFrame:
 def option_files(und: str) -> list:
     if K.is_mcx(und):
         pat = f"opt_{und}_MONTH_*.parquet"
-    else:
-        pat = f"opt_{und}_WEEK_*.parquet"      # the nearest expiry, read once (never the MONTH twin)
+    else:   # the nearest expiry, read once (never the MONTH twin); R44_SERIES=MONTH only for diag_series.py
+        pat = f"opt_{und}_{os.environ.get('R44_SERIES', 'WEEK')}_*.parquet"
     return [p for p in sorted(K.LAKE.glob(pat)) if int(p.stem[-4:]) >= K.FIRST_YEAR]
 
 

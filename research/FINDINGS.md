@@ -700,3 +700,20 @@ signal on the underlying, last 60 one-minute bars + the brain's features) agains
 - Crypto: a tiny real 60-minute direction signal (holdout AUC 0.533, log-loss 0.6915 vs 0.6928, q 0.006, 35,112
   forecasts), far below Delta India costs: every stop-and-lock perp rule loses (-Rs 4 to -301 a day before tax).
 - If ever used, the models are tiny: under 0.4 MB for all three, about 6 ms per forecast on a CPU.
+
+## Boss's 5-year sweep re-tested independently (R44, 14 Oct 2026) - we agree: none of the 7 strategies pays
+Full study: `HUNT_R44_SWEEP_RETEST.md` (pre-registered `hunt/r44/PREREG.md`, commit 65ce8f46; holdout 27 Apr - 12 Oct
+2026 read once). Signal on the 5-minute index (or CRUDEOIL future) candle; ATM option bought; Boss's exits (stop -25%,
+target +50%, 60-minute exit, 15:15 square-off, max 2 a day a side); expiry days skipped; Boss's Rs 95 and our real costs.
+- EMA8/21 + ADX15 (with and without a stepped lock), EMA9/21 + ADX20, EMA9/26 + ADX20, RSI fade 30/70, RSI momentum
+  55/45 and Donchian 20 lose on the 5 indices: 22,443 trades -Rs 26.6 lakh in 2021-23 and 41,766 trades -Rs 36.4 lakh
+  in 2024-26 (real costs). Out-of-sample 0 of 14 strategy-side combinations are positive, as Boss found. In-sample 2
+  were slightly positive (EMA9/21 and EMA9/26 calls, +Rs 24,878 on 916 and +Rs 17,134 on 751 trades) and both lost after.
+- 0 of 112 cells (strategy x index x side x session) pass the gates; CRUDEOIL lost Rs 16.9 lakh on 10,203 trades
+  (Aug 2025 - Oct 2026). The best BH q, 0.019, is RSI fade timing beating random bars while still losing money.
+- Boss's trade counts are about 2x ours per cell (4x in total): their per-session rates match ours only when the WEEK
+  and MONTH option series are both traded (byte-identical files after Nov 2024), so their sweep most likely counted
+  trades twice. Their loss per trade is also bigger (Rs 203 vs Rs 102 for the EMA8/21 family). The verdict is the same.
+- The "October champion" EMA8/21 + ADX15 (most likely BANKNIFTY both sides: our 46 and 306 trades match their 46 and 288)
+  made +Rs 6,410 in the last 25 sessions (Boss: +12,192) after -Rs 1,612 in Jan-Aug 2026 (Boss: -40,109): a short
+  lucky patch. The plain rule lost Rs 8.3 lakh on 9,455 NSE trades over 2021 - Oct 2026. Nothing to paper.

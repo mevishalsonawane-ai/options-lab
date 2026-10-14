@@ -27,7 +27,7 @@ def check_period(period: str):
                               f"it is read only by `run.py holdout`, once")
 
 
-def in_period(day_ord: np.ndarray, period: str, last_sessions: list | None = None) -> np.ndarray:
+def in_period(day_ord: np.ndarray, period: str) -> np.ndarray:
     """Mask of day ordinals inside `period` (after the guard). Embargo days (14-26 Apr 2026) are in no design period."""
     check_period(period)
     a, b, _ = K.PERIODS[period]
@@ -54,7 +54,8 @@ _SIG: dict = {}
 def signal_bars(D, strat: str):
     """(day, bar, side) of every signal (side 0 = CE, 1 = PE), in time order. Cached per series and signal."""
     kind, params, _, _ = K.STRATS[strat]
-    ck = (D.und, id(D), kind, params, ALLOW_HOLDOUT)
+    # the signal depends only on the underlying bars (the same for every option series of an index)
+    ck = (D.und, len(D.bd), int(D.bd[0]) if len(D.bd) else 0, kind, params, ALLOW_HOLDOUT)
     if ck not in _SIG:
         _SIG[ck] = _signal_bars(D, kind, params)
     return _SIG[ck]
