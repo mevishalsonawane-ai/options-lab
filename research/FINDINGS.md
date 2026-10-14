@@ -480,3 +480,34 @@ Full study: `HUNT_R24_WHATIF_PATTERNS.md` (pre-registered `hunt/r24/PREREG.md`, 
   trades, but random entry times did as well (p 0.073, BH q 0.86). Patterns beat random patterns, not random timing.
 - Re-run on the full lake (incl. monthly series): `bash research/hunt/r24/refresh_lake.sh` (Steps 1-2; Step 3 needs a new
   pre-registration).
+
+## Crypto: what is predictable? (C1, 13 Oct 2026) - only the size of the next hour / day, not its direction
+Full study: `CRYPTO_C1_PREDICTABILITY.md` (pre-registered `brain/crypto/PREREG.md`, commit 5adf2a6; 80 tests in one BH
+family). Built on the new crypto Data Brain (`research/brain/crypto`, 24x7 UTC cube of Binance spot, perp, funding, OI).
+- Data: Binance archive BTCUSDT and ETHUSDT 1-minute spot and perp, funding and OI, 1 Oct 2023 - 31 Mar 2026 (913 days
+  each, no gap minutes); Deribit DVOL for BTC. DESIGN data only: the locked crypto holdout (1 Apr 2026 on) was not read,
+  so every pass below is a candidate for one holdout read, not a proven finding.
+- PREDICTABLE: crypto range of the next hour (error 24.7% smaller than the hour-of-day average for BTC, 19.9% for ETH,
+  16,823 hours) and of the next day (19.9% / 15.1% smaller than the 20-day average, 670 days). Recent realised ranges
+  carry it; DVOL adds little. Median BTC next-hour range 0.546% (10-90%: 0.244-1.307%), next-day 3.34%.
+- Crypto weekends are quieter: weekend hours move 0.595x (BTC) / 0.672x (ETH) of weekday hours (126 weeks). The busy
+  hour is 14:00-15:00 UTC (the US open), 2.29x the quietest (05:00 UTC) for BTC.
+- NOT predictable after costs: crypto direction. Next hour has a real short-term reversal (AUC 0.535 BTC / 0.543 ETH,
+  4,340 / 5,168 trades) but it is worth about 0 bps gross against a 12 bps perp round trip (net -11.74 / -13.16 bps a
+  trade). Next day AUC 0.495 / 0.512. Funding, basis and OI change do not predict the next day (best q 0.28); no hour or
+  weekday return beats costs (best ETH 21:00 UTC +7.5 bps, q 0.02, below 12 bps).
+- App and Jarvis: an expected-range nowcast for BTC/ETH and weekend/hour-of-day context; say plainly that crypto
+  direction, funding and basis are not forecasts. Nothing trades on it.
+
+## Crypto in Boss's window, 00:00-09:00 IST (C2, 13 Oct 2026) - size predictable; no direction edge
+Full study: `CRYPTO_C2_WINDOW.md` (pre-registered `brain/crypto/PREREG_C2_WINDOW.md`, commit 9bdbc27; 26 tests, one BH
+family). Boss: crypto only runs 00:00-09:00 IST (18:30-03:30 UTC), flat by 09:00. Design data only (BTC, ETH, Nov 2023 -
+Mar 2026: 7,928 window hours and 880 windows per coin); the holdout from 1 Apr 2026 was not read.
+- PREDICTABLE: the crypto range of the next window hour (error 27.8% BTC / 23.4% ETH below the window-hour average,
+  6,308 hours) and of the whole window (17.2% / 15.2% below the last 20 windows, 670 windows). Median BTC window range
+  1.83% (10-90%: 0.9-3.87%); a window hour is about as busy as the average crypto hour (the US open is outside it).
+- Crypto direction in the window: window hours reverse slightly (AUC 0.547 / 0.550) but lose -10.45 / -10.73 bps a
+  trade after costs. Whole-window direction: BTC -3.82 bps (fails); ETH passed its bar (AUC 0.558, +0.37 bps a trade,
+  351 trades; a reversal of the last day's move) and is a CANDIDATE for one holdout read, not an edge: -1.63 bps at 2x
+  slippage, and it lost in 2024 (-27.3 bps, 119 trades) while winning in 2025 (+10.56, 179). No IST hour's mean
+  return beats the 12 bps round trip (best ETH 03:00 IST +7.88 bps).

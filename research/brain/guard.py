@@ -33,24 +33,35 @@ def _same(a: pd.Series, b: pd.Series, rtol=1e-9, atol=1e-12) -> bool:
     return bool((a.astype(str).values == b.astype(str).values).all())
 
 
-def _perturb_minutes(M: pd.DataFrame, t, rng) -> pd.DataFrame:
+# Which minute columns the perturbation touches, by kind: prices scaled together, levels replaced by noise, volumes
+# replaced by random sizes, flags shuffled. The crypto brain passes its own (crypto/guard.py, 13 Oct 2026).
+INDIA_PERTURB = dict(
+    scale=["open", "high", "low", "close", "fut_open", "fut_high", "fut_low", "fut_close", "oi_max_call_strike",
+           "oi_max_put_strike"],
+    noise=["vix", "basis", "basis_pct", "chain_ok_share", "volume", "atm_iv"],
+    size=["fut_volume", "fut_oi"],
+    flags=["flag", "fut_flag", "vix_flag"],
+)
+
+
+def _perturb_minutes(M: pd.DataFrame, t, rng, spec: dict | None = None) -> pd.DataFrame:
+    spec = spec or INDIA_PERTURB
     M = M.copy()
     fut = (M.ts > t).values
     k = fut.sum()
     if not k:
         return M
     f = rng.uniform(0.9, 1.1, k)
-    for c in ["open", "high", "low", "close", "fut_open", "fut_high", "fut_low", "fut_close", "oi_max_call_strike",
-              "oi_max_put_strike"]:
+    for c in spec["scale"]:
         if c in M:
             M.loc[fut, c] = M.loc[fut, c].values * f
-    for c in ["vix", "basis", "basis_pct", "chain_ok_share", "volume", "atm_iv"]:
+    for c in spec["noise"]:
         if c in M:
             M.loc[fut, c] = rng.normal(0, 5, k)
-    for c in ["fut_volume", "fut_oi"]:
+    for c in spec["size"]:
         if c in M:
             M.loc[fut, c] = rng.uniform(0, 5e5, k)
-    for c in ["flag", "fut_flag", "vix_flag"]:
+    for c in spec["flags"]:
         if c in M:
             M.loc[fut, c] = rng.choice(FLAGS, k)
     return M
@@ -71,20 +82,23 @@ def _perturb_chain(C: pd.DataFrame, t, rng) -> pd.DataFrame:
     return C
 
 
-def check_features(M: pd.DataFrame, C: pd.DataFrame, und: str, cuts, names=None, seed: int = 7) -> dict[str, list]:
-    """Returns {feature: [(cut, mode), ...]} for every feature whose values at rows <= cut changed."""
+def check_features(M: pd.DataFrame, C: pd.DataFrame, und: str, cuts, names=None, seed: int = 7, compute_fn=None,
+                   perturb: dict | None = None) -> dict[str, list]:
+    """Returns {feature: [(cut, mode), ...]} for every feature whose values at rows <= cut changed. compute_fn(M, C,
+    und, names) and perturb (columns, see INDIA_PERTURB) default to the Indian brain's; the crypto brain passes its own."""
+    run = compute_fn or compute
     rng = np.random.default_rng(seed)
-    full = compute(M, C, und, names)
+    full = run(M, C, und, names)
     bad: dict[str, list] = {}
     for t in cuts:
         t = pd.Timestamp(t)
         ref = full[full.ts <= t].reset_index(drop=True)
         variants = {
             "deleted": (M[M.ts <= t], C[C.ts <= t] if C is not None and len(C) else C),
-            "perturbed": (_perturb_minutes(M, t, rng), _perturb_chain(C, t, rng)),
+            "perturbed": (_perturb_minutes(M, t, rng, perturb), _perturb_chain(C, t, rng)),
         }
         for mode, (m2, c2) in variants.items():
-            got = compute(m2, c2, und, names)
+            got = run(m2, c2, und, names)
             got = got[got.ts <= t].reset_index(drop=True)
             if len(got) != len(ref):
                 bad.setdefault("<rows>", []).append((str(t), mode))

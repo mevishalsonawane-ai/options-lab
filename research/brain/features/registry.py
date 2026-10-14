@@ -37,23 +37,29 @@ REGISTRY: dict[str, Feature] = {}
 PENDING: dict[str, dict] = {}       # features defined in the dictionary but not computable from any source yet
 
 
-def pending(name: str, family: str, needs: str, description: str):
+def pending(name: str, family: str, needs: str, description: str, *, registry=None, pending_=None,
+            families=FAMILIES):
     """Register a dictionary field that has no data source yet. It is listed in FEATURES.md as "pending data" and is
-    never computed: no column, no placeholder values."""
-    assert family in FAMILIES, family
-    if name in REGISTRY or name in PENDING:
+    never computed: no column, no placeholder values. registry / pending_ / families default to the Indian brain's
+    (the crypto brain passes its own, 13 Oct 2026)."""
+    registry = REGISTRY if registry is None else registry
+    pending_ = PENDING if pending_ is None else pending_
+    assert family in families, family
+    if name in registry or name in pending_:
         raise ValueError(f"duplicate feature {name}")
-    PENDING[name] = dict(name=name, family=family, needs=needs, description=description)
+    pending_[name] = dict(name=name, family=family, needs=needs, description=description)
 
 
-def feature(name: str, family: str, version: int, inputs: list[str], lookback: str, description: str):
-    assert family in FAMILIES, family
+def feature(name: str, family: str, version: int, inputs: list[str], lookback: str, description: str, *,
+            registry=None, families=FAMILIES):
+    registry = REGISTRY if registry is None else registry
+    assert family in families, family
     assert not name.startswith("y_"), "y_ is reserved for labels"
 
     def deco(fn):
-        if name in REGISTRY:
+        if name in registry:
             raise ValueError(f"duplicate feature {name}")
-        REGISTRY[name] = Feature(name, family, version, tuple(inputs), lookback, description, fn)
+        registry[name] = Feature(name, family, version, tuple(inputs), lookback, description, fn)
         return fn
     return deco
 
@@ -188,10 +194,15 @@ def compute(minutes: pd.DataFrame, chain: pd.DataFrame | None, und: str, names=N
     """All (or the named) features for every cube minute given. Returns ts + one column per feature."""
     from . import load_all
     load_all()
-    ctx = Ctx(minutes, chain, und)
+    return run(Ctx(minutes, chain, und), REGISTRY, names)
+
+
+def run(ctx, registry: dict, names=None) -> pd.DataFrame:
+    """Evaluate the named (or all) features of a registry on a context: ts + one column per feature. Shared by the
+    Indian and the crypto feature stores."""
     out = {"ts": ctx.ts}
-    for n in names or sorted(REGISTRY):
-        v = np.asarray(REGISTRY[n].fn(ctx), dtype=float)
+    for n in names or sorted(registry):
+        v = np.asarray(registry[n].fn(ctx), dtype=float)
         if v.shape != (ctx.n,):
             raise ValueError(f"{n}: shape {v.shape}, expected ({ctx.n},)")
         out[n] = v
@@ -207,8 +218,14 @@ def catalogue_md() -> str:
              f"{len(REGISTRY)} features, signature `{signature()}` (cube v{config.CUBE_VERSION}). Every feature at minute "
              "t uses only cube rows with ts <= t (checked by `tests/test_lookahead.py`). Labels are not features: see "
              "`labels.py`.", ""]
-    for fam in FAMILIES:
-        fs = sorted((f for f in REGISTRY.values() if f.family == fam), key=lambda f: f.name)
+    return render_catalogue(REGISTRY, PENDING, FAMILIES, lines)
+
+
+def render_catalogue(registry: dict, pending_: dict, families, header: list[str]) -> str:
+    """The family tables and the pending-data table under a header (shared with the crypto catalogue)."""
+    lines = list(header)
+    for fam in families:
+        fs = sorted((f for f in registry.values() if f.family == fam), key=lambda f: f.name)
         if not fs:
             continue
         lines += [f"## {fam.capitalize()} ({len(fs)})", "", "| name | v | lookback | inputs | description |",
@@ -216,12 +233,12 @@ def catalogue_md() -> str:
         for f in fs:
             lines.append(f"| `{f.name}` | {f.version} | {f.lookback} | {', '.join(f.inputs)} | {f.description} |")
         lines.append("")
-    if PENDING:
-        lines += [f"## Pending data ({len(PENDING)})", "",
+    if pending_:
+        lines += [f"## Pending data ({len(pending_)})", "",
                   "Defined in the data dictionary but **not computed**: no source in the adapters has the data yet. "
                   "They have no column and no values until an adapter provides the input.", "",
                   "| name | family | needs | description |", "|---|---|---|---|"]
-        for p in sorted(PENDING.values(), key=lambda p: (p["family"], p["name"])):
+        for p in sorted(pending_.values(), key=lambda p: (p["family"], p["name"])):
             lines.append(f"| `{p['name']}` | {p['family']} | {p['needs']} | {p['description']} |")
         lines.append("")
     return "\n".join(lines)

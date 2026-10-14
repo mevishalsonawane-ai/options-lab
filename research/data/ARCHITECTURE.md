@@ -270,6 +270,22 @@ The new fields don't all fit the original "one table per minute" design. Eight c
 5. **A compute budget.** Nightly GitHub Actions jobs stay small (the free minutes on private repos are limited, and each
    job is capped at 6 hours). Large trainings run occasionally.
 
+## Crypto (13 Oct 2026, Boss: "the same model ... for crypto")
+
+The same eight layers for Binance crypto, built by reuse in `research/brain/crypto` (README there has the commands).
+Only the market rules differ; `research/brain/markets.py` describes both markets the same way.
+
+| layer | Indian | crypto |
+|---|---|---|
+| L0 sources | Dhan, Zerodha, NSE | Binance bulk archive (data.binance.vision): spot + USD-M perp 1-minute klines, mark / index / premium klines, funding, 5-minute OI and long/short metrics; Deribit DVOL (repo `crypto/`) |
+| L1 raw | Parquet release assets | the archive's own files, in the Drive crypto lake (sibling session) or fetched a few months at a time; never in git |
+| L2 clean | IST, gaps marked, flags | UTC; the archive's ms -> microsecond switch (1 Jan 2025) fixed per value; gaps marked; the same `quality` flags; slow series placed when known, with their age |
+| L3 cube | 375 minutes a session, chain ATM +-10 | 1440 minutes a UTC day, 24x7: spot, perp, mark / index, basis, funding (+ minutes to the next 00/08/16 UTC settlement), OI, long/short, DVOL |
+| L4 features | 149, session-bound windows | 64, windows across midnight and weekends; day features on a UTC (or IST) analysis day; the same guard and catalogue check |
+| L5 study + knowledge | R16 and the hunts | C1 (`research/CRYPTO_C1_PREDICTABILITY.md`): size of the next hour / day predictable, direction not; in FINDINGS.md and the knowledge pack |
+| L6 gates | walk-forward, last 12 months locked | walk-forward, **holdout from 1 Apr 2026 locked** (`crypto/config.HOLDOUT_START`), BH, perp fees + slippage + funding |
+| L7-L8 | the phone | nothing yet: crypto is research only; the app does not trade crypto |
+
 ---
 
 ## Roadmap (honest sizes)

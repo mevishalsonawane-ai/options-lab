@@ -399,3 +399,18 @@ Later (when profitable):
 - W1 India brain v1 started 14 Oct on the data available then (branch claude/india-brain-v1). When the Dhan lake
   completes, the watchdog runs that branch's REFRESH command (not a new build). The crypto brain is on claude/crypto-brain.
   The Strategy Factory (F1) starts after the refresh.
+
+## C. Crypto Data Brain (owner, 2026-10-13: "the same model ... for crypto")
+Built 13 Oct: `research/brain/crypto` (README there), study `research/CRYPTO_C1_PREDICTABILITY.md`. Research only;
+nothing trades crypto.
+- [x] C1. Market-aware core, L2 clean, L3 24x7 cube, 62 point-in-time features, labels, locked holdout (1 Apr 2026),
+      costs, guard; the C1 predictability study on BTC/ETH design data (size predictable, direction not).
+- [x] C1b. Boss's window (13 Oct: "only from 12am to 9am"): 00:00-09:00 IST (`config.WINDOW`); study C2
+      `research/CRYPTO_C2_WINDOW.md` (range predictable; no direction edge after costs).
+- [ ] C2. When the Drive crypto lake is complete: `fetch drive` month by month, `cube build`, features, labels; add
+      SOL/BNB/XRP; if the lake's layout differs from the archive's file names, one rule in `crypto/adapters.py`.
+- [ ] C3. One pre-registered holdout read (from 1 Apr 2026) for the expected-range forecast (C1 A1/A2, C2 W1/W3), the
+      weekend size effect and C2 W4 on ETH (the whole-window reversal, margin inside the cost uncertainty); nothing
+      else from C1 or C2 earns a holdout read.
+- [ ] C4. Wire in what exists but is not in the cube: ETH DVOL (no file yet), Deribit option surfaces, on-chain and
+      ETF flows (`crypto/data_more`), liquidation prints if a source appears.
