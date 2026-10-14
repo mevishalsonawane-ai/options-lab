@@ -45,7 +45,10 @@ def featrows(und: str, parts=("design",)) -> Path:
         f.insert(0, "row", (f.ts - f.ts.dt.normalize()).dt.total_seconds().values // 60 - 555)
         f.insert(0, "day", pd.Timestamp(d))
         for c in f.columns[3:]:
-            f[c] = f[c].astype(np.float32)
+            if pd.api.types.is_numeric_dtype(f[c]):
+                f[c] = f[c].astype(np.float32)
+            else:
+                f = f.drop(columns=c)                    # text columns (precision tags) are not features
         keep.append(f.drop(columns="ts"))
     tag = "_".join(parts)
     q = K.OUT / "featrows" / tag / f"{und}.parquet"
