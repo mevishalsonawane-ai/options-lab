@@ -22,8 +22,8 @@ Written 14 Oct 2026, for the framework Boss sent in four messages that day:
   - The worst losing run was 18 trades in a row, and the max drawdown −Rs 79,479. That is beyond Boss's −Rs 40,000
     account stop.
 - **The Supertrend flip is worse than no timing at all.**
-  - Entering at a random minute between 14:00 and 14:45 on the same days, in the same direction and with the same
-    strike, size and exit, averages **−Rs 1,675**, against the rule's −Rs 76,771 (p 1.00).
+  - Entering at a random minute between 14:00 and 14:45 on the same days, in the same direction, with the nearest OTM strike at that
+    minute and the same size and exit, averages **−Rs 1,675**, against the rule's −Rs 76,771 (p 1.00).
   - A 1-minute Supertrend turning green on an option's premium means the premium has *just jumped*. The rule buys
     after the jump, pays the spread on a fast candle, and then the premium usually falls back.
 - **None of the add-ons rescue it:**
