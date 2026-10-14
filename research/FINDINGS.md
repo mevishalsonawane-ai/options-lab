@@ -594,3 +594,17 @@ NSE's data is anonymous: only types (Client, DII, FII, Pro), never a person, fir
   neither walls nor magnets (0 of 12 tests; max-OI strike closer to settlement than a same-distance random strike
   42-43% of 873 expiries, which is the no-magnet level of ~44%).
 - The app's own order-flow recordings: none uploaded yet (IraAlgo has 0 releases); `hunt/of1/footprints.py` is ready.
+
+## Night (R3) smart exit: hold past 09:16 for +20/+30 points? (R27, 14 Oct 2026) - no; keep the 09:16 sale
+Full study: `HUNT_R27_NIGHT_EXIT.md` (pre-registered `hunt/r27/PREREG.md`, commit b2f0b55; holdout read once).
+- R3 rebuilt on the Dhan lake (Aug 2021 - 12 Oct 2026, 869 trades); its 15:19 OI build-up equals the app's seed exactly.
+  The 09:16 sale (B0) made +Rs 168/day in the locked year (X2: +150).
+- 8 pre-registered holds, each with a stop and a 10:30 cap: index +20/+30 (BANKNIFTY scaled and raw), option +Rs 20/+30,
+  H2 "hold when the gap and the first minute agree", Boss's +Rs 1,000 / Rs 500 floor. None passed the walk-forward
+  (2023-25, 472 trades; best +Rs 24,778, BH q 0.48, every drawdown worse); in the locked year (173 trades) all 8 lost
+  to the 09:16 sale, Rs -4,576 to Rs -25,893.
+- After 09:16 the morning is a coin flip with big swings both ways (helped about as many nights as it hurt). A first
+  minute in the position's favour is given back (H2 lost to random holding, twin p 0.71 / 0.62). Boss's floor gives more
+  green days but cuts the big ones (Rs -25,893 in the locked year).
+- 2021-22 alone made the index-point holds look good (p 0.006-0.04): they faded and then reversed. The app's agents
+  (order flow, consensus, trap guard) cannot be tested on minute data: a SHADOW log at 09:16 is proposed.

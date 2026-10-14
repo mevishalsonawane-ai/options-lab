@@ -1,0 +1,254 @@
+{
+ "signals": {
+  "NIFTY": {
+   "2021": {
+    "nights": 105,
+    "r17": 61,
+    "r3_before_contract_rules": 43,
+    "r3": 26,
+    "no_breadth": 3,
+    "no_z": 21,
+    "r3_priced": 26,
+    "r3_calls": 13,
+    "blocked_contract_expires_next_session": 11,
+    "blocked_entry_on_expiry_day": 6
+   },
+   "2022": {
+    "nights": 247,
+    "r17": 174,
+    "r3_before_contract_rules": 136,
+    "r3": 90,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 90,
+    "r3_calls": 53,
+    "blocked_contract_expires_next_session": 32,
+    "blocked_entry_on_expiry_day": 14
+   },
+   "2023": {
+    "nights": 245,
+    "r17": 160,
+    "r3_before_contract_rules": 125,
+    "r3": 79,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 79,
+    "r3_calls": 47,
+    "blocked_contract_expires_next_session": 29,
+    "blocked_entry_on_expiry_day": 17
+   },
+   "2024": {
+    "nights": 246,
+    "r17": 161,
+    "r3_before_contract_rules": 122,
+    "r3": 79,
+    "no_breadth": 0,
+    "no_z": 0,
+    "blocked_contract_expires_next_session": 26,
+    "r3_priced": 79,
+    "r3_calls": 43,
+    "blocked_entry_on_expiry_day": 17
+   },
+   "2025": {
+    "nights": 187,
+    "r17": 124,
+    "r3_before_contract_rules": 98,
+    "blocked_contract_expires_next_session": 16,
+    "r3": 65,
+    "no_breadth": 0,
+    "no_z": 0,
+    "blocked_entry_on_expiry_day": 17,
+    "r3_priced": 64,
+    "r3_calls": 27
+   },
+   "hold": {
+    "nights": 252,
+    "r17": 166,
+    "r3_before_contract_rules": 131,
+    "r3": 76,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 75,
+    "r3_calls": 39,
+    "blocked_contract_expires_next_session": 34,
+    "blocked_entry_on_expiry_day": 21
+   }
+  },
+  "BANKNIFTY": {
+   "2021": {
+    "nights": 101,
+    "r17": 54,
+    "r3_before_contract_rules": 32,
+    "r3": 26,
+    "no_breadth": 3,
+    "no_z": 32,
+    "blocked_entry_on_expiry_day": 5,
+    "r3_priced": 26,
+    "r3_calls": 13,
+    "blocked_contract_expires_next_session": 1
+   },
+   "2022": {
+    "nights": 247,
+    "r17": 146,
+    "r3_before_contract_rules": 96,
+    "r3": 84,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 82,
+    "r3_calls": 47,
+    "blocked_entry_on_expiry_day": 7,
+    "blocked_contract_expires_next_session": 5
+   },
+   "2023": {
+    "nights": 245,
+    "r17": 140,
+    "r3_before_contract_rules": 102,
+    "r3": 87,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 87,
+    "r3_calls": 53,
+    "blocked_contract_expires_next_session": 8,
+    "blocked_entry_on_expiry_day": 7
+   },
+   "2024": {
+    "nights": 246,
+    "r17": 152,
+    "r3_before_contract_rules": 102,
+    "r3": 89,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 88,
+    "r3_calls": 46,
+    "blocked_entry_on_expiry_day": 9,
+    "blocked_contract_expires_next_session": 4
+   },
+   "2025": {
+    "nights": 187,
+    "r17": 114,
+    "r3_before_contract_rules": 81,
+    "r3": 77,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 75,
+    "r3_calls": 38,
+    "blocked_contract_expires_next_session": 3,
+    "blocked_entry_on_expiry_day": 1
+   },
+   "hold": {
+    "nights": 252,
+    "r17": 153,
+    "r3_before_contract_rules": 113,
+    "r3": 102,
+    "no_breadth": 0,
+    "no_z": 0,
+    "r3_priced": 98,
+    "r3_calls": 49,
+    "blocked_contract_expires_next_session": 8,
+    "blocked_entry_on_expiry_day": 3
+   }
+  }
+ },
+ "b0_design_by_year": {
+  "NIFTY 2021": {
+   "trades": 26,
+   "net": 18743,
+   "gross": 21220
+  },
+  "NIFTY 2022": {
+   "trades": 90,
+   "net": 4413,
+   "gross": 13315
+  },
+  "NIFTY 2023": {
+   "trades": 79,
+   "net": 25241,
+   "gross": 32035
+  },
+  "NIFTY 2024": {
+   "trades": 79,
+   "net": 13791,
+   "gross": 20702
+  },
+  "NIFTY 2025": {
+   "trades": 64,
+   "net": 20893,
+   "gross": 28672
+  },
+  "BANKNIFTY 2021": {
+   "trades": 26,
+   "net": 15194,
+   "gross": 19486
+  },
+  "BANKNIFTY 2022": {
+   "trades": 82,
+   "net": 49201,
+   "gross": 63046
+  },
+  "BANKNIFTY 2023": {
+   "trades": 87,
+   "net": 5008,
+   "gross": 16107
+  },
+  "BANKNIFTY 2024": {
+   "trades": 88,
+   "net": 24486,
+   "gross": 35199
+  },
+  "BANKNIFTY 2025": {
+   "trades": 75,
+   "net": 52790,
+   "gross": 66390
+  }
+ },
+ "expiry_check": {
+  "NIFTY": {
+   "data_expiry_days": 271,
+   "rule_days": 270,
+   "in_data_not_rule": [
+    "2021-11-03",
+    "2025-12-30"
+   ],
+   "in_rule_not_data": [
+    "2021-11-04"
+   ]
+  },
+  "BANKNIFTY": {
+   "data_expiry_days": 195,
+   "rule_days": 196,
+   "in_data_not_rule": [
+    "2021-11-03",
+    "2023-09-28",
+    "2023-10-26",
+    "2023-11-30",
+    "2023-12-28",
+    "2024-01-25"
+   ],
+   "in_rule_not_data": [
+    "2021-11-04",
+    "2023-09-27",
+    "2023-10-25",
+    "2023-11-29",
+    "2023-12-27",
+    "2024-01-24",
+    "2026-10-06"
+   ]
+  }
+ },
+ "x2_reference": {
+  "pre_trades": {
+   "NIFTY": 393,
+   "BANKNIFTY": 332
+  },
+  "pre_by_year_net_both": {
+   "2020": 11000,
+   "2021": 48000,
+   "2022": 41000,
+   "2023": 46000,
+   "2024": 39000,
+   "2025_jan_sep": 78000
+  },
+  "hold_trades": 155,
+  "note": "X2_CONNECTIONS.md: NIFTY from 2020 (h31 data), BANKNIFTY from Aug 2021"
+ }
+}

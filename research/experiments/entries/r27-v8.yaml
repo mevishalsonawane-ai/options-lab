@@ -1,0 +1,27 @@
+id: r27-v8
+title: 'Night (R3) smart exit V8_H3_LOCK: Always hold past 09:16 with Boss''s floor (from +Rs 1,000 on the lot, Rs 500 below the best); stop the lot Rs 1,000 below its 09:16 value; cap 10:30'
+family: overnight
+date: '2026-10-14'
+doc: research/HUNT_R27_NIGHT_EXIT.md
+hypothesis: 'Holding the Night (R3) option past 09:16 for a +20/+30 point gain (with a stop and a 10:30 cap) beats selling at 09:16 after costs.'
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_NIFTY_WEEK, opt_BANKNIFTY_MONTH, opt_BANKNIFTY_WEEK (ATM+-10), index_1m NIFTY/BANKNIFTY/INDIAVIX, equity_1m (59 stocks, breadth proxy for R3''s 214); 2021-08-02 .. 2026-10-12; R3 rebuilt, OI build-up equal to NightRules.SEED'
+period:
+  design: 'DESC 2021-08 .. 2022-12 (224 R3 trades, descriptive step) + walk-forward test years 2023, 2024, 2025 Jan-Sep (472)'
+  holdout: '2025-10-01 .. 2026-10-12 (173 R3 trades), read once 14 Oct 2026; not unseen: X2 read R3''s 09:16 sale there, h31 read R17 GX / 10:15 exits'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 09:15 bar (gap, first minute)
+- index minutes
+- option minutes
+model_or_rule: 'Always hold past 09:16 with Boss''s floor (from +Rs 1,000 on the lot, Rs 500 below the best); stop the lot Rs 1,000 below its 09:16 value; cap 10:30'
+settings: research/hunt/r27/PREREG.md
+prereg: research/hunt/r27/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Night (R3) exit vs the 09:16 sale (B0). DESC 2021-22 (in-sample) 224 trades, vs B0 +32,809. Walk-forward 2023-2025 Sep 472 trades, vs B0 -2,461 (2023 -365, 2024 +403, 2025 -2,499); p 0.542, BH q (8) 0.74; max DD -52,057 vs B0 -39,504; helped 197 / hurt 275 nights; gave back 40. Holdout (1 Oct 2025 - 12 Oct 2026, read once) 173 trades, vs B0 -25,893 (Rs 96 a trade vs B0 Rs 245); helped 60 / hurt 113. FAILED the walk-forward gates.'
+  costs: 'app fills (+-5 bps, -10 bps stop), app charges (STT 0.15%), h24 half-spread 0.16% on entry and exit; stress 1.5x spread'
+holdout_read: true
+verdict: rejected
+notes: 'One of 8 R27 variants (BH across the 8; with R3''s overnight family of 4,085 tries every q is 1). The app''s live agents (order flow, consensus, trap guard) cannot be rebuilt from minute data: a SHADOW log is proposed in the doc.'
