@@ -14443,6 +14443,46 @@
   },
   {
    "built": "2026-10-13",
+   "bytes": 114140,
+   "complete": true,
+   "dataset": "candles_1m",
+   "dropped_after_expiry": 5280,
+   "first_ts": 1728821580000,
+   "key": "ETH",
+   "last_ts": 1729079940000,
+   "md5": "f48cef9ebe46a15527112f9fcfc7b225",
+   "ok": true,
+   "path": "options/delta_india/candles/ETH/2024/2024-10-16.parquet",
+   "period": "2024-10-16",
+   "price_nonpositive": 0,
+   "products": 44,
+   "products_with_candles": 40,
+   "rows": 112698,
+   "sha256": "dfa256677f3f7b15a26360bd5e93f81126451d21d67dac43d788e99987c0a825",
+   "source": "delta_india"
+  },
+  {
+   "built": "2026-10-13",
+   "bytes": 99235,
+   "complete": true,
+   "dataset": "candles_1m",
+   "dropped_after_expiry": 4320,
+   "first_ts": 1728908040000,
+   "key": "ETH",
+   "last_ts": 1729166340000,
+   "md5": "f27160d984cf76bd29b648a2dc8533fa",
+   "ok": true,
+   "path": "options/delta_india/candles/ETH/2024/2024-10-17.parquet",
+   "period": "2024-10-17",
+   "price_nonpositive": 0,
+   "products": 36,
+   "products_with_candles": 33,
+   "rows": 95057,
+   "sha256": "3a98f550428e8276f6a5776fbd7fd6f72c61a98e6f424fee09b1ea1eab989648",
+   "source": "delta_india"
+  },
+  {
+   "built": "2026-10-13",
    "bytes": 112190,
    "complete": true,
    "dataset": "candles_1m",
@@ -38495,8 +38535,8 @@
  },
  "times": "UTC epoch milliseconds (int64)",
  "totals": {
-  "bytes": 2257986882,
-  "files": 1667,
-  "rows": 788523249
+  "bytes": 2258200257,
+  "files": 1669,
+  "rows": 788731004
  }
 }
