@@ -100,3 +100,24 @@ note.
   skipped). No grid row, feature value or label from it is used, and the guard asserts that.
 - **M2's one-trade-at-a-time gate** uses the spread's 45-minute limit as the busy time (its exit minute is not stored).
   Its 2× spread stress is re-simulated for the trades taken.
+
+## Forward test of M4-NIFTY (14 Oct 2026, after the walk-forward; before any forward session exists)
+
+Boss said "ok" to the forward test proposed in `HUNT_R30_ALL_PARAMETERS.md`. M4-NIFTY was the near miss: positive in
+every test period, p 0.025, but BH q 0.109. This is its one confirmatory test, on sessions that did not exist when
+the model was frozen.
+
+- **Model (frozen, never retrained):** M4 trained exactly as fold F3 (all five indices, every allowed day before
+  1 Jan 2026), threshold 0.68231 (the 95th percentile of the training predictions), 185 inputs. frozen model sha256 `87b1bc8d4ab2fcdde8662f7dcd35bf03b0f35a813a6cbaeab508639f3fdcedbd`
+  (on Drive: `IraAlgo-data-lake/derived/r30/forward/m4_frozen.pkl`). Applied to the 2026 test rows, it reproduces
+  the walk-forward's 35 NIFTY trades and +Rs 5,666 exactly.
+- **Rule:** NIFTY only. At each 5-minute bar close 09:30–14:45, buy the ATM CE or PE whose predicted P(net > 0) is
+  higher, when it is ≥ the threshold. Next minute's open. Boss's lock exit (X1). One trade at a time, at most 3 a day.
+  R30's fills and app charges.
+- **Sessions:** the first 40 NIFTY sessions with option data from 13 Oct 2026, as they arrive in the lake
+  (`forward.py score` after each refresh). Logged only: nothing is placed anywhere, no app change.
+- **Read once, after 40 sessions** (`forward.py verdict`, which refuses an earlier or second read). It **passes** if
+  net P&L > 0, p < 0.05 against 1,000 random-twin sets (same day and side, random grid minute), and net > 0 at 2× the
+  spread. It is one pre-registered test; it is also reported with R30's 30.
+- **If it passes:** it becomes a PAPER candidate behind a switch that is off by default, logged in the Autopilot
+  timeline and shown to Boss (CLAUDE.md). Never live from this test. **If it fails,** it stays a note.

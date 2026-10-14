@@ -165,3 +165,31 @@ def test_feature_cols_exclude_labels():
                           C_X1=[1.0], P_SPR=[1.0], rib5_stack=[1.0], atm_iv=[15.0], und_id=[0]))
     assert MO.feature_cols(T) == ["rib5_stack", "atm_iv", "und_id"]
     assert MO.is_ribbon("rib5_stack") and MO.is_ribbon("cls15_order") and not MO.is_ribbon("atm_iv")
+
+
+# ------------------------------------------------------------------------------------------------ forward test
+import forward as FW  # noqa: E402
+
+
+class _M:
+    def __init__(self, p):
+        self.p = np.asarray(p, float)
+
+    def predict_proba(self, X):
+        return np.c_[1 - self.p, self.p]
+
+
+def test_forward_signals_use_the_frozen_threshold():
+    fz = dict(models={"C": _M([0.9, 0.5, 0.7, 0.69]), "P": _M([0.2, 0.8, 0.7, 0.1])}, threshold=0.69, features=["x"])
+    F = pd.DataFrame(dict(x=[0, 0, 0, 0]))
+    assert list(FW.signals(F, fz)) == ["C", "P", "", "C"]                 # tie skipped; >= threshold trades
+
+
+def test_forward_refuses_a_changed_model(tmp_path, monkeypatch):
+    f = tmp_path / "m.pkl"
+    f.write_bytes(b"not the frozen model")
+    monkeypatch.setattr(FW, "FROZEN", f)
+    with pytest.raises(SystemExit):
+        FW.load_frozen()
+    assert FW.recorded_sha() and len(FW.recorded_sha()) == 64
+    assert FW.FORWARD_FROM > K.LAST and FW.SESSIONS == 40
