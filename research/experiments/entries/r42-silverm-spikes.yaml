@@ -11,10 +11,15 @@ period:
   design: 2025-08-05..2026-07-07 (M4's design)
   holdout: 2026-07-08..2026-10-08 (M4's holdout, a re-run of its frozen rule); extra 2026-10-09..2026-10-12 labelled
     extra
+# Instruments (14 Oct: the knowledge pack's names): SILVERM options (M4); SILVER, GOLDM, GOLD, CRUDEOIL and NATURALGAS
+# options (census, M4 walk-forward books); NIFTY weekly and BANKNIFTY monthly options (census comparison).
 instruments:
-- SILVERM options
-- SILVER, GOLDM, GOLD, CRUDEOIL, NATURALGAS options (census, M4 walk-forward books)
-- NIFTY weekly and BANKNIFTY monthly options (census comparison)
+- SILVER
+- GOLD
+- CRUDE
+- NATURALGAS
+- NIFTY
+- BANKNIFTY
 features:
 - 'signal source: clock (15-minute grid 09:15-13:45), strike from the SILVERM futures price; option premium only for
   P&L'

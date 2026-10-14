@@ -16,7 +16,7 @@ instruments:
 - FINNIFTY
 - MIDCPNIFTY
 - SENSEX
-- CRUDEOIL
+- CRUDE
 features:
 - 5-minute underlying OHLC (index spot / CRUDEOIL future)
 - signal on the underlying; ATM option bought

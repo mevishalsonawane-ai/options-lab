@@ -60,7 +60,8 @@ def main():
             data_version=DATA,
             period=dict(design="IS 2021-2023, OOS design 1 Jan 2024 - 13 Apr 2026 (CRUDEOIL Aug 2025 - 13 Apr 2026)",
                         holdout="27 Apr - 12 Oct 2026 (read once)"),
-            instruments=list(K.UNDS),
+            # 14 Oct: the knowledge pack's instrument names (CRUDEOIL is "CRUDE" there; KnowledgeTest checks them).
+            instruments=["CRUDE" if u == "CRUDEOIL" else u for u in K.UNDS],
             features=["5-minute underlying OHLC (index spot / CRUDEOIL future)", "signal on the underlying; ATM option bought"],
             model_or_rule=f"{st} (research/hunt/r44/r44cfg.py STRATS, ind.py signals, sim.py exits)",
             settings="research/hunt/r44/PREREG.md (Boss's spec: stop -25%, target +50%, 60-min exit, 15:15 square-off, "
