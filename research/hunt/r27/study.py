@@ -4,6 +4,7 @@
     python3 research/hunt/r27/study.py describe    # step 2: the held option after 09:16, DESC block only (<= 2022)
     python3 research/hunt/r27/study.py test        # step 4a: walk-forward test years 2023, 2024, 2025 (Jan-Sep)
     python3 research/hunt/r27/study.py holdout     # step 4b: the locked holdout, ONCE (writes a flag; refuses again)
+    python3 research/hunt/r27/study.py report      # results/report.md: the tables of 4a and 4b side by side (no new reads)
 
 `test` and `holdout` refuse to run unless PREREG.md is committed and unchanged (its sha256 is recorded in the output).
 """
@@ -335,6 +336,52 @@ def _md_period(res, title, hold=False):
     return "\n".join(L) + "\n"
 
 
+def _fmt(x):
+    return f"{x:,.0f}" if isinstance(x, (int, float)) else str(x)
+
+
+def report():
+    t = json.loads((K.RESULTS / "test.json").read_text())
+    h = json.loads((K.RESULTS / "holdout.json").read_text())
+    ids = ["B0"] + [s.id for s in R.VARIANTS]
+    L = ["# R27 tables (from results/test.json and results/holdout.json)", ""]
+    for name, P in (("DESC block 2021-08 .. 2022 (in-sample: the descriptive step read it)", t["desc_in_sample"]),
+                    ("Walk-forward test years 2023, 2024, 2025 Jan-Sep (pooled)", t["pooled"]),
+                    ("LOCKED HOLDOUT 1 Oct 2025 .. 12 Oct 2026 (read once)", h["pooled"])):
+        b15 = P["B0"]["metrics"]["net15"]
+        L += [f"## {name}", "", "| variant | trades | held % | win % | avg win | avg loss | Rs/trade | Rs/day | net | vs B0 | "
+              "vs B0 at 1.5x spread | green days % | worst day | max DD | helped / hurt | gave back / rescued | p | BH q (8) |",
+              "|" + "---|" * 18]
+        for v in ids:
+            m = P[v]["metrics"]
+            p, q = P[v].get("p"), P[v].get("bh_q8")
+            extra = ["", "", "", ""] if v == "B0" else [f"{m['diff']:+,}", f"{m['net15'] - b15:+,}", f"{m['helped']} / {m['hurt']}",
+                                                       f"{m['gave_back']} / {m['rescued']}"]
+            L.append(f"| {v} | {m['trades']} | {m['held_pct']} | {m['win_pct']} | {_fmt(m['avg_win'])} | {_fmt(m['avg_loss'])} | "
+                     f"{m['per_trade']:.0f} | {m['per_day']:.0f} | {_fmt(m['net'])} | {extra[0]} | {extra[1]} | {m['green_days_pct']} | "
+                     f"{_fmt(m['worst_day'])} | {_fmt(m['max_dd'])} | {extra[2]} | {extra[3]} | "
+                     f"{'' if p is None else round(p, 3)} | {'' if q is None else round(q, 2)} |")
+        L.append("")
+    L += ["## Difference from B0 by year (Rs; trades)", "", "| variant | DESC 2021-22 | 2023 | 2024 | 2025 Jan-Sep | holdout |",
+          "|---|---|---|---|---|---|"]
+    for s in R.VARIANTS:
+        L.append(f"| {s.id} | {t['desc_in_sample'][s.id]['metrics']['diff']:+,} | " +
+                 " | ".join(f"{t['years'][str(y)][s.id]['metrics']['diff']:+,} ({t['years'][str(y)][s.id]['metrics']['trades']})" for y in K.WF_YEARS) +
+                 f" | {h['pooled'][s.id]['metrics']['diff']:+,} ({h['pooled'][s.id]['metrics']['trades']}) |")
+    L += ["", "B0 net by period: DESC " + _fmt(t["desc_in_sample"]["B0"]["metrics"]["net"]) + ", " +
+          ", ".join(f"{y} {_fmt(t['years'][str(y)]['B0']['metrics']['net'])}" for y in K.WF_YEARS) +
+          f", holdout {_fmt(h['pooled']['B0']['metrics']['net'])}.", "",
+          f"V7 random twin p: walk-forward {t['pooled']['V7_H2_I30s']['twin']['p']:.3f}, holdout {h['pooled']['V7_H2_I30s']['twin']['p']:.3f}.",
+          f"BH q with R3's family (8 + {t['family_tries_before']} tries): " +
+          ", ".join(f"{s.id} {t['pooled'][s.id]['bh_q_with_family']:.2f}" for s in R.VARIANTS) + ".",
+          f"Anchored walk-forward pick: " + "; ".join(f"{p['year']} {p['pick']} ({p['diff_that_year']:+,})" for p in t["wf_pick"]["picks"]) +
+          f"; total {t['wf_pick']['total_diff_vs_b0']:+,} vs B0.", "",
+          "PASS_WF: " + ", ".join(f"{s.id} {t['pooled'][s.id]['PASS_WF']}" for s in R.VARIANTS) + ". Holdout pass: none tested "
+          "(no variant passed the walk-forward); the holdout is information only.", ""]
+    (K.RESULTS / "report.md").write_text("\n".join(L))
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    {"rebuild": rebuild, "describe": describe, "test": test, "holdout": holdout}.get(cmd, lambda: sys.exit(__doc__))()
+    {"rebuild": rebuild, "describe": describe, "test": test, "holdout": holdout, "report": report}.get(cmd, lambda: sys.exit(__doc__))()

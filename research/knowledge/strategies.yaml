@@ -173,6 +173,11 @@
       costs: "app charges and spread"
       src: android/app/src/main/assets/study/pages.txt
       sec: Night (R3)
+    - text: "Holding the Night option past 09:16 for +20/+30 points did not pay: in the locked year (173 trades) all 8 pre-registered holds lost to the 09:16 sale, Rs -4,576 to Rs -25,893; keep the 09:16 sale."
+      period: "1 Oct 2025 - 12 Oct 2026"
+      costs: "app charges and spread"
+      src: research/HUNT_R27_NIGHT_EXIT.md
+      sec: Verdict for Boss
 
 - id: vix-divergence
   name: VIX divergence
