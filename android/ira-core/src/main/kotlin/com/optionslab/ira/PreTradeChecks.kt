@@ -305,7 +305,8 @@ object DangerMeter {
         val provisional: Boolean get() = GAP in unknown
 
         fun line(): String {
-            val why = worst?.let { " Worst sign: ${describe(it)} (the simulated arms made %s a day on those %d sessions).".format(Locale.ENGLISH, rs(it.mean), it.n) } ?: ""
+            // The bucket's words go in after the format (14 Oct crash: "VIX up over 5%" put a % into the format string).
+            val why = worst?.let { " Worst sign: " + describe(it) + " (the simulated arms made ${rs(it.mean)} a day on those ${it.n} sessions)." } ?: ""
             val rest = unknown.filter { it != GAP }
             val miss = if (rest.isEmpty()) "" else " Not known yet: ${rest.joinToString()} (counted as neutral)."
             val first = if (provisional) "provisional, gap not known yet, read again after the open; " else ""

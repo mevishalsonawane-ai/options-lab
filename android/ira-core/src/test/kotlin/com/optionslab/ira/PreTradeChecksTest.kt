@@ -151,4 +151,16 @@ class PreTradeChecksTest {
         assertEquals(1, DangerMeter.lots(3, DangerMeter.Level.CAREFUL, halfOn = true))
         for (n in 0..40) for (l in DangerMeter.Level.values()) assertTrue(DangerMeter.lots(n, l, true) <= maxOf(n, 0) || n <= 1)
     }
+
+    @Test fun aWorstSignWithAPercentInItsWordsNeverCrashesTheLine() {
+        // 14 Oct crash on the phone: "VIX up over 5%" went into the format string ("% (t" read as a date conversion).
+        for (b in listOf("up", "down")) {
+            val r = DangerMeter.Reading(DangerMeter.Level.CAREFUL, -0.4,
+                listOf(DangerMeter.Bucket("vix_chg", b, 37, -1234.0, -0.8)), emptyList())
+            val line = r.line()
+            assertTrue("VIX $b over 5% (the simulated arms made -₹1,234 a day on those 37 sessions)." in line, line)
+        }
+        for (f in listOf("gap", "vix", "event", "expiry", "weekday"))
+            DangerMeter.Reading(DangerMeter.Level.NORMAL, 0.1, listOf(DangerMeter.Bucket(f, "100%", 3, 5.0, -0.1)), listOf("the gap")).line()
+    }
 }
