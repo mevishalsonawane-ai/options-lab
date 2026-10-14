@@ -113,3 +113,32 @@ features and the readable rules, the green / red anatomy, the trading tables (tr
 net, per day, green days, worst day, max drawdown), sample sizes. Experiment entries `research/experiments/entries/b2-*.yaml`.
 Tests `research/hunt/b2/test_b2.py` with the look-ahead guard (no feature is a future value; targets never enter X; the
 walk-forward never trains on its test block).
+
+---
+
+## Amendment 1 (14 Oct 2026, before any B2 model is fitted or any target is looked at)
+
+Boss (14 Oct): "all parameters include OI, VWAP, volume, EMA and all the variants, order flow and all the other things.
+Try changing all the params from them too." So the model's inputs get a **parameter-sweep bank** on top of the 205
+brain / F1 features (`b2sweep.py`), computed from the lake's index minutes, point in time (a 5- or 15-minute bar is used
+only once it has closed by the decision minute), on three charts: **1-minute, 5-minute and 15-minute**:
+
+- EMA distance (close vs EMA) for lengths 5, 8, 9, 13, 20, 21, 34, 50, 100, 200;
+- EMA crosses (fast vs slow spread) for 5/13, 8/21, 9/20, 9/21, 12/26, 13/34, 20/50, 50/200, and the bars since each cross;
+- RSI 7, 9, 14, 21; stochastic %K 5 and 14; Williams %R 14; CCI 20;
+- MACD histogram (12, 26, 9), (8, 17, 9), (5, 35, 5);
+- Bollinger %B and width (20, 2), (20, 2.5), (10, 1.5), (50, 2);
+- Supertrend side and distance (7, 2), (10, 3), (14, 2), (20, 4);
+- ATR % 7, 14, 28; ADX 7, 14, 28 (with DI spread);
+- momentum (return over 1, 3, 5, 10, 20, 40 bars); Donchian position 20 and 55; distance from the session TWAP.
+
+The index has no traded volume (Dhan stores 0). Volume, VWAP and order-flow inputs therefore come from the option chain
+and the futures, as already in the brain / F1 features: option-volume VWAP and bands, anchored VWAPs, PCR (OI and
+volume), OI build-up per strike (long / short build-up, short covering, long unwinding), writing bias, OI walls, max
+pain, GEX proxy, futures basis / OI / volume (futures only from Jul 2026), and breadth. True order flow (bid / ask
+queues, aggressor side) does not exist in the history; it exists only in the phone's recent recordings (OF1 follow-up),
+so it cannot be in this model.
+
+Every model in section 4 is fitted twice: on the 205 base features ("base") and on base + the sweep bank ("all"). Both
+count in the BH families (section 8: 8 targets x 3 models x 2 input sets = 48 per family). The trading rules (section 7)
+use the "all" GBM only (still 4 rules). Nothing else changes.
