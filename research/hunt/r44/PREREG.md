@@ -1,6 +1,7 @@
 # R44 pre-registration: independent re-test of Boss's 5-year sweep (7 strategies)
 
-Written 14 Oct 2026, BEFORE any R44 profit or loss was computed. Committed and pushed on its own.
+Written 14 Oct 2026, BEFORE any R44 profit or loss was computed. Committed and pushed on its own. Amendment 1 (same
+day, still before any P&L): signal and entry in the same session; MCX morning entries from 09:05.
 
 Boss (14 Oct): "Check the above strategy and provide me results". Boss's own workspace ran a 5-year sweep (`sweep.py`,
 not in this repo) and found 0 of 14 strategy-side combos positive in-sample (2021-2023, 98,761 trades) or
@@ -43,6 +44,8 @@ No rule reads an option's own chart.
 - **Time exit**: after 12 bars (the entry bar is bar 1) at the close of the 12th bar.
 - **Square-off**: NSE/BSE at the open of the 15:15 bar; MCX at the open of the 23:15 bar. Entries only on bars that
   start before the square-off bar.
+- **The signal bar and the entry bar are in the same session** (a signal on a session's last bars that would enter
+  at or after the square-off bar, or on the next day, is dropped).
 - **Max 2 entries a day per side** (per strategy x index). One open position per strategy x index x side; a signal while
   that side's position is open is ignored. CE and PE are separate books.
 - **Expiry days skipped** (primary): a day is an expiry day of the nearest contract if the ATM straddle's time value
@@ -76,7 +79,7 @@ ADX: +DM/-DM and TR (true range with the previous close), Wilder-smoothed (seed 
 s = s - s/14 + x), DX = 100|+DI - -DI|/(+DI + -DI), ADX = mean of the first 14 DX, then Wilder average.
 
 MCX CRUDEOIL: the same signals on 5-minute bars of the futures price from 09:00. Two variants: **morning** (entries on
-bars starting 09:00-14:55) and **full** (entries on bars starting 09:05-23:10); both square off at 23:15.
+bars starting 09:05-14:55) and **full** (entries on bars starting 09:05-23:10); both square off at 23:15.
 
 ## Sizes and costs
 
