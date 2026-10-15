@@ -60,6 +60,8 @@ def summary(T: pd.DataFrame, days: int, scale: float = 1.0) -> dict:
         trades=n, days=days, win=round(float(w.mean()), 4),
         avg_win=round(float(net[w].mean()), 2) if w.any() else None,
         avg_loss=round(float(net[~w].mean()), 2) if (~w).any() else None,
+        gross=round(float((T.gross.to_numpy(float) * scale).sum()), 2),
+        fees=round(float((T.fees.to_numpy(float) * scale).sum()), 2),
         net=round(float(net.sum()), 2), per_trade=round(float(net.mean()), 2),
         tax=round(float((T.tax.to_numpy(float) * scale).sum()), 2), after_tax=round(float(after.sum()), 2),
         after_per_trade=round(float(after.mean()), 2), per_day=round(float(after.sum()) / max(days, 1), 2),

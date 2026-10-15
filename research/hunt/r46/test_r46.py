@@ -288,7 +288,7 @@ def test_perp_pool_long_short_mirror():
 # --- book: one at a time, max 2 per IST day -----------------------------------------------------------------------------
 def _pool(entries, hold=10, ok=True):
     e = pd.DatetimeIndex(entries)
-    return pd.DataFrame(dict(ok=ok, exit_ts=e + pd.Timedelta(minutes=hold), net=1.0, net_after=0.7, tax=0.3,
+    return pd.DataFrame(dict(ok=ok, exit_ts=e + pd.Timedelta(minutes=hold), gross=1.2, fees=0.2, net=1.0, net_after=0.7, tax=0.3,
                              tds=0.01, reason=TIME), index=e)
 
 
