@@ -1,0 +1,38 @@
+id: r52-h37-9
+title: 'R52 re-test on Nov 2024+: H37-9 Point & Figure double-top breakout'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H37-9 (old verdict: Family net -111/tr; SENSEX double-top top-10 by t (pre +42..134/day),
+  hold +1..10/day) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''box'': ''b0.1pct'', ''name'': ''PF_DT'', ''unds'': [''SENSEX'']} | ITM1/near | exits time_stop=60,time_gain=None,sig_levels=False
+  | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 22
+results:
+  summary: 'Design original: 97 trades, win 44%, net Rs +4,369 (Rs +13/day), worst day Rs -6,523, max DD Rs -20,716, p 0.969
+    (coin-flip p 0.306); walk-forward Rs +18,039. Re-tune pick g03 ({''unds'': (''SENSEX'',), ''box'': ''b0.5atr'', ''name'':
+    ''PF_DT''} · ITM1/near · exits time_stop=60,time_gain=None,sig_levels=False): design 185 trades, win 44%, net Rs +43,101
+    (Rs +128/day), worst day Rs -5,917, max DD Rs -21,401, p 0.744 (coin-flip p 0.037); walk-forward Rs +51,249. FINAL original:
+    41 trades, win 49%, net Rs +3,754 (Rs +28/day), worst day Rs -4,988, max DD Rs -11,137, p 0.915 (coin-flip p 0.272), q
+    1.00 -> FAIL. FINAL pick: 59 trades, win 46%, net Rs +4,285 (Rs +32/day), worst day Rs -4,513, max DD Rs -10,348, p 0.925
+    (coin-flip p 0.214), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: SENSEX 1-min PF_DT with the T60 exit (HUNT_H37.md top 10 by t); its box size
+  is not named in the write-up: the original uses the study''s first box (0.1 % of the previous close, as OBUY_GA-1), the
+  other four boxes are the first grid settings. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+
+  final trades, top-5 < 100% of net, design walk-forward > 0.'

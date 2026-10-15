@@ -1,0 +1,32 @@
+id: r52-mv-1
+title: 'R52 re-test on Nov 2024+: MV-1 Matrix v2.2 risk engine with structure-break entries'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule MV-1 (old verdict: All 38 versions lose both yrs; best 15-min CHoCH-only -55.5k (177
+  tr)) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''buf'': 2.0, ''mode'': ''lock'', ''tf'': 5, ''tp1'': 1.0} | ATM/near | exits default | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 16
+results:
+  summary: 'Design original: 1536 trades, win 35%, net Rs -349,818 (Rs -1,038/day), worst day Rs -27,781, max DD Rs -367,492,
+    p 1.000 (coin-flip p 0.872); walk-forward Rs -122,388. FINAL original: 602 trades, win 33%, net Rs -86,873 (Rs -658/day),
+    worst day Rs -28,390, max DD Rs -201,892, p 1.000 (coin-flip p 0.467), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the study''s default: 5-min, SL pivot 2 x ATR, TP1 1R half + breakeven,
+  lock, 2 lots (research/matrix_v22.py). Two 1-lot rows per entry (half A / B). Grid = its 15-min chart, CHoCH only, fixed
+  / ribbon, buffer 1.5 / 2.5, TP1 1.5R, the tight 0.5 ATR row.. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final
+  read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

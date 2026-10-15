@@ -1,0 +1,38 @@
+id: r52-liq-12
+title: 'R52 re-test on Nov 2024+: LIQ-12 SENSEX Liquidity 15m+3m B-pick with first-hour range filter'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule LIQ-12 (old verdict: Never adopted: est. +24,660 (333 tr, t 1.31) / held-out +35,890
+  (335, t 1.55); strict model -17.6k / -5.5k (no real SENSEX options then)) makes money net of real costs on the recent market
+  (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''books'': [[15, 20, 10], [3, 20, 10]], ''source'': ''both'', ''stop'': True, ''unds'': [''SENSEX''], ''vol_fh'':
+  0.8} | ATM/near | exits stop_pct=0.15 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 422 trades, win 38%, net Rs +1,980 (Rs +6/day), worst day Rs -4,875, max DD Rs -28,852, p 0.970
+    (coin-flip p 0.222); walk-forward Rs -1,889. Re-tune pick g05 ({''unds'': (''SENSEX'',), ''books'': ((10, 20, 10), (5,
+    20, 10)), ''source'': ''both'', ''stop'': True, ''vol_fh'': 0.8} · ATM/near · exits stop_pct=0.15): design 309 trades,
+    win 44%, net Rs +25,170 (Rs +75/day), worst day Rs -4,438, max DD Rs -16,416, p 0.874 (coin-flip p 0.075); walk-forward
+    Rs +38,055. FINAL original: 161 trades, win 42%, net Rs +15,162 (Rs +115/day), worst day Rs -2,200, max DD Rs -9,520,
+    p 0.078 (coin-flip p 0.017), q 0.55 -> FAIL. FINAL pick: 113 trades, win 40%, net Rs +12,283 (Rs +93/day), worst day Rs
+    -2,674, max DD Rs -14,884, p 0.515 (coin-flip p 0.117), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = liquidity_sensex_plus.py''s Year-B combo (LIQUIDITY_SENSEX_PLUS.md:
+  books 15+3 + vol 0.8; the study MODELLED options, R52 prices real ones); grid = the study''s VARIANTS applied to the pick.
+  Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

@@ -1,0 +1,42 @@
+id: r52-h25-11
+title: 'R52 re-test on Nov 2024+: H25-11 CDL ladder-bottom fade (WF family)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H25-11 (old verdict: WF +21,934 on 144 tr over 4 yrs, 2/4 yrs +, Holm 1.0) makes money
+  net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''name'': ''CDLLADDERBOTTOM'', ''orient'': ''fade'', ''tf'': 1, ''unds'': [''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'',
+  ''MIDCPNIFTY'', ''SENSEX'']} | ITM1/near | exits stop_pct=0.15,time_stop=20 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 23
+results:
+  summary: 'Design original: 277 trades, win 21%, net Rs -41,686 (Rs -124/day), worst day Rs -3,323, max DD Rs -51,487, p
+    0.877 (coin-flip p 0.612); walk-forward Rs -41,553. Re-tune pick g07 ({''unds'': (''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'',
+    ''MIDCPNIFTY'', ''SENSEX''), ''tf'': 1, ''name'': ''CDLLADDERBOTTOM'', ''orient'': ''fade''} · ITM1/near · exits stop_pct=0.15,tgt_pct=0.3,sig_levels=False):
+    design 262 trades, win 40%, net Rs -17,691 (Rs -52/day), worst day Rs -8,301, max DD Rs -40,743, p 0.377 (coin-flip p
+    0.191); walk-forward Rs +2,818. FINAL original: 179 trades, win 25%, net Rs -23,784 (Rs -179/day), worst day Rs -3,050,
+    max DD Rs -24,783, p 0.762 (coin-flip p 0.503), q 1.00 -> FAIL. FINAL pick: 159 trades, win 36%, net Rs -66,696 (Rs -501/day),
+    worst day Rs -10,999, max DD Rs -88,174, p 0.732 (coin-flip p 0.894), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: WF family CDLLADDERBOTTOM fade (HUNT_H25.md best WF family): no frozen variant:
+  the per-year walk-forward picks were not recorded (scratch wf.csv deleted) and rebuilding them needs pre-2025 P&L; as OBUY_GA-1,
+  the original is the study''s FIRST setting in its own loop order, on every index the family''s walk-forward chose from;
+  R52''s re-tune walk-forward over the grid plays the original WF''s role (all 5 indices, 1-min, ARM). Gates: final net >
+  0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

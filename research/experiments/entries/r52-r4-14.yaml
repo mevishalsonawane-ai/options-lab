@@ -1,0 +1,39 @@
+id: r52-r4-14
+title: 'R52 re-test on Nov 2024+: R4-14 Square-of-9 intraday calculator'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R4-14 (old verdict: NIFTY 1,276 tr -4/day (p twin 0.02), hold -167; BN -60 / -171; R4-15
+  all lose) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''unds'': [''NIFTY'', ''BANKNIFTY'', ''FINNIFTY''], ''var'': ''M1_SQ9I|r0925|NATk3''} | ITM1/near | exits
+  default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 18
+results:
+  summary: 'Design original: 1002 trades, win 36%, net Rs +14,170 (Rs +42/day), worst day Rs -11,650, max DD Rs -85,121, p
+    0.005 (coin-flip p 0.004); walk-forward Rs +20,330. Re-tune pick g16 ({''var'': ''M1_SQ9I|rPC|OPT'', ''unds'': (''NIFTY'',
+    ''BANKNIFTY'', ''FINNIFTY'')} · ITM1/near · exits stop_pct=0.25,tgt_pct=0.5): design 999 trades, win 42%, net Rs +69,754
+    (Rs +207/day), worst day Rs -23,501, max DD Rs -163,557, p 0.011 (coin-flip p 0.001); walk-forward Rs +183,806. FINAL
+    original: 371 trades, win 34%, net Rs -97,209 (Rs -731/day), worst day Rs -7,092, max DD Rs -120,477, p 0.864 (coin-flip
+    p 0.662), q 1.00 -> FAIL. FINAL pick: 362 trades, win 41%, net Rs -100,290 (Rs -754/day), worst day Rs -29,955, max DD
+    Rs -138,793, p 0.011 (coin-flip p 0.610), q 0.17 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R4''s frozen pick (research/hunt/r4/results/frozen.json, HUNT_R4_GANN_FIB_MAGIC.md)
+  M1_SQ9I|r0925|NATk3 on all three indices; R4-15 (M2_SQ9H, frozen r0925|T30) in the grid. Gates: final net > 0, p < 0.05,
+  q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

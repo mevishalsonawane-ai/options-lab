@@ -1,0 +1,40 @@
+id: r52-obuy-ga-1
+title: 'R52 re-test on Nov 2024+: OBUY_GA-1 Open = low / open = high'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_GA-1 (old verdict: IS best +25.4k (207 tr) 4/7; WF -83.4k. H34 points WF +2,622
+  (gross +19.2k) 2/4) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''check'': 560, ''pc_filter'': False, ''tol'': 0.0} | ATM/near | exits sq_off=915,idx_tgt_r=1.0 | expiry
+  skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 99 trades, win 49%, net Rs +13,866 (Rs +41/day), worst day Rs -13,957, max DD Rs -24,745, p 0.003
+    (coin-flip p 0.104); walk-forward Rs +17,930. Re-tune pick s3.r0.x0 ({''check'': 560, ''tol'': 0.03, ''pc_filter'': True}
+    · ATM/near · exits sq_off=915,idx_tgt_r=1.0): design 204 trades, win 52%, net Rs +54,900 (Rs +163/day), worst day Rs -19,142,
+    max DD Rs -30,278, p 0.000 (coin-flip p 0.056); walk-forward Rs +69,352. FINAL original: 30 trades, win 33%, net Rs -16,135
+    (Rs -121/day), worst day Rs -5,938, max DD Rs -19,136, p 0.406 (coin-flip p 0.658), q 1.00 -> too few trades to judge.
+    FINAL pick: 100 trades, win 45%, net Rs -36,978 (Rs -278/day), worst day Rs -11,747, max DD Rs -46,838, p 0.079 (coin-flip
+    p 0.645), q 0.55 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: no frozen variant named (OBUY_GA.md): the catalog''s first setting. Gates:
+  final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

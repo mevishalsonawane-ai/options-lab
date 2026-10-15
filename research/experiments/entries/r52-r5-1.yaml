@@ -1,0 +1,39 @@
+id: r52-r5-1
+title: 'R52 re-test on Nov 2024+: R5-1 Boss''s uploaded Gann/Fib/Harmonic Pine'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R5-1 (old verdict: ''Do not run, even on paper''. AS_WRITTEN 0 trades; pooled 77 tr,
+  66 instant stop-outs; best +8/day; hold 0 option tr) makes money net of real costs on the recent market (Nov 2024+) at its
+  original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''cd'': 15, ''cfg'': ''AS_WRITTEN'', ''exit'': ''NAT'', ''ms'': 1.0, ''piv'': 10, ''tf'': 15, ''unds'': [''NIFTY'',
+  ''BANKNIFTY'']} | ITM1/near | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 18
+results:
+  summary: 'Design original: 0 trades, win 0%, net Rs +0 (Rs +0/day), worst day Rs +0, max DD Rs +0, p 1.000 (coin-flip p
+    1.000); walk-forward Rs +0. Re-tune pick g07 ({''cfg'': ''PRAG'', ''tf'': 15, ''piv'': 10, ''ms'': 1.0, ''cd'': 15, ''exit'':
+    ''OPT'', ''unds'': (''NIFTY'', ''BANKNIFTY'')} · ITM1/near · exits stop_pct=0.25,tgt_pct=0.5): design 3 trades, win 67%,
+    net Rs +2,636 (Rs +8/day), worst day Rs -256, max DD Rs -256, p 1.000 (coin-flip p 1.000); walk-forward Rs +2,636. FINAL
+    original: 0 trades, win 0%, net Rs +0 (Rs +0/day), worst day Rs +0, max DD Rs +0, p 1.000 (coin-flip p 1.000), q 1.00
+    -> too few trades to judge. FINAL pick: 0 trades, win 0%, net Rs +0 (Rs +0/day), worst day Rs +0, max DD Rs +0, p 1.000
+    (coin-flip p 1.000), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the script as uploaded (AS_WRITTEN), 15m, script default pivot
+  10 / minSwing 1.0 / cooldown 15, NAT exit = R5''s PRIMARY setting (research/hunt/r5/PREREG.md, design.py DEFAULT); grid
+  = the other 17 primary runs. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5
+  < 100% of net, design walk-forward > 0.'

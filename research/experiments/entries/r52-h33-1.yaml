@@ -1,0 +1,37 @@
+id: r52-h33-1
+title: 'R52 re-test on Nov 2024+: H33-1 Price-shock follow'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H33-1 (old verdict: REJECT. FIN 193 tr +43/day (gross 67), 4/5 yrs, BH q 0.90; hold -16/day.
+  NIFTY 226 tr +26/day, rand p 0.000, BH q 0.09) makes money net of real costs on the recent market (Nov 2024+) at its original
+  setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- FINNIFTY
+features:
+- 'signal source: index + option-chain context (option volume)'
+model_or_rule: '{''N'': 3, ''VB'': 1, ''W'': 1, ''Z'': 5, ''orient'': ''follow'', ''und'': ''FINNIFTY''} | ITM1/near | exits
+  time_stop=30,time_gain=None | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design original: 68 trades, win 56%, net Rs +35,555 (Rs +106/day), worst day Rs -16,958, max DD Rs -17,578, p
+    0.010 (coin-flip p 0.035); walk-forward Rs +39,534. Re-tune pick g03 ({''und'': ''FINNIFTY'', ''W'': 1, ''Z'': 5, ''VB'':
+    0, ''N'': 3, ''orient'': ''follow''} · ITM1/near · exits time_stop=30,time_gain=None): design 102 trades, win 55%, net
+    Rs +40,788 (Rs +121/day), worst day Rs -16,958, max DD Rs -22,133, p 0.017 (coin-flip p 0.015); walk-forward Rs +57,946.
+    FINAL original: 20 trades, win 40%, net Rs +12,037 (Rs +91/day), worst day Rs -3,076, max DD Rs -5,191, p 0.202 (coin-flip
+    p 0.022), q 0.88 -> too few trades to judge. FINAL pick: 29 trades, win 41%, net Rs +14,287 (Rs +108/day), worst day Rs
+    -3,076, max DD Rs -6,508, p 0.017 (coin-flip p 0.054), q 0.20 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index + option-chain context (option volume). Why this original: HUNT_H33.md best price-shock variant
+  (FIN W1 Z5 VB N3 follow T30); H33-2 (NIFTY W3 Z5 N1 P30) in the grid. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over
+  every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

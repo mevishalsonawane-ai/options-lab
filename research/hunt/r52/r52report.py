@@ -5,7 +5,7 @@ import json
 
 import r52cfg as K
 
-COLS = ("trades", "win", "net", "net/day", "avg win", "avg loss", "worst day", "max DD", "p", "q", "verdict")
+COLS = ("trades", "win", "net", "net/day", "avg win", "avg loss", "worst day", "max DD", "p", "p coin-flip", "q", "verdict")
 
 
 def _rs(x):
@@ -16,7 +16,7 @@ def row(label, s, q=None, verdict=""):
     if s is None:
         return f"| {label} | " + " | ".join(["-"] * len(COLS)) + " |"
     return (f"| {label} | {s['trades']} | {s['win_rate']:.0%} | {_rs(s['net'])} | {_rs(s['per_day'])} | {_rs(s['avg_win'])} | "
-            f"{_rs(s['avg_loss'])} | {_rs(s['worst_day'])} | {_rs(s['max_dd'])} | {s['p']:.3f} | "
+            f"{_rs(s['avg_loss'])} | {_rs(s['worst_day'])} | {_rs(s['max_dd'])} | {s['p']:.3f} | {s.get('p_flip', float('nan')):.3f} | "
             f"{'-' if q is None else f'{q:.2f}'} | {verdict} |")
 
 
@@ -32,7 +32,7 @@ def section(key, d, fin, old, pre=None):
     sp = d["spec"]
     sc = d["scores"]
     pick = d["pick"]
-    lines = [f"### {key}: {o.get('title') or sp.get('title') or sp.get('strategy')}", ""]
+    lines = [f"#### {key}: {o.get('title') or sp.get('title') or sp.get('strategy')}", ""]
     lines.append(f"- **Signal source:** {sp.get('source')}. **Original setting:** {sp.get('params')} · {sp.get('rule')} · "
                  f"exits {sp.get('exits')} · expiry {sp.get('expiry')} · {sp.get('pos')}. Why: {sp.get('why')}.")
     lines.append(f"- **Old verdict:** {o.get('old', 'see CATALOGUE.md')}")
@@ -63,8 +63,8 @@ def section(key, d, fin, old, pre=None):
 
 
 def main():
-    d = json.loads((K.OUT / "design.json").read_text())
-    fp = K.OUT / "final.json"
+    d = json.loads((K.RESULTS / "design.json").read_text())
+    fp = K.RESULTS / "final.json"
     fin = json.loads(fp.read_text()) if fp.exists() else {}
     old = json.loads((K.RESULTS / "old_verdicts.json").read_text())
     pp = K.RESULTS / "rules_prereg.json"

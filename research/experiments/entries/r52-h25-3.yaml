@@ -1,0 +1,36 @@
+id: r52-h25-3
+title: 'R52 re-test on Nov 2024+: H25-3 SENSEX 60-min HMA 13/34 fade'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H25-3 (old verdict: Gate passer; hold 83 tr +39/day (T30), +12 (T15)) makes money net
+  of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''name'': ''HMA_X13_34'', ''orient'': ''fade'', ''tf'': 60, ''unds'': [''SENSEX'']} | ITM1/near | exits time_stop=30,time_gain=None,sig_levels=False
+  | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 23
+results:
+  summary: 'Design original: 100 trades, win 50%, net Rs +27,447 (Rs +81/day), worst day Rs -2,855, max DD Rs -4,769, p 0.000
+    (coin-flip p 0.016); walk-forward Rs +16,739. Re-tune pick g11 ({''unds'': (''SENSEX'',), ''tf'': 60, ''name'': ''HMA_X13_34'',
+    ''orient'': ''fade''} · ITM1/near · exits time_stop=60,time_gain=None,sig_levels=False): design 100 trades, win 47%, net
+    Rs +20,814 (Rs +62/day), worst day Rs -3,514, max DD Rs -5,944, p 0.000 (coin-flip p 0.132); walk-forward Rs +9,326. FINAL
+    original: 49 trades, win 47%, net Rs +3,266 (Rs +25/day), worst day Rs -2,568, max DD Rs -3,837, p 0.110 (coin-flip p
+    0.242), q 0.63 -> FAIL. FINAL pick: 49 trades, win 41%, net Rs +8,255 (Rs +63/day), worst day Rs -3,594, max DD Rs -8,560,
+    p 0.021 (coin-flip p 0.305), q 0.21 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the gate passer named in HUNT_H25.md (SENSEX 60m HMA_X13_34 fade
+  T30; holdout 83 tr +39/day; T15 is in the grid). Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+
+  final trades, top-5 < 100% of net, design walk-forward > 0.'

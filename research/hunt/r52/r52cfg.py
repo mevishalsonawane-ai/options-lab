@@ -3,8 +3,9 @@
     lake files   $IRAALGO_LAKE (default <cache>/lake): index_1m_<UND|INDIAVIX>_<YEAR>.parquet and
                  opt_<UND>_WEEK_<YEAR>.parquet from gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m), copied with
                  rclone, never committed. WEEK and MONTH are the same contract for BANKNIFTY / FINNIFTY / MIDCPNIFTY in
-                 this window (NSE ended their weeklies in Nov 2024), so only WEEK is read for every index.
-    caches       R52_OUT (default <cache>/r52): per-index session pickles (big: never in git)
+                 this window (NSE ended their weeklies in Nov 2024), so one series ('near') is used; rules that said
+                 'monthly' read the MONTH series.
+    caches       R52_OUT (default <cache>/r52): working design / final results while batches run (published to results/)
     results      research/hunt/r52/results (small JSON / markdown only)
 
 Window (Boss, 15 Oct 2026: "add the Nov 2024 onwards view. Don't test any data before that"):
@@ -37,14 +38,12 @@ FIRST_TRADE = date(2024, 11, 20)
 DESIGN_END = date(2026, 3, 31)
 FINAL_START = date(2026, 4, 1)
 LAST_DAY = date(2026, 10, 13)
-WARMUP_FROM = date(2024, 9, 1)        # index-only sessions kept for indicators (never traded)
 
 # Walk-forward on design: each fold is tested with settings chosen on the sessions before it (expanding window).
 FOLDS = ((date(2025, 4, 1), date(2025, 6, 30)), (date(2025, 7, 1), date(2025, 9, 30)),
          (date(2025, 10, 1), date(2025, 12, 31)), (date(2026, 1, 1), date(2026, 3, 31)))
 
 UNDS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
-BSE = {"SENSEX"}
 STEP = {"NIFTY": 50.0, "BANKNIFTY": 100.0, "FINNIFTY": 50.0, "MIDCPNIFTY": 25.0, "SENSEX": 100.0}
 LOTS = {  # NSE / BSE lot in force (research/obuy/config.py LOT_SCHEDULE)
     "NIFTY": [("2000-01-01", 75), ("2021-07-23", 50), ("2024-04-26", 25), ("2024-11-28", 75), ("2025-12-31", 65)],
@@ -54,7 +53,6 @@ LOTS = {  # NSE / BSE lot in force (research/obuy/config.py LOT_SCHEDULE)
     "MIDCPNIFTY": [("2000-01-01", 75), ("2024-11-28", 120)],
 }
 
-TWINS = 500
 SEED = 52
 BH_Q = 0.10
 P_MAX = 0.05

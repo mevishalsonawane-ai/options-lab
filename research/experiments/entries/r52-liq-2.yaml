@@ -1,0 +1,37 @@
+id: r52-liq-2
+title: 'R52 re-test on Nov 2024+: LIQ-2 BN Liquidity break, non-confluence levels / no failed-break stop'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule LIQ-2 (old verdict: Reject, mostly negative. 15-min ''both'' no stop +18k (132 tr) /
+  +37k (110), t 0.69/0.98; 15-min swing+stop +17k / -42k) makes money net of real costs on the recent market (Nov 2024+) at
+  its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''books'': [[15, 20, 10]], ''source'': ''both'', ''stop'': False} | ATM/near | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 172 trades, win 63%, net Rs -2,508 (Rs -7/day), worst day Rs -8,961, max DD Rs -33,885, p 0.980
+    (coin-flip p 0.241); walk-forward Rs +26,400. Re-tune pick g11 ({''books'': ((15, 20, 10),), ''source'': ''pool'', ''stop'':
+    False} · ATM/near · exits default): design 315 trades, win 60%, net Rs +21,355 (Rs +63/day), worst day Rs -8,961, max
+    DD Rs -47,675, p 1.000 (coin-flip p 0.157); walk-forward Rs +52,494. FINAL original: 60 trades, win 58%, net Rs -18,212
+    (Rs -138/day), worst day Rs -6,975, max DD Rs -33,317, p 1.000 (coin-flip p 0.606), q 1.00 -> FAIL. FINAL pick: 109 trades,
+    win 50%, net Rs -51,562 (Rs -391/day), worst day Rs -12,204, max DD Rs -62,605, p 1.000 (coin-flip p 0.894), q 1.00 ->
+    FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the catalogue''s CLOSE cell (LIQUIDITY.md 15-min both no stop
+  +18k / +37k); grid = liquidity_break''s other 5/15-min cells + liquidity_more''s 15-min lookback / confirm cells (both,
+  either; no stop). Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of
+  net, design walk-forward > 0.'

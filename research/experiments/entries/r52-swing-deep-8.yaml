@@ -1,0 +1,38 @@
+id: r52-swing-deep-8
+title: 'R52 re-test on Nov 2024+: SWING_DEEP-8 Buy after a big down day'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule SWING_DEEP-8 (old verdict: NIFTY monthly ATM 10d +145k (44 tr) 4/7; BN WF picks -71k/+134k/-100k.
+  SWING_EXITS-3 NIFTY +2,019/yr 5/7 (''at most paper'')) makes money net of real costs on the recent market (Nov 2024+) at
+  its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''ex'': ''10d'', ''rule'': ''bigdown'', ''series'': ''month''} | ATM/month | exits sq_off=930 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 15
+results:
+  summary: 'Design original: 16 trades, win 25%, net Rs -127,178 (Rs -377/day), worst day Rs -33,906, max DD Rs -127,178,
+    p 0.669 (coin-flip p 0.950); walk-forward Rs -102,426. Re-tune pick g09 ({''rule'': ''bigdown'', ''ex'': ''5d'', ''series'':
+    ''near''} · ATM/near · exits stop_pts=30.0,tgt_pts=60.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=60.0,sq_off=930):
+    design 19 trades, win 58%, net Rs +6,202 (Rs +18/day), worst day Rs -2,331, max DD Rs -4,239, p 0.070 (coin-flip p 0.192);
+    walk-forward Rs +8,876. FINAL original: 5 trades, win 0%, net Rs -80,880 (Rs -608/day), worst day Rs -33,687, max DD Rs
+    -80,880, p 0.090 (coin-flip p 0.944), q 0.61 -> too few trades to judge. FINAL pick: 9 trades, win 33%, net Rs +438 (Rs
+    +3/day), worst day Rs -2,030, max DD Rs -3,423, p 0.455 (coin-flip p 0.416), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: NIFTY monthly ATM fixed 10d was the close cell (+145k, 44 tr, 4/7 yrs, SWING_DEEP.md);
+  grid = its options exits per index + merged SWING_EXITS-3 (near ATM call, app literal -30/+60 pts + ladder, or scaled -30%/+60%
+  + ladder; max 5 / 3 sessions; its NIFTY literal and BN scaled headline cells). Gates: final net > 0, p < 0.05, q <= 0.10
+  (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

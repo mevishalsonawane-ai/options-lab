@@ -1,0 +1,35 @@
+id: r52-h28-3
+title: 'R52 re-test on Nov 2024+: H28-3 April BANKNIFTY CE at 09:20'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H28-3 (old verdict: Pre 75 tr +72,743, 4/4, p coin 0.023; hold +33,434 (20)) makes money
+  net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index (calendar)'
+model_or_rule: '{''legs'': [[''moy_04'', ''BANKNIFTY'', ''0920'', ''prior'', 1]]} | ITM1/near | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design original: 19 trades, win 53%, net Rs +21,721 (Rs +64/day), worst day Rs -8,895, max DD Rs -22,677, p 1.000
+    (coin-flip p 0.288); walk-forward Rs +21,721. Re-tune pick g07 ({''legs'': ((''moy_04'', ''BANKNIFTY'', ''1200'', ''prior'',
+    1),)} · ITM1/near · exits default): design 19 trades, win 68%, net Rs +27,445 (Rs +81/day), worst day Rs -5,978, max DD
+    Rs -9,414, p 1.000 (coin-flip p 0.086); walk-forward Rs +27,445. FINAL original: 20 trades, win 45%, net Rs +35,567 (Rs
+    +269/day), worst day Rs -9,513, max DD Rs -31,031, p 1.000 (coin-flip p 0.202), q 1.00 -> too few trades to judge. FINAL
+    pick: 20 trades, win 55%, net Rs +41,174 (Rs +312/day), worst day Rs -7,358, max DD Rs -19,738, p 1.000 (coin-flip p 0.069),
+    q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index (calendar). Why this original: original = h28 variant (moy_04, BANKNIFTY, 09:20, E6_close, prior
+  = CE). April 2025 is the only design April; April 2026 is in the final test.. Gates: final net > 0, p < 0.05, q <= 0.10
+  (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

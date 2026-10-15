@@ -1,0 +1,37 @@
+id: r52-h11-2
+title: 'R52 re-test on Nov 2024+: H11-2 Liquidity 15+5 on SENSEX'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H11-2 (old verdict: FAIL. Pre +11.4/day (2023 -7.9k, 2024 -0.7k, 2025 +20.0k), WF -7.0k;
+  hold 105 tr -18.5/day (+19 gross). H4 503 tr +5.8k / hold -359; H23 343 tr -19.9k; LIQ-11 est. +24.3k / -6.3k) makes money
+  net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''books'': [[''SENSEX'', 15], [''SENSEX'', 5]], ''room'': 2.0, ''stop_mult'': 1.0} | ITM1/near | exits stop_pct=0.15,time_stop=20
+  | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 165 trades, win 30%, net Rs +15,533 (Rs +46/day), worst day Rs -4,425, max DD Rs -26,091, p 0.539
+    (coin-flip p 0.099); walk-forward Rs +21,696. Re-tune pick g02 ({''books'': ((''SENSEX'', 15), (''SENSEX'', 5)), ''stop_mult'':
+    1.0, ''room'': 1.0} · ITM1/near · exits stop_pct=0.15,time_stop=20): design 222 trades, win 34%, net Rs +15,121 (Rs +45/day),
+    worst day Rs -4,425, max DD Rs -29,022, p 0.569 (coin-flip p 0.071); walk-forward Rs +26,277. FINAL original: 58 trades,
+    win 28%, net Rs +762 (Rs +6/day), worst day Rs -3,611, max DD Rs -12,828, p 0.401 (coin-flip p 0.288), q 1.00 -> FAIL.
+    FINAL pick: 71 trades, win 35%, net Rs +3,529 (Rs +27/day), worst day Rs -3,611, max DD Rs -13,867, p 0.356 (coin-flip
+    p 0.107), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = H11''s pre-registered choice for SENSEX (HUNT_H11.md: 15+5, 1x
+  stop 50 pts, room >= 2, ITM1, weekly); hunt/h11/sig.py raw_signals; grid = the rest of H11''s 24 cells. Gates: final net
+  > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'
