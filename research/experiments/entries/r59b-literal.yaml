@@ -1,0 +1,33 @@
+id: r59b-literal
+title: Bollinger Band Mean Reversion (outside AI) reproduced on the rolling stock-option series
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R59B_STOCK_BOLLINGER_AUDIT.md
+hypothesis: Their +Rs 967 a trade (7,297 trades, 73.0% win) reproduces on the lake's rolling 15-minute ATM series, and most
+  of it comes from the series switching strike or expiry inside the band's window or the hold, not from held options.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: stock_options_rolling_1m stkopt_<SYM>_MONTH (rolling ATM-1..ATM+1, nearest
+  monthly expiry, 1-minute, rebuilt per held contract), equity_1m 2024-2026, nse_bhavcopy weekly UDiFF files (expiries, lots);
+  options to 14 Oct 2026, equity to 12 Oct 2026'
+period:
+  design: 4 Nov 2024 - 14 Oct 2026 (their span; a check of their claim only)
+instruments:
+- F&O stocks (stock options)
+features:
+- 'signal source: the OPTION''s own price chart (NON-DEFAULT, labelled)'
+- rolling ATM 15-minute closes (offset 0, last close in the bin), Bollinger(20, 2)
+model_or_rule: 'their code: rolling 15-minute ATM close <= Bollinger(20, 2) lower band (pandas rolling, ddof 1) and close
+  >= 5, CE and PE separately; entry close[t], exit close[t+4]; Rs 10,000 notional, fractional contracts, Rs 95; overlaps allowed'
+settings: research/hunt/r59b/r59blit.py, research/hunt/r59b/r59bcfg.py
+prereg: research/hunt/r59b/PREREG.md
+variants_tried: null
+results:
+  summary: 'Reproduced exactly: 7,297 trades, 73.0% win, Rs +967 a trade (median +626), total Rs +7,052,602, max drawdown
+    Rs -31,485, 15.3 trades a day (claim 7,297, 73.0%, +967, +626, +70.5 lakh, -31,485, 15.5). 91.1% of trades and 97.8% of
+    profit have a strike switch or expiry roll in the band window or the hold (88.6% of profit from trades whose band window
+    mixed contracts, 77.7% from trades whose exit was another strike); the 651 one-contract trades average Rs +235 (60.1%
+    win, their Rs 95, no spread). Their trades valued on the contract actually held: 7,064 trades, Rs -60 a trade.'
+  costs: 'theirs: Rs 95 a trade flat, no spread, fractional Rs 10,000 notional'
+holdout_read: null
+verdict: not-a-test
+notes: 'An audit of another AI''s claim (shared by Boss on 15 Oct 2026). Nothing in the app changes. Stocks: RELIANCE, HDFCBANK,
+  ICICIBANK, INFY, TCS, SBIN, AXISBANK, KOTAKBANK, ITC, TMPV (Tata Motors).'
