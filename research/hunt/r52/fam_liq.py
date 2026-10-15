@@ -89,8 +89,8 @@ LEFT
 """
 from __future__ import annotations
 
+import bisect
 import importlib.util
-import math
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -380,7 +380,6 @@ class DayInfo:
         self.ema5 = c5.ewm(span=50, adjust=False).mean().values.reshape(n, -1) if n else np.zeros((0, 75))
         self.exp = np.array([bool(ix.d[d]["exp"]) for d in self.days])
         exps = [d for d, e in zip(self.days, self.exp) if e]
-        import bisect
         self.dte = np.array([((exps[j] - d).days if (j := bisect.bisect_left(exps, d)) < len(exps) else 99)
                              for d in self.days])
 
