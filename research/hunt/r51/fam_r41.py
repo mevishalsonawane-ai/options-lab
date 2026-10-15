@@ -115,7 +115,7 @@ def predictions(kind: str, target: str, block: str):
     out = X.loc[bm, ["day", "row", "und", "expiry"]].copy()
     ok = tm & np.isfinite(y)
     idx = np.flatnonzero(ok)
-    if len(idx) < 2000:
+    if len(idx) < (2000 if kind == "q1" else 300):     # R13 has one row a session per index
         out["p"], out["size"] = np.nan, np.nan
         return out, dict(conf=np.inf, size=np.inf, conf20=np.inf, conf5=np.inf)
     cut = idx[int(len(idx) * 0.8)]

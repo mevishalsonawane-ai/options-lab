@@ -5267,27 +5267,30 @@
   "design_start": "2025-04-01",
   "sessions": 247,
   "design": {
-   "trades": 0,
-   "win": null,
-   "net": 0.0,
-   "per_day": 0.0,
-   "avg_win": null,
-   "avg_loss": null,
-   "worst_day": 0.0,
-   "max_dd": 0.0,
-   "ex_top5": 0.0,
+   "trades": 246,
+   "win": 0.4634,
+   "net": -102504.0,
+   "per_day": -415.0,
+   "avg_win": 2884.0,
+   "avg_loss": -3267.0,
+   "worst_day": -36013.0,
+   "max_dd": 152590.0,
+   "ex_top5": -160533.0,
    "top5_share": null,
-   "days": 0,
-   "p": null,
-   "twin_mean": null
+   "days": 137,
+   "why": {
+    "next_0916": 246
+   },
+   "p": 0.3114,
+   "twin_mean": -132252.0
   },
   "folds": [
-   0.0,
-   0.0,
-   0.0,
-   0.0
+   5516.0,
+   22734.0,
+   -46258.0,
+   -84497.0
   ],
-  "wf_net": 0.0
+  "wf_net": -102504.0
  },
  "R41-R13-RT": {
   "family": "R41 neural nets",
@@ -5305,27 +5308,30 @@
    "r41|R13|conf20",
    "r41|R13|conf20"
   ],
-  "wf_net": 0.0,
-  "wf_trades": 0,
-  "final_pick": "r41|R13|conf20",
-  "final_pick_i": 0,
+  "wf_net": -102504.0,
+  "wf_trades": 246,
+  "final_pick": "r41|R13|conf5",
+  "final_pick_i": 2,
   "grid_design_net": {
-   "r41|R13|conf20": 0.0,
-   "r41|R13|conf": 0.0,
-   "r41|R13|conf5": 0.0
+   "r41|R13|conf20": -102504.0,
+   "r41|R13|conf": -86874.0,
+   "r41|R13|conf5": -44125.0
   },
   "design": {
-   "trades": 0,
-   "win": null,
-   "net": 0.0,
-   "per_day": 0.0,
-   "avg_win": null,
-   "avg_loss": null,
-   "worst_day": 0.0,
-   "max_dd": 0.0,
-   "ex_top5": 0.0,
+   "trades": 93,
+   "win": 0.3978,
+   "net": -44125.0,
+   "per_day": -178.6,
+   "avg_win": 3953.0,
+   "avg_loss": -3400.0,
+   "worst_day": -31174.0,
+   "max_dd": 74572.0,
+   "ex_top5": -96794.0,
    "top5_share": null,
-   "days": 0
+   "days": 56,
+   "why": {
+    "next_0916": 93
+   }
   }
  },
  "R41-ALWAYS-CALL": {
