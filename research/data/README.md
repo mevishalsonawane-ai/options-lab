@@ -100,8 +100,9 @@ weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices fo
   Equity minutes/daily, stock futures and live stock futures were **not** refreshed (still to 12/13 Oct).
 * **Stock options are still incomplete.** Fetched share of the planned 30-day chunks (`STOCK_OPTIONS_COVERAGE.json`,
   per stock and offset, 1.0 = complete): ATM 99.4% (every stock ≥94.5%; ADANIENT was 79%), ATM±1 100%,
-  ATM±2 23%, ATM±3..±5 none. About 57,000 chunks remain. Stock-option files end on 12 Oct except where the newest
-  window was fetched again (405 of 1,298 series), which end on 14 Oct.
+  ATM±2 23%, ATM±3..±5 none. About 57,000 chunks remain. Every stock-option file now runs to **14 Oct**: the newest
+  30-day window was fetched again for ATM and ATM±1 of every stock and for 51 of the 236 ATM±2 series; the other
+  ATM±2 series keep their published rows to 12 Oct (5 of them via stand-ins, see below).
   Why: Dhan rate-limited the account (HTTP 429 DH-904) on every data endpoint for most of 14 Oct, even at one
   request per second; when it lifted, stock-option windows often timed out (HTTP 504), so a night gave only about
   3,500 chunks (most of them windows that were empty last time, asked again); then the token expired.
@@ -116,6 +117,9 @@ weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices fo
 * QA counts of rebuilt option and index files add the published files' dropped-row counts to those of the
   re-fetched newest window, so the window that was fetched twice is counted twice (for example NIFTY WEEK
   `outside_session` 44,353 instead of about 40,993); the data rows themselves are not affected.
+* VALIDATION.md's Yahoo comparison of index daily closes dipped slightly (NIFTY 100% → 99.98%) because the saved Yahoo
+  history in `nse_bhavcopy/yahoo/` was taken during market hours on 13 Oct, so its 13 Oct "close" is an intraday
+  price (NIFTY 22,488 vs the real close 22,721.95). The lake's value is correct.
 * Every other dataset was fetched with no failed chunks left (the gaps of the 12 Oct download, in HINDUNILVR equity
   minutes, FINNIFTY options and live stock futures, are filled).
 
