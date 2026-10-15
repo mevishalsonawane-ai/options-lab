@@ -1062,6 +1062,22 @@ of every rule: the underlying (MCX near future, US future + USD/INR, XAUUSD, BTC
   tax in design and final. Nearest: RC2 R8 day-high/low break on Delta options, +Rs 16.9k before tax, -Rs 28.9k after
   (313 trades). Buy-and-hold made +Rs 13-15k per Rs 1 lakh after tax over the same final window.
 
+## The other AI's stock-option "S2 Mean Reversion Dip Buy" (R59, 15 Oct 2026) - the +Rs 1,695 a trade is strike switches and expiry rolls; 0 of 84 pass
+Full study: `HUNT_R59_STOCK_DIP_AUDIT.md` (pre-registered `hunt/r59/PREREG.md`, commit 8db2c18; design frozen 68e9ef6).
+Claim: on the lake's rolling ATM stock options (10 stocks, 15-minute bars), buy CE / PE after the premium fell 20%+ in a bar,
+sell 60 minutes later: 6,945 trades, 73.4% win, +Rs 1,695 a trade. Signal source: the option's own chart (NON-DEFAULT,
+labelled); family B puts the signal on the stock (default).
+- Reproduced on the rolling series: 6,689 trades, 73.5% win, +Rs 1,836 a trade, +Rs 1.23 crore (TCS CE +Rs 3,940).
+- 89.5% of those trades and 100.1% of the profit involve a strike switch or an expiry roll between the bars. The 701
+  one-contract trades lost Rs 18 a trade; 42 exits priced on the next month's contract made Rs 33 lakh. Their trades
+  valued on the contract actually held: 6,509 trades, Rs -3 a trade before any spread.
+- Honest version (held contract, 1 lot from the bhavcopy, next-minute fills, per-stock Roll spread 0.26-0.50% a side,
+  dated charges, no trade in the last 2 sessions before expiry; design 20 Nov 2024 - 31 Mar 2026, final 1 Apr - 12 Oct
+  2026 read once): pooled A no stop 78 final trades, +Rs 2 a trade (design 381, -Rs 32); A with a 25% stop 80, -Rs 57;
+  B (stock moved 1% against the option) 75, -Rs 252, and -Rs 380 with the stop. No per-stock cell has 40 trades; AXISBANK
+  CE's +Rs 16.6k is 5 trades. One lot costs a median Rs 8,730 (A) / Rs 12,820 (B).
+- Lesson (R45, R46, R59): on the lake's rolling option files, always check that entry and exit are the same contract.
+
 ## Data lake from Dhan API v2 (DATA-LAKE, 12-13 Oct 2026) - read research/data/README.md first
 - `research/data/`: fetch/build/validate scripts, `CATALOG.json` (file list, rows, sha256), `VALIDATION.md`.
   The data is Parquet (zstd), meant for release `data-20261012`. This session was not allowed to create GitHub
