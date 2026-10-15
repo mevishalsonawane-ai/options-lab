@@ -11,8 +11,8 @@ period:
   holdout: final test 1 Apr - 13 Oct 2026 (132-133 sessions per index), read once 15 Oct 2026; not pristine (R3, R24 and others
     had read parts of 2025-26)
 prereg: research/hunt/r49/PREREG.md
-hypothesis: On the market since NSE's Nov 2024 expiry change, r49-g-range-fade-m15-k1 makes money after real costs on the
-  final test, beats random-entry twins and survives BH over 336 tests (PREREG A6), pooled or on one index.
+hypothesis: On the market since NSE's Nov 2024 expiry change, r49-g-range-fade-m15-k1 makes money net of all trading fees
+  on the final test, beats random-entry twins and survives BH over 336 tests (PREREG A6), pooled or on one index.
 instruments:
 - NIFTY
 - BANKNIFTY

@@ -55,7 +55,7 @@ def main():
         e = dict(
             id=eid(r.id), title=f"R49 {r.id}: {WHAT[r.group]} (Nov 2024+ market only)", family="orb", date="2026-10-15",
             doc=DOC, data_version=DATA, period=PERIOD, prereg=PREREG,
-            hypothesis=(f"On the market since NSE's Nov 2024 expiry change, {r.id} makes money after real costs on the final "
+            hypothesis=(f"On the market since NSE's Nov 2024 expiry change, {r.id} makes money net of all trading fees on the final "
                         "test, beats random-entry twins and survives BH over 336 tests (PREREG A6), pooled or on one index."),
             instruments=list(K.UNDS), features=["1-minute index", "opening range", "VIX (R3 filters)", "ATR14", "TWAP (R23)"],
             model_or_rule=rule + ". " + SIGNAL, settings="research/hunt/r49/PREREG.md A3; results/design.json rules[]",
