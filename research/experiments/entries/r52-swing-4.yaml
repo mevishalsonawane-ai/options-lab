@@ -1,0 +1,31 @@
+id: r52-swing-4
+title: 'R52 re-test on Nov 2024+: SWING-4 BN gap-down recovery'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule SWING-4 (old verdict: 3-day ATM +40.6k (42 tr) then -46.0k (39); 1-day -11.6k / -40.8k)
+  makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''hold'': 3, ''rule'': ''gapdown''} | ATM/near | exits sq_off=930 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design original: 44 trades, win 43%, net Rs -27,937 (Rs -83/day), worst day Rs -15,395, max DD Rs -49,285, p 0.887
+    (coin-flip p 0.399); walk-forward Rs -22,188. FINAL original: 19 trades, win 47%, net Rs -3,633 (Rs -28/day), worst day
+    Rs -12,812, max DD Rs -33,695, p 0.598 (coin-flip p 0.231), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: 3-day ATM is the cell that came close (+40.6k / -46.0k, SWING.md); grid =
+  holds 1/3/5 x ATM / ITM1. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5
+  < 100% of net, design walk-forward > 0.'

@@ -1,0 +1,42 @@
+id: r52-h37-10
+title: 'R52 re-test on Nov 2024+: H37-10 Market Profile: open outside value and go'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H37-10 (old verdict: Open-outside-value WF 2/4 yrs +22,950 (426 tr), Holm 0.31; MP pooled
+  -112/tr) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''name'': ''MP_OOV'', ''tf'': 5, ''unds'': [''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'', ''MIDCPNIFTY'', ''SENSEX'']}
+  | ITM1/near | exits stop_pts=10,tgt_pts=15,sig_levels=False | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 18
+results:
+  summary: 'Design original: 714 trades, win 43%, net Rs -29,084 (Rs -86/day), worst day Rs -8,031, max DD Rs -60,910, p 0.011
+    (coin-flip p 0.014); walk-forward Rs -1,481. Re-tune pick g17 ({''unds'': (''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'', ''MIDCPNIFTY'',
+    ''SENSEX''), ''tf'': 5, ''name'': ''MP_OOV''} · ITM1/near · exits time_stop=60,time_gain=None,sig_levels=False): design
+    714 trades, win 54%, net Rs +292,648 (Rs +868/day), worst day Rs -21,273, max DD Rs -85,666, p 0.000 (coin-flip p 0.000);
+    walk-forward Rs +272,367. FINAL original: 294 trades, win 45%, net Rs -1,912 (Rs -14/day), worst day Rs -6,230, max DD
+    Rs -16,930, p 0.003 (coin-flip p 0.010), q 0.06 -> FAIL. FINAL pick: 294 trades, win 50%, net Rs +48,772 (Rs +367/day),
+    worst day Rs -15,837, max DD Rs -46,363, p 0.001 (coin-flip p 0.014), q 0.03 -> PASS.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: paper-only
+notes: 'Signal source: index. Why this original: WF family MP_OOV (HUNT_H37.md): no frozen variant: the per-year walk-forward
+  picks were not recorded (scratch wf.csv deleted) and rebuilding them needs pre-2025 P&L; as OBUY_GA-1, the original is the
+  study''s FIRST setting in its own loop order, on every index the family''s walk-forward chose from; R52''s re-tune walk-forward
+  over the grid plays the original WF''s role (all 5 indices, 5-min, P15_10). Gates: final net > 0, p < 0.05, q <= 0.10 (BH
+  over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

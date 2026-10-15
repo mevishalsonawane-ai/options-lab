@@ -1,0 +1,38 @@
+id: r52-h31-5
+title: 'R52 re-test on Nov 2024+: H31-5 Overnight CE on FOMC / US-CPI nights'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H31-5 (old verdict: Median +262 / +413 per tr, q 0.06 / 0.13; only ~30 FOMC nights per
+  index) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (calendar)'
+model_or_rule: '{''filt'': ''F0'', ''rule'': ''R16'', ''series'': ''near'', ''unds'': [''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'',
+  ''MIDCPNIFTY'', ''SENSEX''], ''xit'': ''X1015''} | ITM1/near | exits sq_off=930 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design original: 39 trades, win 36%, net Rs -73,083 (Rs -217/day), worst day Rs -39,434, max DD Rs -73,083, p
+    1.000 (coin-flip p 0.931); walk-forward Rs -55,411. FINAL original: 16 trades, win 38%, net Rs -35,431 (Rs -266/day),
+    worst day Rs -46,584, max DD Rs -51,725, p 1.000 (coin-flip p 0.687), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index (calendar). Why this original: original = R16 (CE on the night after a scheduled FOMC decision;
+  dates gc_common._FED), set up as H31-4''s original (all 5 indices, 1-ITM nearest, F0, out 10:15). R15 (FOMC or US-CPI) is
+  LEFT: no dated US-CPI list in the original code. About 8 nights a year per index. Grid: h31''s exits / filters / monthly..
+  Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

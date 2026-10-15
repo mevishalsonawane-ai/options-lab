@@ -1,0 +1,38 @@
+id: r52-liq-9
+title: 'R52 re-test on Nov 2024+: LIQ-9 NIFTY Liquidity 10-min A-pick'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule LIQ-9 (old verdict: Paper candidate only: +36,979 (55 tr, t 1.88) / held-out +6,191 (33
+  tr, t 0.78); knife edge. B-pick +18.5k (39) / -8.1k (47)) makes money net of real costs on the recent market (Nov 2024+)
+  at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''books'': [[10, 20, 10]], ''skip'': ''dte1'', ''source'': ''both'', ''stop'': True, ''unds'': [''NIFTY''],
+  ''vol_fh'': 1.0} | ATM/near | exits stop_pct=0.15,trail_pct=0.15,trail_arm=0.3 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 37 trades, win 43%, net Rs +4,387 (Rs +13/day), worst day Rs -1,556, max DD Rs -5,150, p 0.469
+    (coin-flip p 0.213); walk-forward Rs +8,012. Re-tune pick g21 ({''unds'': (''NIFTY'',), ''books'': ((10, 20, 10),), ''source'':
+    ''both'', ''stop'': True, ''vol_fh'': 1.0, ''skip'': ''dte1''} · ATM/near · exits stop_pct=0.15,trail_pct=0.15,trail_arm=0.3):
+    design 29 trades, win 52%, net Rs +9,114 (Rs +27/day), worst day Rs -1,722, max DD Rs -5,192, p 0.399 (coin-flip p 0.033);
+    walk-forward Rs +13,254. FINAL original: 8 trades, win 50%, net Rs -716 (Rs -5/day), worst day Rs -1,191, max DD Rs -1,986,
+    p 0.309 (coin-flip p 0.580), q 1.00 -> too few trades to judge. FINAL pick: 7 trades, win 57%, net Rs +441 (Rs +3/day),
+    worst day Rs -1,191, max DD Rs -1,688, p 0.186 (coin-flip p 0.392), q 0.85 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = liquidity_nifty_plus.py''s Year-A pick (LIQUIDITY_NIFTY_PLUS.md
+  ''exact settings''); grid = the B-pick (LIQ-10), the study''s 4 robustness charts and its single-factor changes applied
+  to the pick. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net,
+  design walk-forward > 0.'

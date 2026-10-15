@@ -1,0 +1,37 @@
+id: r52-h45-1
+title: 'R52 re-test on Nov 2024+: H45-1 Symmetric +-5% premium bracket'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H45-1 (old verdict: 528 variants, 0 BH. BN +-5% -76/day pre, -255/day hold; MIDCP hold
+  +93/day but pre -114/tr; h18 -109/tr) makes money net of real costs on the recent market (Nov 2024+) at its original setting
+  or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{} | ITM1/near | exits stop_pct=0.05,tgt_pct=0.05,time_gain=None,sig_levels=False | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 863 trades, win 54%, net Rs +27,725 (Rs +82/day), worst day Rs -8,461, max DD Rs -43,503, p 0.030
+    (coin-flip p 0.000); walk-forward Rs +54,530. Re-tune pick g14 ({} · ITM1/near · exits stop_pct=0.1,tgt_pct=0.1,time_stop=30,time_gain=None,sig_levels=False):
+    design 850 trades, win 52%, net Rs +136,921 (Rs +406/day), worst day Rs -10,827, max DD Rs -33,370, p 0.002 (coin-flip
+    p 0.000); walk-forward Rs +151,307. FINAL original: 344 trades, win 51%, net Rs -31,049 (Rs -235/day), worst day Rs -7,330,
+    max DD Rs -42,043, p 0.841 (coin-flip p 0.120), q 1.00 -> FAIL. FINAL pick: 341 trades, win 53%, net Rs +31,275 (Rs +237/day),
+    worst day Rs -10,975, max DD Rs -22,106, p 0.101 (coin-flip p 0.001), q 0.62 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: h45 PREREG headline variant (+5% / -5%, 15:10, 1-ITM) on its Liquidity entry
+  set. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design
+  walk-forward > 0.'

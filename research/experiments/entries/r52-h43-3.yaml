@@ -1,0 +1,32 @@
+id: r52-h43-3
+title: 'R52 re-test on Nov 2024+: H43-3 Afternoon PE (bake-off #4)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H43-3 (old verdict: 1,027 tr -205/day, 1/5; hold -190/day) makes money net of real costs
+  on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''strat'': ''pe'', ''tf'': 5} | ATM/near | exits stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915
+  | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Design original: 388 trades, win 44%, net Rs -46,633 (Rs -138/day), worst day Rs -4,781, max DD Rs -66,121, p
+    0.690 (coin-flip p 0.476); walk-forward Rs -21,205. FINAL original: 141 trades, win 44%, net Rs -15,137 (Rs -115/day),
+    worst day Rs -5,504, max DD Rs -29,631, p 0.656 (coin-flip p 0.258), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the report''s pe 5-min, -30/+60%, 30-min time stop, 2/day (sigs.py
+  STRATS, partA T30). Grid = pe at 1 / 15 min (T30) and the document''s 15-min T45.. Gates: final net > 0, p < 0.05, q <=
+  0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

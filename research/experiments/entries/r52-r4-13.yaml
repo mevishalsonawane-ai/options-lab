@@ -1,0 +1,33 @@
+id: r52-r4-13
+title: 'R52 re-test on Nov 2024+: R4-13 Gann seasonal dates fade'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R4-13 (old verdict: Too few: BN 33 tr -3/day, hold 8 tr +42; NIFTY 41 tr -5 / -39) makes
+  money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''unds'': [''NIFTY'', ''BANKNIFTY''], ''var'': ''G7_SEAS|fade5d|OPT''} | ITM1/near | exits stop_pct=0.25,tgt_pct=0.5
+  | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Design original: 22 trades, win 41%, net Rs -3,022 (Rs -9/day), worst day Rs -13,063, max DD Rs -21,725, p 1.000
+    (coin-flip p 0.721); walk-forward Rs +6,259. FINAL original: 8 trades, win 25%, net Rs +2,260 (Rs +17/day), worst day
+    Rs -4,676, max DD Rs -8,000, p 1.000 (coin-flip p 0.423), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R4''s frozen pick (research/hunt/r4/results/frozen.json, HUNT_R4_GANN_FIB_MAGIC.md)
+  G7_SEAS|fade5d|OPT on NIFTY + BANKNIFTY (signal 09:15 close, twins at the same minute as R4). Gates: final net > 0, p <
+  0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

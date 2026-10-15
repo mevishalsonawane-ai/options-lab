@@ -1,0 +1,33 @@
+id: r52-r1-6-banknifty
+title: 'R52 re-test on Nov 2024+: R1-6@BANKNIFTY ICT first fair value gap (R1 N6, BANKNIFTY)'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R1-6@BANKNIFTY (old verdict: see CATALOGUE.md) makes money net of real costs on the recent
+  market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''T0'': ''0930'', ''exit'': ''LIQ'', ''g'': 0.0005, ''unds'': [''BANKNIFTY'']} | ITM1/near | exits stop_pct=0.15,time_stop=20
+  | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design original: 263 trades, win 37%, net Rs -38,539 (Rs -114/day), worst day Rs -6,278, max DD Rs -51,993, p
+    0.192 (coin-flip p 0.304); walk-forward Rs -20,949. FINAL original: 110 trades, win 36%, net Rs -15,329 (Rs -116/day),
+    worst day Rs -3,986, max DD Rs -29,741, p 0.771 (coin-flip p 0.460), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R1''s frozen holdout pick per index (HUNT_R1_INTERNET.md results
+  table; hunt/r1/design.py frozen.json): BANKNIFTY 0930 g0.0005 LIQ (the two indices'' picks need different premium exits,
+  so split). Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net,
+  design walk-forward > 0.'

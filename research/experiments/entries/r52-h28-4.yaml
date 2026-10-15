@@ -1,0 +1,40 @@
+id: r52-h28-4
+title: 'R52 re-test on Nov 2024+: H28-4 January NIFTY 10:15 mom; first-3-days BANKNIFTY 14:00 mom'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H28-4 (old verdict: Jan NIFTY pre 105 tr +68,119, hold -22,987; first-3 BN pre 148 tr
+  +67,619 (p coin 0.001), hold -17,408 (38)) makes money net of real costs on the recent market (Nov 2024+) at its original
+  setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index (calendar)'
+model_or_rule: '{''legs'': [[''moy_01'', ''NIFTY'', ''1015'', ''mom'', 0], [''tom_first3'', ''BANKNIFTY'', ''1400'', ''mom'',
+  0]]} | ITM1/near | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design original: 91 trades, win 37%, net Rs -12,529 (Rs -37/day), worst day Rs -8,795, max DD Rs -54,346, p 1.000
+    (coin-flip p 0.511); walk-forward Rs -18,545. Re-tune pick g04 ({''legs'': ((''moy_01'', ''NIFTY'', ''1015'', ''mom'',
+    0), (''tom_first3'', ''BANKNIFTY'', ''1400'', ''mom'', 0))} · ITM1/near · exits stop_pct=0.15,ladder=((0.25, 0.0), (0.5,
+    0.25), (0.75, 0.5)),ladder_ref_pct=0.15): design 91 trades, win 42%, net Rs +20,434 (Rs +61/day), worst day Rs -4,422,
+    max DD Rs -11,465, p 1.000 (coin-flip p 0.108); walk-forward Rs +2,004. FINAL original: 21 trades, win 29%, net Rs -10,852
+    (Rs -82/day), worst day Rs -11,528, max DD Rs -31,134, p 1.000 (coin-flip p 0.812), q 1.00 -> too few trades to judge.
+    FINAL pick: 21 trades, win 29%, net Rs +586 (Rs +4/day), worst day Rs -4,067, max DD Rs -9,027, p 1.000 (coin-flip p 0.664),
+    q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index (calendar). Why this original: original = the two h28 variants the catalogue row names, traded
+  together (each its own book): (moy_01, NIFTY, 10:15, E6_close, mom) and (tom_first3, BANKNIFTY, 14:00, E6_close, mom). Grid:
+  the other 5 exits and the other ''mom'' entry times of each leg (prior side not computable, see LEFT).. Gates: final net
+  > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

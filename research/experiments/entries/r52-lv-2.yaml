@@ -1,0 +1,33 @@
+id: r52-lv-2
+title: 'R52 re-test on Nov 2024+: LV-2 Filtered 09:20 BN long straddle'
+family: option-structure
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule LV-2 (old verdict: No filter positive both yrs; best cost_vs_oc10 mid +20.0k (36 d) /
+  -19.7k (79 d)) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index + option-chain context (straddle price vs past index moves; no direction)'
+model_or_rule: '{''feat'': ''cost_vs_oc10'', ''hi'': 6.25, ''lo'': 4.44} | ATM/near | exits sq_off=911 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design original: 107 trades, win 36%, net Rs -14,771 (Rs -44/day), worst day Rs -4,211, max DD Rs -19,758, p 0.290
+    (coin-flip p 0.190); walk-forward Rs +3,161. FINAL original: 40 trades, win 28%, net Rs -7,011 (Rs -53/day), worst day
+    Rs -3,384, max DD Rs -16,761, p 0.094 (coin-flip p 0.078), q 0.61 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index + option-chain context (straddle price vs past index moves; no direction). Why this original:
+  cost_vs_oc10 middle tercile was the best cell (+20.0k / -19.7k, LONG_VOL.md); grid = the other cells of its ''best single
+  filters'' list, cut points as published. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final
+  trades, top-5 < 100% of net, design walk-forward > 0.'

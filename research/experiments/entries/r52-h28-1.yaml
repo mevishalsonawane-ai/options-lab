@@ -1,0 +1,37 @@
+id: r52-h28-1
+title: 'R52 re-test on Nov 2024+: H28-1 January NIFTY PE at 09:20'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H28-1 (old verdict: Not significant over 8,820 variants. Pre 105 tr +100,164, WF 4/4,
+  p coin 0.047; hold +22,724 (20 tr)) makes money net of real costs on the recent market (Nov 2024+) at its original setting
+  or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+features:
+- 'signal source: index (calendar)'
+model_or_rule: '{''legs'': [[''moy_01'', ''NIFTY'', ''0920'', ''prior'', -1]]} | ITM1/near | exits stop_pct=0.15,time_stop=20
+  | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design original: 43 trades, win 21%, net Rs +45,326 (Rs +134/day), worst day Rs -2,403, max DD Rs -13,620, p 1.000
+    (coin-flip p 0.048); walk-forward Rs +23,284. Re-tune pick g05 ({''legs'': ((''moy_01'', ''NIFTY'', ''0920'', ''prior'',
+    -1),)} · ITM1/near · exits default): design 43 trades, win 42%, net Rs +31,444 (Rs +93/day), worst day Rs -12,029, max
+    DD Rs -30,394, p 1.000 (coin-flip p 0.244); walk-forward Rs +32,628. FINAL original: 0 trades, win 0%, net Rs +0 (Rs +0/day),
+    worst day Rs +0, max DD Rs +0, p 1.000 (coin-flip p 1.000), q 1.00 -> too few trades to judge. FINAL pick: 0 trades, win
+    0%, net Rs +0 (Rs +0/day), worst day Rs +0, max DD Rs +0, p 1.000 (coin-flip p 1.000), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index (calendar). Why this original: original = h28 variant (moy_01, NIFTY, 09:20, E1_liq, prior =
+  PE), the top PRE variant (HUNT_H28.md table). Grid: h28''s own axes around it (other 5 exits, other entry times, ''mom''
+  side).. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design
+  walk-forward > 0.'

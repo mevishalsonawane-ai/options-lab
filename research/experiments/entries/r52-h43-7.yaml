@@ -1,0 +1,36 @@
+id: r52-h43-7
+title: 'R52 re-test on Nov 2024+: H43-7 Enhanced Afternoon PE (FINNIFTY)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H43-7 (old verdict: Pre +81/day (2022 +92k); hold -140/day; WF -104/day) makes money
+  net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- FINNIFTY
+features:
+- 'signal source: index + VIX'
+model_or_rule: '{''band'': [20, 30], ''fam'': ''pe'', ''filt'': ''vix_high'', ''start'': 810, ''tf'': 5, ''und'': ''FINNIFTY''}
+  | ITM1/near | exits stop_pct=0.3,tgt_pct=0.6,sq_off=915 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 15
+results:
+  summary: 'Design original: 97 trades, win 45%, net Rs -7,532 (Rs -22/day), worst day Rs -9,934, max DD Rs -37,889, p 0.134
+    (coin-flip p 0.481); walk-forward Rs +14,193. Re-tune pick g12 ({''und'': ''FINNIFTY'', ''fam'': ''pe'', ''start'': 810,
+    ''band'': (20, 30), ''tf'': 5, ''filt'': ''vix_high''} · ATM/near · exits stop_pct=0.3,tgt_pct=0.6,sq_off=915): design
+    99 trades, win 42%, net Rs -4,463 (Rs -13/day), worst day Rs -5,178, max DD Rs -32,737, p 0.058 (coin-flip p 0.291); walk-forward
+    Rs +14,059. FINAL original: 73 trades, win 36%, net Rs -28,444 (Rs -215/day), worst day Rs -8,092, max DD Rs -30,639,
+    p 0.804 (coin-flip p 0.458), q 1.00 -> FAIL. FINAL pick: 75 trades, win 44%, net Rs -12,288 (Rs -93/day), worst day Rs
+    -8,748, max DD Rs -17,554, p 0.355 (coin-flip p 0.202), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index + VIX. Why this original: original = part D''s ''enhanced'' pe pick: FINNIFTY 1-ITM, from 13:30,
+  ADX 20-30, 5-min, filter vix_high, S30EOD, 4/day. Grid = one-step neighbours in partD''s grid.. Gates: final net > 0, p
+  < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

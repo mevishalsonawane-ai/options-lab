@@ -1,0 +1,36 @@
+id: r52-r20c-1n
+title: 'R52 re-test on Nov 2024+: R20C-1N Pivot R1/S1 break, 2 closing 5-min candles (NIFTY half of R20C-1)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R20C-1N (old verdict: see CATALOGUE.md) makes money net of real costs on the recent market
+  (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''last_entry'': [14, 0], ''n'': 2, ''tf'': 5, ''types'': [''PIV''], ''unds'': [''NIFTY'']} | ATM/near | exits
+  stop_pts=20.0,tgt_pts=20.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=20.0 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Design original: 193 trades, win 42%, net Rs +4,851 (Rs +14/day), worst day Rs -2,777, max DD Rs -17,793, p 0.278
+    (coin-flip p 0.029); walk-forward Rs +10,254. Re-tune pick g01 ({''types'': (''PIV'',), ''tf'': 5, ''n'': 1, ''last_entry'':
+    (14, 0), ''unds'': (''NIFTY'',)} · ATM/near · exits stop_pts=20.0,tgt_pts=20.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75,
+    0.5)),ladder_ref_pts=20.0): design 206 trades, win 44%, net Rs +16,980 (Rs +50/day), worst day Rs -1,611, max DD Rs -7,744,
+    p 0.032 (coin-flip p 0.002); walk-forward Rs +13,722. FINAL original: 80 trades, win 35%, net Rs +703 (Rs +5/day), worst
+    day Rs -1,401, max DD Rs -5,392, p 0.105 (coin-flip p 0.192), q 0.62 -> FAIL. FINAL pick: 82 trades, win 39%, net Rs -2,825
+    (Rs -21/day), worst day Rs -1,505, max DD Rs -6,522, p 0.398 (coin-flip p 0.193), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: R20C-1''s NIFTY half: r20brk-piv5n2 with ARM NIFTY 20/20 + LADDER (trades.py
+  ARM). Grid piv5n1.. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100%
+  of net, design walk-forward > 0.'

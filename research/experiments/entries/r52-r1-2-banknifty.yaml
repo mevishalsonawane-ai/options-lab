@@ -1,0 +1,36 @@
+id: r52-r1-2-banknifty
+title: 'R52 re-test on Nov 2024+: R1-2@BANKNIFTY Larry Williams volatility breakout (R1 N2, BANKNIFTY)'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R1-2@BANKNIFTY (old verdict: see CATALOGUE.md) makes money net of real costs on the recent
+  market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''exit'': ''LIQ'', ''k'': 0.75, ''unds'': [''BANKNIFTY'']} | ITM1/near | exits stop_pct=0.15,time_stop=20
+  | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 9
+results:
+  summary: 'Design original: 142 trades, win 31%, net Rs -13,812 (Rs -41/day), worst day Rs -6,575, max DD Rs -27,916, p 0.988
+    (coin-flip p 0.570); walk-forward Rs +11,056. Re-tune pick g01 ({''k'': 0.25, ''exit'': ''native'', ''unds'': (''BANKNIFTY'',)}
+    · ITM1/near · exits default): design 319 trades, win 34%, net Rs -26,128 (Rs -78/day), worst day Rs -8,721, max DD Rs
+    -86,331, p 0.718 (coin-flip p 0.223); walk-forward Rs +20,926. FINAL original: 59 trades, win 36%, net Rs +3,515 (Rs +27/day),
+    worst day Rs -5,701, max DD Rs -26,770, p 0.926 (coin-flip p 0.443), q 1.00 -> FAIL. FINAL pick: 127 trades, win 31%,
+    net Rs -55,889 (Rs -423/day), worst day Rs -7,675, max DD Rs -72,136, p 0.837 (coin-flip p 0.820), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R1''s frozen holdout pick per index (HUNT_R1_INTERNET.md results
+  table; hunt/r1/design.py frozen.json): BANKNIFTY k0.75 LIQ (the two indices'' picks need different premium exits, so split
+  by index). Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net,
+  design walk-forward > 0.'

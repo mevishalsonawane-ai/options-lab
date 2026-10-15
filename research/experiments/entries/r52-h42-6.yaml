@@ -1,0 +1,35 @@
+id: r52-h42-6
+title: 'R52 re-test on Nov 2024+: H42-6 NIFTY 12:30 weak-day PE'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H42-6 (old verdict: Not candidate: +288/tr, n 128, p 0.23) makes money net of real costs
+  on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''qid'': ''Q0521''} | ITM1/near | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 36 trades, win 44%, net Rs +11,135 (Rs +33/day), worst day Rs -6,747, max DD Rs -24,942, p 1.000
+    (coin-flip p 0.098); walk-forward Rs +14,673. Re-tune pick g23 ({''qid'': ''Q0521''} · ITM1/near · exits stop_pts=20.0,tgt_pts=30.0,time_stop=30,time_gain=None):
+    design 36 trades, win 56%, net Rs +11,334 (Rs +34/day), worst day Rs -1,602, max DD Rs -4,043, p 1.000 (coin-flip p 0.061);
+    walk-forward Rs +7,182. FINAL original: 17 trades, win 47%, net Rs +14,124 (Rs +106/day), worst day Rs -8,878, max DD
+    Rs -10,499, p 1.000 (coin-flip p 0.293), q 1.00 -> too few trades to judge. FINAL pick: 17 trades, win 65%, net Rs +1,868
+    (Rs +14/day), worst day Rs -1,438, max DD Rs -2,667, p 1.000 (coin-flip p 0.029), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = answers.csv #17 = Q0521 (12:30 down > 0.5% and in the bottom 20%
+  of the range -> PE, 1-ITM near) with its best exit = its own horizon (hold to 15:10), the +288/tr the catalogue quotes.
+  Grid: h42''s 38 exits.. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 <
+  100% of net, design walk-forward > 0.'

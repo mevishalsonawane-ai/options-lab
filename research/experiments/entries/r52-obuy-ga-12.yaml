@@ -1,0 +1,36 @@
+id: r52-obuy-ga-12
+title: 'R52 re-test on Nov 2024+: OBUY_GA-12 Donchian N-day first-day leg'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_GA-12 (old verdict: Passed gates mechanically, not recommended. WF +85.8k (282 tr)
+  3/5 (+95.7k/+33.7k/-14.3k/+19.5k/-48.8k); time-matched p 0.017; DSR 0.07; profit mostly 2020-23 longs) makes money net of
+  real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index (+ VIX filter)'
+model_or_rule: '{''mode'': ''nextday'', ''n'': 7, ''vix'': True} | ITM1/month | exits sq_off=915 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 71 trades, win 48%, net Rs +16,075 (Rs +48/day), worst day Rs -14,075, max DD Rs -69,631, p 0.013
+    (coin-flip p 0.044); walk-forward Rs -25,903. Re-tune pick s7.r1.x1 ({''n'': 7, ''vix'': True, ''mode'': ''intraday''}
+    · ITM1/month · exits stop_pct=0.3,sq_off=915): design 114 trades, win 51%, net Rs +48,443 (Rs +144/day), worst day Rs
+    -12,437, max DD Rs -41,748, p 0.150 (coin-flip p 0.013); walk-forward Rs +18,768. FINAL original: 30 trades, win 43%,
+    net Rs -28,882 (Rs -217/day), worst day Rs -11,151, max DD Rs -37,100, p 0.999 (coin-flip p 0.744), q 1.00 -> too few
+    trades to judge. FINAL pick: 65 trades, win 32%, net Rs -63,677 (Rs -479/day), worst day Rs -17,118, max DD Rs -72,328,
+    p 1.000 (coin-flip p 0.964), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index (+ VIX filter). Why this original: the walk-forward pick every year (OBUY_GA.md). Gates: final
+  net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

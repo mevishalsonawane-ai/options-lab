@@ -1,0 +1,1572 @@
+{
+ "CH-1": {
+  "title": "Chandelier Exit flips (Boss's ATR 7 x 2)",
+  "priority": "P1",
+  "old": "Not reliable: 60-min SL1/TP1 +38.3k (71 tr) / +5.8k (76); 5-min loses all",
+  "close": "60-min SL1/TP1 positive both years (+38.3k / +5.8k)",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H5-1": {
+  "title": "Trend-day pyramid with OI agreement",
+  "priority": "P1",
+  "old": "NO. Train 795 tr +386/day (1 lot +106); hold 215 tr -334/day (1 lot -150); BH 0/63,072; SPA 0.98",
+  "close": "Train +386/day net with 4/6 years positive; holdout negative; BH 0/63,072",
+  "source": "index + chain context",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H9-1": {
+  "title": "Extra Liquidity books (BN 10-min, MIDCP 30-min, ...)",
+  "priority": "P1",
+  "old": "Do not add. BN10 310 tr +22.2k (q 0.006); MIDCP30 46 tr +28.9k (q 0.049); hold extras +17/day, rand p 0.15. BN30 +12.6k, FIN3 +6.2k, FIN15 +2.1k; MIDCP3/10 lose",
+  "close": "BN10 and MIDCP30 passed the pre gates (q 0.006 / 0.049); holdout uplift +17/day failed random p 0.15",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY",
+   "MIDCPNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": [
+   "H9-2"
+  ]
+ },
+ "H11-1": {
+  "title": "Liquidity 15+5-style level break on NIFTY",
+  "priority": "P1",
+  "old": "FAIL. H11 choice pre -15.1/day net (+17 gross), 2023 +3.3k, 2024 +15.0k, WF +1.2k; hold 83 tr -3.9/day, rand p 0.31. H4 765 tr -26.9k; H23 604 tr -56.0k; LIQ-8 -66k/-28k",
+  "close": "H11 choice positive in 2023-24 and in WF (+1.2k), small holdout loss; failed SPA",
+  "source": "index",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": [
+   "H4-1",
+   "H23-3",
+   "H34-9",
+   "LIQ-8"
+  ]
+ },
+ "H11-2": {
+  "title": "Liquidity 15+5 on SENSEX",
+  "priority": "P1",
+  "old": "FAIL. Pre +11.4/day (2023 -7.9k, 2024 -0.7k, 2025 +20.0k), WF -7.0k; hold 105 tr -18.5/day (+19 gross). H4 503 tr +5.8k / hold -359; H23 343 tr -19.9k; LIQ-11 est. +24.3k / -6.3k",
+  "close": "Pre +11.4/day net and 2025 +20k; small holdout loss (-18.5/day, +19 gross)",
+  "source": "index",
+  "unds": [
+   "SENSEX"
+  ],
+  "merged": [
+   "H4-2",
+   "H23-3",
+   "H34-9",
+   "LIQ-11"
+  ]
+ },
+ "H18-1": {
+  "title": "Rolling 60-min high/low break",
+  "priority": "P1",
+  "old": "No pass, no holdout. Best R60 / arm+30%: 4,537 tr, gross +3.25L, net +3k, rand p <0.001, WF -1.73L, SPA 0.87; yrs +25k/+40k/+24k/-12k/+73k/-147k",
+  "close": "Net about 0 (+3k on 4,537 tr) with 4/6 years positive and random p < 0.001; WF and SPA failed",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H25-2": {
+  "title": "SENSEX 5-min separating lines fade",
+  "priority": "P1",
+  "old": "Gate passer; hold 76 tr +90/day (gross +121); '3 of 31 is chance level'",
+  "close": "Gate passer, holdout +90/day on 76 tr",
+  "source": "index",
+  "unds": [
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H25-3": {
+  "title": "SENSEX 60-min HMA 13/34 fade",
+  "priority": "P1",
+  "old": "Gate passer; hold 83 tr +39/day (T30), +12 (T15)",
+  "close": "Gate passer, holdout +39/day on 83 tr",
+  "source": "index",
+  "unds": [
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H25-5": {
+  "title": "FINNIFTY 60-min EMA 13/34 fade",
+  "priority": "P1",
+  "old": "Top pre t: 110 tr +182/tr, t 2.44, +20/day; hold 36 tr -38/day",
+  "close": "Top pre t 2.44 (+20/day, 110 tr); small holdout loss",
+  "source": "index",
+  "unds": [
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "H25-6": {
+  "title": "SENSEX 5-min SMA 50/200 follow",
+  "priority": "P1",
+  "old": "Pre 173 tr +151/tr, t 1.96, q 1.0; hold 84 tr +3/day (-2 at 1.5x spread)",
+  "close": "Pre t 1.96; holdout +3/day on 84 tr",
+  "source": "index",
+  "unds": [
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H25-10": {
+  "title": "BANKNIFTY 30-min doji follow",
+  "priority": "P1",
+  "old": "Post-hoc Welch q < 0.05, about +30/tr; 0 pass the gate",
+  "close": "Post-hoc Welch q < 0.05 (+30/tr), no gate pass",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H25-11": {
+  "title": "CDL ladder-bottom fade (WF family)",
+  "priority": "P1",
+  "old": "WF +21,934 on 144 tr over 4 yrs, 2/4 yrs +, Holm 1.0",
+  "close": "Best WF family +21.9k on 144 tr, 2/4 years",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H28-1": {
+  "title": "January NIFTY PE at 09:20",
+  "priority": "P1",
+  "old": "Not significant over 8,820 variants. Pre 105 tr +100,164, WF 4/4, p coin 0.047; hold +22,724 (20 tr)",
+  "close": "Pre +100k on 105 tr, WF 4/4, holdout +22.7k (20 tr); not significant after the grid",
+  "source": "index (calendar)",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": []
+ },
+ "H28-2": {
+  "title": "Expiry-day BANKNIFTY PE at 09:20",
+  "priority": "P1",
+  "old": "Pre 177 tr +79,759, p coin 0.027; as WF pick 2024 -29.3k, 2025 -15.0k; hold +12,855 (13 tr)",
+  "close": "Pre +79.8k (p coin 0.027), holdout +12.9k on 13 tr; WF lost 2024-25",
+  "source": "index (calendar)",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H28-3": {
+  "title": "April BANKNIFTY CE at 09:20",
+  "priority": "P1",
+  "old": "Pre 75 tr +72,743, 4/4, p coin 0.023; hold +33,434 (20)",
+  "close": "Pre +72.7k 4/4, holdout +33.4k (20)",
+  "source": "index (calendar)",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H28-4": {
+  "title": "January NIFTY 10:15 mom; first-3-days BANKNIFTY 14:00 mom",
+  "priority": "P1",
+  "old": "Jan NIFTY pre 105 tr +68,119, hold -22,987; first-3 BN pre 148 tr +67,619 (p coin 0.001), hold -17,408 (38)",
+  "close": "Pre +68k / +68k (p coin 0.001) but both lost in the holdout",
+  "source": "index (calendar)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H29-3": {
+  "title": "Cheap-IV entries, side from the last 30 min",
+  "priority": "P1",
+  "old": "Rejected. Best: 380-444 tr, gross +4.6/day, net -30/day, rand p 0.02 (BH 0.80); WF -1.44L, 0/4",
+  "close": "Gross positive (+4.6/day), net small loss (-30/day); random p 0.02",
+  "source": "index + IV context",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H31-4": {
+  "title": "Overnight close-location / day-move follow",
+  "priority": "P1",
+  "old": "R03: 82% of variants +, median +151/tr; hold 48% +. R08: 65%, +71/tr; WF 2023 pick +30,450",
+  "close": "82% (R03) and 65% (R08) of variants positive pre",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H31-5": {
+  "title": "Overnight CE on FOMC / US-CPI nights",
+  "priority": "P1",
+  "old": "Median +262 / +413 per tr, q 0.06 / 0.13; only ~30 FOMC nights per index",
+  "close": "Median +262 / +413 per trade, q 0.06 / 0.13; only ~30 nights per index",
+  "source": "index (calendar)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H33-1": {
+  "title": "Price-shock follow",
+  "priority": "P1",
+  "old": "REJECT. FIN 193 tr +43/day (gross 67), 4/5 yrs, BH q 0.90; hold -16/day. NIFTY 226 tr +26/day, rand p 0.000, BH q 0.09",
+  "close": "Positive pre in 4/5 years (FIN); NIFTY variant BH q 0.09 vs gate 0.05",
+  "source": "index (+ option-volume filter)",
+  "unds": [
+   "FINNIFTY",
+   "NIFTY"
+  ],
+  "merged": [
+   "H33-2"
+  ]
+ },
+ "H37-2": {
+  "title": "Fibonacci 78.6% break, trade the pullback",
+  "priority": "P1",
+  "old": "NIFTY 997 tr +25,024 (+20/day), hold 199 tr +4,017; MIDCP 497 tr +35,201, hold 264 tr -17,239; WF family 3/4 yrs, Holm 1.00",
+  "close": "Passed the variant gate, NIFTY holdout +16/day; WF family 3/4 years but Holm 1.0",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "H37-3": {
+  "title": "Elliott wave 3",
+  "priority": "P1",
+  "old": "MIDCP 574 tr +19,565 (+28/day); hold 294 tr -4,223; WF 2/4 +11,454, Holm 0.61",
+  "close": "MIDCP pre +28/day; small holdout loss; WF 2/4",
+  "source": "index",
+  "unds": [
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "H37-6": {
+  "title": "Gann time cycles (daily)",
+  "priority": "P1",
+  "old": "Daily cycles WF 2/3 yrs +13,886 on 41 tr, Holm 0.97; intraday WF -262k/-362k; R4-11/12 lose both periods",
+  "close": "Daily version WF 2/3 years +13.9k on only 41 trades",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": [
+   "R4-11",
+   "R4-12"
+  ]
+ },
+ "H37-9": {
+  "title": "Point & Figure double-top breakout",
+  "priority": "P1",
+  "old": "Family net -111/tr; SENSEX double-top top-10 by t (pre +42..134/day), hold +1..10/day",
+  "close": "Top-10 SENSEX variant positive pre and holdout (+1..10/day)",
+  "source": "index",
+  "unds": [
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H37-10": {
+  "title": "Market Profile: open outside value and go",
+  "priority": "P1",
+  "old": "Open-outside-value WF 2/4 yrs +22,950 (426 tr), Holm 0.31; MP pooled -112/tr",
+  "close": "WF family 2/4 years +22.9k (426 tr)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H42-3": {
+  "title": "MIDCP 14:00 early-extreme fade",
+  "priority": "P1",
+  "old": "Q0176 pre +69/day, hold 80 tr -55/day (gross +15); Q0177 pre +108, hold 90 tr -23/day (gross +65)",
+  "close": "Pre +69 / +108 per day; holdout gross positive, net small loss",
+  "source": "index",
+  "unds": [
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "H42-4": {
+  "title": "MIDCP day-before-expiry straddle",
+  "priority": "P1",
+  "old": "Pre +53/day; hold 11 tr -15/day, p 0.47",
+  "close": "Pre +53/day; holdout 11 trades only",
+  "source": "time (expiry calendar)",
+  "unds": [
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "H42-6": {
+  "title": "NIFTY 12:30 weak-day PE",
+  "priority": "P1",
+  "old": "Not candidate: +288/tr, n 128, p 0.23",
+  "close": "+288/tr on 128 tr, p 0.23",
+  "source": "index",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": []
+ },
+ "H42-7": {
+  "title": "NIFTY turn-of-month CE",
+  "priority": "P1",
+  "old": "Not candidate: +275/tr, p 0.12 (index effect q 0.006)",
+  "close": "+275/tr, p 0.12; index effect q 0.006",
+  "source": "index (calendar)",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": []
+ },
+ "H42-8": {
+  "title": "BN 5-min spike fade",
+  "priority": "P1",
+  "old": "Not candidate: +93 gross, -41 net per tr",
+  "close": "+93 gross, -41 net per trade",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H42-9": {
+  "title": "SENSEX gap-down bounce",
+  "priority": "P1",
+  "old": "Not candidate: +314/tr on 35 tr (NIFTY/BN -290..-342)",
+  "close": "+314/tr but only 35 trades",
+  "source": "index",
+  "unds": [
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "H43-5": {
+  "title": "Enhanced Bollinger (MIDCP)",
+  "priority": "P1",
+  "old": "Pre +401/day (2025 alone +186k); hold +228/day but top 5 tr made it, t 0.6; nested WF BB -225/day 0/4",
+  "close": "Pre +401/day and holdout +228/day, but the holdout came from 5 trades and nested WF lost",
+  "source": "index + chain context",
+  "unds": [
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "H43-6": {
+  "title": "Enhanced EMA5/21 + ADX (MIDCP)",
+  "priority": "P1",
+  "old": "Pre +246/day (2024 +183k only); hold -82/day; nested WF EMA -138/day",
+  "close": "Pre +246/day (2024 only); holdout -82/day",
+  "source": "index",
+  "unds": [
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "H46-2": {
+  "title": "VWAP reject, MIDCP 15-min",
+  "priority": "P1",
+  "old": "Not run on hold. +60..+335/day, beats random p 0.0005, BH q 0.12, SPA 0.75; yrs +18k / -7k / +51k",
+  "close": "+60..+335/day, beats random p 0.0005, BH q 0.12; never run on the holdout",
+  "source": "index",
+  "unds": [
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-2": {
+  "title": "BN Liquidity break, non-confluence levels / no failed-break stop",
+  "priority": "P1",
+  "old": "Reject, mostly negative. 15-min 'both' no stop +18k (132 tr) / +37k (110), t 0.69/0.98; 15-min swing+stop +17k / -42k",
+  "close": "15-min 'both' without the failed-break stop was positive in both years (+18k / +37k, t 0.69 / 0.98)",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-3": {
+  "title": "BN Liquidity break on the 60-min chart",
+  "priority": "P1",
+  "old": "Reject: none positive both yrs; best pool/no stop/overnight +53k (57 tr) / -16k (68 tr)",
+  "close": "Best cell +53k in Yr A, -16k in Yr B; few trades (0.1-0.3/day)",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-4": {
+  "title": "BN Liquidity other two-chart combos",
+  "priority": "P1",
+  "old": "Not adopted: 15+5(L10) +22.9k (636 tr) / +20.6k (699), t 0.41/0.66 vs adopted +58k/+32k; 15+3 -1.0k/-6.9k",
+  "close": "15+5(L10) positive both years (+22.9k / +20.6k) but below the adopted combo",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-5": {
+  "title": "BN Liquidity 'wait 5 candles' after a level event",
+  "priority": "P1",
+  "old": "Reject: almost all negative; 15-min found/both/colour -8.8k (58 tr) / +25.3k (43); found/pool/colour -5.3k / +22.2k (184)",
+  "close": "15-min 'found' cells positive in one year (+25.3k / +22.2k), small loss in the other",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-6": {
+  "title": "FINNIFTY Liquidity 15m+5m (pre-30+5 version)",
+  "priority": "P1",
+  "old": "Replaced: index +5.8 pts (494 tr, t 1.98) / +3.6 (475); real options -6.0k / 83 tr. B-pick fails held-out (+61k vs base +73k est.)",
+  "close": "Index points positive both years (t 1.98 / 1.78); real-option sample tiny and negative",
+  "source": "index",
+  "unds": [
+   "FINNIFTY"
+  ],
+  "merged": [
+   "LIQ-7"
+  ]
+ },
+ "LIQ-9": {
+  "title": "NIFTY Liquidity 10-min A-pick",
+  "priority": "P1",
+  "old": "Paper candidate only: +36,979 (55 tr, t 1.88) / held-out +6,191 (33 tr, t 0.78); knife edge. B-pick +18.5k (39) / -8.1k (47)",
+  "close": "A-pick positive in both years (+37.0k / +6.2k held-out, t 0.78) but a knife edge; never adopted",
+  "source": "index",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": [
+   "LIQ-10"
+  ]
+ },
+ "LIQ-12": {
+  "title": "SENSEX Liquidity 15m+3m B-pick with first-hour range filter",
+  "priority": "P1",
+  "old": "Never adopted: est. +24,660 (333 tr, t 1.31) / held-out +35,890 (335, t 1.55); strict model -17.6k / -5.5k (no real SENSEX options then)",
+  "close": "Positive in both years on the estimate model (+24.7k / +35.9k held-out); real SENSEX options never tested",
+  "source": "index (option P&L was modelled)",
+  "unds": [
+   "SENSEX"
+  ],
+  "merged": []
+ },
+ "LV-2": {
+  "title": "Filtered 09:20 BN long straddle",
+  "priority": "P1",
+  "old": "No filter positive both yrs; best cost_vs_oc10 mid +20.0k (36 d) / -19.7k (79 d)",
+  "close": "Best cell +20.0k in one year, -19.7k in the other",
+  "source": "index + VIX + straddle price",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LV-4": {
+  "title": "Overnight BN long straddle",
+  "priority": "P1",
+  "old": "+18,988 (202 tr, t 0.75) / -117,193 (231, t -5.89)",
+  "close": "+19.0k in Yr A, -117k in Yr B",
+  "source": "time",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LV-5": {
+  "title": "Pre-event long straddle",
+  "priority": "P1",
+  "old": "1 day before, sold 15:10 +60,335 (14, t 0.67), all from the 2024 election; RBI -3.6k. VOL-05 WF -102.6k 0/5",
+  "close": "+60.3k on 14 events, nearly all from the 2024 election",
+  "source": "event calendar",
+  "unds": [
+   "BANKNIFTY",
+   "NIFTY"
+  ],
+  "merged": [
+   "OBUY_GC-11"
+  ]
+ },
+ "LV-6": {
+  "title": "Expiry-afternoon long straddle",
+  "priority": "P1",
+  "old": "BN 14:00 straddle hold +20,025 (11 d, t 1.79); NIFTY every entry loses (-22k..-39k)",
+  "close": "BN 14:00 straddle +20.0k on 11 expiries (t 1.79); NIFTY lost",
+  "source": "time (expiry day)",
+  "unds": [
+   "BANKNIFTY",
+   "NIFTY"
+  ],
+  "merged": []
+ },
+ "OBUY_GA-1": {
+  "title": "Open = low / open = high",
+  "priority": "P1",
+  "old": "IS best +25.4k (207 tr) 4/7; WF -83.4k. H34 points WF +2,622 (gross +19.2k) 2/4",
+  "close": "Points-menu WF +2.6k (2/4 yrs); IS best +25.4k",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "SENSEX"
+  ],
+  "merged": [
+   "H34-3"
+  ]
+ },
+ "OBUY_GA-11": {
+  "title": "NR4/NR7 next-day breakout (intraday leg)",
+  "priority": "P1",
+  "old": "IS best +31.5k (329 tr) 5/7; WF -28.1k (168) 1/5; PBO 76%",
+  "close": "IS +31.5k with 5/7 years; WF -28k",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "OBUY_GA-12": {
+  "title": "Donchian N-day first-day leg",
+  "priority": "P1",
+  "old": "Passed gates mechanically, not recommended. WF +85.8k (282 tr) 3/5 (+95.7k/+33.7k/-14.3k/+19.5k/-48.8k); time-matched p 0.017; DSR 0.07; profit mostly 2020-23 longs",
+  "close": "WF +85.8k 3/5 and passed the family gate mechanically; profit mostly 2020-23 longs",
+  "source": "index (+VIX filter)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "OBUY_GB-1": {
+  "title": "Camarilla R3/S3 rejection fade",
+  "priority": "P1",
+  "old": "Paper control. IS best s0.r0.x0 +67,141 (1,498 tr), BH q 0.077; WF -16,289 (1,417) 2/5, p 0.013. H4 frozen pick hold -77,306 (gross -42k). H34 points WF -59.8k",
+  "close": "Entries beat random (IS p 0.000, BH q 0.077; WF p 0.013); about zero after costs; paper control",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "SENSEX"
+  ],
+  "merged": [
+   "H4-4",
+   "H34-6"
+  ]
+ },
+ "OBUY_GB-4": {
+  "title": "EMA9 x TWAP cross (NIFTY)",
+  "priority": "P1",
+  "old": "IS best -33.2k; WF -73.6k 1/5. H34 points WF +982 (gross +69.8k) 2/4",
+  "close": "Points-menu WF +982 (gross +69.8k, 2/4 yrs); OBUY version FAR",
+  "source": "index",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": [
+   "H34-5"
+  ]
+ },
+ "OBUY_GC-3": {
+  "title": "Expiry-day +10% scalp",
+  "priority": "P1",
+  "old": "OBUY: 1/day WF -23.4k (421) 0/5. H34 points WF +2,635 (gross +28.5k) 3/4 yrs, fails BH/SPA. EXPIRY_SCALP no-stop NIFTY follow-5 +8,651 (53 tr) vs coin -2.6k",
+  "close": "Points-menu WF +2.6k with 3/4 years +; no-stop NIFTY version +8.7k on 53 tr; failed BH/SPA",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "H34-2",
+   "EXPIRY_SCALP-1"
+  ]
+ },
+ "OBUY_GC-14": {
+  "title": "BTST strong close (overnight)",
+  "priority": "P1",
+  "old": "Paper control only. IS best +318k (1,236 tr, 7/7; 2024 +4.1k, 2025 +0.7k); WF -42.4k (863) 3/5, 2026 -111.6k; SPA 0.93. H4 pick hold -8.5k (rand p 0.23). H31 R04 NIFTY W 10:15: 254 tr +186k, q 0.22",
+  "close": "Positive every year 2020-26 in sample (7/7) and 16 variants BH q 0.028, but WF -42k (2026 -112k)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "H4-3",
+   "H31-2"
+  ]
+ },
+ "OBUY_GC-15": {
+  "title": "Daily trend, monthly option, 5-10 day hold",
+  "priority": "P1",
+  "old": "IS best +68.4k on 66 tr (ST, Varsity, hold 5); WF -404 on 17 tr. SWING_DEEP-5 NIFTY monthly ATM 5d +306.9k (210 tr) 6/7; options WF NIFTY +21.3k 3/6, BN -149k; 'the only thing worth paper-trading'",
+  "close": "SWING_DEEP-5 NIFTY monthly ATM 5-day +307k (210 tr) 6/7; 'the only thing worth paper-trading'",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "SWING_DEEP-5",
+   "SWING-6"
+  ]
+ },
+ "OBUY_LV05_MULTIDAY-1": {
+  "title": "Donchian channel breakout held multi-day",
+  "priority": "P1",
+  "old": "Rejected, 'close the LV-05 lead': WF -85.3k (135 tr) 2/5, SPA 0.77. SWING_DEEP-1 BN monthly ATM 5d +221k 4/6, 10d +89.7k 5/6; NIFTY options lose",
+  "close": "SWING_DEEP-1 BN monthly ATM 5-day +221k (4/6) and 10-day 5/6; LV05 study itself WF -85k",
+  "source": "index (+VIX)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "SWING_DEEP-1",
+   "SWING_DEEP-2"
+  ]
+ },
+ "OBUY_SEARCH-2": {
+  "title": "FINNIFTY expiry-day afternoon CE (search rule #3)",
+  "priority": "P1",
+  "old": "IS 41 tr t 3.81 +836/tr; hold 0 trades (FIN weekly gone)",
+  "close": "IS t 3.81 (41 tr); never traded out of sample (FIN weekly ended)",
+  "source": "index",
+  "unds": [
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "OBUY_SEARCH-4": {
+  "title": "NIFTY morning CE (search rule #7)",
+  "priority": "P1",
+  "old": "IS 61 tr t 3.59 +714/tr; hold 10 tr +453/tr (+4,534), random -140/tr; the only hold winner of 10",
+  "close": "The only holdout winner of 10: +4.5k on 10 tr",
+  "source": "index + VIX + PCR context",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": []
+ },
+ "R1-1": {
+  "title": "Noise-area intraday momentum",
+  "priority": "P1",
+  "old": "NIFTY m1.0 EOD 659 tr +89/day, q 1.0, rand p 0.23; hold 133 tr -297/day. BN m1.5 trail +26 / -76",
+  "close": "NIFTY design +89/day; holdout lost",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R1-2": {
+  "title": "Larry Williams volatility breakout",
+  "priority": "P1",
+  "old": "NIFTY k0.75 EOD 500 tr +61/day; hold 95 tr +93/day (rand p 0.23, 7/13 months); BN LIQ +101 / -84",
+  "close": "NIFTY positive in design (+61/day) and holdout (+93/day) but no better than random (p 0.23)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R1-4": {
+  "title": "Rest-of-day -> last 30 min momentum",
+  "priority": "P1",
+  "old": "NIFTY expiry 268 tr -33/day, hold 51 tr +6; BN -96 / +35 (13 tr). TD-02 IS best -11.4k 5/7, WF -113.2k",
+  "close": "Small design loss, holdout +6 / +35 per day",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "OBUY_GA-6"
+  ]
+ },
+ "R1-6": {
+  "title": "ICT first fair value gap",
+  "priority": "P1",
+  "old": "Flipped. NIFTY 982 tr +125/day, rand p 0.006 (all from 2024); hold -334/day. BN LIQ 814 tr +142/day, p 0.002; hold -196",
+  "close": "Design +125 / +142 per day, beat random (p 0.006 / 0.002); flipped in the holdout",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R1-7": {
+  "title": "Turtle soup on PDL/PDH",
+  "priority": "P1",
+  "old": "BN native 657 tr -77/day; hold 163 tr +247/day (rand p 0.045, 8/13 months). NIFTY -25 / -222",
+  "close": "BN holdout +247/day (rand p 0.045, 8/13 months) after a design loss",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R1-8": {
+  "title": "Internal bar strength",
+  "priority": "P1",
+  "old": "BN 0.2 60m 471 tr +53/day, hold -8; NIFTY 0.1 LIQ -2 / +18",
+  "close": "BN design +53/day, holdout -8",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R1-9": {
+  "title": "India VIX spike -> CE",
+  "priority": "P1",
+  "old": "Too few: NIFTY chg15 18 tr in 5 yrs +44/day, rand p 0.04; hold 7 tr +13. BN 14 tr +51 / -26",
+  "close": "Positive with random p 0.04 but 18 trades in 5 years",
+  "source": "India VIX + index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R1-14": {
+  "title": "Midday reversal",
+  "priority": "P1",
+  "old": "NIFTY 0.6% LIQ 242 tr -29/day, hold 36 tr +83/day; BN -80 / +47",
+  "close": "Small design loss, holdout +83 / +47 per day",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-1": {
+  "title": "Fibonacci floor pivots",
+  "priority": "P1",
+  "old": "BN bnc OPT 702 tr +63/day, p twin 0.01, q 1.0; hold 155 tr -153/day. NIFTY -7 / -238",
+  "close": "BN design +63/day (p twin 0.01)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-2": {
+  "title": "Previous-day-range Fibonacci levels",
+  "priority": "P1",
+  "old": "BN brk T30 1,114 tr -62/day, hold 271 tr -6/day; NIFTY -140 / -61",
+  "close": "BN holdout about flat (-6/day)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-3": {
+  "title": "Fibonacci golden pocket",
+  "priority": "P1",
+  "old": "NIFTY 15m NAT 653 tr -56/day, hold 108 tr -17; BN -159 / -88",
+  "close": "NIFTY small loss both periods",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-4": {
+  "title": "Upstox 3-min 61.8% touch + reversal candle",
+  "priority": "P1",
+  "old": "BN OPT 1,115 tr -190/day, hold 230 tr +17/day; NIFTY -269 / -329",
+  "close": "BN holdout +17/day",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-6": {
+  "title": "Fibonacci + round-100 confluence",
+  "priority": "P1",
+  "old": "NIFTY NAT 629 tr -56/day, hold 130 tr -1/day (win 57%); BN -102 / -161",
+  "close": "NIFTY holdout about flat (-1/day, 57% won)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-8": {
+  "title": "Gann 2-bar swing chart break",
+  "priority": "P1",
+  "old": "NIFTY 15m 679 tr -77/day, hold 113 tr +42/day; FIN 60m -2 / -44",
+  "close": "NIFTY holdout +42/day; FIN design about 0",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-10": {
+  "title": "Gann 1x1 / 2x1 intraday angle",
+  "priority": "P1",
+  "old": "Flipped. NIFTY 2x1 NAT 1,270 tr +75/day, p twin 0.01; hold 239 tr -240/day",
+  "close": "NIFTY design +75/day (p twin 0.01); flipped in the holdout",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-13": {
+  "title": "Gann seasonal dates fade",
+  "priority": "P1",
+  "old": "Too few: BN 33 tr -3/day, hold 8 tr +42; NIFTY 41 tr -5 / -39",
+  "close": "Near zero on 33-41 trades; too few",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-14": {
+  "title": "Square-of-9 intraday calculator",
+  "priority": "P1",
+  "old": "NIFTY 1,276 tr -4/day (p twin 0.02), hold -167; BN -60 / -171; R4-15 all lose",
+  "close": "NIFTY design about 0 (-4/day, p twin 0.02)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": [
+   "R4-15"
+  ]
+ },
+ "R4-16": {
+  "title": "Round number as a magnet",
+  "priority": "P1",
+  "old": "NIFTY major OPT 506 tr +22/day, hold 117 tr -55; FIN -66 / -7",
+  "close": "NIFTY design +22/day; FIN holdout about 0",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "R4-18": {
+  "title": "Harmonic patterns (R4 engine)",
+  "priority": "P1",
+  "old": "BN ABCD 15m OPT 147 tr +70/day (p 0.04), hold 30 tr -160; BN all 60m 80 tr +45, hold 13 tr +59; Cypher/5-0/Shark small +; Bat 245 tr +159/tr over 36 var",
+  "close": "Several small positive picks, all under the trade-count bar",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": [
+   "R4-19",
+   "R4-20",
+   "R4-21"
+  ]
+ },
+ "R9-4": {
+  "title": "Absorption proxy reversal",
+  "priority": "P1",
+  "old": "0/12 BH. NIFTY 52 events +2.2/+2.7/+4.7 bp vs control (p 0.034, q 0.29); hold 18 events -2.7 bp; under ~2 bp cost",
+  "close": "NIFTY design +2-5 bp vs control (p 0.034) but below the ~2 bp cost; flipped in the holdout",
+  "source": "index + option volume (proxy)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R13-1": {
+  "title": "Majority Rule MR(14) oversold bounce",
+  "priority": "P1",
+  "old": "Not proven. Wait +1000/-500 futures 8 tr +38.6k; strict 8 tr -69.3k; plain touch hold 4w 9 tr 100% won +2.28L; 35-day call 9 tr +56k (since 2020 4 tr +13k)",
+  "close": "Every plain touch won (9 tr) but only ~8 independent episodes since 2006",
+  "source": "index (weekly NIFTY)",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": [
+   "R13-2"
+  ]
+ },
+ "R16-2": {
+  "title": "Intraday direction model",
+  "priority": "P1",
+  "old": "Not a rule. 60 min hold AUC 0.536, -12/tr on 646 tr, beats 98% of side twins, q 0.17; 30 min -14 on 524. BN AUC ~0.51, -115..-142/tr",
+  "close": "NIFTY 60-min holdout AUC 0.536, -12/tr, beat 98% of side twins (q 0.17)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "R16-1"
+  ]
+ },
+ "R20C-1": {
+  "title": "Pivot R1/S1 break, 2 closing 5-min candles",
+  "priority": "P1",
+  "old": "Rejected. Design -21,292 (491 tr); hold +25,603 (183): t p 0.021 (q 0.33), random-level p 0.20. piv5n1 +36.8k / +5.2k",
+  "close": "Holdout +25.6k (t p 0.021, q 0.33) after a design loss; piv5n1 positive both periods",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "R20C-2"
+  ]
+ },
+ "R20C-3": {
+  "title": "Early 15-min R1/S1/PDH/PDL break",
+  "priority": "P1",
+  "old": "Design +33,393 (331 tr; one day +20.8k); hold -7,117 (127; BN -17.9k, NIFTY +10.8k)",
+  "close": "Design +33.4k (one day +20.8k); holdout -7.1k",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R24-3": {
+  "title": "R24 p3: IV high + gap against the option",
+  "priority": "P1",
+  "old": "Fail gate 3. Design 749 tr +24,947; hold 47 tr +14,066 (19% won), rand p 0.073, pattern p 0.045",
+  "close": "Holdout +14.1k on 47 tr; beat random patterns (p 0.045) but not random timing (0.073)",
+  "source": "index + IV context",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R24-5": {
+  "title": "R24 p5: gap against the option, 1-2 DTE",
+  "priority": "P1",
+  "old": "Design 513 tr +33,125; hold 18 tr +3,187 (p 0.116), under 30 trades",
+  "close": "Positive both periods; 18 holdout trades",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R24-6": {
+  "title": "R24 p6: other-side OI building + high RV",
+  "priority": "P1",
+  "old": "Design 1,247 tr +9,766; hold 84 tr +15,952; rand p 0.49, pattern p 0.040",
+  "close": "Holdout +16.0k (84 tr); pattern p 0.040",
+  "source": "index RV + chain OI",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R24-7": {
+  "title": "R24 p7: room ahead + ATM IV high",
+  "priority": "P1",
+  "old": "Design 1,015 tr +51,329; hold 61 tr +804 (-220 at 2x spread)",
+  "close": "Design +51.3k; holdout +804",
+  "source": "index levels + IV context",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R24-8": {
+  "title": "R24 p8: far from the level behind + IV rank high",
+  "priority": "P1",
+  "old": "Design 826 tr +49,439; hold 62 tr +14,737; rand p 0.138, pattern p 0.030",
+  "close": "Holdout +14.7k (62 tr); pattern p 0.030",
+  "source": "index levels + IV context",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "REVERSAL_SETUP-1": {
+  "title": "Boss's 29 Sep reversal setup",
+  "priority": "P1",
+  "old": "Too few: next-expiry 3:1 15-37 tr -2.5k..-11k; 20k move 0.3% +10% no stop +4,506 (37 tr), hold to 15:10 +5,749",
+  "close": "20k / 0.3% / +10% no stop +4.5k on 37 tr",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SCALP17-3": {
+  "title": "NIFTY PE scalp on 15-min move + distance from extreme",
+  "priority": "P1",
+  "old": "Train 3,006 tr +76 gross, +2 net app; hold 1,066 tr -113 net app. SCALP17-5 hold 617-631 tr +9..+29 gross, -35..-55 net app",
+  "close": "Gross positive in the holdout (+9..+29/tr) for SCALP17-5; net loss after spread",
+  "source": "index (+ premium-level filter)",
+  "unds": [
+   "NIFTY"
+  ],
+  "merged": [
+   "SCALP17-5"
+  ]
+ },
+ "SI-1": {
+  "title": "STRAD-INDEX: buy the straddle when big and cheap",
+  "priority": "P1",
+  "old": "0 of 2,520 variants positive pre (best -3/day), SPA 1.0, WF -71k; hold +23/day (50 tr, rand p 0.045). BN design -3/day, hold -73/day",
+  "close": "Holdout +23/day (50 tr, random p 0.045) after a design near zero (-3/day)",
+  "source": "index forecast + straddle-implied vol",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "SI-2"
+  ]
+ },
+ "SWING-3": {
+  "title": "BN 5-day reversal",
+  "priority": "P1",
+  "old": "1-day ATM +129.8k (yr1, 244 tr) then -83.0k (yr2); ITM1 -94.9k / -67.5k",
+  "close": "+129.8k in year 1 then -83k",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SWING-4": {
+  "title": "BN gap-down recovery",
+  "priority": "P1",
+  "old": "3-day ATM +40.6k (42 tr) then -46.0k (39); 1-day -11.6k / -40.8k",
+  "close": "3-day +40.6k then -46.0k",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SWING-5": {
+  "title": "BN big daily candle 40% pullback",
+  "priority": "P1",
+  "old": "Too few (4 / 8-10 tr): yr2 1-day +2.6k, 3-day +16.6k, 5-day +11.0k ATM; ITM1 negative",
+  "close": "Positive in year 2 on 8-10 trades",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SWING_DEEP-3": {
+  "title": "RSI(2) pullback above/below 200DMA",
+  "priority": "P1",
+  "old": "NIFTY monthly ATM 10d +23.3k (63 tr) 4/7; BN options -229k..-289k; BN fut 2ATR+10d +264k",
+  "close": "NIFTY monthly ATM 10-day +23.3k (63 tr) 4/7",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SWING_DEEP-6": {
+  "title": "NR7 / inside day multi-day breakout",
+  "priority": "P1",
+  "old": "NIFTY fut 20d +570k 8/11; BN fut 2ATR+10d +590k 7/11; WF out-of-sample -21k/-41k/-9k/+33k",
+  "close": "Futures +570k (NIFTY 20d, 8/11 yrs); WF out-of-sample mixed",
+  "source": "index (futures traded)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SWING_DEEP-8": {
+  "title": "Buy after a big down day",
+  "priority": "P1",
+  "old": "NIFTY monthly ATM 10d +145k (44 tr) 4/7; BN WF picks -71k/+134k/-100k. SWING_EXITS-3 NIFTY +2,019/yr 5/7 ('at most paper')",
+  "close": "NIFTY monthly ATM 10-day +145k (44 tr) 4/7; SWING_EXITS-3 'at most a paper trade'",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "SWING_EXITS-3"
+  ]
+ },
+ "TAS_OPTIONS-1": {
+  "title": "TAS tracker rule on the index, buy ATM",
+  "priority": "P1",
+  "old": "Rejected. NIFTY 30m targets + 1/3 lock +54.1k (209 tr) t 0.68; wait-5 15m +43.4k (326 tr); BN 30m +15.5k; FIN index 30m 199 tr +21.9 pts/tr t 2.23, both yrs + (watch)",
+  "close": "NIFTY 30m +54k (209 tr), wait-5 15m +43k; FIN index both years +",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "SENSEX"
+  ],
+  "merged": [
+   "TAS_OPTIONS-2",
+   "TAS_OPTIONS-3",
+   "TAS_CONFIRM-1",
+   "TAS_INDICES-1"
+  ]
+ },
+ "TREND_FILTER-1": {
+  "title": "BN 5-min EMA9/TWAP higher-highs trend",
+  "priority": "P1",
+  "old": "Best 3 HH/HL, -40/+40, filter on: 462 tr, 52%, -126 (t 0.00), halves +11.1k / -11.2k",
+  "close": "Best about breakeven (-126 on 462 tr, halves +11k / -11k)",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "BS-1": {
+  "title": "Buy both ATM CE and PE, manage each side",
+  "priority": "P2",
+  "old": "All 54 versions lose both yrs (t -2.8..-5.7); owner's set -107k / -36k",
+  "close": "FAR; Boss-proposed: YES ('buy BOTH the ATM call and put'). Boss's idea",
+  "source": "time; exits on premium",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H17-1": {
+  "title": "Day-level P&L locks",
+  "priority": "P2",
+  "old": "No help: H17 BN1+M1 L 115 vs 111/day; H19 placebo p 0.06-0.99; R19C-5 net -1.29L -> -1.42L (ORB-off +3.5k post hoc); giveback locks cost 3-176/day",
+  "close": "CLOSE (loose) / FAR; Boss-proposed: YES (H19-1: 'trades backfired after 4k, 3k to negative'). Boss: trades backfired after +4k/+3k",
+  "source": "index (arms) + account P&L",
+  "unds": [
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY"
+  ],
+  "merged": [
+   "H19-1",
+   "R19C-4",
+   "R19C-5",
+   "LIQ-23"
+  ]
+ },
+ "H34-1": {
+  "title": "Premium-point exits on Liquidity",
+  "priority": "P2",
+  "old": "All 256 point variants lost; WF -66,284; hold WF pick -229/day vs own exits +42k. LIQ-18 C3 +54.7k, E80 +63.9k vs current +242k",
+  "close": "FAR (H34) / CLOSE (LIQ-18 C3, E80); Boss-proposed: YES ('points' = premium points). Boss: 'points' = premium points",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": [
+   "LIQ-16",
+   "LIQ-18"
+  ]
+ },
+ "H35-1": {
+  "title": "App S/R levels: break / retest / bounce",
+  "priority": "P2",
+  "old": "REJECT. 0/408 net > 0; e.g. pivot break 7,525 tr -7.10L (gross +7.7k); round numbers hold 736 tr -453/day",
+  "close": "FAR; Boss-proposed: YES ('check the support and resistance ... in the app'). Boss asked to check the app's own levels",
+  "source": "index (levels; -5/-6 from chain OI)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY",
+   "SENSEX"
+  ],
+  "merged": [
+   "H35-2",
+   "H35-3",
+   "H35-4",
+   "H35-5",
+   "H35-6",
+   "H35-7",
+   "H35-8"
+  ]
+ },
+ "H35-9": {
+  "title": "Skip Liquidity entries with a level just ahead",
+  "priority": "P2",
+  "old": "0/16 kept. Struct 0.2% +26.5k, p 0.045, q 0.35; Brain 1u +19.7k",
+  "close": "CLOSE (failed BH only); Boss-proposed: YES (as H35-1). Boss's levels as a filter; +26.5k pre, failed BH only",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY"
+  ],
+  "merged": []
+ },
+ "H43-2": {
+  "title": "Bollinger(20,2) state entries (bake-off #2)",
+  "priority": "P2",
+  "old": "1-min 1,690 tr -261/day, 1/5 yrs; hold +13/day. 5-min/30 -259 pre, hold +88 (p 0.01)",
+  "close": "FAR; Boss-proposed: YES (Boss's companion parameter document). Boss's companion parameter document",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H43-3": {
+  "title": "Afternoon PE (bake-off #4)",
+  "priority": "P2",
+  "old": "1,027 tr -205/day, 1/5; hold -190/day",
+  "close": "FAR; Boss-proposed: YES (as H43-2). Boss's companion parameter document",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "H43-7": {
+  "title": "Enhanced Afternoon PE (FINNIFTY)",
+  "priority": "P2",
+  "old": "Pre +81/day (2022 +92k); hold -140/day; WF -104/day",
+  "close": "FAR; Boss-proposed: YES (as H43-5). Boss: 'enhance ... to the best'",
+  "source": "index + VIX",
+  "unds": [
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "H45-1": {
+  "title": "Symmetric +-5% premium bracket",
+  "priority": "P2",
+  "old": "528 variants, 0 BH. BN +-5% -76/day pre, -255/day hold; MIDCP hold +93/day but pre -114/tr; h18 -109/tr",
+  "close": "FAR; Boss-proposed: YES ('target +5% / stop -5%'). Boss's question: target +5% / stop -5%",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY",
+   "FINNIFTY",
+   "MIDCPNIFTY"
+  ],
+  "merged": [
+   "H45-2"
+  ]
+ },
+ "LIQ-1": {
+  "title": "BN Liquidity on 1-min and 3-min charts",
+  "priority": "P2",
+  "old": "Reject: every 1-min version loses both yrs (1-min swing no stop 1,688 tr -125k / -145k); 3-min best -4.5k / -197k",
+  "close": "FAR; Boss-proposed: YES (owner's liquidity strategy). Boss's own strategy family",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-15": {
+  "title": "Trailing profit stop on Liquidity",
+  "priority": "P2",
+  "old": "Not recommended: early trails -5k..-43k; from +40% +44.0k / +28.2k vs arm +103.0k / +30.3k",
+  "close": "CLOSE; Boss-proposed: YES (owner's trailing profit stop). Boss's trailing profit stop",
+  "source": "index entry; trail on premium",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-19": {
+  "title": "No stop, no target: hold to a liquidity level",
+  "priority": "P2",
+  "old": "Rejected (risk): N3 +53-55k/yr, better than A in 4/6 yrs but DD -49..-55k vs -37k",
+  "close": "CLOSE; Boss-proposed: YES (Boss, 7 Oct: 'no stop loss, no target'). Boss (7 Oct): no stop loss, no target",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-20": {
+  "title": "OI / volume check before a Liquidity entry",
+  "priority": "P2",
+  "old": "Keep as is: no check improves both yrs; best 'our side busier 15m' -6.5k / +3.9k",
+  "close": "CLOSE (small loss); Boss-proposed: YES (owner's ask, 1 Oct). Boss's ask (1 Oct)",
+  "source": "index + chain context",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "LIQ-22": {
+  "title": "Later entry cut-off for Liquidity",
+  "priority": "P2",
+  "old": "14:00 adopted (+110.4k / +33.6k); 14:30 +103.0k / +30.3k; off +87.0k / +21.8k",
+  "close": "CLOSE; Boss-proposed: YES (owner's ask, 1 Oct). Boss's ask (1 Oct)",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "MP-1": {
+  "title": "Boss's Matrix Premium v2.2",
+  "priority": "P2",
+  "old": "ATM -109.4k (356 tr) / -109.4k (352); H22 1,491 tr -2.21L",
+  "close": "FAR; Boss-proposed: YES (owner's Pine). Boss's Pine",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "H22-4"
+  ]
+ },
+ "MV-1": {
+  "title": "Matrix v2.2 risk engine with structure-break entries",
+  "priority": "P2",
+  "old": "All 38 versions lose both yrs; best 15-min CHoCH-only -55.5k (177 tr)",
+  "close": "FAR; Boss-proposed: YES (owner's Matrix v2.2). Boss's Pine",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R5-1": {
+  "title": "Boss's uploaded Gann/Fib/Harmonic Pine",
+  "priority": "P2",
+  "old": "'Do not run, even on paper'. AS_WRITTEN 0 trades; pooled 77 tr, 66 instant stop-outs; best +8/day; hold 0 option tr",
+  "close": "FAR (broken code); Boss-proposed: YES (uploaded by Boss). Boss uploaded it (code itself is broken: 0 trades as written)",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R18-1": {
+  "title": "Exit overlays V1-V5",
+  "priority": "P2",
+  "old": "0/60 BH. VIX-div BN V2/V4 design +37.9k/+36.4k (59 tr), hold +1.3k/+2.3k; NIFTY all negative; Liq all worse; Pine V2 +64.8k pooled post hoc",
+  "close": "CLOSE (VIX-div BN, Pine V2) / FAR; Boss-proposed: YES ('test exits by VWAP band, the next S/R level ...'). Boss listed these exits",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "R18-2",
+   "R18-3",
+   "R18-4"
+  ]
+ },
+ "R19B-1": {
+  "title": "Boss's Rs 500 trail / +1,000-then-500 floor",
+  "priority": "P2",
+  "old": "FAILED every variant: A1 hold 15m -10.0k, 5m -19.2k; F1000_500 hold 15m +23.4k -> -6.9k; VIX-div BN -11.2k -> +0.8k (beat 70% of twins)",
+  "close": "FAR / CLOSE (VIX-div BN); Boss-proposed: YES ('down Rs 500 from its highest point, sell'). Boss's own rule; exists as an off-by-default paper switch",
+  "source": "index entry; exits on premium P&L",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "R19C-1",
+   "R19C-2",
+   "R19C-3"
+  ]
+ },
+ "R20C-4": {
+  "title": "Low-VIX 15-min pivot break",
+  "priority": "P2",
+  "old": "Design +66,057 (115 tr); hold -33,153 (127), the worst",
+  "close": "FAR; Boss-proposed: YES (as R20C-1). Boss's 2-candle rule",
+  "source": "index + VIX",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R24-2": {
+  "title": "R24 p2: levels near + IV high + own OI building",
+  "priority": "P2",
+  "old": "Design 817 tr +7,117; hold 45 tr -20,777",
+  "close": "FAR; Boss-proposed: YES (as R24-3). Boss's pattern-mining ask",
+  "source": "index + chain context",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "R24-4": {
+  "title": "R24 p4: levels near on expiry day, buy CE",
+  "priority": "P2",
+  "old": "Design 430 tr +25,815; hold 32 tr, 3% won, -18,601",
+  "close": "FAR; Boss-proposed: YES (as R24-3). Boss's pattern-mining ask",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SCALP17-1": {
+  "title": "Generic +17/-15 premium-point scalp",
+  "priority": "P2",
+  "old": "'Not achievable': +17 first 32.7% vs -15 40.7%; EV -3.31 pts net+spread over 4.98M entries",
+  "close": "FAR; Boss-proposed: YES ('+15-20 points, up to 5 trades a day'). Boss's +15-20 points ask (no entry signal: a baseline)",
+  "source": "none (random entry)",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY",
+   "FINNIFTY"
+  ],
+  "merged": []
+ },
+ "SCALP17-2": {
+  "title": "BN PE fade after 3 green bars",
+  "priority": "P2",
+  "old": "Train 1,190 tr 73% won, +10 net app; hold 671 tr -182 net app (random p 0.049); mirrors -160..-210/tr",
+  "close": "FAR; Boss-proposed: YES (inside Boss's +15-20 range). Best rule inside Boss's +15-20 range",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "SCALP17-6",
+   "SCALP17-7"
+  ]
+ },
+ "SIDEWAYS_GUARD-1": {
+  "title": "Sideways-day guard on Liquidity",
+  "priority": "P2",
+  "old": "'Do not add': 35 tests, none passes both yrs; ADX pause +103k/+30k -> +52k/+9k",
+  "close": "FAR; Boss-proposed: YES ('if the market is completely sideways Jarvis should not trade'). Boss: stop the arms when the market is sideways",
+  "source": "index (+VIX)",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": []
+ },
+ "SOLO-2": {
+  "title": "Solo online learner",
+  "priority": "P2",
+  "old": "Loses every version: H22 3,997 tr -6.29L, every year red; app edge 0.10/H15 -1.31L (987 tr)",
+  "close": "FAR; Boss-proposed: YES ('learn from the market itself'). Boss: 'learn from the market itself'",
+  "source": "index",
+  "unds": [
+   "NIFTY",
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "H22-2"
+  ]
+ },
+ "ST-1": {
+  "title": "Boss's Pine Supertrend(10,3) + EMA50",
+  "priority": "P2",
+  "old": "ST-1 5-min +8.5 pts/tr (357 tr, t 0.85), ATM +14.2k; Yr A +0.7 pts. H22 5-min 1,565 tr -2.13L, 15-min 539 tr -1.68L",
+  "close": "CLOSE (1 yr) / FAR (5 yrs); Boss-proposed: YES (owner's Pine). Boss's Pine",
+  "source": "index",
+  "unds": [
+   "BANKNIFTY"
+  ],
+  "merged": [
+   "H22-3"
+  ]
+ }
+}

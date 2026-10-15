@@ -1009,3 +1009,32 @@ at the worse price. The ORB family (R49) and zero-to-hero rules (R50) are not in
 - Everything else loses in the final test or is no better than random entries: R45, 19 of 20 F1 rules, R29's cross
   and Boss's ribbon ideas, every R41 rule (always buying the call overnight -Rs 5.36 lakh on 520 trades) and all 4 B2
   rules.
+
+## Older rejected index rules re-tested on Nov 2024 onwards (R52, 15 Oct 2026) - 1 of 188 final reads passes; paper candidate only
+Full study: `HUNT_R52_OLD_CATALOGUE_RECENT.md`. Pre-registered in `hunt/r52/PREREG.md`, with each rule's setting in
+`results/rules_prereg.json`. Signal source of every tested rule: the index; VIX, OI or IV appear only as filters.
+- **Scope.** The catalogue (`hunt/r52/CATALOGUE.md`) lists 268 distinct older rejected rules from the hunt series and
+  the topic studies; R49-R51's rules are excluded. 114 of them, almost every "close" rule and Boss's own rules, were
+  re-run with their own code on 20 Nov 2024 - 31 Mar 2026 (design, 1,468 settings), then read once on 1 Apr - 13 Oct
+  2026 (188 reads). The measurement: one held contract, dated charges, R17 spread fills, 1 lot in force.
+- **Final test.** 1 PASS, 123 FAIL, 64 too few trades (< 40).
+- **The pass: H37-10 "open outside value and go".**
+  - Rule: the previous day's 70% value area; open and the first 5-minute bar above VAH -> buy 1-ITM CE, below VAL ->
+    PE, at 09:21; sell 60 minutes later; 5 indices.
+  - Final: 294 trades, +Rs 48,772, +Rs 367 a day, win 50%, max DD -Rs 46,363, p 0.001, q 0.03, top 5 = 82% of net.
+  - Caveats:
+    - the 60-minute exit was a design re-tune; the original +15 / -10 point exit lost (-29k design, -1.9k final);
+    - MIDCPNIFTY made +46k of the final, while FINNIFTY led on design;
+    - with coin-flip twins its q would be 0.29.
+  - Verdict: a paper candidate for Boss to decide on, never live without unseen paper first.
+- **Fails only the same-side twin test.**
+  - R4-8, Gann 2-bar swing, 30-minute exit: 242 trades, +38.9k, p 0.13.
+  - H45-1, Liquidity entries with a ±10% bracket and a 30-minute stop: 341 trades, +31.3k, p 0.10.
+  - Both have coin-flip p 0.001 and are re-tuned picks whose originals lost. Off.
+- **The other old "close" rules stay off.**
+  - Boss's Pine scripts lose or fail: Supertrend+EMA50 (ST-1), Matrix (MP-1, MV-1), and the Gann/Fib guide (R5-1),
+    which fires about 0 times.
+  - Also off: Chandelier, BTST, Camarilla, the H28/H42 calendar rules, swing and long-vol, the R24 patterns, and the
+    NIFTY/SENSEX Liquidity versions.
+- **Method lesson.** Same-side random twins leak the day's direction to breakout rules, and are degenerate (p = 1) for
+  fixed-minute rules. Report a coin-flip-side p next to them (R52 Amendment 1).
