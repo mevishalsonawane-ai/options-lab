@@ -1,0 +1,37 @@
+id: r46-amend3-dip-buy
+title: 'R46 amendment 3: "buy the BTC ATM option after a 25% drop in one 15-minute bar" - reproduced, diagnosed, re-tested'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R46_BTC_EMA_ADX_NN.md
+hypothesis: 'Their claim (Sep 2024 - Oct 2026): CE 5,504 trades 59.5% win avg +$424, PE 5,743 trades 59.1% avg +$408 (no stop,
+  $5 cost, $300 a trade). Tested: their code on a frame like theirs, the share of profit from contract switches, and the rule on
+  HELD contracts with real fills, costs, tax and a stop + lock.'
+data_version: 'Crypto lake gdrive:IraAlgo-data-crypto pulled 15 Oct 2026 (as R46): Delta India BTC option 1-minute trade candles
+  rebuilt into a rolling ATM call/put frame (2,223,282 rows Sep 2024 - Oct 2026, like their 2.1 M-row file). Outside git.'
+period:
+  design: 2024-11-20..2026-03-31 (PRIMARY); full span 2024-01-01..2026-03-31 beside it
+  holdout: 2026-04-01..2026-10-12 (final test = R46's already-read holdout span)
+instruments:
+- CRYPTO
+features:
+- option_premium_15min_change
+model_or_rule: 'Held contract: at each 15-min bar close, the ATM call (or put) whose own price fell >= 25% since the previous
+  bar close and is >= $50; buy it at the first real trade 1-5 minutes after the close + half spread; 60-min exit, 50% stop and
+  step (L1) or trailing (L2) lock; $300 of premium a trade; one position at a time per side'
+settings: research/hunt/r46/amend_cfg.py
+prereg: null
+variants_tried: 4
+results:
+  summary: 'Their code (pct_change over the interleaved frame, exit row idx+4): every call signal compares a call row with the
+    put row before it, and idx+4 is 2 minutes later, not 60; 84% of its profit is exits on another strike or expiry. Their
+    words on 15-min rolling bars: CE 3,482 trades, 69.6% win, avg +$323, total +$1.12 M (close to their claim) - but 99.5% of it
+    comes from strike switches or the daily expiry roll (645 roll exits alone made $1.03 M); same-contract trades: 351, avg
+    +$17.6 with no spread. Held contracts, Nov 2024+ design, Delta: CE L1 3,548 trades, win 26.8%, -$181,242 before tax,
+    -$226,911 after (p 0.97); final 1,380 trades -$43,685 / -$61,249. PE L1 3,727 trades -$196,630 / -$244,824; final 1,401
+    -$57,460 / -$72,744. CoinSwitch with or without GST: still large losses. 0 of 4 pass.'
+  costs: Delta India dated fees + 18% GST (gate), CoinSwitch 0.015% of notional with/without GST; spread model (a x spot + b x
+    mid), fill at a real trade 1-5 min after the close, exits less half spread + tick + 1%; tax 31.2% per winning trade
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: NON-DEFAULT, the option''s own price chart (labelled; only Boss could switch such a rule on). Their
+  no-stop numbers are only the reproduction of the claim; every tested version had a stop and a profit lock. Research only.'

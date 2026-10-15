@@ -1,0 +1,36 @@
+id: r46-amend1-coinswitch-costs
+title: 'R46 amendment 1: the R46 variants under CoinSwitch PRO costs (GST with and without), Nov 2024+ view'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R46_BTC_EMA_ADX_NN.md
+hypothesis: Boss trades on CoinSwitch PRO and doubts the 18% GST; with CoinSwitch's quoted fees (with or without GST) some R46
+  variant might turn profitable after tax.
+data_version: 'Crypto lake gdrive:IraAlgo-data-crypto pulled 15 Oct 2026 (as R46): Binance BTCUSDT spot + USD-M perp 1-minute,
+  Delta Exchange India BTC option 1-minute trade candles. Raw data and pools outside git.'
+period:
+  design: 2024-11-20..2026-03-31 (PRIMARY, Boss 15 Oct); full span 2024-01-01..2026-03-31 beside it
+  holdout: 2026-04-01..2026-10-12 (final test = R46's holdout span, already read once by R46; spans fixed before the amendment
+    run)
+instruments:
+- CRYPTO
+features:
+- btc_spot_ema8
+- btc_spot_ema21
+- btc_spot_adx14
+model_or_rule: R46's 14 variants unchanged (A/B x call/put x L1-L3 + perp long/short), re-costed per cost reading
+settings: research/hunt/r46/amend_cfg.py
+prereg: null
+variants_tried: 14
+results:
+  summary: 'Nov 2024+ design, A call L2 (1,000 contracts): 991 trades, win 27.8%, after tax Delta -$89,295, CoinSwitch with GST
+    -$77,822, without GST -$72,640 (p 0.53-0.57). Final test 391 trades: Delta -$11,003, CoinSwitch with GST -$14,895, without
+    -$13,370. CoinSwitch 0.015% of notional is cheaper than Delta''s old 0.03% (to Jul 2025) but dearer than Delta''s current
+    0.01% with the premium cap. Every variant loses in every view and cost reading; 0 of 14 pass (B: 4 design trades, 0 final).
+    Perp at CoinSwitch maker 0.02% without GST still loses $101k design / $24k final per 1 BTC after tax.'
+  costs: 'Delta India dated fee schedule + 18% GST (R46, the gate); CoinSwitch PRO options 0.015% of notional per side (third-party
+    figure, unverified, no cap) with and without 18% GST; futures 0.05% taker / 0.02% maker; same spread model and one-minute-later
+    fill; tax 31.2% on each winning trade, no set-off; 1% TDS noted.'
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: BTC spot (the underlying). Every option trade had a 50% stop and a profit lock. Research only; nothing
+  in the app trades crypto. Settings committed in d492524 before the amendment run.'

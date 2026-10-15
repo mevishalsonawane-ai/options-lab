@@ -794,3 +794,43 @@ Bollinger(20, 2) lower band). That is not the default; it is reported separately
   shows -106 and -127 (122 and 130 trades). On the fixed contract the signal is no better than random entries (q 0.62).
 - BANKNIFTY: +Rs 237 on the rolling series, -Rs 124 a trade on one contract at real lots (1,405 trades).
 - Rule for every lake study: never trade the rolling ATM series as one instrument; hold the strike that was bought.
+
+## The other AI's BTC "Option 1" (EMA 8/21 + ADX > 15 + neural net, Delta India ATM calls) (R46, 15 Oct 2026) - the 85.7% claim does not hold; 0 of 14 pass
+Full study: `HUNT_R46_BTC_EMA_ADX_NN.md` (pre-registered `hunt/r46/PREREG.md`, commit 3388242; design results d934a9e
+before the holdout; holdout 1 Apr - 12 Oct 2026 read once). Signal source: BTC spot (the underlying), 5-minute bars;
+the trade buys a Delta Exchange India BTC daily ATM call (puts and the perp as extras). Every trade had a 50% (or 30%)
+premium stop AND a profit lock (the other AI's no-lock exit was not run), 60-minute exit, max 2 a day.
+- Their claim: 21 trades in 44 days, 85.7% win, +$122 a trade. Same entry, our data, realistic fill (the option one
+  minute later + half spread), 1,000 contracts = 1 BTC: design 2024 - Mar 2026 1,486 trades, 25.8% win, -$71 a trade,
+  -$127,828 after tax; holdout 391 trades, 41.4% win, -$15 a trade, -$11,003 after tax; their own window (1 Sep - 12 Oct
+  2026) 83 trades, 37.4% win, -$2,457 before tax. Best lock variant (L2 trail) shown; L1/L3 are a little worse.
+- No edge before costs in design (gross -$5,616 even at the printed-trade fill). Fees + GST were $45 a round trip per
+  BTC in 2024 and ~$16 now on a $280-410 premium. The printed-trade fill flatters results by ~$33k (design) and turns
+  the holdout calls to +$288 before tax, -$5,919 after the per-winning-trade tax.
+- Our walk-forward MLP in their 12-64-32-1 shape sits at coin-flip validation loss (0.692) and cleared 0.65 on 88 of
+  7,536 design signals: 24 trades, -$1,200; 2 holdout trades; 0 in their window. The 60-minute BTC direction is not
+  predictable from price features here.
+- The calls beat random entry times in the holdout only (p 0.001; design p 0.58), while BTC rose ~20%: not a stable
+  edge, and still a loss after costs. The BTC perp version loses $249k (design, 1,639 trades) and its 1% TDS would lock
+  $1.36M. Nothing goes to paper; nothing in the app trades crypto.
+- Their "1,000 contracts ~ $300" is right in kind (0.001 BTC a contract; median ATM premium $278 holdout, $410 design),
+  but 1,000 contracts is far beyond what Delta's daily-option book fills at the modelled spread.
+- **Amendments (15 Oct, labelled; primary view 20 Nov 2024 - 31 Mar 2026 design, 1 Apr - 12 Oct 2026 final = R46's
+  already-read holdout span): still 0 of 22 pass.**
+  - CoinSwitch PRO costs (0.015% of notional, unverified; GST with and without): A call L2 Nov24+ design 991 trades,
+    -$72,640 to -$89,295 after tax; final 391 trades, -$11,003 to -$14,895. No sign changes.
+  - The other AI's v2 "Ensemble" (MLP+GB+RF > 0.65 on the call's chart): its AUC 0.78 is real but comes from the
+    ROLLING ATM series. The strike or expiry changes inside 98% of the 60-minute label windows. We get 0.786 on a random
+    split and still 0.782 walk-forward, but the same model scores 0.50-0.51 against the held contract's own move. On
+    held contracts the AUC is 0.54 and the filter almost never fires (1 design trade, 0 final). The rolling-filter
+    version lost: 281 design trades, -$16,561 after tax; 140 final trades, -$4,027. In their Sep-Oct window: 23 trades,
+    43.5% win.
+  - The "buy after a 25% drop" claim (+$2.3 M per side) is a data artefact:
+    - their code's `pct_change` compares a call row with the put row before it, and `idx + 4` is 2 minutes later;
+    - on 15-minute rolling bars, 99.5% of the profit is strike switches and the daily expiry roll (the roll alone made
+      $1.03 M).
+    - On held contracts with real fills, a stop and a lock, the calls lost $181k before tax on 3,548 Nov24+ design
+      trades ($300 each; p 0.97) and $44k on 1,380 final trades. The puts lost the same way.
+    - Option-chart signal: non-default.
+  - **Lesson for every study:** never label or build features on a rolling ATM series. Price and label on the held
+    contract.
