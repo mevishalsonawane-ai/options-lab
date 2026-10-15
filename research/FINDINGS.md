@@ -834,3 +834,33 @@ premium stop AND a profit lock (the other AI's no-lock exit was not run), 60-min
     - Option-chart signal: non-default.
   - **Lesson for every study:** never label or build features on a rolling ATM series. Price and label on the held
     contract.
+
+## Index-option buying with relaxed design rules (R47, 15 Oct 2026) - 387,392 variants, 10 to the holdout, none passes
+Full study: `HUNT_R47_RELAXED_OPTION_BUYING.md` (pre-registered `hunt/r47/PREREG.md`, commit 2f27c32d; candidates
+frozen in 4f012404; holdout 10 Nov 2025 - 13 Oct 2026 read once). Boss (15 Oct) allowed relaxing the DESIGN rules for
+option buying. Relaxed: the signal source (index, option chain, the option's own chart - labelled non-default),
+overnight and 1-5 session holds, any strike, month expiry, debit spreads, straddles, no trade cap, budget sizing, a wide
+search with no BH during exploration, and VIX / weekday / expiry / month-end / event filters. Measurement was NOT
+relaxed: one fixed contract per leg, R17 fills, dated charges, gap fills, no look-ahead.
+- Design (Aug 2021 - Oct 2025, NIFTY, BANKNIFTY, FINNIFTY, SENSEX): 16 of the 17 signal families with enough trades lose
+  in the median variant (Rs 34-2,446 a trade on a Rs 20,000 budget). Only multi-day breakouts (U4) are slightly
+  positive. 18 of 132 families pass the walk-forward. The strongest were overnight late-day momentum (BANKNIFTY,
+  FINNIFTY) and NIFTY 10-day breakout spreads.
+- Holdout, 10 candidates, 500 random twins each: 6 make money, 4 lose, and none beats random entries after BH (best q
+  0.50). Closest: BANKNIFTY "PCR extreme at 10:15 -> buy ITM3 in its direction" (+Rs 865 a trade, 91 trades, p 0.0499,
+  q 0.50; its design profit had faded to +Rs 9 a trade in 2025). The best design idea, overnight late-day momentum,
+  lost Rs 1,031 a trade on the BANKNIFTY holdout (90 trades). Nothing goes to paper.
+- **Lake data defect (affects other studies):** some rolling option files contain rows of ANOTHER underlying, i.e.
+  rows whose `spot` and `strike` sit at another index's level. Affected: FINNIFTY WEEK/MONTH (118k rows in 2025 at
+  MIDCPNIFTY's level), BANKNIFTY MONTH 2022-24 (77k rows at NIFTY's level), SENSEX MONTH/WEEK (73k rows at BANKEX's
+  level), MIDCPNIFTY (93k rows), and a few NIFTY MONTH / BANKNIFTY WEEK rows. NIFTY WEEK is clean. Drop any option row
+  whose `spot` is more than 3% off the index at that minute (`hunt/r47/r47data.foreign_rows`). Thin contracts also
+  carry stray prints (a 09:15 open of 500 on a Rs 60 option): never let a fill profit from a price more than 20% off
+  the contract's surrounding closes (`hunt/r47/r47price.open_for_sell`). R47's selection was unchanged by both fixes.
+- **Nov 2024+ view (amendment 4, Boss's primary view, 15 Oct): still nothing passes.**
+  - Spans: design 20 Nov 2024 - 31 Mar 2026; final test 1 Apr - 13 Oct 2026, which overlaps the already-read holdout.
+  - C9, C10 and C1 look good in design (p 0.012-0.018, q 0.098-0.10), and all three lose in the final test.
+  - C4 (BANKNIFTY PCR follow) is the only candidate positive in both: 146 trades at +Rs 322, then 55 at +Rs 1,125
+    (p 0.07, q 0.76).
+  - Re-selecting inside Nov 2024+ only (101,136 variants in 27 groups) gives no pick with 40+ final-test trades and
+    p < 0.05.

@@ -1,0 +1,29 @@
+date: '2026-10-15'
+doc: research/HUNT_R47_RELAXED_OPTION_BUYING.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m opt_{NIFTY,BANKNIFTY,FINNIFTY,SENSEX}_{WEEK,MONTH}
+  2021-2026, index_1m, index_daily; foreign-underlying rows dropped (amendment 2)'
+period:
+  design: 1 Aug 2021 - 31 Oct 2025 (walk-forward blocks B1 2021-22, B2 2023, B3 2024, B4 Jan-Oct 2025)
+  holdout: 10 Nov 2025 - 13 Oct 2026, read once for 10 frozen candidates (1-9 Nov 2025 embargo)
+prereg: research/hunt/r47/PREREG.md
+settings: research/hunt/r47/r47cfg.py
+id: r47-holdout-c3
+title: 'R47 holdout candidate C3: U3_lateday FINNIFTY sp_itm2_otm2 filter vix_lo'
+family: overnight
+hypothesis: This design-selected relaxed option-buying rule keeps its edge on the locked holdout.
+instruments:
+- FINNIFTY
+features:
+- underlying (index spot) - the CLAUDE.md default
+model_or_rule: 'U3_lateday params {''th'': 0.5, ''how'': ''follow''}; instrument sp_itm2_otm2; exit (stop, target, hold, lock)
+  [0.0, 1.0, ''am'', None]; filter vix_lo'
+variants_tried: 1
+results:
+  summary: 'Design 156 trades, Rs +1245/trade (t 2.98), blocks B1 7/+21,341, B2 61/+68,801, B3 40/+87,683, B4 48/+16,338;
+    walk-forward 109 OOS trades Rs +1431/trade. Holdout 49 trades, Rs -5418/trade, net Rs -265,497, win 28.6%; random twins
+    Rs -5569/trade, p 0.483, BH q 0.5633 (10 candidates). Failed gates: G1_net_positive, G3_p, G4_q, G5_top5, G6_best_month.'
+  costs: research/obuy Costs('dated') on every order of every leg + R17 'liq' fills (5 bps + 1/2/4 ticks by traded lots; stops
+    10 bps, 2x ticks), stray-print guard; one fixed contract per leg; Rs 20,000 premium budget
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: underlying (index spot) - the CLAUDE.md default.'

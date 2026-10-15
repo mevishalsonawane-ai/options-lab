@@ -1,0 +1,34 @@
+date: '2026-10-15'
+doc: research/HUNT_R47_RELAXED_OPTION_BUYING.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m opt_{NIFTY,BANKNIFTY,FINNIFTY,SENSEX}_{WEEK,MONTH}
+  2021-2026, index_1m, index_daily; foreign-underlying rows dropped (amendment 2)'
+period:
+  design: 1 Aug 2021 - 31 Oct 2025 (walk-forward blocks B1 2021-22, B2 2023, B3 2024, B4 Jan-Oct 2025)
+  holdout: 10 Nov 2025 - 13 Oct 2026, read once for 10 frozen candidates (1-9 Nov 2025 embargo)
+prereg: research/hunt/r47/PREREG.md
+settings: research/hunt/r47/r47cfg.py
+id: r47-c3-oishift
+title: R47 relaxed option buying, family C3_oishift (option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain))
+family: flow-oi
+hypothesis: 'Some version of C3_oishift (params [{''how'': ''follow''}, {''how'': ''fade''}]) buying index options (any strike,
+  near or month expiry, debit spreads, straddles; intraday to 5-session holds; regime filters) makes money after real costs
+  on one fixed contract.'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1
+model_or_rule: 'C3_oishift: see research/hunt/r47/PREREG.md table and r47sig.py'
+variants_tried: 1280
+results:
+  summary: 'Design only. 1280 variants (params x instrument x exit x 14 filters); 1280 with 100+ trades, of which 244 net
+    positive; median Rs -249.0/trade. best single variant with 100+ trades (selection-biased): SENSEX atm exit [0.4, 0.0,
+    ''sq'', None], 149 trades, Rs +1135/trade, 1/2 blocks green. Walk-forward qualifying families: NIFTY spread (WF 159 OOS
+    trades, Rs +1078/trade). Sent to the holdout: C6.'
+  costs: research/obuy Costs('dated') on every order of every leg + R17 'liq' fills (5 bps + 1/2/4 ticks by traded lots; stops
+    10 bps, 2x ticks), stray-print guard; one fixed contract per leg; Rs 20,000 premium budget
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: option-chain signal (OI / PCR / IV of the lake''s ATM+-10 chain) - relaxed item 1.'
