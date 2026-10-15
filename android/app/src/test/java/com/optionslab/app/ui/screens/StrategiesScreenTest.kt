@@ -668,8 +668,8 @@ class OrbRowsTest {
         assertTrue(!shown("Lots:"))
         openAbout("Liquidity 15+5")
         assertTrue(shown("Lots:"))
-        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertEquals(1, compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Liquidity 2 lots, chosen")).fetchSemanticsNodes().size)
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         // Each book's quantity, and the candidates' record (per lot, so the size never moves it), in its name's dialog.
         assertTrue(explained("Liquidity 15+5", keepNumbersWhole("Size: 2 lots a trade (BANKNIFTY 60, FINNIFTY 130 qty) · an open position keeps its own"),
             keepNumbersWhole("Since 06 Oct, per lot: 1 paper trade")))
