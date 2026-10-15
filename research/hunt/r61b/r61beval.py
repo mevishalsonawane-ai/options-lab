@@ -174,7 +174,7 @@ def features(day: dict, frow: int, side: str, prev_hl: tuple, prev_close: float,
     o, h, l, c = day["o"], day["h"], day["l"], day["c"]
     out = {n: NAN for n in TR}
     # traps: OR15 (breaks from row 15 on) and the previous day's high / low
-    orng = opening_range(h, l, frow)
+    orng = opening_range(h, l, frow) if frow >= OR_ROWS else None     # NaN before row 15 (PREREG; amendment 1)
     if orng is not None:
         up, dn = orng
         out["trap_same_or"] = failed_break(c, up if s > 0 else dn, s, frow, OR_ROWS, NAN)

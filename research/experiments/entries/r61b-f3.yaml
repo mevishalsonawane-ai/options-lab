@@ -1,0 +1,44 @@
+id: r61b-f3
+title: 'R61b F3: Solo 2.0 (A2) candidates S1-S4, skip a candidate whose break came on below-normal near-ATM option volume
+  (vs the same 5 minutes of the last 20 non-expiry sessions)'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R61B_TRAPS_ORDERFLOW.md
+hypothesis: 'Trap / fake-breakout / order-flow-proxy checks read at the signal minute from 1-minute data improve Solo 2.0''s
+  paper trades (S1-S4, at most one a day, NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY) out of sample (gates: final net > 0,
+  twin p < 0.05, BH q <= 0.10 over 8, 40+ trades, top-5 < net, design WF > 0; replaces Solo 2.0 only if it also beats V1 on
+  net, AUC, paired-day bootstrap p < 0.10 and net without MIDCPNIFTY).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK files with OI / volume),
+  20 Nov 2024 onwards; copied 15 Oct 2026 (last session 14 Oct NIFTY / BANKNIFTY, 13 Oct FINNIFTY / MIDCPNIFTY); no ticks
+  or order book (proxies only)
+period:
+  design: 21 Nov 2024 - 31 Mar 2026 (purged walk-forward, monthly refits, 1-session embargo, test months Jul 2025 - Mar 2026)
+  holdout: '1 Apr 2026 - 14 Oct 2026, read once (NOT fresh: its fourth use after R57, R61, R61-N)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the underlying index (setups S1-S4); trap flags from index minutes, volume / OI proxies from the option
+  chain as context / filters only'
+- V1's model and scores; skip rule F3 (r61beval.skip)
+model_or_rule: skip a candidate whose break came on below-normal near-ATM option volume (vs the same 5 minutes of the last
+  20 non-expiry sessions)
+settings: research/hunt/r61b/PREREG.md section 4; research/hunt/r61b/r61bcfg.py VARIANTS
+prereg: research/hunt/r61b/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design walk-forward (Jul 2025 - Mar 2026): 95 trades, win 55%, net Rs +46,298 (V1 Rs +55,910), 2x costs Rs +35,641,
+    walk-forward AUC 0.5463, candidates skipped 1946. Final test (1 Apr - 14 Oct 2026, read once, not fresh): 84 trades, win
+    52%, net Rs +28,954 (Rs +345/trade), at 2x costs Rs +18,297, max DD Rs 16,349, months green 5/7, top-5 share 1.237, AUC
+    0.5199; twin p 0.0319, BH q 0.0319 (8 variants), selection-twin p 0.0818; net without MIDCPNIFTY Rs +11,991 (MIDCPNIFTY
+    share 0.586). Per index: BANKNIFTY 16 / Rs -995, FINNIFTY 13 / Rs +6,793, MIDCPNIFTY 40 / Rs +16,963, NIFTY 15 / Rs +6,193.
+    Gates: FAIL: top-5 >= net. Not the replace candidate (F4 had the best design net); it made less than Solo 2.0 (V1, Rs
+    +99,172) on the final days.'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills doubled on stops, next-minute fills, one held contract,
+    1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Does not beat Solo 2.0 (V1: 128 final trades, Rs +99,172) on the final days, so not adopted (PREREG section 7). The order-flow
+  inputs are minute-bar proxies: true delta / OFI / depth need tick and order-book data the lake does not have.'

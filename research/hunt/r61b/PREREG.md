@@ -169,3 +169,13 @@ the research code so a Kotlin port can be checked line by line.
 Window, split, setups, labels, the feature list and definitions (N = 15, 30-minute sweep window, 20-session baselines),
 the filter thresholds, the 8 variants and their settings, the take rule, twins, gates and the replace rule. A bug fix
 after results is written up as an amendment with its effect.
+
+## Amendment 1 (15 Oct 2026, after the final read): opening-range traps at the 09:30 signal row
+
+Found in self-review after the final read. Section 3 says the opening-range trap flags are NaN when the signal row is
+before 15; the code used for the design and final runs gave 0 at signal row 14 (an S2 candidate entering at 09:30), when
+no break can exist yet. It touched 96 of 8,028 candidate rows (70 design, 26 final; all S2). Effect on the reported
+results: none for F1-F4 (a 0 and a missing flag both mean "do not skip") and none for M1 / M3 (the logistic models
+impute the training median, which is 0 for these flags); only the trees (M2) could route these rows differently, on at
+most 26 final rows (3 of M2's 120 final trades entered at 09:30). The final was not re-read. `r61beval.py` now follows
+section 3 (a test covers row 14), so a port matches the pre-registration; re-running design with it would only move M2.

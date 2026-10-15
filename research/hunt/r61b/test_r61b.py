@@ -73,6 +73,9 @@ def test_or_traps_missing_before_the_range_is_complete():
     d = flat_day()
     f = feats(d, 10)
     assert math.isnan(f["trap_same_or"]) and math.isnan(f["sweep_same30"])
+    f = feats(d, 14)                    # row 14 closes the range: no break can exist yet, so still missing
+    assert math.isnan(f["trap_same_or"]) and math.isnan(f["trap_opp_or"]) and math.isnan(f["sweep_same30"])
+    assert feats(d, 15)["trap_same_or"] == 0.0
     assert f["trap_same_pd"] == 0.0
 
 

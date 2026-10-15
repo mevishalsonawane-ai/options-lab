@@ -47,6 +47,12 @@ IN_A2 = {
     "news": "R61-N (pre-registered in NEWS_PREREG.md): see the R61-N row under 'What our research found'. Verdict: no help "
             "beyond Solo 2.0 out of sample.",
 }
+# R61b (15 Oct 2026) concepts: not R61 inputs; research/hunt/r61b/r61breport.py writes their measured results to
+# r61b/results/concept_results.json, which replaces these placeholders when it exists
+R61B = ("fake_breakout", "traps", "stop_hunt", "absorption", "delta_cvd", "ofi", "depth_imbalance", "volume_profile",
+        "order_blocks", "fvg", "bos_choch")
+R61B_RESULTS = K.HERE.parent / "r61b" / "results" / "concept_results.json"
+LATER = {c: "Not an R61 input; added by R61b (research/HUNT_R61B_TRAPS_ORDERFLOW.md)." for c in R61B}
 
 
 def _f(x):
@@ -82,6 +88,9 @@ def concept_results(design: dict, final: dict) -> dict:
                     f". Each input added alone to A2's 29 changed AUC (design / final): " + ", ".join(adds) + ". " +
                     verdict)
     out.update(IN_A2)
+    out.update(LATER)
+    if R61B_RESULTS.exists():
+        out.update(json.loads(R61B_RESULTS.read_text()))
     return out
 
 

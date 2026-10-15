@@ -789,3 +789,332 @@ Also called: news sentiment, headline tone.
 **Solo's inputs from it.** `news_tone (R61-N)`, `news_count (R61-N)`.
 
 **R61 result.** R61-N (pre-registered in NEWS_PREREG.md): see the R61-N row under 'What our research found'. Verdict: no help beyond Solo 2.0 out of sample.
+
+## Fake (failed) breakout
+
+Also called: failed breakout, false break, breakout failure.
+
+**What it is.** Price closes beyond a level everyone watches (the opening range, yesterday's high or low, a swing high) and then comes back inside it within minutes, leaving the breakout buyers trapped.
+
+**How it is computed.** R61b (signal time only): a break = a 1-minute index close beyond the level after a close that was not; it failed if a close at one of the next 15 minutes (and not after the signal) is back inside. Flags for the opening range (09:15-09:29) and the previous day's high / low, on the trade's side and the other side. The break quality of the signal bar: rejection wick share and close location of the 5 minutes before entry, and near-ATM option volume in those 5 minutes vs the same window of the last 20 non-expiry sessions (the index has no volume; futures minutes exist only from Jul 2026).
+
+**On the phone.** yes: index minutes and the live chain's volume (ChainAnalytics); no futures history needed.
+
+**How traders use it.** Breakout traders wait for a close outside, a retest, or volume before trusting a break; fade traders sell a break that slips back inside.
+
+**Pitfalls.**
+
+- Whether a break 'failed' is known only after it fails; a rule must not use the future.
+- A failed break on a 1-minute chart is often a normal pullback on a 5-minute chart.
+- Most breaks look fine at the moment they happen; the bad ones are clear only in hindsight.
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R11 (`research/HUNT_R11_MOVE_ANATOMY.md`) | 5-min top-5% candles making a new day high / low after 10:15, 2020-2026 | Fakes (fully given back within 15 minutes): BANKNIFTY 12.8% design / 21.1% holdout, NIFTY 14.9% / 14.6%; they come in busier markets, but nothing separates fakes from real breaks reliably. | descriptive; no rule |
+| H18 (`research/HUNT_H18.md`) | 4,537 trades, 5 years | Breaks continue and sweeps do not reverse (30-min sweep fades -0.42 / -0.62 bp, t -2.6 / -3.3); buying the break is gross +Rs 3.25 lakh but net +Rs 3k, walk-forward -Rs 1.73 lakh, SPA p 0.87. | failed (no edge after costs) |
+| R61b (`research/HUNT_R61B_TRAPS_ORDERFLOW.md`) | S1-S4 candidates, 20 Nov 2024 - 14 Oct 2026 | Skip filters and meta-labeller inputs for failed breaks, wicks and break volume; see R61b result. | see R61b result |
+
+**Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
+
+**Solo's inputs from it.** `trap_same_or`, `trap_opp_or`, `trap_same_pd`, `trap_opp_pd`, `brk_wick`, `brk_clv`, `vol_brk_rel`, `oi_chg15_pct`, `bu15`.
+
+**R61 result.** R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'traps' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0024 (design) / +0.0003 (final) and net by Rs -13,755 / Rs -2,327; removing the 'break bar' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by -0.0055 (design) / -0.0078 (final) and net by Rs -14,313 / Rs -10,808; removing the 'break volume' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0006 (design) / -0.0011 (final) and net by Rs +9,120 / Rs -7,000; removing the 'oi at break' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0000 (design) / +0.0001 (final) and net by Rs +6,333 / Rs -6,578. Each input added alone to A2's 29 changed AUC (design / final): `trap_same_or` +0.0001 / +0.0004, `trap_same_pd` -0.0022 / -0.0003, `brk_wick` +0.0027 / +0.0001, `brk_clv` -0.0003 / +0.0000, `vol_brk_rel` -0.0006 / -0.0008, `oi_chg15_pct` -0.0002 / -0.0016, `bu15` -0.0027 / +0.0001. Skip filters on Solo 2.0: F1 (skip after a failed same-side break): design 158 trades Rs +57,050 vs V1 Rs +55,910; final 126 trades Rs +90,775 vs V1 Rs +99,172, gates PASS; F2 (skip a signal bar with a rejection wick of half its range or more): design 166 trades Rs +55,698 vs V1 Rs +55,910; final 127 trades Rs +86,888 vs V1 Rs +99,172, gates PASS; F3 (skip a break on below-normal option volume): design 95 trades Rs +46,298 vs V1 Rs +55,910; final 84 trades Rs +28,954 vs V1 Rs +99,172, gates FAIL. Verdict: no measurable help out of sample (every AUC change under 0.01; no skip filter made more than Solo 2.0 on the final days).
+
+## Bull trap and bear trap
+
+Also called: bull trap, bear trap, turtle soup.
+
+**What it is.** A bull trap is an upside break that fails, catching buyers who then sell; a bear trap is the downside mirror. 'Turtle soup' trades the reversal after a false break of a 20-day or previous-day extreme.
+
+**How it is computed.** R61b: the failed-break flags above, read for the trade's own side (a trap against Solo's direction) and the other side (a trap that supports it), for the opening range and the previous day's high / low.
+
+**On the phone.** yes: index minutes only.
+
+**How traders use it.** Traders avoid a direction right after it trapped people, or trade the other way once the trap is clear.
+
+**Pitfalls.**
+
+- The same pattern is called a 'shakeout' when the move continues; the label comes after the fact.
+- Our tests of trading the reversal all lost (below).
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R1 N7 (`research/HUNT_R1_INTERNET.md`) | NIFTY 777, BANKNIFTY 657 design trades | Turtle soup (false break of the previous day's high / low, then reclaim): design -Rs 25 / -77 a day; BANKNIFTY's +Rs 247 a day in the locked year was judged noise. | failed |
+| R52 r1-7 (`research/HUNT_R52_OLD_CATALOGUE_RECENT.md`) | 166 final trades (Nov 2024 onwards) | Turtle soup re-tested on recent data: final -Rs 17,852. | failed |
+| R61b (`research/HUNT_R61B_TRAPS_ORDERFLOW.md`) | S1-S4 candidates | Trap flags as a skip filter (F1, F4) and as inputs; see R61b result. | see R61b result |
+
+**Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
+
+**Solo's inputs from it.** `trap_same_or`, `trap_opp_or`, `trap_same_pd`, `trap_opp_pd`.
+
+**R61 result.** R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'traps' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0024 (design) / +0.0003 (final) and net by Rs -13,755 / Rs -2,327. Each input added alone to A2's 29 changed AUC (design / final): `trap_same_or` +0.0001 / +0.0004, `trap_opp_or` -0.0008 / -0.0001, `trap_same_pd` -0.0022 / -0.0003, `trap_opp_pd` -0.0014 / +0.0003. Skip filters on Solo 2.0: F1 (skip after a failed same-side break): design 158 trades Rs +57,050 vs V1 Rs +55,910; final 126 trades Rs +90,775 vs V1 Rs +99,172, gates PASS. Verdict: no measurable help out of sample (every AUC change under 0.01; no skip filter made more than Solo 2.0 on the final days).
+
+## Stop-hunts and liquidity sweeps
+
+Also called: stop run, liquidity grab, sweep, ORB sweep.
+
+**What it is.** Price pokes just past an obvious high or low where stop orders sit, fills them, and snaps back: the 'liquidity' (resting stops) was taken, and the story is that the real move then goes the other way.
+
+**How it is computed.** R61b: in the last 30 one-minute bars (from 09:30), a bar that makes a new high (or low) of the day but closes back below (above) the old extreme; flagged on the trade's side (a warning) and the other side (support).
+
+**On the phone.** yes: index minutes only.
+
+**How traders use it.** SMC / ICT traders wait for a sweep of the highs or lows and enter the other way; others put stops past the obvious level to avoid being swept.
+
+**Pitfalls.**
+
+- On the index a 'sweep' is usually just a wick; there is no real stop book to see in minute data.
+- Our data says breaks continue more often than sweeps reverse (H18).
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| H18 (`research/HUNT_H18.md`) | 5 years, NIFTY and BANKNIFTY | 'Liquidity sweep, then reversal' is folklore: 30-minute sweep fades -0.42 / -0.62 bp (t -2.6 / -3.3); breaks +2.34 bp (t 4.9), holdout +2.95 (t 3.2). | failed (the fade) |
+| R3 (`research/HUNT_R3_ORB_FAMILY.md`) | BANKNIFTY + NIFTY 5 years 3,156 trades; unseen indices 3,303 | The app's ORB Sweep (poke beyond the 09:15-10:00 range, close back inside, buy the other way): -Rs 5,05,954 in design and -Rs 5,85,798 on unseen indices, 0 of 6 years in profit; all 16 enhanced versions failed. | failed |
+| R49 (`research/HUNT_R49_ORB_RECENT.md`) | 20 Nov 2024 onwards: 2,093 design / 870 final trades | ORB Sweep -Rs 4,12,532 design, -Rs 92,211 final; Range Fade -Rs 4,06,570 / -Rs 1,14,187; 0 of 336 tests pass. | failed |
+| R8 (`research/HUNT_R8_ORDER_FLOW_TRAPS.md`) | one MCX evening, 11 stop-hunt events (tick data) | Crude was back inside 33% / 50% / 83% of the time by 30 / 60 / 120 seconds; proposed a 60-second confirm and a 120-second failed-break label (not tested on P&L). | not-a-test (too small) |
+| R61b (`research/HUNT_R61B_TRAPS_ORDERFLOW.md`) | S1-S4 candidates | Sweep flags in the F4 skip filter and as inputs; see R61b result. | see R61b result |
+
+**Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
+
+**Solo's inputs from it.** `sweep_same30`, `sweep_opp30`.
+
+**R61 result.** R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'sweeps' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0015 (design) / +0.0002 (final) and net by Rs +8,281 / Rs +1,329. Each input added alone to A2's 29 changed AUC (design / final): `sweep_same30` -0.0010 / +0.0015, `sweep_opp30` -0.0005 / -0.0004. Skip filters on Solo 2.0: F4 (skip on any price-only trap sign (F1, F2 or a same-side sweep)): design 144 trades Rs +65,534 vs V1 Rs +55,910; final 117 trades Rs +75,675 vs V1 Rs +99,172, gates PASS. Verdict: no measurable help out of sample (every AUC change under 0.01; no skip filter made more than Solo 2.0 on the final days).
+
+## Absorption
+
+Also called: passive absorption, iceberg buying / selling.
+
+**What it is.** Heavy aggressive selling (or buying) that does not move the price, because a big passive buyer (seller) soaks it up at one level. Read on a footprint or tape as lots of volume at one price with little range.
+
+**How it is computed.** True absorption needs trades and the order book at each price. R61b proxy: log(15-minute near-ATM option volume / its 20-session same-window mean) minus log(15-minute index range / its 20-session same-window mean): high volume with a small range. The phone's TickZoneRecorder (from 12 Oct 2026) flags real absorption per minute (60%+ of volume at one price, 2x the usual minute, narrow range).
+
+**On the phone.** proxy yes (index minutes + chain volume); real absorption only from TickZoneRecorder's recordings (NIFTY / BANKNIFTY futures and ATM +-3 options, since 12 Oct 2026).
+
+**How traders use it.** Traders read absorption at a level as 'this level will hold' and trade the bounce.
+
+**Pitfalls.**
+
+- On real MCX tick data flagged levels broke MORE often than others (R8).
+- Index minutes have no volume; option volume is a noisy stand-in.
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R8 (`research/HUNT_R8_ORDER_FLOW_TRAPS.md`) | MCX tick sample: 368 option + 47 futures episodes | Absorption did not mean 'this level will hold': flagged levels broke 58% (options) and 68% (futures) of the time vs 55% for unflagged levels. | failed (one evening) |
+| R9 (`research/HUNT_R9_VOLUME_GAMMA.md`) | NIFTY / BANKNIFTY minutes, 52 events | Heavy-volume narrow-range 5-minute bars: NIFTY design +2-6 bp vs control, q 0.29; holdout +2 bp then negative; below the cost of trading. | failed (proxy) |
+| R61b (`research/HUNT_R61B_TRAPS_ORDERFLOW.md`) | S1-S4 candidates | `absorb15` as a meta-labeller input; see R61b result. | see R61b result |
+
+**Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
+
+**Solo's inputs from it.** `absorb15`.
+
+**R61 result.** R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'absorption' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0015 (design) / -0.0007 (final) and net by Rs +7,247 / Rs -2,398. Each input added alone to A2's 29 changed AUC (design / final): `absorb15` -0.0013 / -0.0011. Verdict: no measurable help out of sample (every AUC change under 0.01).
+
+## Order flow: delta and cumulative delta (CVD)
+
+Also called: volume delta, CVD, buy / sell volume, footprint.
+
+**What it is.** Delta = volume traded at the ask (aggressive buyers) minus volume at the bid (aggressive sellers) in a bar; cumulative delta adds it up through the day. Divergence (price up, CVD down) is read as weak buying.
+
+**How it is computed.** Needs every trade with its side (tick rule or bid / ask). The lake has only 1-minute bars, so R61b uses a proxy: each index minute's close location ((C - L) - (H - C)) / (H - L) weighted by that minute's near-ATM option volume, over 30 minutes (`delta30`) and from 09:15 (`cdelta_day`), signed by the trade's side. TickZoneRecorder computes the real tick-rule delta and CVD per minute from 12 Oct 2026.
+
+**On the phone.** proxy yes; real delta / CVD in TickZoneRecorder's orderflow_1m (NIFTY / BANKNIFTY futures, ATM +-3 options) and OrderFlowLive's 1-second file.
+
+**How traders use it.** Confirm a breakout with positive delta; fade a move whose delta diverges.
+
+**Pitfalls.**
+
+- A close-location proxy is not delta: it only says where the bar closed.
+- Same-time delta always 'explains' the move; the question is whether it LEADS it (R7: it did not).
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R7 (`research/HUNT_R7_ORDER_FLOW.md`) | 34-minute Dhan full-feed sample, 14 MCX contracts, 217,517 packets; own NIFTY / BANKNIFTY option-flow feature | Same-10-second correlation with the move +0.71 to +0.90, but no lead across 66 cells; the app's option-flow signal leads (IC +0.109 at 1 minute) but its edge is 0.42x the cost; best use a filter, not a signal. | not-a-test (needs 8-12 weeks of recording) |
+| R9 (`research/HUNT_R9_VOLUME_GAMMA.md`) | NIFTY / BANKNIFTY minutes | Delta divergence (proxy): reversal -2.6 to +0.6 bp. | failed (proxy) |
+| R61b (`research/HUNT_R61B_TRAPS_ORDERFLOW.md`) | S1-S4 candidates | `delta30`, `cdelta_day` as inputs; see R61b result. | see R61b result |
+
+**Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
+
+**Solo's inputs from it.** `delta30`, `cdelta_day`.
+
+**R61 result.** R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'delta proxies' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by -0.0024 (design) / -0.0027 (final) and net by Rs +13,733 / Rs +1,730. Each input added alone to A2's 29 changed AUC (design / final): `delta30` +0.0036 / +0.0015, `cdelta_day` +0.0004 / -0.0012. Verdict: no measurable help out of sample (every AUC change under 0.01).
+
+## Order-flow imbalance (OFI)
+
+Also called: OFI, MOFI, multi-level OFI.
+
+**What it is.** The net change in the best bid and ask queues between quotes: bids growing or asks being taken pushes OFI up. Academic work finds it explains same-time price changes very well.
+
+**How it is computed.** Needs every best-bid / best-ask update (Cont, Kukanov and Stoikov 2014). Not computable from minute bars. R61b's nearest proxy: the near-ATM call minus put volume share over 15 minutes (`optvol_imb15`), signed by side; it is an activity tilt, not OFI.
+
+**On the phone.** real OFI only from OrderFlowLive (1-second, index futures + ATM +-2) and TickZoneRecorder (from 12 Oct 2026); proxy yes.
+
+**How traders use it.** HFT and scalpers lean on short-horizon OFI; discretionary traders watch the bid / ask stack.
+
+**Pitfalls.**
+
+- Strongly same-time, weakly predictive; any lead lasts seconds.
+- Call volume is not 'buying': writers sell calls too.
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R7 (`research/HUNT_R7_ORDER_FLOW.md`) | MCX full-feed sample | OFI +0.71 / +0.73 and MOFI +0.81 / +0.90 same-10-second correlation (CRUDEOIL / NATURALGAS), no lead; cost hurdle about 2 bp of the index for BANKNIFTY. | not-a-test |
+| R10 (`research/HUNT_R10_ORDERFLOW_TOOLS.md`) | 75 design tests on the arms | VWAP / profile tools: one Range Fade filter passed (q 0.075) but Range Fade still loses Rs 309 a day; proposes recording 1-second quotes and footprints and testing after 20 sessions. | failed / record first |
+| R61b (`research/HUNT_R61B_TRAPS_ORDERFLOW.md`) | S1-S4 candidates | `optvol_imb15` as an input; see R61b result. | see R61b result |
+
+**Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
+
+**Solo's inputs from it.** `optvol_imb15`.
+
+**R61 result.** R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'optvol imbalance' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0013 (design) / +0.0014 (final) and net by Rs +16,257 / Rs -1,394. Each input added alone to A2's 29 changed AUC (design / final): `optvol_imb15` -0.0005 / -0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01).
+
+## Depth (order-book) imbalance
+
+Also called: book imbalance, bid/ask imbalance, walls in the book.
+
+**What it is.** Total bid quantity vs total ask quantity in the visible book (5 levels on NSE): (bids - asks) / (bids + asks). Big resting orders are read as 'walls'.
+
+**How it is computed.** Needs the order book; the lake has none (Dhan does not provide historical depth). TickZoneRecorder stores 5 bid and 5 ask levels each second from 12 Oct 2026. Not an R61b input.
+
+**On the phone.** live only: TickZoneRecorder / OrderFlowLive book imbalance; no history before 12 Oct 2026.
+
+**How traders use it.** Lean with the heavier side of the book; watch walls being pulled.
+
+**Pitfalls.**
+
+- Visible depth is mostly cancelled within seconds (R8: about half of added size within 3-5 s; walls live a median 1.2 s and 50% are pulled, 5% traded).
+- Spoofing: size shown to be pulled.
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R8 (`research/HUNT_R8_ORDER_FLOW_TRAPS.md`) | one MCX evening, 11,700 walls | Walls (2x or more) had a median life of 1.2 seconds; half were pulled and 5% traded; no extra pulling at candle closes (hazard 1.03x, p 0.53). | not-a-test |
+| OF1 (`research/HUNT_OF1_ORDERFLOW_INDIA.md`) | the app's recordings as of 13-14 Oct 2026 | 0 uploaded releases and an empty catalogue: no recorded day analysed yet; footprints.py is ready for large prints, absorption, sweeps and refills. | waiting for data |
+
+**Role in Solo.** not a model input yet (no history): needs the phone's recordings.
+
+**R61 result.** Not measurable in R61b: the lake has no order book. The phone's TickZoneRecorder stores 5-level depth each second only from 12 Oct 2026 (a few sessions, none uploaded or analysed yet).
+
+## Volume profile: POC, value area, high / low-volume nodes
+
+Also called: VPOC, VAH / VAL, HVN, LVN.
+
+**What it is.** Volume traded at each price over a session: the point of control (POC) is the busiest price, the value area the band holding 70% of the volume, high-volume nodes act as magnets and low-volume nodes are 'thin' prices that get crossed quickly. The time-based version (TPO / market profile) is the 'Value area / market profile' concept above.
+
+**How it is computed.** Needs volume by price; the index has no volume, so our studies use a TPO profile (30-minute letters) or option / futures volume as a stand-in. R62 (branch claude/r62-volume-profile-smc) tests Boss's 15 Oct volume-profile video strategy separately; R61b does not duplicate it.
+
+**On the phone.** TPO version yes (index minutes); volume version only with futures volume (recorded from Jul 2026).
+
+**How traders use it.** Trade back to the POC, fade at value-area edges, expect fast moves through low-volume nodes.
+
+**Pitfalls.**
+
+- Levels picked by eye look magical; against randomly shifted placebo levels they do no better (R9, LEVEL_MAP).
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R9 (`research/HUNT_R9_VOLUME_GAMMA.md`) | 224 design tests, holdout 1 Oct 2025 - 6 Oct 2026 | POC / value area / HVN / LVN vs placebo levels: 0 of 32 design tests pass BH (best q 0.26); real futures volume (48 days) gives scattered results. | failed |
+| LEVEL_MAP (`research/LEVEL_MAP.md`) | 24 tests (12 level types x 2 indices) | No level type beats placebo levels shifted 0.3-0.7% (lowest q 0.76). | failed |
+| R52 H37-10 (`research/HUNT_R52_OLD_CATALOGUE_RECENT.md`) | 294 final trades | 'Open outside value and go' (TPO value area): final +Rs 48,772, p 0.001, q 0.03, PASS but MIDCPNIFTY carries +Rs 46,329 and the exit was re-tuned; it is Solo's S3. | paper-only candidate |
+
+**Role in Solo.** R62's subject; in Solo only through S3 and A2's inputs.
+
+**R61 result.** Not an R61b input: R62 (branch claude/r62-volume-profile-smc) tests the volume-profile strategy separately. In Solo it appears only through S3 (open outside the previous day's TPO value area).
+
+## Order blocks
+
+Also called: OB, institutional candle, supply / demand zone.
+
+**What it is.** SMC idea: the last opposite-colour candle before a strong move marks where 'institutions' placed orders; price is expected to come back to that zone and react.
+
+**How it is computed.** Typical: the last down candle before an up-impulse that breaks structure (bullish OB), its high-low as a zone. Not an R61b input. R62 tests the SMC strategy separately.
+
+**On the phone.** computable from index candles; not built.
+
+**How traders use it.** Enter on a return to the order block in the direction of the impulse.
+
+**Pitfalls.**
+
+- Defined after the impulse, so zones are easy to draw in hindsight and hard to test honestly.
+- No order data is behind it: it is a candle pattern.
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| search (`research/FINDINGS.md`) | the whole research folder | No study of order blocks exists in our research yet; R62 is the first. | untested (R62) |
+
+**Role in Solo.** R62's subject; not an R61b input.
+
+**R61 result.** Not an R61b input: R62 tests it separately.
+
+## Fair value gaps (FVG)
+
+Also called: FVG, imbalance (ICT), liquidity void.
+
+**What it is.** A three-candle pattern where the first candle's high and the third candle's low do not overlap (bullish), leaving a 'gap' the middle candle moved through; price is expected to return to fill it.
+
+**How it is computed.** Bullish FVG: low[t] > high[t-2]; bearish: high[t] < low[t-2]; usually a minimum gap size. Not an R61b input; R62 tests the strategy separately.
+
+**On the phone.** computable from index candles; not built.
+
+**How traders use it.** ICT traders enter when price returns into the gap after a break of structure.
+
+**Pitfalls.**
+
+- Gaps are everywhere on 1-5 minute charts; filters picked after the fact make backtests look good.
+- Our design favourite flipped to a loss on unseen data.
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| R1 N6 (`research/HUNT_R1_INTERNET.md`) | BANKNIFTY 814 / NIFTY 982 design trades | ICT first FVG: design +Rs 142 / +125 a day, then the locked year -Rs 196 / -334 a day; q 1.00. | failed (flipped) |
+| R52 (`research/HUNT_R52_OLD_CATALOGUE_RECENT.md`) | BANKNIFTY 110, NIFTY 97 final trades | FVG re-tested on Nov 2024+ data: -Rs 15,329 and -Rs 18,658. | failed |
+| ADVANCED (`research/ADVANCED.md`) | 209 trades | Entering in the FVG removed the pullback edge (-Rs 35,814). | failed |
+
+**Role in Solo.** R62's subject; not an R61b input.
+
+**R61 result.** Not an R61b input: R62 tests it separately.
+
+## Break of structure (BOS) and change of character (ChoCH)
+
+Also called: BOS, CHoCH, MSS, market structure.
+
+**What it is.** SMC terms: a BOS is a break of the last swing high in an uptrend (continuation); a ChoCH is the first break against the trend (the last higher low broken), read as a possible reversal.
+
+**How it is computed.** Swing points from N-bar pivots; BOS = close beyond the last swing in the trend's direction, ChoCH = close beyond the last opposite swing. Not an R61b input; R62 tests the strategy separately.
+
+**On the phone.** computable from index candles (Matrix Pine script had BOS / ChoCH entries).
+
+**How traders use it.** Trade continuation after a BOS and the new direction after a ChoCH, often with an order block or FVG.
+
+**Pitfalls.**
+
+- Swing definitions change the answer; many parameters to over-fit.
+- A BOS is just a breakout with a new name; breaks barely pay after costs (H18).
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| MATRIX_V22 (`research/MATRIX_V22.md`) | 38 in-spec versions, two years | BOS / ChoCH entries lose in both years in every version (5-minute example 608 trades, -Rs 2,30,966 on 2 lots). | failed |
+| ADVANCED (`research/ADVANCED.md`) | 167 trades | 'Base + break of structure': -Rs 54,886. | failed |
+
+**Role in Solo.** R62's subject; not an R61b input.
+
+**R61 result.** Not an R61b input: R62 tests it separately.
