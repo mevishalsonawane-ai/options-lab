@@ -794,3 +794,18 @@ Bollinger(20, 2) lower band). That is not the default; it is reported separately
   shows -106 and -127 (122 and 130 trades). On the fixed contract the signal is no better than random entries (q 0.62).
 - BANKNIFTY: +Rs 237 on the rolling series, -Rs 124 a trade on one contract at real lots (1,405 trades).
 - Rule for every lake study: never trade the rolling ATM series as one instrument; hold the strike that was bought.
+
+## The ORB family on the Nov-2024+ market only (R49, 15 Oct 2026) - still loses on every index; nothing comes back
+Full study: `HUNT_R49_ORB_RECENT.md` (pre-registered `hunt/r49/PREREG.md`, commit 5448420; Dhan lake 21 Nov 2024 - 13 Oct
+2026 only; design to 31 Mar 2026, final test 1 Apr - 13 Oct 2026 read once; one held contract, lots read from the data,
+charges in force on each date incl. STT 0.15% from 1 Apr 2026, liq fills). Signal source: the index (default).
+- The old rules exactly as paused, all five indices pooled: ORB design -Rs 88,644 (1,595 trades), final -Rs 9,813 (636);
+  ORB Fresh the same; ORB Sweep -Rs 4,12,532 (2,093) and -Rs 92,211 (870); Range Fade -Rs 4,06,570 (2,363) and -Rs
+  1,14,187 (1,020). Every arm lost on every index in design. ORB's small final loss is one month: April 2026 +Rs 23,944.
+- R3's 16 versions (unchanged) all lose pooled in design; R23's two R22-range finalists, the only rules positive in
+  design (+Rs 28,121 / +Rs 14,517), lost -Rs 57,452 / -Rs 61,789 in the final test. A 32-rule re-tune (range 15 / 30 / 50
+  minutes x stop / target 0.5 / 1 / 1.5) is negative pooled in design and final for every point.
+- 0 of 336 tests pass (56 rules x pooled + 5 indices; BH over 336). Near-misses only on FINNIFTY: ORB 1-ITM design +Rs
+  24,846 (310 trades), final +Rs 26,002 (116), p 0.12, q 0.55, its 5 best trades 126% of the net; R3 saw the same and
+  called it noise.
+- App: nothing changes; ORB, ORB Fresh, ORB Sweep and Range Fade stay paused on every index; nothing goes on paper.

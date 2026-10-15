@@ -1,0 +1,43 @@
+id: r49-g-orb-fresh-m15-k0p5
+title: 'R49 r49-g-orb-fresh-m15-k0.5: a re-tune grid point (opening-range length M, stop / target scale k), chosen on design
+  only (Nov 2024+ market only)'
+family: orb
+date: '2026-10-15'
+doc: research/HUNT_R49_ORB_RECENT.md
+data_version: 'Dhan lake on Drive, fetched 15 Oct 2026: options_rolling_1m opt_<UND>_WEEK_2024-2026 (nearest expiry on or
+  after the day, one held contract per trade) and index_1m incl. INDIAVIX, read by research/hunt/r49/r49data.py'
+period:
+  design: 21 Nov 2024 - 31 Mar 2026 (336 sessions per index), NIFTY BANKNIFTY FINNIFTY MIDCPNIFTY SENSEX
+  holdout: final test 1 Apr - 13 Oct 2026 (132-133 sessions per index), read once 15 Oct 2026; not pristine (R3, R24 and others
+    had read parts of 2025-26)
+prereg: research/hunt/r49/PREREG.md
+hypothesis: On the market since NSE's Nov 2024 expiry change, r49-g-orb-fresh-m15-k0.5 makes money after real costs on the
+  final test, beats random-entry twins and survives BH over 336 tests (PREREG A6), pooled or on one index.
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 1-minute index
+- opening range
+- VIX (R3 filters)
+- ATR14
+- TWAP (R23)
+model_or_rule: 'r49-g-orb-fresh-m15-k0.5: a re-tune grid point (opening-range length M, stop / target scale k), chosen on
+  design only; arm orb_fresh, range 15 min, stop / target x0.5. Signal source: the index spot (1-minute, 5- / 15-minute bars)
+  - the default; the option is only the instrument.'
+settings: research/hunt/r49/PREREG.md A3; results/design.json rules[]
+variants_tried: 6
+results:
+  summary: 'Design (pooled): 2,018 trades, win rate 39%, net Rs -130,083 (Rs -387 a day), avg win / loss Rs +462 / -404, worst
+    day Rs -5,350, max DD Rs -140,264. Final test (pooled): 776 trades, win rate 42%, net Rs -26,758 (Rs -201 a day), avg
+    win / loss Rs +546 / -458, worst day Rs -5,326, max DD Rs -52,729, twin p 0.014, BH q 0.15, FAIL. Final by index: NIFTY
+    158 / -8,270 (p 0.37, FAIL); BANKNIFTY 154 / -483 (p 0.00, FAIL); FINNIFTY 148 / +1,965 (p 0.20, FAIL); MIDCPNIFTY 160
+    / -14,042 (p 0.16, FAIL); SENSEX 156 / -5,928 (p 0.25, FAIL). Passes: none.'
+  costs: charges in force on the date (STT 0.1% to 31 Mar 2026, 0.15% from 1 Apr 2026; BSE rates for SENSEX); liq fills (5
+    bps + 1-4 ticks, stops 10 bps + 2x ticks); 1 lot of the day's contract (lot read from the data)
+holdout_read: true
+verdict: rejected
+notes: 6 tests per rule (pooled + 5 indices), all in R49's BH family of 336.

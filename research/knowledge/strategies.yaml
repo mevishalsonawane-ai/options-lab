@@ -78,6 +78,11 @@
       costs: "app charges, liq fills, 1 lot"
       src: research/FINDINGS.md
       sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, ORB lost -Rs 88,644 in design (1,595 trades, 5 indices) and -Rs 9,813 in the final test (636 trades, Apr - Oct 2026); 0 of 336 R49 tests pass."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
 
 - id: orb-fresh
   name: ORB Fresh
@@ -101,6 +106,11 @@
       costs: "app charges, liq fills, 1 lot"
       src: research/FINDINGS.md
       sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, ORB Fresh equals ORB with the 1-a-side cap: -Rs 88,644 in design (1,595 trades) and -Rs 9,813 in the final test (636 trades); R49: stays off."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
 
 - id: orb-sweep
   name: ORB Sweep
@@ -119,6 +129,11 @@
       costs: "app charges, liq fills, 1 lot"
       src: research/FINDINGS.md
       sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, ORB Sweep lost -Rs 4,12,532 in design (2,093 trades) and -Rs 92,211 in the final test (870 trades); R49: stays off."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
 
 - id: range-fade
   name: Range Fade
@@ -142,6 +157,11 @@
       costs: "app charges, liq fills, 1 lot"
       src: research/FINDINGS.md
       sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, Range Fade lost -Rs 4,06,570 in design (2,363 trades) and -Rs 1,14,187 in the final test (1,020 trades); R49: stays off."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
 
 - id: big-candle-pullback
   name: Big-candle pullback (Solo)
