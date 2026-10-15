@@ -152,3 +152,19 @@ default) and **0.50**.
 
 Nothing directly. A PASS is at most a paper candidate for Boss, labelled "signal on the underlying", never live without
 unseen paper first (CLAUDE.md safety rules).
+
+## Amendment 0 (15 Oct 2026, after the data build and the unit tests, BEFORE any P&L was computed)
+
+Decided while writing the engine; no result of any rule had been seen.
+1. **Invalid fills.** A trade whose fill-minute index open is already at or beyond its stop (long: <= S) or its target
+   (long: >= T) is not taken (there is no risk or no reward left to trade). The twins keep the real trade's distances,
+   so they are never in that state.
+2. **Time exit.** The option is sold at the open of row (fill row + 12 x timeframe minutes) when neither level was hit
+   first and that row is before the square-off.
+3. **Last session.** The cleaned index store runs to **14 Oct 2026** (524 sessions from 2 Sep 2024 for every index);
+   the final test runs to that day.
+4. **One try per zone per variant.** `tch` and `rej` read the same zones; each variant takes at most one trade per
+   zone, and none while that index's previous trade in the same variant is still open.
+5. **Sensitivity (fib 0.33, 0.50)** gets the same trade statistics but no twins and no BH (information only).
+6. The script's `ta.highest` / `ta.lowest` read the current timeframe's high / low; the zigzag runs continuously across
+   sessions (overnight gaps included), as on a TradingView intraday chart.
