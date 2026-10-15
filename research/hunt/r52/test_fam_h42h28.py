@@ -104,7 +104,7 @@ def assert_lookahead_safe(fn, mk_of, ix, und, sig, **kw):
 # ------------------------------------------------------------------------------------------------ H42
 def test_h42_q0176_early_high_fires_pe_at_1400_and_not_otherwise():
     days = sessions(date(2025, 2, 3), 3)
-    c = flat(3)
+    c = flat(3) + np.linspace(0, 5, W)       # day 0 rises all day: its high is late -> no signal
     c[1, 5] = 1010.0                         # day 1: the high so far is made at 09:20 (first 15 min)
     c[1, 6:] = 1000.0 - np.linspace(0, 5, W - 6)
     c[2, 100] = 1010.0                       # day 2: high made at 10:55 -> no signal
@@ -236,10 +236,11 @@ def test_h28_expiry_day_and_first3_flags():
     s = F.h28_signals(FakeMk({"BANKNIFTY": ix}), legs=(("exp_day", "BANKNIFTY", "0920", "prior", -1),))
     assert list(s.day) == [days[3]] and s.side.iloc[0] == -1         # trades ON the expiry day
     c = flat(len(days))
-    c[:, 300:] = 1003.0
+    c[:, 200:] = 1003.0                      # up since the open by 13:59 -> CE
     ix2 = from_closes(days, c)
     s2 = F.h28_signals(FakeMk({"BANKNIFTY": ix2}), legs=(("tom_first3", "BANKNIFTY", "1400", "mom", 0),))
-    assert list(s2.day) == [date(2025, 3, 3), date(2025, 3, 4), date(2025, 3, 5)]
+    # ranks count the sessions in the data (the lake starts Jan 2024, so only the warm-up month is affected)
+    assert list(s2.day) == days[:3] + [date(2025, 3, 3), date(2025, 3, 4), date(2025, 3, 5)]
     assert set(s2.side) == {1}
 
 

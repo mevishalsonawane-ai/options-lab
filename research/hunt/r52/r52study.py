@@ -119,6 +119,12 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "design":
         design(sys.argv[2:] or None)
+    elif cmd == "pending":           # every registered rule not yet in the working design results
+        done = _load(DESIGN)
+        todo = [k for k in RR.RULES if k not in done]
+        print("pending:", " ".join(todo), flush=True)
+        if todo:
+            design(todo)
     elif cmd == "final":
         final()
     elif cmd == "prereg":

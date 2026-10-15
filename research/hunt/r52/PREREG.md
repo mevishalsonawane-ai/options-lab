@@ -96,3 +96,16 @@ One engine smoke test ran on DESIGN sessions before this file was committed. It 
 point 0 (5-minute, R3/S3, pivot target, ATM, 15:15 square-off), to check that the harness prices held contracts on the
 new lake. No final-test session was read. That rule (H4-4 / OBUY GB MR-04) is tested at its frozen variant below, like
 every other rule.
+
+## Amendment 1 (15 Oct 2026, after the first design runs; no final-test session read)
+
+The first design runs showed a flaw in the same-side twins. A twin keeps the real trade's side, so on a day when a
+breakout rule bought a call it buys a call too, and it may enter earlier in the window, before the breakout. That twin
+already knows the day's direction. The R1-2 NIFTY twins averaged +Rs 1,868 a trade against the rule's +Rs 296.
+
+- **Gate unchanged:** the gate stays exactly as pre-registered, on the same-side twin p. It is the stricter test.
+- **New column, information only:** each read also gets **p_flip**, from the same twins with a coin-flip side. This is
+  obuy's own default and the baseline the OBUY studies used.
+- **Flagging:** a rule that fails only the same-side p but passes every other gate with p_flip < 0.05 is flagged in the
+  write-up as "fails only the same-side twin test". It does not pass.
+- **Rerun:** every design run so far is rerun with both pools.

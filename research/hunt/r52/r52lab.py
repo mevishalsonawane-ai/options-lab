@@ -105,8 +105,12 @@ def run(rules: list, part: str, twins: bool = True, seed: int = K.SEED) -> dict:
             s = s[keep].reset_index(drop=True)
         jobs.append((s, r.rule, r.exe(), POOL_K if twins else 0, r.window, True))
         meta.append(r)
-    packs = prepare_many([j for j in jobs if len(j[0])], seed=seed) if any(len(j[0]) for j in jobs) else []
-    it = iter(packs)
+    live = [j for j in jobs if len(j[0])]
+    # second pool (amendment 1, information only): the same twins with a coin-flip side (obuy's own default)
+    flip = [(j[0], j[1], j[2], POOL_K, j[4], False) for j in live] if twins else []
+    packs = prepare_many(live + flip, seed=seed) if live else []
+    flips = iter(packs[len(live):])
+    it = iter(packs[:len(live)])
     out = {}
     for (s, *_), r in zip(jobs, meta):
         unds = r.unds or (tuple(sorted(s.und.unique())) if len(s) else ())
@@ -114,11 +118,13 @@ def run(rules: list, part: str, twins: bool = True, seed: int = K.SEED) -> dict:
             out[r.id] = dict(trades=pd.DataFrame(columns=KEEP), pool=None, sessions=sessions(unds, part), rule=r)
             continue
         pk, pool = next(it)
+        pool_flip = next(flips)[1] if twins else None
         tr = pk.run(r.exits, r.exe()) if len(pk) else pd.DataFrame(columns=KEEP)
         tr = positions(tr, **r.pos) if len(tr) else tr
         tr = tr[KEEP] if len(tr) else pd.DataFrame(columns=KEEP)
         pt = pool.run(r.exits, r.exe()) if (twins and pool is not None and len(pool)) else None
-        out[r.id] = dict(trades=tr.reset_index(drop=True), pool=pt, sessions=sessions(unds, part), rule=r)
+        pf = pool_flip.run(r.exits, r.exe()) if (twins and pool_flip is not None and len(pool_flip)) else None
+        out[r.id] = dict(trades=tr.reset_index(drop=True), pool=pt, pool_flip=pf, sessions=sessions(unds, part), rule=r)
     return out
 
 
@@ -136,6 +142,8 @@ def score(res: dict, B: int = B_TWINS) -> dict:
     net = float(nets.sum())
     top5 = float(np.sort(nets)[::-1][:5].sum()) if len(nets) else 0.0
     rb = random_baseline(tr, res["pool"], B=B, seed=K.SEED) if (res["pool"] is not None and len(tr)) else dict(p=1.0, null_mean=np.nan, n_used=0)
+    rf = (random_baseline(tr, res.get("pool_flip"), B=B, seed=K.SEED) if (res.get("pool_flip") is not None and len(tr))
+          else dict(p=1.0, null_mean=np.nan))
     traded = by_day[by_day.index.isin(set(tr.day))] if len(tr) else by_day.iloc[:0]
     return dict(
         trades=int(len(nets)), days=len(days), win_rate=float((nets > 0).mean()) if len(nets) else 0.0,
@@ -144,6 +152,7 @@ def score(res: dict, B: int = B_TWINS) -> dict:
         worst_day=float(traded.min()) if len(traded) else 0.0, max_dd=dd,
         top5_share=(top5 / net) if net > 0 else float("nan"),
         p=float(rb["p"]), twin_mean=float(rb.get("null_mean", np.nan)), twins_used=int(rb.get("n_used", 0)),
+        p_flip=float(rf["p"]), twin_flip_mean=float(rf.get("null_mean", np.nan)),
         by_und={u: float(x) for u, x in tr.groupby("und").net.sum().items()} if len(tr) else {},
         by_fold=fold_nets(tr), exits={str(w): int(n) for w, n in tr.why.value_counts().items()} if len(tr) else {},
     )

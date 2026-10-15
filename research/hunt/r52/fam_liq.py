@@ -481,3 +481,317 @@ def _be_exit(X, r, m, side, be):
             return OPEN_M + t + 1
         mfe = max(mfe, side * ((h if side > 0 else l) - o))
     return None
+
+
+# ====================================================================================== LIQ-5: wait 5 candles
+def _read(ch, i, how, wait, level, side):
+    """liquidity_wait5.read: the direction of candles i+1 .. i+wait (+1 up, -1 down, 0 none)."""
+    O, H, L, C = ch.O, ch.H, ch.L, ch.C
+    w = range(i + 1, i + wait + 1)
+    if how == "net":
+        return int(np.sign(C[i + wait] - C[i]))
+    if how == "colour":
+        return int(np.sign(sum(np.sign(C[k] - O[k]) for k in w)))
+    if how == "hhhl":
+        return int(np.sign(sum(int(H[k] > H[k - 1] and L[k] > L[k - 1]) - int(H[k] < H[k - 1] and L[k] < L[k - 1]) for k in w)))
+    if how == "held":
+        beyond = (C[i + wait] > level) if side > 0 else (C[i + wait] < level)
+        return side if beyond else -side
+    raise ValueError(how)
+
+
+def wait5_signals(mk, unds=("BANKNIFTY",), tf=15, kind="found", source="both", how="colour", wait=5, win=(5, 315),
+                  name="w5"):
+    """liquidity_wait5.py: a level is FOUND (becomes known) or taken (BREAK) on bar i; read candles i+1..i+5 (same
+    session); buy that way at the next candle (entries 09:20-14:30); out at the next level ahead, a new level on the
+    trade's side, or 15:10 (no failed-break exit in that study)."""
+    rows = []
+    for und in unds:
+        ch = chart(mk, und, tf)
+        n = len(ch.C)
+        evs = []
+        for k in range(len(ch.zones)):
+            if source == "swing" and ch.zkind[k]:
+                continue
+            if source in ("pool", "both") and not ch.zkind[k]:
+                continue
+            at = int(ch.zknown[k] if kind == "found" else ch.zbroken[k])
+            if at < 0:
+                continue
+            if source == "both" and not ch.active_swing_overlap(k, at):
+                continue
+            evs.append((at, k))
+        sig = {}
+        for at, k in evs:                                       # liquidity_wait5.signals_for (shift 0)
+            i = at
+            if i + wait + 1 >= n or ch.di[i] != ch.di[i + wait] or ch.di[i + wait] != ch.di[i + wait + 1]:
+                continue
+            s = _read(ch, i, how, wait, float(ch.zedge[k]), int(ch.zside[k]))
+            if s:
+                sig[i + wait] = s
+        for j in sorted(sig):
+            sg = sig[j]
+            m = int(ch.E[j])
+            if j >= ch.day_end[j] or not (win[0] <= m <= win[1]):
+                continue
+            tgt = ch.target(j, sg, ch.C[j])
+            nl = ch.first_nl(j, sg)
+            rows.append(dict(und=und, day=ch.days[int(ch.di[j])], sig_min=OPEN_M + m - 1, side=int(sg),
+                             book=f"{name}{tf}_{und}", idx_stop=np.nan, idx_target=np.nan if tgt is None else tgt,
+                             exit_at=float(ch.clock_end(nl)) if nl is not None else np.nan, tag=f"{kind}/{source}/{how}"))
+    return pd.DataFrame(rows, columns=COLS)
+
+
+# ====================================================================================== LIQ-3: 60-min, held overnight
+def carry_signals(mk, unds=("BANKNIFTY",), tf=60, source="pool", stop=False, carry=True, win=(5, 315), name="lb"):
+    """liquidity_break.simulate on a tf-minute chart with no premium stop, replayed one position at a time (every
+    exit is an index event): out at the next level touched (filled the next minute), a failed-break close (stop=True)
+    or a new same-side level (filled at the next candle's open), else 15:10 (carry=False). carry=True: no 15:10 while
+    the near contract does not expire that day - the trade is held overnight; on a day it cannot be carried it is
+    squared off at 15:15 (R52's latest square-off; the old run held to 15:29). Rows carry exit_day / exit_min
+    (obuy multiday; exits sq_off = MD_SQ), each in its own book (the sequence is already one at a time)."""
+    rows = []
+    for und in unds:
+        ch = chart(mk, und, tf)
+        X = dayinfo(mk, und)
+        nd = len(ch.days)
+        pos = None
+        for i in range(len(ch.C)):
+            r = int(ch.di[i])
+            if pos is not None:
+                sg = pos["side"]
+                can_carry = carry and not X.exp[r] and r + 1 < nd
+                cut = None if can_carry else (360 if carry else 355)
+                x = None
+                t0 = max(int(ch.S[i]), pos["m"]) if r == pos["r"] else int(ch.S[i])
+                for t in range(t0, int(ch.E[i])):
+                    if cut is not None and t >= cut:
+                        x = OPEN_M + cut
+                        break
+                    if pos["tgt"] is not None and np.isfinite(X.c[r, t]) and (
+                            (sg > 0 and X.h[r, t] >= pos["tgt"]) or (sg < 0 and X.l[r, t] <= pos["tgt"])):
+                        x = OPEN_M + min(t + 1, W - 1)
+                        break
+                if x is None and stop and sg * (ch.C[i] - pos["level"]) < 0:
+                    x = OPEN_M + min(int(ch.E[i]), W - 1)
+                if x is None and ((ch.zknown == i) & (ch.zside == sg)).any():
+                    x = OPEN_M + min(int(ch.E[i]), W - 1)
+                if x is None and i == ch.day_end[i] and not can_carry:
+                    x = OPEN_M + (cut if cut is not None else W - 1)
+                if x is not None:
+                    rows.append(dict(pos["row"], exit_day=ch.days[r], exit_min=int(x)))
+                    pos = None
+            if pos is not None or i >= ch.day_end[i]:
+                continue
+            m = int(ch.E[i])
+            if not (win[0] <= m <= win[1]):
+                continue
+            k = ch.cand(i, source)
+            if k is None:
+                continue
+            sg = int(ch.zside[k])
+            tgt = ch.target(i, sg, ch.C[i])
+            n = len(rows)
+            pos = dict(side=sg, m=m, r=r, level=float(ch.zedge[k]), tgt=tgt,
+                       row=dict(und=und, day=ch.days[r], sig_min=OPEN_M + m - 1, side=sg, book=f"{name}{tf}_{und}_{n}",
+                                tag=f"lvl={ch.zedge[k]:.2f}"))
+    return pd.DataFrame(rows, columns=["und", "day", "sig_min", "side", "book", "tag", "exit_day", "exit_min"])
+
+
+# ====================================================================================== SPECS
+ARM_X = dict(stop_pct=0.15, time_stop=20, time_gain=0.05, sq_off=SQ10)      # obuy.strategies.liquidity.ARM_EXITS
+PLAIN_X = dict(stop_pct=None, time_stop=None, sq_off=SQ10)                  # liquidity_break: no premium stop
+P15_X = dict(stop_pct=0.15, time_stop=None, sq_off=SQ10)                    # the 'plus' studies' 15% premium stop
+ARM_WIN = (9 * 60 + 19, 13 * 60 + 59)                                       # bar ends 09:20 .. 14:00
+LB_WIN = (9 * 60 + 19, 14 * 60 + 29)                                        # fills 09:20 .. 14:30
+VOL_WIN = (10 * 60 + 14, 14 * 60 + 29)                                      # first-hour filter: fills from 10:15
+ONE = dict(one_at_a_time=True)
+
+
+def _lock(trigger, keep, stop=0.15):
+    """'once the premium is up trigger x paid, out if it falls back to paid x (1 + keep)' (sensex / finnifty_plus)."""
+    return dict(stop_pct=stop, time_stop=None, ladder=((trigger, keep),), ladder_ref_pct=1.0, be_floor=False, sq_off=SQ10)
+
+
+SRC = ("swing", "pool", "either", "both")
+
+# ---- H9-1
+_H9_BOOKS = [("BANKNIFTY", 3), ("BANKNIFTY", 10), ("BANKNIFTY", 30), ("BANKNIFTY", 60), ("FINNIFTY", 3),
+             ("FINNIFTY", 10), ("FINNIFTY", 15), ("FINNIFTY", 60), ("MIDCPNIFTY", 3), ("MIDCPNIFTY", 10),
+             ("MIDCPNIFTY", 30), ("MIDCPNIFTY", 60)]
+H9 = dict(
+    key="H9-1", title="Liquidity arm on extra books (BN 10-min + MIDCP 30-min)", source="index",
+    why="original = the two books H9's pre-registered keep rule kept (HUNT_H9.md: BN10 q 0.006, MIDCP30 q 0.049); "
+        "rules = the app arm via hunt/h4/comps.py (run_h9.sig_one); grid = each of H9's 12 extra books alone",
+    orig=dict(fn=arm_signals, params=dict(books=(("BANKNIFTY", 10), ("MIDCPNIFTY", 30))), money=1, series="near",
+              unds=("BANKNIFTY", "MIDCPNIFTY"), exits=ARM_X, expiry="skip", pos=ONE, window=ARM_WIN),
+    grid=[dict(params=dict(books=(b,)), unds=(b[0],)) for b in _H9_BOOKS],
+)
+
+
+# ---- H11-1 / H11-2
+def _h11(key, und, orig_books):
+    cells = []
+    for bk in ((15, 5), (30, 5)):
+        for sm in (1.0, 2.0):
+            for room in (1.0, 2.0):
+                for money in (0, 1):
+                    cells.append((bk, sm, room, money, "near"))
+    for bk in ((15, 5), (30, 5)):
+        for sm in (1.0, 2.0):
+            for money in (0, 1):
+                cells.append((bk, sm, 1.0, money, "month"))
+    o = (orig_books, 1.0, 2.0, 1, "near")
+    grid = [dict(params=dict(books=tuple((und, t) for t in bk), stop_mult=sm, room=room), money=money, series=ser)
+            for bk, sm, room, money, ser in cells if (bk, sm, room, money, ser) != o]
+    stop = {"NIFTY": 15, "SENSEX": 50}[und]
+    return dict(
+        key=key, title=f"Liquidity arm on {und} ({orig_books[0]}m+{orig_books[1]}m, room 2)", source="index",
+        why=f"original = H11's pre-registered choice for {und} (HUNT_H11.md: {orig_books[0]}+{orig_books[1]}, 1x stop "
+            f"{stop} pts, room >= 2, ITM1, weekly); hunt/h11/sig.py raw_signals; grid = the rest of H11's 24 cells",
+        orig=dict(fn=arm_signals, params=dict(books=tuple((und, t) for t in orig_books), stop_mult=1.0, room=2.0),
+                  money=1, series="near", unds=(und,), exits=ARM_X, expiry="skip", pos=ONE, window=ARM_WIN),
+        grid=grid)
+
+
+# ---- LIQ-1 / LIQ-2 / LIQ-3 / LIQ-4 (liquidity_break / liquidity_more)
+def _lb_grid(tfs, orig, extra=()):
+    g = []
+    for tf in tfs:
+        for src in SRC:
+            for st in (False, True):
+                if (tf, src, st) != orig:
+                    g.append(dict(params=dict(books=((tf, 20, 10),), source=src, stop=st)))
+    return g + list(extra)
+
+
+def _lb(key, title, why, tf, src, st, grid):
+    return dict(key=key, title=title, source="index", why=why,
+                orig=dict(fn=break_signals, params=dict(books=((tf, 20, 10),), source=src, stop=st), money=0,
+                          series="near", unds=("BANKNIFTY",), exits=PLAIN_X, expiry="allow", pos=ONE, window=LB_WIN),
+                grid=grid)
+
+
+LIQ1 = _lb("LIQ-1", "Liquidity break on BN 1/3-min charts (3-min, either, no stop)",
+           "no frozen variant (LIQUIDITY.md, all rejected): original = the catalogue's best cell, 3-min 'either' without the "
+           "failed-break stop; liquidity_break.simulate; grid = the other 1/3-min cells", 3, "either", False,
+           _lb_grid((1, 3), (3, "either", False)))
+LIQ2 = _lb("LIQ-2", "Liquidity break on BN 15-min, 'both', no failed-break stop",
+           "original = the catalogue's CLOSE cell (LIQUIDITY.md 15-min both no stop +18k / +37k); grid = liquidity_break's "
+           "other 5/15-min cells + liquidity_more's 15-min lookback / confirm cells (both, either; no stop)",
+           15, "both", False,
+           _lb_grid((5, 15), (15, "both", False),
+                    [dict(params=dict(books=((15, ln, cf),), source=src, stop=False))
+                     for ln, cf in ((10, 10), (5, 10), (20, 5), (10, 5)) for src in ("both", "either")]))
+_C3 = [(src, st, cy) for src in SRC for st in (False, True) for cy in (False, True)]
+LIQ3 = dict(
+    key="LIQ-3", title="Liquidity break on BN 60-min, pool, no stop, held overnight", source="index",
+    why="original = the catalogue's best 60-min cell (LIQUIDITY.md pool / no stop / overnight +53k / -16k); "
+        "liquidity_break.simulate(carry=True) replayed with obuy multiday; grid = the other 15 60-min cells",
+    orig=dict(fn=carry_signals, params=dict(tf=60, source="pool", stop=False, carry=True), money=0, series="near",
+              unds=("BANKNIFTY",), exits=dict(sq_off=MD_SQ), expiry="allow", pos=ONE, window=LB_WIN),
+    grid=[dict(params=dict(source=s, stop=st, carry=cy)) for s, st, cy in _C3 if (s, st, cy) != ("pool", False, True)],
+)
+LIQ4 = dict(
+    key="LIQ-4", title="Liquidity break BN two charts 15(20,10)+5(10,10)", source="index",
+    why="original = the first non-adopted combo in liquidity_more.py (15-min lookback 20 confirm 10 + 5-min lookback 10 "
+        "confirm 10, 'both', failed-break stop; +20.6k / +22.9k); grid = the study's other two combos",
+    orig=dict(fn=break_signals, params=dict(books=((15, 20, 10), (5, 10, 10)), source="both", stop=True, name="lbL"),
+              money=0, series="near", unds=("BANKNIFTY",), exits=PLAIN_X, expiry="allow", pos=ONE, window=LB_WIN),
+    grid=[dict(params=dict(books=((15, 10, 10), (5, 10, 10)))), dict(params=dict(books=((15, 20, 10), (3, 20, 10))))],
+)
+
+# ---- LIQ-5
+_W5 = [(15, "found", s, h) for s in SRC for h in ("net", "colour", "hhhl")]
+_W5 = [c for c in _W5 if c != (15, "found", "both", "colour")]
+_W5 += [(15, "break", s, h) for s in ("pool", "both") for h in ("net", "colour", "hhhl", "held")]
+_W5 += [(tf, "found", s, "colour") for tf in (3, 5) for s in ("both", "pool")]
+LIQ5 = dict(
+    key="LIQ-5", title="Liquidity found -> wait 5 candles -> buy (BN 15-min, found, both, colour)", source="index",
+    why="original = the catalogue's named cell (LIQUIDITY_WAIT5.md 15-min found / both / colour -8.8k / +25.3k); "
+        "liquidity_wait5.run/signals_for/read; grid = the study's other 15-min found and break cells + 3/5-min found",
+    orig=dict(fn=wait5_signals, params=dict(tf=15, kind="found", source="both", how="colour"), money=0, series="near",
+              unds=("BANKNIFTY",), exits=PLAIN_X, expiry="allow", pos=ONE, window=LB_WIN),
+    grid=[dict(params=dict(tf=tf, kind=k, source=s, how=h)) for tf, k, s, h in _W5],
+)
+
+# ---- LIQ-6 (= LIQ-7)
+_F = lambda bks, L=20, C=10: tuple((t, L, C) for t in bks)  # noqa: E731
+LIQ6 = dict(
+    key="LIQ-6", title="Liquidity break on FINNIFTY 15m+5m (ATM, 15% stop)", source="index",
+    why="original = liquidity_finnifty_plus.py BASE (= LIQUIDITY_FINNIFTY.md's 15+5, later replaced by 30+5); "
+        "grid = the study's A/B picks, single changes and option knobs (LIQ-7)",
+    orig=dict(fn=break_signals, params=dict(unds=("FINNIFTY",), books=_F((15, 5)), source="both", stop=True),
+              money=0, series="near", unds=("FINNIFTY",), exits=P15_X, expiry="allow", pos=ONE, window=LB_WIN),
+    grid=[dict(params=dict(books=_F((5, 30), C=15))),
+          dict(params=dict(books=_F((10, 15), L=10), vol_rng=0.5))]
+    + [dict(params=dict(books=_F(b))) for b in ((5,), (15,), (3, 15), (5, 30), (10, 15))]
+    + [dict(params=dict(books=_F((15, 5), L=v))) for v in (10, 30)]
+    + [dict(params=dict(books=_F((15, 5), C=v))) for v in (5, 15)]
+    + [dict(params=dict(vol_rng=v)) for v in (0.3, 0.5)]
+    + [dict(params=dict(trend="vwap")), dict(params=dict(skip="expday")),
+       dict(pos=dict(one_at_a_time=True, max_per_day=1))]
+    + [dict(exits=dict(P15_X, stop_pct=p)) for p in (None, 0.10, 0.20, 0.25)]
+    + [dict(money=1), dict(exits=_lock(0.30, 0.10)), dict(exits=_lock(0.50, 0.0))],
+)
+
+# ---- LIQ-9 (= LIQ-10)
+TRAIL_X = dict(stop_pct=0.15, time_stop=None, trail_pct=0.15, trail_arm=0.30, sq_off=SQ10)
+_N = dict(unds=("NIFTY",), books=_F((10,)), source="both", stop=True, vol_fh=1.0, skip="dte1")
+LIQ9 = dict(
+    key="LIQ-9", title="Liquidity NIFTY A-pick (10-min, first-hour filter, lock 30/15, skip DTE<=1)", source="index",
+    why="original = liquidity_nifty_plus.py's Year-A pick (LIQUIDITY_NIFTY_PLUS.md 'exact settings'); grid = the "
+        "B-pick (LIQ-10), the study's 4 robustness charts and its single-factor changes applied to the pick",
+    orig=dict(fn=break_signals, params=_N, money=0, series="near", unds=("NIFTY",), exits=TRAIL_X, expiry="allow",
+              pos=ONE, window=VOL_WIN),
+    grid=[dict(params=dict(books=_F((30,)), stop=False, vol_fh=None, trend="vwap"), window=LB_WIN)]
+    + [dict(params=dict(books=_F(b))) for b in ((5,), (15,), (30,), (15, 5))]
+    + [dict(params=dict(books=_F((10,), L=v))) for v in (10, 15, 30)]
+    + [dict(params=dict(books=_F((10,), C=v))) for v in (5, 15)]
+    + [dict(exits=dict(TRAIL_X, stop_pct=p)) for p in (None, 0.10, 0.20, 0.25)]
+    + [dict(params=dict(stop=False)), dict(params=dict(trend="vwap")), dict(params=dict(trend="ema5x50")),
+       dict(money=1), dict(exits=_lock(0.20, 0.0)), dict(params=dict(skip="expday")),
+       dict(pos=dict(one_at_a_time=True, max_per_day=1)), dict(pos=dict(one_at_a_time=True, max_per_day=2)),
+       dict(params=dict(vol_fh=None), window=LB_WIN)],
+)
+
+# ---- LIQ-12
+_S = dict(unds=("SENSEX",), books=_F((15, 3)), source="both", stop=True, vol_fh=0.8)
+LIQ12 = dict(
+    key="LIQ-12", title="Liquidity SENSEX B-pick (15m+3m, first hour >= 0.8x median)", source="index",
+    why="original = liquidity_sensex_plus.py's Year-B combo (LIQUIDITY_SENSEX_PLUS.md: books 15+3 + vol 0.8; the "
+        "study MODELLED options, R52 prices real ones); grid = the study's VARIANTS applied to the pick",
+    orig=dict(fn=break_signals, params=_S, money=0, series="near", unds=("SENSEX",), exits=P15_X, expiry="allow",
+              pos=ONE, window=VOL_WIN),
+    grid=[dict(params=dict(books=_F(b))) for b in ((15, 5), (15,), (5,), (30, 15), (10, 5))]
+    + [dict(params=dict(books=_F((15, 3), L=v))) for v in (10, 15, 30)]
+    + [dict(params=dict(books=_F((15, 3), C=v))) for v in (5, 15)]
+    + [dict(params=dict(stop=False))]
+    + [dict(exits=dict(P15_X, stop_pct=p)) for p in (None, 0.10, 0.20, 0.25)]
+    + [dict(exits=_lock(0.20, 0.0)), dict(exits=_lock(0.30, 0.10)), dict(params=dict(trend="vwap")),
+       dict(params=dict(trend="ema20x3")), dict(params=dict(vol_fh=1.0)), dict(params=dict(vol_fh=None), window=LB_WIN),
+       dict(params=dict(skip="expday")), dict(pos=dict(one_at_a_time=True, max_per_day=2))],
+)
+
+# ---- LIQ-19 / LIQ-22 (overlays on the arm)
+_ARM_BOOKS = (("BANKNIFTY", 15), ("BANKNIFTY", 5), ("FINNIFTY", 30), ("FINNIFTY", 5))
+LIQ19 = dict(
+    key="LIQ-19", title="Liquidity arm, no stop no target: hold to a level (N3)", source="index",
+    why="original = N3 (next level + failed break, 15:10), the variant the study named (LIQUIDITY_EXITS_3060.md "
+        "post hoc, liquidity_nostop.py, 'as the app would run it'); grid = N1, N2, N12",
+    orig=dict(fn=arm_signals, params=dict(books=_ARM_BOOKS, mode="N3"), money=1, series="near",
+              unds=("BANKNIFTY", "FINNIFTY"), exits=PLAIN_X, expiry="skip", pos=ONE, window=ARM_WIN),
+    grid=[dict(params=dict(mode=x)) for x in ("N1", "N2", "N12")],
+)
+LIQ22 = dict(
+    key="LIQ-22", title="Liquidity arm BN with a later entry cut-off (14:30)", source="index",
+    why="original = 14:30, the first cut-off later than the adopted 14:00 (ENTRY_CUTOFF.md, entry_cutoff.run_liq; "
+        "on the arm as it runs now); grid = 14:55, 15:00, 15:05",
+    orig=dict(fn=arm_signals, params=dict(books=(("BANKNIFTY", 15), ("BANKNIFTY", 5)), win_to=14 * 60 + 30), money=1,
+              series="near", unds=("BANKNIFTY",), exits=ARM_X, expiry="skip", pos=ONE,
+              window=(9 * 60 + 19, 14 * 60 + 29)),
+    grid=[dict(params=dict(win_to=t), window=(9 * 60 + 19, t - 1)) for t in (14 * 60 + 55, 15 * 60, 15 * 60 + 5)],
+)
+
+SPECS = [H9, _h11("H11-1", "NIFTY", (30, 5)), _h11("H11-2", "SENSEX", (15, 5)), LIQ1, LIQ2, LIQ3, LIQ4, LIQ5, LIQ6,
+         LIQ9, LIQ12, LIQ19, LIQ22]

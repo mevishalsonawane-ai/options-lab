@@ -331,3 +331,54 @@ def test_specs_shape():
                 assert (r.exits.stop_pct == 0.25) == kinds.pop()
             assert r.exits.sq_off == 15 * 60 + 10
             assert set(r.unds) == set(r.params["unds"])
+
+
+# ------------------------------------------------------------------------------------------------ R5-1 Pine adapter
+def test_r5_adapter_maps_script_entries(monkeypatch):
+    """Entries in 09:20-14:45 on ok days only; long -> CE, short -> PE; NAT = the script's stop / TP1 at entry, plus
+    its same-day reversal close (exit at the next minute's open); OPT carries no index levels."""
+    days = weekdays(date(2025, 2, 3), 2)
+    mk = mk1(days, from_closes(np.full((2, W), 10000.0)))
+    T = pd.DataFrame([
+        dict(ecol=59, edpos=1, side=1, sl=9950.0, tp=10090.0, why="REV", xdpos=1, xcol=119),   # 10:14 CE, reversed 11:14
+        dict(ecol=344, edpos=1, side=-1, sl=10050.0, tp=9910.0, why="SL", xdpos=1, xcol=359),  # 15:00: after 14:45, dropped
+        dict(ecol=29, edpos=0, side=-1, sl=10050.0, tp=9910.0, why="REV", xdpos=1, xcol=14),   # 09:44 PE, reversed next day
+        dict(ecol=4, edpos=0, side=1, sl=9950.0, tp=10090.0, why="TP", xdpos=0, xcol=9),       # 09:19: before window
+    ])
+    monkeypatch.setattr(F.P5, "simulate", lambda B, piv, ms, cd, cfg: (T, {}))
+    df = F.r5_pine(mk, cfg="PRAG", tf=15, unds=("NIFTY",))
+    assert list(zip(df.day, df.sig_min, df.side)) == [(days[1], OPEN + 59, 1), (days[0], OPEN + 29, -1)]
+    assert (df.idx_stop.iloc[0], df.idx_target.iloc[0], df.exit_at.iloc[0]) == (9950.0, 10090.0, OPEN + 120)
+    assert np.isnan(df.exit_at.iloc[1])
+    opt = F.r5_pine(mk, cfg="PRAG", tf=15, exit="OPT", unds=("NIFTY",))
+    assert len(opt) == 2 and opt.idx_stop.isna().all() and opt.exit_at.isna().all()
+
+
+def test_r5_flat_market_no_signal():
+    days = weekdays(date(2025, 2, 3), 20)
+    assert len(F.r5_pine(mk1(days, from_closes(np.full((20, W), 10000.0))), cfg="PRAG", unds=("NIFTY",))) == 0
+
+
+def test_r5_look_ahead_guard_loose_script_settings():
+    """The default script almost never fires on a short synthetic market, so the guard runs the same code with loose
+    pivots (2/2, no swing filter, no cooldown) on 15m and 60m."""
+    days = weekdays(date(2025, 1, 1), 50)
+    base = random_market(50, seed=2, vol=0.0012)    # seed with PRAG signals on 15m and 60m
+    rng = np.random.default_rng(5)
+    fired = 0
+    for cfg in ("AS_WRITTEN", "PRAG", "CONFL"):
+        for tf in (15, 60):
+            p = dict(cfg=cfg, tf=tf, piv=2, ms=0.0, cd=0, exit="NAT", unds=("NIFTY",))
+            df = F.r5_pine(mk1(days, base), **p)
+            fired += len(df) > 0 and cfg == "PRAG"
+            for r in (df.iloc[rng.choice(len(df), min(3, len(df)), replace=False)].itertuples() if len(df) else []):
+                di, col = days.index(r.day), r.sig_min - OPEN
+                shock = np.zeros((len(days), W))
+                shock[di, col + 1:] = 1.0
+                shock[di + 1:, :] = 1.0
+                noise = np.cumsum(rng.standard_normal((len(days), W)), axis=1) * 15.0 * shock
+                M = {k: v + noise for k, v in base.items()}
+                df2 = F.r5_pine(mk1(days, M), **p)
+                cut = lambda x: x[(x.day < r.day) | ((x.day == r.day) & (x.sig_min <= r.sig_min))]  # noqa: E731
+                assert _norm(cut(df)).equals(_norm(cut(df2))), f"R5 {cfg} tf{tf}: changed by future bars"
+    assert fired >= 1
