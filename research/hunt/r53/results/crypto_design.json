@@ -1,0 +1,3221 @@
+{
+ "baselines": {
+  "BTC": {
+   "buy_and_hold": {
+    "buys": 1,
+    "net_after_tax": -17738.31870946652,
+    "net_per_day_after_tax": -35.69078211160265,
+    "net_pre_tax": -17738.31870946652,
+    "tds_locked": 826.293820406142
+   },
+   "monthly_dca": {
+    "buys": 17,
+    "net_after_tax": -22051.780268332135,
+    "net_per_day_after_tax": -44.369779211935885,
+    "net_pre_tax": -21958.549675178267,
+    "tds_locked": 783.9028710242752
+   }
+  },
+  "ETH": {
+   "buy_and_hold": {
+    "buys": 1,
+    "net_after_tax": -24653.211322008516,
+    "net_per_day_after_tax": -49.60404692557045,
+    "net_pre_tax": -24653.211322008516,
+    "tds_locked": 756.8358061171361
+   },
+   "monthly_dca": {
+    "buys": 17,
+    "net_after_tax": -19572.60939008411,
+    "net_per_day_after_tax": -39.38150782713101,
+    "net_pre_tax": -18309.644880277327,
+    "tds_locked": 820.5550210408586
+   }
+  },
+  "costs": "rc1 SPOT_COST base",
+  "period_days": 497,
+  "window": [
+   "2024-11-20",
+   "2026-03-31"
+  ]
+ },
+ "books": [
+  "delta",
+  "coinswitch_gst",
+  "coinswitch_nogst"
+ ],
+ "part": "design",
+ "rules": {
+  "CC1": {
+   "design_pick": null,
+   "kind": "rc2opt",
+   "name": "rc2-r8-pdl",
+   "original": "s40_step",
+   "variants": {
+    "s25_step": {
+     "by_coin": {
+      "BTC": 402,
+      "ETH": 388
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -553.2258367986977,
+      "avg_win": 665.9940175399447,
+      "days": 414,
+      "max_dd": 172296.7259384614,
+      "net": -168820.04311646987,
+      "net_per_day": -407.77788192384025,
+      "net_per_period_day": -339.6781551639233,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.27848101265822783,
+      "worst_day": -2560.1657964919864
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -553.2258367986977,
+      "avg_win": 968.0145603778267,
+      "days": 414,
+      "max_dd": 110584.01820619687,
+      "net": -102375.52369213582,
+      "net_per_day": -247.28387365250197,
+      "net_per_period_day": -205.98696919946843,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.27848101265822783,
+      "worst_day": -2560.1657964919864
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -535.3278059501877,
+      "avg_win": 677.2874429251225,
+      "days": 414,
+      "max_dd": 159974.95090331297,
+      "net": -156133.61194808007,
+      "net_per_day": -377.134328377005,
+      "net_per_period_day": -314.15213671645887,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.27848101265822783,
+      "worst_day": -2505.5381340795816
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -535.3278059501877,
+      "avg_win": 984.4294228562827,
+      "days": 414,
+      "max_dd": 97729.87012655182,
+      "net": -88562.37636322479,
+      "net_per_day": -213.91878348605022,
+      "net_per_period_day": -178.19391622379231,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.27848101265822783,
+      "worst_day": -2505.5381340795816
+     },
+     "delta_after_tax": {
+      "avg_loss": -509.890115803126,
+      "avg_win": 686.0573370138036,
+      "days": 414,
+      "max_dd": 141633.22735403807,
+      "net": -137312.85695911114,
+      "net_per_day": -331.6735675340849,
+      "net_per_period_day": -276.2834144046502,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.2810126582278481,
+      "worst_day": -2440.7942378871016
+     },
+     "delta_pre_tax": {
+      "avg_loss": -509.890115803126,
+      "avg_win": 997.1763619386682,
+      "days": 414,
+      "max_dd": 82102.22333384304,
+      "net": -68244.43342579121,
+      "net_per_day": -164.84162663234594,
+      "net_per_period_day": -137.31274331145113,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.2810126582278481,
+      "worst_day": -2440.7942378871016
+     },
+     "exit_reasons": {
+      "lock": 323,
+      "stop": 419,
+      "time": 48
+     },
+     "p": 0.005988023952095809,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -13517.065651494442,
+       "trades": 69
+      },
+      "2025Q1": {
+       "net": -28356.218462861943,
+       "trades": 136
+      },
+      "2025Q2": {
+       "net": -24460.594773283075,
+       "trades": 142
+      },
+      "2025Q3": {
+       "net": -48842.584016385954,
+       "trades": 156
+      },
+      "2025Q4": {
+       "net": 1734.6504174984989,
+       "trades": 151
+      },
+      "2026Q1": {
+       "net": -23871.04447258422,
+       "trades": 136
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -8056.902119975237,
+       "trades": 69
+      },
+      "2025Q1": {
+       "net": -18143.56267456426,
+       "trades": 136
+      },
+      "2025Q2": {
+       "net": -12697.971370223837,
+       "trades": 142
+      },
+      "2025Q3": {
+       "net": -40401.311029970006,
+       "trades": 156
+      },
+      "2025Q4": {
+       "net": 24789.538418707845,
+       "trades": 151
+      },
+      "2026Q1": {
+       "net": -13734.224649765743,
+       "trades": 136
+      }
+     },
+     "skips": {
+      "no_strike": 1,
+      "signals": 791
+     },
+     "tds_locked": 15232.606964860573,
+     "trades": 790,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC1_s25_step.csv",
+     "twins": {
+      "p": 0.005988023952095809,
+      "sizes": {
+       "BTC": {
+        "pool": 800,
+        "rule_trades": 402
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 388
+       }
+      },
+      "twin_mean": -186965.16420084893,
+      "twin_q05": -214327.4321932808,
+      "twin_q95": -155755.0751237002
+     }
+    },
+    "s40_step": {
+     "by_coin": {
+      "BTC": 402,
+      "ETH": 388
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -666.9806065730005,
+      "avg_win": 674.4984209978289,
+      "days": 414,
+      "max_dd": 172795.2206912604,
+      "net": -170081.25785882975,
+      "net_per_day": -410.8242943449994,
+      "net_per_period_day": -342.2158105811464,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.3367088607594937,
+      "worst_day": -3680.234279040743
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -666.9806065730005,
+      "avg_win": 980.375611915449,
+      "days": 414,
+      "max_dd": 98367.5573844862,
+      "net": -88717.9250747428,
+      "net_per_day": -214.29450501145604,
+      "net_per_period_day": -178.50689149847645,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.3367088607594937,
+      "worst_day": -3680.234279040743
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -650.2852189099721,
+      "avg_win": 683.3510435042962,
+      "days": 414,
+      "max_dd": 160715.42172649762,
+      "net": -157644.44087426836,
+      "net_per_day": -380.78367360934385,
+      "net_per_period_day": -317.1920339522502,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.3379746835443038,
+      "worst_day": -3625.5937526931502
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -650.2852189099721,
+      "avg_win": 993.2427957911282,
+      "days": 414,
+      "max_dd": 89438.88602015516,
+      "net": -74903.34301368419,
+      "net_per_day": -180.92594930841594,
+      "net_per_period_day": -150.71095173779514,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.3379746835443038,
+      "worst_day": -3625.5937526931502
+     },
+     "delta_after_tax": {
+      "avg_loss": -623.8500090835141,
+      "avg_win": 693.1212188925725,
+      "days": 414,
+      "max_dd": 142157.00693202202,
+      "net": -138576.24685040885,
+      "net_per_day": -334.7252339381856,
+      "net_per_period_day": -278.8254463790922,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.34050632911392403,
+      "worst_day": -3553.384145502626
+     },
+     "delta_pre_tax": {
+      "avg_loss": -623.8500090835141,
+      "avg_win": 1007.4436321112973,
+      "days": 414,
+      "max_dd": 75804.88464031811,
+      "net": -54023.51769457187,
+      "net_per_day": -130.49158863423156,
+      "net_per_period_day": -108.69923077378645,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.34050632911392403,
+      "worst_day": -3553.384145502626
+     },
+     "exit_reasons": {
+      "lock": 389,
+      "stop": 305,
+      "time": 96
+     },
+     "p": 0.005988023952095809,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -18087.73520313609,
+       "trades": 69
+      },
+      "2025Q1": {
+       "net": -35691.583878944315,
+       "trades": 136
+      },
+      "2025Q2": {
+       "net": -20836.424254646994,
+       "trades": 142
+      },
+      "2025Q3": {
+       "net": -42283.657918656274,
+       "trades": 156
+      },
+      "2025Q4": {
+       "net": 5018.249767170292,
+       "trades": 151
+      },
+      "2026Q1": {
+       "net": -26695.095362195476,
+       "trades": 136
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -11747.130845777701,
+       "trades": 69
+      },
+      "2025Q1": {
+       "net": -24250.725652791836,
+       "trades": 136
+      },
+      "2025Q2": {
+       "net": -4503.115308291104,
+       "trades": 142
+      },
+      "2025Q3": {
+       "net": -28861.86851259179,
+       "trades": 156
+      },
+      "2025Q4": {
+       "net": 31083.336774923133,
+       "trades": 151
+      },
+      "2026Q1": {
+       "net": -15744.01415004256,
+       "trades": 136
+      }
+     },
+     "skips": {
+      "no_strike": 1,
+      "signals": 791
+     },
+     "tds_locked": 15369.27700569751,
+     "trades": 790,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC1_s40_step.csv",
+     "twins": {
+      "p": 0.005988023952095809,
+      "sizes": {
+       "BTC": {
+        "pool": 800,
+        "rule_trades": 402
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 388
+       }
+      },
+      "twin_mean": -200622.3858006302,
+      "twin_q05": -231729.25503072052,
+      "twin_q95": -165504.1399338467
+     }
+    },
+    "s40_trail": {
+     "by_coin": {
+      "BTC": 402,
+      "ETH": 388
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -684.3777639688046,
+      "avg_win": 566.7560744158039,
+      "days": 414,
+      "max_dd": 167533.15172275837,
+      "net": -164067.1481815885,
+      "net_per_day": -396.29745937581765,
+      "net_per_period_day": -330.1149862808622,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.3810126582278481,
+      "worst_day": -3680.234279040743
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -684.3777639688046,
+      "avg_win": 823.773363976459,
+      "days": 414,
+      "max_dd": 98584.21385091438,
+      "net": -86704.9440238313,
+      "net_per_day": -209.4322319416215,
+      "net_per_period_day": -174.4566278145499,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.3810126582278481,
+      "worst_day": -3680.234279040743
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -684.1254686365958,
+      "avg_win": 553.8009647498253,
+      "days": 414,
+      "max_dd": 155569.95879295628,
+      "net": -151750.22013957446,
+      "net_per_day": -366.5464254579093,
+      "net_per_period_day": -305.3324348884798,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.39746835443037976,
+      "worst_day": -3625.5937526931502
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -684.1254686365958,
+      "avg_win": 804.9432627177695,
+      "days": 414,
+      "max_dd": 85743.54652926685,
+      "net": -72891.53857764,
+      "net_per_day": -176.0665183034783,
+      "net_per_period_day": -146.66305548820927,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.39746835443037976,
+      "worst_day": -3625.5937526931502
+     },
+     "delta_after_tax": {
+      "avg_loss": -665.8645339551139,
+      "avg_win": 551.61477659436,
+      "days": 414,
+      "max_dd": 137599.41697714705,
+      "net": -132787.16451705986,
+      "net_per_day": -320.74194327792236,
+      "net_per_period_day": -267.17739339448667,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.4088607594936709,
+      "worst_day": -3553.384145502626
+     },
+     "delta_pre_tax": {
+      "avg_loss": -665.8645339551139,
+      "avg_win": 801.7656636545931,
+      "days": 414,
+      "max_dd": 67035.95597335078,
+      "net": -51988.4279966046,
+      "net_per_day": -125.57591303527681,
+      "net_per_period_day": -104.60448289055252,
+      "top5_share": null,
+      "trades": 790,
+      "win_rate": 0.4088607594936709,
+      "worst_day": -3553.384145502626
+     },
+     "exit_reasons": {
+      "lock": 413,
+      "stop": 305,
+      "time": 72
+     },
+     "p": 0.001996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -19873.876801471946,
+       "trades": 69
+      },
+      "2025Q1": {
+       "net": -34926.83734930599,
+       "trades": 136
+      },
+      "2025Q2": {
+       "net": -17513.996115619913,
+       "trades": 142
+      },
+      "2025Q3": {
+       "net": -36151.90063443057,
+       "trades": 156
+      },
+      "2025Q4": {
+       "net": -2931.745240252947,
+       "trades": 151
+      },
+      "2026Q1": {
+       "net": -21388.80837597852,
+       "trades": 136
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -14800.797156538298,
+       "trades": 69
+      },
+      "2025Q1": {
+       "net": -24348.359935699355,
+       "trades": 136
+      },
+      "2025Q2": {
+       "net": -1402.4052067128468,
+       "trades": 142
+      },
+      "2025Q3": {
+       "net": -20653.726968001214,
+       "trades": 156
+      },
+      "2025Q4": {
+       "net": 18465.6224667691,
+       "trades": 151
+      },
+      "2026Q1": {
+       "net": -9248.761196421978,
+       "trades": 136
+      }
+     },
+     "skips": {
+      "no_strike": 1,
+      "signals": 791
+     },
+     "tds_locked": 15389.32968256532,
+     "trades": 790,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC1_s40_trail.csv",
+     "twins": {
+      "p": 0.001996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 800,
+        "rule_trades": 402
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 388
+       }
+      },
+      "twin_mean": -198800.65044526153,
+      "twin_q05": -227727.046475278,
+      "twin_q95": -167807.6770975198
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "s25_step": -137312.85695911114,
+     "s40_step": -138576.24685040885,
+     "s40_trail": -132787.16451705986
+    },
+    "design_pick": null,
+    "orig_wf_net": -84796.92776832845,
+    "retune_picks": [
+     "s25_step",
+     "s25_step",
+     "s40_trail",
+     "s40_trail"
+    ],
+    "retune_wf_net": -97623.7324059005
+   }
+  },
+  "CC2": {
+   "design_pick": null,
+   "kind": "rc2opt",
+   "name": "rc2-r4-burst",
+   "original": "s40_trail",
+   "variants": {
+    "s40_step": {
+     "by_coin": {
+      "BTC": 722,
+      "ETH": 856
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -627.1520228841363,
+      "avg_win": 742.8080131208188,
+      "days": 416,
+      "max_dd": 284972.3020163033,
+      "net": -277266.6733885902,
+      "net_per_day": -666.5064264148804,
+      "net_per_period_day": -557.8806305605438,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.32953105196451205,
+      "worst_day": -5530.125421918761
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -627.1520228841363,
+      "avg_win": 1079.662809768632,
+      "days": 416,
+      "max_dd": 149331.11562136427,
+      "net": -102102.17913172732,
+      "net_per_day": -245.43793060511373,
+      "net_per_period_day": -205.43698014432056,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.32953105196451205,
+      "worst_day": -5528.646738613894
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -613.5493925486938,
+      "avg_win": 751.2223443312076,
+      "days": 416,
+      "max_dd": 267404.705709176,
+      "net": -257134.86652741017,
+      "net_per_day": -618.1126599216591,
+      "net_per_period_day": -517.3739769163183,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.33016476552598223,
+      "worst_day": -5443.83242738779
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -613.5493925486938,
+      "avg_win": 1091.8929423418717,
+      "days": 416,
+      "max_dd": 129813.99705120065,
+      "net": -79645.48496385424,
+      "net_per_day": -191.4554927015727,
+      "net_per_period_day": -160.25248483672885,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.33016476552598223,
+      "worst_day": -5443.83242738779
+     },
+     "delta_after_tax": {
+      "avg_loss": -594.3712241554566,
+      "avg_win": 760.4575353955864,
+      "days": 416,
+      "max_dd": 242968.26230709607,
+      "net": -229342.35047211507,
+      "net_per_day": -551.3037270964304,
+      "net_per_period_day": -461.45342147306854,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.3314321926489227,
+      "worst_day": -5343.3117622309255
+     },
+     "delta_pre_tax": {
+      "avg_loss": -594.3712241554566,
+      "avg_win": 1105.3161851680036,
+      "days": 416,
+      "max_dd": 102958.46780527188,
+      "net": -48981.276641140896,
+      "net_per_day": -117.743453464281,
+      "net_per_period_day": -98.55387654153098,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.3314321926489227,
+      "worst_day": -5343.3117622309255
+     },
+     "exit_reasons": {
+      "lock": 766,
+      "stop": 600,
+      "time": 212
+     },
+     "p": 0.001996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": 6700.629531169464,
+       "trades": 127
+      },
+      "2025Q1": {
+       "net": -27345.519257146698,
+       "trades": 294
+      },
+      "2025Q2": {
+       "net": -60808.96914174016,
+       "trades": 272
+      },
+      "2025Q3": {
+       "net": -34116.16649548318,
+       "trades": 241
+      },
+      "2025Q4": {
+       "net": -39928.60120523201,
+       "trades": 308
+      },
+      "2026Q1": {
+       "net": -73843.72390368246,
+       "trades": 336
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": 27568.608844401573,
+       "trades": 127
+      },
+      "2025Q1": {
+       "net": 9779.08625439198,
+       "trades": 294
+      },
+      "2025Q2": {
+       "net": -37524.684606352894,
+       "trades": 272
+      },
+      "2025Q3": {
+       "net": -4899.924359549753,
+       "trades": 241
+      },
+      "2025Q4": {
+       "net": 1158.0887273383996,
+       "trades": 308
+      },
+      "2026Q1": {
+       "net": -45062.451501370204,
+       "trades": 336
+      }
+     },
+     "skips": {
+      "no_strike": 1,
+      "signals": 1579
+     },
+     "tds_locked": 31184.631826466735,
+     "trades": 1578,
+     "trades_file": "/tmp/claude-0/-home-user-options-lab/c7c6df28-43da-587a-b285-f65231fcba98/scratchpad/cache/r53/trades/crypto_design_CC2_s40_step.csv",
+     "twins": {
+      "p": 0.001996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 799,
+        "rule_trades": 722
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 856
+       }
+      },
+      "twin_mean": -479995.8057531477,
+      "twin_q05": -524034.08850789705,
+      "twin_q95": -435236.4040287935
+     }
+    },
+    "s40_trail": {
+     "by_coin": {
+      "BTC": 722,
+      "ETH": 856
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -659.1821987666425,
+      "avg_win": 580.8368779466335,
+      "days": 416,
+      "max_dd": 280687.2231679164,
+      "net": -276337.75839838374,
+      "net_per_day": -664.2734576884225,
+      "net_per_period_day": -556.0115863146555,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.39036755386565275,
+      "worst_day": -5426.588748140243
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -659.1821987666425,
+      "avg_win": 844.2396481782465,
+      "days": 416,
+      "max_dd": 137841.32085648176,
+      "net": -114081.65193571014,
+      "net_per_day": -274.2347402300724,
+      "net_per_period_day": -229.54054715434634,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.39036755386565275,
+      "worst_day": -5426.588748140243
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -649.9580089879046,
+      "avg_win": 582.6342408415136,
+      "days": 416,
+      "max_dd": 261083.73832081218,
+      "net": -256496.1742893565,
+      "net_per_day": -616.5773420417224,
+      "net_per_period_day": -516.0888818699326,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.39543726235741444,
+      "worst_day": -5346.452134235843
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -649.9580089879046,
+      "avg_win": 846.8520942463862,
+      "days": 416,
+      "max_dd": 117874.15855492926,
+      "net": -91624.23376471606,
+      "net_per_day": -220.2505619344136,
+      "net_per_period_day": -184.35459510003233,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.39543726235741444,
+      "worst_day": -5346.452134235843
+     },
+     "delta_after_tax": {
+      "avg_loss": -639.574566440401,
+      "avg_win": 579.3610601189469,
+      "days": 416,
+      "max_dd": 233988.87953888244,
+      "net": -229129.86484497008,
+      "net_per_day": -550.7929443388704,
+      "net_per_period_day": -461.0258849999398,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.4055766793409379,
+      "worst_day": -5251.4754066454425
+     },
+     "delta_pre_tax": {
+      "avg_loss": -639.574566440401,
+      "avg_win": 842.0945641263764,
+      "days": 416,
+      "max_dd": 92069.95410552747,
+      "net": -60980.42228021521,
+      "net_per_day": -146.58755355820963,
+      "net_per_period_day": -122.69702672075495,
+      "top5_share": null,
+      "trades": 1578,
+      "win_rate": 0.4055766793409379,
+      "worst_day": -5251.4754066454425
+     },
+     "exit_reasons": {
+      "lock": 817,
+      "stop": 600,
+      "time": 161
+     },
+     "p": 0.001996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": 756.2089338551871,
+       "trades": 127
+      },
+      "2025Q1": {
+       "net": -35803.02359342859,
+       "trades": 294
+      },
+      "2025Q2": {
+       "net": -55159.598900171106,
+       "trades": 272
+      },
+      "2025Q3": {
+       "net": -31398.82159000456,
+       "trades": 241
+      },
+      "2025Q4": {
+       "net": -41489.167496143455,
+       "trades": 308
+      },
+      "2026Q1": {
+       "net": -66035.46219907755,
+       "trades": 336
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": 17926.77256830923,
+       "trades": 127
+      },
+      "2025Q1": {
+       "net": -4440.999862177589,
+       "trades": 294
+      },
+      "2025Q2": {
+       "net": -31127.998505683157,
+       "trades": 272
+      },
+      "2025Q3": {
+       "net": -2570.8326002724993,
+       "trades": 241
+      },
+      "2025Q4": {
+       "net": -3889.2945459170915,
+       "trades": 308
+      },
+      "2026Q1": {
+       "net": -36878.069334474094,
+       "trades": 336
+      }
+     },
+     "skips": {
+      "no_strike": 1,
+      "signals": 1579
+     },
+     "tds_locked": 31064.884560853727,
+     "trades": 1578,
+     "trades_file": "/tmp/claude-0/-home-user-options-lab/c7c6df28-43da-587a-b285-f65231fcba98/scratchpad/cache/r53/trades/crypto_design_CC2_s40_trail.csv",
+     "twins": {
+      "p": 0.001996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 799,
+        "rule_trades": 722
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 856
+       }
+      },
+      "twin_mean": -471045.1928235208,
+      "twin_q05": -516938.1548712246,
+      "twin_q95": -425434.5500898926
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "s40_step": -229342.35047211507,
+     "s40_trail": -229129.86484497008
+    },
+    "design_pick": null,
+    "orig_wf_net": -194083.05018539669,
+    "retune_picks": [
+     "s40_step",
+     "s40_step",
+     "s40_step",
+     "s40_step"
+    ],
+    "retune_wf_net": -208697.4607461378
+   }
+  },
+  "CC3": {
+   "design_pick": null,
+   "kind": "rc2opt",
+   "name": "rc2-r6-hero",
+   "original": "s70_step",
+   "variants": {
+    "s50_step": {
+     "by_coin": {
+      "BTC": 78,
+      "ETH": 121
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -1942.4264101959752,
+      "avg_win": 2411.726333666468,
+      "days": 142,
+      "max_dd": 246314.19441763216,
+      "net": -242855.81508153852,
+      "net_per_day": -1710.252218884074,
+      "net_per_period_day": -488.64349110973546,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.1658291457286432,
+      "worst_day": -5942.679474961959
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -1942.4264101959752,
+      "avg_win": 3505.4161826547493,
+      "days": 142,
+      "max_dd": 211790.76421622394,
+      "net": -206764.05006492522,
+      "net_per_day": -1456.0848596121493,
+      "net_per_period_day": -416.0242456034713,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.1658291457286432,
+      "worst_day": -5942.679474961959
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -1783.261623220297,
+      "avg_win": 2503.266183182205,
+      "days": 142,
+      "max_dd": 217040.95331110223,
+      "net": -213413.64540955654,
+      "net_per_day": -1502.9129958419476,
+      "net_per_period_day": -429.40371309769927,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.1658291457286432,
+      "worst_day": -5462.347760238212
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -1783.261623220297,
+      "avg_win": 3638.4682895090186,
+      "days": 142,
+      "max_dd": 181224.2257576695,
+      "net": -175951.97590077165,
+      "net_per_day": -1239.0984218364201,
+      "net_per_period_day": -354.0281205246915,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.1658291457286432,
+      "worst_day": -5462.347760238212
+     },
+     "delta_after_tax": {
+      "avg_loss": -1167.9517368967115,
+      "avg_win": 1879.2077211507283,
+      "days": 142,
+      "max_dd": 81194.70571800056,
+      "net": -77017.26328202622,
+      "net_per_day": -542.3750935353959,
+      "net_per_period_day": -154.96431243868454,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.2562814070351759,
+      "worst_day": -2995.5932241587125
+     },
+     "delta_pre_tax": {
+      "avg_loss": -1167.9517368967115,
+      "avg_win": 2731.4065714400112,
+      "days": 142,
+      "max_dd": 39626.98592304948,
+      "net": -33555.121917272736,
+      "net_per_day": -236.30367547375167,
+      "net_per_period_day": -67.51533584964334,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.2562814070351759,
+      "worst_day": -2995.5932241587125
+     },
+     "exit_reasons": {
+      "lock": 77,
+      "stop": 120,
+      "time": 2
+     },
+     "p": 0.001996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -17881.330653453795,
+       "trades": 17
+      },
+      "2025Q1": {
+       "net": -7138.506981728189,
+       "trades": 43
+      },
+      "2025Q2": {
+       "net": -20995.696012348966,
+       "trades": 29
+      },
+      "2025Q3": {
+       "net": 6041.737571562878,
+       "trades": 26
+      },
+      "2025Q4": {
+       "net": -22273.06212007768,
+       "trades": 37
+      },
+      "2026Q1": {
+       "net": -14770.405085980452,
+       "trades": 47
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -17818.93473122382,
+       "trades": 17
+      },
+      "2025Q1": {
+       "net": 8009.976054426073,
+       "trades": 43
+      },
+      "2025Q2": {
+       "net": -18124.600554752113,
+       "trades": 29
+      },
+      "2025Q3": {
+       "net": 17285.981520432553,
+       "trades": 26
+      },
+      "2025Q4": {
+       "net": -18375.742660302367,
+       "trades": 37
+      },
+      "2026Q1": {
+       "net": -4531.801545853057,
+       "trades": 47
+      }
+     },
+     "skips": {
+      "no_strike": 7,
+      "signals": 206
+     },
+     "tds_locked": 3770.566788087584,
+     "trades": 199,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC3_s50_step.csv",
+     "twins": {
+      "p": 0.001996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 794,
+        "rule_trades": 78
+       },
+       "ETH": {
+        "pool": 727,
+        "rule_trades": 121
+       }
+      },
+      "twin_mean": -165657.34951513482,
+      "twin_q05": -196624.82410122806,
+      "twin_q95": -128738.76341054596
+     }
+    },
+    "s70_step": {
+     "by_coin": {
+      "BTC": 78,
+      "ETH": 121
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -2075.6937847246563,
+      "avg_win": 2552.691106599894,
+      "days": 142,
+      "max_dd": 245271.2015172918,
+      "net": -241812.8221811982,
+      "net_per_day": -1702.9071984591421,
+      "net_per_period_day": -486.5449138454692,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.18592964824120603,
+      "worst_day": -6581.291217996268
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -2075.6937847246563,
+      "avg_win": 3710.3068409882176,
+      "days": 142,
+      "max_dd": 204007.75416012903,
+      "net": -198981.0400088302,
+      "net_per_day": -1401.2749296396494,
+      "net_per_period_day": -400.3642656113284,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.18592964824120603,
+      "worst_day": -6581.291217996268
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -1929.6553664676067,
+      "avg_win": 2577.1396304157593,
+      "days": 142,
+      "max_dd": 216370.51594703158,
+      "net": -212743.20804548578,
+      "net_per_day": -1498.1916059541252,
+      "net_per_period_day": -428.0547445583215,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.19095477386934673,
+      "worst_day": -6101.28164524446
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -1929.6553664676067,
+      "avg_win": 3745.842486069419,
+      "days": 142,
+      "max_dd": 173604.74938754464,
+      "net": -168332.49953064672,
+      "net_per_day": -1185.4401375397656,
+      "net_per_period_day": -338.69718215421875,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.19095477386934673,
+      "worst_day": -6101.28164524446
+     },
+     "delta_after_tax": {
+      "avg_loss": -1387.2057920766022,
+      "avg_win": 1857.7894202183843,
+      "days": 142,
+      "max_dd": 82286.68710922408,
+      "net": -78109.24467324972,
+      "net_per_day": -550.0651033327445,
+      "net_per_period_day": -157.16145809506986,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.3065326633165829,
+      "worst_day": -3609.85490365032
+     },
+     "delta_pre_tax": {
+      "avg_loss": -1387.2057920766022,
+      "avg_win": 2700.27532008486,
+      "days": 142,
+      "max_dd": 44824.347699928105,
+      "net": -26717.604781394617,
+      "net_per_day": -188.15214634784942,
+      "net_per_period_day": -53.757756099385546,
+      "top5_share": null,
+      "trades": 199,
+      "win_rate": 0.3065326633165829,
+      "worst_day": -3609.85490365032
+     },
+     "exit_reasons": {
+      "lock": 89,
+      "stop": 108,
+      "time": 2
+     },
+     "p": 0.001996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -17385.798534818114,
+       "trades": 17
+      },
+      "2025Q1": {
+       "net": 2673.0888226279767,
+       "trades": 43
+      },
+      "2025Q2": {
+       "net": -27082.028635145358,
+       "trades": 29
+      },
+      "2025Q3": {
+       "net": 2232.6776183900984,
+       "trades": 26
+      },
+      "2025Q4": {
+       "net": -19020.215592671106,
+       "trades": 37
+      },
+      "2026Q1": {
+       "net": -19526.968351633208,
+       "trades": 47
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -16982.22110526643,
+       "trades": 17
+      },
+      "2025Q1": {
+       "net": 21986.151689731618,
+       "trades": 43
+      },
+      "2025Q2": {
+       "net": -24210.9331775485,
+       "trades": 29
+      },
+      "2025Q3": {
+       "net": 13476.921567259771,
+       "trades": 26
+      },
+      "2025Q4": {
+       "net": -12001.26711193241,
+       "trades": 37
+      },
+      "2026Q1": {
+       "net": -8986.256643638668,
+       "trades": 47
+      }
+     },
+     "skips": {
+      "no_strike": 7,
+      "signals": 206
+     },
+     "tds_locked": 3837.6763470127166,
+     "trades": 199,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC3_s70_step.csv",
+     "twins": {
+      "p": 0.001996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 794,
+        "rule_trades": 78
+       },
+       "ETH": {
+        "pool": 727,
+        "rule_trades": 121
+       }
+      },
+      "twin_mean": -179713.63802553236,
+      "twin_q05": -219023.63345592454,
+      "twin_q95": -132690.4500016441
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "s50_step": -77017.26328202621,
+     "s70_step": -78109.2446732497
+    },
+    "design_pick": null,
+    "orig_wf_net": -63396.534961059566,
+    "retune_picks": [
+     "s70_step",
+     "s70_step",
+     "s70_step",
+     "s70_step"
+    ],
+    "retune_wf_net": -63396.53496105957
+   }
+  },
+  "CC4": {
+   "design_pick": null,
+   "kind": "f1cperp",
+   "name": "f1c-p07",
+   "original": "s15_trail",
+   "variants": {
+    "s10_trail": {
+     "by_coin": {
+      "BTC": 243,
+      "ETH": 228
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -746.7041207830104,
+      "avg_win": 441.72099383401854,
+      "days": 290,
+      "max_dd": 137333.9913384914,
+      "net": -136592.69514311565,
+      "net_per_day": -471.0092935969505,
+      "net_per_period_day": -274.83439666622866,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3842887473460722,
+      "worst_day": -4188.905634830604
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -746.7041207830104,
+      "avg_win": 642.0363282471201,
+      "days": 290,
+      "max_dd": 102855.02333694827,
+      "net": -100335.61961434426,
+      "net_per_day": -345.9848952218768,
+      "net_per_period_day": -201.88253443530033,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3842887473460722,
+      "worst_day": -4188.905634830604
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -742.1452340448564,
+      "avg_win": 441.69097845089277,
+      "days": 290,
+      "max_dd": 130421.18448776501,
+      "net": -129356.86971091798,
+      "net_per_day": -446.05817141695854,
+      "net_per_period_day": -260.27539177247075,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.39490445859872614,
+      "worst_day": -4153.155227466876
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -742.1452340448564,
+      "avg_win": 641.9927012367629,
+      "days": 290,
+      "max_dd": 95213.5716441072,
+      "net": -92100.74927274615,
+      "net_per_day": -317.58879059567636,
+      "net_per_period_day": -185.31337881840273,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.39490445859872614,
+      "worst_day": -4153.155227466876
+     },
+     "delta_after_tax": {
+      "avg_loss": -746.7041207830104,
+      "avg_win": 441.72099383401854,
+      "days": 290,
+      "max_dd": 137333.9913384914,
+      "net": -136592.69514311565,
+      "net_per_day": -471.0092935969505,
+      "net_per_period_day": -274.83439666622866,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3842887473460722,
+      "worst_day": -4188.905634830604
+     },
+     "delta_pre_tax": {
+      "avg_loss": -746.7041207830104,
+      "avg_win": 642.0363282471201,
+      "days": 290,
+      "max_dd": 102855.02333694827,
+      "net": -100335.61961434426,
+      "net_per_day": -345.9848952218768,
+      "net_per_period_day": -201.88253443530033,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3842887473460722,
+      "worst_day": -4188.905634830604
+     },
+     "exit_reasons": {
+      "lock": 126,
+      "stop": 160,
+      "time": 185
+     },
+     "p": 0.9900199600798403,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -13393.018652174778,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -27688.10624263264,
+       "trades": 88
+      },
+      "2025Q2": {
+       "net": -23310.405460697937,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -34386.40040035343,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -14952.492964241143,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -22862.27142301572,
+       "trades": 83
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -10000.255717695361,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -20193.97987729657,
+       "trades": 88
+      },
+      "2025Q2": {
+       "net": -14417.744902018474,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -29271.16088897719,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -10302.90907728611,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -16149.569151070558,
+       "trades": 83
+      }
+     },
+     "skips": {
+      "signals": 471
+     },
+     "tds_locked": 457261.3031343131,
+     "trades": 471,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC4_s10_trail.csv",
+     "twins": {
+      "p": 0.9900199600798403,
+      "sizes": {
+       "BTC": {
+        "pool": 4000,
+        "rule_trades": 243
+       },
+       "ETH": {
+        "pool": 4000,
+        "rule_trades": 228
+       }
+      },
+      "twin_mean": -102541.11135873606,
+      "twin_q05": -123957.69497519278,
+      "twin_q95": -78700.01415353444
+     }
+    },
+    "s15_step": {
+     "by_coin": {
+      "BTC": 243,
+      "ETH": 228
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -792.2294718942103,
+      "avg_win": 500.50518103812277,
+      "days": 290,
+      "max_dd": 151486.33948830498,
+      "net": -150789.7209578118,
+      "net_per_day": -519.9645550269372,
+      "net_per_period_day": -303.399840961392,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3651804670912951,
+      "worst_day": -5794.241023819331
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -792.2294718942103,
+      "avg_win": 727.4784608112249,
+      "days": 290,
+      "max_dd": 115982.65103029298,
+      "net": -111750.3168368382,
+      "net_per_day": -385.3459201270283,
+      "net_per_period_day": -224.84973206607285,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3651804670912951,
+      "worst_day": -5794.241023819331
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -785.4018570952767,
+      "avg_win": 501.0685294453377,
+      "days": 290,
+      "max_dd": 144560.09892468955,
+      "net": -143505.48666072718,
+      "net_per_day": -494.84650572664543,
+      "net_per_period_day": -288.7434339250044,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37367303609341823,
+      "worst_day": -5758.851466777596
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -785.4018570952767,
+      "avg_win": 728.297281170549,
+      "days": 290,
+      "max_dd": 108399.21631362083,
+      "net": -103513.22635709,
+      "net_per_day": -356.9421598520345,
+      "net_per_period_day": -208.2761093704024,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37367303609341823,
+      "worst_day": -5758.851466777596
+     },
+     "delta_after_tax": {
+      "avg_loss": -792.2294718942103,
+      "avg_win": 500.50518103812277,
+      "days": 290,
+      "max_dd": 151486.33948830498,
+      "net": -150789.7209578118,
+      "net_per_day": -519.9645550269372,
+      "net_per_period_day": -303.399840961392,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3651804670912951,
+      "worst_day": -5794.241023819331
+     },
+     "delta_pre_tax": {
+      "avg_loss": -792.2294718942103,
+      "avg_win": 727.4784608112249,
+      "days": 290,
+      "max_dd": 115982.65103029298,
+      "net": -111750.3168368382,
+      "net_per_day": -385.3459201270283,
+      "net_per_period_day": -224.84973206607285,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.3651804670912951,
+      "worst_day": -5794.241023819331
+     },
+     "exit_reasons": {
+      "lock": 47,
+      "stop": 86,
+      "time": 338
+     },
+     "p": 0.998003992015968,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -16150.176405030887,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -35615.22080525751,
+       "trades": 88
+      },
+      "2025Q2": {
+       "net": -28014.65013120562,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -34777.01234204046,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -12922.226324367819,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -23310.434949909493,
+       "trades": 83
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -13225.519892143247,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -28058.890886062294,
+       "trades": 88
+      },
+      "2025Q2": {
+       "net": -18546.42412881102,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -28966.83932858767,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -6647.871154749114,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -16304.771446484861,
+       "trades": 83
+      }
+     },
+     "skips": {
+      "signals": 471
+     },
+     "tds_locked": 457327.6301545246,
+     "trades": 471,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC4_s15_step.csv",
+     "twins": {
+      "p": 0.998003992015968,
+      "sizes": {
+       "BTC": {
+        "pool": 4000,
+        "rule_trades": 243
+       },
+       "ETH": {
+        "pool": 4000,
+        "rule_trades": 228
+       }
+      },
+      "twin_mean": -104516.11386532027,
+      "twin_q05": -131469.88258843363,
+      "twin_q95": -75473.13767472614
+     }
+    },
+    "s15_trail": {
+     "by_coin": {
+      "BTC": 243,
+      "ETH": 228
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -799.915927093673,
+      "avg_win": 527.2340445790765,
+      "days": 290,
+      "max_dd": 146366.5820193377,
+      "net": -144509.15661838884,
+      "net_per_day": -498.3074366151339,
+      "net_per_period_day": -290.76289058025924,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37154989384288745,
+      "worst_day": -5794.241023819331
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -799.915927093673,
+      "avg_win": 766.3285531672623,
+      "days": 290,
+      "max_dd": 109976.53621222891,
+      "net": -102667.61761545629,
+      "net_per_day": -354.02626763950445,
+      "net_per_period_day": -206.57468333089795,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37154989384288745,
+      "worst_day": -5794.241023819331
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -790.54590402502,
+      "avg_win": 530.2971979289719,
+      "days": 290,
+      "max_dd": 139643.21231944318,
+      "net": -137237.0486479739,
+      "net_per_day": -473.2312022343927,
+      "net_per_period_day": -276.13088259149674,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37791932059447986,
+      "worst_day": -5758.851466777596
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -790.54590402502,
+      "avg_win": 770.7808109432731,
+      "days": 290,
+      "max_dd": 102393.30656449689,
+      "net": -94430.96553142826,
+      "net_per_day": -325.62401907389057,
+      "net_per_period_day": -190.00194271917155,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37791932059447986,
+      "worst_day": -5758.851466777596
+     },
+     "delta_after_tax": {
+      "avg_loss": -799.915927093673,
+      "avg_win": 527.2340445790765,
+      "days": 290,
+      "max_dd": 146366.5820193377,
+      "net": -144509.15661838884,
+      "net_per_day": -498.3074366151339,
+      "net_per_period_day": -290.76289058025924,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37154989384288745,
+      "worst_day": -5794.241023819331
+     },
+     "delta_pre_tax": {
+      "avg_loss": -799.915927093673,
+      "avg_win": 766.3285531672623,
+      "days": 290,
+      "max_dd": 109976.53621222891,
+      "net": -102667.61761545629,
+      "net_per_day": -354.02626763950445,
+      "net_per_period_day": -206.57468333089795,
+      "top5_share": null,
+      "trades": 471,
+      "win_rate": 0.37154989384288745,
+      "worst_day": -5794.241023819331
+     },
+     "exit_reasons": {
+      "lock": 63,
+      "stop": 86,
+      "time": 322
+     },
+     "p": 0.9940119760479041,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -13991.353706361673,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -33014.815263033975,
+       "trades": 88
+      },
+      "2025Q2": {
+       "net": -28022.882224413202,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -34933.760504524114,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -13857.227879382091,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -20689.117040673773,
+       "trades": 83
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -10087.696202217066,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -24279.23166771414,
+       "trades": 88
+      },
+      "2025Q2": {
+       "net": -18573.782016672714,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -29200.032533861926,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -8006.8850428512515,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -12519.990152139184,
+       "trades": 83
+      }
+     },
+     "skips": {
+      "signals": 471
+     },
+     "tds_locked": 457348.7200214991,
+     "trades": 471,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC4_s15_trail.csv",
+     "twins": {
+      "p": 0.9940119760479041,
+      "sizes": {
+       "BTC": {
+        "pool": 4000,
+        "rule_trades": 243
+       },
+       "ETH": {
+        "pool": 4000,
+        "rule_trades": 228
+       }
+      },
+      "twin_mean": -105093.03883088441,
+      "twin_q05": -132800.24252458246,
+      "twin_q95": -79416.3215853371
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "s10_trail": -136592.69514311565,
+     "s15_step": -150789.7209578118,
+     "s15_trail": -144509.15661838884
+    },
+    "design_pick": null,
+    "orig_wf_net": -97502.98764899318,
+    "retune_picks": [
+     "s10_trail",
+     "s10_trail",
+     "s10_trail",
+     "s10_trail"
+    ],
+    "retune_wf_net": -95511.57024830821
+   }
+  },
+  "CC5": {
+   "design_pick": null,
+   "kind": "f1cperp",
+   "name": "f1c-p13",
+   "original": "s15_step",
+   "variants": {
+    "s15_step": {
+     "by_coin": {
+      "BTC": 274,
+      "ETH": 319
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -836.4581735938287,
+      "avg_win": 521.1046713499034,
+      "days": 297,
+      "max_dd": 156379.27855008558,
+      "net": -149841.1714804888,
+      "net_per_day": -504.51572889053466,
+      "net_per_period_day": -301.4912907052088,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.4300168634064081,
+      "worst_day": -7981.836036268129
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -836.4581735938287,
+      "avg_win": 757.4195804504408,
+      "days": 297,
+      "max_dd": 112540.73301025527,
+      "net": -89580.86965985168,
+      "net_per_day": -301.6190897638104,
+      "net_per_period_day": -180.24319851076797,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.4300168634064081,
+      "worst_day": -7981.836036268129
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -839.0095450310994,
+      "avg_win": 517.1647522020969,
+      "days": 297,
+      "max_dd": 148528.14008355615,
+      "net": -140858.82003111133,
+      "net_per_day": -474.27212131687315,
+      "net_per_period_day": -283.41814895595843,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.44350758853288363,
+      "worst_day": -7914.115632636289
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -839.0095450310994,
+      "avg_win": 751.6929537821176,
+      "days": 297,
+      "max_dd": 103760.40908803247,
+      "net": -79177.90301556587,
+      "net_per_day": -266.59226604567635,
+      "net_per_period_day": -159.31167608765767,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.44350758853288363,
+      "worst_day": -7914.115632636289
+     },
+     "delta_after_tax": {
+      "avg_loss": -836.4581735938287,
+      "avg_win": 521.1046713499034,
+      "days": 297,
+      "max_dd": 156379.27855008558,
+      "net": -149841.1714804888,
+      "net_per_day": -504.51572889053466,
+      "net_per_period_day": -301.4912907052088,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.4300168634064081,
+      "worst_day": -7981.836036268129
+     },
+     "delta_pre_tax": {
+      "avg_loss": -836.4581735938287,
+      "avg_win": 757.4195804504408,
+      "days": 297,
+      "max_dd": 112540.73301025527,
+      "net": -89580.86965985168,
+      "net_per_day": -301.6190897638104,
+      "net_per_period_day": -180.24319851076797,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.4300168634064081,
+      "worst_day": -7981.836036268129
+     },
+     "exit_reasons": {
+      "lock": 15,
+      "stop": 132,
+      "time": 446
+     },
+     "p": 0.9161676646706587,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -10616.352692671988,
+       "trades": 51
+      },
+      "2025Q1": {
+       "net": -38612.252251411024,
+       "trades": 113
+      },
+      "2025Q2": {
+       "net": -57660.171566677825,
+       "trades": 136
+      },
+      "2025Q3": {
+       "net": -15379.92161878851,
+       "trades": 96
+      },
+      "2025Q4": {
+       "net": -25311.46609066385,
+       "trades": 84
+      },
+      "2026Q1": {
+       "net": -2261.007260275586,
+       "trades": 113
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -5653.1412485801975,
+       "trades": 51
+      },
+      "2025Q1": {
+       "net": -24211.578734406885,
+       "trades": 113
+      },
+      "2025Q2": {
+       "net": -48913.22510086277,
+       "trades": 136
+      },
+      "2025Q3": {
+       "net": -8114.293085609001,
+       "trades": 96
+      },
+      "2025Q4": {
+       "net": -17410.410416617946,
+       "trades": 84
+      },
+      "2026Q1": {
+       "net": 14721.77892622512,
+       "trades": 113
+      }
+     },
+     "skips": {
+      "signals": 2648
+     },
+     "tds_locked": 577836.4866871824,
+     "trades": 593,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC5_s15_step.csv",
+     "twins": {
+      "p": 0.9161676646706587,
+      "sizes": {
+       "BTC": {
+        "pool": 4000,
+        "rule_trades": 274
+       },
+       "ETH": {
+        "pool": 4000,
+        "rule_trades": 319
+       }
+      },
+      "twin_mean": -127256.80962237557,
+      "twin_q05": -155980.86032296118,
+      "twin_q95": -102153.60360618193
+     }
+    },
+    "s15_trail": {
+     "by_coin": {
+      "BTC": 274,
+      "ETH": 319
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -849.2158303696858,
+      "avg_win": 504.63773518765794,
+      "days": 297,
+      "max_dd": 162243.41199237763,
+      "net": -155644.6210609863,
+      "net_per_day": -524.0559631683041,
+      "net_per_period_day": -313.1682516317632,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.433389544688027,
+      "worst_day": -7981.836036268129
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -849.2158303696858,
+      "avg_win": 733.4850802146191,
+      "days": 297,
+      "max_dd": 119878.9200269529,
+      "net": -96830.8533890573,
+      "net_per_day": -326.0298093907653,
+      "net_per_period_day": -194.83069092365653,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.433389544688027,
+      "worst_day": -7981.836036268129
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -844.3437417647872,
+      "avg_win": 506.94008275921294,
+      "days": 297,
+      "max_dd": 154389.48622024184,
+      "net": -146659.4768412307,
+      "net_per_day": -493.8029523273761,
+      "net_per_period_day": -295.0894906262187,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.4418212478920742,
+      "worst_day": -7914.115632636289
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -844.3437417647872,
+      "avg_win": 736.831515638391,
+      "days": 297,
+      "max_dd": 111098.63872982688,
+      "net": -86427.92142688608,
+      "net_per_day": -291.00310244742786,
+      "net_per_period_day": -173.899238283473,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.4418212478920742,
+      "worst_day": -7914.115632636289
+     },
+     "delta_after_tax": {
+      "avg_loss": -849.2158303696858,
+      "avg_win": 504.63773518765794,
+      "days": 297,
+      "max_dd": 162243.41199237763,
+      "net": -155644.6210609863,
+      "net_per_day": -524.0559631683041,
+      "net_per_period_day": -313.1682516317632,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.433389544688027,
+      "worst_day": -7981.836036268129
+     },
+     "delta_pre_tax": {
+      "avg_loss": -849.2158303696858,
+      "avg_win": 733.4850802146191,
+      "days": 297,
+      "max_dd": 119878.9200269529,
+      "net": -96830.8533890573,
+      "net_per_day": -326.0298093907653,
+      "net_per_period_day": -194.83069092365653,
+      "top5_share": null,
+      "trades": 593,
+      "win_rate": 0.433389544688027,
+      "worst_day": -7981.836036268129
+     },
+     "exit_reasons": {
+      "lock": 29,
+      "stop": 133,
+      "time": 431
+     },
+     "p": 0.9680638722554891,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -9942.83271687702,
+       "trades": 51
+      },
+      "2025Q1": {
+       "net": -42365.86160480673,
+       "trades": 113
+      },
+      "2025Q2": {
+       "net": -58134.18652351812,
+       "trades": 136
+      },
+      "2025Q3": {
+       "net": -15268.536453138619,
+       "trades": 96
+      },
+      "2025Q4": {
+       "net": -27859.359831189988,
+       "trades": 84
+      },
+      "2026Q1": {
+       "net": -2073.8439314558573,
+       "trades": 113
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -4674.1877953898365,
+       "trades": 51
+      },
+      "2025Q1": {
+       "net": -29170.602045457446,
+       "trades": 113
+      },
+      "2025Q2": {
+       "net": -49612.32363223625,
+       "trades": 136
+      },
+      "2025Q3": {
+       "net": -7954.575861120735,
+       "trades": 96
+      },
+      "2025Q4": {
+       "net": -20411.25847225975,
+       "trades": 84
+      },
+      "2026Q1": {
+       "net": 14992.094417406726,
+       "trades": 113
+      }
+     },
+     "skips": {
+      "signals": 2648
+     },
+     "tds_locked": 577798.3063834236,
+     "trades": 593,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC5_s15_trail.csv",
+     "twins": {
+      "p": 0.9680638722554891,
+      "sizes": {
+       "BTC": {
+        "pool": 4000,
+        "rule_trades": 274
+       },
+       "ETH": {
+        "pool": 4000,
+        "rule_trades": 319
+       }
+      },
+      "twin_mean": -125870.60421083376,
+      "twin_q05": -151830.5761456332,
+      "twin_q95": -99550.10160929682
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "s15_step": -149841.1714804888,
+     "s15_trail": -155644.62106098633
+    },
+    "design_pick": null,
+    "orig_wf_net": -100612.56653640576,
+    "retune_picks": [
+     "s15_step",
+     "s15_step",
+     "s15_step",
+     "s15_step"
+    ],
+    "retune_wf_net": -100612.56653640576
+   }
+  },
+  "CC6": {
+   "design_pick": null,
+   "kind": "f1copt",
+   "name": "f1c-o19",
+   "original": "s25_step",
+   "variants": {
+    "s25_step": {
+     "by_coin": {
+      "BTC": 385,
+      "ETH": 456
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -502.64012281450806,
+      "avg_win": 680.2162220674921,
+      "days": 302,
+      "max_dd": 146470.60839498398,
+      "net": -145931.95858461322,
+      "net_per_day": -483.2184059093153,
+      "net_per_period_day": -293.6256711964049,
+      "top5_share": null,
+      "trades": 841,
+      "win_rate": 0.27824019024970276,
+      "worst_day": -3654.3394817001745
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -502.64012281450806,
+      "avg_win": 988.6863692841456,
+      "days": 302,
+      "max_dd": 81277.26163254814,
+      "net": -73749.94413591632,
+      "net_per_day": -244.2051130328355,
+      "net_per_period_day": -148.39022964973103,
+      "top5_share": null,
+      "trades": 841,
+      "win_rate": 0.27824019024970276,
+      "worst_day": -3654.3394817001745
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -490.03961173432367,
+      "avg_win": 686.8152922900506,
+      "days": 302,
+      "max_dd": 136149.49037956656,
+      "net": -135562.4110228382,
+      "net_per_day": -448.8821557047623,
+      "net_per_period_day": -272.76139038800443,
+      "top5_share": null,
+      "trades": 841,
+      "win_rate": 0.2794292508917955,
+      "worst_day": -3596.7001402887863
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -490.03961173432367,
+      "avg_win": 998.2780411192599,
+      "days": 302,
+      "max_dd": 70881.71833636568,
+      "net": -62368.665047974064,
+      "net_per_day": -206.5187584370002,
+      "net_per_period_day": -125.49027172630596,
+      "top5_share": null,
+      "trades": 841,
+      "win_rate": 0.2794292508917955,
+      "worst_day": -3596.7001402887863
+     },
+     "delta_after_tax": {
+      "avg_loss": -473.7430164522612,
+      "avg_win": 698.0703936194222,
+      "days": 302,
+      "max_dd": 123689.86378486961,
+      "net": -123041.7254695061,
+      "net_per_day": -407.42293201823213,
+      "net_per_period_day": -247.56886412375474,
+      "top5_share": null,
+      "trades": 841,
+      "win_rate": 0.2794292508917955,
+      "worst_day": -3528.3868467641782
+     },
+     "delta_pre_tax": {
+      "avg_loss": -473.7430164522612,
+      "avg_win": 1014.6372000282299,
+      "days": 302,
+      "max_dd": 60709.009077067494,
+      "net": -48648.52596343627,
+      "net_per_day": -161.08783431601412,
+      "net_per_period_day": -97.88435807532449,
+      "top5_share": null,
+      "trades": 841,
+      "win_rate": 0.2794292508917955,
+      "worst_day": -3528.3868467641782
+     },
+     "exit_reasons": {
+      "lock": 362,
+      "stop": 426,
+      "time": 53
+     },
+     "p": 0.001996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -2922.3371803370374,
+       "trades": 67
+      },
+      "2025Q1": {
+       "net": -22943.776111446234,
+       "trades": 152
+      },
+      "2025Q2": {
+       "net": -8117.437533691772,
+       "trades": 152
+      },
+      "2025Q3": {
+       "net": -22604.56912512995,
+       "trades": 125
+      },
+      "2025Q4": {
+       "net": -45054.69652403251,
+       "trades": 164
+      },
+      "2026Q1": {
+       "net": -21398.90899486861,
+       "trades": 181
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": 5476.5423458590285,
+       "trades": 67
+      },
+      "2025Q1": {
+       "net": -10531.852652516398,
+       "trades": 152
+      },
+      "2025Q2": {
+       "net": 8568.719854659974,
+       "trades": 152
+      },
+      "2025Q3": {
+       "net": -11161.479607674297,
+       "trades": 125
+      },
+      "2025Q4": {
+       "net": -36215.206906781445,
+       "trades": 164
+      },
+      "2026Q1": {
+       "net": -4785.248996983138,
+       "trades": 181
+      }
+     },
+     "skips": {
+      "busy": 599,
+      "day_limit": 1203,
+      "no_strike": 1,
+      "signals": 2644
+     },
+     "tds_locked": 16400.22441947773,
+     "trades": 841,
+     "trades_file": "/tmp/claude-0/-home-user-options-lab/c7c6df28-43da-587a-b285-f65231fcba98/scratchpad/cache/r53/trades/crypto_design_CC6_s25_step.csv",
+     "twins": {
+      "p": 0.001996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 800,
+        "rule_trades": 385
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 456
+       }
+      },
+      "twin_mean": -222592.26512111208,
+      "twin_q05": -248157.65966546608,
+      "twin_q95": -194592.05811836733
+     }
+    },
+    "s40_trail": {
+     "by_coin": {
+      "BTC": 381,
+      "ETH": 452
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -667.8594963968867,
+      "avg_win": 561.0991173016826,
+      "days": 302,
+      "max_dd": 157915.38165267816,
+      "net": -156915.4110465716,
+      "net_per_day": -519.5874537965947,
+      "net_per_period_day": -315.7251731319348,
+      "top5_share": null,
+      "trades": 833,
+      "win_rate": 0.39015606242497,
+      "worst_day": -3913.035499419367
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -667.8594963968867,
+      "avg_win": 815.5510425896549,
+      "days": 302,
+      "max_dd": 77544.83868294736,
+      "net": -74218.53532798059,
+      "net_per_day": -245.75673949662445,
+      "net_per_period_day": -149.33306907038346,
+      "top5_share": null,
+      "trades": 833,
+      "win_rate": 0.39015606242497,
+      "worst_day": -3717.1684533787225
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -661.9520072528653,
+      "avg_win": 559.8029338104615,
+      "days": 302,
+      "max_dd": 148108.33675076184,
+      "net": -147005.13654967572,
+      "net_per_day": -486.77197533005204,
+      "net_per_period_day": -295.7849829973355,
+      "top5_share": null,
+      "trades": 833,
+      "win_rate": 0.39735894357743096,
+      "worst_day": -3799.124169689111
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -661.9520072528653,
+      "avg_win": 813.6670549570661,
+      "days": 302,
+      "max_dd": 69999.08752968207,
+      "net": -62976.11245014955,
+      "net_per_day": -208.53017367599188,
+      "net_per_period_day": -126.71249989969728,
+      "top5_share": null,
+      "trades": 833,
+      "win_rate": 0.39735894357743096,
+      "worst_day": -3618.02269416955
+     },
+     "delta_after_tax": {
+      "avg_loss": -652.5185439212485,
+      "avg_win": 560.3608220066673,
+      "days": 302,
+      "max_dd": 136038.57158545422,
+      "net": -134807.60076869244,
+      "net_per_day": -446.38278400229285,
+      "net_per_period_day": -271.24265748227856,
+      "top5_share": null,
+      "trades": 833,
+      "win_rate": 0.40456182472989194,
+      "worst_day": -3657.0676580668055
+     },
+     "delta_pre_tax": {
+      "avg_loss": -652.5185439212485,
+      "avg_win": 814.4779389631791,
+      "days": 302,
+      "max_dd": 62321.900528364306,
+      "net": -49170.13235434791,
+      "net_per_day": -162.815007795854,
+      "net_per_period_day": -98.93386791619298,
+      "top5_share": null,
+      "trades": 833,
+      "win_rate": 0.40456182472989194,
+      "worst_day": -3558.2131974863505
+     },
+     "exit_reasons": {
+      "lock": 410,
+      "stop": 325,
+      "time": 98
+     },
+     "p": 0.001996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -5945.101724978754,
+       "trades": 64
+      },
+      "2025Q1": {
+       "net": -29866.16009844198,
+       "trades": 153
+      },
+      "2025Q2": {
+       "net": -2325.6289938618265,
+       "trades": 151
+      },
+      "2025Q3": {
+       "net": -24085.858427905543,
+       "trades": 125
+      },
+      "2025Q4": {
+       "net": -44254.38835542124,
+       "trades": 158
+      },
+      "2026Q1": {
+       "net": -28330.463168083093,
+       "trades": 182
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": 1961.3665042295893,
+       "trades": 64
+      },
+      "2025Q1": {
+       "net": -15867.753304638527,
+       "trades": 153
+      },
+      "2025Q2": {
+       "net": 17605.958871905164,
+       "trades": 151
+      },
+      "2025Q3": {
+       "net": -10271.337480142,
+       "trades": 125
+      },
+      "2025Q4": {
+       "net": -33382.55553891157,
+       "trades": 158
+      },
+      "2026Q1": {
+       "net": -9215.811406790566,
+       "trades": 182
+      }
+     },
+     "skips": {
+      "busy": 667,
+      "day_limit": 1143,
+      "no_strike": 1,
+      "signals": 2644
+     },
+     "tds_locked": 16231.086764986101,
+     "trades": 833,
+     "trades_file": "/tmp/claude-0/-home-user-options-lab/c7c6df28-43da-587a-b285-f65231fcba98/scratchpad/cache/r53/trades/crypto_design_CC6_s40_trail.csv",
+     "twins": {
+      "p": 0.001996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 800,
+        "rule_trades": 381
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 452
+       }
+      },
+      "twin_mean": -235404.1106083945,
+      "twin_q05": -266594.02505433926,
+      "twin_q95": -204327.61941116618
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "s25_step": -123041.72546950611,
+     "s40_trail": -134807.6007686924
+    },
+    "design_pick": null,
+    "orig_wf_net": -97175.61217772284,
+    "retune_picks": [
+     "s25_step",
+     "s25_step",
+     "s25_step",
+     "s25_step"
+    ],
+    "retune_wf_net": -97175.61217772283
+   }
+  },
+  "CC7": {
+   "design_pick": null,
+   "kind": "f1copt",
+   "name": "f1c-o18",
+   "original": "s40_trail",
+   "variants": {
+    "s25_step": {
+     "by_coin": {
+      "BTC": 243,
+      "ETH": 227
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -560.3243931398977,
+      "avg_win": 738.6011404521482,
+      "days": 290,
+      "max_dd": 123068.50714781092,
+      "net": -123068.50714781095,
+      "net_per_day": -424.37416257865846,
+      "net_per_period_day": -247.62275080042443,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.2297872340425532,
+      "worst_day": -2188.479308953161
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -560.3243931398977,
+      "avg_win": 1073.5481692618432,
+      "days": 290,
+      "max_dd": 87537.411923707,
+      "net": -86894.22803636387,
+      "net_per_day": -299.6352690909099,
+      "net_per_period_day": -174.8374809584786,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.2297872340425532,
+      "worst_day": -2188.479308953161
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -543.2275871746958,
+      "avg_win": 749.3817745008439,
+      "days": 290,
+      "max_dd": 115715.15491114862,
+      "net": -115715.15491114874,
+      "net_per_day": -399.0177755556853,
+      "net_per_period_day": -232.82727346307593,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.2297872340425532,
+      "worst_day": -2112.892996767861
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -543.2275871746958,
+      "avg_win": 1089.2176954954127,
+      "days": 290,
+      "max_dd": 80650.4619076317,
+      "net": -79012.8754437353,
+      "net_per_day": -272.45819118529414,
+      "net_per_period_day": -158.97962865942716,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.2297872340425532,
+      "worst_day": -2112.892996767861
+     },
+     "delta_after_tax": {
+      "avg_loss": -519.9314381568491,
+      "avg_win": 762.2340224346709,
+      "days": 290,
+      "max_dd": 105893.90618983496,
+      "net": -105893.90618983493,
+      "net_per_day": -365.1514006546032,
+      "net_per_period_day": -213.06620963749484,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.2297872340425532,
+      "worst_day": -1995.8123221610706
+     },
+     "delta_pre_tax": {
+      "avg_loss": -519.9314381568491,
+      "avg_win": 1107.8982884224872,
+      "days": 290,
+      "max_dd": 71591.14977305406,
+      "net": -68562.16546315081,
+      "net_per_day": -236.42126021776141,
+      "net_per_period_day": -137.9520431854141,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.2297872340425532,
+      "worst_day": -1995.8123221610706
+     },
+     "exit_reasons": {
+      "lock": 168,
+      "stop": 275,
+      "time": 27
+     },
+     "p": 0.01996007984031936,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -7459.366239417425,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -18067.050096738865,
+       "trades": 87
+      },
+      "2025Q2": {
+       "net": -20810.43103416223,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -27421.286230091468,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -21490.886308415735,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -10644.886281009223,
+       "trades": 83
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -3537.1725051322205,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -12242.469121889848,
+       "trades": 87
+      },
+      "2025Q2": {
+       "net": -12872.295478271797,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -20666.036335609726,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -17739.581290864917,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -1504.610731382312,
+       "trades": 83
+      }
+     },
+     "skips": {
+      "no_strike": 1,
+      "signals": 471
+     },
+     "tds_locked": 8786.415325574631,
+     "trades": 470,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC7_s25_step.csv",
+     "twins": {
+      "p": 0.01996007984031936,
+      "sizes": {
+       "BTC": {
+        "pool": 800,
+        "rule_trades": 243
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 227
+       }
+      },
+      "twin_mean": -128820.59700738647,
+      "twin_q05": -147998.04696604927,
+      "twin_q95": -110278.85077493312
+     }
+    },
+    "s40_trail": {
+     "by_coin": {
+      "BTC": 243,
+      "ETH": 227
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -703.8374414373425,
+      "avg_win": 674.3561522385405,
+      "days": 290,
+      "max_dd": 118561.78404946481,
+      "net": -118561.78404946496,
+      "net_per_day": -408.8337381016033,
+      "net_per_period_day": -238.55489748383292,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.3276595744680851,
+      "worst_day": -3019.619335667305
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -703.8374414373425,
+      "avg_win": 980.1688259281112,
+      "days": 290,
+      "max_dd": 72810.03531980926,
+      "net": -71466.63230127105,
+      "net_per_day": -246.4366631078312,
+      "net_per_period_day": -143.79604084762786,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.3276595744680851,
+      "worst_day": -3019.619335667305
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -695.4473673825756,
+      "avg_win": 667.9414104186591,
+      "days": 290,
+      "max_dd": 111444.83577721544,
+      "net": -111444.83577721547,
+      "net_per_day": -384.292537162812,
+      "net_per_period_day": -224.2350820467112,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.33617021276595743,
+      "worst_day": -2943.9832789466054
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -695.4473673825756,
+      "avg_win": 970.8450732829348,
+      "days": 290,
+      "max_dd": 65785.96663198438,
+      "net": -63586.0570446599,
+      "net_per_day": -219.26226567124104,
+      "net_per_period_day": -127.9397526049495,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.33617021276595743,
+      "worst_day": -2943.9832789466054
+     },
+     "delta_after_tax": {
+      "avg_loss": -681.5197970666175,
+      "avg_win": 660.4449698459089,
+      "days": 290,
+      "max_dd": 101574.04761456832,
+      "net": -101574.04761456841,
+      "net_per_day": -350.25533660196004,
+      "net_per_period_day": -204.3743412767976,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.3468085106382979,
+      "worst_day": -2800.6473688903375
+     },
+     "delta_pre_tax": {
+      "avg_loss": -681.5197970666175,
+      "avg_win": 959.949084078356,
+      "days": 290,
+      "max_dd": 56877.85975504326,
+      "net": -52754.87699467954,
+      "net_per_day": -181.91336894717082,
+      "net_per_period_day": -106.14663379211174,
+      "top5_share": null,
+      "trades": 470,
+      "win_rate": 0.3468085106382979,
+      "worst_day": -2800.6473688903375
+     },
+     "exit_reasons": {
+      "lock": 216,
+      "stop": 205,
+      "time": 49
+     },
+     "p": 0.017964071856287425,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -6328.506795601963,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -17584.087251970454,
+       "trades": 87
+      },
+      "2025Q2": {
+       "net": -18571.102019888684,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -27715.696516003234,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -18670.54541356737,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -12704.109617536698,
+       "trades": 83
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -807.7696047170568,
+       "trades": 41
+      },
+      "2025Q1": {
+       "net": -11327.757815962845,
+       "trades": 87
+      },
+      "2025Q2": {
+       "net": -7272.728633226827,
+       "trades": 96
+      },
+      "2025Q3": {
+       "net": -17410.706298944853,
+       "trades": 93
+      },
+      "2025Q4": {
+       "net": -12983.294388646344,
+       "trades": 70
+      },
+      "2026Q1": {
+       "net": -2952.620253181612,
+       "trades": 83
+      }
+     },
+     "skips": {
+      "no_strike": 1,
+      "signals": 471
+     },
+     "tds_locked": 8940.640324231084,
+     "trades": 470,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC7_s40_trail.csv",
+     "twins": {
+      "p": 0.017964071856287425,
+      "sizes": {
+       "BTC": {
+        "pool": 800,
+        "rule_trades": 243
+       },
+       "ETH": {
+        "pool": 800,
+        "rule_trades": 227
+       }
+      },
+      "twin_mean": -137183.66057231775,
+      "twin_q05": -159607.18660322888,
+      "twin_q95": -110746.00572788376
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "s25_step": -105893.90618983495,
+     "s40_trail": -101574.04761456841
+    },
+    "design_pick": null,
+    "orig_wf_net": -77661.453566996,
+    "retune_picks": [
+     "s40_trail",
+     "s40_trail",
+     "s40_trail",
+     "s40_trail"
+    ],
+    "retune_wf_net": -77661.453566996
+   }
+  },
+  "CC8": {
+   "design_pick": null,
+   "kind": "rc1brk",
+   "name": "rc1-g-breakout",
+   "original": "orig",
+   "variants": {
+    "orig": {
+     "by_coin": {
+      "BTC": 48,
+      "ETH": 50
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -2766.141949063602,
+      "avg_win": 5096.57864756535,
+      "days": 74,
+      "max_dd": 109671.34801980112,
+      "net": -98102.057882396,
+      "net_per_day": -1325.7034848972432,
+      "net_per_period_day": -197.3884464434527,
+      "top5_share": null,
+      "trades": 98,
+      "win_rate": 0.22448979591836735,
+      "worst_day": -10462.388814694263
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -2766.141949063602,
+      "avg_win": 7407.817801693825,
+      "days": 74,
+      "max_dd": 82981.0333304917,
+      "net": -47254.79649156959,
+      "net_per_day": -638.5783309671566,
+      "net_per_period_day": -95.08007342368127,
+      "top5_share": null,
+      "trades": 98,
+      "win_rate": 0.22448979591836735,
+      "worst_day": -10462.388814694263
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -2748.854197206076,
+      "avg_win": 5109.079234524263,
+      "days": 74,
+      "max_dd": 108138.14447861878,
+      "net": -96513.175828128,
+      "net_per_day": -1304.2321057855136,
+      "net_per_period_day": -194.19150066021732,
+      "top5_share": null,
+      "trades": 98,
+      "win_rate": 0.22448979591836735,
+      "worst_day": -10427.454859448075
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -2748.854197206076,
+      "avg_win": 7425.987259482939,
+      "days": 74,
+      "max_dd": 82497.20598015454,
+      "net": -45541.199279037086,
+      "net_per_day": -615.4216118788795,
+      "net_per_period_day": -91.63219170832411,
+      "top5_share": null,
+      "trades": 98,
+      "win_rate": 0.22448979591836735,
+      "worst_day": -10427.454859448075
+     },
+     "delta_after_tax": {
+      "avg_loss": -2766.141949063602,
+      "avg_win": 5096.57864756535,
+      "days": 74,
+      "max_dd": 109671.34801980112,
+      "net": -98102.057882396,
+      "net_per_day": -1325.7034848972432,
+      "net_per_period_day": -197.3884464434527,
+      "top5_share": null,
+      "trades": 98,
+      "win_rate": 0.22448979591836735,
+      "worst_day": -10462.388814694263
+     },
+     "delta_pre_tax": {
+      "avg_loss": -2766.141949063602,
+      "avg_win": 7407.817801693825,
+      "days": 74,
+      "max_dd": 82981.0333304917,
+      "net": -47254.79649156959,
+      "net_per_day": -638.5783309671566,
+      "net_per_period_day": -95.08007342368127,
+      "top5_share": null,
+      "trades": 98,
+      "win_rate": 0.22448979591836735,
+      "worst_day": -10462.388814694263
+     },
+     "exit_reasons": {
+      "stop": 47,
+      "trail": 51
+     },
+     "p": 0.6866267465069861,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -14135.692940574598,
+       "trades": 7
+      },
+      "2025Q1": {
+       "net": -47867.32762373665,
+       "trades": 17
+      },
+      "2025Q2": {
+       "net": -14151.551803168262,
+       "trades": 23
+      },
+      "2025Q3": {
+       "net": 33738.60695047425,
+       "trades": 17
+      },
+      "2025Q4": {
+       "net": -37858.19950934289,
+       "trades": 17
+      },
+      "2026Q1": {
+       "net": -17827.89295604785,
+       "trades": 17
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -11421.664512830845,
+       "trades": 7
+      },
+      "2025Q1": {
+       "net": -46533.43325882079,
+       "trades": 17
+      },
+      "2025Q2": {
+       "net": 1821.0716481189188,
+       "trades": 23
+      },
+      "2025Q3": {
+       "net": 58197.18973117112,
+       "trades": 17
+      },
+      "2025Q4": {
+       "net": -37858.19950934289,
+       "trades": 17
+      },
+      "2026Q1": {
+       "net": -11459.760589865104,
+       "trades": 17
+      }
+     },
+     "skips": {},
+     "tds_locked": 95048.11651474614,
+     "trades": 98,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC8_orig.csv",
+     "twins": {
+      "p": 0.6866267465069861,
+      "sizes": {
+       "BTC": {
+        "pool": 2982,
+        "rule_trades": 48
+       },
+       "ETH": {
+        "pool": 2982,
+        "rule_trades": 50
+       }
+      },
+      "twin_mean": -77195.32173851783,
+      "twin_q05": -142018.9087172074,
+      "twin_q95": -14065.195233137269
+     }
+    },
+    "step_lock": {
+     "by_coin": {
+      "BTC": 54,
+      "ETH": 59
+     },
+     "coinswitch_gst_after_tax": {
+      "avg_loss": -3066.239186335084,
+      "avg_win": 2135.6573416079345,
+      "days": 88,
+      "max_dd": 81800.82086628133,
+      "net": -81188.30513077053,
+      "net_per_day": -922.5943764860288,
+      "net_per_period_day": -163.35675076613788,
+      "top5_share": null,
+      "trades": 113,
+      "win_rate": 0.45132743362831856,
+      "worst_day": -7369.588849260272
+     },
+     "coinswitch_gst_pre_tax": {
+      "avg_loss": -3066.239186335084,
+      "avg_win": 3104.1531128022307,
+      "days": 88,
+      "max_dd": 61395.80469864422,
+      "net": -31795.020799861435,
+      "net_per_day": -361.30705454387993,
+      "net_per_period_day": -63.97388490917794,
+      "top5_share": null,
+      "trades": 113,
+      "win_rate": 0.45132743362831856,
+      "worst_day": -7369.588849260272
+     },
+     "coinswitch_nogst_after_tax": {
+      "avg_loss": -3048.944025436695,
+      "avg_win": 2147.896825450252,
+      "days": 88,
+      "max_dd": 80116.70762307088,
+      "net": -79491.79147911225,
+      "net_per_day": -903.3158122626392,
+      "net_per_period_day": -159.9432424127007,
+      "top5_share": null,
+      "trades": 113,
+      "win_rate": 0.45132743362831856,
+      "worst_day": -7335.186974446346
+     },
+     "coinswitch_nogst_pre_tax": {
+      "avg_loss": -3048.944025436695,
+      "avg_win": 3121.9430602474586,
+      "days": 88,
+      "max_dd": 60874.80738363149,
+      "net": -29815.43350445465,
+      "net_per_day": -338.81174436880286,
+      "net_per_period_day": -59.99081188019044,
+      "top5_share": null,
+      "trades": 113,
+      "win_rate": 0.45132743362831856,
+      "worst_day": -7335.186974446346
+     },
+     "delta_after_tax": {
+      "avg_loss": -3066.239186335084,
+      "avg_win": 2135.6573416079345,
+      "days": 88,
+      "max_dd": 81800.82086628133,
+      "net": -81188.30513077053,
+      "net_per_day": -922.5943764860288,
+      "net_per_period_day": -163.35675076613788,
+      "top5_share": null,
+      "trades": 113,
+      "win_rate": 0.45132743362831856,
+      "worst_day": -7369.588849260272
+     },
+     "delta_pre_tax": {
+      "avg_loss": -3066.239186335084,
+      "avg_win": 3104.1531128022307,
+      "days": 88,
+      "max_dd": 61395.80469864422,
+      "net": -31795.020799861435,
+      "net_per_day": -361.30705454387993,
+      "net_per_period_day": -63.97388490917794,
+      "top5_share": null,
+      "trades": 113,
+      "win_rate": 0.45132743362831856,
+      "worst_day": -7369.588849260272
+     },
+     "exit_reasons": {
+      "lock": 50,
+      "stop": 44,
+      "trail": 19
+     },
+     "p": 0.4311377245508982,
+     "period_days": 497,
+     "quarters_delta_after_tax": {
+      "2024Q4": {
+       "net": -18411.57359867093,
+       "trades": 9
+      },
+      "2025Q1": {
+       "net": -33506.865636554794,
+       "trades": 18
+      },
+      "2025Q2": {
+       "net": -17063.745817550527,
+       "trades": 27
+      },
+      "2025Q3": {
+       "net": 22592.95895720405,
+       "trades": 19
+      },
+      "2025Q4": {
+       "net": -16428.250874141173,
+       "trades": 20
+      },
+      "2026Q1": {
+       "net": -18370.828161057172,
+       "trades": 20
+      }
+     },
+     "quarters_delta_pre_tax": {
+      "2024Q4": {
+       "net": -17544.378493603737,
+       "trades": 9
+      },
+      "2025Q1": {
+       "net": -29577.189589363683,
+       "trades": 18
+      },
+      "2025Q2": {
+       "net": -2090.7611937178867,
+       "trades": 27
+      },
+      "2025Q3": {
+       "net": 42680.883925525806,
+       "trades": 19
+      },
+      "2025Q4": {
+       "net": -12546.264338132094,
+       "trades": 20
+      },
+      "2026Q1": {
+       "net": -12717.311110569834,
+       "trades": 20
+      }
+     },
+     "skips": {},
+     "tds_locked": 109905.58600691255,
+     "trades": 113,
+     "trades_file": "/home/user/options-lab/research/hunt/r53/results/trades/crypto_design_CC8_step_lock.csv",
+     "twins": {
+      "p": 0.4311377245508982,
+      "sizes": {
+       "BTC": {
+        "pool": 2982,
+        "rule_trades": 54
+       },
+       "ETH": {
+        "pool": 2982,
+        "rule_trades": 59
+       }
+      },
+      "twin_mean": -84240.26791008565,
+      "twin_q05": -139543.26940427028,
+      "twin_q95": -24567.880446709296
+     }
+    }
+   },
+   "walk_forward_delta_after_tax": {
+    "design_net": {
+     "orig": -98102.05788239601,
+     "step_lock": -81188.30513077055
+    },
+    "design_pick": null,
+    "orig_wf_net": -36099.03731808476,
+    "retune_picks": [
+     "step_lock",
+     "step_lock",
+     "orig",
+     "step_lock"
+    ],
+    "retune_wf_net": -50699.81453074653
+   }
+  }
+ },
+ "window": [
+  "2024-11-20",
+  "2026-03-31"
+ ],
+ "written": "2026-10-15 02:04:59 UTC"
+}
