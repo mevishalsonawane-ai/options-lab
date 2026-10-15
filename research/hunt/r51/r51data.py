@@ -111,6 +111,10 @@ def add_options(und: str, days: dict, series: str = "WEEK", clean: bool = False)
             o, lab, log = lakeclean.clean(o, closes)
             logs.append(log)
         labs = dict(tuple(lab[lab.offset == 0].groupby("day", sort=True)))
+        # clean: the expiry test reads its 15:15 straddle from the same rows as the ATM label (a dropped stray-open row
+        # must not hide an expiry day; that would change which days a rule skips, not just its prices)
+        tvc = (lab.drop_duplicates(["day", "side", "strike", "r"]).set_index(["day", "side", "strike", "r"]).close
+               if clean else None)
         for d, g in o.groupby("day", sort=True):
             if d not in days:
                 continue
@@ -130,11 +134,16 @@ def add_options(und: str, days: dict, series: str = "WEEK", clean: bool = False)
             if len(a):
                 last = a.iloc[a.r.values.argmax()]
                 k = float(last.strike)
-                ce, pe = D.con.get(("C", k)), D.con.get(("P", k))
                 rr = int(last.r)
-                if ce is not None and pe is not None and np.isfinite(ce[3, rr]) and np.isfinite(pe[3, rr]):
+                if clean:
+                    cc, pc = tvc.get((d, "C", k, rr), np.nan), tvc.get((d, "P", k, rr), np.nan)
+                else:
+                    ce, pe = D.con.get(("C", k)), D.con.get(("P", k))
+                    cc = ce[3, rr] if ce is not None else np.nan
+                    pc = pe[3, rr] if pe is not None else np.nan
+                if np.isfinite(cc) and np.isfinite(pc):
                     spot = float(last.spot)
-                    tv[d] = (ce[3, rr] + pe[3, rr] - abs(spot - k)) / spot * 100
+                    tv[d] = (cc + pc - abs(spot - k)) / spot * 100
     for d in expiry_days(pd.Series(tv)):
         days[d].expiry = True
     if not clean:

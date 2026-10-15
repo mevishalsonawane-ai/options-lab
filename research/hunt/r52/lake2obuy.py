@@ -12,6 +12,8 @@ Years 2024-2026 only: 2024 sessions are warm-up for indicators; no trade before 
 Amendment 2 (15 Oct 2026): `lake2obuy.py <dir> --clean` drops foreign rows and stray prints from every option file
 (research/hunt/lakeclean.py; rows outside 09:15-15:29 pass through untouched) and writes, next to the layout,
 clean_log_<U>_<SERIES>.parquet (every dropped or capped row), clean_counts.json and the CLEANED marker r52amend.py checks.
+`--foreign-only` applies step 1 alone (marker FOREIGN_ONLY): the layout the expiry-day labels are read from, so a dropped
+stray print can never change which days a rule skips (the same rule as R51 Amendment A's ATM and expiry labels).
 """
 from __future__ import annotations
 
@@ -54,20 +56,23 @@ def index_closes(u: str, years=YEARS) -> dict:
     return out
 
 
-def clean_frame(df: pd.DataFrame, closes: dict):
-    """(cleaned lake frame, log of removed / capped rows, rows checked). Rows outside the minute grid are kept as is."""
+def clean_frame(df: pd.DataFrame, closes: dict, stray: bool = True):
+    """(cleaned lake frame, log of removed / capped rows, rows checked). Rows outside the minute grid are kept as is.
+    stray=False: foreign rows only (step 1)."""
     d, r = _day_r(df.ts)
     ing = (r >= 0) & (r < lakeclean.NROWS)
     w = df[ing].copy()
     w["day"], w["r"] = d[ing], r[ing]
     w["side"] = w.side.astype(str).str[0].str.upper()
-    kept, _, log = lakeclean.clean(w, closes)
+    kept, after1, log = lakeclean.clean(w, closes)
+    if not stray:
+        kept, log = after1, log[log.why == "foreign"]
     keep = df[ing].loc[kept.index].copy()
     keep["high"] = kept.high.to_numpy()
     return pd.concat([df[~ing], keep]).sort_index(), log, int(ing.sum())
 
 
-def convert(out: Path, unds=K.UNDS, years=YEARS, clean: bool = False) -> None:
+def convert(out: Path, unds=K.UNDS, years=YEARS, clean: bool = False, stray: bool = True) -> None:
     counts = {}
     for u in unds:
         closes = index_closes(u, years) if clean else None
@@ -79,7 +84,7 @@ def convert(out: Path, unds=K.UNDS, years=YEARS, clean: bool = False) -> None:
                     continue
                 df = pd.read_parquet(p)
                 if clean:
-                    df, log, n = clean_frame(df, closes)
+                    df, log, n = clean_frame(df, closes, stray)
                     logs.append(log)
                     total += n
                 df["ts"] = df.ts.dt.tz_convert("UTC").astype("datetime64[ms, UTC]")
@@ -108,8 +113,12 @@ def convert(out: Path, unds=K.UNDS, years=YEARS, clean: bool = False) -> None:
     v[["ts", "open", "high", "low", "close"]].to_parquet(d / "INDIA_VIX.parquet", index=False)
     if clean:
         (out / "clean_counts.json").write_text(json.dumps(counts, indent=1))
-        (out / "CLEANED").write_text("foreign rows and stray prints removed (R52 Amendment 2)\n")
+        if stray:
+            (out / "CLEANED").write_text("foreign rows and stray prints removed (R52 Amendment 2)\n")
+        else:
+            (out / "FOREIGN_ONLY").write_text("foreign rows removed, stray prints kept (expiry labels only)\n")
 
 
 if __name__ == "__main__":
-    convert(Path(sys.argv[1]).expanduser(), clean="--clean" in sys.argv[2:])
+    fo = "--foreign-only" in sys.argv[2:]
+    convert(Path(sys.argv[1]).expanduser(), clean=fo or "--clean" in sys.argv[2:], stray=not fo)

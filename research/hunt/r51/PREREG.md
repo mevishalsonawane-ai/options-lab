@@ -166,3 +166,9 @@ reproduces R44-donchian20-RT's design exactly (4,517 trades, +Rs 33,681) but not
 committed result, the original rules on the current lake (raw), and on the current lake cleaned. The share of profit due
 to foreign or stray rows is measured as raw-now minus cleaned-now (same lake version). Gates are judged on cleaned-now,
 as registered. (R52 reproduces exactly on the current lake: H37-10:g17 294 trades, +Rs 48,772.)
+
+**Second note (15 Oct 2026, before the cleaned read).** The first cleaned build showed that dropping stray-open rows
+hid 15:15 straddle prices and so un-flagged expiry days (NIFTY 99 -> 71), which would change which days a rule skips: a
+re-selection, not a re-pricing. The expiry test now reads its 15:15 straddle from the same rows as the ATM label (after
+the foreign step, before the stray step), as point 3 already does for the ATM strike. Result: the cleaned stores carry
+exactly the original expiry days for every index; the ATM label changes on 22 FINNIFTY days (foreign rows) only.

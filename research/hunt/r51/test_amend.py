@@ -260,3 +260,28 @@ def test_run_day_uses_module_slip(monkeypatch):
     monkeypatch.setattr(E, "SLIP", E.SLIP2)
     b = E.run_day("NIFTY", D, ["C"], [24000.0], [10], ex)[0]
     assert b["rE"] > a["rE"] and b["rX"] < a["rX"] and b["net"] < a["net"]
+
+
+def test_clean_expiry_flag_ignores_stray_rows(tmp_path, monkeypatch):
+    """A stray-open row at the 15:15 ATM minute must not hide an expiry day (day 1: tv 0.2%, day 2: tv 1%)."""
+    recs, idx = [], []
+    for day, prem, stray in (("2025-06-02", 24.0, True), ("2025-06-03", 120.0, False)):
+        t = pd.Timestamp(f"{day} 15:15", tz="Asia/Kolkata")
+        idx.append(dict(ts=t, open=24000.0, high=24000.0, low=24000.0, close=24000.0))
+        for side in ("CE", "PE"):
+            for m in (-1, 0, 1):
+                tm = t + pd.Timedelta(minutes=m)
+                o = 200.0 if (stray and side == "CE" and m == 0) else prem
+                recs.append(dict(ts=tm, offset=0, side=side, strike=24000.0, spot=24000.0, open=o, high=max(o, prem),
+                                 low=prem, close=prem, volume=1000.0))
+    pd.DataFrame(idx).to_parquet(tmp_path / "index_1m_NIFTY_2025.parquet")
+    pd.DataFrame(recs).to_parquet(tmp_path / "opt_NIFTY_WEEK_2025.parquet")
+    monkeypatch.setattr(K, "LAKE", tmp_path)
+    days = r51data.index_days("NIFTY")
+    r51data.add_options("NIFTY", days)
+    assert days[D1].expiry and not days[D2].expiry
+    days = r51data.index_days("NIFTY")
+    log = r51data.add_options("NIFTY", days, clean=True)
+    assert (log.why == "stray_open").sum() == 1
+    assert np.isnan(days[D1].contract("C", 24000.0)[3, K.row(15, 15)])      # the stray minute is gone ...
+    assert days[D1].expiry and not days[D2].expiry                          # ... the expiry flag is not

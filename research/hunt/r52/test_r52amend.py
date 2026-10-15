@@ -133,3 +133,44 @@ def test_raw_and_run_refuse_the_wrong_layout(tmp_path, monkeypatch):
     (tmp_path / "CLEANED").write_text("x")
     with pytest.raises(SystemExit):
         A.raw()                                                     # not the original layout
+
+
+def test_clean_frame_foreign_only_keeps_stray_rows():
+    ts = pd.DatetimeIndex([pd.Timestamp(f"2025-06-02 09:{m}", tz="Asia/Kolkata") for m in (15, 16, 17)]
+                          + [pd.Timestamp("2025-06-02 09:15", tz="Asia/Kolkata")])
+    df = _lake(ts, dict(offset=[0] * 4, side=["CE"] * 4, strike=[24000.0] * 3 + [13000.0],
+                        spot=[24000.0] * 3 + [13000.0], open=[100.0, 500.0, 100.0, 50.0], high=[101.0, 500.0, 150.0, 50.0],
+                        low=[99.0] * 4, close=[100.0] * 4, volume=[1.0] * 4, oi=[1.0] * 4, iv=[1.0] * 4))
+    out, log, n = LO.clean_frame(df, {D1: np.full(375, 24000.0)}, stray=False)
+    assert out.index.tolist() == [0, 1, 2] and out.loc[1, "open"] == 500.0 and out.loc[2, "high"] == 150.0
+    assert log.why.tolist() == ["foreign"] and n == 4
+
+
+class _Ix:
+    def __init__(self, flags):
+        self.days = sorted(flags)
+        self.d = {d: dict(exp=v) for d, v in flags.items()}
+        self._daily = "stale"
+
+
+class _Mk:
+    def __init__(self, per):
+        self.per = per
+
+    def index(self, u):
+        return self.per[u]
+
+
+def test_pin_labels_sets_expiry_flags():
+    per = {u: _Ix({D1: False, date(2025, 6, 3): True}) for u in K.UNDS}
+    lab = {f"NIFTY|{D1}": True, "NIFTY|2025-06-03": True, f"SENSEX|{D1}": False, "SENSEX|2025-06-03": False}
+    assert A.pin_labels(lab, _Mk(per)) == 2                    # NIFTY 2 Jun on, SENSEX 3 Jun off
+    assert per["NIFTY"].d[D1]["exp"] and not per["SENSEX"].d[date(2025, 6, 3)]["exp"]
+    assert per["BANKNIFTY"].d[date(2025, 6, 3)]["exp"]         # no label: left as it was
+    assert per["NIFTY"]._daily is None
+
+
+def test_labels_and_run_need_their_layouts(tmp_path, monkeypatch):
+    monkeypatch.setattr(A.OC, "DATA", str(tmp_path))
+    with pytest.raises(SystemExit):
+        A.labels(str(tmp_path / "x.json"))                     # not the foreign-only layout

@@ -5,6 +5,8 @@ final test is re-priced, not re-selected.
 
     python3 research/hunt/r52/lake2obuy.py <raw dir>                   # original layout (if not already made)
     OBUY_DATA=<raw dir> OBUY_CACHE=<c1> python3 research/hunt/r52/r52amend.py raw     # ORIGINAL trades (reproduction)
+    python3 research/hunt/r52/lake2obuy.py <fo dir> --foreign-only     # foreign rows only: the expiry-day labels
+    OBUY_DATA=<fo dir> OBUY_CACHE=<c3> python3 research/hunt/r52/r52amend.py labels <clean dir>/expiry_labels.json
     python3 research/hunt/r52/lake2obuy.py <clean dir> --clean          # cleaned layout + what was dropped
     OBUY_DATA=<clean dir> OBUY_CACHE=<c2> python3 research/hunt/r52/r52amend.py run   # the ONE re-priced read
     python3 research/hunt/r52/r52amend.py report                        # results/amend_clean.json -> amend_clean.md
@@ -53,6 +55,36 @@ class Fills2x(Fills):
 
 def cleaned() -> bool:
     return os.path.exists(os.path.join(OC.DATA, "CLEANED"))
+
+
+LABELS = "expiry_labels.json"
+
+
+def labels(path: str):
+    """Write {und|day: expiry flag} from the foreign-only layout (stray prints kept): the labels the cleaned run uses."""
+    if not os.path.exists(os.path.join(OC.DATA, "FOREIGN_ONLY")):
+        raise SystemExit("run `labels` on the foreign-only layout (lake2obuy.py <dir> --foreign-only)")
+    from obuy.data import market
+    out = {f"{u}|{d}": bool(market().index(u).d[d]["exp"]) for u in K.UNDS for d in market().index(u).days}
+    with open(path, "w") as f:
+        json.dump(out, f)
+    print(len(out), "labels,", sum(out.values()), "expiry days")
+
+
+def pin_labels(lab: dict, mk=None) -> int:
+    """Set obuy's expiry flags from `lab` before any signal or trade is computed. Returns how many flags changed."""
+    from obuy.data import market
+    mk = mk or market()
+    n = 0
+    for u in K.UNDS:
+        ix = mk.index(u)
+        for d in ix.days:
+            v = lab.get(f"{u}|{d}")
+            if v is not None and bool(ix.d[d]["exp"]) != v:
+                ix.d[d]["exp"] = v
+                n += 1
+        ix._daily = None
+    return n
 
 
 def check_key(check_git: bool = True):
@@ -135,11 +167,15 @@ def run():
         raise SystemExit("run `run` on the CLEANED layout (lake2obuy.py <dir> --clean)")
     check_key()
     L.env_check()
+    lp = os.path.join(OC.DATA, LABELS)
+    if not os.path.exists(lp):
+        raise SystemExit(f"missing {LABELS} in the cleaned layout (r52amend.py labels)")
+    pinned = pin_labels(json.loads(open(lp).read()))
     fin0 = json.loads((K.RESULTS / "final.json").read_text())
     des0 = json.loads((K.RESULTS / "design.json").read_text())
     cnt = os.path.join(OC.DATA, "clean_counts.json")
     out = dict(read=time.strftime("%Y-%m-%d %H:%M:%S"), drops=json.loads(open(cnt).read()) if os.path.exists(cnt) else {},
-               settings={})
+               settings={}, expiry_flags_pinned=pinned)
     vs = variants()
     dres = L.run(vs, "design")
     fres = L.run(vs, "final")
@@ -223,6 +259,8 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "raw":
         raw()
+    elif cmd == "labels":
+        labels(sys.argv[2])
     elif cmd == "run":
         run()
         print(report())

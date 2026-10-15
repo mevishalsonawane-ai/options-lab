@@ -109,9 +109,14 @@ def raw():
         T = cfg.run(a, b)
         T.to_pickle(raw_dir() / f"raw_{tag}_{PASSING}.pkl")
         print(tag, len(T), round(float(T.net.sum()), 0), flush=True)
-    f = C.stats(pd.read_pickle(raw_dir() / f"raw_final_{PASSING}.pkl"), study.sessions(v, K.FINAL_START, K.END))
+    T = pd.read_pickle(raw_dir() / f"raw_final_{PASSING}.pkl")
+    f = C.stats(T, study.sessions(v, K.FINAL_START, K.END))
+    f["p"], f["twin_mean"] = C.twin_p(T, cfg)
+    f["by_und"] = by_und(T)
+    (raw_dir() / f"raw_summary_{PASSING}.json").write_text(json.dumps(f, default=str))
     ok = f["trades"] == fin[PASSING]["trades"] and abs(f["net"] - fin[PASSING]["net"]) < 1
-    print("reproduces final.json" if ok else f"DOES NOT reproduce final.json: {f['trades']} {f['net']}", flush=True)
+    print("reproduces final.json" if ok else f"DOES NOT reproduce final.json: {f['trades']} {f['net']} p {f['p']}",
+          flush=True)
 
 
 def drop_counts() -> dict:
@@ -186,6 +191,9 @@ def run():
         v = _variants([n])[0]
         cfg = _cfg(v, fin0[n]["config"])
         info = {}
+        rs = raw_dir() / f"raw_summary_{n}.json"
+        if rs.exists():                    # the original rules on the current (re-uploaded) lake, before cleaning
+            info["raw_now"] = json.loads(rs.read_text())
         for tag in ("design", "final"):
             p = raw_dir() / f"raw_{tag}_{n}.pkl"
             if p.exists():
@@ -227,6 +235,11 @@ def report(res: dict | None = None) -> str:
         if not info:
             continue
         L += ["", f"**{n}** by index (cleaned final): " + ", ".join(f"{u} {_rs(x)}" for u, x in r["final"]["by_und"].items())]
+        rn = info.get("raw_now")
+        if rn:
+            L.append(f"- Original rules on the CURRENT lake before cleaning (the lake was re-uploaded after R51's read): "
+                     f"final {rn['trades']} trades {_rs(rn['net'])}, p {rn['p']}; by index "
+                     + ", ".join(f"{u} {_rs(x)}" for u, x in rn["by_und"].items()) + ".")
         for tag in ("design", "final"):
             t = info.get(f"touched_{tag}")
             if t and t.get("trades"):

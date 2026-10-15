@@ -133,3 +133,9 @@ lake's rolling option files and added a stray-print guard; R52 applied neither. 
   the spread and slippage.
 - **Read once:** `r52amend.py run` writes `results/amend_clean.json` and refuses if it exists or if this amendment is
   not committed unchanged.
+
+**Note to Amendment 2 (15 Oct 2026, before the cleaned read).** obuy finds expiry days from the chain's last prices, and
+the stray step changed 36 of its 3,452 index-day flags (lots unchanged), which would change which days a rule skips. As
+in R51 Amendment A (labels from the rows after the foreign step, before the stray step), the cleaned run pins the expiry
+flags read from a foreign-only layout (`lake2obuy.py --foreign-only`, `r52amend.py labels`); those flags equal the
+original layout's on every index-day. The current lake reproduces R52's committed final test exactly.
