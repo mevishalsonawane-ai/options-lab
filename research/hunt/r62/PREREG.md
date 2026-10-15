@@ -185,3 +185,20 @@ zone {`poc`, `lvn`} x confluence {`x` off, `c` on (OB for poc, FVG for lvn)} x H
 
 Nothing directly. A PASS is at most a paper candidate for Boss, labelled "signal on the underlying", never live without
 unseen paper first (CLAUDE.md safety rules).
+
+## Amendment 0 (15 Oct 2026, after the data build, BEFORE any P&L was computed)
+
+Decided while building the data and the engine; no result of any rule had been seen.
+1. **Cash quantity.** `equity_1m` is split-adjusted (KOTAKBANK reads ~Rs 425 in early Jan 2026, before its 1:5
+   split). A dated lot on adjusted prices would mis-size trades before a split, so a cash trade's quantity is the
+   stock's lot in the LATEST bhavcopy R58 read (`r58/results/lots.json`), on today's share scale, for every date.
+2. **Volume source (b).** A minute's constituent value counts only when >= 80% of the listed names printed that minute
+   (else it is unknown, NaN); the profile's 80%-coverage rule then applies as written.
+3. **Twins.** A random draw that cannot fill (no contract / no print / no stock open) is redrawn up to 5 times (as in
+   R58); a twin that never fills adds 0.
+4. **Last session.** The index lake runs to 14 Oct 2026 (stocks to 12 Oct 2026); the final test runs to those days.
+5. **STK-opt** is reported only if R58's books can be rebuilt in this session (they need the stock-option files and the
+   bhavcopies); it uses R58's engine unchanged, so its stock stop / target fire on a minute CLOSE beyond the level
+   (R58's rule), not on the low / high as in the cash book. Stated, context only.
+6. Index options use R51's market-sell fill for every exit (the exit is a next-minute market order after an index
+   trigger, not a resting option stop).
