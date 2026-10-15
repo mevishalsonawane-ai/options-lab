@@ -794,3 +794,26 @@ Bollinger(20, 2) lower band). That is not the default; it is reported separately
   shows -106 and -127 (122 and 130 trades). On the fixed contract the signal is no better than random entries (q 0.62).
 - BANKNIFTY: +Rs 237 on the rolling series, -Rs 124 a trade on one contract at real lots (1,405 trades).
 - Rule for every lake study: never trade the rolling ATM series as one instrument; hold the strike that was bought.
+
+## Rejected MCX, gold and crypto rules on the recent market only (R53, 15 Oct 2026) - 0 of 44 pass; nothing comes back on paper
+Full study: `HUNT_R53_MCX_CRYPTO_RECENT.md` (pre-registered `hunt/r53/PREREG.md`, commit 3d233ea4; list of every rejected
+rule, tested and left: `hunt/r53/CATALOGUE.md`). Data from 20 Nov 2024 only. Design 20 Nov 2024 - 31 Mar 2026 (MCX
+minutes from 5 Aug 2025). Final test 1 Apr - 12 Oct 2026, read once; earlier studies had seen parts of it. Signal source
+of every rule: the underlying (MCX near future, US future + USD/INR, XAUUSD, BTC/ETH perp; DVOL/OI as context).
+- 31 rules (10 MCX families incl. the app's NG evening, US-night silver and 12-month trend arms; 13 XAUUSD; 8 crypto),
+  44 final-test versions, one BH step: 0 pass, 10 too few trades to judge.
+- Closest: the app's US-night silver arm (SILVERMIC, 09:05 sign of SI=F + INR=X): final 109 trades, +Rs 62,850 (57% won,
+  max drawdown Rs 18.5k), design walk-forward +Rs 1.42 lakh, twin p 0.036, but q 0.198. Shorts made +Rs 56.5k of it.
+  It stays the "not proven" paper arm it already is.
+- The app's NG evening breakout lost on the final test (115 trades, -Rs 3.5k; design +Rs 19k) and the 12-month trend lost
+  -Rs 66.1k on 28 leg-months. Turning them off would be a risk-lowering paper change; Boss decides.
+- R2's gap-residual fade was positive in all three final books (GOLDTEN +Rs 17.0k p 0.004; NG option +Rs 20.2k p 0.008;
+  CRUDEOILM +Rs 22.6k p 0.032; 59-77 trades) but lost in design: watch-list, not paper.
+- M3's "close" GOLDM rules were data holes: on the fuller lake the GOLDM evening break goes from +Rs 313 to -Rs 386 a
+  trade, the GOLDM morning break from +Rs 110 to -Rs 315.
+- Gold (XAUUSD, per standard lot): every study re-run trade for trade with its own code. Most made +$80k to +$245k in
+  design, then lost or shrank in 2026's final test. Best: Liquidity 1h confirmation 20, +$25.5k but only 23 trades.
+  Boss's two session strategies, TAS 15m and AI's Opinion all fail.
+- Crypto (stop + profit lock on every trade; Delta and CoinSwitch costs; 31.2% tax per winner): all 8 rules lose after
+  tax in design and final. Nearest: RC2 R8 day-high/low break on Delta options, +Rs 16.9k before tax, -Rs 28.9k after
+  (313 trades). Buy-and-hold made +Rs 13-15k per Rs 1 lakh after tax over the same final window.

@@ -1,0 +1,25 @@
+id: r53-ma8
+title: 'R53: M3 India-open range break on the GOLDM option, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (09:00-09:30 range, break to 12:00, 1-ITM, 60 min) earns after real costs on the recent market
+  only (Boss, 15 Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: GOLDM near future (underlying)'
+model_or_rule: 09:00-09:30 range, break to 12:00, 1-ITM, 60 min
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Rs. orig: design 45 trades net -23,591, walk-forward -23,024; final 115 trades, win 39%, net -13,883, p 0.056,
+    q 0.273 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected

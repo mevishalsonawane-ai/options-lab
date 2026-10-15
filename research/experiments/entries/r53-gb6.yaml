@@ -1,0 +1,25 @@
+id: r53-gb6
+title: 'R53: gold reopen drift (reopen +5 to +120 min), re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (gold_reopen) earns after real costs on the recent market only (Boss, 15 Oct).
+data_version: Dukascopy XAUUSD 1m bid (release research-data + tail to 12 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: XAUUSD (underlying)'
+model_or_rule: gold_reopen
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'USD per standard lot. orig: design 348 trades net 39,656, walk-forward 40,437; final 137 trades, win 44%, net
+    9,204, p 0.176, q 0.455 -> fail; rt_fixed2300: design 337 trades net 64,855, walk-forward 57,251; final 137 trades, win
+    56%, net 9,017, p 0.134, q 0.420 -> fail'
+  costs: ask = bid + 0.30, $7/lot, $40/lot/night swap where held
+holdout_read: true
+verdict: rejected

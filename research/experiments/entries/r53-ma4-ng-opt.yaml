@@ -1,0 +1,25 @@
+id: r53-ma4-ng-opt
+title: 'R53: R2 C3 gap-residual fade, NG option, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (fade res beyond 22 bp, out 14:00) earns after real costs on the recent market only (Boss, 15
+  Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- NATURALGAS
+features:
+- 'signal source: NATURALGAS future vs NG=F + INR=X (underlying)'
+model_or_rule: fade res beyond 22 bp, out 14:00
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Rs. orig: design 83 trades net -13,435, walk-forward -20,009; final 59 trades, win 63%, net 20,155, p 0.008, q
+    0.088 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected

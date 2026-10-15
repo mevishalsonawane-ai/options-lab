@@ -1,0 +1,24 @@
+id: r53-gb5-4h
+title: 'R53: AI''s Opinion V5 Robust on 1h and 4h (Boss''s TradingView script) [GB5-4h], re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (gold_ai_opinion Robust) earns after real costs on the recent market only (Boss, 15 Oct).
+data_version: Dukascopy XAUUSD 1m bid (release research-data + tail to 12 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: XAUUSD (underlying)'
+model_or_rule: gold_ai_opinion Robust
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 1
+results:
+  summary: 'USD per standard lot. orig: design 86 trades net 170,046, walk-forward 155,097; final 23 trades, win 22%, net
+    -36,308, p 0.754, q 0.810 -> too few trades to judge'
+  costs: ask = bid + 0.30, $7/lot, $40/lot/night swap where held
+holdout_read: true
+verdict: inconclusive

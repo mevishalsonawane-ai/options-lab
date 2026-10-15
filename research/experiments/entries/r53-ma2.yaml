@@ -1,0 +1,25 @@
+id: r53-ma2
+title: 'R53: app US-night silver (R2 C2) as the app runs it, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (sign(SI=F + INR=X overnight move) at 09:05, SILVERMIC future, 3% stop, out 10 min before close)
+  earns after real costs on the recent market only (Boss, 15 Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- SILVER
+features:
+- 'signal source: SI=F and INR=X (Yahoo 1h) (underlying)'
+model_or_rule: sign(SI=F + INR=X overnight move) at 09:05, SILVERMIC future, 3% stop, out 10 min before close
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Rs. orig: design 122 trades net 142,880, walk-forward 141,636; final 109 trades, win 57%, net 62,850, p 0.036,
+    q 0.198 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected

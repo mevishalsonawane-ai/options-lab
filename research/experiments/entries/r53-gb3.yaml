@@ -1,0 +1,25 @@
+id: r53-gb3
+title: 'R53: TAS 15m ATR 19 (Boss''s own setting), re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (gold_tas 15m with targets) earns after real costs on the recent market only (Boss, 15 Oct).
+data_version: Dukascopy XAUUSD 1m bid (release research-data + tail to 12 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: XAUUSD (underlying)'
+model_or_rule: gold_tas 15m with targets
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'USD per standard lot. orig: design 471 trades net 59,297, walk-forward 54,754; final 181 trades, win 34%, net
+    -30,078, p 0.471, q 0.691 -> fail; rt_notargets: design 471 trades net 129,771, walk-forward 101,808; final 181 trades,
+    win 32%, net -34,721, p 0.471, q 0.691 -> fail'
+  costs: ask = bid + 0.30, $7/lot, $40/lot/night swap where held
+holdout_read: true
+verdict: rejected

@@ -1,0 +1,25 @@
+id: r53-ma6
+title: 'R53: R3 GOLDM EMA8/21 + ADX15 morning option rule (outside report), re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (5m EMA8/21 cross, ADX14 > 15, 09:00-14:55, ATM option, -25%/+50%, 60 min) earns after real
+  costs on the recent market only (Boss, 15 Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: GOLDM near future (underlying)'
+model_or_rule: 5m EMA8/21 cross, ADX14 > 15, 09:00-14:55, ATM option, -25%/+50%, 60 min
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Rs. orig: design 88 trades net -17,432, walk-forward -12,750; final 175 trades, win 38%, net -49,611, p 0.623,
+    q 0.783 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected

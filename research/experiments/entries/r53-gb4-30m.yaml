@@ -1,0 +1,24 @@
+id: r53-gb4-30m
+title: 'R53: TAS on 4h (targets) and 30m (no targets) [GB4-30m], re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (gold_tas 4h / 30m) earns after real costs on the recent market only (Boss, 15 Oct).
+data_version: Dukascopy XAUUSD 1m bid (release research-data + tail to 12 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: XAUUSD (underlying)'
+model_or_rule: gold_tas 4h / 30m
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 1
+results:
+  summary: 'USD per standard lot. orig: design 216 trades net 171,712, walk-forward 137,930; final 86 trades, win 34%, net
+    -31,845, p 0.493, q 0.700 -> fail'
+  costs: ask = bid + 0.30, $7/lot, $40/lot/night swap where held
+holdout_read: true
+verdict: rejected

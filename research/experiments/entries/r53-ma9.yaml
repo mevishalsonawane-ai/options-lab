@@ -1,0 +1,25 @@
+id: r53-ma9
+title: 'R53: M3 crude EIA release break, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (15-min pre-release range, break within 30 min, 1-ITM, 30 min) earns after real costs on the
+  recent market only (Boss, 15 Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- CRUDE
+features:
+- 'signal source: CRUDEOIL near future (underlying)'
+model_or_rule: 15-min pre-release range, break within 30 min, 1-ITM, 30 min
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Rs. orig: design 29 trades net -7,285, walk-forward -6,972; final 27 trades, win 56%, net -567, p 0.253, q 0.465
+    -> too few trades to judge'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: inconclusive
