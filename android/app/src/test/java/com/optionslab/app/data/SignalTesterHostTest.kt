@@ -81,7 +81,7 @@ class SignalTesterHostTest : RobolectricTest() {
         assertEquals(true, SignalTesterHost.accepts("org.telegram.messenger", "Ravi @ Sensex Kings"))
         assertEquals(false, SignalTesterHost.accepts("org.telegram.messenger", "Family"))
         assertEquals(false, SignalTesterHost.accepts("org.telegram.messenger", null))
-        assertEquals("\"Sensex Kings\" is already on the list.", SignalTesterHost.allow("sensex kings"))
+        assertEquals("\"sensex kings\" is already on the list.", SignalTesterHost.allow("sensex kings"))
         assertEquals("Type the channel's name as Telegram shows it.", SignalTesterHost.allow("🚀"))
         SignalTesterHost.setListen(context, false)
         assertEquals(false, SignalTesterHost.accepts("org.telegram.messenger", "Sensex Kings"))
