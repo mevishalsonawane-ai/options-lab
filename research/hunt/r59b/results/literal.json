@@ -1,0 +1,1911 @@
+{
+ "window": [
+  "2024-11-04",
+  "2026-10-14"
+ ],
+ "label": "a check of their claim only (their own window)",
+ "pooled": {
+  "trades": 7297,
+  "win": 73.0,
+  "per_trade": 967.0,
+  "median": 626.0,
+  "total": 7052602.0,
+  "by_category": {
+   "one_contract": {
+    "trades": 651,
+    "share_trades": 8.9,
+    "profit": 152686.0,
+    "share_profit": 2.2,
+    "per_trade": 235.0,
+    "win": 60.1
+   },
+   "window_mixed": {
+    "trades": 6181,
+    "share_trades": 84.7,
+    "profit": 6249881.0,
+    "share_profit": 88.6,
+    "per_trade": 1011.0,
+    "win": 74.5
+   },
+   "break_switch": {
+    "trades": 3546,
+    "share_trades": 48.6,
+    "profit": 3844831.0,
+    "share_profit": 54.5,
+    "per_trade": 1084.0,
+    "win": 76.3
+   },
+   "break_roll": {
+    "trades": 0,
+    "share_trades": 0.0,
+    "profit": 0.0,
+    "share_profit": 0.0,
+    "per_trade": null,
+    "win": null
+   },
+   "rec_switch": {
+    "trades": 3297,
+    "share_trades": 45.2,
+    "profit": 5482817.0,
+    "share_profit": 77.7,
+    "per_trade": 1663.0,
+    "win": 83.7
+   },
+   "rec_roll": {
+    "trades": 2,
+    "share_trades": 0.0,
+    "profit": 25915.0,
+    "share_profit": 0.4,
+    "per_trade": 12957.0,
+    "win": 100.0
+   },
+   "any_switch_or_roll": {
+    "trades": 6646,
+    "share_trades": 91.1,
+    "profit": 6899917.0,
+    "share_profit": 97.8,
+    "per_trade": 1038.0,
+    "win": 74.3
+   },
+   "overnight_exit": {
+    "trades": 1113,
+    "share_trades": 15.3,
+    "profit": 1104437.0,
+    "share_profit": 15.7,
+    "per_trade": 992.0,
+    "win": 72.8
+   }
+  },
+  "held_contract_diag": {
+   "trades": 7064,
+   "win": 44.3,
+   "per_trade": -60.0,
+   "total": -426776.0
+  }
+ },
+ "pooled_CE": {
+  "trades": 3867,
+  "win": 73.3,
+  "per_trade": 996.0,
+  "median": 650.0,
+  "total": 3851208.0,
+  "by_category": {
+   "one_contract": {
+    "trades": 369,
+    "share_trades": 9.5,
+    "profit": 89474.0,
+    "share_profit": 2.3,
+    "per_trade": 242.0,
+    "win": 61.8
+   },
+   "window_mixed": {
+    "trades": 3242,
+    "share_trades": 83.8,
+    "profit": 3400622.0,
+    "share_profit": 88.3,
+    "per_trade": 1049.0,
+    "win": 74.7
+   },
+   "break_switch": {
+    "trades": 1892,
+    "share_trades": 48.9,
+    "profit": 2060666.0,
+    "share_profit": 53.5,
+    "per_trade": 1089.0,
+    "win": 76.0
+   },
+   "break_roll": {
+    "trades": 0,
+    "share_trades": 0.0,
+    "profit": 0.0,
+    "share_profit": 0.0,
+    "per_trade": null,
+    "win": null
+   },
+   "rec_switch": {
+    "trades": 1811,
+    "share_trades": 46.8,
+    "profit": 3127573.0,
+    "share_profit": 81.2,
+    "per_trade": 1727.0,
+    "win": 83.7
+   },
+   "rec_roll": {
+    "trades": 0,
+    "share_trades": 0.0,
+    "profit": 0.0,
+    "share_profit": 0.0,
+    "per_trade": null,
+    "win": null
+   },
+   "any_switch_or_roll": {
+    "trades": 3498,
+    "share_trades": 90.5,
+    "profit": 3761734.0,
+    "share_profit": 97.7,
+    "per_trade": 1075.0,
+    "win": 74.5
+   },
+   "overnight_exit": {
+    "trades": 581,
+    "share_trades": 15.0,
+    "profit": 586502.0,
+    "share_profit": 15.2,
+    "per_trade": 1009.0,
+    "win": 71.8
+   }
+  },
+  "held_contract_diag": {
+   "trades": 3749,
+   "win": 43.1,
+   "per_trade": -128.0,
+   "total": -481455.0
+  }
+ },
+ "pooled_PE": {
+  "trades": 3430,
+  "win": 72.8,
+  "per_trade": 933.0,
+  "median": 595.0,
+  "total": 3201395.0,
+  "by_category": {
+   "one_contract": {
+    "trades": 282,
+    "share_trades": 8.2,
+    "profit": 63212.0,
+    "share_profit": 2.0,
+    "per_trade": 224.0,
+    "win": 57.8
+   },
+   "window_mixed": {
+    "trades": 2939,
+    "share_trades": 85.7,
+    "profit": 2849259.0,
+    "share_profit": 89.0,
+    "per_trade": 969.0,
+    "win": 74.2
+   },
+   "break_switch": {
+    "trades": 1654,
+    "share_trades": 48.2,
+    "profit": 1784164.0,
+    "share_profit": 55.7,
+    "per_trade": 1079.0,
+    "win": 76.5
+   },
+   "break_roll": {
+    "trades": 0,
+    "share_trades": 0.0,
+    "profit": 0.0,
+    "share_profit": 0.0,
+    "per_trade": null,
+    "win": null
+   },
+   "rec_switch": {
+    "trades": 1486,
+    "share_trades": 43.3,
+    "profit": 2355244.0,
+    "share_profit": 73.6,
+    "per_trade": 1585.0,
+    "win": 83.8
+   },
+   "rec_roll": {
+    "trades": 2,
+    "share_trades": 0.1,
+    "profit": 25915.0,
+    "share_profit": 0.8,
+    "per_trade": 12957.0,
+    "win": 100.0
+   },
+   "any_switch_or_roll": {
+    "trades": 3148,
+    "share_trades": 91.8,
+    "profit": 3138183.0,
+    "share_profit": 98.0,
+    "per_trade": 997.0,
+    "win": 74.1
+   },
+   "overnight_exit": {
+    "trades": 532,
+    "share_trades": 15.5,
+    "profit": 517935.0,
+    "share_profit": 16.2,
+    "per_trade": 974.0,
+    "win": 73.9
+   }
+  },
+  "held_contract_diag": {
+   "trades": 3315,
+   "win": 45.8,
+   "per_trade": 16.0,
+   "total": 54679.0
+  }
+ },
+ "claim_checks": {
+  "max_drawdown": -31485.0,
+  "trades_per_day": 15.3,
+  "dates": 477,
+  "win_by_quarter": {
+   "2024Q4": {
+    "trades": 550,
+    "win": 77.1
+   },
+   "2025Q1": {
+    "trades": 883,
+    "win": 76.0
+   },
+   "2025Q2": {
+    "trades": 1105,
+    "win": 73.8
+   },
+   "2025Q3": {
+    "trades": 980,
+    "win": 72.9
+   },
+   "2025Q4": {
+    "trades": 909,
+    "win": 72.3
+   },
+   "2026Q1": {
+    "trades": 896,
+    "win": 72.3
+   },
+   "2026Q2": {
+    "trades": 936,
+    "win": 70.7
+   },
+   "2026Q3": {
+    "trades": 920,
+    "win": 70.8
+   },
+   "2026Q4": {
+    "trades": 118,
+    "win": 73.7
+   }
+  },
+  "win_by_stock": {
+   "AXISBANK": {
+    "trades": 688,
+    "win": 75.4
+   },
+   "HDFCBANK": {
+    "trades": 813,
+    "win": 70.5
+   },
+   "ICICIBANK": {
+    "trades": 812,
+    "win": 77.1
+   },
+   "INFY": {
+    "trades": 932,
+    "win": 67.2
+   },
+   "ITC": {
+    "trades": 281,
+    "win": 71.2
+   },
+   "KOTAKBANK": {
+    "trades": 679,
+    "win": 74.4
+   },
+   "RELIANCE": {
+    "trades": 768,
+    "win": 75.5
+   },
+   "SBIN": {
+    "trades": 836,
+    "win": 72.0
+   },
+   "TCS": {
+    "trades": 859,
+    "win": 73.1
+   },
+   "TMPV": {
+    "trades": 629,
+    "win": 74.7
+   }
+  }
+ },
+ "cells": {
+  "RELIANCE_CE": {
+   "trades": 415,
+   "win": 76.6,
+   "per_trade": 898.0,
+   "median": 728.0,
+   "total": 372499.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 10,
+     "share_trades": 2.4,
+     "profit": 4779.0,
+     "share_profit": 1.3,
+     "per_trade": 478.0,
+     "win": 90.0
+    },
+    "window_mixed": {
+     "trades": 392,
+     "share_trades": 94.5,
+     "profit": 358836.0,
+     "share_profit": 96.3,
+     "per_trade": 915.0,
+     "win": 76.8
+    },
+    "break_switch": {
+     "trades": 247,
+     "share_trades": 59.5,
+     "profit": 202986.0,
+     "share_profit": 54.5,
+     "per_trade": 822.0,
+     "win": 75.7
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 218,
+     "share_trades": 52.5,
+     "profit": 293521.0,
+     "share_profit": 78.8,
+     "per_trade": 1346.0,
+     "win": 84.4
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 405,
+     "share_trades": 97.6,
+     "profit": 367720.0,
+     "share_profit": 98.7,
+     "per_trade": 908.0,
+     "win": 76.3
+    },
+    "overnight_exit": {
+     "trades": 85,
+     "share_trades": 20.5,
+     "profit": 46158.0,
+     "share_profit": 12.4,
+     "per_trade": 543.0,
+     "win": 72.9
+    }
+   },
+   "held_contract_diag": {
+    "trades": 405,
+    "win": 42.0,
+    "per_trade": -189.0,
+    "total": -76368.0
+   }
+  },
+  "RELIANCE_PE": {
+   "trades": 353,
+   "win": 74.2,
+   "per_trade": 858.0,
+   "median": 663.0,
+   "total": 302864.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 10,
+     "share_trades": 2.8,
+     "profit": -1343.0,
+     "share_profit": -0.4,
+     "per_trade": -134.0,
+     "win": 30.0
+    },
+    "window_mixed": {
+     "trades": 329,
+     "share_trades": 93.2,
+     "profit": 287737.0,
+     "share_profit": 95.0,
+     "per_trade": 875.0,
+     "win": 75.7
+    },
+    "break_switch": {
+     "trades": 186,
+     "share_trades": 52.7,
+     "profit": 176213.0,
+     "share_profit": 58.2,
+     "per_trade": 947.0,
+     "win": 77.4
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 163,
+     "share_trades": 46.2,
+     "profit": 240757.0,
+     "share_profit": 79.5,
+     "per_trade": 1477.0,
+     "win": 85.9
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 343,
+     "share_trades": 97.2,
+     "profit": 304207.0,
+     "share_profit": 100.4,
+     "per_trade": 887.0,
+     "win": 75.5
+    },
+    "overnight_exit": {
+     "trades": 68,
+     "share_trades": 19.3,
+     "profit": 70277.0,
+     "share_profit": 23.2,
+     "per_trade": 1033.0,
+     "win": 77.9
+    }
+   },
+   "held_contract_diag": {
+    "trades": 338,
+    "win": 44.4,
+    "per_trade": -134.0,
+    "total": -45135.0
+   }
+  },
+  "HDFCBANK_CE": {
+   "trades": 425,
+   "win": 73.2,
+   "per_trade": 1083.0,
+   "median": 733.0,
+   "total": 460413.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 39,
+     "share_trades": 9.2,
+     "profit": -1237.0,
+     "share_profit": -0.3,
+     "per_trade": -32.0,
+     "win": 59.0
+    },
+    "window_mixed": {
+     "trades": 344,
+     "share_trades": 80.9,
+     "profit": 367144.0,
+     "share_profit": 79.7,
+     "per_trade": 1067.0,
+     "win": 74.7
+    },
+    "break_switch": {
+     "trades": 206,
+     "share_trades": 48.5,
+     "profit": 213198.0,
+     "share_profit": 46.3,
+     "per_trade": 1035.0,
+     "win": 73.8
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 211,
+     "share_trades": 49.6,
+     "profit": 406630.0,
+     "share_profit": 88.3,
+     "per_trade": 1927.0,
+     "win": 85.3
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 386,
+     "share_trades": 90.8,
+     "profit": 461650.0,
+     "share_profit": 100.3,
+     "per_trade": 1196.0,
+     "win": 74.6
+    },
+    "overnight_exit": {
+     "trades": 64,
+     "share_trades": 15.1,
+     "profit": 58979.0,
+     "share_profit": 12.8,
+     "per_trade": 922.0,
+     "win": 62.5
+    }
+   },
+   "held_contract_diag": {
+    "trades": 402,
+    "win": 40.0,
+    "per_trade": -179.0,
+    "total": -71911.0
+   }
+  },
+  "HDFCBANK_PE": {
+   "trades": 388,
+   "win": 67.5,
+   "per_trade": 816.0,
+   "median": 501.0,
+   "total": 316707.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 37,
+     "share_trades": 9.5,
+     "profit": -7254.0,
+     "share_profit": -2.3,
+     "per_trade": -196.0,
+     "win": 40.5
+    },
+    "window_mixed": {
+     "trades": 311,
+     "share_trades": 80.2,
+     "profit": 262635.0,
+     "share_profit": 82.9,
+     "per_trade": 844.0,
+     "win": 71.1
+    },
+    "break_switch": {
+     "trades": 175,
+     "share_trades": 45.1,
+     "profit": 163921.0,
+     "share_profit": 51.8,
+     "per_trade": 937.0,
+     "win": 74.3
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 179,
+     "share_trades": 46.1,
+     "profit": 275007.0,
+     "share_profit": 86.8,
+     "per_trade": 1536.0,
+     "win": 78.2
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 351,
+     "share_trades": 90.5,
+     "profit": 323961.0,
+     "share_profit": 102.3,
+     "per_trade": 923.0,
+     "win": 70.4
+    },
+    "overnight_exit": {
+     "trades": 64,
+     "share_trades": 16.5,
+     "profit": 44721.0,
+     "share_profit": 14.1,
+     "per_trade": 699.0,
+     "win": 59.4
+    }
+   },
+   "held_contract_diag": {
+    "trades": 367,
+    "win": 42.8,
+    "per_trade": -91.0,
+    "total": -33475.0
+   }
+  },
+  "ICICIBANK_CE": {
+   "trades": 442,
+   "win": 79.2,
+   "per_trade": 1179.0,
+   "median": 987.0,
+   "total": 521300.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 19,
+     "share_trades": 4.3,
+     "profit": 7543.0,
+     "share_profit": 1.4,
+     "per_trade": 397.0,
+     "win": 68.4
+    },
+    "window_mixed": {
+     "trades": 404,
+     "share_trades": 91.4,
+     "profit": 498022.0,
+     "share_profit": 95.5,
+     "per_trade": 1233.0,
+     "win": 80.2
+    },
+    "break_switch": {
+     "trades": 243,
+     "share_trades": 55.0,
+     "profit": 301749.0,
+     "share_profit": 57.9,
+     "per_trade": 1242.0,
+     "win": 80.7
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 220,
+     "share_trades": 49.8,
+     "profit": 410408.0,
+     "share_profit": 78.7,
+     "per_trade": 1865.0,
+     "win": 87.7
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 423,
+     "share_trades": 95.7,
+     "profit": 513757.0,
+     "share_profit": 98.6,
+     "per_trade": 1215.0,
+     "win": 79.7
+    },
+    "overnight_exit": {
+     "trades": 75,
+     "share_trades": 17.0,
+     "profit": 86518.0,
+     "share_profit": 16.6,
+     "per_trade": 1154.0,
+     "win": 77.3
+    }
+   },
+   "held_contract_diag": {
+    "trades": 431,
+    "win": 44.3,
+    "per_trade": -102.0,
+    "total": -43748.0
+   }
+  },
+  "ICICIBANK_PE": {
+   "trades": 370,
+   "win": 74.6,
+   "per_trade": 1008.0,
+   "median": 696.0,
+   "total": 372927.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 17,
+     "share_trades": 4.6,
+     "profit": -4797.0,
+     "share_profit": -1.3,
+     "per_trade": -282.0,
+     "win": 41.2
+    },
+    "window_mixed": {
+     "trades": 331,
+     "share_trades": 89.5,
+     "profit": 353146.0,
+     "share_profit": 94.7,
+     "per_trade": 1067.0,
+     "win": 77.3
+    },
+    "break_switch": {
+     "trades": 189,
+     "share_trades": 51.1,
+     "profit": 208459.0,
+     "share_profit": 55.9,
+     "per_trade": 1103.0,
+     "win": 77.8
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 176,
+     "share_trades": 47.6,
+     "profit": 282959.0,
+     "share_profit": 75.9,
+     "per_trade": 1608.0,
+     "win": 86.4
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 353,
+     "share_trades": 95.4,
+     "profit": 377724.0,
+     "share_profit": 101.3,
+     "per_trade": 1070.0,
+     "win": 76.2
+    },
+    "overnight_exit": {
+     "trades": 53,
+     "share_trades": 14.3,
+     "profit": 57259.0,
+     "share_profit": 15.4,
+     "per_trade": 1080.0,
+     "win": 75.5
+    }
+   },
+   "held_contract_diag": {
+    "trades": 364,
+    "win": 44.0,
+    "per_trade": 93.0,
+    "total": 33845.0
+   }
+  },
+  "INFY_CE": {
+   "trades": 509,
+   "win": 65.4,
+   "per_trade": 1066.0,
+   "median": 568.0,
+   "total": 542447.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 62,
+     "share_trades": 12.2,
+     "profit": 24177.0,
+     "share_profit": 4.5,
+     "per_trade": 390.0,
+     "win": 54.8
+    },
+    "window_mixed": {
+     "trades": 408,
+     "share_trades": 80.2,
+     "profit": 451846.0,
+     "share_profit": 83.3,
+     "per_trade": 1107.0,
+     "win": 66.4
+    },
+    "break_switch": {
+     "trades": 228,
+     "share_trades": 44.8,
+     "profit": 273405.0,
+     "share_profit": 50.4,
+     "per_trade": 1199.0,
+     "win": 69.3
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 221,
+     "share_trades": 43.4,
+     "profit": 477457.0,
+     "share_profit": 88.0,
+     "per_trade": 2160.0,
+     "win": 80.1
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 447,
+     "share_trades": 87.8,
+     "profit": 518270.0,
+     "share_profit": 95.5,
+     "per_trade": 1159.0,
+     "win": 66.9
+    },
+    "overnight_exit": {
+     "trades": 61,
+     "share_trades": 12.0,
+     "profit": 73459.0,
+     "share_profit": 13.5,
+     "per_trade": 1204.0,
+     "win": 68.9
+    }
+   },
+   "held_contract_diag": {
+    "trades": 491,
+    "win": 38.5,
+    "per_trade": -339.0,
+    "total": -166486.0
+   }
+  },
+  "INFY_PE": {
+   "trades": 423,
+   "win": 69.3,
+   "per_trade": 981.0,
+   "median": 520.0,
+   "total": 414787.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 54,
+     "share_trades": 12.8,
+     "profit": 21450.0,
+     "share_profit": 5.2,
+     "per_trade": 397.0,
+     "win": 55.6
+    },
+    "window_mixed": {
+     "trades": 343,
+     "share_trades": 81.1,
+     "profit": 360789.0,
+     "share_profit": 87.0,
+     "per_trade": 1052.0,
+     "win": 70.3
+    },
+    "break_switch": {
+     "trades": 181,
+     "share_trades": 42.8,
+     "profit": 233309.0,
+     "share_profit": 56.2,
+     "per_trade": 1289.0,
+     "win": 72.9
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 166,
+     "share_trades": 39.2,
+     "profit": 318753.0,
+     "share_profit": 76.8,
+     "per_trade": 1920.0,
+     "win": 84.3
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 369,
+     "share_trades": 87.2,
+     "profit": 393337.0,
+     "share_profit": 94.8,
+     "per_trade": 1066.0,
+     "win": 71.3
+    },
+    "overnight_exit": {
+     "trades": 59,
+     "share_trades": 13.9,
+     "profit": 51129.0,
+     "share_profit": 12.3,
+     "per_trade": 867.0,
+     "win": 69.5
+    }
+   },
+   "held_contract_diag": {
+    "trades": 409,
+    "win": 43.3,
+    "per_trade": -109.0,
+    "total": -44494.0
+   }
+  },
+  "TCS_CE": {
+   "trades": 426,
+   "win": 73.0,
+   "per_trade": 854.0,
+   "median": 640.0,
+   "total": 363674.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 21,
+     "share_trades": 4.9,
+     "profit": 7560.0,
+     "share_profit": 2.1,
+     "per_trade": 360.0,
+     "win": 76.2
+    },
+    "window_mixed": {
+     "trades": 378,
+     "share_trades": 88.7,
+     "profit": 337617.0,
+     "share_profit": 92.8,
+     "per_trade": 893.0,
+     "win": 73.8
+    },
+    "break_switch": {
+     "trades": 199,
+     "share_trades": 46.7,
+     "profit": 195321.0,
+     "share_profit": 53.7,
+     "per_trade": 982.0,
+     "win": 76.9
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 216,
+     "share_trades": 50.7,
+     "profit": 291327.0,
+     "share_profit": 80.1,
+     "per_trade": 1349.0,
+     "win": 77.8
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 405,
+     "share_trades": 95.1,
+     "profit": 356114.0,
+     "share_profit": 97.9,
+     "per_trade": 879.0,
+     "win": 72.8
+    },
+    "overnight_exit": {
+     "trades": 66,
+     "share_trades": 15.5,
+     "profit": 52236.0,
+     "share_profit": 14.4,
+     "per_trade": 791.0,
+     "win": 74.2
+    }
+   },
+   "held_contract_diag": {
+    "trades": 402,
+    "win": 44.3,
+    "per_trade": -162.0,
+    "total": -65056.0
+   }
+  },
+  "TCS_PE": {
+   "trades": 433,
+   "win": 73.2,
+   "per_trade": 982.0,
+   "median": 625.0,
+   "total": 425357.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 17,
+     "share_trades": 3.9,
+     "profit": 13451.0,
+     "share_profit": 3.2,
+     "per_trade": 791.0,
+     "win": 76.5
+    },
+    "window_mixed": {
+     "trades": 398,
+     "share_trades": 91.9,
+     "profit": 397320.0,
+     "share_profit": 93.4,
+     "per_trade": 998.0,
+     "win": 72.4
+    },
+    "break_switch": {
+     "trades": 228,
+     "share_trades": 52.7,
+     "profit": 262191.0,
+     "share_profit": 61.6,
+     "per_trade": 1150.0,
+     "win": 76.8
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 206,
+     "share_trades": 47.6,
+     "profit": 285148.0,
+     "share_profit": 67.0,
+     "per_trade": 1384.0,
+     "win": 82.5
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 416,
+     "share_trades": 96.1,
+     "profit": 411906.0,
+     "share_profit": 96.8,
+     "per_trade": 990.0,
+     "win": 73.1
+    },
+    "overnight_exit": {
+     "trades": 50,
+     "share_trades": 11.5,
+     "profit": 26366.0,
+     "share_profit": 6.2,
+     "per_trade": 527.0,
+     "win": 62.0
+    }
+   },
+   "held_contract_diag": {
+    "trades": 408,
+    "win": 46.8,
+    "per_trade": 257.0,
+    "total": 104855.0
+   }
+  },
+  "SBIN_CE": {
+   "trades": 430,
+   "win": 69.5,
+   "per_trade": 769.0,
+   "median": 432.0,
+   "total": 330714.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 58,
+     "share_trades": 13.5,
+     "profit": 2111.0,
+     "share_profit": 0.6,
+     "per_trade": 36.0,
+     "win": 55.2
+    },
+    "window_mixed": {
+     "trades": 341,
+     "share_trades": 79.3,
+     "profit": 292251.0,
+     "share_profit": 88.4,
+     "per_trade": 857.0,
+     "win": 71.6
+    },
+    "break_switch": {
+     "trades": 194,
+     "share_trades": 45.1,
+     "profit": 172797.0,
+     "share_profit": 52.2,
+     "per_trade": 891.0,
+     "win": 71.1
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 203,
+     "share_trades": 47.2,
+     "profit": 274412.0,
+     "share_profit": 83.0,
+     "per_trade": 1352.0,
+     "win": 77.3
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 372,
+     "share_trades": 86.5,
+     "profit": 328602.0,
+     "share_profit": 99.4,
+     "per_trade": 883.0,
+     "win": 71.8
+    },
+    "overnight_exit": {
+     "trades": 75,
+     "share_trades": 17.4,
+     "profit": 47193.0,
+     "share_profit": 14.3,
+     "per_trade": 629.0,
+     "win": 54.7
+    }
+   },
+   "held_contract_diag": {
+    "trades": 410,
+    "win": 44.4,
+    "per_trade": -34.0,
+    "total": -13929.0
+   }
+  },
+  "SBIN_PE": {
+   "trades": 406,
+   "win": 74.6,
+   "per_trade": 801.0,
+   "median": 527.0,
+   "total": 325391.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 55,
+     "share_trades": 13.5,
+     "profit": 3319.0,
+     "share_profit": 1.0,
+     "per_trade": 60.0,
+     "win": 65.5
+    },
+    "window_mixed": {
+     "trades": 328,
+     "share_trades": 80.8,
+     "profit": 296076.0,
+     "share_profit": 91.0,
+     "per_trade": 903.0,
+     "win": 76.2
+    },
+    "break_switch": {
+     "trades": 188,
+     "share_trades": 46.3,
+     "profit": 176338.0,
+     "share_profit": 54.2,
+     "per_trade": 938.0,
+     "win": 76.6
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 161,
+     "share_trades": 39.7,
+     "profit": 232909.0,
+     "share_profit": 71.6,
+     "per_trade": 1447.0,
+     "win": 82.6
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 351,
+     "share_trades": 86.5,
+     "profit": 322072.0,
+     "share_profit": 99.0,
+     "per_trade": 918.0,
+     "win": 76.1
+    },
+    "overnight_exit": {
+     "trades": 72,
+     "share_trades": 17.7,
+     "profit": 67515.0,
+     "share_profit": 20.7,
+     "per_trade": 938.0,
+     "win": 80.6
+    }
+   },
+   "held_contract_diag": {
+    "trades": 389,
+    "win": 53.2,
+    "per_trade": 84.0,
+    "total": 32712.0
+   }
+  },
+  "AXISBANK_CE": {
+   "trades": 373,
+   "win": 74.5,
+   "per_trade": 1102.0,
+   "median": 693.0,
+   "total": 411044.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 34,
+     "share_trades": 9.1,
+     "profit": 4599.0,
+     "share_profit": 1.1,
+     "per_trade": 135.0,
+     "win": 58.8
+    },
+    "window_mixed": {
+     "trades": 315,
+     "share_trades": 84.5,
+     "profit": 389391.0,
+     "share_profit": 94.7,
+     "per_trade": 1236.0,
+     "win": 77.5
+    },
+    "break_switch": {
+     "trades": 200,
+     "share_trades": 53.6,
+     "profit": 277118.0,
+     "share_profit": 67.4,
+     "per_trade": 1386.0,
+     "win": 81.0
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 182,
+     "share_trades": 48.8,
+     "profit": 343294.0,
+     "share_profit": 83.5,
+     "per_trade": 1886.0,
+     "win": 84.6
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 339,
+     "share_trades": 90.9,
+     "profit": 406445.0,
+     "share_profit": 98.9,
+     "per_trade": 1199.0,
+     "win": 76.1
+    },
+    "overnight_exit": {
+     "trades": 56,
+     "share_trades": 15.0,
+     "profit": 111050.0,
+     "share_profit": 27.0,
+     "per_trade": 1983.0,
+     "win": 85.7
+    }
+   },
+   "held_contract_diag": {
+    "trades": 371,
+    "win": 43.7,
+    "per_trade": -115.0,
+    "total": -42717.0
+   }
+  },
+  "AXISBANK_PE": {
+   "trades": 315,
+   "win": 76.5,
+   "per_trade": 965.0,
+   "median": 668.0,
+   "total": 304017.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 22,
+     "share_trades": 7.0,
+     "profit": 22565.0,
+     "share_profit": 7.4,
+     "per_trade": 1026.0,
+     "win": 77.3
+    },
+    "window_mixed": {
+     "trades": 277,
+     "share_trades": 87.9,
+     "profit": 248066.0,
+     "share_profit": 81.6,
+     "per_trade": 896.0,
+     "win": 76.9
+    },
+    "break_switch": {
+     "trades": 161,
+     "share_trades": 51.1,
+     "profit": 166390.0,
+     "share_profit": 54.7,
+     "per_trade": 1033.0,
+     "win": 83.2
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 139,
+     "share_trades": 44.1,
+     "profit": 184824.0,
+     "share_profit": 60.8,
+     "per_trade": 1330.0,
+     "win": 85.6
+    },
+    "rec_roll": {
+     "trades": 2,
+     "share_trades": 0.6,
+     "profit": 25915.0,
+     "share_profit": 8.5,
+     "per_trade": 12957.0,
+     "win": 100.0
+    },
+    "any_switch_or_roll": {
+     "trades": 293,
+     "share_trades": 93.0,
+     "profit": 281452.0,
+     "share_profit": 92.6,
+     "per_trade": 961.0,
+     "win": 76.5
+    },
+    "overnight_exit": {
+     "trades": 58,
+     "share_trades": 18.4,
+     "profit": 78718.0,
+     "share_profit": 25.9,
+     "per_trade": 1357.0,
+     "win": 81.0
+    }
+   },
+   "held_contract_diag": {
+    "trades": 311,
+    "win": 47.3,
+    "per_trade": 120.0,
+    "total": 37387.0
+   }
+  },
+  "KOTAKBANK_CE": {
+   "trades": 354,
+   "win": 76.3,
+   "per_trade": 1167.0,
+   "median": 747.0,
+   "total": 413049.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 24,
+     "share_trades": 6.8,
+     "profit": 14856.0,
+     "share_profit": 3.6,
+     "per_trade": 619.0,
+     "win": 87.5
+    },
+    "window_mixed": {
+     "trades": 309,
+     "share_trades": 87.3,
+     "profit": 363834.0,
+     "share_profit": 88.1,
+     "per_trade": 1177.0,
+     "win": 75.1
+    },
+    "break_switch": {
+     "trades": 175,
+     "share_trades": 49.4,
+     "profit": 210215.0,
+     "share_profit": 50.9,
+     "per_trade": 1201.0,
+     "win": 76.0
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 159,
+     "share_trades": 44.9,
+     "profit": 311634.0,
+     "share_profit": 75.4,
+     "per_trade": 1960.0,
+     "win": 86.8
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 330,
+     "share_trades": 93.2,
+     "profit": 398193.0,
+     "share_profit": 96.4,
+     "per_trade": 1207.0,
+     "win": 75.5
+    },
+    "overnight_exit": {
+     "trades": 49,
+     "share_trades": 13.8,
+     "profit": 60909.0,
+     "share_profit": 14.7,
+     "per_trade": 1243.0,
+     "win": 79.6
+    }
+   },
+   "held_contract_diag": {
+    "trades": 348,
+    "win": 44.3,
+    "per_trade": -92.0,
+    "total": -32020.0
+   }
+  },
+  "KOTAKBANK_PE": {
+   "trades": 325,
+   "win": 72.3,
+   "per_trade": 1068.0,
+   "median": 555.0,
+   "total": 347202.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 17,
+     "share_trades": 5.2,
+     "profit": 3198.0,
+     "share_profit": 0.9,
+     "per_trade": 188.0,
+     "win": 58.8
+    },
+    "window_mixed": {
+     "trades": 285,
+     "share_trades": 87.7,
+     "profit": 298155.0,
+     "share_profit": 85.9,
+     "per_trade": 1046.0,
+     "win": 72.6
+    },
+    "break_switch": {
+     "trades": 160,
+     "share_trades": 49.2,
+     "profit": 190865.0,
+     "share_profit": 55.0,
+     "per_trade": 1193.0,
+     "win": 73.8
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 154,
+     "share_trades": 47.4,
+     "profit": 275161.0,
+     "share_profit": 79.3,
+     "per_trade": 1787.0,
+     "win": 80.5
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 308,
+     "share_trades": 94.8,
+     "profit": 344003.0,
+     "share_profit": 99.1,
+     "per_trade": 1117.0,
+     "win": 73.1
+    },
+    "overnight_exit": {
+     "trades": 57,
+     "share_trades": 17.5,
+     "profit": 56079.0,
+     "share_profit": 16.2,
+     "per_trade": 984.0,
+     "win": 71.9
+    }
+   },
+   "held_contract_diag": {
+    "trades": 317,
+    "win": 41.3,
+    "per_trade": -120.0,
+    "total": -37895.0
+   }
+  },
+  "ITC_CE": {
+   "trades": 183,
+   "win": 73.8,
+   "per_trade": 864.0,
+   "median": 541.0,
+   "total": 158070.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 37,
+     "share_trades": 20.2,
+     "profit": 8473.0,
+     "share_profit": 5.4,
+     "per_trade": 229.0,
+     "win": 62.2
+    },
+    "window_mixed": {
+     "trades": 137,
+     "share_trades": 74.9,
+     "profit": 131313.0,
+     "share_profit": 83.1,
+     "per_trade": 958.0,
+     "win": 75.9
+    },
+    "break_switch": {
+     "trades": 75,
+     "share_trades": 41.0,
+     "profit": 75938.0,
+     "share_profit": 48.0,
+     "per_trade": 1013.0,
+     "win": 73.3
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 80,
+     "share_trades": 43.7,
+     "profit": 133698.0,
+     "share_profit": 84.6,
+     "per_trade": 1671.0,
+     "win": 90.0
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 146,
+     "share_trades": 79.8,
+     "profit": 149597.0,
+     "share_profit": 94.6,
+     "per_trade": 1025.0,
+     "win": 76.7
+    },
+    "overnight_exit": {
+     "trades": 21,
+     "share_trades": 11.5,
+     "profit": 17473.0,
+     "share_profit": 11.1,
+     "per_trade": 832.0,
+     "win": 71.4
+    }
+   },
+   "held_contract_diag": {
+    "trades": 180,
+    "win": 41.1,
+    "per_trade": -169.0,
+    "total": -30471.0
+   }
+  },
+  "ITC_PE": {
+   "trades": 98,
+   "win": 66.3,
+   "per_trade": 604.0,
+   "median": 323.0,
+   "total": 59180.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 12,
+     "share_trades": 12.2,
+     "profit": -5439.0,
+     "share_profit": -9.2,
+     "per_trade": -453.0,
+     "win": 16.7
+    },
+    "window_mixed": {
+     "trades": 80,
+     "share_trades": 81.6,
+     "profit": 66485.0,
+     "share_profit": 112.3,
+     "per_trade": 831.0,
+     "win": 75.0
+    },
+    "break_switch": {
+     "trades": 46,
+     "share_trades": 46.9,
+     "profit": 40303.0,
+     "share_profit": 68.1,
+     "per_trade": 876.0,
+     "win": 76.1
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 35,
+     "share_trades": 35.7,
+     "profit": 46235.0,
+     "share_profit": 78.1,
+     "per_trade": 1321.0,
+     "win": 88.6
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 86,
+     "share_trades": 87.8,
+     "profit": 64618.0,
+     "share_profit": 109.2,
+     "per_trade": 751.0,
+     "win": 73.3
+    },
+    "overnight_exit": {
+     "trades": 10,
+     "share_trades": 10.2,
+     "profit": 16270.0,
+     "share_profit": 27.5,
+     "per_trade": 1627.0,
+     "win": 90.0
+    }
+   },
+   "held_contract_diag": {
+    "trades": 98,
+    "win": 38.8,
+    "per_trade": -244.0,
+    "total": -23943.0
+   }
+  },
+  "TMPV_CE": {
+   "trades": 310,
+   "win": 73.5,
+   "per_trade": 897.0,
+   "median": 594.0,
+   "total": 277999.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 65,
+     "share_trades": 21.0,
+     "profit": 16614.0,
+     "share_profit": 6.0,
+     "per_trade": 256.0,
+     "win": 56.9
+    },
+    "window_mixed": {
+     "trades": 214,
+     "share_trades": 69.0,
+     "profit": 210369.0,
+     "share_profit": 75.7,
+     "per_trade": 983.0,
+     "win": 77.6
+    },
+    "break_switch": {
+     "trades": 125,
+     "share_trades": 40.3,
+     "profit": 137940.0,
+     "share_profit": 49.6,
+     "per_trade": 1104.0,
+     "win": 83.2
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 101,
+     "share_trades": 32.6,
+     "profit": 185192.0,
+     "share_profit": 66.6,
+     "per_trade": 1834.0,
+     "win": 92.1
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 245,
+     "share_trades": 79.0,
+     "profit": 261385.0,
+     "share_profit": 94.0,
+     "per_trade": 1067.0,
+     "win": 78.0
+    },
+    "overnight_exit": {
+     "trades": 29,
+     "share_trades": 9.4,
+     "profit": 32526.0,
+     "share_profit": 11.7,
+     "per_trade": 1122.0,
+     "win": 79.3
+    }
+   },
+   "held_contract_diag": {
+    "trades": 309,
+    "win": 49.5,
+    "per_trade": 198.0,
+    "total": 61251.0
+   }
+  },
+  "TMPV_PE": {
+   "trades": 319,
+   "win": 75.9,
+   "per_trade": 1044.0,
+   "median": 722.0,
+   "total": 332964.0,
+   "by_category": {
+    "one_contract": {
+     "trades": 41,
+     "share_trades": 12.9,
+     "profit": 18061.0,
+     "share_profit": 5.4,
+     "per_trade": 441.0,
+     "win": 73.2
+    },
+    "window_mixed": {
+     "trades": 257,
+     "share_trades": 80.6,
+     "profit": 278849.0,
+     "share_profit": 83.7,
+     "per_trade": 1085.0,
+     "win": 76.3
+    },
+    "break_switch": {
+     "trades": 140,
+     "share_trades": 43.9,
+     "profit": 166176.0,
+     "share_profit": 49.9,
+     "per_trade": 1187.0,
+     "win": 76.4
+    },
+    "break_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "rec_switch": {
+     "trades": 107,
+     "share_trades": 33.5,
+     "profit": 213490.0,
+     "share_profit": 64.1,
+     "per_trade": 1995.0,
+     "win": 89.7
+    },
+    "rec_roll": {
+     "trades": 0,
+     "share_trades": 0.0,
+     "profit": 0.0,
+     "share_profit": 0.0,
+     "per_trade": null,
+     "win": null
+    },
+    "any_switch_or_roll": {
+     "trades": 278,
+     "share_trades": 87.1,
+     "profit": 314903.0,
+     "share_profit": 94.6,
+     "per_trade": 1133.0,
+     "win": 76.3
+    },
+    "overnight_exit": {
+     "trades": 41,
+     "share_trades": 12.9,
+     "profit": 49601.0,
+     "share_profit": 14.9,
+     "per_trade": 1210.0,
+     "win": 85.4
+    }
+   },
+   "held_contract_diag": {
+    "trades": 314,
+    "win": 50.6,
+    "per_trade": 98.0,
+    "total": 30821.0
+   }
+  }
+ }
+}
