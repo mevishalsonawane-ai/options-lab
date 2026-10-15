@@ -154,7 +154,9 @@ object PassedArms {
      * (bar start times; read from the entry minute on), then [ltp] (the price now, null: none) at [now]. Read from the bars
      * alone (plus the price now), so a restart in the middle of a trade finds the same answer.
      */
-    fun exitOnBars(entry: Double, entryMinute: LocalDateTime, bars: List<Bar>, ltp: Double?, now: LocalDateTime, x: PremiumExits): Walk {
+    fun exitOnBars(entry: Double, entryMinute: LocalDateTime, bars: List<Bar>, ltp: Double?, now: LocalDateTime, x: PremiumExits,
+                   /** A lock level an earlier look saw earned by that time (it holds for the bars starting then or later, and now). */
+                   known: Pair<LocalDateTime, Double>? = null): Walk {
         if (!(entry > 0)) return Walk(null, entry, null)
         val stop = stopLevel(entry, x)
         val tgt = targetLevel(entry, x)
@@ -166,6 +168,7 @@ object PassedArms {
             .sortedBy { it.start }.distinctBy { it.start }
         for (b in done) {
             if (!b.low.isFinite() || !b.high.isFinite()) continue
+            known?.let { (at, lv) -> if (!b.start.isBefore(at) && (lock == null || lv > lock!!)) lock = lv }
             val lv = maxOf(stop ?: -1.0, lock ?: -1.0)
             if (lv > 0 && b.low <= lv + EPS) {
                 val px = if (b.open.isFinite() && b.open < lv) b.open else lv
@@ -178,7 +181,8 @@ object PassedArms {
             for ((trig, keep) in x.steps) if (g >= trig - 1e-12) { val l = entry * (1 + keep); if (lock == null || l > lock) lock = l }
             if (tend != null && b.start == tend) return Walk(Exit(ExitKind.TIME, b.start.plusMinutes(1), b.close), peak, lock)
         }
-        // Between bars: the price now against the same levels, then the clock.
+        // Between bars: the price now against the same levels (and a lock seen earned before), then the clock.
+        known?.let { (_, lv) -> if (lock == null || lv > lock!!) lock = lv }
         val lv = maxOf(stop ?: -1.0, lock ?: -1.0)
         if (ltp != null && ltp > 0) {
             if (lv > 0 && ltp <= lv + EPS) return Walk(Exit(if (lock != null && lock >= (stop ?: -1.0)) ExitKind.LOCK else ExitKind.STOP, now, ltp), peak, lock)
@@ -207,24 +211,33 @@ object PassedArms {
 
         enum class Verdict { RUNNING, PASSED, FAILED_NET, FAILED_SPREAD }
 
-        /** The record judged: closed [trades], [net] after charges, the [spread] (and slippage) they paid, [wins]. */
-        data class Check(val verdict: Verdict, val trades: Int, val net: Double, val spread: Double, val wins: Int) {
+        /**
+         * The record: closed [trades], [net] after charges, the [spread] (and slippage) they paid, [wins] - and what the bar
+         * judged: the first 40 trades' net ([judgedNet]) and spread ([judgedSpread]).
+         */
+        data class Check(val verdict: Verdict, val trades: Int, val net: Double, val spread: Double, val wins: Int,
+                         val judgedNet: Double = 0.0, val judgedSpread: Double = 0.0) {
             /** The net had the spread and slippage been twice what they were. */
             val netAtTwiceSpread: Double get() = net - spread
         }
 
-        /** [nets] (after charges) and [spreads] (each trade's spread and slippage, rupees) of the closed trades, oldest first. */
+        /**
+         * [nets] (after charges) and [spreads] (each trade's spread and slippage, rupees) of the closed trades, oldest first. The
+         * verdict is on the FIRST 40 trades only, so it is the same whenever it is read after them (judged once, as set).
+         */
         fun judge(nets: List<Double>, spreads: List<Double>, base: Int = 0): Check {
             val n = nets.size
             val net = nets.sum()
             val sp = spreads.take(n).sum()
+            val jn = nets.take(TRADES).sum()
+            val js = spreads.take(minOf(n, TRADES)).sum()
             val v = when {
                 n < TRADES || base >= TRADES -> Verdict.RUNNING
-                net < 0 -> Verdict.FAILED_NET
-                net - sp < 0 -> Verdict.FAILED_SPREAD
+                jn < 0 -> Verdict.FAILED_NET
+                jn - js < 0 -> Verdict.FAILED_SPREAD
                 else -> Verdict.PASSED
             }
-            return Check(v, n, net, sp, nets.count { it > 0 })
+            return Check(v, n, net, sp, nets.count { it > 0 }, jn, js)
         }
 
         fun switchOff(v: Verdict): Boolean = v == Verdict.FAILED_NET || v == Verdict.FAILED_SPREAD

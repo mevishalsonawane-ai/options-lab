@@ -194,8 +194,9 @@ object WatchlistHost {
             }
             c4(now)?.let { signals += it }
         }
-        val added = synchronized(lock) { accept(log(), signals, now) }
+        // The open records priced first (the one-at-a-time rules read their exits), then the new signals.
         price(now)
+        val added = synchronized(lock) { accept(log(), signals, now) }
         if (!now.toLocalTime().isBefore(EVENING)) evening(now)
         if (added) synchronized(lock) { save(log()) }
     }
@@ -237,10 +238,8 @@ object WatchlistHost {
         return com.optionslab.engine.orb.HeroRules.isExpiryDay(day, l)
     }
 
-    private suspend fun indexMinutes(u: String, now: LocalDateTime): List<Bar> {
-        val key = runCatching { ChartFeed.instrumentKey(u) }.getOrNull() ?: Upstox.INDEX_KEYS.getValue(u)
-        return optionBars(key, now.toLocalDate(), now)
-    }
+    /** [u]'s minutes today, shared with the passed arms' read of the same minute (one read a minute an index). */
+    private suspend fun indexMinutes(u: String, now: LocalDateTime): List<Bar> = PassedArmsHost.indexBars(u, now)
 
     /** [key]'s finished 1-minute bars of [day] by [now]: today's feed (with the stream's whole minutes), an earlier day's history. */
     private suspend fun optionBars(key: String, day: LocalDate, now: LocalDateTime): List<Bar> {
@@ -263,14 +262,16 @@ object WatchlistHost {
         val u = "BANKNIFTY"
         val step = PassedArms.step(u)
         // The chain in memory first (its OI no older than 3 minutes).
-        val snap = runCatching { MemoryChain.read(u, each = 12) }.getOrNull()
+        // Only at 10:15-10:16 is the chain in memory "as at 10:14" (later, its OI would be from after the entry: look-ahead).
+        val snap = if (!t.isAfter(LocalTime.of(10, 16, 59))) runCatching { MemoryChain.read(u, each = 12) }.getOrNull() else null
         var spot = snap?.spot
         var oi: Map<Double, Pair<Long?, Long?>>? = snap?.legs?.filter { it.packetAgeMs <= 180_000 && it.oi != null }?.groupBy { it.strike }
             ?.mapValues { (_, l) -> l.firstOrNull { it.right == "CE" }?.oi to l.firstOrNull { it.right == "PE" }?.oi }
         if ((oi == null || oi.size < 15) && !tried && !runCatching { SmartWorkers.holdingAny() }.getOrDefault(true)) {
             // One background read a day, only while nothing is held (the existing chain read and its rate limits).
             synchronized(lock) { log().let { it.chainTried = day.toString(); save(it) } }
-            runCatching { Market.liveChain(u, near = 10) }.getOrNull()?.let { lc ->
+            // From candles only (each minute's OI, cut at 10:14); a live quote snapshot is "now", so it is not used.
+            runCatching { Market.liveChain(u, near = 10) }.getOrNull()?.takeIf { it.pricedAt == null }?.let { lc ->
                 spot = lc.spot
                 val at = 10 * 60 + 14
                 oi = lc.series.groupBy { it.strike }.mapValues { (_, l) ->
@@ -293,7 +294,17 @@ object WatchlistHost {
 
     /** Each open record priced once its exit is due; after 15:25 the day's twins. */
     private suspend fun price(now: LocalDateTime) {
-        val open = synchronized(lock) { log().recs.filter { !it.final || (it.state == DONE && it.twins.isEmpty() && !now.toLocalTime().isBefore(EVENING) && it.s.entry.toLocalDate() == now.toLocalDate()) } }
+        val evening = !now.toLocalTime().isBefore(EVENING)
+        // Priced when it may have ended: from 3 minutes after its entry, every 5 minutes (and once its time exit has passed),
+        // an earlier day's at once, and the day's twins in the evening - not every round.
+        fun due(r: Rec): Boolean {
+            val d = r.s.entry.toLocalDate()
+            if (d.isBefore(now.toLocalDate())) return true
+            if (now.isBefore(r.s.entry.plusMinutes(3))) return false
+            val timeUp = r.s.rule.exits.tmaxMinutes?.let { !now.isBefore(r.s.entry.plusMinutes(it.toLong() + 1)) } ?: false
+            return evening || timeUp || now.minute % 5 == 0
+        }
+        val open = synchronized(lock) { log().recs.filter { (!it.final && due(it)) || (it.state == DONE && it.twins.isEmpty() && evening && it.s.entry.toLocalDate() == now.toLocalDate()) } }
         if (open.isEmpty()) return
         val byKey = HashMap<String, List<Bar>>()
         for (r in open) {

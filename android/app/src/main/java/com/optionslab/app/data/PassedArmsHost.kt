@@ -52,8 +52,8 @@ import java.util.Locale
  *  - R51 / R52: at 40 paper trades, a net below 0 or below the cost of twice the spread ([PassedArms.ForwardBar]);
  *  - Solo 2.0: SoloMidday's bar - after 60 trades a net per trade <= 0, or a drawdown beyond -Rs 25,000 at any time.
  *
- * Off the order and tick paths: the entries run in the watch's arms passes (a worker), their reads made BEFORE the arms' lock
- * is taken; the previous sessions' bars and daily candles are read once a day in the background ([prefetch]); Solo 2.0's
+ * Off the order and tick paths: the entries run in the watch's arms passes (a worker), their reads and orders on a copy of the
+ * book OUTSIDE its lock (merged back after), so the exits never wait behind them; the previous sessions' bars and daily candles are read once a day in the background ([prefetch]); Solo 2.0's
  * model is read once, at start-up, from the app's assets on a worker ([refresh]) - never on the main thread, never in the
  * fast lanes. While a position is held its exits run in the fast path's minute lane at full cadence ([manageOnly]), and after
  * a restart the book is read first ([PositionsFirst]).
@@ -130,7 +130,13 @@ object PassedArmsHost {
         /** Solo 2.0's scored candidates, "day|key|score|what". */
         val scores: ArrayList<String> = ArrayList(),
         val marks: MutableMap<String, Double> = HashMap(),
-    )
+        /** Each open trade's lock as an earlier look saw it earned ("time|level"): it holds even when the feed loses those bars. */
+        val locks: MutableMap<String, String> = HashMap(),
+    ) {
+        /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
+        fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), HashMap(status), ArrayList(log), HashSet(migrated), HashMap(base),
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks))
+    }
 
     /** What the rows and Jarvis read (memory only). */
     data class View(
@@ -159,8 +165,10 @@ object PassedArmsHost {
 
     @Volatile private var cache: Book? = null
     private const val LOG_KEPT = 200
+    /** Closed trades kept per arm. */
     private const val CLOSED_KEPT = 1500
-    private const val NOTICE = 6960
+    /** Its own notices: 8100.. (buys 8100-8114, switch-offs 8120-8122, sells 8140-8154); no other part of the app uses 81xx. */
+    private const val NOTICE = 8100
 
     private fun ready() = ::file.isInitialized
 
@@ -181,6 +189,7 @@ object PassedArmsHost {
             o.optJSONObject("acted")?.let { m -> m.keys().forEach { b.acted[it] = m.getString(it) } }
             o.optJSONObject("paused")?.let { m -> m.keys().forEach { b.paused[it] = m.getString(it) } }
             o.optJSONArray("scores")?.let { a -> for (i in 0 until a.length()) b.scores += a.getString(i) }
+            o.optJSONObject("locks")?.let { m -> m.keys().forEach { b.locks[it] = m.getString(it) } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
         cache = b
         // 15 Oct (the PAPER rule): on once, on paper. A book that could not be read is never switched on by itself (Boss may
@@ -229,6 +238,8 @@ object PassedArmsHost {
         o.put("acted", JSONObject().apply { b.acted.forEach { (k, v) -> put(k, v) } })
         o.put("paused", JSONObject().apply { b.paused.forEach { (k, v) -> put(k, v) } })
         o.put("scores", JSONArray().apply { b.scores.takeLast(120).forEach { put(it) } })
+        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && it.symbol == k } }.forEach { (k, v) -> put(k, v) } })
+        while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
     }
@@ -248,7 +259,6 @@ object PassedArmsHost {
 
     private fun note(b: Book, text: String) {
         b.log += "${now0()} $text"
-        while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         runCatching { Diag.record("passed-arms", text) }
     }
 
@@ -268,7 +278,7 @@ object PassedArmsHost {
 
     /** Read the book (the rows and the start-up's positions-first step call it, off the main thread); the model is read here once. */
     suspend fun refresh(): View {
-        if (ready()) { lock.withLock { book() }; ensureModel(); cache?.let { publish(it) } }
+        if (ready()) { ensureModel(); lock.withLock { publish(book()) } }
         return _view.value
     }
 
@@ -382,6 +392,13 @@ object PassedArmsHost {
         return toBars(bars).sortedBy { it.start }.distinctBy { it.start }
     }
 
+    /** [u]'s finished minutes today, read at most once a minute (shared with the Watchlist, [WatchlistHost]). */
+    internal suspend fun indexBars(u: String, now: LocalDateTime): List<Bar> {
+        val minute = now.withSecond(0).withNano(0)
+        lastRead[u]?.takeIf { it.first == minute }?.let { return it.second }
+        return minutes(upKey(u), now).also { lastRead[u] = minute to it }
+    }
+
     /** The index's listed options saved on the phone today (SENSEX: BSE's list); never a download in the pass. */
     private fun listed(u: String): List<Upstox.Contract> {
         val bfo = u == Paper.BFO_UNDERLYING
@@ -408,7 +425,7 @@ object PassedArmsHost {
 
     private suspend fun reads(now: LocalDateTime, v: View): Reads {
         val want = SOURCES.filter { v.on(it) }.flatMap { underlyings(it) }.distinct()
-        val minute = now.withSecond(0)
+        val minute = now.withSecond(0).withNano(0)
         val out = HashMap<String, List<Bar>?>()
         for (u in want) {
             val kept = lastRead[u]?.takeIf { it.first == minute }
@@ -434,28 +451,69 @@ object PassedArmsHost {
         }
     }
 
-    /** The watch's arms passes: the open trades' exits first, the forward bars, then each arm's entries (reads made before the lock). */
+    /** Only one entries phase at a time (the exits never wait for it: they take only the book's own lock). */
+    private val entryLock = Mutex()
+
+    /**
+     * The watch's arms passes: the open trades' exits and the forward bars first, under the book's lock; then each arm's entries
+     * (their index reads before, their price reads and orders on a copy of the book, OUTSIDE its lock), merged back under it -
+     * so the minute lane's exits ([manageOnly]) never wait behind an entry's network reads.
+     */
     suspend fun tick() {
         if (!ready() || com.optionslab.app.BuildConfig.GOLD || !Market.isTradingDay()) return
         val now = now0()
         if (cache == null) lock.withLock { book() }
         ensureModel()
         runCatching { prefetch(now) }
-        val v = _view.value
-        val reads = if (v.armed.values.any { it } && entryMinute(now.toLocalTime())) runCatching { reads(now, v) }.getOrNull() else null
         lock.withLock {
             val b = book()
             var changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
             changed = runCatching { forward(b) }.getOrDefault(false) || changed
-            if (reads != null) {
-                if (b.armed[DonchianArm.SOURCE] == true) changed = runCatching { donchian(b, now, reads) }.getOrElse { b.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
-                if (b.armed[OovArm.SOURCE] == true) changed = runCatching { oov(b, now, reads) }.getOrElse { b.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
-                if (b.armed[Solo2.SOURCE] == true) changed = runCatching { solo2(b, now, reads) }.getOrElse { b.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
-            }
-            val closed = b.positions.count { !it.open }
-            if (closed > CLOSED_KEPT) { var drop = closed - CLOSED_KEPT; b.positions.removeAll { !it.open && drop-- > 0 }; changed = true }
+            changed = prune(b) || changed
             if (changed) save(b) else publish(b)
         }
+        val v = _view.value
+        if (!v.armed.values.any { it } || !entryMinute(now.toLocalTime())) return
+        if (!entryLock.tryLock()) return
+        try {
+            val reads = runCatching { reads(now, v) }.getOrNull() ?: return
+            val (work, n0, log0, sc0) = lock.withLock { val b = book(); Quad(b.copy(), b.positions.size, b.log.size, b.scores.size) }
+            val st0 = HashMap(work.status)
+            var changed = false
+            if (work.armed[DonchianArm.SOURCE] == true) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (work.armed[OovArm.SOURCE] == true) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (work.armed[Solo2.SOURCE] == true) changed = runCatching { solo2(work, now, reads) }.getOrElse { work.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (!changed) return
+            lock.withLock {
+                val b = book()
+                val added = work.positions.drop(n0)
+                b.positions += added
+                added.forEach { p -> work.marks[p.symbol]?.let { b.marks[p.symbol] = it } }
+                b.decided += work.decided
+                work.status.forEach { (k, x) -> if (st0[k] != x) b.status[k] = x }
+                b.log += work.log.drop(log0)
+                b.scores += work.scores.drop(sc0)
+                save(b)
+            }
+        } finally { entryLock.unlock() }
+    }
+
+    private data class Quad(val a: Book, val b: Int, val c: Int, val d: Int)
+
+    /** Closed trades kept: the last [CLOSED_KEPT] of each arm; the forward bars' baselines move with what is dropped. */
+    private fun prune(b: Book): Boolean {
+        var changed = false
+        for (s in SOURCES) {
+            val closed = b.positions.filter { it.arm == s && !it.open }
+            val drop = closed.size - CLOSED_KEPT
+            if (drop <= 0) continue
+            val gone = closed.take(drop).toSet()
+            b.positions.removeAll { it in gone }
+            b.base[s]?.let { b.base[s] = (it - drop).coerceAtLeast(PassedArms.ForwardBar.TRADES) }
+            if (s == Solo2.SOURCE) soloBase(b).takeIf { it.from > 0 }?.let { x -> b.soloBase = "${(x.from - drop).coerceAtLeast(0)}|${x.peak - gone.sumOf { it.net ?: 0.0 }}" }
+            changed = true
+        }
+        return changed
     }
 
     private fun rs(x: Double) = (if (x < 0) "-Rs " else "+Rs ") + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(x))
@@ -488,8 +546,8 @@ object PassedArmsHost {
                 val chk = PassedArms.ForwardBar.judge(nets, c.map { it.spread }, base)
                 val k = "${chk.verdict}@$base"
                 Triple(PassedArms.ForwardBar.switchOff(chk.verdict) && b.acted[s] != k, k,
-                    if (chk.verdict == PassedArms.ForwardBar.Verdict.FAILED_NET) "net ${PassedArms.rs(chk.net)} after 40 paper trades (below ₹0)"
-                    else "net ${PassedArms.rs(chk.net)} after 40 paper trades is below the cost of twice the spread (${PassedArms.rs(chk.spread)})")
+                    if (chk.verdict == PassedArms.ForwardBar.Verdict.FAILED_NET) "net ${PassedArms.rs(chk.judgedNet)} after 40 paper trades (below ₹0)"
+                    else "net ${PassedArms.rs(chk.judgedNet)} after 40 paper trades is below the cost of twice the spread (${PassedArms.rs(chk.judgedSpread)})")
             }
             if (!fail) continue
             b.armed[s] = false
@@ -536,10 +594,12 @@ object PassedArmsHost {
         for (k in strikes) {
             val c = Paper.ticketContract(u, expiry, k.toDouble(), right) ?: run { why = "$k ${right.name} not listed"; null } ?: continue
             if (c.lotSize <= 0) { why = "lot size unknown"; continue }
+            // One contract, one arm: never two of these arms holding the same option (each one's exits read its own lot).
+            b.positions.firstOrNull { it.open && it.symbol == c.symbol }?.let { why = "${c.symbol} is held by ${label(it.arm)}"; return null to why }
             val q = runCatching { Paper.quote(c) }.getOrNull()
-            val ref = q?.ltp?.takeIf { it > 0 }
+            val ref = q?.ltp?.takeIf { it > 0 } ?: run { why = "${c.symbol}: no fresh price"; null } ?: continue
             val snap = runCatching { Paper.snapshot() }.getOrNull()
-            val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref ?: 0.0), snap?.let { Guard.paperAccount(it) }, paper = true)
+            val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref), snap?.let { Guard.paperAccount(it) }, paper = true)
             if (refusals.isNotEmpty()) return null to "refused by the account guard: " + refusals.joinToString(" ")
             runCatching { LiveRecorder.signal(label(arm), c.symbol, u, right.name, ref, paper = true) }
             val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q)
@@ -572,6 +632,9 @@ object PassedArmsHost {
                 x.tmaxMinutes?.let { "out after $it minutes" }, "square-off ${x.squareOff}").joinToString(", ")
         }
     }
+
+    /** S1's premium backstop when its index cannot be read: the Solo layer's -30% stop, SoloMidday's 14:30. */
+    private val S1_BACKSTOP = PassedArms.PremiumExits(0.30, null, null, emptyList(), SoloMidday.EXIT)
 
     private fun exitsOf(p: Pos): PassedArms.PremiumExits = when (p.arm) {
         DonchianArm.SOURCE -> DonchianArm.EXITS
@@ -710,7 +773,11 @@ object PassedArmsHost {
                 say(b, src, "bought ${p.symbol} @ ${px(p.entry)}: ${Solo2.why(c, sc.score, m)}", final = true)
                 return true
             }
-            say(b, src, "${c.setup.key} ${c.underlying}: $why; tried again for 2 minutes")
+            // R57 takes the day's first passing candidate and nothing more that day: one that cannot be bought ends the day too.
+            b.decided += ck; b.decided += dayKey
+            b.scores += "$today|${c.key.replace('|', ':')}|$words: passed, not bought ($why)"
+            say(b, src, "${c.setup.key} ${c.underlying} passed but could not be bought: $why; nothing more today (one pick a day)", final = true)
+            return true
         }
         return changed
     }
@@ -726,7 +793,12 @@ object PassedArmsHost {
         val stopped = stoppedToday()
         for ((i, p) in b.positions.withIndex().toList()) {
             if (!p.open) continue
-            val c = Paper.contractOf(p.symbol) ?: continue
+            val c = Paper.contractOf(p.symbol)
+            if (c == null) {
+                // The paper book no longer knows the contract (a reset): nothing is held there, so the trade is closed at its entry.
+                val done = p.copy(exit = p.entry, exitTime = now, why = "closed_elsewhere")
+                b.positions[i] = done; closed(b, done); changed = true; continue
+            }
             // Gone from the paper book without this host selling it (the loss limit, Boss, a square-off): closed there.
             val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
             if (held <= 0) {
@@ -738,15 +810,21 @@ object PassedArmsHost {
             val overnight = p.day.isBefore(now.toLocalDate())
             val bars = if (!overnight) runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty() else emptyList()
             val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.lastOrNull()?.close
+                ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
             ltp?.let { b.marks[p.symbol] = it }
+            val known = b.locks[p.symbol]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
             val why: String? = when {
                 overnight -> "overnight"
                 p.setup == Solo2.Setup.S1.key -> {
                     val ones = runCatching { minutes(upKey(p.index), now) }.getOrNull().orEmpty()
                     val w = SoloMidday.walk(SoloMidday.Open(p.index, p.side, p.idx ?: Double.NaN, p.atr ?: Double.NaN, p.entryMinute), ones, now)
-                    w.exit
+                    // The index unread (or its levels unknown): the premium backstop, -30% (the Solo layer's stop), so it never runs unwatched.
+                    w.exit ?: if (ones.isEmpty() || p.idx == null || p.atr == null)
+                        PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, S1_BACKSTOP).exit?.kind?.let { "backstop_" + it.why } else null
                 }
-                else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p)).exit?.kind?.why
+                else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known).also { w ->
+                    w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[p.symbol] = "$now|$lv" }
+                }.exit?.kind?.why
             } ?: if (stopped) "operator_stop" else null
             if (why == null) continue
             val next = sell(b, p, c, why, ltp)
@@ -772,7 +850,7 @@ object PassedArmsHost {
         val booked = if (why == PassedArms.ExitKind.TARGET.why) PassedArms.booked(PassedArms.ExitKind.TARGET, fill.price, target) else fill.price
         val done = p.copy(exit = booked, exitTime = now0(), why = why, charges = p.charges + chargesOf(r.orderId), exitRef = ltp,
             paperFill = fill.price.takeIf { kotlin.math.abs(it - booked) > 1e-9 })
-        b.marks.remove(p.symbol)
+        b.marks.remove(p.symbol); b.locks.remove(p.symbol)
         closed(b, done)
         return done
     }

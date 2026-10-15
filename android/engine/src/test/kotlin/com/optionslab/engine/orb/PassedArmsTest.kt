@@ -185,6 +185,30 @@ class PassedArmsTest {
         assertTrue(F.BAR.contains("40 paper trades") && F.BAR.contains("twice the spread"))
     }
 
+    @Test fun theBarIsTheFirstFortyTradesSoALaterDipNeverReJudgesIt() {
+        val F = PassedArms.ForwardBar
+        val nets = List(40) { 100.0 } + List(40) { -200.0 }
+        val c = F.judge(nets, List(80) { 10.0 })
+        assertEquals(PassedArms.ForwardBar.Verdict.PASSED, c.verdict)
+        assertEquals(4_000.0, c.judgedNet, 1e-9); assertEquals(400.0, c.judgedSpread, 1e-9)
+        assertEquals(-4_000.0, c.net, 1e-9)
+        assertEquals(PassedArms.ForwardBar.Verdict.FAILED_NET, F.judge(List(40) { -1.0 } + List(10) { 100.0 }, emptyList()).verdict)
+    }
+
+    @Test fun aLockSeenEarnedBeforeHoldsWhenTheBarsThatEarnedItAreGone() {
+        // An earlier look saw +10% locked (110) by 10:05; now only bars from 10:06 are in (the feed lost the earlier ones).
+        val known = t(10, 5) to 110.0
+        val w = PassedArms.exitOnBars(100.0, t(10, 0), listOf(bar(10, 6, 112.0, 113.0, 109.0, 111.0)), null, t(10, 7), layer, known)
+        assertEquals(PassedArms.ExitKind.LOCK, w.exit!!.kind); assertEquals(110.0, w.exit!!.price, 1e-9)
+        // Bars from before the time it was seen are never judged against it.
+        assertNull(PassedArms.exitOnBars(100.0, t(10, 0), listOf(bar(10, 2, 100.0, 101.0, 99.0, 100.0)), null, t(10, 3), layer, t(10, 5) to 110.0).exit)
+        // No bars, but the price now: held against it too.
+        assertEquals(PassedArms.ExitKind.LOCK, PassedArms.exitOnBars(100.0, t(10, 0), emptyList(), 108.0, t(10, 9), layer, known).exit!!.kind)
+        // A lower known lock never lowers one the bars earn.
+        val hi = PassedArms.exitOnBars(100.0, t(10, 0), listOf(bar(10, 6, 106.0, 141.0, 106.0, 120.0)), 120.0, t(10, 7), layer, t(10, 6) to 105.0)
+        assertEquals(110.0, hi.lock!!, 1e-9)
+    }
+
     @Test fun theSpreadPaidAndTheWords() {
         // Bought 100.5 against 100 seen, sold 119.4 against 120 seen, 65 units: (0.5 + 0.6) x 65.
         assertEquals(71.5, PassedArms.spreadPaid(65, 100.5, 100.0, 119.4, 120.0, 0.0016), 1e-9)
