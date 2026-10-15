@@ -119,6 +119,9 @@ android {
     }
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "DebugProbesKt.bin", "kotlin-tooling-metadata.json")
+        // Native libraries compressed in the APK (15 Oct 2026: TDLib for the Signal tester's Telegram login is 23 MB, about 10 MB
+        // compressed), unpacked once at install - a smaller download for Boss's phone.
+        jniLibs.useLegacyPackaging = true
     }
     lint {
         abortOnError = false

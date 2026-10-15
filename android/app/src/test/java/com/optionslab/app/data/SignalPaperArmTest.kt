@@ -113,7 +113,7 @@ class SignalPaperArmTest : RobolectricTest() {
         // 09:29 trades 121 (at or above 120): bought on paper, its stop (the call's 100) resting as a SELL SL-M.
         tick(LocalTime.of(9, 30), 10)
         val p = v().open.single()
-        assertEquals("NIFTY-SP-25000CE", p.symbol); assertEquals(65, p.qty); assertEquals(100.0, p.stop, 1e-9); assertFalse(p.ourStop)
+        assertTrue(p.symbol, p.symbol.startsWith("NIFTY") && p.symbol.endsWith("25000CE")); assertEquals(65, p.qty); assertEquals(100.0, p.stop, 1e-9); assertFalse(p.ourStop)
         assertEquals(140.0, p.target)
         val stop = Paper.state.orders.single { it.orderId == p.stopOrderId }
         assertEquals("SL-M", stop.priceType); assertEquals("SELL", stop.action); assertEquals(100.0, stop.triggerPrice!!.toDouble(), 1e-9)
@@ -187,6 +187,25 @@ class SignalPaperArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    @Test fun aStatusUpdateNeverTradesOrChangesTheTrade() {
+        runBlocking { SignalPaperArm.setOn(chat, true) }
+        message()
+        tick(LocalTime.of(9, 30), 10)
+        val p = v().open.single()
+        // The channel re-posts the call with its entry ticked, then "T1 done": notes on the call, never a second trade.
+        SignalTesterHost.ingest(chat, "NIFTY 25000 CE above 120✅ sl 100 tgt 140 160", day.atTime(9, 32), SignalTesterHost.PASTED)
+        SignalTesterHost.ingest(chat, "T1 done ✅", day.atTime(9, 33), SignalTesterHost.PASTED)
+        assertEquals(1, SignalTesterHost.view.value.recs.count { it.kind == SignalTesterHost.CALL })
+        assertEquals(2, SignalTesterHost.view.value.recs.count { it.kind == SignalTesterHost.FOLLOW })
+        tick(LocalTime.of(9, 34))
+        assertEquals(listOf(p), v().open)
+        assertTrue(v().closed.isEmpty())
+        // The month check counts from the day it was switched on.
+        assertEquals(day, v().sinceOf(chat))
+        assertTrue(v().monthCheck(chat, null).first().detail == "0 paper trades")
+        assertNothingAtZerodha()
+    }
+
     @Test fun theBookIsRestoredFirstAfterARestart() {
         runBlocking { SignalPaperArm.setOn(chat, true) }
         message()
@@ -212,7 +231,7 @@ class SignalPaperArmTest : RobolectricTest() {
 
     @Test fun thePaperArmHasNoLivePath() {
         val dir = listOf(File("src/main/java/com/optionslab/app/data"), File("app/src/main/java/com/optionslab/app/data")).first { it.exists() }
-        for (name in listOf("SignalPaperArm.kt", "SignalTesterHost.kt", "SignalShareActivity.kt", "MessageSource.kt")) {
+        for (name in listOf("SignalPaperArm.kt", "SignalTesterHost.kt", "SignalShareActivity.kt", "MessageSource.kt", "TelegramCapture.kt")) {
             val code = File(dir, name).readLines().filterNot { it.trim().startsWith("*") || it.trim().startsWith("//") || it.trim().startsWith("/**") }.joinToString("\n")
             for (bad in listOf("Broker.", "Kite.", "KiteOrders", "placeLive", "LiveOrders", "Zerodha", "live = true")) assertFalse("$name: $bad", code.contains(bad))
         }

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.ExportSource
 import com.optionslab.app.data.SignalPaperArm
 import com.optionslab.app.data.SignalTesterHost
+import com.optionslab.app.data.TelegramCapture
 import com.optionslab.app.ui.components.Rule
 import com.optionslab.app.ui.components.TextButton
 import com.optionslab.app.ui.theme.LocalPalette
@@ -61,11 +62,12 @@ import java.time.LocalTime
 internal fun SignalTesterCard() {
     val v by SignalTesterHost.view.collectAsState(Dispatchers.Main.immediate)
     val pv by SignalPaperArm.view.collectAsState(Dispatchers.Main.immediate)
+    val tv by TelegramCapture.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
     var said by remember { mutableStateOf<String?>(null) }
     var picking by remember { mutableStateOf<Pair<ExportSource, List<SignalTesterHost.Seen>>?>(null) }
-    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { SignalTesterHost.on(); SignalPaperArm.refresh() } } }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { SignalTesterHost.on(); SignalPaperArm.refresh(); TelegramCapture.refresh() } } }
     fun io(f: suspend () -> String?) { scope.launch { said = withContext(Dispatchers.IO) { runCatching { f() }.getOrElse { "That did not work: ${it.javaClass.simpleName}." } } } }
     val importer = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
@@ -82,7 +84,7 @@ internal fun SignalTesterCard() {
             if (got is Pair<*, *>) picking = got as Pair<ExportSource, List<SignalTesterHost.Seen>> else said = got as String
         }
     }
-    SignalTesterCardContent(v, pv, said, SignalActions(
+    SignalTesterCardContent(v, pv, said, tv = tv, a = SignalActions(
         onSwitch = { on -> io { SignalTesterHost.setOn(on) } },
         allow = { n -> io { SignalTesterHost.allow(n) } },
         disallow = { n -> io { SignalTesterHost.disallow(n) } },
@@ -96,6 +98,14 @@ internal fun SignalTesterCard() {
         paperExit = { e -> io { SignalPaperArm.setExit(e) } },
         paperLimits = { n, cap -> io { SignalPaperArm.setLimits(n, cap) } },
         now = { com.optionslab.app.data.Market.now().toLocalDateTime().withNano(0) },
+        tg = TelegramActions(
+            keys = { id, hash -> io { TelegramCapture.saveKeys(id, hash) } }, login = { io { TelegramCapture.startLogin() } },
+            phone = { x -> io { TelegramCapture.phone(x) } }, code = { x -> io { TelegramCapture.code(x) } },
+            password = { x -> io { TelegramCapture.password(x) } }, capture = { on -> io { TelegramCapture.setCapture(on) } },
+            window = { f, t -> io { TelegramCapture.setWindow(f, t) } }, channels = { io { TelegramCapture.loadChannels() } },
+            check = { id -> io { TelegramCapture.check(id) } }, select = { m -> io { TelegramCapture.select(m) } },
+            history = { id -> io { TelegramCapture.fetchHistory(id) } }, logOut = { io { TelegramCapture.logOut() } },
+        ),
     ))
     picking?.let { (src, seen) ->
         ChatPickerDialog(seen, v.allow, onCheck = { title ->
@@ -130,6 +140,15 @@ internal class SignalActions(
     val delay: (Int) -> Unit = {}, val validity: (Int) -> Unit = {},
     val paper: (String, Boolean) -> Unit = { _, _ -> }, val paperExit: (SignalPaperRules.Exit) -> Unit = {},
     val paperLimits: (Int, Double) -> Unit = { _, _ -> }, val now: () -> LocalDateTime = { LocalDateTime.now().withNano(0) },
+    val tg: TelegramActions = TelegramActions(),
+)
+
+/** The Telegram login's controls (the screen passes [TelegramCapture]'s, off the main thread; tests pass their own). */
+internal class TelegramActions(
+    val keys: (String, String) -> Unit = { _, _ -> }, val login: () -> Unit = {}, val phone: (String) -> Unit = {}, val code: (String) -> Unit = {},
+    val password: (String) -> Unit = {}, val capture: (Boolean) -> Unit = {}, val window: (LocalTime, LocalTime) -> Unit = { _, _ -> },
+    val channels: () -> Unit = {}, val check: (Long) -> Unit = {}, val select: (Map<Long, String>) -> Unit = {}, val history: (Long) -> Unit = {},
+    val logOut: () -> Unit = {},
 )
 
 private fun rs(x: Double) = ChannelScore.rs(x)
@@ -152,19 +171,22 @@ internal fun signalExplanation(): List<String> = listOf(
     "How a call is tested: bought (in shadow) when the premium trades at or above the entry within the window, after your reaction " +
         "delay, with the paper slippage and real charges for 1 lot; out at T1, T2, T3, as given, or with a stop (the chat's, else our −20%); " +
         "square-off 15:15 (15:05 on the index's expiry day).",
-    "Messages come from a Telegram Desktop export (pick the chats to follow from its list), Share from Telegram to IraAlgo, or the paste " +
-        "box - no notification reading. Only calls and follow-ups are used; chatter, adverts and results posts are ignored. Unclear ones go " +
+    "Messages come from your Telegram login inside the app (read-only: only the channels you select; each post read as it arrives), a " +
+        "Telegram Desktop export (pick the chats to follow from its list), Share from Telegram to IraAlgo, or the paste box - no " +
+        "notification reading. A channel re-posting a call with ticks, or \"T1 done\" / \"SL hit\" under it, only notes that call (never a " +
+        "new trade); the scorecard checks those claims against the real prices. Only calls and follow-ups are used; chatter, adverts and results posts are ignored. Unclear ones go " +
         "to Needs review; your fixes teach the model.",
     "Private: kept encrypted on this phone only, outside the backup and the GitHub uploads; message text only for calls.",
 )
 
 @Composable
-internal fun SignalTesterCardContent(v: SignalTesterHost.View, pv: SignalPaperArm.View, said: String?, a: SignalActions) {
+internal fun SignalTesterCardContent(v: SignalTesterHost.View, pv: SignalPaperArm.View, said: String?, a: SignalActions,
+                                     tv: TelegramCapture.View = TelegramCapture.View()) {
     val p = LocalPalette.current
     Rule()
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            ExplainedName("Signal tester", signalExplanation(), extra = { SignalPanel(v, pv, said, a) })
+            ExplainedName("Signal tester", signalExplanation(), extra = { SignalPanel(v, pv, said, a, tv) })
             Text(keepNumbersWhole(signalStatusLine(v, pv)), style = Type.bodySmall.copy(color = if (v.on) p.verdigris else p.inkFaint, fontSize = 12.sp))
         }
         Switch(
@@ -187,12 +209,14 @@ internal fun chatStatusLine(c: ChannelScore.Card, pv: SignalPaperArm.View): Stri
 
 /** The panel inside the name's dialog: the chats followed (a row each), then the tools. */
 @Composable
-internal fun SignalPanel(v: SignalTesterHost.View, pv: SignalPaperArm.View, said: String?, a: SignalActions) {
+internal fun SignalPanel(v: SignalTesterHost.View, pv: SignalPaperArm.View, said: String?, a: SignalActions, tv: TelegramCapture.View = TelegramCapture.View()) {
     val p = LocalPalette.current
     var channel by remember { mutableStateOf<String?>(null) }
     var dialog by remember { mutableStateOf<String?>(null) }
     Column {
         said?.let { Text(keepNumbersWhole(it), style = Type.bodySmall.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(bottom = 6.dp)) }
+        // The Telegram login, compact: its name (a tap: every step, in its dialog), one status line, its capture switch.
+        if (tv.available) TelegramRow(tv, v, a.tg)
         Text("Chats followed", style = Type.label)
         if (v.cards.isEmpty()) Text("None yet: pick chats from an export, or add one by name.", style = Type.bodySmall)
         v.cards.forEach { c ->
@@ -237,8 +261,9 @@ internal fun SignalPanel(v: SignalTesterHost.View, pv: SignalPaperArm.View, said
 @Composable
 internal fun ChatPickerDialog(seen: List<SignalTesterHost.Seen>, followed: List<String>, onCheck: ((String) -> Unit)? = null,
                               onOk: (Set<String>) -> Unit, close: () -> Unit) {
-    val start = remember { seen.map { it.title }.filter { t -> followed.any { SignalTesterHost.norm(it) == SignalTesterHost.norm(t) } }.toSet() }
-    var ticked by remember { mutableStateOf(start) }
+    // Ticked by name (normalised), so a chat followed before stays ticked when the list fills in later; nothing else is ticked.
+    var ticked by remember { mutableStateOf(followed.map { SignalTesterHost.norm(it) }.toSet()) }
+    fun on(t: String) = SignalTesterHost.norm(t) in ticked
     com.optionslab.app.ui.components.AlertDialog(
         onDismissRequest = close,
         title = { Text("Chats to follow", style = Type.title) },
@@ -248,9 +273,10 @@ internal fun ChatPickerDialog(seen: List<SignalTesterHost.Seen>, followed: List<
                 if (seen.isEmpty()) Text("No chats seen yet: import a Telegram Desktop export.", style = Type.bodySmall)
                 seen.sortedByDescending { it.stats?.share ?: -1.0 }.forEach { c ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Checkbox) {
-                        ticked = if (c.title in ticked) ticked - c.title else ticked + c.title
+                        val n = SignalTesterHost.norm(c.title)
+                        ticked = if (n in ticked) ticked - n else ticked + n
                     }.semantics { contentDescription = "Follow ${c.title}" }, verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = c.title in ticked, onCheckedChange = null)
+                        Checkbox(checked = on(c.title), onCheckedChange = null)
                         Column(Modifier.weight(1f)) {
                             Text(c.title, style = Type.bodySmall.copy(fontWeight = FontWeight.SemiBold))
                             c.stats?.let { st -> Text(keepNumbersWhole(st.line + if (st.looksLikeCalls) " · ${ChatScan.BADGE}" else ""), style = Type.bodySmall) }
@@ -261,7 +287,7 @@ internal fun ChatPickerDialog(seen: List<SignalTesterHost.Seen>, followed: List<
                 }
             }
         },
-        confirmButton = { TextButton({ onOk(ticked) }, Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Follow the ticked chats" }) { Text("OK") } },
+        confirmButton = { TextButton({ onOk(seen.map { it.title }.filter { on(it) }.toSet()) }, Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Follow the ticked chats" }) { Text("OK") } },
         dismissButton = { TextButton(close, Modifier.heightIn(min = 48.dp)) { Text("Cancel") } },
     )
 }
@@ -276,8 +302,18 @@ internal fun channelLines(v: SignalTesterHost.View, ch: String, pv: SignalPaperA
         listOfNotNull(if (pv.isOn(ch)) "Paper trading its calls: on - ${SignalPaperRules.BOSS_CHOICE}. ${pv.settings.exit.words}; " +
             "at most ${pv.settings.maxPerDay} a day; paused for the day at a ${rs(-pv.settings.lossCap)} paper loss." else null,
             pv.statusOf(ch)?.let { "Paper: $it" }) +
+        monthLines(v, ch, pv) +
         (pv.openOf(ch) + pv.closedOf(ch).takeLast(20).reversed()).map { paperLine(it) } +
         v.callsOf(ch).take(80).map { callLine(it) }
+
+/** [ch]'s paper month against Boss's pass marks (once its paper trading was switched on). */
+internal fun monthLines(v: SignalTesterHost.View, ch: String, pv: SignalPaperArm.View, today: java.time.LocalDate = java.time.LocalDate.now()): List<String> {
+    val since = pv.sinceOf(ch) ?: return emptyList()
+    val marks = pv.monthCheck(ch, v.cards.firstOrNull { it.channel == ch })
+    val day = java.time.temporal.ChronoUnit.DAYS.between(since, today) + 1
+    return listOf("Month check (paper since $since, day ${minOf(day, SignalPaperRules.MONTH_DAYS)} of ${SignalPaperRules.MONTH_DAYS}): ${SignalPaperRules.monthLine(marks)}") +
+        marks.map { m -> (when (m.ok) { true -> "✓ "; false -> "✗ "; null -> "… " }) + "${m.name}: ${m.detail}" }
+}
 
 /** One paper trade in words. */
 internal fun paperLine(p: SignalPaperArm.Pos): String =
@@ -290,12 +326,13 @@ internal fun callLine(r: SignalTesterHost.Rec): String {
     val body = when (r.kind) {
         SignalTesterHost.CALL -> (r.draft?.line() ?: "call") + " · " + callStatus(r)
         SignalTesterHost.FOLLOW -> "follow-up: ${r.follow?.kind?.words ?: "?"}" + (r.follow?.targetNo?.let { if (it == 99) " (all)" else " (T$it)" } ?: "") +
-            when (r.claim) { true -> " - true by the prices"; false -> " - NOT true by the prices"; null -> "" }
+            (r.verdict?.let { " - ${it.words}" } ?: "")
         SignalTesterHost.NOT -> "not a call: ${r.reason ?: "?"}"
         SignalTesterHost.PENDING -> "waiting for the language model"
         else -> "needs review: " + r.unsure.joinToString("; ").ifEmpty { r.reason ?: "unclear" }
     }
-    return head + body + " · " + r.sourceWords + if (r.edited) " · edited later (not scored)" else ""
+    return head + body + " · " + r.sourceWords + (if (r.edited) " · edited later (not scored)" else "") +
+        (r.editedAt?.let { " · edited after posting (at ${it.toLocalTime()}; scored as first posted)" } ?: "")
 }
 
 private fun callStatus(r: SignalTesterHost.Rec): String {
@@ -477,4 +514,96 @@ private fun SignalSettingsDialog(v: SignalTesterHost.View, pv: SignalPaperArm.Vi
             }
         }
     }, onClose = close)
+}
+
+/** The Telegram login's row: name (a tap: its dialog), one status line, the capture switch. */
+@Composable
+internal fun TelegramRow(tv: TelegramCapture.View, v: SignalTesterHost.View, a: TelegramActions) {
+    val p = LocalPalette.current
+    var open by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).heightIn(min = 48.dp).semantics { contentDescription = "Telegram login" }.clickable(role = Role.Button) { open = true }
+            .padding(vertical = 4.dp)) {
+            Text("Telegram login", style = Type.bodySmall.copy(fontWeight = FontWeight.SemiBold))
+            Text(keepNumbersWhole(tv.line), style = Type.bodySmall)
+        }
+        Switch(modifier = Modifier.semantics { contentDescription = "Capture the selected Telegram channels" }, checked = tv.capture,
+            enabled = tv.loggedIn, onCheckedChange = { x -> a.capture(x) },
+            colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card))
+    }
+    if (open) TelegramDialog(tv, v, a) { open = false }
+}
+
+/** The capture windows offered (IST). */
+internal val TG_WINDOWS: List<Pair<LocalTime, LocalTime>> = listOf(LocalTime.of(9, 0) to LocalTime.of(15, 35), LocalTime.of(8, 30) to LocalTime.of(15, 40),
+    LocalTime.of(9, 0) to LocalTime.of(23, 30))
+
+/**
+ * Every Telegram step in one dialog with a single OK: the api keys (once), the login (phone, code, 2-step password), the channels
+ * (titles only, nothing selected at first), each selected channel's history, the capture window, and "Log out of Telegram".
+ */
+@Composable
+internal fun TelegramDialog(tv: TelegramCapture.View, v: SignalTesterHost.View, a: TelegramActions, close: () -> Unit) {
+    var apiId by remember { mutableStateOf("") }
+    var apiHash by remember { mutableStateOf("") }
+    var entry by remember { mutableStateOf("") }
+    var picking by remember { mutableStateOf(false) }
+    val selected = v.tg
+    val masked = androidx.compose.ui.text.input.PasswordVisualTransformation()
+    ExplainDialog("Telegram login", listOf(
+        READS_ONLY,
+        "Read-only: IraAlgo never sends, joins, leaves, reacts or marks anything as read. Your api_id and api_hash (from my.telegram.org → " +
+            "API development tools) and the login stay encrypted on this phone only; your phone number, code and password go only to Telegram.",
+        "Status: ${tv.line}." + (tv.hint?.let { " The code / password hint: $it." } ?: ""),
+        tv.said ?: "",
+    ), extra = {
+        val auth = tv.auth
+        when {
+            !tv.keys -> {
+                OutlinedTextField(apiId, { apiId = it.filter { c -> c.isDigit() }.take(12) }, singleLine = true, label = { Text("api_id") },
+                    modifier = Modifier.semantics { contentDescription = "api_id" })
+                OutlinedTextField(apiHash, { apiHash = it.trim().take(40) }, singleLine = true, label = { Text("api_hash") }, visualTransformation = masked,
+                    modifier = Modifier.semantics { contentDescription = "api_hash" })
+                TextButton({ a.keys(apiId, apiHash); apiHash = "" }, Modifier.heightIn(min = 48.dp)) { Text("Save keys") }
+            }
+            auth == com.optionslab.engine.signals.TdSession.Auth.NEED_PHONE || auth == com.optionslab.engine.signals.TdSession.Auth.NEED_CODE ||
+                auth == com.optionslab.engine.signals.TdSession.Auth.NEED_PASSWORD -> {
+                val (label, send) = when (auth) {
+                    com.optionslab.engine.signals.TdSession.Auth.NEED_PHONE -> "Phone number (+91…)" to a.phone
+                    com.optionslab.engine.signals.TdSession.Auth.NEED_CODE -> "Login code" to a.code
+                    else -> "2-step verification password" to a.password
+                }
+                OutlinedTextField(entry, { entry = it.take(64) }, singleLine = true, label = { Text(label) },
+                    visualTransformation = if (auth == com.optionslab.engine.signals.TdSession.Auth.NEED_PASSWORD) masked
+                        else androidx.compose.ui.text.input.VisualTransformation.None,
+                    modifier = Modifier.semantics { contentDescription = label })
+                TextButton({ if (entry.isNotBlank()) { send(entry); entry = "" } }, Modifier.heightIn(min = 48.dp)) { Text("Send") }
+            }
+            !tv.loggedIn -> TextButton(a.login, Modifier.heightIn(min = 48.dp)) { Text("Log in to Telegram") }
+            else -> {
+                TextButton({ a.channels(); picking = true }, Modifier.heightIn(min = 48.dp)) { Text("Choose channels (${selected.size} selected)") }
+                selected.forEach { (id, title) ->
+                    TextButton({ a.history(id) }, Modifier.heightIn(min = 48.dp).semantics { contentDescription = "History of $title" }) {
+                        Text(keepNumbersWhole("Read $title's history since 20 Nov 2024"))
+                    }
+                }
+                Text("Capture window (IST, trading days)", style = Type.label)
+                TG_WINDOWS.forEach { (f, t) ->
+                    Row(Modifier.heightIn(min = 48.dp).clickable(role = Role.RadioButton) { a.window(f, t) }, verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = tv.from == f && tv.to == t, onClick = { a.window(f, t) }); Text(keepNumbersWhole("$f-$t"), style = Type.bodySmall)
+                    }
+                }
+            }
+        }
+        if (tv.keys || tv.loggedIn) TextButton(a.logOut, Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Log out of Telegram" }) {
+            Text("Log out of Telegram")
+        }
+    }, onClose = close)
+    if (picking) {
+        // Titles only; nothing ticked but what Boss selected before. "Check this chat" counts one chat's recent posts, on his tap.
+        val seen = tv.channels.map { c -> v.seen.firstOrNull { SignalTesterHost.norm(it.title) == SignalTesterHost.norm(c.title) && it.stats != null }
+            ?: SignalTesterHost.Seen(c.title, null, SignalTesterHost.TELEGRAM) }
+        ChatPickerDialog(seen, selected.values.toList(), onCheck = { title -> tv.channels.firstOrNull { it.title == title }?.let { a.check(it.id) } },
+            onOk = { chosen -> picking = false; a.select(tv.channels.filter { it.title in chosen }.associate { it.id to it.title }) }) { picking = false }
+    }
 }

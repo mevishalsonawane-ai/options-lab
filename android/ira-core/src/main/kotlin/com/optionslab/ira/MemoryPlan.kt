@@ -29,6 +29,8 @@ object MemoryPlan {
     /** What a trim may free. None of these is read by the order or tick path. */
     enum class Item(val words: String) {
         MODEL("the language model"),
+        // 15 Oct: the Signal tester's Telegram reader (TDLib, read-only) - started again by its next round once the pressure passes.
+        TELEGRAM("the Telegram reader"),
         KNOWLEDGE_INDEX("the research index"),
         SHARED_FINDINGS("the shared knowledge's findings counts"),
         ANSWER_CACHE("the short-answer readings"),
@@ -58,7 +60,7 @@ object MemoryPlan {
         level >= BACKGROUND -> Item.entries
         level >= UI_HIDDEN -> listOf(Item.MODEL)
         level >= RUNNING_LOW -> Item.entries
-        level >= RUNNING_MODERATE -> listOf(Item.MODEL, Item.ANSWER_CACHE, Item.MOVE_SUMMARIES)
+        level >= RUNNING_MODERATE -> listOf(Item.MODEL, Item.TELEGRAM, Item.ANSWER_CACHE, Item.MOVE_SUMMARIES)
         else -> emptyList()
     }
 

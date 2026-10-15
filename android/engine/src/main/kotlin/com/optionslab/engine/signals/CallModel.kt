@@ -49,14 +49,24 @@ object CallModel {
         "followup (target, stop, book, exit, trail or hold), target_no, confidence (0 to 1). Use ONLY numbers written in the message. " +
         "If something is not in the message, use null (targets: []). Never guess a stop-loss."
 
-    /** The Qwen chat prompt for [text]: the fixed examples, then the channel's own ([examples], the last [MAX_EXAMPLES]). */
-    fun prompt(text: String, examples: List<Example> = emptyList()): String {
+    /** The channel's open calls given to the model with a message, at most. */
+    const val MAX_OPEN = 5
+
+    /**
+     * The Qwen chat prompt for [text]: the fixed examples, then the channel's own ([examples], the last [MAX_EXAMPLES]); [open]:
+     * the channel's open calls (their [CallParser.Draft.line], newest last, the last [MAX_OPEN]) put before the message, so a
+     * status update ("T2 done", a re-post with ticks) is read as news about one of them, not as a new call (15 Oct, Boss).
+     */
+    fun prompt(text: String, examples: List<Example> = emptyList(), open: List<String> = emptyList()): String {
         val sb = StringBuilder("<|im_start|>system\n").append(SYSTEM).append("<|im_end|>\n")
         for (e in FIXED + examples.takeLast(MAX_EXAMPLES)) {
             sb.append("<|im_start|>user\n").append(e.text.take(600)).append("<|im_end|>\n")
             sb.append("<|im_start|>assistant\n").append(e.json).append("<|im_end|>\n")
         }
-        sb.append("<|im_start|>user\n").append(text.take(600)).append("<|im_end|>\n<|im_start|>assistant\n")
+        sb.append("<|im_start|>user\n")
+        if (open.isNotEmpty()) sb.append("Open calls of this channel (for context; a message about one of them is a followup, not new):\n")
+            .append(open.takeLast(MAX_OPEN).joinToString("\n") { "- " + it.take(160) }).append("\nMessage:\n")
+        sb.append(text.take(600)).append("<|im_end|>\n<|im_start|>assistant\n")
         return sb.toString()
     }
 

@@ -87,4 +87,57 @@ object SignalPaperRules {
         tradesToday >= s.maxPerDay -> "${s.maxPerDay} paper trades today already"
         else -> null
     }
+    // ---- the month check (Boss, 15 Oct: "run it on paper for a month, then show me the scorecard") ------------------------
+
+    const val MONTH_DAYS = 30L
+    const val PASS_TRADES = 40
+    const val MONTH_LOSS = 13_000.0
+    const val MAX_DRAWDOWN = 40_000.0
+    const val TOP_OUT = 5
+
+    /** One closed paper trade of a chat: its day and its rupees after charges. */
+    data class Closed(val day: java.time.LocalDate, val net: Double)
+
+    /** One pass mark: [ok] null when it cannot be told yet (no shadow p, nothing tested). */
+    data class Mark(val name: String, val ok: Boolean?, val detail: String)
+
+    /**
+     * A chat's paper month against Boss's pass marks: at least [PASS_TRADES] triggered (paper) trades; net above 0 after the
+     * paper fills and charges; better than random twins on the shadow scorecard ([card]: p < 0.05 with a positive net); fewer
+     * than half its tested calls moved before the message; its worst calendar month no worse than -[MONTH_LOSS] and its deepest
+     * drawdown no worse than -[MAX_DRAWDOWN] (the worst day and losing streak shown beside); still at least break-even without
+     * its [TOP_OUT] best trades. Nothing is promoted by passing: paper stays paper, live is Boss's call under the PIN rules.
+     */
+    fun monthCheck(trades: List<Closed>, card: ChannelScore.Card?): List<Mark> {
+        fun rs(x: Double) = ChannelScore.rs(x)
+        val nets = trades.sortedBy { it.day }.map { it.net }
+        val net = nets.sum()
+        var peak = 0.0; var cum = 0.0; var dd = 0.0
+        for (x in nets) { cum += x; peak = maxOf(peak, cum); dd = maxOf(dd, peak - cum) }
+        val worstMonth = trades.groupBy { java.time.YearMonth.from(it.day) }.values.minOfOrNull { m -> m.sumOf { it.net } } ?: 0.0
+        val worstDay = trades.groupBy { it.day }.values.minOfOrNull { d -> d.sumOf { it.net } } ?: 0.0
+        var streak = 0.0; var worstStreak = 0.0
+        for (x in nets) { streak = if (x < 0) streak + x else 0.0; worstStreak = minOf(worstStreak, streak) }
+        val withoutTop = nets.sortedDescending().drop(TOP_OUT).sum()
+        val p = card?.p
+        val moved = card?.movedShare
+        return listOf(
+            Mark("at least $PASS_TRADES triggered calls", trades.size >= PASS_TRADES, "${trades.size} paper trades"),
+            Mark("net above zero after fills and charges", if (trades.isEmpty()) null else net > 0, rs(net)),
+            Mark("beats random entries", p?.let { it < 0.05 && (card?.mainNet ?: 0.0) > 0 },
+                p?.let { String.format(java.util.Locale.ENGLISH, "p %.3f on the shadow scorecard", it) } ?: "not tested yet (needs ${ChannelScore.REVIEW_CALLS} triggered calls)"),
+            Mark("fewer than half the calls moved before the message", moved?.let { it < 0.5 },
+                moved?.let { String.format(java.util.Locale.ENGLISH, "%.0f%% moved before", it * 100) } ?: "nothing tested yet"),
+            Mark("losses within ₹13,000 a month and ₹40,000 drawdown", if (trades.isEmpty()) null else worstMonth >= -MONTH_LOSS && dd <= MAX_DRAWDOWN,
+                "worst month ${rs(worstMonth)}, drawdown ${rs(-dd)}, worst day ${rs(worstDay)}, worst losing streak ${rs(worstStreak)}"),
+            Mark("break-even or better without its $TOP_OUT best trades", if (trades.size <= TOP_OUT) null else withoutTop >= 0, rs(withoutTop)),
+        )
+    }
+
+    /** The month check in one line: passed every mark, or which failed (or cannot be told yet). Paper only, never a promotion. */
+    fun monthLine(marks: List<Mark>): String = when {
+        marks.all { it.ok == true } -> "passed every pass mark (${marks.size} of ${marks.size}). It stays paper: live is your call, under the PIN rules."
+        marks.any { it.ok == false } -> "did not pass: " + marks.filter { it.ok == false }.joinToString("; ") { "${it.name} (${it.detail})" } + "."
+        else -> "not decided yet: " + marks.filter { it.ok == null }.joinToString("; ") { it.name } + "."
+    }
 }

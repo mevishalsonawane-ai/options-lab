@@ -21,6 +21,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -44,7 +45,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    store. Nothing is followed until Boss picks a channel;
  *  - [SignalShareActivity]: Boss shares a message from Telegram (time = now, "shared (time approximate)");
  *  - the card's paste box (an editable time).
- * A Telegram login (TDLib) as a live source is a later step behind the same [MessageSource] (android/README.md, "Signal tester").
+ *  - the Telegram login ([TelegramCapture], read-only, 15 Oct): each post of a selected channel read on arrival ([telegram]),
+ *    its edits' times ([edited]), a selected channel's history from 20 Nov 2024 ([telegramHistory]).
+ * Status posts (the call re-posted with ticks, "T1 done", "SL hit", a reply) are linked to the channel's open call and only
+ * annotate it ([CallReader.repost], [CallReader.link]); a status for an unknown call is ignored. The claims are checked against
+ * the prices (the scorecard's "claims accuracy").
  * Understanding ([ingest]): the rules ([CallParser]); when they are unsure, the on-device language model ([CallModel], Jarvis's
  * model, in its own background job with a timeout - never on the main thread or the tick / order path, and not while a position
  * or order is open: positions come first); when the model is not on the phone, the rules' reading waits in "Needs review". Then
@@ -60,7 +65,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 object SignalTesterHost {
     const val NOTE = CallParser.NOTE
     const val FILE = "signals.vault"
-    const val KEEP = 3000
+    /** Records kept (a back-test from Nov 2024 of a busy channel; a not-a-call keeps its reason only). */
+    const val KEEP = 10_000
     const val MAX_CHANNELS = 40
     const val MAX_EXAMPLES = 8
     /** Live calls priced per round at most (their option minutes read once a round each). */
@@ -75,6 +81,8 @@ object SignalTesterHost {
     const val SHARED = "shared"
     const val PASTED = "pasted"
     const val IMPORTED = "imported"
+    /** Read live through the Telegram login ([TelegramCapture]). */
+    const val TELEGRAM = "telegram"
 
     @Volatile private var file: File? = null
     @Volatile private var app: Context? = null
@@ -93,16 +101,21 @@ object SignalTesterHost {
         val id: String, val channel: String, val at: LocalDateTime, val source: String, val approx: Boolean = false, val edited: Boolean = false,
         val kind: String, val text: String? = null, val hash: Int = 0, val reason: String? = null, val by: String = "rules",
         val confidence: Double = 1.0, val unsure: List<String> = emptyList(), val draft: Draft? = null,
-        val follow: Reading.FollowUp? = null, val link: String? = null, val claim: Boolean? = null,
+        val follow: Reading.FollowUp? = null, val link: String? = null, val verdict: CallReader.Verdict? = null,
         val expiry: LocalDate? = null, val symbol: String? = null, val key: String? = null, val lot: Int? = null,
         val checked: Boolean = false, val result: CallEval.Result? = null, val twins: List<Double> = emptyList(), val unpriced: String? = null,
         val twinsDone: Boolean = false,
+        /** Telegram's id of the message and of the one it replies to (a Telegram login or an export; null when pasted or shared). */
+        val msgId: Long? = null, val replyTo: Long? = null,
+        /** Edited after posting, seen live at this time: the first text is kept and scored, flagged (15 Oct, Boss). */
+        val editedAt: LocalDateTime? = null,
     ) {
         /** Nothing more to price: not a call, a call that could not be priced, or its result is final (a finished trade's twins in). */
         val final: Boolean get() = kind != CALL || unpriced != null ||
             (result?.status in FINAL && (result?.status != CallEval.Status.DONE || twinsDone))
         val sourceWords: String get() = when (source) {
-            SHARED -> "shared (time approximate)"; PASTED -> "pasted" + if (approx) " (time approximate)" else ""; IMPORTED -> "imported"; else -> source
+            SHARED -> "shared (time approximate)"; PASTED -> "pasted" + if (approx) " (time approximate)" else ""; IMPORTED -> "imported"
+            TELEGRAM -> "Telegram (read-only login)"; else -> source
         }
     }
 
@@ -113,7 +126,9 @@ object SignalTesterHost {
 
     data class View(val on: Boolean = false, val allow: List<String> = emptyList(), val delaySec: Int = 30,
                     val validityMin: Int = 15, val cards: List<ChannelScore.Card> = emptyList(), val recs: List<Rec> = emptyList(),
-                    val review: List<Rec> = emptyList(), val pending: Int = 0, val seen: List<Seen> = emptyList()) {
+                    val review: List<Rec> = emptyList(), val pending: Int = 0, val seen: List<Seen> = emptyList(),
+                    /** The Telegram login's selected channels (id -> title). */
+                    val tg: Map<Long, String> = emptyMap()) {
         fun callsOf(channel: String): List<Rec> = recs.filter { it.channel == channel }.reversed()
     }
 
@@ -124,7 +139,9 @@ object SignalTesterHost {
     private class Log(var on: Boolean = false, val allow: MutableList<String> = ArrayList(), val seen: MutableMap<String, Seen> = LinkedHashMap(), var delaySec: Int = 30,
                       var validityMin: Int = 15, val recs: MutableList<Rec> = ArrayList(),
                       val examples: MutableMap<String, MutableList<CallModel.Example>> = LinkedHashMap(), val told: MutableSet<String> = HashSet(),
-                      var seq: Long = 0)
+                      var seq: Long = 0,
+                      /** The Telegram login's selected channels: id -> title (nothing selected at first). */
+                      val tg: MutableMap<Long, String> = LinkedHashMap())
     private var cache: Log? = null
 
 
@@ -178,7 +195,8 @@ object SignalTesterHost {
             if (r.approx) put("approx", true); if (r.edited) put("edited", true)
             r.text?.let { put("text", it) }; r.reason?.let { put("reason", it) }
             if (r.unsure.isNotEmpty()) put("unsure", JSONArray(r.unsure))
-            r.draft?.let { put("d", draftJson(it)) }; r.follow?.let { put("f", followJson(it)) }; r.link?.let { put("link", it) }; r.claim?.let { put("claim", it) }
+            r.draft?.let { put("d", draftJson(it)) }; r.follow?.let { put("f", followJson(it)) }; r.link?.let { put("link", it) }; r.verdict?.let { put("verdict", it.key) }
+            r.msgId?.let { put("mid", it) }; r.replyTo?.let { put("rto", it) }; r.editedAt?.let { put("eat", it.toString()) }
             r.expiry?.let { put("exp", it.toString()) }; r.symbol?.let { put("sym", it) }; r.key?.let { put("key", it) }; r.lot?.let { put("lot", it) }
             r.result?.let { put("res", resultJson(it)) }; if (r.twins.isNotEmpty()) put("tw", JSONArray(r.twins)); r.unpriced?.let { put("unpriced", it) }
             if (r.twinsDone) put("twd", true)
@@ -190,11 +208,14 @@ object SignalTesterHost {
         o.getString("id"), o.getString("ch"), LocalDateTime.parse(o.getString("at")), o.optString("src", PASTED), o.optBoolean("approx"), o.optBoolean("edited"),
         o.getString("kind"), o.optString("text").ifEmpty { null }, o.optInt("h"), o.optString("reason").ifEmpty { null }, o.optString("by", "rules"),
         o.optDouble("conf", 1.0), strs(o.optJSONArray("unsure")), draftOf(o.optJSONObject("d")), followOf(o.optJSONObject("f")),
-        o.optString("link").ifEmpty { null }, if (o.has("claim")) o.getBoolean("claim") else null,
+        o.optString("link").ifEmpty { null },
+        // Before 15 Oct a claim was true / false: read as confirmed / not reached.
+        CallReader.Verdict.of(o.optString("verdict")) ?: if (o.has("claim")) (if (o.getBoolean("claim")) CallReader.Verdict.CONFIRMED else CallReader.Verdict.NOT_REACHED) else null,
         o.optString("exp").ifEmpty { null }?.let { LocalDate.parse(it) }, o.optString("sym").ifEmpty { null }, o.optString("key").ifEmpty { null },
         if (o.has("lot")) o.getInt("lot") else null, o.optBoolean("checked"), resultOf(o.optJSONObject("res")),
         o.optJSONArray("tw")?.let { a -> (0 until a.length()).map { a.getDouble(it) } }.orEmpty(), o.optString("unpriced").ifEmpty { null },
-        o.optBoolean("twd"))
+        o.optBoolean("twd"), if (o.has("mid")) o.getLong("mid") else null, if (o.has("rto")) o.getLong("rto") else null,
+        o.optString("eat").ifEmpty { null }?.let { LocalDateTime.parse(it) })
 
     private fun log(): Log {
         cache?.let { return it }
@@ -217,6 +238,7 @@ object SignalTesterHost {
                 l.examples[ch] = (0 until a.length()).map { i -> a.getJSONObject(i).let { e -> CallModel.Example(e.getString("t"), e.getString("j")) } }.toMutableList()
             } }
             l.told += strs(o.optJSONArray("told"))
+            o.optJSONObject("tg")?.let { m -> m.keys().forEach { k -> k.toLongOrNull()?.let { id -> l.tg[id] = m.getString(k) } } }
         }.isSuccess
         if (!ok && f != null && f.exists()) runCatching { Vault.setAside(f) }
         cache = l
@@ -237,6 +259,7 @@ object SignalTesterHost {
                     x.stats?.let { put("n", it.messages).put("calls", it.calls).put("fu", it.followUps) } } })).put("delay", l.delaySec).put("validity", l.validityMin)
                 .put("seq", l.seq).put("recs", JSONArray(l.recs.map { recJson(it) })).put("told", JSONArray(l.told.sorted()))
                 .put("ex", JSONObject().apply { l.examples.forEach { (ch, xs) -> put(ch, JSONArray(xs.map { JSONObject().put("t", it.text).put("j", it.json) })) } })
+                .put("tg", JSONObject().apply { l.tg.forEach { (id, t) -> put(id.toString(), t) } })
             written.write(f, o.toString().toByteArray(Charsets.UTF_8))
         }
         publish(l)
@@ -244,7 +267,7 @@ object SignalTesterHost {
 
     private fun publish(l: Log) {
         _view.value = View(l.on, l.allow.toList(), l.delaySec, l.validityMin, cardsOf(l), l.recs.takeLast(400),
-            l.recs.filter { it.kind == REVIEW }, l.recs.count { it.kind == PENDING }, l.seen.values.toList())
+            l.recs.filter { it.kind == REVIEW }, l.recs.count { it.kind == PENDING }, l.seen.values.toList(), l.tg.toMap())
     }
 
     private fun cardsOf(l: Log): List<ChannelScore.Card> = l.allow.map { ch -> ChannelScore.card(ch, l.recs.filter { it.channel == ch }.map { item(it) }) }
@@ -254,9 +277,9 @@ object SignalTesterHost {
             val res = r.result
             val trig = when (res?.status) { CallEval.Status.DONE -> true; CallEval.Status.NOT_TRIGGERED -> false; else -> null }
             ChannelScore.Item(ChannelScore.Kind.CALL, r.by != "you", trig, res?.legs?.mapValues { it.value.net }.orEmpty(),
-                res?.pre?.movedBefore, res?.pre?.underlyingMove3, r.twins, r.edited)
+                res?.pre?.movedBefore, res?.pre?.underlyingMove3, r.twins, r.edited, editedLater = r.editedAt != null)
         }
-        FOLLOW -> ChannelScore.Item(ChannelScore.Kind.FOLLOW_UP, r.by != "you")
+        FOLLOW -> ChannelScore.Item(ChannelScore.Kind.FOLLOW_UP, r.by != "you", verdict = r.verdict)
         NOT -> ChannelScore.Item(ChannelScore.Kind.NOT_A_CALL)
         else -> ChannelScore.Item(ChannelScore.Kind.REVIEW)
     }
@@ -338,18 +361,27 @@ object SignalTesterHost {
      * the same text from the same channel within 3 minutes is dropped. Returns the records made.
      */
     internal fun ingest(title: String, text: String, at: LocalDateTime, source: String, approx: Boolean = false, edited: Boolean = false,
-                        persist: Boolean = true): List<Rec> = synchronized(lock) {
+                        persist: Boolean = true, msgId: Long? = null, replyTo: Long? = null): List<Rec> = synchronized(lock) {
         val l = log()
         if (!l.on) return emptyList()
         val key = channelOf(title, l.allow.map { norm(it) }.toSet()) ?: return emptyList()
         val ch = l.allow.first { norm(it) == key }
         val body = text.trim().take(4000)
         val h = body.hashCode()
+        // A message already recorded (by its Telegram id: a history page or a poll seen again), or the same text again within 3 minutes.
+        if (msgId != null && l.recs.any { it.channel == ch && it.msgId == msgId }) return emptyList()
         if (l.recs.any { it.channel == ch && it.hash == h && kotlin.math.abs(java.time.Duration.between(it.at, at).seconds) <= 180 }) return emptyList()
-        val base = Rec(nextId(l), ch, at, source, approx, edited, PENDING, body, h)
+        val base = Rec(nextId(l), ch, at, source, approx, edited, PENDING, body, h, msgId = msgId, replyTo = replyTo)
         val rules = CallParser.read(body, at.toLocalDate())
-        val out = if (CallReader.needsModel(rules)) listOf(base)
-        else finish(l, base, CallReader.understand(body, at.toLocalDate()))
+        // 15 Oct (Boss): the same call posted again (ticks on the levels reached, "T1 done" under it) is news about that call -
+        // never a new call, never a trade.
+        // Finished calls too: a call re-posted with its stop ticked after "SL hit" is still that call, never a new one.
+        val status = CallReader.repost(rules, body, at, openCalls(l, ch, finished = true), replyTo)
+        val out = when {
+            status != null -> listOf(base.copy(kind = FOLLOW, follow = status.follow, link = status.callId, confidence = 0.9))
+            CallReader.needsModel(rules) -> listOf(base)
+            else -> finish(l, base, CallReader.understand(body, at.toLocalDate()))
+        }
         l.recs += out
         if (persist) {
             save(l)
@@ -374,13 +406,36 @@ object SignalTesterHost {
         val r = base.copy(id = id, by = m.by, confidence = m.confidence, unsure = m.unsure)
         when (val x = m.reading) {
             is Reading.NewCall -> r.copy(kind = if (m.sure) CALL else REVIEW, draft = x.draft)
-            is Reading.FollowUp -> r.copy(kind = if (m.sure) FOLLOW else REVIEW, follow = x,
-                link = CallReader.link(x, base.at, openCalls(l, base.channel)))
+            is Reading.FollowUp -> {
+                val link = CallReader.link(x, base.at, openCalls(l, base.channel), base.replyTo, base.text)
+                // A status for a call the tester does not hold: ignored (15 Oct, Boss: "unknown call"); its text is not kept.
+                if (link == null) r.copy(kind = NOT, text = null, reason = UNKNOWN_CALL)
+                else r.copy(kind = if (m.sure) FOLLOW else REVIEW, follow = x, link = link)
+            }
             is Reading.NotACall -> if (m.sure) r.copy(kind = NOT, text = null, reason = x.reason) else r.copy(kind = REVIEW, reason = x.reason)
         }
     }
 
-    private fun openCalls(l: Log, ch: String) = l.recs.filter { it.channel == ch && it.kind == CALL && it.draft != null }.map { CallReader.Open(it.id, it.draft!!, it.at) }
+    const val UNKNOWN_CALL = "a status update for an unknown call (ignored)"
+
+    /**
+     * [ch]'s calls still open, for linking a status message: a call is finished once the channel said its stop was hit, it exited,
+     * booked it all, or its last target (or "all targets") was reached. [finished]: those too (a re-post is matched to any call).
+     */
+    private fun openCalls(l: Log, ch: String, finished: Boolean = false): List<CallReader.Open> {
+        val mine = l.recs.filter { it.channel == ch }
+        val done = mine.filter { it.kind == FOLLOW && it.link != null && it.follow != null }.filter { f ->
+            val x = f.follow!!
+            val d = mine.firstOrNull { it.id == f.link }?.draft
+            when (x.kind) {
+                Follow.STOP, Follow.EXIT -> true
+                Follow.BOOK -> !x.partial
+                Follow.TARGET -> x.targetNo == 99 || (d != null && d.targets.isNotEmpty() && (x.targetNo ?: 0) >= d.targets.size)
+                else -> false
+            }
+        }.mapNotNull { it.link }.toSet()
+        return mine.filter { it.kind == CALL && it.draft != null && (finished || it.id !in done) }.map { CallReader.Open(it.id, it.draft!!, it.at, it.msgId, it.text) }
+    }
 
     // ---- stage (b): the language model, its own background job ------------------------------------------------------------
 
@@ -421,8 +476,9 @@ object SignalTesterHost {
             // Positions first: a position or order opening mid-pass stops it at once (the rest wait for the next pass).
             if (m != null && holding()) break
             val text = r.text ?: continue
-            val ex = synchronized(lock) { log().examples[r.channel].orEmpty().toList() }
-            val reply = if (m == null) null else withTimeoutOrNull(CallModel.TIMEOUT_MS + 2_000) { runCatching { m(CallModel.prompt(text, ex)) }.getOrNull() }
+            val (ex, open) = synchronized(lock) { log().let { l -> l.examples[r.channel].orEmpty().toList() to openCalls(l, r.channel).filter { !it.at.isAfter(r.at) }.map { it.draft.line() } } }
+            // The channel's open calls go with the message (15 Oct, Boss): a status update is then read as news about one of them.
+            val reply = if (m == null) null else withTimeoutOrNull(CallModel.TIMEOUT_MS + 2_000) { runCatching { m(CallModel.prompt(text, ex, open)) }.getOrNull() }
             val merged = CallReader.understand(text, r.at.toLocalDate(), modelReply = reply, modelMissing = m == null)
             synchronized(lock) {
                 val l = log()
@@ -559,6 +615,78 @@ object SignalTesterHost {
         return follow(src, ok.map { it.title }.toSet())
     }
 
+    // ---- the Telegram login ([TelegramCapture]) ------------------------------------------------------------------------------
+
+    /** The selected channels (id -> title); nothing at first. */
+    fun telegramSelected(): Map<Long, String> = synchronized(lock) { log().tg.toMap() }
+
+    /**
+     * Boss's selection in the Telegram channel list: exactly these are read from now on (each joins the followed chats; a channel
+     * unselected is no longer read - what was recorded of it stays for its scorecard).
+     */
+    fun telegramSelect(chosen: Map<Long, String>): String = synchronized(lock) {
+        val l = log()
+        l.tg.clear(); l.tg.putAll(chosen.mapValues { it.value.trim().take(80) })
+        for (t in l.tg.values) if (l.allow.none { norm(it) == norm(t) } && l.allow.size < MAX_CHANNELS) l.allow += t
+        save(l)
+        if (chosen.isEmpty()) "No channel selected: Telegram is not read." else "Reading only: " + l.tg.values.joinToString(", ") + "."
+    }
+
+    /** A selected channel's title by its id (a channel renamed in Telegram keeps the title it was selected by). */
+    private fun tgTitle(id: Long): String? = synchronized(lock) { log().tg[id] }
+
+    /**
+     * A new post of the selected channel [id], read on arrival (15 Oct, Boss: "every new msg should be read immediately").
+     * Anything not selected never gets here ([com.optionslab.engine.signals.TdSession]). A post edited before it was first seen
+     * has an unknown first text: kept, not scored (as an export's).
+     */
+    fun telegram(id: Long, m: TelegramExport.Msg, history: Boolean): List<Rec> {
+        val title = tgTitle(id) ?: return emptyList()
+        return ingest(title, m.text, m.at, if (history) IMPORTED else TELEGRAM, edited = m.edited, msgId = m.id, replyTo = m.replyTo)
+    }
+
+    /** A history fetch's pages, held in memory until the last (they come newest first), then read oldest first in one go. */
+    private val pages = HashMap<Long, MutableList<TelegramExport.Msg>>()
+
+    /** One page of the selected channel [id]'s history; [done]: the last page - then all of it is read in, oldest first. */
+    fun telegramHistory(id: Long, msgs: List<TelegramExport.Msg>, done: Boolean): Int {
+        val all = synchronized(pages) {
+            pages.getOrPut(id) { ArrayList() } += msgs
+            if (done) pages.remove(id) else null
+        } ?: return 0
+        val title = tgTitle(id) ?: return 0
+        var n = 0
+        for (m in all.sortedBy { it.at }.distinctBy { it.id }) n += ingest(title, m.text, m.at, IMPORTED, edited = m.edited, persist = false, msgId = m.id, replyTo = m.replyTo).size
+        val pending = synchronized(lock) { log().let { l -> save(l); l.recs.any { it.kind == PENDING } } }
+        if (pending) kickModel()
+        runCatching { Diag.record("signals", "Telegram history read: ${all.size} posts, $n new records") }
+        return n
+    }
+
+    /**
+     * A post of a selected channel edited after it was first seen, at [at]: the first version stays the one scored; the edit's time
+     * is recorded and the call flagged "edited after posting" (15 Oct, Boss). Its new text is not read.
+     */
+    fun edited(id: Long, msgId: Long, at: LocalDateTime) {
+        val title = tgTitle(id) ?: return
+        synchronized(lock) {
+            val l = log()
+            var changed = false
+            for (i in l.recs.indices) {
+                val r = l.recs[i]
+                if (r.msgId == msgId && norm(r.channel) == norm(title) && r.editedAt == null) { l.recs[i] = r.copy(editedAt = at.withNano(0)); changed = true }
+            }
+            if (changed) save(l)
+        }
+    }
+
+    /** "Check this chat" (Telegram login): the one channel [title]'s recent posts counted, only the counts kept. */
+    fun checkCounts(title: String, msgs: List<TelegramExport.Msg>): Seen {
+        val x = Seen(title, com.optionslab.engine.signals.ChatScan.scan(msgs.map { it.text to it.at.toLocalDate() }), TELEGRAM)
+        synchronized(lock) { val l = log(); l.seen[norm(title)] = x; save(l) }
+        return x
+    }
+
     // ---- the round (Jarvis's words lane) ---------------------------------------------------------------------------------------
 
     /** TEST SEAM: a day's 1-minute bars of an instrument key (an index as "INDEX:<name>"). */
@@ -569,13 +697,20 @@ object SignalTesterHost {
     /** One round of the words lane. Never throws; off, it reads nothing. */
     suspend fun watch() {
         if (com.optionslab.app.BuildConfig.GOLD) return
-        if (!runCatching { on() }.getOrDefault(false)) return
+        if (!runCatching { on() }.getOrDefault(false)) { runCatching { TelegramCapture.close() }; return }
         val now = Market.now().toLocalDateTime().withNano(0)
+        // The Telegram login's reader started or closed for its capture window (the reading itself is its own thread).
+        runCatching { TelegramCapture.ensure(now) }
         runCatching { round(now) }.onFailure { runCatching { Diag.record("signals", "round failed: ${it.javaClass.simpleName}") } }
     }
 
     /** One round at [now] (tests call it directly): the model's queue, each live call priced, follow-up claims, verdicts. */
-    internal suspend fun round(now: LocalDateTime) {
+    internal suspend fun round(now: LocalDateTime) = rounds.withLock { roundNow(now) }
+
+    /** One round at a time (the words lane's, and the one a new call starts at once): never two pricing the same call. */
+    private val rounds = kotlinx.coroutines.sync.Mutex()
+
+    private suspend fun roundNow(now: LocalDateTime) {
         if (synchronized(lock) { log().recs.any { it.kind == PENDING } }) kickModel()
         val todo = synchronized(lock) { log().recs.filter { !it.final && !waitingForTheClose(it, now) } }.sortedByDescending { it.at }.take(MAX_LIVE)
         val bars = HashMap<String, List<Bar>>()
@@ -636,7 +771,8 @@ object SignalTesterHost {
             val spot = idx.lastOrNull { !it.start.plusMinutes(1).isAfter(r.at) }?.close ?: idx.firstOrNull()?.open
             if (spot == null && today && now.isBefore(r.at.plusMinutes(5))) return
             val problems = CallCheck.problems(d, day, known = true, spot = spot, listed = true)
-            if (problems.isNotEmpty()) { update(r) { it.copy(kind = REVIEW, unsure = problems, checked = true) }; return }
+            // Only a record still as this round read it: Boss's confirm meanwhile (checked, his reading) is never sent back.
+            if (problems.isNotEmpty()) { update(r) { if (it.checked || it.draft != r0.draft) it else it.copy(kind = REVIEW, unsure = problems, checked = true) }; return }
             r = r.copy(checked = true)
         }
         val trading = runCatching { Market.isTradingDay(day) }.getOrDefault(true)
@@ -646,7 +782,8 @@ object SignalTesterHost {
         // The twins once the day is over (a random minute after now has no price yet).
         val twinsNow = res.status == CallEval.Status.DONE && dayOver(r, now)
         val twins = if (twinsNow) CallEval.twins(setup, res, opt, r.id + r.channel) else emptyList()
-        update(r0) { it.copy(checked = true, result = res, twins = twins, twinsDone = twinsNow) }
+        // A result of the reading it was priced from only (Boss may have corrected the call in Needs review meanwhile).
+        update(r0) { if (it.draft != r0.draft || it.kind != CALL) it else it.copy(checked = true, result = res, twins = twins, twinsDone = twinsNow) }
     }
 
     /** [key]'s finished minutes of [day] by [at], or null when the read failed (tried again next round). */
@@ -674,13 +811,17 @@ object SignalTesterHost {
     private suspend fun claims(now: LocalDateTime, cache: MutableMap<String, List<Bar>>) {
         val todo = synchronized(lock) {
             val l = log()
-            l.recs.filter { it.kind == FOLLOW && it.claim == null && it.link != null && it.follow?.kind in setOf(Follow.TARGET, Follow.STOP) }
-                .mapNotNull { f -> l.recs.firstOrNull { it.id == f.link }?.let { c -> f to c } }
+            l.recs.filter { it.kind == FOLLOW && it.verdict == null && it.link != null && it.follow?.kind in setOf(Follow.TARGET, Follow.STOP) }
+                .mapNotNull { f -> l.recs.firstOrNull { it.id == f.link }?.let { c ->
+                    // A bare "done": the target after the ones this call's earlier claims named.
+                    val prior = l.recs.count { it.kind == FOLLOW && it.link == c.id && it.follow?.kind == Follow.TARGET && it.at.isBefore(f.at) }
+                    Triple(f, c, prior) } }
         }
         var reads = 0
-        for ((f, c) in todo) {
+        for ((f, c, prior) in todo) {
             val d = c.draft ?: continue
             val fillAt = c.result?.fillAt ?: continue
+            val fill = c.result?.fillRaw ?: continue
             val key = c.key ?: continue
             val day = c.at.toLocalDate()
             val k = "$key|$day"
@@ -689,8 +830,8 @@ object SignalTesterHost {
                 reads++
                 bars(key, day, if (day == now.toLocalDate()) now else day.atTime(15, 45))?.also { cache[k] = it }
             } ?: continue
-            val ok = CallReader.claimTrue(f.follow!!, d, bs, fillAt, f.at) ?: continue
-            update(f) { it.copy(claim = ok) }
+            val v = CallReader.verdict(f.follow!!, d, bs, fillAt, fill, f.at, prior) ?: continue
+            update(f) { it.copy(verdict = v) }
         }
     }
 
@@ -726,6 +867,7 @@ object SignalTesterHost {
         synchronized(lock) {
             cache = null; written.forget(); _view.value = View()
             testModel = null; testModelMissing = false; testHolding = null; testBars = null; testContracts = null
+            synchronized(pages) { pages.clear() }
         }
     }
 

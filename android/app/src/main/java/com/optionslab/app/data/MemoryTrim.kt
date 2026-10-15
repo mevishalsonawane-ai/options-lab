@@ -48,6 +48,8 @@ object MemoryTrim {
         for (i in items) runCatching {
             when (i) {
                 MemoryPlan.Item.MODEL -> com.optionslab.app.ira.IraModel.releaseForMemory()
+                // 15 Oct: the Signal tester's Telegram reader closes (its next round starts it again once the pressure has passed).
+                MemoryPlan.Item.TELEGRAM -> TelegramCapture.releaseForMemory()
                 MemoryPlan.Item.KNOWLEDGE_INDEX -> com.optionslab.app.ira.KnowledgeLibrary.drop()
                 MemoryPlan.Item.SHARED_FINDINGS -> SharedKnowledgeHost.dropCounts()
                 MemoryPlan.Item.ANSWER_CACHE -> com.optionslab.ira.ShortAnswer.clearCache()

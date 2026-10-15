@@ -9,8 +9,8 @@ import com.optionslab.engine.signals.TelegramExport
  * every other chat's messages are never asked for, so they never reach the reader or the store.
  *
  * Working sources: a Telegram Desktop export ([ExportSource]); Boss's paste box and the Share target push single messages
- * straight in. A Telegram login (TDLib, Telegram's own client library, read-only) would be one more [MessageSource] - not in this
- * change: see android/README.md, "Signal tester". No notification reading (Boss, 15 Oct).
+ * straight in. The Telegram login ([TelegramCapture]: TDLib, read-only) lists channels by title and reads only the selected ones
+ * (see android/README.md, "Signal tester"). No notification reading (Boss, 15 Oct).
  */
 interface MessageSource {
     /** A short key ("export"), kept beside each chat title seen. */

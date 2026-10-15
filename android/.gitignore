@@ -6,3 +6,6 @@ local.properties
 .kotlin/
 *.keystore
 *.jks
+
+# TDLib (android/tools/tdlib/build-tdlib.sh) is built in CI and placed here; never committed.
+app/src/ira/jniLibs/

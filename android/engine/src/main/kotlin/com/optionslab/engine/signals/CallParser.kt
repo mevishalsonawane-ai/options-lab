@@ -59,7 +59,9 @@ object CallParser {
     /** A follow-up's kind. */
     enum class Follow(val key: String, val words: String) {
         TARGET("target", "target hit"), STOP("stop", "stop-loss hit"), BOOK("book", "book profit"), EXIT("exit", "exit"),
-        TRAIL("trail", "trail the stop"), HOLD("hold", "hold");
+        TRAIL("trail", "trail the stop"), HOLD("hold", "hold"),
+        // 15 Oct (Boss): a channel re-posting its call with ticks on the entry line ("Above 280 ✅"), or the same call again.
+        TRIGGERED("triggered", "entry triggered"), REPOST("repost", "re-posted the call");
         companion object { fun of(k: String?): Follow? = entries.firstOrNull { it.key == k } }
     }
 
@@ -191,7 +193,9 @@ object CallParser {
     private val F_TARGET_ALL = rx("\\ball (?:targets?|tgts?) $DONE\\b|\\b(?:targets?|tgts?) all $DONE\\b")
     private val F_TARGET = rx("\\b(?:target|targets|tgt|tgts|trgt) $DONE\\b|\\b(\\d+(?:\\.\\d+)?) $DONE\\b")
     private val F_BOOK = rx("\\bbook(?:ed|ing)? ?(?:half|partial|50 ?%?|some|part)\\b|\\b(?:half|partial|part) ?(?:profit )?book(?:ing)?\\b")
-    private val F_BOOK_ALL = rx("\\bbook(?:ed|ing)? (?:full |all |your |the )?(?:profits?|it|karo|kar lo|kr lo|now)\\b|\\bprofit book(?:ed|ing)?\\b")
+    private val F_BOOK_ALL = rx("\\bbook(?:ed|ing)? (?:full |all |your |the )?(?:profits?|it|karo|kar lo|kr lo|now)\\b|\\bprofit book(?:ed|ing)?\\b|^booked$")
+    /** A bare tick or "done" (15 Oct, Boss: channels answer "done" or "✅" under a call): the next target reached. */
+    private val F_DONE = rx("^(?:done ?)+$")
     private val F_EXIT = rx("\\bexit(?: all| now| it| from| karo| kar do| kr do| kar lo)?\\b|\\bclose (?:it|all|position)\\b|\\bnikal(?: jao| lo| jaao)\\b|\\bexit\\b")
     private val F_TRAIL = rx("\\btrail(?:ing)?(?: your)? (?:sl|stop)\\b|\\bsl (?:to|at|on) cost\\b|\\bctc\\b|\\bsl cost\\b|\\bmove sl\\b|\\bsl (?:trail|shift)\\b|\\bshift sl\\b")
     private val F_HOLD = rx("\\bhold(?:ing)?(?: it| for| tight| karo| rakho)?\\b")
@@ -367,7 +371,8 @@ object CallParser {
         val d = Draft(u, t[a.strike].n, a.side, exp, trig, trigger, high, stop, stopPct, targets.toList())
         return Reading.NewCall(d, round2(conf.coerceIn(0.0, 1.0)), unsure)
     }
-    private val TGT_SEP = setOf("-", "/", "+", "@")
+    // "done" too: a re-post ticks its targets ("310✅-345✅-400+++" reads "310 done -345 done -400").
+    private val TGT_SEP = setOf("-", "/", "+", "@", "done")
 
     /** A message naming no option: a follow-up, else not a call (and why). */
     private fun noOption(norm: String, toks: List<Tok>): Reading {
@@ -395,6 +400,7 @@ object CallParser {
             return Reading.FollowUp(Follow.TARGET, targetNo = n)
         }
         F_TARGET.find(norm)?.let { m -> return Reading.FollowUp(Follow.TARGET, level = m.groupValues[1].ifEmpty { null }?.toDouble()) }
+        if (F_DONE.matches(norm)) return Reading.FollowUp(Follow.TARGET)
         if (F_BOOK.containsMatchIn(norm)) return Reading.FollowUp(Follow.BOOK, partial = true)
         if (F_BOOK_ALL.containsMatchIn(norm)) return Reading.FollowUp(Follow.BOOK)
         if (F_EXIT.containsMatchIn(norm)) return Reading.FollowUp(Follow.EXIT)
@@ -407,6 +413,37 @@ object CallParser {
         return null
     }
 
+    private val TICKS = Regex("✅|✔️|✔|☑️|☑|💯")
+    private val NUMBER = Regex("(?<![A-Za-z0-9.,])(?:\\d{1,3}(?:,\\d{2,3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)")
+
+    /**
+     * The numbers [raw] marks with a tick (15 Oct, Boss: channels re-post a call with ✅ / ✔️ on the levels reached): a tick right
+     * after a number (only spaces, "+" or letters such as "CE" between) marks it; two or more ticks after a line's list mark that
+     * many of its numbers from the first ("310-345-400 ✅✅": 310 and 345). A number inside a word ("NIFTY50") is not one. The
+     * caller compares with the first post's own ticks (some channels decorate a fresh call with them).
+     */
+    fun ticked(raw: String): Set<Double> {
+        val out = LinkedHashSet<Double>()
+        for (line in raw.lines()) {
+            val nums = NUMBER.findAll(line).toList()
+            val ticks = TICKS.findAll(line).toList()
+            if (nums.isEmpty() || ticks.isEmpty()) continue
+            fun add(n: MatchResult) { n.value.replace(",", "").toDoubleOrNull()?.let { out += it } }
+            // Several ticks after a list ("310-345-400 ✅✅"): that many of the line's numbers from the first.
+            val after = ticks.filter { it.range.first > nums.last().range.last }
+            val counted = nums.size > 1 && after.size >= 2
+            if (counted) nums.take(after.size).forEach { add(it) }
+            for (t in ticks) {
+                if (counted && t in after) continue
+                // Right after a number ("310✅", "280 ✔️", "22500CE✅"): that number.
+                val before = nums.lastOrNull { it.range.last < t.range.first } ?: continue
+                val gap = line.substring(before.range.last + 1, t.range.first)
+                if (gap.length <= 4 && gap.all { it == ' ' || it == '+' || it.isLetter() }) add(before)
+            }
+        }
+        return out
+    }
+
     /** Every number written in [text] (as read after normalising): the model may use only these ([CallModel]). */
     fun numbers(text: String): Set<Double> = tokens(normalize(text)).mapNotNull { it.n }.toSet()
 
@@ -416,5 +453,5 @@ object CallParser {
     /** "280", "280.5". */
     fun num(x: Double): String = if (x == Math.floor(x) && !x.isInfinite()) x.toLong().toString() else String.format(Locale.ENGLISH, "%.2f", x).trimEnd('0').trimEnd('.')
 
-    internal fun round2(x: Double) = Math.round(x * 100) / 100.0
+    fun round2(x: Double) = Math.round(x * 100) / 100.0
 }

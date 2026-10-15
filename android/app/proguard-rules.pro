@@ -50,3 +50,7 @@
 # the code is still shrunk and optimised (allowoptimization: R8 may still inline and merge; review, 14 Oct), and nothing
 # secret is in a name (the repository is public).
 -keepnames,allowoptimization class com.optionslab.** { <methods>; }
+
+# TDLib (the Signal tester's read-only Telegram login, 15 Oct 2026): libtdjsonjava.so registers its native methods on
+# org.drinkless.tdlib.JsonClient (and its LogMessageHandler) by these exact names when it loads.
+-keep class org.drinkless.tdlib.** { *; }

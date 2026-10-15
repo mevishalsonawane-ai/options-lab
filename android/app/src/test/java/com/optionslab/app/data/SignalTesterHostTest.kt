@@ -246,9 +246,23 @@ class SignalTesterHostTest : RobolectricTest() {
         val s = SignalTesterHost.ingest("Sensex Kings", "T3 done ✅", at(9, 35), SignalTesterHost.PASTED).single()
         clock(at(9, 45)); runBlocking { SignalTesterHost.round(at(9, 45)) }
         val recs = SignalTesterHost.view.value.recs
-        assertEquals(true, recs.first { it.id == f.id }.claim)
-        // T3 (400) was not reached by 09:35: not true by the prices.
-        assertEquals(false, recs.first { it.id == s.id }.claim)
+        assertEquals(com.optionslab.engine.signals.CallReader.Verdict.CONFIRMED, recs.first { it.id == f.id }.verdict)
+        // T3 (400) was not reached by 09:35: not reached by the prices.
+        assertEquals(com.optionslab.engine.signals.CallReader.Verdict.NOT_REACHED, recs.first { it.id == s.id }.verdict)
+        // The scorecard's claims accuracy.
+        assertTrue(com.optionslab.engine.signals.ChannelScore.details(SignalTesterHost.view.value.cards.single())
+            .contains("Claims accuracy: of 2 hits the channel claimed, 1 confirmed by the real prices, 1 not reached, 0 reached only after our stop."))
+    }
+
+    @Test fun aRepostOfAFinishedCallIsStillThatCallNeverANewOne() {
+        on("Sensex Kings")
+        val c = SignalTesterHost.ingest("Sensex Kings", "$sample\nSL 250", at(9, 28, 4), SignalTesterHost.PASTED).single()
+        assertEquals(SignalTesterHost.FOLLOW, SignalTesterHost.ingest("Sensex Kings", "SL hit", at(9, 50), SignalTesterHost.PASTED).single().kind)
+        val again = SignalTesterHost.ingest("Sensex Kings", "$sample\nSL 250✅", at(9, 51), SignalTesterHost.PASTED).single()
+        assertEquals(SignalTesterHost.FOLLOW, again.kind); assertEquals(c.id, again.link)
+        assertEquals(1, SignalTesterHost.view.value.recs.count { it.kind == SignalTesterHost.CALL })
+        // The call finished: a later bare "done" has no open call - an unknown call, ignored.
+        assertEquals(SignalTesterHost.UNKNOWN_CALL, SignalTesterHost.ingest("Sensex Kings", "done", at(9, 55), SignalTesterHost.PASTED).single().reason)
     }
 
     @Test fun aTelegramExportIsImportedForItsAllowListedChatOnly() {
@@ -283,7 +297,9 @@ class SignalTesterHostTest : RobolectricTest() {
         SignalTesterHost.setOn(true)
         assertTrue(SignalTesterHost.paste("Sensex Kings", sample, at(9, 28), false).startsWith("Recorded: SENSEX 73100 CE above 280"))
         assertTrue(SignalTesterHost.paste("Nope", sample, at(9, 28), false).startsWith("Not recorded"))
-        assertTrue(SignalTesterHost.paste("Sensex Kings", "73100 CE above 280", at(9, 29), true).let { it.startsWith("Recorded;") })
+        // The same call pasted again: a re-post of it, never a second call.
+        assertEquals("Recorded: re-posted the call.", SignalTesterHost.paste("Sensex Kings", "73100 CE above 280", at(9, 29), true))
+        assertTrue(SignalTesterHost.paste("Sensex Kings", "73200 CE above 220", at(9, 30), true).startsWith("Recorded;"))
         assertTrue(SignalTesterHost.shareNow("Sensex Kings", "SL hit", at(9, 50)).startsWith("Recorded"))
         assertEquals("shared (time approximate)", SignalTesterHost.view.value.recs.last().sourceWords)
         SignalTesterHost.setDelay(60); SignalTesterHost.setDelay(45); SignalTesterHost.setValidity(500)

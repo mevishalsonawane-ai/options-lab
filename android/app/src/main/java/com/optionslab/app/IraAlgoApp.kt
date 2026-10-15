@@ -96,6 +96,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.WatchlistHost.init(this)
         com.optionslab.app.data.SignalTesterHost.init(this)
         com.optionslab.app.data.SignalPaperArm.init(this)
+        com.optionslab.app.data.TelegramCapture.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.ShadowArms.init(this)

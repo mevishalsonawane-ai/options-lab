@@ -160,19 +160,30 @@ class CallModelTest {
         assertEquals("a", CallReader.link(Reading.FollowUp(Follow.TARGET, 1), t0.plusMinutes(10), open))
         assertEquals("a", CallReader.link(Reading.FollowUp(Follow.STOP, ref = Draft(null, 73100.0, Right.CE)), t0.plusMinutes(30), open))
         assertNull(CallReader.link(Reading.FollowUp(Follow.STOP, ref = Draft("NIFTY", 73100.0, null)), t0.plusMinutes(30), open))
-        assertNull(CallReader.link(Reading.FollowUp(Follow.EXIT), t0.minusMinutes(1), open))
+        // No call of its day before it: the channel's latest open call of the last 3 days (yesterday's); older: an unknown call.
+        assertEquals("y", CallReader.link(Reading.FollowUp(Follow.EXIT), t0.minusMinutes(1), open))
+        assertNull(CallReader.link(Reading.FollowUp(Follow.EXIT), t0.minusMinutes(1), listOf(yesterday.copy(at = t0.minusDays(4)))))
         // The claim against the prices.
         val bars = (0 until 30).map { i -> Bar(t0.withSecond(0).plusMinutes(i.toLong()), 280.0 + i, 281.0 + i * 2, 279.0 - i, 280.0 + i) }
         assertEquals(310.0, CallReader.claimedLevel(Reading.FollowUp(Follow.TARGET, 1), a.draft))
         assertEquals(400.0, CallReader.claimedLevel(Reading.FollowUp(Follow.TARGET, 99), a.draft))
         assertEquals(333.0, CallReader.claimedLevel(Reading.FollowUp(Follow.TARGET, level = 333.0), a.draft))
+        // A bare "done": the next target after the claims already made.
+        assertEquals(345.0, CallReader.claimedLevel(Reading.FollowUp(Follow.TARGET), a.draft, prior = 1))
         assertNull(CallReader.claimedLevel(Reading.FollowUp(Follow.EXIT), a.draft))
-        assertEquals(true, CallReader.claimTrue(Reading.FollowUp(Follow.TARGET, 1), a.draft, bars, t0, t0.plusMinutes(20)))
-        assertEquals(false, CallReader.claimTrue(Reading.FollowUp(Follow.TARGET, 3), a.draft, bars, t0, t0.plusMinutes(20)))
-        assertEquals(true, CallReader.claimTrue(Reading.FollowUp(Follow.STOP), a.draft, bars, t0, t0.plusMinutes(29)))
-        assertNull(CallReader.claimTrue(Reading.FollowUp(Follow.STOP), b.draft, bars, t0, t0.plusMinutes(29)))
-        assertNull(CallReader.claimTrue(Reading.FollowUp(Follow.EXIT), a.draft, bars, t0, t0.plusMinutes(29)))
-        assertNull(CallReader.claimTrue(Reading.FollowUp(Follow.TARGET, 1), a.draft, emptyList(), t0, t0.plusMinutes(29)))
+        val v = CallReader.Verdict.CONFIRMED
+        assertEquals(v, CallReader.verdict(Reading.FollowUp(Follow.TARGET, 1), a.draft, bars, t0, 280.0, t0.plusMinutes(20)))
+        assertEquals(CallReader.Verdict.NOT_REACHED, CallReader.verdict(Reading.FollowUp(Follow.TARGET, 3), a.draft, bars, t0, 280.0, t0.plusMinutes(20)))
+        assertEquals(v, CallReader.verdict(Reading.FollowUp(Follow.STOP), a.draft, bars, t0, 280.0, t0.plusMinutes(29)))
+        // No stop given: our stop (20% under the fill) is the level - never reached here.
+        assertEquals(CallReader.Verdict.NOT_REACHED, CallReader.verdict(Reading.FollowUp(Follow.STOP), b.draft, bars, t0, 280.0, t0.plusMinutes(29)))
+        assertNull(CallReader.verdict(Reading.FollowUp(Follow.EXIT), a.draft, bars, t0, 280.0, t0.plusMinutes(29)))
+        assertNull(CallReader.verdict(Reading.FollowUp(Follow.TARGET, 1), a.draft, emptyList(), t0, 280.0, t0.plusMinutes(29)))
+        // Down through our stop first, then up to T1: "reached only after our stop"; the same minute counts the stop first.
+        val dip = listOf(Bar(t0.withSecond(0), 280.0, 282.0, 240.0, 245.0), Bar(t0.withSecond(0).plusMinutes(1), 245.0, 315.0, 244.0, 312.0))
+        assertEquals(CallReader.Verdict.AFTER_STOP, CallReader.verdict(Reading.FollowUp(Follow.TARGET, 1), a.draft, dip, t0, 280.0, t0.plusMinutes(5)))
+        val both = listOf(Bar(t0.withSecond(0), 280.0, 320.0, 240.0, 300.0))
+        assertEquals(CallReader.Verdict.AFTER_STOP, CallReader.verdict(Reading.FollowUp(Follow.TARGET, 1), a.draft, both, t0, 280.0, t0.plusMinutes(5)))
         assertNotNull(CallReader.needsModel(emptyList()))
         assertFalse(CallReader.needsModel(CallParser.read("NIFTY 25000 CE above 1 tgt 2\nNIFTY 25100 CE 5", on)))
     }

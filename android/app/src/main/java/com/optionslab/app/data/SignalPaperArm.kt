@@ -74,15 +74,23 @@ object SignalPaperArm {
         val log: ArrayList<String> = ArrayList(),
         /** callId -> an entry order a cancel could not take out (settled on the next pass, never a second BUY beside it). */
         val pending: MutableMap<String, String> = HashMap(),
+        /** The day each chat's paper trading was first switched on (its month check counts from it). */
+        val since: MutableMap<String, LocalDate> = HashMap(),
+        /** Chats whose month check Jarvis has already shown. */
+        val monthTold: MutableSet<String> = HashSet(),
     )
 
     data class View(val on: Map<String, Boolean> = emptyMap(), val settings: SignalPaperRules.Settings = SignalPaperRules.Settings(),
                     val open: List<Pos> = emptyList(), val closed: List<Pos> = emptyList(), val status: Map<String, String> = emptyMap(),
-                    val log: List<String> = emptyList(), val decided: Set<String> = emptySet()) {
+                    val log: List<String> = emptyList(), val decided: Set<String> = emptySet(), val since: Map<String, LocalDate> = emptyMap()) {
         fun isOn(chat: String): Boolean = on[chatId(chat)] == true
         fun closedOf(chat: String): List<Pos> = closed.filter { it.chat == chatId(chat) }
         fun openOf(chat: String): List<Pos> = open.filter { it.chat == chatId(chat) }
         fun statusOf(chat: String): String? = status[chatId(chat)]
+        fun sinceOf(chat: String): LocalDate? = since[chatId(chat)]
+        /** [chat]'s paper record against Boss's pass marks ([SignalPaperRules.monthCheck]; [card]: its shadow scorecard). */
+        fun monthCheck(chat: String, card: com.optionslab.engine.signals.ChannelScore.Card?): List<SignalPaperRules.Mark> =
+            SignalPaperRules.monthCheck(closedOf(chat).map { SignalPaperRules.Closed(it.day, it.net ?: 0.0) }, card)
     }
 
     private val _view = MutableStateFlow(View())
@@ -123,6 +131,8 @@ object SignalPaperArm {
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { b.pending[it] = m.getString(it) } }
+            o.optJSONObject("since")?.let { m -> m.keys().forEach { k -> runCatching { b.since[k] = LocalDate.parse(m.getString(k)) } } }
+            o.optJSONArray("monthTold")?.let { a -> for (i in 0 until a.length()) b.monthTold += a.getString(i) }
         }.isSuccess
         if (!ok && f != null && f.exists()) runCatching { Vault.setAside(f) }
         cache = b
@@ -140,13 +150,14 @@ object SignalPaperArm {
             .put("positions", JSONArray(b.positions.map { posJson(it) })).put("decided", JSONArray(b.decided.sorted().takeLast(2000)))
             .put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } }).put("log", JSONArray(b.log.takeLast(200)))
             .put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k, v) } })
+            .put("since", JSONObject().apply { b.since.forEach { (k, v) -> put(k, v.toString()) } }).put("monthTold", JSONArray(b.monthTold.sorted()))
         file?.let { f -> runCatching { written.write(f, o.toString().toByteArray(Charsets.UTF_8)) } }
         publish(b)
     }
 
     private fun publish(b: Book) {
         _view.value = View(b.on.toMap(), b.settings, b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(100), b.status.toMap(), b.log.takeLast(30),
-            b.decided.toSet())
+            b.decided.toSet(), b.since.toMap())
     }
 
     private fun note(b: Book, text: String) {
@@ -181,6 +192,7 @@ object SignalPaperArm {
         val b = book()
         if ((b.on[id] == true) == on) return@withLock "Paper trading of this chat's calls is already ${if (on) "on" else "off"}."
         b.on[id] = on
+        if (on && id !in b.since) b.since[id] = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         note(b, "chat $id: paper trading of its calls ${if (on) "on (${SignalPaperRules.BOSS_CHOICE})" else "off"}" +
             if (!on && b.positions.any { it.open && it.chat == id }) "; what it holds still closes by its own exits" else "")
         save(b)
@@ -243,8 +255,29 @@ object SignalPaperArm {
             for (r in candidates(view, now, b.decided)) changed = runCatching { entry(b, r, now) }.getOrElse {
                 b.status[chatId(r.channel)] = "error: ${it.javaClass.simpleName}"; true
             } || changed
+            changed = monthChecks(b, now.toLocalDate()) || changed
             if (changed) save(b) else publish(b)
         }
+    }
+
+    /**
+     * Once a chat has been on paper for [SignalPaperRules.MONTH_DAYS] days, Jarvis shows its record against Boss's pass marks once
+     * (its dialog shows it all along). Never a promotion: it stays paper.
+     */
+    private fun monthChecks(b: Book, today: LocalDate): Boolean {
+        var changed = false
+        for ((id, since) in b.since) {
+            if (id in b.monthTold || today.isBefore(since.plusDays(SignalPaperRules.MONTH_DAYS))) continue
+            val card = SignalTesterHost.view.value.cards.firstOrNull { chatId(it.channel) == id } ?: continue
+            val closed = b.positions.filter { !it.open && it.chat == id }.map { SignalPaperRules.Closed(it.day, it.net ?: 0.0) }
+            val line = SignalPaperRules.monthLine(SignalPaperRules.monthCheck(closed, card))
+            b.monthTold += id; changed = true
+            note(b, "chat $id: month check - $line")
+            if (com.optionslab.app.BuildConfig.JARVIS) runCatching {
+                com.optionslab.app.ira.IraHub.note("Boss, a month of paper-trading ${card.channel}'s Telegram calls (${SignalPaperRules.BOSS_CHOICE}): $line")
+            }
+        }
+        return changed
     }
 
     private fun say(b: Book, chat: String, why: String, final: Boolean = false): Boolean {

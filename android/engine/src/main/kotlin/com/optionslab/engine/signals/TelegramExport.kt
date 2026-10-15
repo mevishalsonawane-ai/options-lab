@@ -14,7 +14,8 @@ import java.time.LocalDateTime
  * account export ("chats": {"list": [...]}) gives each chat. Pure.
  */
 object TelegramExport {
-    data class Msg(val at: LocalDateTime, val text: String, val edited: Boolean)
+    /** [id]: the message's Telegram id; [replyTo]: the id of the message it answers (a status update under its call). */
+    data class Msg(val at: LocalDateTime, val text: String, val edited: Boolean, val id: Long? = null, val replyTo: Long? = null)
     data class Chat(val name: String, val messages: List<Msg>)
 
     class Bad(msg: String) : IllegalArgumentException(msg)
@@ -34,8 +35,10 @@ object TelegramExport {
         val text = text(x["text"]).trim()
         if (text.isEmpty()) return@mapNotNull null
         val at = time(x["date_unixtime"], x["date"]) ?: return@mapNotNull null
-        Msg(at, text, x["edited"] != null || x["edited_unixtime"] != null)
+        Msg(at, text, x["edited"] != null || x["edited_unixtime"] != null, num(x["id"]), num(x["reply_to_message_id"]))
     }
+
+    private fun num(x: Any?): Long? = (x as? Double)?.toLong() ?: (x as? Long) ?: (x as? Int)?.toLong() ?: (x as? String)?.toLongOrNull()
 
     private fun time(unix: Any?, date: Any?): LocalDateTime? {
         val s = (unix as? String)?.toLongOrNull() ?: (unix as? Double)?.toLong()

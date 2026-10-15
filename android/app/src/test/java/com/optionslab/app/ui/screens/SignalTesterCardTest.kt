@@ -155,4 +155,73 @@ class SignalTesterCardTest {
         tap("Follow the ticked chats")
         assertEquals(setOf("Sensex Kings"), chosen)
     }
+
+    private fun showTelegram(tv: com.optionslab.app.data.TelegramCapture.View, v: SignalTesterHost.View, log: ArrayList<String>) = compose.setContent {
+        IraAlgoTheme("light") {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                TelegramRow(tv, v, TelegramActions(keys = { id, h -> log += "keys $id ${h.length}" }, login = { log += "login" },
+                    phone = { log += "phone $it" }, code = { log += "code $it" }, password = { log += "password" },
+                    capture = { log += "capture $it" }, channels = { log += "channels" }, history = { log += "history $it" },
+                    window = { f, t -> log += "window $f-$t" }, logOut = { log += "logout" }))
+            }
+        }
+    }
+
+    @Test fun theTelegramRowIsCompactAndItsDialogWalksTheLogin() {
+        val log = ArrayList<String>()
+        val tv = com.optionslab.app.data.TelegramCapture.View(available = true)
+        showTelegram(tv, SignalTesterHost.View(on = true), log)
+        // Compact: the name, one status line, the capture switch (off; it needs a login first).
+        compose.onNodeWithText("Telegram login").assertExists()
+        compose.onNodeWithText("Not set up: enter your api_id and api_hash").assertExists()
+        compose.onNodeWithContentDescription("Capture the selected Telegram channels").assertIsOff()
+        // The name: the dialog, which says what it reads, and asks for the keys (the hash masked).
+        tap("Telegram login")
+        compose.onNodeWithText(keepNumbersWhole(READS_ONLY)).assertExists()
+        compose.onNodeWithContentDescription("api_id").performTextInput("12345")
+        compose.onNodeWithContentDescription("api_hash").performTextInput("0123456789abcdef0123456789abcdef")
+        compose.onAllNodesWithText("0123456789abcdef0123456789abcdef").fetchSemanticsNodes().let { assertTrue("the hash is masked", it.isEmpty()) }
+        tapText("Save keys")
+        assertEquals(listOf("keys 12345 32"), log)
+        tapText("OK")
+    }
+
+    @Test fun theLoginStepsAndTheChannelsInTheDialog() {
+        val log = ArrayList<String>()
+        val step = androidx.compose.runtime.mutableStateOf(com.optionslab.app.data.TelegramCapture.View(available = true, keys = true,
+            auth = com.optionslab.engine.signals.TdSession.Auth.NEED_CODE, hint = "in the Telegram app"))
+        val v = SignalTesterHost.View(on = true, tg = mapOf(-1001L to "Sensex Kings"))
+        compose.setContent { IraAlgoTheme("light") { TelegramDialog(step.value, v, TelegramActions(code = { log += "code $it" }, history = { log += "history $it" },
+            window = { f, t -> log += "window $f-$t" }, logOut = { log += "logout" }, channels = { log += "channels" })) { log += "closed" } } }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Login code").performTextInput("12345")
+        tapText("Send")
+        assertEquals("code 12345", log.last())
+        // Logged in: the channels (one selected), its history, the capture window, log out - and a single OK.
+        step.value = com.optionslab.app.data.TelegramCapture.View(available = true, keys = true, loggedIn = true, capture = true,
+            auth = com.optionslab.engine.signals.TdSession.Auth.READY)
+        compose.waitForIdle()
+        compose.onNodeWithText("Choose channels (1 selected)").assertExists()
+        tap("History of Sensex Kings")
+        assertEquals("history -1001", log.last())
+        tapText(keepNumbersWhole("08:30-15:40"))
+        assertEquals("window 08:30-15:40", log.last())
+        tap("Log out of Telegram")
+        assertEquals("logout", log.last())
+        tapText("OK")
+        assertEquals("closed", log.last())
+    }
+
+    @Test fun aChatsDialogShowsItsMonthCheckAndItsClaims() {
+        val pv = com.optionslab.app.data.SignalPaperArm.View(on = mapOf(com.optionslab.app.data.SignalPaperArm.chatId("Sensex Kings") to true),
+            since = mapOf(com.optionslab.app.data.SignalPaperArm.chatId("Sensex Kings") to java.time.LocalDate.of(2026, 10, 15)))
+        val lines = monthLines(view, "Sensex Kings", pv, java.time.LocalDate.of(2026, 10, 20))
+        assertTrue(lines.first(), lines.first().startsWith("Month check (paper since 2026-10-15, day 6 of 30): did not pass: at least 40 triggered calls (0 paper trades)"))
+        assertTrue(lines.any { it.startsWith("✗ at least 40 triggered calls") })
+        assertTrue(channelLines(view, "Sensex Kings", pv).any { it.startsWith("Month check") })
+        assertTrue(channelLines(view, "Sensex Kings").any { it.startsWith("Claims accuracy:") })
+        val f = SignalTesterHost.Rec("s3", "Sensex Kings", t0.plusMinutes(9), SignalTesterHost.TELEGRAM, kind = SignalTesterHost.FOLLOW, text = "T1 done",
+            follow = CallParser.Reading.FollowUp(CallParser.Follow.TARGET, 1), link = "s1", verdict = com.optionslab.engine.signals.CallReader.Verdict.AFTER_STOP)
+        assertTrue(callLine(f).contains("follow-up: target hit (T1) - reached only after our stop · Telegram (read-only login)"))
+    }
 }

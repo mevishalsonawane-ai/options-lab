@@ -22,13 +22,20 @@ object ChannelScore {
 
     /** One message's part in the card. */
     data class Item(val kind: Kind, val byRules: Boolean = true, val triggered: Boolean? = null, val nets: Map<Variant, Double> = emptyMap(),
-                    val movedBefore: Boolean? = null, val preMove: Double? = null, val twins: List<Double> = emptyList(), val edited: Boolean = false)
+                    val movedBefore: Boolean? = null, val preMove: Double? = null, val twins: List<Double> = emptyList(), val edited: Boolean = false,
+                    /** A call edited after posting, seen live (its first text kept and scored, flagged). */
+                    val editedLater: Boolean = false,
+                    /** A follow-up's claim checked against the prices ([CallReader.verdict]); null: not a checked claim. */
+                    val verdict: CallReader.Verdict? = null)
 
     enum class Kind { CALL, FOLLOW_UP, NOT_A_CALL, REVIEW }
 
     data class Card(val channel: String, val messages: Int, val calls: Int, val followUps: Int, val notCalls: Int, val review: Int, val understood: Int,
                     val evaluated: Int, val triggered: Int, val wins: Int, val avgWin: Double?, val avgLoss: Double?, val net: Map<Variant, Double>,
-                    val maxDrawdown: Double, val movedBefore: Int, val preMoveAvg: Double?, val p: Double?) {
+                    val maxDrawdown: Double, val movedBefore: Int, val preMoveAvg: Double?, val p: Double?,
+                    val claimsConfirmed: Int = 0, val claimsNotReached: Int = 0, val claimsAfterStop: Int = 0, val editedLater: Int = 0) {
+        /** The channel's target and stop claims checked against the prices. */
+        val claims: Int get() = claimsConfirmed + claimsNotReached + claimsAfterStop
         /** Calls and follow-ups understood without Boss's help, of all that looked like calls. */
         val parseRate: Double? get() = (calls + followUps + review).let { if (it == 0) null else understood.toDouble() / it }
         val triggeredRate: Double? get() = if (evaluated == 0) null else triggered.toDouble() / evaluated
@@ -55,7 +62,9 @@ object ChannelScore {
         return Card(channel, items.size, calls.size, items.count { it.kind == Kind.FOLLOW_UP }, items.count { it.kind == Kind.NOT_A_CALL },
             items.count { it.kind == Kind.REVIEW }, items.count { (it.kind == Kind.CALL || it.kind == Kind.FOLLOW_UP) && it.byRules },
             scored.size, trig.size, wins.size, wins.takeIf { it.isNotEmpty() }?.average(), losses.takeIf { it.isNotEmpty() }?.average(), net, dd,
-            scored.count { it.movedBefore == true }, pre.takeIf { it.isNotEmpty() }?.average(), p)
+            scored.count { it.movedBefore == true }, pre.takeIf { it.isNotEmpty() }?.average(), p,
+            items.count { it.verdict == CallReader.Verdict.CONFIRMED }, items.count { it.verdict == CallReader.Verdict.NOT_REACHED },
+            items.count { it.verdict == CallReader.Verdict.AFTER_STOP }, calls.count { it.editedLater })
     }
 
     fun rs(x: Double): String = (if (x < 0) "−₹" else "+₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
@@ -74,6 +83,11 @@ object ChannelScore {
         "Average win ${c.avgWin?.let { rs(it) } ?: "–"}, average loss ${c.avgLoss?.let { rs(it) } ?: "–"} (with a stop).",
         "Would-be net after slippage and charges, 1 lot: " + Variant.entries.filter { it in c.net }.joinToString(" · ") { "${it.label} ${rs(c.net.getValue(it))}" } + ".",
         "Deepest drawdown ${rs(-c.maxDrawdown)}.",
+        // 15 Oct (Boss): what the channel said about its own calls ("T1 done", ticks, "SL hit"), checked against the real prices.
+        if (c.claims == 0) "Claims accuracy: no target or stop claims checked yet."
+        else "Claims accuracy: of ${c.claims} hits the channel claimed, ${c.claimsConfirmed} confirmed by the real prices, " +
+            "${c.claimsNotReached} not reached, ${c.claimsAfterStop} reached only after our stop.",
+        if (c.editedLater > 0) "${c.editedLater} call${if (c.editedLater == 1) " was" else "s were"} edited after posting (scored as first posted)." else null,
         "Price already moved before the call: ${pct(c.movedShare)} of tested calls" +
             (c.preMoveAvg?.let { ", the underlying ${String.format(Locale.ENGLISH, "%+.2f%%", it)} on average in the 3 minutes before" } ?: "") + ".",
         if (c.p != null) "Against random entries on the same day and contract: p ${String.format(Locale.ENGLISH, "%.3f", c.p)} (${c.triggered} calls)."

@@ -65,7 +65,7 @@ class MemoryTrimTest : RobolectricTest() {
         val done = MemoryTrim.release(all, MemoryPlan.COMPLETE)
         assertEquals(all, done)
         val line = MemoryTrim.lastLine.orEmpty()
-        assertTrue(line, line.startsWith("background trim (level 80): let go the language model, the research index"))
+        assertTrue(line, line.startsWith("background trim (level 80): let go the language model, the Telegram reader, the research index"))
         assertTrue(line, line.endsWith("the position watch untouched"))
         // A level that lets nothing go: nothing runs, nothing counted.
         MemoryTrim.resetForTest()
