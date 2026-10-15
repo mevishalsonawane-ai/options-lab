@@ -172,3 +172,11 @@ hid 15:15 straddle prices and so un-flagged expiry days (NIFTY 99 -> 71), which 
 re-selection, not a re-pricing. The expiry test now reads its 15:15 straddle from the same rows as the ATM label (after
 the foreign step, before the stray step), as point 3 already does for the ATM strike. Result: the cleaned stores carry
 exactly the original expiry days for every index; the ATM label changes on 22 FINNIFTY days (foreign rows) only.
+
+**Third note (15 Oct 2026, before any number of these variants was seen).** The 10 near-misses of the F1, R41 and B2
+families (F1-C1, F1-C1-RT, F1-S7, F1-S7-RT, R41-R1, R41-R2, R41-R2-RT, R41-R5, R41-R5-RT, B2-G60-RT) read the brain
+feature store, which R51 built from the lake from June 2023 and which is itself computed from the uncleaned option
+chain. It is not in this session, and rebuilding it needs option data before this amendment's window. They are not
+re-priced and keep their original p in the BH. The re-priced set is the passing rule and 16 near-misses (the R44 and R29
+families). R29 reads index bars from 2023 for warm-up only (as in R51); on the current lake its design reproduces
+exactly (R29-R3: 200 trades, -Rs 5,826; R29-R8: 987, -Rs 188,223).

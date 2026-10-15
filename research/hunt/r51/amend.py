@@ -29,6 +29,9 @@ lakeclean = r51data.lakeclean
 PASSING = "R44-donchian20-RT"
 NEAR_Q = 0.20
 NON_INDEX = {"m4"}                      # MCX: no index to check a row's spot against (keeps its original numbers)
+# Third note to Amendment A: these families read the brain feature store, built from the lake from Jun 2023 (outside
+# this amendment's data window) and itself computed from the uncleaned chain; they keep their original numbers.
+NEEDS_BRAIN = {"f1", "r41", "b2"}
 OUT_JSON = K.RESULTS / "amend_clean.json"
 OUT_MD = K.RESULTS / "amend_clean.md"
 PREREG = K.HERE / "PREREG.md"
@@ -43,7 +46,8 @@ def targets(final: dict, design: dict) -> list[str]:
     """The passing variant(s) plus every gated, failed index-option variant with final q <= NEAR_Q."""
     out = []
     for n, f in final.items():
-        if design[n]["kind"] == "ref" or f.get("q") is None or design[n].get("module") in NON_INDEX:
+        if (design[n]["kind"] == "ref" or f.get("q") is None
+                or design[n].get("module") in NON_INDEX | NEEDS_BRAIN):
             continue
         if f.get("pass") or f["q"] <= NEAR_Q:
             out.append(n)

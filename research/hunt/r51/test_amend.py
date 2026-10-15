@@ -188,7 +188,9 @@ def test_requalify_reproduces_the_committed_q():
     q = A.requalify(fin, des, {})
     assert len(q) == 125
     assert all(abs(q[n] - fin[n]["q"]) < 1e-4 for n in q)
-    assert len(A.targets(fin, des)) == 27 and A.targets(fin, des)[0] == A.PASSING
+    t = A.targets(fin, des)
+    assert len(t) == 17 and t[0] == A.PASSING
+    assert not any(n.startswith(("F1-", "R41-", "B2-", "M4-")) for n in t)
 
 
 def test_check_key_refusals(tmp_path, monkeypatch):
