@@ -73,6 +73,8 @@ fun StrategiesScreen(model: AppModel) {
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val list by model.strategies.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val log by model.strategyLog.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // 15 Oct (Boss's cleanup): the Hidden arms list is reachable from here too.
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
 
     com.optionslab.app.ui.PollWhileStarted {
         model.refreshStrategies()
@@ -94,6 +96,7 @@ fun StrategiesScreen(model: AppModel) {
         },
         presets = { PresetsCard(model) },
         reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
+        hiddenArms = if (hidden.done) { { HiddenArmsEntry() } } else null,
     )
 }
 
@@ -115,6 +118,8 @@ internal interface StrategyActions {
 internal fun StrategiesContent(
     liveAllowed: Boolean, list: List<Strategies.Entry>, log: List<Strategies.LogLine>, actions: StrategyActions,
     presets: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
+    /** The Hidden arms list's line (15 Oct; [HiddenArmsEntry] in the app); null: none. */
+    hiddenArms: (@Composable () -> Unit)? = null,
 ) {
     val p = LocalPalette.current
     var editing by remember { mutableStateOf<StrategyDef?>(null) }
@@ -130,6 +135,7 @@ internal fun StrategiesContent(
             }
         }
         item { presets() }
+        hiddenArms?.let { h -> item { LedgerCard { h() } } }
         if (list.isEmpty()) item { LedgerCard { Note("No strategies yet.") } }
         list.forEach { e -> item(key = e.def.id) { StrategyCard(actions, e, liveAllowed, onEdit = { editing = e.def }, onLive = { confirmLive = e.def.id }) } }
         if (log.isNotEmpty()) item {

@@ -50,7 +50,16 @@ class LiquidityTestCardTest {
             LiquidityTestLines(view(), onWatched = { watched = it }, onReenable = {})
         } } }
         compose.waitForIdle()
+        // COMPACT (15 Oct): the freeze said short; a tap shows its words in full, OK closes them.
+        assertTrue(shows(FROZEN_SHORT))
+        assertFalse(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
+        compose.onNodeWithText(FROZEN_SHORT).performClick()
+        compose.waitForIdle()
         assertTrue(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
+        compose.onNodeWithText("OK").performClick()
+        compose.waitForIdle()
+        assertFalse(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
+        // The live stop rule (the account stop) stays on the row.
         assertTrue(shows("would not have stopped", sub = true))
         assertFalse("no re-enable while it runs", shows(REENABLE_LIVE))
         // The checklist is folded: its count in sight, the lines behind the tap.

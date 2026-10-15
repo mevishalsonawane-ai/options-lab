@@ -190,6 +190,6 @@ object ArmsCleanup {
         return LiqPlan(parked.intersect(LIQ_INDICES.toSet()), on)
     }
 
-    /** The label an index's books carry once the cleanup switched them on. */
-    fun liqOnWords(index: String): String = "on, paper only - Boss's choice (15 Oct); never cleared for Zerodha by this change ($index)"
+    /** The label an index's books carry once the cleanup switched them on (never cleared for Zerodha by this change). */
+    const val LIQ_ON = "on, paper only - Boss's choice (15 Oct)"
 }

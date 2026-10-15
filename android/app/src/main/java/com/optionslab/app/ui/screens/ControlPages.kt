@@ -80,9 +80,10 @@ fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean)
     // The whole row is the switch: a 48 dp target (the bare switch was 52x32 dp) read with its title by TalkBack.
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = checked, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange)
         .padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = Type.body.copy(color = p.ink))
-            if (sub != null) Text(sub, style = Type.italic.copy(color = p.inkSoft, fontSize = 13.sp))
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = Type.body.copy(color = p.ink), modifier = Modifier.weight(1f, fill = false))
+            // COMPACT (15 Oct, Boss): the setting's explanation is in its own small dialog (the ⓘ beside it), not under the row.
+            if (sub != null) AboutButton(title, listOf(sub))
         }
         Spacer(Modifier.width(8.dp))
         Switch(checked, null, colors = SwitchDefaults.colors(

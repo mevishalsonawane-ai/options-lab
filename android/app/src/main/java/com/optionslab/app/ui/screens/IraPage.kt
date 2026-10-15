@@ -1154,35 +1154,38 @@ fun JarvisSettingsPage() {
 @Composable
 private fun SoloCard() {
     val p = LocalPalette.current
-    LedgerCard(title = "Solo: Jarvis trades by himself (paper)") {
+    LedgerCard {
         // Solo's own state, not a copy: it shows off once Solo has switched itself off (the forward test's bar).
         val on by com.optionslab.app.ira.IraSolo.onState.collectAsState()
         LaunchedEffect(Unit) { com.optionslab.app.ira.IraSolo.refreshOn() }
+        // The forward test set in advance and the "not proven" label: in the name's dialog (COMPACT, 15 Oct), with its rules.
+        val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(if (on) "Solo (midday) is on" else "Solo (midday) is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                Text("Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30.",
-                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                ExplainedName("Solo: Jarvis trades by himself (paper)", listOf(SOLO_RULES) + lines,
+                    style = Type.title.copy(color = p.ink, fontSize = 16.sp))
+                Text(if (on) "Solo (midday) is on · paper only" else "Solo (midday) is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
             }
-            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.switch(v) })
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.switch(v) },
+                modifier = Modifier.semantics { contentDescription = "Paper only: switch Solo (midday)" })
         }
         // The forward test at a glance (read off the main thread, again on each switch; never in GOLD).
         var glance by remember { mutableStateOf<SoloGlanceRead?>(null) }
         SoloForwardGlance(on, onRead = { glance = it }) { readSoloGlance(on) }
-        // The forward test set in advance, and the "not proven" label (the lines the glance shows are left out under it -
-        // only once it has been read; while it is not, or cannot be, the card keeps them).
-        val shown = glance
-        val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
-        lines.filter { com.optionslab.app.BuildConfig.GOLD || shown == null || !com.optionslab.ira.SoloProgress.shownAtAGlance(it) }.forEach { Note(it) }
         val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
         Note(rec)
         // The trade manager on Solo's newest trade: its lock (Solo has no target to extend), an early exit, against the original rules.
         val managed by com.optionslab.app.data.TradeManagerHost.records.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         managed.lastOrNull { it.trade.family == "solo" }?.let { Note(com.optionslab.ira.TradeManager.cardLine(it)) }
         // Why it switched itself off: said once - the glance's own line when it shows one, else the kept note.
-        if (shown?.glance?.offLine == null) com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
+        if (glance?.glance?.offLine == null) com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
     }
 }
+
+/** Solo (midday)'s rules (its name's dialog). */
+internal const val SOLO_RULES = "Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY or FINNIFTY) that has moved " +
+    "half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, " +
+    "one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30."
 
 /**
  * Jarvis's health (the owner's wish, 2026-10-03): everything it does by itself, each with its own switch and when it
@@ -1195,13 +1198,19 @@ internal fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupO
     var own by remember { mutableStateOf(com.optionslab.app.ira.Automations.ownSwitch(a)) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 6.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(a.label, style = Type.label.copy(color = if (groupOn) p.ink else p.inkSoft, fontSize = 13.sp))
+            // COMPACT (15 Oct, Boss): a tap on the setting's name shows only its explanation, in its own dialog with OK.
+            ExplainedName(a.label, listOf(a.what), style = Type.label.copy(color = if (groupOn) p.ink else p.inkSoft, fontSize = 13.sp))
             val group = com.optionslab.app.ira.Automations.groupOf(a)?.label ?: "Its group"
-            Text(a.what + (if (groupOn) "" else " ($group is off: this stays quiet.)"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            if (!groupOn) Text("($group is off: this stays quiet.)", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         }
         androidx.compose.material3.Switch(checked = own, onCheckedChange = { v -> own = v; com.optionslab.app.ira.Automations.set(a, v) })
     }
 }
+
+/** What the Jarvis switches' "How these switches work" opens (15 Oct, compact). */
+internal const val AUTOMATIONS_NOTE = "Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper " +
+    "(Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops."
+internal const val AUTOMATIONS_ALWAYS = "Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice."
 
 @Composable
 private fun AutomationsCard() {
@@ -1228,7 +1237,9 @@ private fun AutomationsCard() {
                 })
             }
         }
-        Note("Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper (Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops.")
+        // COMPACT (15 Oct): how these switches work, in a small dialog.
+        ExplainedName("How these switches work", listOf(AUTOMATIONS_NOTE, AUTOMATIONS_ALWAYS),
+            style = Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
         com.optionslab.app.ira.Automations.Group.entries.forEach { g ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(g)) }
             val last = remember(on) { com.optionslab.app.ira.Automations.last(g) }
@@ -1236,8 +1247,7 @@ private fun AutomationsCard() {
             com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.groupKey(g)) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                     Column(Modifier.weight(1f)) {
-                        Text(g.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                        Text(g.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                        ExplainedName(g.label, listOf(g.what), style = Type.label.copy(color = p.ink, fontSize = 14.sp))
                         Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
                             style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
                     }
@@ -1254,7 +1264,7 @@ private fun AutomationsCard() {
             }
             g.subs.forEach { a -> com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.subKey(a)) { AutomationSubRow(a, groupOn = on) } }
         }
-        Note("Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice.")
+
     }
 }
 

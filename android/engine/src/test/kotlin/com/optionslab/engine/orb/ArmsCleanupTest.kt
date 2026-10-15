@@ -136,7 +136,7 @@ class ArmsCleanupTest {
         assertTrue(ArmsCleanup.HIDDEN_WORDS.contains("15 Oct"))
         assertTrue(ArmsCleanup.WAITING.contains("open position"))
         assertTrue(ArmsCleanup.NIFTY_NOTE.contains("765 trades"))
-        assertTrue(ArmsCleanup.liqOnWords("FINNIFTY").contains("paper only"))
+        assertTrue(ArmsCleanup.LIQ_ON.contains("paper only") && ArmsCleanup.LIQ_ON.contains("Boss's choice"))
         assertEquals("arms_cleanup_2026_10_15", ArmsCleanup.MIGRATION)
         assertEquals("liquidity_four_2026_10_15", ArmsCleanup.LIQ_MIGRATION)
     }

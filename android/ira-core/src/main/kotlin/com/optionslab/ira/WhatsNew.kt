@@ -57,6 +57,20 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-15-arms-cleanup", OCT15, "Fewer arms: the others switched off and hidden",
+            "On your choice, a short list of arms keeps running as today. " +
+                "Liquidity 15+5 on BANKNIFTY, FINNIFTY and MIDCPNIFTY, the Hero ₹1,000 ticket, R51, R52, Solo 2.0 and the Watchlist stay. " +
+                "Solo midday and the MCX paper arms stay too. " +
+                "Every other automatic trader is switched off and hidden, its code, settings and trades kept. " +
+                "One holding a position keeps trading it to its own exit first. " +
+                "FINNIFTY is back on with Liquidity, on paper, as your choice; NIFTY has no Liquidity book (it failed research). " +
+                "Each one comes back in one tap from the Hidden arms list.",
+            "Home → Strategies → Hidden arms (one tap restores each); every switch-off and restore is also in " +
+                "Home → Automation card → Autopilot → Change log"),
+        Entry("2026-10-15-compact-rows", OCT15, "Shorter strategy rows: tap a name for its details",
+            "Each strategy row now shows just its name, one status line, its key numbers and its switch. " +
+                "Tap the name for its rules, settings and research notes in a small box with one OK button.",
+            "Home → Strategies, the MCX card, the Liquidity cards, Strategy lab and Autopilot: tap an arm's name"),
         Entry("2026-10-15-passed-paper-arms", OCT15, "Three paper arms that passed research",
             "R51 Donchian 20, R52 Open outside value and Solo 2.0 now trade on paper, 1 lot each. " +
                 "They passed every research gate, so your paper rule switches them on at once. " +

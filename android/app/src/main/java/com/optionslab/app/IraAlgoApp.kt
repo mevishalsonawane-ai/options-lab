@@ -110,6 +110,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
         com.optionslab.app.data.PositionsFirst.start(this)
+        // Boss's 15 Oct arms cleanup: its small file read on its own worker; its first pass waits for the positions step above.
+        com.optionslab.app.data.HiddenArms.init(this)
         com.optionslab.app.data.LiveRecorder.init(this)
         // The OI-wall shadow log (14 Oct, Boss approved; R26): names its encrypted file only (a record, never an order).
         com.optionslab.app.data.OiWallShadowHost.init(this)

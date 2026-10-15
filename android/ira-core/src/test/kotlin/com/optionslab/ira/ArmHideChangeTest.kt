@@ -81,4 +81,19 @@ class ArmHideChangeTest {
         assertEquals(AutoChange.ON, AutoChange.undo(b, hide.id)!!.inverse.to)
         assertEquals(AutoChange.PARKED, AutoChange.undo(b, liq.id)!!.inverse.to)
     }
+
+    @Test fun onlyTheNewestEntryOfAnArmUndoes() {
+        var b = AutoChange.Book()
+        val (b1, hide) = AutoChange.record(b, AutoChange.armHidden("pine_auto", "Pine", true), AutoChange.Status.KEPT, 1_000L, day, by = "your choice")
+        val (b2, restore) = AutoChange.record(b1, AutoChange.armRestored("pine_auto", "Pine"), AutoChange.Status.KEPT, 2_000L, day, by = "your choice")
+        b = b2
+        assertTrue(AutoChange.superseded(b, AutoChange.entry(b, hide.id)!!))
+        assertNull(AutoChange.undo(b, hide.id), "the older switch-off no longer undoes")
+        assertFalse(AutoChange.superseded(b, AutoChange.entry(b, restore.id)!!))
+        assertEquals(AutoChange.HIDDEN, AutoChange.undo(b, restore.id)!!.inverse.to)
+        // Another arm's entries are its own.
+        val (b3, other) = AutoChange.record(b, AutoChange.armHidden("orb", "ORB", false), AutoChange.Status.KEPT, 3_000L, day, by = "your choice")
+        assertFalse(AutoChange.superseded(b3, AutoChange.entry(b3, restore.id)!!))
+        assertFalse(AutoChange.superseded(b3, AutoChange.entry(b3, other.id)!!))
+    }
 }

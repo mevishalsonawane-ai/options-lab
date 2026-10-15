@@ -67,6 +67,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val botStopWhy by model.botStopWhy.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val dayLock by model.dayLockLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val paperSince by model.paperSinceLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // 15 Oct (Boss's cleanup): the scheduled strategies' rows are hidden once none runs; the Hidden arms list restores them.
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     StrategyArmContent(
         live = s.live, killOn = s.guardKill, all = all, auto = auto, pending = pending, botStopped = botStopped,
         actions = object : StrategyArmActions {
@@ -90,8 +92,14 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
         // Home's Automation card, each opening its section ([AutomationHomeCard]).
         nightRow = { NightRow(); VixDivRow(); HeroTicketRow(); PassedArmRows(); WatchlistCard() },
+        basketsVisible = com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.BASKETS),
+        hiddenArms = { HiddenArmsEntry() },
     )
 }
+
+/** What the Strategies card's title opens (15 Oct, compact rows). */
+internal const val STRATEGIES_NOTE = "Each arm's row shows its name, status, key numbers and switch; tap a name for its rules, research and notes."
+internal const val AUTO_NOTE = "AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves."
 
 /** Home's MCX paper bots, a card of their own under the Strategies card (11 Oct). */
 @Composable
@@ -131,10 +139,14 @@ internal fun StrategyArmContent(
     nightRow: @Composable () -> Unit = {},
     /** The MCX paper bots' "MCX (commodities)" group, paper only ([McxArmRows] in the app); nothing by default. */
     mcxRows: @Composable () -> Unit = {},
+    /** 15 Oct (Boss's cleanup): false hides the saved strategies' rows (scheduled strategies hidden, none running). */
+    basketsVisible: Boolean = true,
+    /** The Hidden arms list's line ([HiddenArmsEntry] in the app); nothing by default. */
+    hiddenArms: @Composable () -> Unit = {},
 ) {
     val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
-    val list = all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) }
+    val list = if (basketsVisible) all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) } else emptyList()
     val replaced = all.size - list.size
     var importing by remember { mutableStateOf(false) }
     // Arming asks how orders should go out; a live choice is then confirmed with the PIN or fingerprint.
@@ -145,7 +157,8 @@ internal fun StrategyArmContent(
 
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Strategies", style = Type.title.copy(color = p.ink, fontSize = 16.sp), modifier = Modifier.weight(1f))
+            // COMPACT (15 Oct): how the switches work is in the title's dialog.
+            ExplainedName("Strategies", listOfNotNull(paperSince, STRATEGIES_NOTE, AUTO_NOTE), Modifier.weight(1f), style = Type.title.copy(color = p.ink, fontSize = 16.sp))
             Text("Import from desktop", style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.clickable { importing = true }.padding(4.dp))
         }
@@ -163,10 +176,10 @@ internal fun StrategyArmContent(
         }
         // The account day lock (08 Oct): reached today, new automatic entries wait for tomorrow; open positions keep their exits.
         dayLock?.let { Note(it, Modifier.padding(top = 6.dp)) }
-        // The paper account's net since the start date (Settings → Bot settings): words only.
-        paperSince?.let { Note(it, Modifier.padding(top = 6.dp)) }
+        // (The paper account's net since the start date is in the title's dialog: 15 Oct, compact.)
         orbRows()
         nightRow()
+        hiddenArms()
         if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Research → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
@@ -230,8 +243,6 @@ internal fun StrategyArmContent(
                 }
             }
         }
-        if (list.isNotEmpty()) Note("AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves.",
-            Modifier.padding(top = 4.dp))
         // The MCX paper bots (9 Oct, Boss: "it should be on home screen"): their own group, last, so no NSE row reads as MCX.
         mcxRows()
     }

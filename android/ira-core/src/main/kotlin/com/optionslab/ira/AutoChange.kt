@@ -839,9 +839,10 @@ object AutoChange {
      * review: undoing an older one would set the switch against what the newest entry shows). Every other change: false.
      */
     fun superseded(book: Book, e: Entry): Boolean {
-        if (e.change.kind != Kind.LIQ_TRAIL) return false
+        // 15 Oct: an arm hidden, restored and hidden again ([Kind.ARM_HIDE]) likewise - only its newest entry undoes.
+        if (e.change.kind != Kind.LIQ_TRAIL && e.change.kind != Kind.ARM_HIDE) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
-        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == Kind.LIQ_TRAIL && it.change.target == e.change.target }
+        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }
 
     /** What Boss is told when he taps Undo on a [superseded] flip of his trail switch. */

@@ -91,7 +91,8 @@ internal fun AutopilotCardContent(book: AutoChange.Book, mode: AutoChange.Mode, 
     val s = remember(book, today) { AutoChange.summary(book, today) }
     val todays = remember(book, today) { book.entries.filter { it.day == today && (it.applied || it.status == AutoChange.Status.OFFERED) }.takeLast(3).reversed() }
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(AUTOPILOT_TITLE, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+        // COMPACT (15 Oct): what Autopilot may change is in its name's dialog; its mode stays on the card.
+        ExplainedName(AUTOPILOT_TITLE, listOf(AUTOPILOT_NOTE))
         Note("Autopilot learning: ${mode.words}" + when (mode) {
             AutoChange.Mode.OFF -> " - nothing changes by itself."
             AutoChange.Mode.SHADOW_ONLY -> " - shadow changes by itself, the rest asked."
@@ -310,13 +311,17 @@ internal fun AutopilotSettingCard(model: AppModel) {
         onOk = { pin = false; set(AutoChange.Mode.SAFE, true) }, onCancel = { pin = false })
 }
 
+/** What Autopilot may change (its name's dialog, and the setting's). */
+internal const val AUTOPILOT_NOTE = "The agents make the changes their lessons point to, within strict bounds, each logged and undoable. SAFE: shadow and paper " +
+    "by themselves, live only to lower risk, anything that adds risk asked. SHADOW-ONLY: shadow by themselves, the rest asked. " +
+    "Never the PIN, Live, AI-live, the guard, the locks, sizes or orders. \"Turn off autopilot\" by voice always works; turning it up is only here."
+
 /** The setting's rows from plain state (tests drive it). */
 @Composable
 internal fun AutopilotModeContent(mode: AutoChange.Mode, said: String?, onPick: (AutoChange.Mode) -> Unit) {
     val order = listOf(AutoChange.Mode.OFF, AutoChange.Mode.SAFE, AutoChange.Mode.SHADOW_ONLY)
-    Note("The agents make the changes their lessons point to, within strict bounds, each logged and undoable. SAFE: shadow and paper " +
-        "by themselves, live only to lower risk, anything that adds risk asked. SHADOW-ONLY: shadow by themselves, the rest asked. " +
-        "Never the PIN, Live, AI-live, the guard, the locks, sizes or orders. \"Turn off autopilot\" by voice always works; turning it up is only here.")
+    // COMPACT (15 Oct): the levels explained in a small dialog.
+    ExplainedName("What each level may change", listOf(AUTOPILOT_NOTE), style = Type.bodySmall.copy(color = LocalPalette.current.ink, fontWeight = FontWeight.SemiBold))
     ParamTokens("Autopilot learning", order.map { (if (it == AutoChange.Mode.SHADOW_ONLY) "SHADOW-ONLY" else it.name) to (it == mode) }) { i -> onPick(order[i]) }
     said?.let { Note(it, Modifier.padding(top = 4.dp)) }
 }

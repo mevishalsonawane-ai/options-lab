@@ -349,6 +349,10 @@ object PineAuto {
      */
     suspend fun arm(id: Long, on: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val item = PineScripts.get(id) ?: return@withLock "not found"
+        // 15 Oct (Boss's cleanup): Pine auto-trading hidden - a script places orders again only after its restore (Hidden arms).
+        // Alerts-only scripts never trade and are not hidden.
+        if (on && item.auto.mode == "trade" && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.PINE))
+            return@withLock com.optionslab.engine.orb.ArmsCleanup.refusal("Pine auto-trading")
         // Boss's 06 Oct rule: a script that places orders switches on only with a stop-loss and a target.
         if (on) com.optionslab.ira.PineProtection.armRefusal(item.auto.mode, item.auto.stopPts, item.auto.targetPts)?.let { return@withLock it }
         // 14 Oct (Boss): the signal is read on the index chart, then the option is bought. An option's own chart, an MCX

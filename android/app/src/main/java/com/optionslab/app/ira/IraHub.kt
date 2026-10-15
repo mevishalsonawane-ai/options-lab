@@ -805,6 +805,13 @@ object IraHub {
     private suspend fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String,
                                      solo: Boolean = false) {
         if (GOLD_ONLY_TALK) return
+        // 15 Oct (Boss's cleanup): Jarvis's trade ideas are hidden - neither offered nor taken on paper; the news is still told.
+        // A restore from Home → Strategies → Hidden arms brings them back.
+        if (com.optionslab.app.data.HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.JARVIS)) {
+            if (source.startsWith("news")) reply(text)
+            IraActivity.add("Held back a ${idea.market.label} trade idea: Jarvis's trade ideas are hidden (your 15 Oct cleanup).")
+            return
+        }
         val m = idea.market
         // Boss's own rules in what he asked me to remember ("I don't trade BankNifty", "no trades before 9:30"): the
         // idea is neither offered nor taken (the news itself is still told).

@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,36 +46,45 @@ class FamilyParkRowsTest {
     }
 
     private fun tap(text: String) { compose.onNodeWithText(text).performClick(); compose.waitForIdle() }
+    /** COMPACT (15 Oct): a parked arm's switch-back is in its own dialog. */
+    private fun switchBack(label: String) { compose.onNodeWithContentDescription("About $label").performClick(); compose.waitForIdle(); tap("Switch $label back on") }
 
     @Test fun eachParkedArmSaysSoWithItsRecord() {
         rows(parked())
         for (a in FamilyPark.ARMS) {
-            compose.onNodeWithTag("orb-line:${a.source}", useUnmergedTree = true).assertTextEquals(keepNumbersWhole(FamilyPark.rowLine(a.source)))
+            // COMPACT (15 Oct): the row says it is parked; its tested record is in its name's dialog.
+            compose.onNodeWithTag("orb-line:${a.source}", useUnmergedTree = true).assertTextEquals(FamilyPark.ROW)
+            compose.onNodeWithText("Switch ${a.label} back on").assertDoesNotExist()
+            compose.onNodeWithContentDescription("About ${a.label}").performClick(); compose.waitForIdle()
+            compose.onNodeWithText(keepNumbersWhole(FamilyPark.rowLine(a.source) + ".")).assertExists()
             compose.onNodeWithText("Switch ${a.label} back on").assertExists()
+            compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
         }
         assertTrue(FamilyPark.rowLine("orb").startsWith("parked on your choice (13 Oct)"))
-        // Liquidity and the Hero arm are untouched: no park line, no tap.
+        // Liquidity and the Hero arm are untouched: no park line, no tap (not even in their own dialogs).
+        compose.onNodeWithContentDescription("About Liquidity 15+5").performClick(); compose.waitForIdle()
         compose.onNodeWithText("Switch Liquidity 15+5 back on").assertDoesNotExist()
+        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
         compose.onNodeWithText("Switch Hero (expiry) back on").assertDoesNotExist()
         assertTrue("nothing done by just showing it", rec.calls.isEmpty())
     }
 
     @Test fun oneTapSwitchesOrbBackOnThroughTheUsualChoice() {
         rows(parked())
-        tap("Switch ORB back on")
+        switchBack("ORB")
         compose.onNodeWithText("Arm ORB (paper)").assertExists()
         assertTrue("nothing armed before Boss chooses", rec.calls.isEmpty())
         tap("Ask me to approve")
         // ORB Sweep and Range Fade are paper only: armed at once, as by their switch.
-        tap("Switch ORB Sweep back on")
-        tap("Switch Range Fade back on")
+        switchBack("ORB Sweep")
+        switchBack("Range Fade")
         assertEquals(listOf("orb arm orb on=true auto=false pin=false", "orb arm orb_sweep on=true auto=true pin=false",
             "orb arm range_fade on=true auto=true pin=false"), rec.calls)
     }
 
     @Test fun inLiveTheTapStillTakesThePin() {
         rows(parked(), live = true)
-        tap("Switch ORB Fresh back on")
+        switchBack("ORB Fresh")
         compose.onNodeWithText("Arm ORB Fresh (LIVE)").assertExists()
         tap("Automatic")
         assertTrue("nothing armed before the PIN", rec.calls.isEmpty())
@@ -85,13 +95,17 @@ class FamilyParkRowsTest {
     @Test fun aParkedArmHoldingAPositionSaysItIsStillManaged() {
         rows(parked(orbOpen = true))
         compose.onNodeWithText("IN TRADE · PAPER").assertExists()
+        compose.onNodeWithContentDescription("About ORB").performClick(); compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("${FamilyPark.ROW}: its open position is still managed to its exit.")).assertExists()
         compose.onNodeWithText("Switch ORB back on").assertExists()
     }
 
     @Test fun anArmSwitchedBackOnShowsNoParkLine() {
         rows(parked(except = setOf("orb")))
+        compose.onNodeWithContentDescription("About ORB").performClick(); compose.waitForIdle()
         compose.onNodeWithText("Switch ORB back on").assertDoesNotExist()
+        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About ORB Fresh").performClick(); compose.waitForIdle()
         compose.onNodeWithText("Switch ORB Fresh back on").assertExists()
     }
 }

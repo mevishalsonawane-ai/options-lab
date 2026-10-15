@@ -57,10 +57,29 @@ internal fun McxArmRows(divider: Boolean = true) {
 internal fun McxArmsGroup(v: McxPaperArms.View, divider: Boolean = true, onArm: (String, Boolean) -> Unit) {
     val p = LocalPalette.current
     if (divider) Rule()
-    Text(MCX_GROUP, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.padding(top = if (divider) 10.dp else 0.dp))
-    Note("Research ideas on paper only: none is proven. 1 lot each, never sent to Zerodha, off until you switch one on.",
-        Modifier.padding(bottom = 4.dp))
+    // COMPACT (15 Oct): the group's note is in its name's dialog.
+    ExplainedName(MCX_GROUP, listOf(MCX_NOTE), Modifier.padding(top = if (divider) 4.dp else 0.dp), style = Type.title.copy(color = p.ink, fontSize = 15.sp))
     McxPaperArms.ARMS.forEach { arm -> McxArmRow(arm, v, onArm) }
+}
+
+/** What the MCX group's name opens. */
+internal const val MCX_NOTE = "Research ideas on paper only: none is proven. 1 lot each, never sent to Zerodha, off until you switch one on."
+
+/** What an MCX bot's name opens: its label, research (first), rules, paper test, its last decision and why it was switched off. */
+internal fun mcxExplanation(arm: String, v: McxPaperArms.View): List<String> = listOfNotNull(
+    McxArmRules.NOT_PROVEN + ".",
+    McxPaperArms.record(arm),
+    McxPaperArms.rules(arm),
+    com.optionslab.ira.Vetting.judge(McxPaperArms.label(arm), v.trades[arm].orEmpty(), runCatching { com.optionslab.app.data.Market.today() }.getOrNull()).text(),
+    v.status[arm]?.takeIf { v.isArmed(arm) },
+    com.optionslab.engine.mcx.McxMorningPark.ROW.takeIf { !v.isArmed(arm) && arm in v.parked },
+)
+
+/** Its key numbers: its closed paper trades and their net after charges. */
+internal fun mcxNumbers(arm: String, v: McxPaperArms.View): String {
+    val t = v.trades[arm].orEmpty()
+    val net = t.sumOf { it.net }
+    return "Paper: ${t.size} trade${if (t.size == 1) "" else "s"}, ${if (net < 0) "−₹" else "+₹"}${"%,.0f".format(Locale.ENGLISH, kotlin.math.abs(net))}"
 }
 
 @Composable
@@ -69,29 +88,18 @@ private fun McxArmRow(arm: String, v: McxPaperArms.View, onArm: (String, Boolean
     val on = v.isArmed(arm)
     val open = v.open.filter { it.arm == arm }
     Rule()
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(McxPaperArms.label(arm), style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-            Text(McxArmRules.NOT_PROVEN, style = Type.label.copy(color = p.amber, fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(top = 2.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(50)).padding(horizontal = 7.dp, vertical = 2.dp))
-            // The research numbers first, then the rules.
-            Text(keepNumbersWhole(McxPaperArms.record(arm)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp),
-                modifier = Modifier.padding(top = 4.dp))
-            Text(keepNumbersWhole(McxPaperArms.rules(arm)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-            Text(if (on) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (on) p.verdigris else p.inkFaint, fontSize = 10.sp,
-                fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
-            // Where its paper test stands ("too early (3/60, 2/40)", against its own backtest, from 13 Oct), on every closed trade the book keeps.
-            Text(keepNumbersWhole(com.optionslab.ira.Vetting.judge(McxPaperArms.label(arm), v.trades[arm].orEmpty(),
-                runCatching { com.optionslab.app.data.Market.today() }.getOrNull()).text()),
-                style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+            // COMPACT (15 Oct): name (tap: its label, research, rules, paper test and notes), state, key numbers, holdings.
+            ExplainedName(McxPaperArms.label(arm), mcxExplanation(arm, v))
+            Text(if (on) "ON · PAPER ONLY" else if (arm in v.parked) "OFF · switched off on your OK (14 Oct)" else "OFF",
+                style = Type.label.copy(color = if (on) p.verdigris else if (arm in v.parked) p.amber else p.inkFaint, fontSize = 10.sp,
+                fontWeight = FontWeight.Bold))
+            Text(keepNumbersWhole(mcxNumbers(arm, v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
             open.forEach { o ->
                 Text(keepNumbersWhole("${if (o.side > 0) "Long" else "Short"} ${o.symbol} · ${o.qty} @ %.2f · paper".format(Locale.ENGLISH, o.entry)),
                     style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
             }
-            if (on) v.status[arm]?.let { s -> Text(keepNumbersWhole(s), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp)) }
-            // 14 Oct (research R42, Boss's OK): switched off once; the row says why, and its switch turns it back on (paper only).
-            if (!on && arm in v.parked)
-                Text(keepNumbersWhole(com.optionslab.engine.mcx.McxMorningPark.ROW), style = Type.bodySmall.copy(color = p.amber, fontSize = 11.sp))
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "Paper only: switch ${McxPaperArms.label(arm)}" },

@@ -39,39 +39,43 @@ import java.util.Locale
  */
 @Composable
 internal fun NightRow() {
+    // 15 Oct (Boss's cleanup): hidden once it holds nothing; restored from the Hidden arms list.
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(Dispatchers.Main.immediate)
+    if (!com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.NIGHT)) return
     val v by NightArm.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { NightArm.refresh() } } }
     NightRowContent(v) { on -> scope.launch(Dispatchers.IO) { runCatching { NightArm.setArmed(on) } } }
 }
 
-/** The row from plain state ([v]) and the switch's callback. */
+/** What Night (R3)'s name opens: its rules, research and label, and each index's last decision. */
+internal fun nightExplanation(v: NightArm.View): List<String> = listOf(
+    NightRules.RULES + ".",
+    "Research: pre-holdout Rs ${NightRules.PRE_PER_DAY}/day, holdout Rs ${NightRules.HOLD_PER_DAY}/day · not proven.",
+    "Paper only: it never trades on Zerodha.",
+) + v.status.toSortedMap().map { (idx, s) -> "$idx: $s" }
+
+/** The row from plain state ([v]) and the switch's callback. COMPACT (15 Oct): name (tap: the explanation), badge, holdings. */
 @Composable
 internal fun NightRowContent(v: NightArm.View, onArm: (Boolean) -> Unit) {
     val p = LocalPalette.current
     Rule()
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(NightRules.LABEL, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+                ExplainedName(NightRules.LABEL, nightExplanation(v))
                 Spacer(Modifier.width(8.dp))
                 val (label, color) = when {
                     v.open.isNotEmpty() -> "HOLDING OVERNIGHT · PAPER" to p.verdigris
-                    v.armed -> "ARMED · PAPER ONLY · NOT PROVEN" to p.amber
+                    v.armed -> "ARMED · PAPER ONLY" to p.amber
                     else -> "OFF" to p.inkFaint
                 }
-                Text(label, style = Type.label.copy(color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(50)).padding(horizontal = 7.dp, vertical = 2.dp))
+                RowBadge(label, color)
             }
-            Text(keepNumbersWhole(NightRules.RULES), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-            Text(keepNumbersWhole("Research: pre-holdout Rs ${NightRules.PRE_PER_DAY}/day, holdout Rs ${NightRules.HOLD_PER_DAY}/day · not proven"),
-                style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+            if (v.open.isEmpty()) Text(if (v.armed) "No position · decides at 15:20" else "Off", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             v.open.forEach { o ->
                 Text(keepNumbersWhole("${o.symbol} · ${o.qty} @ %.2f · sells 09:16".format(Locale.ENGLISH, o.entry)),
                     style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
-            }
-            if (v.armed) v.status.toSortedMap().forEach { (idx, s) ->
-                Text(keepNumbersWhole("$idx: $s"), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
             }
         }
         Switch(

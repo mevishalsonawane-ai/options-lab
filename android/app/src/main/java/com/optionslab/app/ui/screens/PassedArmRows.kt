@@ -103,25 +103,6 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     v.paused[source]?.let { "It switched itself off: $it. Switching it back on is your choice." },
 )
 
-/** A strategy's name that opens its explanation (one OK button). */
-@Composable
-internal fun ExplainedName(name: String, lines: List<String>) {
-    val p = LocalPalette.current
-    var open by remember { mutableStateOf(false) }
-    Text(name, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
-        modifier = Modifier.semantics { contentDescription = "About $name" }.clickable(role = Role.Button) { open = true })
-    if (open) com.optionslab.app.ui.components.AlertDialog(
-        onDismissRequest = { open = false },
-        title = { Text(name, style = Type.title) },
-        text = {
-            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                lines.forEach { Text(keepNumbersWhole(it), style = Type.bodySmall, modifier = Modifier.padding(bottom = 6.dp)) }
-            }
-        },
-        confirmButton = { com.optionslab.app.ui.components.TextButton({ open = false }) { Text("OK") } },
-    )
-}
-
 /** One arm's compact row from plain state ([v]) and its switch callback. */
 @Composable
 internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, onArm: (Boolean) -> Unit) {
@@ -131,9 +112,9 @@ internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, onArm: 
     Rule()
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            ExplainedName(label, passedExplanation(source, v))
+            // ONE status line (15 Oct, Boss); its record and forward-test numbers are in the name's dialog with its explanation.
+            ExplainedName(label, listOf(passedNumbersLine(source, v) + ".") + passedExplanation(source, v))
             Text(keepNumbersWhole(passedStatusLine(source, v)), style = Type.bodySmall.copy(color = if (on) p.verdigris else p.inkFaint, fontSize = 12.sp))
-            Text(keepNumbersWhole(passedNumbersLine(source, v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "Paper only: switch $label" },
@@ -185,10 +166,10 @@ internal fun WatchlistCardContent(v: WatchlistHost.View, onSwitch: (Boolean) -> 
     Rule()
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            ExplainedName("Watchlist (shadow)", watchExplanation(v))
+            // ONE status line (15 Oct, Boss); each rule's numbers are in the name's dialog.
+            ExplainedName("Watchlist (shadow)", v.cards.map { watchNumbers(it) } + watchExplanation(v))
             Text(if (v.on) "On · shadow, not traded · ${v.recs.count { !it.final }} open" else "Off",
                 style = Type.bodySmall.copy(color = if (v.on) p.verdigris else p.inkFaint, fontSize = 12.sp))
-            v.cards.forEach { Text(keepNumbersWhole(watchNumbers(it)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp)) }
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "Shadow only: switch the Watchlist" },

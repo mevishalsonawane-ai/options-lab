@@ -7,6 +7,7 @@ import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Arm
 import com.optionslab.engine.orb.ArmAccount
+import com.optionslab.engine.orb.ArmsCleanup
 import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.FamilyPark
 import com.optionslab.engine.orb.HeroRules
@@ -316,7 +317,7 @@ object OrbArms {
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
             return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
-                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION); cache = it; hints(it) }
+                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION); cache = it; hints(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -326,7 +327,7 @@ object OrbArms {
         hints(b)
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
         if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN, LiquidityLots.ONE_LOT_MIGRATION,
-            ParkedArms.MIGRATION, FamilyPark.MIGRATION)
+            ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone, then
         // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then the MIDCPNIFTY books
@@ -335,6 +336,8 @@ object OrbArms {
         // Then (08 Oct, research X1) a 2-lot size Boss never chose by hand goes back to 1 lot, told once.
         // Then (9 Oct, Boss's OK) Liquidity 15+5 FINNIFTY and ORB Sweep are parked: switched off once, on paper terms.
         // Then (13 Oct, Boss's choice) ORB, ORB Fresh, ORB Sweep and Range Fade are parked: switched off once, paper and live.
+        // (15 Oct, Boss's cleanup: Liquidity's FINNIFTY and MIDCPNIFTY books are kept on by [keepLiquidityFour], run once by the
+        // cleanup's worker after the start's positions step - never on this load.)
         if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b) or oneLot(b) or park(b) or
             parkFamily(b)) save(b)
         return b
@@ -691,6 +694,80 @@ object OrbArms {
         }
         return true
     }
+
+    /**
+     * Once, on this update (Boss's cleanup, 15 Oct 2026: [ArmsCleanup.liquidityPlan]): Liquidity 15+5 keeps its four indices' books
+     * as Boss chose - FINNIFTY unparked (9 Oct's park) and, when its switch is on, each FINNIFTY or MIDCPNIFTY book that is off
+     * switched on with the switch's automatic / approve choice, ON PAPER (never cleared for Zerodha: in Live their entries wait for
+     * Boss's approval until he arms Liquidity again with his PIN). Labelled "Boss's choice" on the books and logged in Autopilot's
+     * change timeline (one tap parks the index again). BANKNIFTY's books are never touched, so its plain-rules record stays
+     * separable for 26 Oct. A restore not yet disarmed switches nothing on; IraGoldAlgo nothing at all. Once (its key in the
+     * book's one-time changes; a new book starts with it done). Called by [HiddenArms]'s worker after the positions step, off the
+     * order path. The indices it changed (empty: nothing to do, or already done).
+     */
+    suspend fun keepLiquidityFour(): List<String> = lock.withLock {
+        val b = book()
+        if (ArmsCleanup.LIQ_MIGRATION in b.migrated) return@withLock emptyList()
+        b.migrated += ArmsCleanup.LIQ_MIGRATION
+        val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
+        if (com.optionslab.app.BuildConfig.GOLD) { save(b); return@withLock emptyList() }
+        val changed = liquidityFour(b, restoring)
+        save(b)
+        changed
+    }
+
+    private fun liquidityFour(b: Book, restoring: Boolean): List<String> {
+        val plan = ArmsCleanup.liquidityPlan(b.armed, b.parked, done = false, restoring = restoring) ?: return emptyList()
+        val automatic = LiquidityRules.BOOKS.filter { b.armed[it.source] == true }.all { b.auto[it.source] != false }
+        b.parked.removeAll(plan.unpark)
+        for (src in plan.on) {
+            b.armed[src] = true; b.auto[src] = automatic; b.liveOk[src] = false; b.pending.remove(src)
+            b.since[src] = now().toString()
+            // Switched on just now: the next decision takes only a fresh break, never one already under way.
+            b.watched.keys.removeAll { it.startsWith("$src|") }
+            b.status[src] = ArmsCleanup.LIQ_ON
+        }
+        val indices = (plan.unpark + plan.on.map { LiquidityRules.underlyingOf(armOf(it)) }).toSortedSet()
+        for (i in indices) {
+            runCatching { Diag.record("orb", "Liquidity 15+5 $i: " + ArmsCleanup.LIQ_ON +
+                (if (plan.on.none { LiquidityRules.underlyingOf(armOf(it)) == i }) "; its books come on with the switch" else "")) }
+            runCatching { com.optionslab.app.ira.Autopilot.logLiqIndexOn(i, parked = i in plan.unpark) }
+        }
+        return indices.toList()
+    }
+
+    /**
+     * The timeline's Undo of the 15 Oct change for [index] (FINNIFTY or MIDCPNIFTY): the index parked again - its books off, on
+     * paper terms (an open position is still managed to its exit; nothing is sold), switched back on from the row as before.
+     */
+    suspend fun parkLiquidity(index: String): String = lock.withLock {
+        if (index !in ArmsCleanup.LIQ_INDICES) return@withLock "Only FINNIFTY or MIDCPNIFTY can be parked here."
+        val b = book()
+        b.parked += index
+        for (a in ParkedArms.books(index)) {
+            b.armed[a.source] = false; b.liveOk[a.source] = false; b.pending.remove(a.source)
+            b.status[a.source] = "parked again by your undo; switch it back on under the row"
+        }
+        save(b)
+        val holding = b.positions.any { it.open && ParkedArms.books(index).any { a -> a.source == it.arm } }
+        runCatching { Diag.record("orb", "Liquidity 15+5 $index: parked again by your undo" + if (holding) "; its open position is still managed to its exit" else "") }
+        "Liquidity 15+5 $index is parked again" + if (holding) "; its open position is still managed to its exit." else "."
+    }
+
+    // ---- 15 Oct: Boss's arms cleanup ([ArmsCleanup], [HiddenArms]) -----------------------------------------------------------
+
+    /** [source]'s switch and whether it holds anything (an open or unconfirmed position); null when it is not one of the arms. */
+    suspend fun cleanupNow(source: String): Pair<Boolean, Boolean>? = lock.withLock {
+        if (ALL_ARMS.none { it.source == source }) return@withLock null
+        val b = book()
+        (b.armed[source] == true) to b.positions.any { it.arm == source && it.open }
+    }
+
+    /** [source]'s automatic / approve choice as the book keeps it (a restore puts it back with it). */
+    suspend fun autoOf(source: String): Boolean = lock.withLock { book().auto[source] != false }
+
+    /** The cleanup switches [source] off (only when it holds nothing): its automatic / approve choice is kept for a restore. */
+    suspend fun cleanupOff(source: String): String = setArmed(source, false, automatic = autoOf(source))
 
     /**
      * Boss switches a parked Liquidity index back on (its row; [ParkedArms]). With Liquidity's switch on, the index's books
@@ -1357,6 +1434,8 @@ object OrbArms {
                 (if (b.parked.isEmpty()) "" else " ${b.parked.sorted().joinToString(" and ")} stays parked (switch it back on under the row).")
             else "${LiquidityRules.ARM.label} disarmed." + if (holding) " Its open position is still managed to its exit." else ""
         }
+        // 15 Oct (Boss's cleanup): a hidden arm is switched on only from the Hidden arms list (its restore), never here.
+        if (on && !HiddenArms.mayArm(source)) return@withLock ArmsCleanup.refusal(armOf(source).label)
         val paperOnly = armOf(source).paperOnly
         val live = liveNow() && !paperOnly
         if (on && live && !pinConfirmed) return@withLock "The app is in Live: arm it with your PIN or fingerprint."

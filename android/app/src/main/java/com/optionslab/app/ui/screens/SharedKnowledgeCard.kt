@@ -10,6 +10,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.optionslab.app.ui.theme.LocalPalette
+import com.optionslab.app.ui.theme.Type
 import com.optionslab.app.data.SharedKnowledgeHost
 import com.optionslab.app.ui.components.LedgerCard
 import com.optionslab.app.ui.components.Note
@@ -34,11 +37,15 @@ internal fun SharedKnowledgeCard() {
     SharedKnowledgeContent(on) { v -> on = v; scope.launch(Dispatchers.IO) { runCatching { SharedKnowledgeHost.shadowOn = v } } }
 }
 
+/** What the shared knowledge's name opens. */
+internal const val SHARED_NOTE = "Every agent now reads one shared knowledge - the research, Jarvis's lessons and the findings - to explain and rank, never to trade."
+
 /** The card from plain state (tests drive it). */
 @Composable
 internal fun SharedKnowledgeContent(on: Boolean, onChange: (Boolean) -> Unit) {
-    LedgerCard(title = SHARED_CARD_TITLE) {
-        Note("Every agent now reads one shared knowledge - the research, Jarvis's lessons and the findings - to explain and rank, never to trade.")
+    LedgerCard {
+        // COMPACT (15 Oct): what it is, in its name's dialog.
+        ExplainedName(SHARED_CARD_TITLE, listOf(SHARED_NOTE), style = Type.title.copy(color = LocalPalette.current.ink, fontSize = 16.sp))
         ToggleRow("Shadow: count trades the research would skip", "Logs only, each night after the close. Nothing is skipped and no size changes; never Liquidity.",
             on, onChange)
         if (on) Note("On: the count is in Diagnostics and in the nightly lessons bundle.", Modifier.padding(top = 4.dp))

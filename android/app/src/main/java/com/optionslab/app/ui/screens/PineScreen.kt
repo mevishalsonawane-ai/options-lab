@@ -891,6 +891,10 @@ private fun num(x: Double) = if (x == Math.floor(x) && kotlin.math.abs(x) < 1e12
 
 // ---- auto-trade ----------------------------------------------------------------------------
 
+/** What the auto-trade tab says while Pine auto-trading is hidden (Boss's 15 Oct cleanup). */
+internal const val PINE_HIDDEN = "Pine auto-trading is hidden on your choice (15 Oct): restore it from Home → Strategies → Hidden arms " +
+    "to place orders again. Alerts-only, the editor, the backtester and the indicators work as before."
+
 @Composable
 private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script, dirty: Boolean, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
     val p = LocalPalette.current
@@ -975,6 +979,11 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Note("On every completed candle the script runs on the symbol below. When its signal changes the app buys the ATM option of the nearest expiry after today (a CALL on buy, a PUT on sell, or just exits) and sells the one it held. Market MIS orders; everything is sold at 15:15.")
+        // 15 Oct (Boss's cleanup): Pine auto-trading is hidden - a script that places orders is switched on only after its restore
+        // (alerts-only scripts never trade and still work). The editor, backtester and indicators are unchanged.
+        val hiddenState by com.optionslab.app.data.HiddenArms.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+        if (!com.optionslab.engine.orb.ArmsCleanup.mayArm(hiddenState, com.optionslab.engine.orb.ArmsCleanup.PINE))
+            Note(PINE_HIDDEN, Modifier.semantics { contentDescription = PINE_HIDDEN })
         if (!usable) {
             Text("This indicator has no signals to trade on. Add for example:\nplotshape(buy, \"Buy\")\nplotshape(sell, \"Sell\")",
                 style = Mono.copy(color = p.oxblood))

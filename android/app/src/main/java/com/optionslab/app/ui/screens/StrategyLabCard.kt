@@ -118,6 +118,9 @@ internal fun LiquidityTrailRow(state: com.optionslab.ira.LiquidityFreeze.State, 
         Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.trail) }
 }
 
+/** What the Strategy lab's name opens. */
+internal const val LAB_NOTE = "Variants trade virtually beside each strategy, and new ideas are tested each night. Most ideas fail - that is honest."
+
 /** The card from plain state (tests drive it). [onOpen]: the sheet, at a candidate's id or at the top (null). */
 @Composable
 internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyForge.Book, onOpen: (String?) -> Unit) {
@@ -133,9 +136,8 @@ internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyFo
     val c = remember(forge) { StrategyForge.counts(forge) }
     val waitingLive = variants.changes.count { it.status == VariantLab.ChangeStatus.OFFERED }
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(LAB_TITLE, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-        Note("Variants trade virtually beside each strategy, and new ideas are tested each night. Most ideas fail - that is honest.",
-            Modifier.padding(top = 2.dp))
+        // COMPACT (15 Oct): what the lab does is in its name's dialog.
+        ExplainedName(LAB_TITLE, listOf(LAB_NOTE))
         if (rows.isEmpty()) Note("No strategy is running for the lab to tune yet.", Modifier.padding(top = 6.dp).testTag("lab-none"))
         rows.forEach { (k, line) ->
             Text(line, style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-strategy-$k"))

@@ -243,7 +243,7 @@ object GrammarArm {
 
     /** Every approved idea not hosted yet (and never stopped) taken in while there is room. True when [b] changed. */
     private fun adopt(b: Book): Boolean {
-        if (!enabled()) return false
+        if (!enabled() || HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.FORGE)) return false
         val forge = runCatching { VariantRunner.forge.value }.getOrNull() ?: return false
         var changed = false
         for (r in forge.records) {
@@ -296,13 +296,15 @@ object GrammarArm {
         if (!ready() || !enabled() || !Market.isTradingDay()) return
         lock.withLock {
             val b = book()
-            var changed = adopt(b)
+            // 15 Oct (Boss's cleanup): hidden, it hosts no new idea and takes no new entry; what it holds still exits by its rules.
+            val hidden = HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.FORGE)
+            var changed = if (hidden) false else adopt(b)
             if (b.ideas.none { it.active } && b.positions.none { it.open }) { if (changed) save(b); return@withLock }
             val now = Market.now().toLocalDateTime().withNano(0)
             changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || changed
             changed = judgeAll(b) || changed
             for (i in b.ideas.indices) {
-                if (!b.ideas[i].active) continue
+                if (!b.ideas[i].active || hidden) continue
                 changed = runCatching { enter(b, i, now) }.getOrElse { note(b, "${b.ideas[i].id}: entry check failed: ${it.javaClass.simpleName}"); true } || changed
             }
             val closed = b.positions.count { !it.open }

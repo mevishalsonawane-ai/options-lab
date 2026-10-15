@@ -91,7 +91,8 @@ internal fun SoloGlanceContent(r: SoloGlanceRead) {
     val tone = if (g.net < 0) p.oxblood else p.verdigris
     val danger = g.verdict == SoloMidday.Verdict.FAILED_DRAWDOWN || g.toLine >= 0.8f
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).background(p.chip, RoundedCornerShape(12.dp)).padding(12.dp)) {
-        Text("FORWARD TEST", style = Type.label.copy(color = p.inkSoft, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp))
+        // COMPACT (15 Oct): the research line is in the name's dialog; the numbers, bars and today's state stay.
+        ExplainedName("FORWARD TEST", listOf(g.research), style = Type.label.copy(color = p.inkSoft, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp))
         Text(keepNumbersWhole(g.progressLine), style = ink.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 2.dp))
         GlanceBar(g.progress, p.brass, "Forward test: ${g.progressLine}")
         g.spark?.let { s ->
@@ -104,7 +105,6 @@ internal fun SoloGlanceContent(r: SoloGlanceRead) {
         GlanceBar(g.toLine, if (danger) p.oxblood else p.amber, "Drawdown against the switch-off line: ${g.drawdownLine}")
         g.offLine?.let { Text(keepNumbersWhole(it), style = ink.copy(color = p.oxblood, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 6.dp)) }
         Text(keepNumbersWhole(r.today), style = ink.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp))
-        Text(keepNumbersWhole(g.research), style = soft, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

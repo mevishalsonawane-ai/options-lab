@@ -252,6 +252,10 @@ object Strategies {
         if (i < 0) return@withLock "That strategy no longer exists."
         val d = b.defs[i]
         if (on && needsBreakoutRules(d)) return@withLock BREAKOUT_BLOCK
+        // 15 Oct (Boss's cleanup): scheduled strategies hidden - armed again only after their restore (Hidden arms). Starting
+        // one by hand (Research → Strategies) is not arming and is unchanged.
+        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.BASKETS))
+            return@withLock com.optionslab.engine.orb.ArmsCleanup.refusal("Scheduled strategies")
         if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Research → Strategies) before arming it live."
         val base = d.scheduler ?: com.optionslab.engine.strategy.SchedulerConfig(
             days = listOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,
@@ -693,6 +697,9 @@ object Strategies {
             for (due in Scheduler.due(def, last, now, { !Market.isTradingDay(it) }, java.time.Duration.ofMinutes(5))) {
                 if (due.job.kind == Scheduler.JobKind.START && needsBreakoutRules(def)) {
                     record(b, def.name, Event("start_refused", "Scheduled start refused: ORB needs its breakout rules (not added yet)", "warn"), false)
+                } else if (due.job.kind == Scheduler.JobKind.START && HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.BASKETS)) {
+                    // 15 Oct (Boss's cleanup): scheduled strategies are hidden; a restore from the Hidden arms list brings them back.
+                    record(b, def.name, Event("start_skipped", "Scheduled start skipped: scheduled strategies are hidden (your 15 Oct cleanup)", "info"), false)
                 } else if (due.job.kind == Scheduler.JobKind.START && b.stoppedDay == Market.today().toString()) {
                     record(b, def.name, Event("start_skipped", "Scheduled start skipped: the bot is stopped for today", "info"), false)
                 } else if (due.job.kind == Scheduler.JobKind.START) {

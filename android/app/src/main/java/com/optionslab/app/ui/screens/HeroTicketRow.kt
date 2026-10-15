@@ -59,7 +59,17 @@ internal fun heroTicketPnlLine(v: HeroTicketArm.View): String =
     "Today: ${if (v.today.isEmpty()) "no ticket" else "${v.today.size} ticket${if (v.today.size == 1) "" else "s"}, ${rs(v.todayPnl)}"} · " +
         "its own record: ${v.nets.size} closed, ${rs(v.nets.sum())} after charges"
 
-/** The row from plain state ([v]) and its callbacks. */
+/** What the ticket's name opens: Boss's label (first), its measured record, rules, signal source, the trail note, its record apart. */
+internal fun heroTicketExplanation(v: HeroTicketArm.View): List<String> = listOf(
+    HeroTicketRules.RECORD + ".",
+    HeroTicketRules.MEASURED,
+    HeroTicketRules.RULES,
+    HeroTicketRules.SIGNAL_SOURCE,
+    HeroTicketRules.TRAIL_START_NOTE + ".",
+    HeroTicketRules.SEPARATE + ".",
+) + v.status.toSortedMap().map { (idx, s) -> "$idx: $s" }
+
+/** The row from plain state ([v]) and its callbacks. COMPACT (15 Oct): name (tap: the explanation), state, P&L, tickets, exit choices. */
 @Composable
 internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Unit, onTarget: (HeroTicketRules.Target) -> Unit,
                                   onStart: (HeroTicketRules.TrailStart) -> Unit = {}) {
@@ -67,55 +77,11 @@ internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Uni
     Rule()
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(HeroTicketRules.LABEL, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-            // The label Boss asked for, first and plain.
-            Text(keepNumbersWhole(HeroTicketRules.RECORD), style = Type.label.copy(color = p.amber, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(top = 2.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 3.dp))
-            Text(keepNumbersWhole(HeroTicketRules.MEASURED), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp))
-            Text(keepNumbersWhole(HeroTicketRules.RULES), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-            Text(keepNumbersWhole(HeroTicketRules.SIGNAL_SOURCE), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
+            // COMPACT (15 Oct, Boss): its tickets and its exit / trail-start choices are in the name's dialog with its rules.
+            ExplainedName(HeroTicketRules.LABEL, heroTicketExplanation(v), extra = { HeroTicketControls(v, onTarget, onStart) })
             Text(if (v.armed) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
             Text(keepNumbersWhole(heroTicketPnlLine(v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
-            v.today.forEach { o ->
-                val line = if (o.open) "${o.symbol} · ${o.qty} @ %.2f".format(Locale.ENGLISH, o.entry) +
-                    (v.marks[o.symbol]?.let { m -> " · now %.2f".format(Locale.ENGLISH, m) } ?: "") + " · paper"
-                    else "${o.symbol} · ${o.qty} @ %.2f → %.2f (%s) · %s".format(Locale.ENGLISH, o.entry, o.exit ?: 0.0, o.why ?: "", rs(o.net ?: 0.0))
-                Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
-            }
-            // Its exit for new tickets, kept: the trail alone (the default) or a 2× / 3× target beside it.
-            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Exit:", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                HeroTicketRules.Target.entries.forEach { t ->
-                    val on = v.target == t
-                    val word = when (t) { HeroTicketRules.Target.TRAIL_ONLY -> "Trail only"; HeroTicketRules.Target.X2 -> "2×"; HeroTicketRules.Target.X3 -> "3×" }
-                    Text(word, style = Type.label.copy(color = if (on) p.card else p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-                        modifier = Modifier
-                            .semantics { contentDescription = "${HeroTicketRules.LABEL} exit: ${t.words}"; selected = on }
-                            .background(if (on) p.verdigris else p.ink.copy(alpha = 0.06f), RoundedCornerShape(50))
-                            .clickable(role = Role.RadioButton) { if (!on) onTarget(t) }
-                            .padding(horizontal = 9.dp, vertical = 3.dp))
-                }
-            }
-            // Where the 25% trail starts for new tickets: at the fill (R50, also a 25% stop), after 2× or after 3×.
-            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Trail starts:", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                HeroTicketRules.TrailStart.entries.forEach { s ->
-                    val on = v.trailStart == s
-                    val word = when (s) { HeroTicketRules.TrailStart.AT_FILL -> "At fill"; HeroTicketRules.TrailStart.AFTER_2X -> "After 2×"; HeroTicketRules.TrailStart.AFTER_3X -> "After 3×" }
-                    Text(word, style = Type.label.copy(color = if (on) p.card else p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-                        modifier = Modifier
-                            .semantics { contentDescription = "${HeroTicketRules.LABEL} trail start: ${s.words}"; selected = on }
-                            .background(if (on) p.verdigris else p.ink.copy(alpha = 0.06f), RoundedCornerShape(50))
-                            .clickable(role = Role.RadioButton) { if (!on) onStart(s) }
-                            .padding(horizontal = 9.dp, vertical = 3.dp))
-                }
-            }
-            Text(keepNumbersWhole(HeroTicketRules.TRAIL_START_NOTE + "."), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
-            if (v.armed) v.status.toSortedMap().forEach { (idx, s) ->
-                Text(keepNumbersWhole("$idx: $s"), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
-            }
-            Text(keepNumbersWhole(HeroTicketRules.SEPARATE + "."), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "Paper only: switch ${HeroTicketRules.LABEL}" },
@@ -123,5 +89,47 @@ internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Uni
             onCheckedChange = { on -> onArm(on) },
             colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),
         )
+    }
+}
+
+/** The ticket's own tickets today and its exit and trail-start choices (its name's dialog; a choice applies to new tickets). */
+@Composable
+private fun HeroTicketControls(v: HeroTicketArm.View, onTarget: (HeroTicketRules.Target) -> Unit, onStart: (HeroTicketRules.TrailStart) -> Unit) {
+    val p = LocalPalette.current
+    Column {
+        v.today.forEach { o ->
+            val line = if (o.open) "${o.symbol} · ${o.qty} @ %.2f".format(Locale.ENGLISH, o.entry) +
+                (v.marks[o.symbol]?.let { m -> " · now %.2f".format(Locale.ENGLISH, m) } ?: "") + " · paper"
+                else "${o.symbol} · ${o.qty} @ %.2f → %.2f (%s) · %s".format(Locale.ENGLISH, o.entry, o.exit ?: 0.0, o.why ?: "", rs(o.net ?: 0.0))
+            Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+        }
+        // Its exit for new tickets, kept: the trail alone (the default) or a 2× / 3× target beside it.
+        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Exit:", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+            HeroTicketRules.Target.entries.forEach { t ->
+                val on = v.target == t
+                val word = when (t) { HeroTicketRules.Target.TRAIL_ONLY -> "Trail only"; HeroTicketRules.Target.X2 -> "2×"; HeroTicketRules.Target.X3 -> "3×" }
+                Text(word, style = Type.label.copy(color = if (on) p.card else p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier
+                        .semantics { contentDescription = "${HeroTicketRules.LABEL} exit: ${t.words}"; selected = on }
+                        .background(if (on) p.verdigris else p.ink.copy(alpha = 0.06f), RoundedCornerShape(50))
+                        .clickable(role = Role.RadioButton) { if (!on) onTarget(t) }
+                        .padding(horizontal = 9.dp, vertical = 3.dp))
+            }
+        }
+        // Where the 25% trail starts for new tickets: at the fill (R50, also a 25% stop), after 2× or after 3×.
+        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Trail starts:", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+            HeroTicketRules.TrailStart.entries.forEach { s ->
+                val on = v.trailStart == s
+                val word = when (s) { HeroTicketRules.TrailStart.AT_FILL -> "At fill"; HeroTicketRules.TrailStart.AFTER_2X -> "After 2×"; HeroTicketRules.TrailStart.AFTER_3X -> "After 3×" }
+                Text(word, style = Type.label.copy(color = if (on) p.card else p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier
+                        .semantics { contentDescription = "${HeroTicketRules.LABEL} trail start: ${s.words}"; selected = on }
+                        .background(if (on) p.verdigris else p.ink.copy(alpha = 0.06f), RoundedCornerShape(50))
+                        .clickable(role = Role.RadioButton) { if (!on) onStart(s) }
+                        .padding(horizontal = 9.dp, vertical = 3.dp))
+            }
+        }
     }
 }

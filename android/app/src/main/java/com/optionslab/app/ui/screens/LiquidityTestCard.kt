@@ -1,7 +1,11 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,6 +25,9 @@ internal const val GO_LIVE_HIDE = "Hide the go-live checklist"
 internal const val WATCHED_TICK = "Tick: I watched the first live trade (app open, stop and exits confirmed in Kite)"
 internal const val WATCHED_UNTICK = "Untick: first live trade watched"
 internal const val REENABLE_LIVE = "Re-enable live entries (PIN)"
+/** The freeze's short line on Liquidity's row (its words in full behind a tap). */
+internal const val FROZEN_SHORT = "Frozen for its paper test · tap for why"
+internal const val PAPER_TEST_SHORT = "Its paper test · tap for the freeze"
 
 /**
  * Liquidity BANKNIFTY's paper test under its row (Boss, 12 Oct): the freeze note, the live stop rule (and, once it is reached,
@@ -31,8 +38,12 @@ internal const val REENABLE_LIVE = "Re-enable live entries (PIN)"
 @Composable
 internal fun LiquidityTestLines(t: OrbArms.LiquidityTestView, onWatched: (Boolean) -> Unit, onReenable: () -> Unit) {
     val p = LocalPalette.current
-    Text(keepNumbersWhole(t.freeze), style = Type.bodySmall.copy(color = if (t.frozen) p.amber else p.inkSoft, fontSize = 12.sp),
-        modifier = Modifier.padding(top = 4.dp).testTag("liq-freeze"))
+    // COMPACT (15 Oct): the freeze said short; its words in full in a small dialog (OK closes it).
+    var freezeOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    Text(if (t.frozen) FROZEN_SHORT else PAPER_TEST_SHORT, style = Type.bodySmall.copy(color = if (t.frozen) p.amber else p.inkSoft, fontSize = 12.sp),
+        modifier = Modifier.padding(top = 4.dp).testTag("liq-freeze").heightIn(min = 48.dp).clickable(onClickLabel = "Why") { freezeOpen = true }
+            .wrapContentHeight())
+    if (freezeOpen) ExplainDialog("Liquidity BANKNIFTY's paper test", listOf(t.freeze)) { freezeOpen = false }
     t.stop.forEach { line ->
         Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = if (t.stopped) p.oxblood else p.inkSoft, fontSize = 12.sp),
             modifier = Modifier.testTag("liq-stop"))

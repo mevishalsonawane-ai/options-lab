@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.engine.orb.SoloMidday
@@ -55,7 +58,14 @@ class SoloGlanceTest {
         assertTrue(shows(keepNumbersWhole(five.glance.drawdownLine)))
         assertTrue(described("Drawdown against the switch-off line"))
         assertTrue(shows(keepNumbersWhole("Decides at 12:00 today (orders only until 12:03).")))
+        // COMPACT (15 Oct): the research line is in the name's dialog; OK closes it.
+        assertFalse(shows(keepNumbersWhole(five.glance.research)))
+        compose.onNodeWithContentDescription("About FORWARD TEST").performClick()
+        compose.waitForIdle()
         assertTrue(shows(keepNumbersWhole(five.glance.research)))
+        compose.onNodeWithText("OK").performClick()
+        compose.waitForIdle()
+        assertFalse(shows(keepNumbersWhole(five.glance.research)))
         assertTrue(five.glance.research.contains("about break-even"))
         assertFalse(shows("Switched itself off", sub = true))
     }

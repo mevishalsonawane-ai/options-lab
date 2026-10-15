@@ -679,6 +679,9 @@ object ShadowArms {
      */
     suspend fun promote(id: String): String = lock.withLock {
         val v = ShadowRules.of(id) ?: return@withLock "No such shadow."
+        // 15 Oct (Boss's cleanup): re-armed shadows hidden - re-armed only after their restore from the Hidden arms list.
+        if (!HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.SHADOW))
+            return@withLock com.optionslab.engine.orb.ArmsCleanup.refusal("Shadows re-armed on paper")
         val b = book()
         b.promoted[id] = today().toString(); b.armed[id] = true
         save(b)

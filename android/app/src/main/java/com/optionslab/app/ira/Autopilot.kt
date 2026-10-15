@@ -363,6 +363,28 @@ internal object Autopilot {
                 val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.HeroTicketArm.setArmed(c.to == AutoChange.ON, log = false) }
                 said.takeIf { !it.contains("not ready") }
             }
+            // 15 Oct (Boss's cleanup, [logArmHidden] / [logArmRestored]): an arm's switch-off undone restores it (back on PAPER
+            // only when it was on: each arm's no-PIN path); a restore undone hides it again (switched off once it holds nothing).
+            AutoChange.Kind.ARM_HIDE -> {
+                val key = c.target.removePrefix(AutoChange.HIDE)
+                if (!c.target.startsWith(AutoChange.HIDE) || !com.optionslab.engine.orb.ArmsCleanup.covers(key)) return null
+                when (c.to) {
+                    AutoChange.HIDDEN -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.hideAgain(key) }
+                    AutoChange.ON, AutoChange.SWITCHED_OFF, AutoChange.RESTORED ->
+                        kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.restore(key, log = false) }.takeIf { !it.contains("not hidden") }
+                    else -> null
+                }
+            }
+            // 15 Oct: Liquidity's FINNIFTY or MIDCPNIFTY books on by Boss's choice ([logLiqIndexOn]): its Undo parks the index again.
+            AutoChange.Kind.LIQ_INDEX_ON -> {
+                val index = c.target.removePrefix(AutoChange.LIQ_INDEX)
+                if (!c.target.startsWith(AutoChange.LIQ_INDEX) || index !in com.optionslab.engine.orb.ArmsCleanup.LIQ_INDICES) return null
+                when (c.to) {
+                    AutoChange.PARKED, AutoChange.SWITCHED_OFF -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.OrbArms.parkLiquidity(index) }
+                    AutoChange.ON -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
+                    else -> null
+                }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -833,6 +855,48 @@ internal object Autopilot {
                 }
             }
         }
+    }
+
+    /**
+     * 15 Oct (Boss's cleanup, [com.optionslab.app.data.HiddenArms]): the arm [key] ([label]) switched off ([wasOn]) or found off,
+     * and hidden - once it held nothing. Logged as Boss's (kept, never Autopilot's) so the change log and "Today's changes" show
+     * it, and one tap undoes it (restored; back on paper only when it was on). One lane with the restores, in their order.
+     */
+    fun logArmHidden(key: String, label: String, wasOn: Boolean) {
+        logArmHide(AutoChange.armHidden(key, label, wasOn), "your 15 Oct cleanup; its code, settings and trades are kept")
+    }
+
+    /** Boss restored [key] ([label]) from the Hidden arms list: logged as his (kept), its Undo hides it again. */
+    fun logArmRestored(key: String, label: String) {
+        logArmHide(AutoChange.armRestored(key, label), "restored from the Hidden arms list; paper only")
+    }
+
+    private fun logArmHide(c: AutoChange.Change, note: String) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    // The newest entry of this arm is the one that undoes ([AutoChange.superseded]); a kept older one is closed.
+                    _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.ARM_HIDE && it.change.target == c.target && it.status == AutoChange.Status.KEPT }
+                        ?.let { _book.value = AutoChange.undone(_book.value, it.id, today) }
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * 15 Oct (Boss's cleanup): Liquidity 15+5's [index] books kept on with its switch, on paper ([parked]: it was parked on 9 Oct).
+     * Logged as Boss's (kept) so the change log shows it; one tap parks the index again. Once: never logged twice.
+     */
+    fun logLiqIndexOn(index: String, parked: Boolean) {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.liqIndexOn(index, parked), "your choice, 15 Oct; paper only - never cleared for Zerodha by this change")
     }
 
     /** One lane for [logBossTrail]: the switch's flips are logged in the order they were made. */
