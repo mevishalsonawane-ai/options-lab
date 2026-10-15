@@ -167,3 +167,20 @@ Added to the candidate rule: a config is eligible only if its structure could be
 sessions it would have traded (skips for "no row" / "no chain" / "no credit" over all its sessions with that DTE and
 decision time, before filters; for direction rules both BPS and BCS count). The skip share is reported for every
 candidate.
+
+## Amendment 3 (15 Oct 2026, Boss: "I want to backtest only from Nov 2024") - before the holdout was read
+
+The first design scan (Aug 2021 - 17 Oct 2025) had been run and 8 candidates picked when Boss asked for the backtest to
+start in Nov 2024 (after SEBI's Nov 2024 changes: one weekly expiry per exchange, bigger lots, expiry-day ELM). The
+holdout had NOT been read. From here:
+- **Design:** entries 1 Nov 2024 - 17 Oct 2025. Embargo and **locked holdout (3 Nov 2025 - 13 Oct 2026) unchanged**,
+  still read once, only for the candidates of THIS rule. The earlier full-period scan is kept as a reference only
+  (results/design_fullperiod.json); its candidates are not read.
+- Candidate rule changes (everything else as above): 43+ design trades (a weekly rule gets ~48 in the year; 43 keeps
+  40+ holdout trades expected); "positive in 75% of years" becomes "net > 0 in both halves, 1 Nov 2024 - 30 Apr 2025
+  and 1 May - 17 Oct 2025, with 10+ trades in each"; the last-year check is the whole design and so is implied.
+  Amendment 2's 90% priced share is over the same window.
+- Walk-forward of the selection (report only): the rule on 1 Nov 2024 - 30 Apr 2025 (20+ trades, positive in that
+  half), top 10, their result on 1 May - 17 Oct 2025.
+- Caution, said before the read: one design year and ~2.1 million configs make the best design results very likely
+  overfitted; the full-period scan's walk-forward already showed the top picks losing in each following year.
