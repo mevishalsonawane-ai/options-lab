@@ -75,15 +75,20 @@ import java.time.format.DateTimeFormatter
 private val ALARM_SYMBOL = Regex("^[A-Z]{2,4}:[A-Z0-9&_-]{1,32}$")
 
 @Composable
-fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+fun ToggleRow(title: String, sub: String?, checked: Boolean, keepSub: Boolean = false, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
     // The whole row is the switch: a 48 dp target (the bare switch was 52x32 dp) read with its title by TalkBack.
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = checked, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange)
         .padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+        // COMPACT (15 Oct, Boss): a setting's explanation is in its own small dialog (the ⓘ beside it), not under the row - except
+        // the safety and security switches ([keepSub]: the kill switch, the fingerprint, the device check, screenshots, the wipe,
+        // the lock screen, live orders' PIN and the exchange stop), whose line says their state and stays in sight.
+        if (keepSub || sub == null) Column(Modifier.weight(1f)) {
+            Text(title, style = Type.body.copy(color = p.ink))
+            if (sub != null) Text(sub, style = Type.italic.copy(color = p.inkSoft, fontSize = 13.sp))
+        } else Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = Type.body.copy(color = p.ink), modifier = Modifier.weight(1f, fill = false))
-            // COMPACT (15 Oct, Boss): the setting's explanation is in its own small dialog (the ⓘ beside it), not under the row.
-            if (sub != null) AboutButton(title, listOf(sub))
+            AboutButton(title, listOf(sub))
         }
         Spacer(Modifier.width(8.dp))
         Switch(checked, null, colors = SwitchDefaults.colors(
@@ -326,7 +331,7 @@ fun SecurityPage(model: AppModel) {
                         }
                     }
                     BrassButton("Check again", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { model.refreshIntegrity() }
-                    ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on ->
+                    ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised, keepSub = true) { on ->
                         if (on) model.update { it.copy(refuseCompromised = true) } else guard("Enter your app PIN to let IraAlgo open on a compromised phone.") { model.update { it.copy(refuseCompromised = false) } }
                     }
                 }
@@ -361,7 +366,7 @@ fun SecurityPage(model: AppModel) {
                     BiometricGate.Kind.STRONG -> "Unlocks the app, confirms orders and opens the Zerodha secret; tied to a hardware key that dies if a finger is added or removed"
                     BiometricGate.Kind.WEAK -> "Face unlock is not used; add a fingerprint"
                     BiometricGate.Kind.NONE -> "No fingerprint added on this phone"
-                }, s.biometric && kind != BiometricGate.Kind.NONE) { on ->
+                }, s.biometric && kind != BiometricGate.Kind.NONE, keepSub = true) { on ->
                     if (on) {
                         // The PIN, never a finger: a finger added by someone else must not be able to trust itself.
                         guard("Enter your app PIN to switch the fingerprint on. Every finger on this phone can then approve orders.", pinOnly = true) {
@@ -385,7 +390,7 @@ fun SecurityPage(model: AppModel) {
                 var capture by remember { mutableStateOf(com.optionslab.app.security.Capture.allowed) }
                 ToggleRow("Allow screenshots and screen recording",
                     if (capture) "On: anyone with the phone can capture any screen, keys and P&L included. Turn it off when you are done."
-                    else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture) { on ->
+                    else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture, keepSub = true) { on ->
                     if (!on) { capture = false; com.optionslab.app.security.Capture.set(context as? android.app.Activity, false) }
                     else guard("Enter your app PIN to allow screenshots and screen recording.") {
                         capture = true; com.optionslab.app.security.Capture.set(context as? android.app.Activity, true)
@@ -397,10 +402,10 @@ fun SecurityPage(model: AppModel) {
                     if (idles[i] <= s.idleSeconds) model.update { it.copy(idleSeconds = idles[i]) }
                     else guard("Enter your app PIN to keep the app open longer when idle.") { model.update { it.copy(idleSeconds = idles[i]) } }
                 }
-                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on ->
+                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion, keepSub = true) { on ->
                     if (on) model.update { it.copy(wipeOnExhaustion = true) } else guard("Enter your app PIN to switch off erasing after wrong PINs.") { model.update { it.copy(wipeOnExhaustion = false) } }
                 }
-                ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }
+                ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen, keepSub = true) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }
                 Spacer(Modifier.height(8.dp))
                 Row {
                     BrassButton("Change PIN", Modifier.weight(1f), tone = p.inkSoft) { changing = true }
@@ -700,7 +705,7 @@ private fun GuardCard(model: AppModel) {
     fun rupees(x: Double) = if (x >= 100_000) "₹${(x / 100_000).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }}L" else "₹%,.0f".format(Locale.ENGLISH, x)
     LedgerCard(title = "Account guard", accent = if (s.guardKill) p.oxblood else null) {
         Note("Checked on every Zerodha order, from a strategy or by hand (paper is never refused). Closing a position is never blocked, not even by the kill switch.")
-        ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill) { on -> confirmKill = on }
+        ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill, keepSub = true) { on -> confirmKill = on }
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
         ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> model.update { it.copy(guardDailyLoss = loss[i]) } }
         val dd = listOf(5.0, 10.0, 20.0, 0.0)

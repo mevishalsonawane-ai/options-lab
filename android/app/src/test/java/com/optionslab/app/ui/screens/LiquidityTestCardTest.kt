@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.ui.components.expandTag
@@ -56,7 +57,7 @@ class LiquidityTestCardTest {
         compose.onNodeWithText(FROZEN_SHORT).performClick()
         compose.waitForIdle()
         assertTrue(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertFalse(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
         // The live stop rule (the account stop) stays on the row.

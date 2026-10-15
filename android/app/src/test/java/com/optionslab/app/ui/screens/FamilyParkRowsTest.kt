@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -47,7 +48,7 @@ class FamilyParkRowsTest {
 
     private fun tap(text: String) { compose.onNodeWithText(text).performClick(); compose.waitForIdle() }
     /** COMPACT (15 Oct): a parked arm's switch-back is in its own dialog. */
-    private fun switchBack(label: String) { compose.onNodeWithContentDescription("About $label").performClick(); compose.waitForIdle(); tap("Switch $label back on") }
+    private fun switchBack(label: String) { compose.onNodeWithContentDescription("About $label").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle(); tap("Switch $label back on") }
 
     @Test fun eachParkedArmSaysSoWithItsRecord() {
         rows(parked())
@@ -55,16 +56,16 @@ class FamilyParkRowsTest {
             // COMPACT (15 Oct): the row says it is parked; its tested record is in its name's dialog.
             compose.onNodeWithTag("orb-line:${a.source}", useUnmergedTree = true).assertTextEquals(FamilyPark.ROW)
             compose.onNodeWithText("Switch ${a.label} back on").assertDoesNotExist()
-            compose.onNodeWithContentDescription("About ${a.label}").performClick(); compose.waitForIdle()
+            compose.onNodeWithContentDescription("About ${a.label}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
             compose.onNodeWithText(keepNumbersWhole(FamilyPark.rowLine(a.source) + ".")).assertExists()
             compose.onNodeWithText("Switch ${a.label} back on").assertExists()
-            compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
+            compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         }
         assertTrue(FamilyPark.rowLine("orb").startsWith("parked on your choice (13 Oct)"))
         // Liquidity and the Hero arm are untouched: no park line, no tap (not even in their own dialogs).
-        compose.onNodeWithContentDescription("About Liquidity 15+5").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About Liquidity 15+5").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         compose.onNodeWithText("Switch Liquidity 15+5 back on").assertDoesNotExist()
-        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         compose.onNodeWithText("Switch Hero (expiry) back on").assertDoesNotExist()
         assertTrue("nothing done by just showing it", rec.calls.isEmpty())
     }
@@ -95,17 +96,17 @@ class FamilyParkRowsTest {
     @Test fun aParkedArmHoldingAPositionSaysItIsStillManaged() {
         rows(parked(orbOpen = true))
         compose.onNodeWithText("IN TRADE · PAPER").assertExists()
-        compose.onNodeWithContentDescription("About ORB").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About ORB").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("${FamilyPark.ROW}: its open position is still managed to its exit.")).assertExists()
         compose.onNodeWithText("Switch ORB back on").assertExists()
     }
 
     @Test fun anArmSwitchedBackOnShowsNoParkLine() {
         rows(parked(except = setOf("orb")))
-        compose.onNodeWithContentDescription("About ORB").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About ORB").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         compose.onNodeWithText("Switch ORB back on").assertDoesNotExist()
-        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
-        compose.onNodeWithContentDescription("About ORB Fresh").performClick(); compose.waitForIdle()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About ORB Fresh").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         compose.onNodeWithText("Switch ORB Fresh back on").assertExists()
     }
 }

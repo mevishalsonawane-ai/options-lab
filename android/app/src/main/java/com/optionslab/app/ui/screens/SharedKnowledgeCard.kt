@@ -47,7 +47,7 @@ internal fun SharedKnowledgeContent(on: Boolean, onChange: (Boolean) -> Unit) {
         // COMPACT (15 Oct): what it is, in its name's dialog.
         ExplainedName(SHARED_CARD_TITLE, listOf(SHARED_NOTE), style = Type.title.copy(color = LocalPalette.current.ink, fontSize = 16.sp))
         ToggleRow("Shadow: count trades the research would skip", "Logs only, each night after the close. Nothing is skipped and no size changes; never Liquidity.",
-            on, onChange)
+            on, onChange = onChange)
         if (on) Note("On: the count is in Diagnostics and in the nightly lessons bundle.", Modifier.padding(top = 4.dp))
     }
 }

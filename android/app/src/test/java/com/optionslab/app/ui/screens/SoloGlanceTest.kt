@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.engine.orb.SoloMidday
@@ -60,10 +61,10 @@ class SoloGlanceTest {
         assertTrue(shows(keepNumbersWhole("Decides at 12:00 today (orders only until 12:03).")))
         // COMPACT (15 Oct): the research line is in the name's dialog; OK closes it.
         assertFalse(shows(keepNumbersWhole(five.glance.research)))
-        compose.onNodeWithContentDescription("About FORWARD TEST").performClick()
+        compose.onNodeWithContentDescription("About FORWARD TEST").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertTrue(shows(keepNumbersWhole(five.glance.research)))
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertFalse(shows(keepNumbersWhole(five.glance.research)))
         assertTrue(five.glance.research.contains("about break-even"))

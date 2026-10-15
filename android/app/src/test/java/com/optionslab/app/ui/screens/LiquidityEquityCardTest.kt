@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.ForwardRecords
 import com.optionslab.app.data.OrbArms
@@ -80,11 +81,11 @@ class LiquidityEquityCardTest {
         assertTrue(chart("Paper record chart").fetchSemanticsNodes().isNotEmpty())
         // COMPACT (15 Oct): what the record is, in its name's dialog (OK closes it).
         assertFalse(shows(keepNumbersWhole("Liquidity 15+5 · closed paper trades since 6 Oct 2026"), sub = true))
-        compose.onNodeWithContentDescription("About PAPER RECORD").performClick()
+        compose.onNodeWithContentDescription("About PAPER RECORD").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertTrue(shows(keepNumbersWhole("Liquidity 15+5 · closed paper trades since 6 Oct 2026, per lot after charges, against the backtest.")))
         assertTrue(shows(EQUITY_READS_ONLY))
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertFalse(shows(EQUITY_READS_ONLY))
         listOf("Trades", "Net", "Max drawdown", "Streak").forEach { assertTrue(it, shows(it)) }
@@ -166,7 +167,7 @@ class LiquidityEquityCardTest {
         // COMPACT (15 Oct): the paper record is in Liquidity's own dialog, not on the card.
         compose.waitForIdle()
         assertFalse(shows("PAPER RECORD"))
-        compose.onNodeWithContentDescription("About Liquidity 15+5").performClick()
+        compose.onNodeWithContentDescription("About Liquidity 15+5").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitUntil(10_000) { shows("PAPER RECORD") }
         assertEquals("one card, in Liquidity 15+5's dialog", 1, count("PAPER RECORD"))
         assertTrue(shows(keepNumbersWhole(LiquidityEquity.verdict(EquityFixtures.inLine))))

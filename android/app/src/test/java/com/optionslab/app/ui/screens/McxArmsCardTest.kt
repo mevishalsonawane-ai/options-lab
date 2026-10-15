@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.McxMarket
 import com.optionslab.app.data.McxPaperArms
@@ -78,18 +79,18 @@ class McxArmsCardTest {
         compose.onNodeWithText(MCX_NOTE).assertDoesNotExist()
         // The trend's warning, in its name's dialog.
         assertTrue(McxPaperArms.record(McxTrendRules.SOURCE).contains("needs ₹8–10 lakh; at ₹1 lakh often ruined"))
-        compose.onNodeWithContentDescription("About ${McxTrendRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${McxTrendRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(McxArmRules.NOT_PROVEN + ".").assertExists()
         compose.onNodeWithText(keepNumbersWhole(McxPaperArms.record(McxTrendRules.SOURCE))).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole(McxPaperArms.record(McxTrendRules.SOURCE))).assertDoesNotExist()
         // The group's note, in the group name's dialog.
-        compose.onNodeWithContentDescription("About $MCX_GROUP").performClick()
+        compose.onNodeWithContentDescription("About $MCX_GROUP").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(MCX_NOTE).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
     }
 
     @Test fun eachBotIsLabelledNotProvenWithItsResearchAndStartsOff() {
@@ -101,13 +102,13 @@ class McxArmsCardTest {
         assertEquals(4, compose.onAllNodesWithText(keepNumbersWhole("Paper: 0 trades, +₹0")).fetchSemanticsNodes().size)
         // The research numbers, each above its rules, labelled not proven - in each name's dialog; OK closes it.
         for (arm in McxPaperArms.ARMS) {
-            compose.onNodeWithContentDescription("About ${McxPaperArms.label(arm)}").performClick()
+            compose.onNodeWithContentDescription("About ${McxPaperArms.label(arm)}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
             compose.waitForIdle()
             compose.onNodeWithText(McxArmRules.NOT_PROVEN + ".").assertExists()
             val rec = compose.onNodeWithText(keepNumbersWhole(McxPaperArms.record(arm))).fetchSemanticsNode().boundsInRoot.top
             val rules = compose.onNodeWithText(keepNumbersWhole(McxPaperArms.rules(arm))).fetchSemanticsNode().boundsInRoot.top
             assertTrue(arm, rec < rules)
-            compose.onNodeWithText("OK").performClick()
+            compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
             compose.waitForIdle()
         }
         assertTrue(McxPaperArms.record(McxTrendRules.SOURCE).contains("needs ₹8–10 lakh; at ₹1 lakh often ruined"))
@@ -134,7 +135,7 @@ class McxArmsCardTest {
             assertTrue(w, w in record)
         // Its key numbers on the row; its research and paper test in its name's dialog.
         compose.onNodeWithText(keepNumbersWhole("Paper: 3 trades, +₹1,700")).assertExists()
-        compose.onNodeWithContentDescription("About ${McxUsSilverRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${McxUsSilverRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole(record)).assertExists()
         assertTrue(McxPaperArms.rules(McxUsSilverRules.SOURCE).contains("not part of the research"))
@@ -142,7 +143,7 @@ class McxArmsCardTest {
         val test = com.optionslab.ira.Vetting.judge(McxUsSilverRules.LABEL, dated, runCatching { com.optionslab.app.data.Market.today() }.getOrNull()).text()
         assertTrue(test, test.startsWith("${McxUsSilverRules.LABEL}'s paper test: too early (3/60, "))
         compose.onNodeWithText(keepNumbersWhole(test)).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Paper only: switch ${McxUsSilverRules.LABEL}").assertIsOff()
     }
@@ -154,7 +155,7 @@ class McxArmsCardTest {
         compose.onNodeWithText("ON · PAPER ONLY").assertIsDisplayed()
         compose.onNodeWithContentDescription("Paper only: switch ${McxMorningRules.LABEL}").assertIsOn()
         // Its last decision is in its name's dialog.
-        compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("am_dte 9 (needs 11-20)")).assertExists()
     }
@@ -167,10 +168,10 @@ class McxArmsCardTest {
         val row = keepNumbersWhole(com.optionslab.engine.mcx.McxMorningPark.ROW)
         // The row says it short; why, in full, in its name's dialog (once).
         compose.onNodeWithText("OFF · switched off on your OK (14 Oct)").assertExists()
-        compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertEquals(1, compose.onAllNodesWithText(row).fetchSemanticsNodes().size)
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Paper only: switch ${McxMorningRules.LABEL}").assertIsOff().performClick()
         compose.waitForIdle()
@@ -180,7 +181,7 @@ class McxArmsCardTest {
     @Test fun theSwitchedOffLineIsNotShownWhileTheMorningCallIsOn() {
         home(off.copy(armed = mapOf(McxMorningRules.SOURCE to true), parked = setOf(McxMorningRules.SOURCE)))
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertEquals(0, compose.onAllNodesWithText(keepNumbersWhole(com.optionslab.engine.mcx.McxMorningPark.ROW)).fetchSemanticsNodes().size)
     }

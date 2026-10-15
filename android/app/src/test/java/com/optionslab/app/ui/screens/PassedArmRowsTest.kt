@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.PassedArmsHost
 import com.optionslab.app.data.WatchlistHost
@@ -63,16 +64,16 @@ class PassedArmRowsTest {
         compose.onNodeWithText(keepNumbersWhole(PassedArms.PASSED)).assertDoesNotExist()
         // ONE status line on the row; the numbers are in each name's own dialog (only that arm's).
         compose.onNodeWithText(keepNumbersWhole("0 closed, +₹0 · FINNIFTY +₹0 · forward test 0/40."), substring = true).assertDoesNotExist()
-        compose.onNodeWithContentDescription("About ${DonchianArm.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${DonchianArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("0 closed, +₹0 · FINNIFTY +₹0 · forward test 0/40.")).assertExists()
         compose.onNodeWithText(keepNumbersWhole("0 closed, +₹0 · MIDCPNIFTY +₹0 · forward test 0/60."), substring = true).assertDoesNotExist()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("About ${Solo2.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${Solo2.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("0 closed, +₹0 · MIDCPNIFTY +₹0 · forward test 0/60.")).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Paper only: switch ${DonchianArm.LABEL}").assertIsOn().performClick()
         compose.onNodeWithContentDescription("Paper only: switch ${OovArm.LABEL}").assertIsOff().performClick()
@@ -83,13 +84,13 @@ class PassedArmRowsTest {
     @Test fun tappingTheNameOpensTheExplanationAndOkClosesIt() {
         show(PassedArmsHost.View(armed = mapOf(OovArm.SOURCE to true)))
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("About ${OovArm.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${OovArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole(PassedArms.PASSED)).assertExists()
         compose.onNodeWithText(keepNumbersWhole("Research: ${OovArm.RESEARCH_ID}"), substring = true).assertExists()
         compose.onNodeWithText("Stop added for CLAUDE.md", substring = true).assertExists()
         compose.onNodeWithText("switches itself off if the net", substring = true).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole(PassedArms.PASSED)).assertDoesNotExist()
     }
@@ -103,10 +104,10 @@ class PassedArmRowsTest {
         show(v)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("On · paper · holding 1")).assertExists()
-        compose.onNodeWithContentDescription("About ${DonchianArm.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${DonchianArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("1 closed, +₹600 · FINNIFTY +₹600 · forward test 1/40.")).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("Off · switched itself off (forward test)")).assertExists()
     }
@@ -119,13 +120,13 @@ class PassedArmRowsTest {
         compose.onNodeWithText(keepNumbersWhole("On · shadow, not traded · 0 open")).assertExists()
         compose.onNodeWithText(keepNumbersWhole("R47 C4 BANKNIFTY high PCR (non-default): 0, +₹0")).assertDoesNotExist()
         compose.onNodeWithText(Watchlist.SELECTION).assertDoesNotExist()
-        compose.onNodeWithContentDescription("About Watchlist (shadow)").performClick()
+        compose.onNodeWithContentDescription("About Watchlist (shadow)").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("R47 C4 BANKNIFTY high PCR (non-default): 0, +₹0")).assertExists()
         compose.onNodeWithText("Shadow, not traded; information only, not a trade signal.").assertExists()
         compose.onNodeWithText(keepNumbersWhole(Watchlist.SELECTION)).assertExists()
         compose.onNodeWithText("NON-DEFAULT (option-chain signal)", substring = true).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole(Watchlist.SELECTION)).assertDoesNotExist()
         compose.onNodeWithContentDescription("Shadow only: switch the Watchlist").assertIsOn().performClick()

@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.GrammarArm
 import com.optionslab.app.data.NightArm
@@ -39,8 +40,8 @@ class CompactRowsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun shown(t: String) = compose.onAllNodesWithText(t, substring = true).fetchSemanticsNodes().isNotEmpty()
-    private fun about(name: String) { compose.onNodeWithContentDescription("About $name").performClick(); compose.waitForIdle() }
-    private fun ok() { compose.onNodeWithText("OK").performClick(); compose.waitForIdle() }
+    private fun about(name: String) { compose.onNodeWithContentDescription("About $name").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle() }
+    private fun ok() { compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle() }
 
     /** The state after the cleanup's first pass, nothing holding a position. */
     private val cleaned = ArmsCleanup.pass(ArmsCleanup.State(), ArmsCleanup.HIDDEN.map { ArmsCleanup.Now(it.key, armed = it.key == ArmsCleanup.ORB, open = false) }).first
@@ -82,7 +83,7 @@ class CompactRowsTest {
         about("Liquidity 15+5")
         assertTrue(shown(keepNumbersWhole("BANKNIFTY (15 + 5-min)")))
         assertTrue(shown("Lots:"))
-        assertTrue(shown(ArmsCleanup.NIFTY_NOTE))
+        assertTrue(shown(keepNumbersWhole(ArmsCleanup.NIFTY_NOTE)))
         // Never another arm's.
         assertFalse(shown("opening-range break"))
         assertFalse(shown(com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE))
@@ -104,15 +105,17 @@ class CompactRowsTest {
         compose.setContent { IraAlgoTheme("light") { Column { HiddenArmsContent(cleaned, said = null) { restored += it } } } }
         compose.waitForIdle()
         assertTrue(shown("$HIDDEN_ARMS (12)"))
-        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 12").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 12").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertTrue(shown(HIDDEN_NOTE))
         assertTrue(shown("was on · back on paper"))
         assertTrue(shown(keepNumbersWhole(ArmsCleanup.NIFTY_NOTE)))
-        compose.onNodeWithContentDescription("Restore ORB").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("Restore ORB").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertEquals(listOf(ArmsCleanup.ORB), restored)
         ok()
         assertFalse(shown(HIDDEN_NOTE))
-        // Before the cleanup ran: no list at all.
+    }
+
+    @Test fun beforeTheCleanupRanThereIsNoList() {
         compose.setContent { IraAlgoTheme("light") { Column { HiddenArmsContent(ArmsCleanup.State()) {} } } }
         compose.waitForIdle()
         assertFalse(shown(HIDDEN_ARMS))
@@ -124,8 +127,8 @@ class CompactRowsTest {
         compose.waitForIdle()
         assertTrue(shown("$HIDDEN_ARMS (11)"))
         assertTrue(shown("1 switching off after its exit"))
-        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 11").performClick(); compose.waitForIdle()
-        assertTrue(shown("Night (R3): " + ArmsCleanup.WAITING))
+        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 11").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        assertTrue(shown(keepNumbersWhole("Night (R3): " + ArmsCleanup.WAITING)))
         assertEquals(0, compose.onAllNodes(hasContentDescription("Restore Night (R3)")).fetchSemanticsNodes().size)
     }
 

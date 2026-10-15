@@ -462,15 +462,18 @@ class OrbRowsTest {
 
     /** COMPACT rows (15 Oct): an arm's name opens its explanation; [texts] are each checked there, then OK closes it. */
     private fun explained(label: String, vararg texts: String): Boolean {
-        compose.onNodeWithContentDescription("About $label").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About $label").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         val all = texts.all { shown(it) }
-        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         return all
     }
     /** Opens [label]'s own dialog (left open). */
-    private fun openAbout(label: String) { compose.onNodeWithContentDescription("About $label").performClick(); compose.waitForIdle() }
+    private fun openAbout(label: String) { compose.onNodeWithContentDescription("About $label").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle() }
     /** A tap on an arm's status line (the rest of the row): the day's detail. */
-    private fun tapRow(source: String) { compose.onNodeWithTag("orb-line:$source", useUnmergedTree = true).performClick(); compose.waitForIdle() }
+    private fun tapRow(source: String) {
+        compose.onNode(androidx.compose.ui.test.hasClickAction() and androidx.compose.ui.test.hasAnyDescendant(androidx.compose.ui.test.hasTestTag("orb-line:$source")),
+            useUnmergedTree = true).areaCClick(); compose.waitForIdle()
+    }
 
     /** The switches on screen: ORB, ORB Fresh, ORB Sweep, Range Fade (0-3), the Hero arm (4) and Liquidity 15+5 (5). */
     private fun switches() = compose.onAllNodes(isToggleable())
@@ -634,7 +637,7 @@ class OrbRowsTest {
         rows(StrategyFakes.orbView(armed = true), live = false)
         assertTrue(shown("ARMED · PAPER · AUTO"))
         // COMPACT (15 Oct): one status line on the row; each book's state and the candidates' record in its name's dialog.
-        assertTrue(shown(keepNumbersWhole("Today: 1 closed · ₹1,158 after charges")))
+        assertTrue(shown("Today: 1 closed · ₹1,158 after charges"))
         assertTrue(!shown("Lots:"))
         assertTrue(!shown("Since 06 Oct, per lot"))
         assertTrue(explained("Liquidity 15+5",
@@ -665,7 +668,7 @@ class OrbRowsTest {
         assertTrue(!shown("Lots:"))
         openAbout("Liquidity 15+5")
         assertTrue(shown("Lots:"))
-        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertEquals(1, compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Liquidity 2 lots, chosen")).fetchSemanticsNodes().size)
         // Each book's quantity, and the candidates' record (per lot, so the size never moves it), in its name's dialog.
         assertTrue(explained("Liquidity 15+5", keepNumbersWhole("Size: 2 lots a trade (BANKNIFTY 60, FINNIFTY 130 qty) · an open position keeps its own"),

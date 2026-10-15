@@ -14,6 +14,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.HeroTicketArm
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -56,7 +57,7 @@ class HeroTicketRowTest {
         // COMPACT (15 Oct): the row carries no explanation; the name's dialog has the label Boss asked for, word for word, above
         // its record and rules, the signal source and its own record's note - and OK closes it.
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.RULES)).assertDoesNotExist()
-        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         val label = compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.RECORD + ".")).fetchSemanticsNode().boundsInRoot.top
         assertTrue("Boss's choice - did not pass research (R50): about -Rs 525 per Rs 1,000 on average; jackpots are rare" == HeroTicketRules.RECORD)
@@ -65,7 +66,7 @@ class HeroTicketRowTest {
         assertTrue(label < measured && measured < rules)
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.SIGNAL_SOURCE)).assertExists()
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.SEPARATE + ".")).assertExists()
-        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.RULES)).assertDoesNotExist()
         // Under the NSE arms (after Night).
@@ -102,7 +103,7 @@ class HeroTicketRowTest {
         compose.onNodeWithText(keepNumbersWhole("Today: 2 tickets, +₹285 · its own record: 1 closed, −₹235 after charges")).assertExists()
         // The tickets and each index's last decision are in the name's dialog (ONE status line on the row).
         compose.onNodeWithText(keepNumbersWhole("NIFTY20OCT2625150CE · 65 @ 12.00 · now 20.00 · paper")).assertDoesNotExist()
-        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("NIFTY20OCT2625150CE · 65 @ 12.00 · now 20.00 · paper")).assertExists()
         compose.onNodeWithText(keepNumbersWhole("NIFTY20OCT2624900PE · 65 @ 11.00 → 8.00 (ticket_trail) · −₹235")).assertExists()
@@ -115,7 +116,7 @@ class HeroTicketRowTest {
         compose.waitForIdle()
         // The exit choice is a control in the name's dialog (not on the row).
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} exit: trail only").assertDoesNotExist()
-        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} exit: trail only").assertIsSelected()
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} exit: 2× target").assertIsNotSelected().performClick()
@@ -138,7 +139,7 @@ class HeroTicketRowTest {
         compose.waitForIdle()
         // The trail-start choice and its note are in the name's dialog (compact row).
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.TRAIL_START_NOTE + ".")).assertDoesNotExist()
-        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 2×").assertIsSelected()
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.TRAIL_START_NOTE + ".")).assertExists()
@@ -152,7 +153,7 @@ class HeroTicketRowTest {
     @Test fun aChosenTargetShowsAsSelected() {
         home(off.copy(armed = true, target = HeroTicketRules.Target.X3))
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performClick()
+        compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} exit: 3× target").assertIsSelected()
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} exit: trail only").assertIsNotSelected()

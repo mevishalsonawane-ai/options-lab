@@ -378,6 +378,8 @@ internal fun orbExplanation(a: OrbArms.ArmView, view: OrbArms.View): List<String
             armShadowLine(view.shadows, src)?.let { out += "Shadow: $it" }
         }
     }
+    // The day's closed trades (on the row only when nothing is open).
+    a.today.filter { !it.open }.takeIf { it.isNotEmpty() }?.let { c -> out += "Today: ${c.size} closed · ${rs(c.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges" }
     a.chargesLine?.let { out += it }
     OrbArms.capLine(a.arm)?.let { out += it }
     return out

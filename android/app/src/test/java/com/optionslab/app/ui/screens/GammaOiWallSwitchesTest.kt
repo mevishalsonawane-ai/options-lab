@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.ira.Automations
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -51,13 +52,13 @@ class GammaOiWallSwitchesTest {
         assertTrue(shows("OI-wall check (shadow)"))
         // COMPACT (15 Oct): each setting's explanation only in its own dialog (a tap on its name; OK closes it).
         assertFalse(shows("says nothing about direction"))
-        compose.onNodeWithContentDescription("About Morning gamma line").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About Morning gamma line").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertTrue(shows("says nothing about direction; information only, never a trade signal"))
         assertFalse("only that setting's text", shows("Never an order, paper or live"))
-        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
-        compose.onNodeWithContentDescription("About OI-wall check (shadow)").performClick(); compose.waitForIdle()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About OI-wall check (shadow)").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertTrue(shows("Never an order, paper or live"))
-        compose.onNodeWithText("OK").performClick(); compose.waitForIdle()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         val switches = compose.onAllNodes(isToggleable())
         assertEquals(2, switches.fetchSemanticsNodes().size)
         switches[0].assertIsOn()
@@ -74,7 +75,7 @@ class GammaOiWallSwitchesTest {
         compose.setContent { IraAlgoTheme("light") { AutomationSubRow(Automations.Auto.OIWALL, groupOn = false) } }
         compose.waitForIdle()
         assertTrue(shows("(Market alerts is off: this stays quiet.)"))
-        compose.onNodeWithContentDescription("About OI-wall check (shadow)").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("About OI-wall check (shadow)").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertTrue(shows("the record goes on and Jarvis stays quiet"))
     }
 }
