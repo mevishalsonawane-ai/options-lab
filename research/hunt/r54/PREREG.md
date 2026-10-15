@@ -130,3 +130,18 @@ else at the end time. The arm being built enters at 12:30 and squares off at 15:
 - The 15:05 square-off stays as it is unless Boss decides otherwise.
 - Any change to the live square-off would be a risk change for Boss to approve. Under CLAUDE.md, anything that could
   resize or delay live exits starts in shadow.
+
+## Amendment 1 (15 Oct 2026, after the design run, BEFORE the final test was read)
+
+- **What the hand check found.** A spot check of design trades showed that R47's stray-print guard can refuse a GENUINE
+  fill. It compares the fill row's open with the median of the closes on rows r-1, r and r+1, so it reads the next
+  bar's close. On NIFTY 13 Jan 2026 the 25,650 CE opened at 6.90 at 14:30, on heavy volume, and closed 24.70 the next
+  minute. The guard priced the buy at 9.70 (over the cap), so there was no ticket.
+- **Why it matters.** The guard was built for R47's slower trades. On cheap expiry options it removes some of the
+  biggest winners, and it can only lower results.
+- **What changes.** The guard stays the primary measurement, as pre-registered. Each cell also reports its net with the
+  guard switched off (`no_guard_net`), in design and in the final test. That figure is informational only: no gate and
+  no reading uses it.
+- **No other change.** Every cell, the twins, BH, the readings and the gates are unchanged.
+- **Also found in design (no change).** Every 25% trail ticket was out before 15:05 (the latest at 14:53). So with the
+  trail, the 15:05 / 15:10 / 15:15 end times give the same trades in design.
