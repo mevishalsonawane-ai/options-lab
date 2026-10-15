@@ -69,6 +69,9 @@ class SweeperFailsafeTest : RobolectricTest() {
 
     private fun warned(): List<String> = Alerts.posted.filter { it.title == title }.map { it.text }
 
+    /** The warning as Boss sees it, for a silence since [hhmm]. */
+    private fun said(hhmm: String) = "Positions not protected: no prices since $hhmm. Check them in Trade."
+
     @Test fun beforeTheOpenAnOvernightPositionWithNoPriceIsNoAlarmFrom0915ItIs() {
         kite.position(nfo, 30, 200.0)                         // no quote: no price at all
         listOf(9 to 0, 9 to 5, 9 to 10, 9 to 14).forEach { (h, m) -> pass(h, m) }
@@ -77,7 +80,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         pass(9, 17)
         assertEquals("two minutes exactly: not yet", emptyList<String>(), warned())
         pass(9, 17, 1)
-        assertEquals(listOf("Positions not protected: no prices since 09:15"), warned())
+        assertEquals(listOf(said("09:15")), warned())
         pass(9, 18)
         assertEquals("said once for one silence", 1, warned().size)
     }
@@ -100,7 +103,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         kite.quotes.remove("NFO:$nfo")
         pass(10, 7)
         pass(10, 8, 1)
-        assertEquals(listOf("Positions not protected: no prices since 10:06"), warned())
+        assertEquals(listOf(said("10:06")), warned())
     }
 
     @Test fun aPositionBookNotReadOnceIsNoAlarmButOneThatStaysUnreadIsSaid() {
@@ -113,7 +116,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertTrue(warned().isEmpty())
         // Still unread: the position has had no price for over two minutes - said, from the last price.
         pass(11, 2, 1)
-        assertEquals(listOf("Positions not protected: no prices since 11:00"), warned())
+        assertEquals(listOf(said("11:00")), warned())
         // Read again and priced: quiet.
         kite.down.clear()
         pass(11, 4); pass(11, 7)
@@ -129,7 +132,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         kite.down.clear()
         pass(12, 7)
         pass(12, 9, 1)
-        assertEquals(listOf("Positions not protected: no prices since 12:07"), warned())
+        assertEquals(listOf(said("12:07")), warned())
     }
 
     @Test fun onAnNseHolidayNothingIsSaid() {
@@ -148,7 +151,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertTrue("MCX is not open at 08:55", warned().isEmpty())
         pass(9, 5)
         pass(9, 7, 1)
-        assertEquals(listOf("Positions not protected: no prices since 09:05"), warned())
+        assertEquals(listOf(said("09:05")), warned())
     }
 
     @Test fun anMcxPositionPricedAt0905IsNoAlarm() {
@@ -165,7 +168,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         kite.position(nfo, 30, 200.0)
         pass(15, 6)
         pass(15, 8, 1)
-        assertEquals(listOf("Positions not protected: no prices since 15:06"), warned())
+        assertEquals(listOf(said("15:06")), warned())
         // After F&O's 15:40 close: nothing more.
         pass(15, 41); pass(15, 45); pass(16, 0)
         assertEquals(1, warned().size)
