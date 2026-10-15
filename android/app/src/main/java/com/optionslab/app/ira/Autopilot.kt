@@ -348,6 +348,13 @@ internal object Autopilot {
                 if (c.target != AutoChange.TRAIL_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 com.optionslab.app.data.LiquidityTest.setTrail(c.to == AutoChange.ON, log = false)
             }
+            // 15 Oct: Boss's Hero ₹1,000 ticket switched on by the update on their choice ([logBossTicketOn]): its Undo switches the
+            // arm off (or, undone twice, back on) - a PAPER arm, never Zerodha, so no PIN either way; the flip is not logged again.
+            AutoChange.Kind.PAPER_ARM_ON -> {
+                if (c.target != AutoChange.TICKET_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.HeroTicketArm.setArmed(c.to == AutoChange.ON, log = false) }
+                said.takeIf { !it.contains("not ready") }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -719,6 +726,44 @@ internal object Autopilot {
                 synchronized(lock) {
                     val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.ARM_PARK && it.change.target == AutoChange.MCX_ARM + source }
                     if (e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
+                }
+            }
+        }
+    }
+
+    /**
+     * 15 Oct (Boss: "add it directly to arm"): the Hero ₹1,000 ticket, a PAPER arm that did not pass research (R50), just switched
+     * on once by its book's one-time change ([com.optionslab.app.data.HeroTicketArm]). Logged as Boss's (kept, not on probation,
+     * never Autopilot's) so "Today's changes" and the change log show it with R50's verdict, and one tap undoes it (the arm off).
+     * Once: never logged twice (a second load, a restart). In the background, on Autopilot's own worker.
+     */
+    fun logBossTicketOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.heroTicketOn(), "your choice, 15 Oct; paper only - it never trades on Zerodha; its trades are kept in their own record")
+    }
+
+    /**
+     * Boss switched the Hero ₹1,000 ticket from its own row. Off: the newest "off → on" entry ([logBossTicketOn]) is closed as
+     * undone, so its Undo can never switch the arm off (or on) again later; marking it undone twice changes nothing. On: logged
+     * as Boss's again ("off → on", kept, undone in one tap). One lane, in the order Boss flipped it; it waits for Autopilot's
+     * start like [logBossOwnOnce], so a flip right after a restart is not lost.
+     */
+    fun heroTicketSwitchedByBoss(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): Hero ₹1,000 ticket ${if (on) "on" else "off"}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == AutoChange.TICKET_TARGET }
+                    if (!on && e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
+                    if (on && e?.status != AutoChange.Status.KEPT) {
+                        _book.value = AutoChange.record(_book.value, AutoChange.heroTicketOn(), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                            by = "your choice", note = "switched on from its row; paper only - it never trades on Zerodha").first
+                        save()
+                    }
                 }
             }
         }

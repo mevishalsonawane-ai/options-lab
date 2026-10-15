@@ -1071,6 +1071,37 @@ object Broker {
         return got
     }
 
+    // ---- SENSEX's options at Zerodha (BFO), for the stream's prices of the Hero ₹1,000 ticket's paper SENSEX side (15 Oct) ----
+
+    /** Today's SENSEX options from GET /instruments/BFO (memory only), or null when not read today. */
+    @Volatile private var bfoOptions: Pair<LocalDate, List<Kite.Instrument>>? = null
+    @Volatile private var bfoTriedAt = 0L
+    private val bfoLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** Today's SENSEX options list, memory only (never the network or a file): null when not read today. */
+    fun cachedBfoOptions(): List<Kite.Instrument>? = bfoOptions?.takeIf { it.first == Market.today() }?.second
+
+    /**
+     * Read today's SENSEX options in the background (logged in only; at most every 10 minutes after a failure). Returns at once:
+     * the stream's price of a SENSEX paper ticket follows on the next look once the list is in.
+     */
+    fun loadBfoOptionsInBackground() {
+        if (!loggedIn || cachedBfoOptions() != null) return
+        val now = System.currentTimeMillis()
+        if (now - bfoTriedAt < 10 * 60_000L || !bfoLoading.compareAndSet(false, true)) return
+        bfoTriedAt = now
+        readScope.launch {
+            try {
+                val text = call("GET", "/instruments/BFO", raw = true) as String
+                bfoOptions = Market.today() to Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Tried again after 10 minutes; until then the ticket is priced from the candle feed, as before.
+            } finally { bfoLoading.set(false) }
+        }
+    }
+
     fun find(list: List<Kite.Instrument>, underlying: String, expiry: LocalDate, strike: Double, right: Right) =
         list.firstOrNull { it.name == underlying && it.expiry == expiry && it.strike == strike && it.right == right }
 

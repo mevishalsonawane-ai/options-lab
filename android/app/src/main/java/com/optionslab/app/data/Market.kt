@@ -186,6 +186,64 @@ object Market {
         return fresh
     }
 
+    // ---- SENSEX's options (BSE F&O), for the Hero ₹1,000 ticket's paper SENSEX side only (15 Oct) ----------------
+
+    private fun bfoFile() = File(app.filesDir, "contracts_bfo.json")
+    @Volatile private var bfoMem: Pair<Long, Pair<LocalDate, List<Upstox.Contract>>>? = null
+    private val bfoLock = Any()
+
+    /** The SENSEX options list saved on the phone (day, contracts), or null: read from its file, kept while the file is unchanged. */
+    fun cachedBfoContracts(): Pair<LocalDate, List<Upstox.Contract>>? = synchronized(readLock) {
+        val f = bfoFile()
+        val stamp = f.lastModified()
+        bfoMem?.let { if (it.first == stamp && f.exists()) return it.second }
+        return runCatching {
+            val o = JSONObject(f.readText())
+            val arr = o.getJSONArray("c")
+            LocalDate.parse(o.getString("day")) to (0 until arr.length()).map {
+                val c = arr.getJSONArray(it)
+                Upstox.Contract(c.getString(0), LocalDate.parse(c.getString(1)), c.getDouble(2),
+                    if (c.getString(3) == "CE") Right.CE else Right.PE, c.getInt(4), c.getString(5), c.getString(6))
+            }
+        }.getOrNull()?.also { bfoMem = stamp to it }
+    }
+
+    /** [list] saved as today's SENSEX options (written whole to a temporary file, then moved into place). */
+    internal fun saveBfo(list: List<Upstox.Contract>) {
+        val arr = JSONArray()
+        list.forEach { arr.put(JSONArray().put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.instrumentKey).put(it.tradingSymbol)) }
+        val tmp = File(app.filesDir, "contracts_bfo.json.tmp")
+        tmp.writeText(JSONObject().put("day", today().toString()).put("c", arr).toString())
+        synchronized(readLock) { if (!tmp.renameTo(bfoFile())) { bfoFile().writeText(tmp.readText()); tmp.delete() } }
+    }
+
+    /**
+     * Today's SENSEX options (BSE F&O, from Upstox's BSE list, fetched at most once a day). Only the Hero ₹1,000 ticket's paper
+     * SENSEX side reads it ([refreshBfoInBackground], then [Paper.ticketContract]); nothing else in the app trades SENSEX, and
+     * nothing here can reach Zerodha. Never on the main thread.
+     */
+    fun bfoContracts(): List<Upstox.Contract> = synchronized(bfoLock) {
+        val cached = cachedBfoContracts()
+        if (cached != null && cached.first == today()) return cached.second
+        val fresh = Net.fetchBseMaster()
+        saveBfo(fresh)
+        return fresh
+    }
+
+    private val bfoRefreshing = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var bfoTriedAt = 0L
+
+    /**
+     * Fetch the day's SENSEX list in the background, once at a time and at most every 10 minutes (offline, it is not tried on
+     * every pass); the arm's pass never waits on the download.
+     */
+    fun refreshBfoInBackground() {
+        val now = System.currentTimeMillis()
+        if (now - bfoTriedAt < 10 * 60_000L || !bfoRefreshing.compareAndSet(false, true)) return
+        bfoTriedAt = now
+        Thread { try { runCatching { bfoContracts() } } finally { bfoRefreshing.set(false) } }.start()
+    }
+
     /** Refresh the day's list in the background, once at a time. */
     fun refreshContractsInBackground() {
         if (!refreshing.compareAndSet(false, true)) return

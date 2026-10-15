@@ -52,10 +52,18 @@ object WhatsNew {
     private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
     private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
+    private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-15-hero-1000-ticket", OCT15, "Hero ₹1,000 ticket (paper, your choice)",
+            "On your choice, a new paper bot buys a call and a put of up to ₹1,000 each at 12:30 on NIFTY's and SENSEX's own expiry days, " +
+                "and sells on your 25% trail (for now it starts once a ticket has doubled; your choice waits on a follow-up study) or at 15:05. It did not pass research (R50: about −₹525 per ₹1,000 on average; jackpots are rare), " +
+                "its trades are kept in their own record, it never trades on Zerodha, and one tap switches it off.",
+            "Home → Strategies → Hero ₹1,000 ticket (its switch, today's tickets, the 2× / 3× / trail-only exit and where the trail starts); " +
+                "the change is also in Home → Automation card → Autopilot → Change log",
+            ask = "how is the hero ticket doing"),
         Entry("2026-10-14-silverm-morning-off", OCT14, "SILVERM morning call switched off (paper)",
             "On your OK, the SILVERM morning call paper bot is switched off once: research R42 found no proven edge on cleaned prices " +
                 "(+₹336 a trade over 53 holdout trades, no better than a random minute; walk-forward −₹44.6k over 129 trades). " +
