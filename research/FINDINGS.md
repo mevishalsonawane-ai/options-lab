@@ -864,3 +864,24 @@ relaxed: one fixed contract per leg, R17 fills, dated charges, gap fills, no loo
     (p 0.07, q 0.76).
   - Re-selecting inside Nov 2024+ only (101,136 variants in 27 groups) gives no pick with 40+ final-test trades and
     p < 0.05.
+
+## High-win-rate option BUYING (R48, 15 Oct 2026) - 0 of 10 pass; a high win rate on design became losses on unseen data
+Full study: `HUNT_R48_HIGH_WINRATE.md`. Pre-registered in `hunt/r48/PREREG.md` (amendments 1-4; the last, commit
+50a189ed, came before the holdout read). Boss: "backtest only from Nov 2024", "only buying options".
+- **Periods:** design 1 Nov 2024 - 17 Oct 2025; holdout 3 Nov 2025 - 13 Oct 2026, read once.
+- **Signal source:** the index (gap, EMA20, TWAP, opening range). The option is bought; target and stop are on the
+  premium. Every leg is one held contract, filled next minute, with dated charges and volume-based slippage.
+- **Search:** 6,651,600 buying configs (ATM to 6 ITM, all 5 indices). 32,879 passed every design gate (43+ trades,
+  65%+ winners, net > 0 in both halves, worst day, drawdown, top-5).
+- **Holdout:** 0 of the 10 candidates pass.
+  - The top three won 100% on design (49, 49 and 43 trades): +3-5% target, no stop.
+  - On the holdout they won 81-88% but lost Rs 6-16k: average loss 7-12x the average win.
+  - FINNIFTY ATM +3% / -50%: 70.6% winners over 218 trades, net -Rs 1,05,369.
+  - The profitable three were no better than random entry times: NIFTY 6-ITM on expiry day +Rs 20,915 (49 trades,
+    p_twin 0.10); BANKNIFTY 2-ITM +Rs 10,679 (70, p 0.07); BANKNIFTY ATM +Rs 3,771 (70, p 0.10).
+- **Walk-forward of the picking rule:** picked on Nov 2024 - Apr 2025, the top 10 lost -Rs 30,179 on May - Oct 2025
+  (344 trades, 70.1% winners).
+- **Earlier full-period scan** (with hedged selling, Aug 2021 - Oct 2025, never read on the holdout): its top picks
+  lost in each following year (2023 -Rs 60k, 2024 -Rs 50k, 2025 -Rs 47k) at 66-79% winners.
+- **Lesson:** a 65%+ win rate is easy to fit (small target, no or wide stop) and says nothing about profit. Judge a
+  rule by net, average win vs average loss, worst day and drawdown together. No paper change.

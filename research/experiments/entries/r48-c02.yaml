@@ -1,0 +1,31 @@
+date: '2026-10-15'
+doc: research/HUNT_R48_HIGH_WINRATE.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m opt_<UND>_WEEK_2021-2026 (nearest expiry, ATM+-10,
+  held contracts), index_1m, index_daily (to 13 Oct 2026)'
+period:
+  design: entries 1 Nov 2024 - 17 Oct 2025 (amendment 3, Boss)
+  holdout: entries 3 Nov 2025 - 13 Oct 2026, read once (20-31 Oct 2025 embargo)
+prereg: research/hunt/r48/PREREG.md
+settings: research/hunt/r48/r48cfg.py
+id: r48-c02
+family: option-structure
+title: 'R48 candidate 2: SENSEX buy 0-ITM on ema (with), DTE 1, 0920, target +3%, stop none, time eod; VIX all, events all'
+hypothesis: This rule, picked by the pre-registered design rule, keeps a >= 60% win rate and makes money on the holdout.
+instruments:
+- SENSEX
+features:
+- index signals as named
+- ATM strike (strike rule)
+model_or_rule: SENSEX buy 0-ITM on ema (with), DTE 1, 0920, target +3%, stop none, time eod; VIX all, events all
+variants_tried: 1
+results:
+  summary: 'Design 49 trades, win 100.0%, net Rs +18,767, avg win Rs 383 / avg loss Rs 0, worst day Rs 9, max DD Rs 0. Holdout
+    49 trades, win 87.8%, net Rs -9,426, avg win Rs 344 / avg loss Rs -4,036, worst day Rs -6,224, max DD Rs -14,849; p_twin
+    0.713, BH q 0.872, bootstrap p(mean<=0) 0.803. Gates failed: net, top5, p.'
+  costs: research/obuy Costs('dated') per order per leg (STT on sold premium at the dated rate, exchange, SEBI, stamp, GST,
+    Rs 20); exercise STT on ITM longs left to expire; 5 bps + 1-4 ticks a leg by 5-minute volume, +1 far OTM, x2 on stops;
+    next-minute fills; 1 lot at the dated lot size
+holdout_read: true
+verdict: rejected
+notes: 'SIGNAL SOURCE: the index (index_1m closes / index_daily), the default; the ATM strike (straddle for selling) sets
+  the strike distance; stops and targets on the spread or premium value.'
