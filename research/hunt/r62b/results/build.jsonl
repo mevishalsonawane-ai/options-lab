@@ -1,0 +1,5 @@
+{"und": "NIFTY", "sessions": 524, "first": "2024-09-02", "last": "2026-10-14", "option_sessions": 470, "cleaned_rows": 105593, "spike_minutes": 8016, "expiry_days": 100}
+{"und": "BANKNIFTY", "sessions": 524, "first": "2024-09-02", "last": "2026-10-14", "option_sessions": 470, "cleaned_rows": 26029, "spike_minutes": 951, "expiry_days": 23}
+{"und": "FINNIFTY", "sessions": 524, "first": "2024-09-02", "last": "2026-10-14", "option_sessions": 469, "cleaned_rows": 153197, "spike_minutes": 1215, "expiry_days": 23}
+{"und": "MIDCPNIFTY", "sessions": 524, "first": "2024-09-02", "last": "2026-10-14", "option_sessions": 469, "cleaned_rows": 28785, "spike_minutes": 1809, "expiry_days": 23}
+{"und": "SENSEX", "sessions": 524, "first": "2024-09-02", "last": "2026-10-14", "option_sessions": 469, "cleaned_rows": 120462, "spike_minutes": 4311, "expiry_days": 97}

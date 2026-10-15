@@ -1,0 +1,42 @@
+id: r62b-5m-tch-h-rr
+title: 'R62b 5m-tch-h-rr: EmreKb MSB & Order Block pullback on the index, 1-ITM option'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R62B_MSB_ORDER_BLOCK.md
+hypothesis: 'The video''s MSB & Order Block pullback (claimed 75-80% win rate) makes money after real costs (gates: final
+  net > 0, random-entry twin p < 0.05, BH q <= 0.10 over 16 variants, 40+ trades, top-5 < net, design positive in >= 3 of
+  5 quarters).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 15 Oct 2026: index_1m and options_rolling_1m opt_<U>_WEEK 2024-2026
+  (R51 Amendment A clean store = R47 foreign / stray-row filter, plus research/data/spikes.py rule; one held contract per
+  trade); read by research/hunt/r62b/r62bdata.py'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward by quarter)
+  holdout: 'final test 1 Apr - 14 Oct 2026, read once 15 Oct 2026 (not pristine: earlier studies saw these sessions, never
+    with these rules)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the INDEX spot 1-minute bars (EmreKb MSB-OB port on 5- / 15-minute bars, 1-hour trend filter); the 1-ITM
+  nearest-expiry option is only what is bought; no option-chain input'
+model_or_rule: 'EmreKb ''Market Structure Break & Order Block'' (zigzag 9, fib 0.273) on 5-minute index bars: after an MSB,
+  first touch of the zone (buy next minute) of its fresh order-block zone; 1-hour MSB state must agree; stop beyond the swing,
+  target the opposing swing only if reward:risk >= 1.5; time exit 12 bars; square-off 15:15 (15:05 expiry); buy the 1-ITM
+  option'
+settings: research/hunt/r62b/PREREG.md sections 1-5; r62bcfg.py
+prereg: research/hunt/r62b/PREREG.md
+variants_tried: 16
+results:
+  summary: 'Design: 166 trades, win 33%, net Rs -26,712, avg win / loss Rs +1,952 / -1,208, mean realised R -0.07, max DD
+    Rs 50,829, months green 6/17; 2x costs Rs -44,139; design gate False. Final (read once): 73 trades, win 41%, net Rs -9,235,
+    avg win / loss Rs +1,846 / -1,503, mean realised R -0.03, max DD Rs 22,592, months green 3/7; 2x costs Rs -17,572; twin
+    p 0.1118, BH q 0.1376. Verdict: FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate. Claimed win rate 75-80%.'
+  costs: 'R51 engine: R17 ''liq'' fills (buy +5 bps + 1/2/4 ticks; market sells -5 bps), obuy Costs(''dated'') charges (STT
+    from 1 Apr 2026; BSE rates for SENSEX), next-minute fills, 1 lot in force; 2x = double bps / ticks and charges'
+holdout_read: true
+verdict: rejected
+notes: Research only. Pine source obtained (EmreKb, MPL-2.0) and ported line by line; signal on the underlying. One of 16
+  R62b tests in one BH family (research/hunt/r62b/results/report.md).
