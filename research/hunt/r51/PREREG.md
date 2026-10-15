@@ -158,3 +158,11 @@ carry rows of ANOTHER underlying (their own `spot` is far from the index at that
   the passing rule at twice the spread and slippage (bps and tick half-spreads doubled, charges unchanged).
 - **Read once:** `amend.py run` writes `results/amend_clean.json` and refuses if it exists or if this amendment is not
   committed unchanged.
+
+**Note to Amendment A (15 Oct 2026, before the cleaned read).** The Drive lake's option files were re-fetched from Dhan
+and re-uploaded at 04:25-04:47 UTC on 15 Oct, after R51's final read (04:06 UTC). On the current lake the ORIGINAL code
+reproduces R44-donchian20-RT's design exactly (4,517 trades, +Rs 33,681) but not its final test (now 1,787 trades,
++Rs 66,047, against the committed 1,775 and +Rs 48,689; same 133 sessions). So the write-up reports three numbers: the
+committed result, the original rules on the current lake (raw), and on the current lake cleaned. The share of profit due
+to foreign or stray rows is measured as raw-now minus cleaned-now (same lake version). Gates are judged on cleaned-now,
+as registered. (R52 reproduces exactly on the current lake: H37-10:g17 294 trades, +Rs 48,772.)
