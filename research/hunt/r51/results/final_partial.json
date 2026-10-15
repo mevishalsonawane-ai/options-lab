@@ -1,0 +1,320 @@
+{
+ "LIQ-FIN": {
+  "trades": 94,
+  "win": 0.383,
+  "net": 4861.0,
+  "per_day": 36.8,
+  "avg_win": 1462.0,
+  "avg_loss": -824.0,
+  "worst_day": -4362.0,
+  "max_dd": 12371.0,
+  "ex_top5": -26871.0,
+  "top5_share": 6.528,
+  "days": 70,
+  "why": {
+   "rule_exit": 60,
+   "time": 26,
+   "stop": 5,
+   "squareoff": 3
+  },
+  "p": 0.489,
+  "twin_mean": 5413.0,
+  "config": "liq|FINNIFTY|30+5|room1.0"
+ },
+ "LIQ-FIN-RT": {
+  "trades": 94,
+  "win": 0.383,
+  "net": 4861.0,
+  "per_day": 36.8,
+  "avg_win": 1462.0,
+  "avg_loss": -824.0,
+  "worst_day": -4362.0,
+  "max_dd": 12371.0,
+  "ex_top5": -26871.0,
+  "top5_share": 6.528,
+  "days": 70,
+  "why": {
+   "rule_exit": 60,
+   "time": 26,
+   "stop": 5,
+   "squareoff": 3
+  },
+  "p": 0.489,
+  "twin_mean": 5413.0,
+  "config": "liq|FINNIFTY|30+5|room1.0"
+ },
+ "LIQ-BN-base": {
+  "trades": 131,
+  "win": 0.3664,
+  "net": 10978.0,
+  "per_day": 83.2,
+  "avg_win": 1982.0,
+  "avg_loss": -1014.0,
+  "worst_day": -6910.0,
+  "max_dd": 24873.0,
+  "ex_top5": -33992.0,
+  "top5_share": 4.096,
+  "days": 81,
+  "why": {
+   "rule_exit": 91,
+   "time": 31,
+   "squareoff": 7,
+   "stop": 2
+  },
+  "p": 0.6986,
+  "twin_mean": 25902.0,
+  "config": "liq|BANKNIFTY|15+5|room1.0"
+ },
+ "G7-GEX-LIQ-BN": {
+  "trades": 90,
+  "win": 0.3556,
+  "net": 4653.0,
+  "per_day": 35.2,
+  "avg_win": 1837.0,
+  "avg_loss": -933.0,
+  "worst_day": -4825.0,
+  "max_dd": 12201.0,
+  "ex_top5": -30886.0,
+  "top5_share": 7.638,
+  "days": 59,
+  "why": {
+   "rule_exit": 63,
+   "time": 20,
+   "squareoff": 6,
+   "stop": 1
+  },
+  "p": 0.5928,
+  "twin_mean": 11543.0,
+  "config": "liq|BANKNIFTY|15+5|room1.0|gex"
+ },
+ "NIGHT-B0": {
+  "trades": 86,
+  "win": 0.5,
+  "net": 47352.0,
+  "per_day": 358.7,
+  "avg_win": 4670.0,
+  "avg_loss": -3569.0,
+  "worst_day": -14081.0,
+  "max_dd": 43635.0,
+  "ex_top5": -14976.0,
+  "top5_share": 1.316,
+  "days": 63,
+  "why": {
+   "b0_0916": 86
+  },
+  "p": 0.0419,
+  "twin_mean": -37480.0,
+  "config": "night|B0"
+ },
+ "NIGHT-V1_H1_I20s": {
+  "trades": 86,
+  "win": 0.5349,
+  "net": 30232.0,
+  "per_day": 229.0,
+  "avg_win": 4288.0,
+  "avg_loss": -4175.0,
+  "worst_day": -14971.0,
+  "max_dd": 45895.0,
+  "ex_top5": -29964.0,
+  "top5_share": 1.991,
+  "days": 63,
+  "why": {
+   "idx_stop": 61,
+   "idx_target": 25
+  },
+  "p": 0.0838,
+  "twin_mean": -34693.0,
+  "config": "night|V1_H1_I20s"
+ },
+ "NIGHT-V2_H1_I30s": {
+  "trades": 86,
+  "win": 0.5349,
+  "net": 31214.0,
+  "per_day": 236.5,
+  "avg_win": 4273.0,
+  "avg_loss": -4134.0,
+  "worst_day": -14945.0,
+  "max_dd": 45207.0,
+  "ex_top5": -26457.0,
+  "top5_share": 1.848,
+  "days": 63,
+  "why": {
+   "idx_stop": 50,
+   "idx_target": 35,
+   "time_1030": 1
+  },
+  "p": 0.0918,
+  "twin_mean": -34179.0,
+  "config": "night|V2_H1_I30s"
+ },
+ "NIGHT-V3_H1_I20r": {
+  "trades": 86,
+  "win": 0.5349,
+  "net": 29853.0,
+  "per_day": 226.2,
+  "avg_win": 4259.0,
+  "avg_loss": -4151.0,
+  "worst_day": -14971.0,
+  "max_dd": 45895.0,
+  "ex_top5": -28400.0,
+  "top5_share": 1.951,
+  "days": 63,
+  "why": {
+   "idx_stop": 61,
+   "idx_target": 25
+  },
+  "p": 0.0818,
+  "twin_mean": -35497.0,
+  "config": "night|V3_H1_I20r"
+ },
+ "NIGHT-V4_H1_I30r": {
+  "trades": 86,
+  "win": 0.5465,
+  "net": 30919.0,
+  "per_day": 234.2,
+  "avg_win": 4201.0,
+  "avg_loss": -4270.0,
+  "worst_day": -14945.0,
+  "max_dd": 45207.0,
+  "ex_top5": -25890.0,
+  "top5_share": 1.837,
+  "days": 63,
+  "why": {
+   "idx_stop": 57,
+   "idx_target": 28,
+   "time_1030": 1
+  },
+  "p": 0.0898,
+  "twin_mean": -34607.0,
+  "config": "night|V4_H1_I30r"
+ },
+ "NIGHT-V5_H1_P20": {
+  "trades": 86,
+  "win": 0.5116,
+  "net": 38425.0,
+  "per_day": 291.1,
+  "avg_win": 4687.0,
+  "avg_loss": -3996.0,
+  "worst_day": -15345.0,
+  "max_dd": 48046.0,
+  "ex_top5": -24611.0,
+  "top5_share": 1.64,
+  "days": 63,
+  "why": {
+   "stop": 45,
+   "target": 35,
+   "time_1030": 4,
+   "stop_gap": 2
+  },
+  "p": 0.0659,
+  "twin_mean": -35951.0,
+  "config": "night|V5_H1_P20"
+ },
+ "NIGHT-V6_H1_P30": {
+  "trades": 86,
+  "win": 0.5,
+  "net": 29711.0,
+  "per_day": 225.1,
+  "avg_win": 4682.0,
+  "avg_loss": -3991.0,
+  "worst_day": -15644.0,
+  "max_dd": 46474.0,
+  "ex_top5": -29797.0,
+  "top5_share": 2.003,
+  "days": 63,
+  "why": {
+   "stop": 44,
+   "target": 34,
+   "time_1030": 7,
+   "stop_gap": 1
+  },
+  "p": 0.0878,
+  "twin_mean": -36118.0,
+  "config": "night|V6_H1_P30"
+ },
+ "NIGHT-V7_H2_I30s": {
+  "trades": 86,
+  "win": 0.5,
+  "net": 42361.0,
+  "per_day": 320.9,
+  "avg_win": 4545.0,
+  "avg_loss": -3560.0,
+  "worst_day": -14081.0,
+  "max_dd": 43635.0,
+  "ex_top5": -20500.0,
+  "top5_share": 1.484,
+  "days": 63,
+  "why": {
+   "b0_0916": 60,
+   "idx_stop": 17,
+   "idx_target": 9
+  },
+  "p": 0.0679,
+  "twin_mean": -30212.0,
+  "config": "night|V7_H2_I30s"
+ },
+ "NIGHT-V8_H3_LOCK": {
+  "trades": 86,
+  "win": 0.5349,
+  "net": 28468.0,
+  "per_day": 215.7,
+  "avg_win": 4458.0,
+  "avg_loss": -4415.0,
+  "worst_day": -15743.0,
+  "max_dd": 51745.0,
+  "ex_top5": -32734.0,
+  "top5_share": 2.15,
+  "days": 63,
+  "why": {
+   "lock": 35,
+   "stop": 30,
+   "lock_gap": 11,
+   "time_1030": 9,
+   "stop_gap": 1
+  },
+  "p": 0.1078,
+  "twin_mean": -35680.0,
+  "config": "night|V8_H3_LOCK"
+ },
+ "NIGHT-HOLD-RT": {
+  "trades": 86,
+  "win": 0.5,
+  "net": 34639.0,
+  "per_day": 262.4,
+  "avg_win": 4576.0,
+  "avg_loss": -3771.0,
+  "worst_day": -15032.0,
+  "max_dd": 45179.0,
+  "ex_top5": -26747.0,
+  "top5_share": 1.772,
+  "days": 63,
+  "why": {
+   "stop": 58,
+   "target": 26,
+   "stop_gap": 1,
+   "time_1030": 1
+  },
+  "p": 0.0579,
+  "twin_mean": -42451.0,
+  "config": "night|RT_P10"
+ },
+ "G10-GEX-NIGHT": {
+  "trades": 40,
+  "win": 0.625,
+  "net": 74364.0,
+  "per_day": 563.4,
+  "avg_win": 5112.0,
+  "avg_loss": -3563.0,
+  "worst_day": -9036.0,
+  "max_dd": 29611.0,
+  "ex_top5": 18578.0,
+  "top5_share": 0.75,
+  "days": 35,
+  "why": {
+   "b0_0916": 40
+  },
+  "p": 0.1277,
+  "twin_mean": 48796.0,
+  "config": "night|B0|gex"
+ }
+}
