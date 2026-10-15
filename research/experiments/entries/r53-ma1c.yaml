@@ -1,0 +1,25 @@
+id: r53-ma1c
+title: 'R53: M3 EVE on the CRUDEOIL option, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (EVE rule, CRUDEOIL 1-ITM option) earns after real costs on the recent market only (Boss, 15
+  Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- CRUDE
+features:
+- 'signal source: CRUDEOIL near future (underlying)'
+model_or_rule: EVE rule, CRUDEOIL 1-ITM option
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Rs. orig: design 145 trades net -33,044, walk-forward -15,970; final 124 trades, win 39%, net -92,211, p 0.691,
+    q 0.810 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected

@@ -1,0 +1,54 @@
+{
+ "book": "mcx",
+ "n_twins": 500,
+ "note": "post-lock correction: MA5's capped final had been seen first, so this cannot count as a clean pass",
+ "part": "final",
+ "period": [
+  "2026-04-01",
+  "2026-10-13"
+ ],
+ "rules": {
+  "MA5u": {
+   "design_pick": null,
+   "design_wf": {
+    "orig_wf_net": -119760.4018789,
+    "retune_wf_net": -125552.2971751
+   },
+   "read": [
+    "orig"
+   ],
+   "variants": {
+    "orig": {
+     "avg_loss": -1084.6093310633332,
+     "avg_win": 1811.3460713587301,
+     "costs": 49365.037300100004,
+     "days": 48,
+     "gross": 65865.0,
+     "longs": 78,
+     "max_dd": 21996.8056016,
+     "net": 16499.962699900003,
+     "net_longs": 29847.997146499998,
+     "net_per_day": 343.7492229145834,
+     "net_per_trading_day": 120.43768394087593,
+     "net_shorts": -13348.034446599999,
+     "p": 0.001996007984031936,
+     "params": {
+      "hold": 15
+     },
+     "seconds": 6.0,
+     "shorts": 75,
+     "stale_exits": 6,
+     "top5_share": 2.158775457081237,
+     "trades": 153,
+     "trades_file": "results/trades/mcx_MA5u_orig_final.csv.gz",
+     "trading_days": 137,
+     "twin_mean": -43248.623753804604,
+     "twin_p95": -22270.764927574997,
+     "twins": 500,
+     "win_rate": 0.4117647058823529,
+     "worst_day": -10205.5082194
+    }
+   }
+  }
+ }
+}

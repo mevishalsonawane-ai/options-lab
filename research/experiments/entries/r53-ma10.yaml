@@ -1,0 +1,28 @@
+id: r53-ma10
+title: 'R53: app MCX 12-month trend (M2 TSM252) on four legs, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (monthly sign of the 252-day return, long/short 1 lot per leg) earns after real costs on the
+  recent market only (Boss, 15 Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- CRUDE
+- NATURALGAS
+- SILVER
+- GOLD
+features:
+- 'signal source: continuous daily futures (underlying)'
+model_or_rule: monthly sign of the 252-day return, long/short 1 lot per leg
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Rs. orig: design 64 trades net 191,444, walk-forward 156,510; final 28 trades, win 43%, net -66,099, p 0.816,
+    q 0.855 -> too few trades to judge'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: inconclusive

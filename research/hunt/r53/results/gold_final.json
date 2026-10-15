@@ -1,0 +1,847 @@
+{
+ "GB1": {
+  "design_orig_wf_net": 24898.3000000008,
+  "design_pick": null,
+  "design_retune_wf_net": 24034.300000001385,
+  "name": "boss-opt1 (M15 EMA9/21+RSI, H1 bias)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 4.328921568627451,
+    "exits": {
+     "cut-off": 12,
+     "stop": 18,
+     "target": 4
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -132.4268115941974,
+    "open_at_data_end": 0,
+    "p": 0.8502994011976048,
+    "summary": {
+     "avg_loss": -1928.3761904761882,
+     "avg_win": 1709.3076923077474,
+     "days": 28,
+     "max_dd": 19967.89999999949,
+     "net": -18274.89999999924,
+     "net_per_day": -652.6749999999729,
+     "top5_share": null,
+     "trades": 34,
+     "win_rate": 0.38235294117647056,
+     "worst_day": -6807.99999999996
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB1_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -5654.544199999662,
+     "n": 500,
+     "p95": 12703.885000000417
+    }
+   }
+  }
+ },
+ "GB10": {
+  "design_orig_wf_net": 22063.299999998,
+  "design_pick": null,
+  "design_retune_wf_net": 22063.299999997995,
+  "name": "liq-india-15+5",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 0.9028735632183907,
+    "exits": {
+     "cut-off": 3,
+     "failed break": 29,
+     "new liquidity": 11,
+     "next liquidity": 44
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": 84.05144927536011,
+    "open_at_data_end": 0,
+    "p": 0.08183632734530938,
+    "summary": {
+     "avg_loss": -543.8086956521893,
+     "avg_win": 893.031707317083,
+     "days": 44,
+     "max_dd": 7633.50000000042,
+     "net": 11599.099999999695,
+     "net_per_day": 263.61590909090216,
+     "top5_share": 2.0054400772474192,
+     "trades": 87,
+     "win_rate": 0.47126436781609193,
+     "worst_day": -3063.000000000098
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB10_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -2440.3625999949845,
+     "n": 500,
+     "p95": 13992.280000004586
+    }
+   }
+  }
+ },
+ "GB11": {
+  "design_orig_wf_net": 52235.50000000115,
+  "design_pick": null,
+  "design_retune_wf_net": 42537.900000001326,
+  "name": "hammer-1h",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 3.5398550724637676,
+    "exits": {
+     "cut-off": 20,
+     "stop": 37,
+     "target": 12
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -97.85072463767139,
+    "open_at_data_end": 0,
+    "p": 0.7005988023952096,
+    "summary": {
+     "avg_loss": -1314.483673469373,
+     "avg_win": 2545.3150000000305,
+     "days": 58,
+     "max_dd": 24901.09999999955,
+     "net": -13503.399999998652,
+     "net_per_day": -232.8172413792871,
+     "top5_share": null,
+     "trades": 69,
+     "win_rate": 0.2898550724637681,
+     "worst_day": -3903.9999999999345
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 40.0
+    },
+    "trades_csv": "results/trades/gold_GB11_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -4295.2117999990005,
+     "n": 500,
+     "p95": 25234.230000001164
+    }
+   }
+  }
+ },
+ "GB12": {
+  "design_orig_wf_net": 111569.00000000541,
+  "design_pick": null,
+  "design_retune_wf_net": 103839.83055074338,
+  "name": "dip-keephalf (2 ATR, 8 h)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 5.843020833333332,
+    "exits": {
+     "break": 47,
+     "stop/lock": 48,
+     "time": 65
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": 43.94637681164961,
+    "open_at_data_end": 0,
+    "p": 0.23952095808383234,
+    "summary": {
+     "avg_loss": -2040.9886075948807,
+     "avg_win": 2065.4654320988056,
+     "days": 111,
+     "max_dd": 37299.09999999635,
+     "net": 6064.600000007646,
+     "net_per_day": 54.63603603610491,
+     "top5_share": 5.6253751277837605,
+     "trades": 160,
+     "win_rate": 0.50625,
+     "worst_day": -12624.999999999785
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB12_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -22740.449599991774,
+     "n": 500,
+     "p95": 41376.94500000703
+    }
+   }
+  }
+ },
+ "GB13": {
+  "design_orig_wf_net": 139999.19483335823,
+  "design_pick": "rt_giveback5",
+  "design_retune_wf_net": 224052.64946165323,
+  "name": "trend-gb3 (Supertrend 4h, 3-ATR giveback, wait)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 128.0,
+    "exits": {
+     "": 9
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -6.346372864650932,
+    "open_at_data_end": 0,
+    "p": 0.3253493013972056,
+    "summary": {
+     "avg_loss": -4370.9464439419335,
+     "avg_win": 8449.959736109924,
+     "days": 9,
+     "max_dd": 19342.692966468672,
+     "net": -875.7994553218286,
+     "net_per_day": -97.3110505913143,
+     "top5_share": null,
+     "trades": 9,
+     "win_rate": 0.3333333333333333,
+     "worst_day": -13019.999999999865
+    },
+    "swap": {
+     "charged": true,
+     "usd_charged": 1800.0
+    },
+    "trades_csv": "results/trades/gold_GB13_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries (swap)",
+     "mean": -16217.766199999474,
+     "n": 500,
+     "p95": 42459.32000000046
+    }
+   },
+   "rt_giveback5": {
+    "avg_hold_h": 200.88888888888889,
+    "exits": {
+     "": 9
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -12.910440889180329,
+    "open_at_data_end": 0,
+    "p": 0.29740518962075846,
+    "summary": {
+     "avg_loss": -6386.191548958163,
+     "avg_win": 21460.85000000013,
+     "days": 9,
+     "max_dd": 22905.99999999971,
+     "net": -1781.6408427068855,
+     "net_per_day": -197.96009363409837,
+     "top5_share": null,
+     "trades": 9,
+     "win_rate": 0.2222222222222222,
+     "worst_day": -13019.999999999865
+    },
+    "swap": {
+     "charged": true,
+     "usd_charged": 2920.0
+    },
+    "trades_csv": "results/trades/gold_GB13_rt_giveback5_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries (swap)",
+     "mean": -24591.996399999476,
+     "n": 500,
+     "p95": 38711.16500000027
+    }
+   }
+  }
+ },
+ "GB2": {
+  "design_orig_wf_net": 16220.899999999738,
+  "design_pick": null,
+  "design_retune_wf_net": 5115.899999999903,
+  "name": "boss-opt2 (M5 Asian-range sweep)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 1.2461748633879781,
+    "exits": {
+     "cut-off": 1,
+     "stop": 55,
+     "target": 5
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -44.67173913043244,
+    "open_at_data_end": 0,
+    "p": 0.5768463073852296,
+    "summary": {
+     "avg_loss": -561.9399999999952,
+     "avg_win": 4123.666666666677,
+     "days": 61,
+     "max_dd": 12384.699999999859,
+     "net": -6164.699999999677,
+     "net_per_day": -101.06065573769962,
+     "top5_share": null,
+     "trades": 61,
+     "win_rate": 0.09836065573770492,
+     "worst_day": -2217.9999999999673
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 40.0
+    },
+    "trades_csv": "results/trades/gold_GB2_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -4062.5717999998096,
+     "n": 500,
+     "p95": 9229.925000000325
+    }
+   }
+  }
+ },
+ "GB3": {
+  "design_orig_wf_net": 54754.31063895014,
+  "design_pick": "rt_notargets",
+  "design_retune_wf_net": 101808.16342263616,
+  "name": "tas-15m (ATR 19, flip + delayed)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 10.943830570902396,
+    "exits": {
+     "data end": 1,
+     "stop": 33,
+     "targets": 8,
+     "tracker": 139
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -217.95993842480922,
+    "open_at_data_end": 1,
+    "p": 0.47105788423153694,
+    "summary": {
+     "avg_loss": -1953.924515789418,
+     "avg_win": 3350.6962359361733,
+     "days": 119,
+     "max_dd": 48569.76307578281,
+     "net": -30078.471502623674,
+     "net_per_day": -252.76026472793004,
+     "top5_share": null,
+     "trades": 181,
+     "win_rate": 0.3370165745856354,
+     "worst_day": -7831.855157894548
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 2440.0
+    },
+    "trades_csv": "results/trades/gold_GB3_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -35026.3729999895,
+     "n": 500,
+     "p95": 52396.81500001174
+    }
+   },
+   "rt_notargets": {
+    "avg_hold_h": 11.724953959484347,
+    "exits": {
+     "data end": 1,
+     "stop": 32,
+     "tracker": 148
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -251.60031197552252,
+    "open_at_data_end": 1,
+    "p": 0.47105788423153694,
+    "summary": {
+     "avg_loss": -1951.4775857936968,
+     "avg_win": 3539.8431034483215,
+     "days": 119,
+     "max_dd": 50556.54031578546,
+     "net": -34720.843052622105,
+     "net_per_day": -291.77179035816897,
+     "top5_share": null,
+     "trades": 181,
+     "win_rate": 0.32044198895027626,
+     "worst_day": -7831.855157894548
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 2760.0
+    },
+    "trades_csv": "results/trades/gold_GB3_rt_notargets_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -35213.40959998951,
+     "n": 500,
+     "p95": 58014.59500000921
+    }
+   }
+  }
+ },
+ "GB4-30m": {
+  "design_orig_wf_net": 137929.53305263392,
+  "design_pick": null,
+  "design_retune_wf_net": 137929.53305263392,
+  "name": "tas-30m no targets",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 26.741472868217052,
+    "exits": {
+     "stop": 17,
+     "tracker": 69
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -230.75963996945765,
+    "open_at_data_end": 0,
+    "p": 0.4930139720558882,
+    "summary": {
+     "avg_loss": -3077.8917599260785,
+     "avg_win": 4951.551724137973,
+     "days": 79,
+     "max_dd": 59510.39252631334,
+     "net": -31844.830315785155,
+     "net_per_day": -403.09911792133107,
+     "top5_share": null,
+     "trades": 86,
+     "win_rate": 0.3372093023255814,
+     "worst_day": -11953.999999999935
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 3560.0
+    },
+    "trades_csv": "results/trades/gold_GB4-30m_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -29889.309199994976,
+     "n": 500,
+     "p95": 66046.59000000532
+    }
+   }
+  }
+ },
+ "GB4-4h": {
+  "design_orig_wf_net": 134442.84378999984,
+  "design_pick": null,
+  "design_retune_wf_net": 134442.84378999984,
+  "name": "tas-4h with targets",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 160.6652777777778,
+    "exits": {
+     "data end": 1,
+     "tracker": 11
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -267.68239771166606,
+    "open_at_data_end": 1,
+    "p": 0.6746506986027944,
+    "summary": {
+     "avg_loss": -6512.759999999932,
+     "avg_win": 14093.7145578947,
+     "days": 12,
+     "max_dd": 43008.59999999955,
+     "net": -36940.17088420992,
+     "net_per_day": -3078.3475736841597,
+     "top5_share": null,
+     "trades": 12,
+     "win_rate": 0.16666666666666666,
+     "worst_day": -12197.999999999894
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 3040.0
+    },
+    "trades_csv": "results/trades/gold_GB4-4h_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -18055.761599999296,
+     "n": 500,
+     "p95": 51749.425000000476
+    }
+   }
+  }
+ },
+ "GB5-1h": {
+  "design_orig_wf_net": 47234.1690098257,
+  "design_pick": null,
+  "design_retune_wf_net": 47234.169009825695,
+  "name": "ai-opinion Robust 1h",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 14.103555555555555,
+    "exits": {
+     "stop": 47,
+     "target": 28
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": 161.4053791096905,
+    "open_at_data_end": 0,
+    "p": 0.07784431137724551,
+    "summary": {
+     "avg_loss": -2063.019015129519,
+     "avg_win": 4258.422715293739,
+     "days": 60,
+     "max_dd": 24372.84058453489,
+     "net": 22273.94231713729,
+     "net_per_day": 371.2323719522882,
+     "top5_share": 1.3730277697724853,
+     "trades": 75,
+     "win_rate": 0.37333333333333335,
+     "worst_day": -4692.999999999876
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 1880.0
+    },
+    "trades_csv": "results/trades/gold_GB5-1h_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -13987.768546293835,
+     "n": 500,
+     "p95": 25857.211781367387
+    }
+   }
+  }
+ },
+ "GB5-4h": {
+  "design_orig_wf_net": 155096.51505240635,
+  "design_pick": null,
+  "design_retune_wf_net": 155096.51505240635,
+  "name": "ai-opinion Robust 4h",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 38.76594202898551,
+    "exits": {
+     "stop": 18,
+     "target": 5
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": -263.0997331576067,
+    "open_at_data_end": 0,
+    "p": 0.7544910179640718,
+    "summary": {
+     "avg_loss": -4092.3728743128086,
+     "avg_win": 7470.989712376167,
+     "days": 23,
+     "max_dd": 55014.40940136968,
+     "net": -36307.76317574972,
+     "net_per_day": -1578.5983989456402,
+     "top5_share": null,
+     "trades": 23,
+     "win_rate": 0.21739130434782608,
+     "worst_day": -7209.576795327513
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 1520.0
+    },
+    "trades_csv": "results/trades/gold_GB5-4h_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -17434.178547734915,
+     "n": 500,
+     "p95": 25958.14567476645
+    }
+   }
+  }
+ },
+ "GB6": {
+  "design_orig_wf_net": 40436.600000005055,
+  "design_pick": "rt_fixed2300",
+  "design_retune_wf_net": 57251.100000004306,
+  "name": "reopen-drift (reopen +5 to +120 min)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 1.9166666666666665,
+    "exits": {
+     "time": 137
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": 66.69565217397673,
+    "open_at_data_end": 0,
+    "p": 0.17564870259481039,
+    "summary": {
+     "avg_loss": -796.9961038960396,
+     "avg_win": 1176.2116666667305,
+     "days": 136,
+     "max_dd": 16232.299999998351,
+     "net": 9204.000000008788,
+     "net_per_day": 67.6764705882999,
+     "top5_share": 2.297077357668416,
+     "trades": 137,
+     "win_rate": 0.43795620437956206,
+     "worst_day": -3291.9999999998545
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB6_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -11192.024999992112,
+     "n": 500,
+     "p95": 26901.60000000791
+    }
+   },
+   "rt_fixed2300": {
+    "avg_hold_h": 0.9166666666666667,
+    "exits": {
+     "time": 137
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": 65.34202898556109,
+    "open_at_data_end": 0,
+    "p": 0.13373253493013973,
+    "summary": {
+     "avg_loss": -700.1066666666122,
+     "avg_win": 662.6441558442101,
+     "days": 137,
+     "max_dd": 9078.99999999897,
+     "net": 9017.20000000743,
+     "net_per_day": 65.81897810224402,
+     "top5_share": 1.2031118307225501,
+     "trades": 137,
+     "win_rate": 0.5620437956204379,
+     "worst_day": -2815.9999999999236
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB6_rt_fixed2300_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -7709.136999992115,
+     "n": 500,
+     "p95": 17283.590000008084
+    }
+   }
+  }
+ },
+ "GB7": {
+  "design_orig_wf_net": 30144.799999999566,
+  "design_pick": null,
+  "design_retune_wf_net": 30144.79999999957,
+  "name": "liq-india-1h15",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 2.338405797101449,
+    "exits": {
+     "cut-off": 8,
+     "failed break": 4,
+     "new liquidity": 2,
+     "next liquidity": 9
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": 46.79927536231932,
+    "open_at_data_end": 0,
+    "p": 0.2375249500998004,
+    "summary": {
+     "avg_loss": -777.7700000000023,
+     "avg_win": 1095.07692307693,
+     "days": 14,
+     "max_dd": 3365.000000000018,
+     "net": 6458.300000000067,
+     "net_per_day": 461.3071428571476,
+     "top5_share": 1.9378629050988263,
+     "trades": 23,
+     "win_rate": 0.5652173913043478,
+     "worst_day": -2146.9999999999927
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB7_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -482.85999999868176,
+     "n": 500,
+     "p95": 14079.35500000114
+    }
+   }
+  }
+ },
+ "GB8": {
+  "design_orig_wf_net": 80267.69999999953,
+  "design_pick": null,
+  "design_retune_wf_net": 80267.69999999953,
+  "name": "liq-2h (confirm 15, second level)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 7.764285714285713,
+    "exits": {
+     "cut-off": 2,
+     "failed break": 6,
+     "next liquidity": 6
+    },
+    "fills_on_missing_minutes": {
+     "entries": 0,
+     "exits_at_minute_prices": 1
+    },
+    "net_per_trading_day": 17.223188405796805,
+    "open_at_data_end": 0,
+    "p": 0.3852295409181637,
+    "summary": {
+     "avg_loss": -4009.2142857143212,
+     "avg_win": 4348.757142857173,
+     "days": 12,
+     "max_dd": 20425.000000000087,
+     "net": 2376.7999999999593,
+     "net_per_day": 198.06666666666328,
+     "top5_share": 11.683061258835624,
+     "trades": 14,
+     "win_rate": 0.5,
+     "worst_day": -14435.999999999996
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 200.0
+    },
+    "trades_csv": "results/trades/gold_GB8_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -1811.2933999991994,
+     "n": 500,
+     "p95": 17734.850000000846
+    }
+   }
+  }
+ },
+ "GB9": {
+  "design_orig_wf_net": 87169.59999999945,
+  "design_pick": null,
+  "design_retune_wf_net": 87169.59999999945,
+  "name": "liq-1h-conf20 (second level)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 5.844202898550723,
+    "exits": {
+     "cut-off": 1,
+     "failed break": 11,
+     "new liquidity": 1,
+     "next liquidity": 10
+    },
+    "fills_on_missing_minutes": {
+     "entries": 1,
+     "exits_at_minute_prices": 0
+    },
+    "net_per_trading_day": 194.30072463767846,
+    "open_at_data_end": 0,
+    "p": 0.01996007984031936,
+    "summary": {
+     "avg_loss": -1531.8500000000224,
+     "avg_win": 4108.699999999991,
+     "days": 17,
+     "max_dd": 6948.200000000204,
+     "net": 26813.499999999625,
+     "net_per_day": 1577.2647058823309,
+     "top5_share": 1.2202211572528903,
+     "trades": 23,
+     "win_rate": 0.4782608695652174,
+     "worst_day": -2689.000000000062
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 280.0
+    },
+    "trades_csv": "results/trades/gold_GB9_orig_final.csv",
+    "trading_days": 138,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -1950.1305999986632,
+     "n": 500,
+     "p95": 20868.185000001038
+    }
+   }
+  }
+ },
+ "_meta": {
+  "data": "xauusd_m1_bid_to20261012_filled.csv.gz",
+  "final": [
+   "2026-04-01",
+   "2026-10-13"
+  ],
+  "ideas": [
+   "GB1:orig",
+   "GB2:orig",
+   "GB3:orig",
+   "GB3:rt_notargets",
+   "GB4-4h:orig",
+   "GB4-30m:orig",
+   "GB5-1h:orig",
+   "GB5-4h:orig",
+   "GB6:orig",
+   "GB6:rt_fixed2300",
+   "GB7:orig",
+   "GB8:orig",
+   "GB9:orig",
+   "GB10:orig",
+   "GB11:orig",
+   "GB12:orig",
+   "GB13:orig",
+   "GB13:rt_giveback5"
+  ],
+  "last_bar": "2026-10-12 23:59:00",
+  "money": "USD per standard lot (100 oz) after the study's costs",
+  "n_twins": 500,
+  "trading_days": 138
+ }
+}

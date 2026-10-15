@@ -1,0 +1,26 @@
+id: r53-cc4
+title: 'R53: F1C P07 day-high/low break on perps in the 00-09 IST window, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (1.5 ATR stop + trail lock, 180 min) earns after real costs on the recent market only (Boss,
+  15 Oct).
+data_version: Binance USD-M 1m perps, Deribit DVOL, Binance 5m OI, Delta India 1m option marks
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- CRYPTO
+features:
+- 'signal source: BTC/ETH perp (underlying)'
+model_or_rule: 1.5 ATR stop + trail lock, 180 min
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Rs. s15_trail: design 471 trades net -102,668, walk-forward -97,503; final 172 trades, win 35%, net -26,290 before
+    tax, -38,618 after tax (Delta), p 0.890, q 0.890 -> fail'
+  costs: Delta India fees + 18% GST, RC2 spread model, fills 1 min later; CoinSwitch PRO with/without GST; 31.2% tax per winning
+    trade, TDS as cash flow
+holdout_read: true
+verdict: rejected

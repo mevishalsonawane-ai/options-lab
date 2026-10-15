@@ -1,0 +1,26 @@
+id: r53-ma3-fut
+title: 'R53: R2 C1 NG 09:05 gap follow, NATGASMINI future, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (sign of the 09:05 gap, out 14:00) earns after real costs on the recent market only (Boss, 15
+  Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- NATURALGAS
+features:
+- 'signal source: NATURALGAS near future (underlying)'
+model_or_rule: sign of the 09:05 gap, out 14:00
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Rs. orig: design 147 trades net 82,666, walk-forward 84,472; final 125 trades, win 43%, net -4,020, p 0.154, q
+    0.450 -> fail; xeod: design 147 trades net 86,344, walk-forward 82,798; final 125 trades, win 45%, net -20,266, p 0.745,
+    q 0.810 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected
