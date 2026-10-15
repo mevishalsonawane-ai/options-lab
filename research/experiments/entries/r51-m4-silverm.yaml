@@ -1,0 +1,30 @@
+id: r51-m4-silverm
+title: 'R51 M4-SILVERM: SILVERM call 2 strikes OTM, 09:15-13:45 grid, 11-20 days to expiry, 240-min hold'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2025-08-05 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- SILVER
+features:
+- 'signal source: clock (15-min grid), strike from the future'
+model_or_rule: SILVERM call 2 strikes OTM, 09:15-13:45 grid, 11-20 days to expiry, 240-min hold
+settings: research/hunt/r51/fam_m4.py (m4|otm2|h240)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 81 trades, win 48%, net Rs 50,119 (Rs 300/day), avg win Rs 3,061 / loss Rs -1,649, worst day Rs -23,940,
+    max DD Rs 24,646, without top 5 Rs -2,270; twin p 0.6567; folds [0.0, -3146.0, 24524.0, 28740.0]. final test (1 Apr -
+    13 Oct 2026, read once) 93 trades, win 51%, net Rs 100,402 (Rs 733/day), avg win Rs 3,656 / loss Rs -1,553, worst day
+    Rs -5,160, max DD Rs 10,153, without top 5 Rs 42,085; twin p 0.0259, BH q 0.1408: q > 0.10. OLD: R42: holdout 53 trades
+    +Rs 336/trade (+Rs 17.8k), twin p 0.079; walk-forward -Rs 44.6k (129); paper arm switched off 14 Oct'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

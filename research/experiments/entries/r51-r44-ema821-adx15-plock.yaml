@@ -1,0 +1,36 @@
+id: r51-r44-ema821-adx15-plock
+title: 'R51 R44-ema821_adx15_plock: ema821_adx15_plock: 5-min index signal, ATM, stop -25% / target +50% / 60 min, stepped
+  lock'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (5-min)'
+model_or_rule: 'ema821_adx15_plock: 5-min index signal, ATM, stop -25% / target +50% / 60 min, stepped lock'
+settings: research/hunt/r51/fam_r44.py (ema821_adx15_plock|A|m0)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 3066 trades, win 41%, net Rs -255,364 (Rs -758/day), avg win Rs 1,983 / loss Rs -1,494, worst day Rs -39,602,
+    max DD Rs 268,369, without top 5 Rs -327,957; twin p 0.2675; folds [17599.0, -34297.0, -44629.0, -28159.0]. final test
+    (1 Apr - 13 Oct 2026, read once) 1231 trades, win 42%, net Rs 21,480 (Rs 162/day), avg win Rs 2,079 / loss Rs -1,456,
+    worst day Rs -28,823, max DD Rs 95,939, without top 5 Rs -40,614; twin p 0.0319, BH q 0.1595: q > 0.10; top-5 trades >=
+    net; design walk-forward <= 0. OLD: R44 (2021 - Oct 2026, 5 indices + CRUDEOIL): out of sample 0 of 14 strategy-side combinations
+    positive, 0 of 112 cells pass; EMA8/21+ADX15 alone -Rs 8.3 lakh on 9,455 NSE trades'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

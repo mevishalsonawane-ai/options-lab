@@ -1,0 +1,34 @@
+id: r51-r29-r8-rt
+title: 'R51 R29-R8-RT: re-tune: exit {X1, X1 30 min, -20%/+40%/60 min} x strike {ATM, 1-ITM}'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this re-tune makes money after real costs on one held contract (gates:
+  final net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (EMA ribbons on 1/3/5/15-min bars)'
+model_or_rule: 're-tune: exit {X1, X1 30 min, -20%/+40%/60 min} x strike {ATM, 1-ITM}'
+settings: research/hunt/r51/fam_r29.py (r29|P10_1|-1|fade|S20T40|m0)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 6
+results:
+  summary: 'design 949 trades, win 41%, net Rs -128,443 (Rs -381/day), avg win Rs 1,775 / loss Rs -1,480, worst day Rs -29,141,
+    max DD Rs 209,216, without top 5 Rs -178,397; chosen r29|P10_1|-1|fade|S20T40|m0; walk-forward out-of-fold Rs -182,970
+    on 656 trades. final test (1 Apr - 13 Oct 2026, read once) 367 trades, win 41%, net Rs 26,292 (Rs 198/day), avg win Rs
+    1,798 / loss Rs -1,121, worst day Rs -18,002, max DD Rs 51,521, without top 5 Rs -16,511; twin p 0.002, BH q 0.025: top-5
+    trades >= net; design walk-forward <= 0. OLD: R29 holdout 2023: -Rs 43 to -223 a trade; 0 of 55 rule x index tests pass'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

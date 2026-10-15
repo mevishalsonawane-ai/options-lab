@@ -1,0 +1,30 @@
+id: r51-r45-f-a
+title: 'R51 R45-F-a: Bollinger lower-band cross on the 5-min rolling ATM call; trade the strike ATM at entry'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+features:
+- 'signal source: OPTION''S OWN PRICE CHART (non-default; Boss only)'
+model_or_rule: Bollinger lower-band cross on the 5-min rolling ATM call; trade the strike ATM at entry
+settings: research/hunt/r51/fam_r45.py (r45|F-a|h3|s0.1)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 368 trades, win 33%, net Rs -74,813 (Rs -222/day), avg win Rs 786 / loss Rs -694, worst day Rs -3,918,
+    max DD Rs 75,038, without top 5 Rs -91,492; twin p 0.98; folds [-22453.0, -791.0, -15938.0, -22340.0]. final test (1 Apr
+    - 13 Oct 2026, read once) 142 trades, win 43%, net Rs -8,544 (Rs -64/day), avg win Rs 685 / loss Rs -621, worst day Rs
+    -2,866, max DD Rs 14,003, without top 5 Rs -21,011; twin p 0.2974, BH q 0.5549: final net <= 0; p >= 0.05; q > 0.10; top-5
+    trades >= net; design walk-forward <= 0. OLD: R45: -Rs 170 a trade (1,250 trades) on one contract; holdout -Rs 106 (122)'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected
