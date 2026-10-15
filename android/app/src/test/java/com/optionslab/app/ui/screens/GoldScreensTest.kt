@@ -3,7 +3,7 @@ package com.optionslab.app.ui.screens
 import android.app.Application
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performSemanticsAction
@@ -98,7 +98,7 @@ class GoldScreensTest {
         assertTrue(compose.has("Gold (COMEX futures)"))
         // COMPACT (15 Oct): the switch's explanation is in its own small dialog (its ⓘ), OK closes it.
         assertFalse(compose.has("24x5: Monday 05:30 IST to Saturday 02:30 IST", substring = true))
-        compose.onNodeWithContentDescription("About Armed").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.onAllNodesWithContentDescription("About Armed")[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         assertTrue(compose.has("24x5: Monday 05:30 IST to Saturday 02:30 IST", substring = true))
         compose.onNodeWithText("OK").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         assertTrue(compose.has("Last signal")); assertTrue(compose.has("none yet"))
