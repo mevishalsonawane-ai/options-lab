@@ -301,7 +301,8 @@ object ManagerSpecialists {
         return when (team.kind) {
             TradeManager.TeamKind.WHICH -> SpecialistBook.answerWhich(a.family, records) { SmartWorkers.hhmm(it) }
             TradeManager.TeamKind.HOW -> SpecialistBook.answerHow(a.family, records, _book.value.tuned) +
-                _book.value.lines.takeIf { it.isNotEmpty() }?.let { "\nLast night's review: " + it.joinToString("; ") }.orEmpty()
+                _book.value.lines.takeIf { it.isNotEmpty() }?.let { "\nLast night's review: " + it.joinToString("; ") }.orEmpty() +
+                researchPriors(team.specialist, a.family)
             TradeManager.TeamKind.MUTE, TradeManager.TeamKind.UNMUTE -> {
                 val fam = a.family ?: return "For which strategy, Boss? Say, for example, \"mute the OI specialist for Pine\"."
                 val id = team.specialist ?: return "Which specialist, Boss? They are: ${ManagerTeam.SPECIALISTS.joinToString(", ") { it.name }}."
@@ -309,6 +310,17 @@ object ManagerSpecialists {
             }
         }
     }
+
+    /**
+     * The research priors beside the specialists' record (13 Oct, the shared knowledge): the asked specialist's, else the order-flow
+     * readers' (flow, traps). Context only: a prior never mutes, weights or changes a vote. Memory only.
+     */
+    private fun researchPriors(specialist: String?, family: String?): String = runCatching {
+        val s = SharedKnowledgeHost.snapshot
+        val ids = specialist?.let { listOf(it) } ?: listOf("flow", "traps")
+        val notes = ids.mapNotNull { id -> com.optionslab.ira.SharedKnowledge.specialistNote(s, id, family)?.let { "${ManagerTeam.nameOf(id)} - $it" } }
+        if (notes.isEmpty()) "" else { SharedKnowledgeHost.read("Trade manager", "the research priors of ${ids.joinToString(", ")}"); "\nFrom the research: " + notes.joinToString("; ") }
+    }.getOrDefault("")
 
     /** The diagnostics' lines. */
     fun diagLines(): List<String> {

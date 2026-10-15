@@ -1,0 +1,37 @@
+id: r52-h11-1
+title: 'R52 re-test on Nov 2024+: H11-1 Liquidity 15+5-style level break on NIFTY'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H11-1 (old verdict: FAIL. H11 choice pre -15.1/day net (+17 gross), 2023 +3.3k, 2024
+  +15.0k, WF +1.2k; hold 83 tr -3.9/day, rand p 0.31. H4 765 tr -26.9k; H23 604 tr -56.0k; LIQ-8 -66k/-28k) makes money net
+  of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''books'': [[''NIFTY'', 30], [''NIFTY'', 5]], ''room'': 2.0, ''stop_mult'': 1.0} | ITM1/near | exits stop_pct=0.15,time_stop=20
+  | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 145 trades, win 34%, net Rs +3,027 (Rs +9/day), worst day Rs -3,759, max DD Rs -17,777, p 0.856
+    (coin-flip p 0.261); walk-forward Rs +17,462. Re-tune pick g20 ({''books'': ((''NIFTY'', 30), (''NIFTY'', 5)), ''stop_mult'':
+    1.0, ''room'': 1.0} · ATM/month · exits stop_pct=0.15,time_stop=20): design 196 trades, win 41%, net Rs +6,899 (Rs +20/day),
+    worst day Rs -3,190, max DD Rs -13,477, p 0.525 (coin-flip p 0.055); walk-forward Rs +13,076. FINAL original: 60 trades,
+    win 25%, net Rs -13,114 (Rs -99/day), worst day Rs -2,789, max DD Rs -14,716, p 0.964 (coin-flip p 0.814), q 1.00 -> FAIL.
+    FINAL pick: 81 trades, win 25%, net Rs -15,888 (Rs -119/day), worst day Rs -2,224, max DD Rs -15,888, p 0.918 (coin-flip
+    p 0.808), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = H11''s pre-registered choice for NIFTY (HUNT_H11.md: 30+5, 1x
+  stop 15 pts, room >= 2, ITM1, weekly); hunt/h11/sig.py raw_signals; grid = the rest of H11''s 24 cells. Gates: final net
+  > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

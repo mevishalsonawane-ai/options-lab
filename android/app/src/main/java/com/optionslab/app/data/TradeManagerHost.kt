@@ -463,7 +463,8 @@ object TradeManagerHost {
                 val lockHit = d.rule == TradeManager.Rule.LOCK
                 val words = if (lockHit) "profit lock hit" else TradeManager.short(d.rule, t.side)
                 val kind = if (lockHit) TradeManager.LOCK_NOTE else TradeManager.EXIT_EARLY
-                note(id, TradeManager.Note(now, kind, d.rule.key, "$words (${d.reason})", px, act, d.evidence, lock = step.state.core.lock,
+                val cite = if (lockHit) "" else researchCite(lead, t.family)
+                note(id, TradeManager.Note(now, kind, d.rule.key, "$words (${d.reason}$cite)", px, act, d.evidence, lock = step.state.core.lock,
                     lead = if (lockHit) null else lead, voters = if (lockHit) emptyList() else voters))
                 update(id) { r ->
                     var x = r.copy(actedAtMs = r.actedAtMs ?: now)
@@ -479,7 +480,7 @@ object TradeManagerHost {
             }
             is TradeManager.Decision.Extend -> {
                 note(id, TradeManager.Note(now, TradeManager.EXTEND_NOTE, TradeManager.Rule.EXTEND.key,
-                    "target ${TradeManager.lv(d.newTarget)}, lock ${TradeManager.lv(d.newStop)} (${d.reason})", px, act, d.evidence,
+                    "target ${TradeManager.lv(d.newTarget)}, lock ${TradeManager.lv(d.newStop)} (${d.reason}${researchCite(lead, t.family)})", px, act, d.evidence,
                     target = d.newTarget, lock = d.newStop, lead = lead, voters = voters))
                 l.noteLock = d.newStop
                 update(id) { it.copy(target = d.newTarget, lock = d.newStop, extensions = step.state.core.extensions, actedAtMs = it.actedAtMs ?: now) }
@@ -490,6 +491,18 @@ object TradeManagerHost {
                 } else post(t, "$who would have extended its target to ${TradeManager.lv(d.newTarget)} with the lock at ${TradeManager.lv(d.newStop)} (shadow)")
             }
         }
+    }
+
+    /**
+     * The research prior the leading specialist's vote is cited with (13 Oct, the shared knowledge: "the Traps specialist reads the
+     * trap findings, and the chair's reasons cite them"): "; research on traps: still open - ..." or "". Words only - it never changes
+     * the decision. Memory only (a lookup in the built snapshot), safe on the manager's thread.
+     */
+    private fun researchCite(lead: String?, family: String): String {
+        if (lead == null) return ""
+        val n = runCatching { com.optionslab.ira.SharedKnowledge.specialistNote(SharedKnowledgeHost.snapshot, lead, family) }.getOrNull() ?: return ""
+        SharedKnowledgeHost.read("Trade manager", "the research on the ${ManagerTeam.nameOf(lead)} specialist's subject for its vote")
+        return "; $n"
     }
 
     /** TEST ONLY: the strategy's own look is not woken (the test runs it itself). False in the app. Throws unless BuildConfig.DEBUG. */

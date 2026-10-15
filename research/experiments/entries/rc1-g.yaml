@@ -1,0 +1,30 @@
+id: rc1-g
+title: Crypto 4h breakout with a 2-ATR stop on spot (short-term, frequent)
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/HUNT_RC1_CRYPTO_SMALL_ACCOUNT.md
+hypothesis: A short-term breakout survives Indian costs and the 30% no-set-off tax.
+data_version: 'Binance public archive (data.binance.vision): spot BTCUSDT/ETHUSDT 1d+1h 2017-08-17..2026-10-12, USD-M perps
+  1d+1h 2020-01-01..2026-10-12, funding 2020-01..2026-09-30; USD/INR ECB (frankfurter.dev); parquet cache outside git'
+period:
+  design: walk-forward OOS 2019-10-13..2025-10-12 (6 yearly OOS years, anchored; training from 2018-03-05)
+  holdout: 2025-10-13..2026-10-12 (13 months), read once
+instruments:
+- CRYPTO
+features:
+- BTC / ETH prices in INR
+model_or_rule: 4h close > prior 20-bar high; stop entry - 2 ATR(14); exit on close < prior 10-bar low
+settings: research/hunt/rc1/config.py
+prereg: research/hunt/rc1/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Walk-forward 50/50 Rs 1L: gross +48.0%/yr, pre-tax +10.6%, after tax -12.2% (Rs 1L to Rs 45,746), 397 entries
+    (133 orders/yr), tax Rs 1.62 L, max DD -82%. Low costs +1.4%, high -29.8%. Twin p 0.089, BH q 0.356. Holdout -45.7% (76
+    entries) vs twin median -35.8%. FAILED.'
+  costs: Indian spot taker 0.25% + 18% GST + 0.15% half-spread per side (low 0.168% / high 0.890%); INR perps 0.05% + GST
+    + 0.02% (0.079%); real funding; 31.2% VDA tax per profitable sale, no loss set-off; 1% TDS locked 365 d; perps tax readings
+    A (VDA) and B (business)
+holdout_read: true
+verdict: rejected
+notes: 'RC1 (Boss 13 Oct 2026, small Indian account). BH across 8 active tests (b x2, c, c-perp, d, f, g, g-perp). Tax figures
+  are modelling assumptions; confirm with a CA. Research only: nothing in the app trades crypto.'

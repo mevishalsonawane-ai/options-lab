@@ -140,6 +140,10 @@ object FastPath {
 
     private fun snapshot(now: Long): Snap {
         snap?.takeIf { now - it.at in 0 until STATE_MS }?.let { return it }
+        // Asked BEFORE the cover is read (13 Oct): the cover's own read starts the paper book's background load, which can
+        // finish before the end of this function - asked afterwards, a "not covered" read from before the load was kept the
+        // full 500 ms, and a live stop's tick in that window planned no LIVE lane (OrderPathRound2Test, after a quick load).
+        val paperReady = runCatching { Paper.loaded() }.getOrDefault(true)
         val cover = runCatching { Paper.streamCover() }.getOrDefault(Paper.StreamCover(emptySet(), covered = false, any = false))
         val orbLive = OrbArms.liveHint
         val jarvis = com.optionslab.app.BuildConfig.JARVIS
@@ -148,6 +152,7 @@ object FastPath {
         val holding = cover.any || OrbArms.holdingHint
         val minuteArms = NightArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
             VixDivArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
+            HeroTicketArm.holding() ||
             McxPaperArms.view.value.let { v -> v.armed.values.any { it } || v.open.isNotEmpty() } ||
             (jarvis && runCatching { com.optionslab.app.ira.IraSolo.holding() }.getOrDefault(false)) ||
             holding || liveHolding || anyLive
@@ -161,7 +166,7 @@ object FastPath {
         val tokens = cover.tokens + KiteStream.followed() + KiteStream.INDEX_TOKENS + live
         val liveActive = live.isNotEmpty() || (OrbArms.armedHint && liveMode(now))
         // Built before the paper book was in memory (not covered for now): kept only briefly, so the cover is read again soon.
-        val at = if (runCatching { Paper.loaded() }.getOrDefault(true)) now else now - STATE_MS + 25
+        val at = if (paperReady) now else now - STATE_MS + 25
         return Snap(at, st, tokens, cover.any, live, liveActive).also { snap = it }
     }
 
@@ -292,6 +297,9 @@ object FastPath {
                     step("Forge ideas") { GrammarArm.tick() }
                     if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.manageOnly() }
                     step("missed-lock sweep") { Sweeper.run(ctx) }
+                    // 15 Oct: the Hero ₹1,000 ticket (paper): its open tickets' trail, target and 15:05 every minute (exits only - its
+                    // 12:30 chain reads run in the watch's arms passes, never in this lane).
+                    step(HERO_TICKET) { HeroTicketArm.manageOnly() }
                     // Smart scheduling (10 Oct): these looked at this minute; the watch's passes need not look again for it.
                     runCatching { SmartWorkers.ranByLane(MINUTE_ARMS) }
                 }
@@ -306,6 +314,11 @@ object FastPath {
 
     /** The watch's step names of the arms these lanes run (the smart scheduler counts their looks as done). */
     private val MINUTE_ARMS = listOf("Night (R3)", "VIX divergence", "MCX paper arms", "Forge ideas")
+    /**
+     * The Hero ₹1,000 ticket's step name (the minute lane and the watch's rounds). Not a smart-scheduler step: the rounds include
+     * it only when it needs a pass ([HeroTicketArm.wantsPass]), and then it always runs.
+     */
+    const val HERO_TICKET = "Hero 1000 ticket"
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.

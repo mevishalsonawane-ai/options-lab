@@ -1,0 +1,36 @@
+id: r52-h28-2
+title: 'R52 re-test on Nov 2024+: H28-2 Expiry-day BANKNIFTY PE at 09:20'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H28-2 (old verdict: Pre 177 tr +79,759, p coin 0.027; as WF pick 2024 -29.3k, 2025 -15.0k;
+  hold +12,855 (13 tr)) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small
+  design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index (calendar)'
+model_or_rule: '{''legs'': [[''exp_day'', ''BANKNIFTY'', ''0920'', ''prior'', -1]]} | ITM1/near | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design original: 17 trades, win 29%, net Rs -21,699 (Rs -64/day), worst day Rs -9,433, max DD Rs -37,440, p 1.000
+    (coin-flip p 0.473); walk-forward Rs -6,313. Re-tune pick g08 ({''legs'': ((''exp_day'', ''BANKNIFTY'', ''1400'', ''prior'',
+    -1),)} · ITM1/near · exits default): design 17 trades, win 53%, net Rs +20,216 (Rs +60/day), worst day Rs -5,208, max
+    DD Rs -9,920, p 1.000 (coin-flip p 0.143); walk-forward Rs +14,693. FINAL original: 6 trades, win 67%, net Rs +19,443
+    (Rs +147/day), worst day Rs -3,895, max DD Rs -6,108, p 1.000 (coin-flip p 0.031), q 1.00 -> too few trades to judge.
+    FINAL pick: 6 trades, win 50%, net Rs -1,993 (Rs -15/day), worst day Rs -3,318, max DD Rs -4,633, p 1.000 (coin-flip p
+    0.262), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index (calendar). Why this original: original = h28 variant (exp_day, BANKNIFTY, 09:20, E6_close, prior
+  = PE), the WF pick 2024-25. BANKNIFTY has monthly expiries only in this window (about one session a month).. Gates: final
+  net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

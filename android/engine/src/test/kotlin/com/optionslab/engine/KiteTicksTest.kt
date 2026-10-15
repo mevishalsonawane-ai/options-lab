@@ -52,6 +52,8 @@ class KiteTicksTest {
         val t = KiteTicks.parse(message(p)).single()
         assertEquals(212.55, t.last)
         assertEquals(123_456L, t.volume)
+        // The day's average traded price (bytes 12-15): the tick zone's exact VWAP.
+        assertEquals(210.0, t.avgPrice)
         assertEquals(200.0, t.open)
         assertEquals(205.0, t.close)
         assertEquals(654_321L, t.oi)
@@ -73,6 +75,7 @@ class KiteTicksTest {
         assertEquals(null, noDepth.bidQty); assertEquals(null, noDepth.askQty)
         assertEquals(0L, noDepth.buyQty); assertEquals(0L, noDepth.sellQty)
         assertEquals(null, noDepth.depth); assertEquals(null, noDepth.lastTradeTime); assertEquals(0L, noDepth.lastQty)
+        assertEquals(null, noDepth.avgPrice, "no average price in the packet: none invented")
     }
 
     @Test fun fullBookAllFiveLevels() {

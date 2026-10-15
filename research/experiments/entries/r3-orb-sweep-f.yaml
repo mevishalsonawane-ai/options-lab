@@ -1,0 +1,41 @@
+id: r3-orb-sweep-f
+title: 'R3 ORB Sweep variant F: the baseline + skip the worst tercile of one point-in-time feature (Part B)'
+family: orb
+date: '2026-10-14'
+doc: research/HUNT_R3_ORB_FAMILY.md
+data_version: Dhan lake data-20261014 (options_rolling_1m opt_<UND>_WEEK = nearest expiry on or after the day, ATM+-10; index_1m
+  incl. INDIAVIX) read by research/hunt/r3orb/r3data.py
+period:
+  design: BANKNIFTY 2021-09-03..2026-10-12 (1,255 sessions) + NIFTY 2021-08-02..2026-10-12 (1,284)
+  holdout: 'out-of-instrument: FINNIFTY 2021-09-03.. (1,254), MIDCPNIFTY 2022-02-21.. (906), SENSEX 2023-05-15.. (845), all
+    to 2026-10-12; read once 14 Oct 2026'
+prereg: research/hunt/r3orb/PREREG.md
+hypothesis: ORB Sweep with the baseline + skip the worst tercile of one point-in-time feature (Part B) makes money net of
+  the app's fees and fills on unseen data (PREREG A8 gates D1-D4, H1-H5).
+instruments:
+- BANKNIFTY
+- NIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 1-minute index
+- opening range
+- VIX
+- gap
+- range width / ATR14
+- signal time
+- expiry day
+- TWAP distance
+model_or_rule: 'ORB Sweep: the baseline + skip the worst tercile of one point-in-time feature (Part B). Filter: skip vix_chg
+  low (-inf .. -0.9926).'
+settings: research/hunt/r3orb/PREREG.md A6 and Part B
+variants_tried: 16
+results:
+  summary: 'Design: 2,172 trades, net Rs -319,572 (Rs -249 a day), win rate 28%, worst day Rs -4,754, max drawdown Rs -320,882;
+    per year [-36303, -59013, -48355, -20957, -113823, -41121]; gates D1-D4 nnnn. Holdout: 2,240 trades, net Rs -391,289 (Rs
+    -312 a day), win rate 29%, worst day Rs -27,672, max drawdown Rs -406,734; t p 1.000, twin mean Rs -501,633 p 0.008, BH
+    q 1.00 / 0.16 (m 183); gates H1-H5 nyyyn. FAIL.'
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+holdout_read: true
+verdict: rejected

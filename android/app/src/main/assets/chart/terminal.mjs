@@ -183,6 +183,64 @@ for (const [kind, def] of Object.entries(FLOW_LINES)) {
   } catch (e) { /* an older chart build: the basic chart's toggles remain */ }
 }
 
+// ---- the level map (TODO I12, 13 Oct): today's support / resistance with "held N of M" -------------
+// One indicator in the menu's "Market context" group, off until added. The app computes the levels off
+// its main thread and keeps them (bridge.levelMap, memory only); drawing here only reads that answer.
+// Research: no kind of level held more often than a random price nearby - each label says its count.
+const LEVEL_KEYS = ['PDH', 'PDL', 'PDC', 'P', 'R1', 'S1', 'R2', 'S2', 'SWING_HIGH', 'SWING_LOW',
+  'MAX_OI_CALL', 'MAX_OI_PUT', 'VWAP', 'VB:+1σ', 'VB:−1σ', 'VB:+2σ', 'VB:−2σ'];
+const LEVEL_TITLES = { SWING_HIGH: 'Swing H', SWING_LOW: 'Swing L', MAX_OI_CALL: 'OI call', MAX_OI_PUT: 'OI put' };
+let levelData = { levels: [] };
+function levelRead() {
+  try {
+    const [sym] = chartNow();
+    levelData = JSON.parse(bridge && bridge.levelMap ? bridge.levelMap(sym) : '{"levels":[]}');
+  } catch (e) { levelData = { levels: [] }; }
+  return levelData.levels || [];
+}
+function istDay0() { return Math.floor((Date.now() / 1000 + 19800) / 86400) * 86400 - 19800; }
+try {
+  registerIndicator({
+    id: 'ira-levels', name: 'Ira: level map (held N of M)', category: 'Market context', placement: 'onchart',
+    inputs: [
+      { key: 'showLabels', type: 'boolean', label: 'Labels', default: true },
+      { key: 'cR', type: 'color', label: 'Resistance colour', default: '#a0522d' },
+      { key: 'cS', type: 'color', label: 'Support colour', default: '#2e7d6b' },
+      { key: 'cV', type: 'color', label: 'VWAP colour', default: '#6b7b8c' },
+    ],
+    plots: LEVEL_KEYS.map((k, i) => ({ key: 'l' + i, title: LEVEL_TITLES[k] || k.replace('VB:', 'VWAP '),
+      // Support: S1/S2 only (13 Oct review: startsWith('S') also caught SWING_HIGH, a resistance).
+      colorKey: k === 'VWAP' || k.startsWith('VB:') ? 'cV' : (/^S\d$/.test(k) || k === 'PDL' || k === 'MAX_OI_PUT' || k === 'SWING_LOW' ? 'cS' : 'cR'),
+      type: 'line', style: { lineWidth: 1 } })),
+    calc: (bars) => {
+      const lv = levelRead();
+      const day0 = istDay0();
+      const out = {};
+      LEVEL_KEYS.forEach((k, i) => {
+        const l = lv.find((x) => x.type === k);
+        out['l' + i] = bars.map((b) => (l && b.time >= day0 ? l.price : null));
+      });
+      return out;
+    },
+    markers: ({ bars, settings }) => {
+      if (settings && settings.showLabels === false) return [];
+      const today = bars.filter((b) => b.time >= istDay0());
+      const last = today[today.length - 1];
+      if (!last) return [];
+      return (levelData.levels || []).map((l) => ({ time: last.time, position: 'atPrice', price: l.price,
+        shape: l.side === 'S' ? 'labelUp' : 'labelDown', size: 'tiny', color: l.side === 'S' ? '#2e7d6b' : '#a0522d', text: l.label }));
+    },
+  });
+} catch (e) { /* an older chart build: the level map is simply not offered */ }
+// The app fills its cache on its own thread: the shown map is read again shortly after it is added and then every minute.
+function levelRefresh() {
+  try {
+    for (const ind of widget.chart.indicators()) if (ind.indicatorId === 'ira-levels' && ind.recompute) ind.recompute();
+  } catch (e) { /* nothing shown */ }
+}
+setTimeout(levelRefresh, 2500);
+setInterval(() => { if (!paused) levelRefresh(); }, 60000);
+
 const widget = createWidget('#t', {
   feed,
   symbol,
@@ -279,6 +337,47 @@ widget.on('symbol', () => {
 widget.chart.on('indicatorSettings', (e) => {
   try { WIDGET_DIALOGS.indicatorSettings(widget.context, undefined, { instanceId: e && e.instanceId }); } catch (err) { /* older chart build */ }
 });
+
+// ---- explain a candle (TODO I13, 13 Oct) ------------------------------------------------------------------
+// A long press opens the chart's menu; one more row at its top, "Explain this candle (Jarvis)", sends that
+// candle and its day's others to the app, which answers in a dialog from what it holds for those minutes.
+function explainCandle(time) {
+  try {
+    const data = widget.series.getData();
+    const b = data.find((x) => x.time === time);
+    if (!b || b.open == null) return;
+    const day0 = Math.floor((time + 19800) / 86400) * 86400 - 19800;
+    const day = data.filter((x) => x.time >= day0 && x.time < day0 + 86400 && x.open != null)
+      .map((x) => [x.time, x.open, x.high, x.low, x.close, x.volume ?? 0]);
+    bridge.explain && bridge.explain(widget.symbol(), Math.max(1, Math.round(barSeconds(widget.interval()) / 60)),
+      JSON.stringify([b.time, b.open, b.high, b.low, b.close, b.volume ?? 0]), JSON.stringify(day));
+  } catch (e) { show('Could not read that candle.'); }
+}
+try {
+  widget.chart.on('contextmenu', (e) => {
+    if (!e || e.time == null || !bridge || !bridge.explain) return;
+    const time = e.time;
+    setTimeout(() => {
+      const menus = document.querySelectorAll('.oac-ctx');
+      const panel = menus[menus.length - 1];
+      if (!panel) { explainCandle(time); return; }
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'oac-ctx__row';
+      row.setAttribute('role', 'menuitem');
+      const mark = document.createElement('span'); mark.className = 'oac-ctx__mark';
+      const label = document.createElement('span'); label.className = 'oac-ctx__label'; label.textContent = 'Explain this candle (Jarvis)';
+      row.append(mark, label);
+      row.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        setTimeout(() => { if (panel.isConnected) panel.remove(); }, 60);
+        explainCandle(time);
+      });
+      panel.insertBefore(row, panel.firstChild);
+    }, 0);
+  });
+} catch (e) { /* an older chart build: no long-press explain */ }
 
 // The app switches symbol (e.g. from the option chain) through this.
 window.__iraSetSymbol = (s, ex) => widget.setSymbol(s, ex);

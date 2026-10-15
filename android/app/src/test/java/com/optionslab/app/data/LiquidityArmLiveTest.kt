@@ -132,6 +132,23 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertNull("the approval is used up", row().pending)
     }
 
+    /** 13 Oct review: Boss's Rs 500 trail is paper only - a LIVE entry with the switch on carries no trail, and is not labelled trailed. */
+    @Test fun aLiveEntryWithBosssPaperTrailSwitchOnCarriesNoTrail() {
+        val before = LiquidityTest.state.value
+        LiquidityTest.setStateForTest(before.copy(trail = true))
+        try {
+            assertTrue(LiquidityTest.trailOn())
+            state()
+            assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+            val p = row().open!!
+            assertTrue(p.live)
+            assertNull("never on a live trade", p.trail)
+            assertNull(p.trailFrom)
+            // Its resting stop is the plain 15% one (170 under the 200 fill), not moved by any trail.
+            assertEquals(170.0, p.stopTrigger!!, 0.0)
+        } finally { LiquidityTest.setStateForTest(before) }
+    }
+
     @Test fun twoLotsAtZerodhaBuyTwiceTheLotAndTheStopCoversThemAll() {
         state(lots = 2)
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })

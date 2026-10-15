@@ -1,0 +1,39 @@
+id: r52-swing-deep-6
+title: 'R52 re-test on Nov 2024+: SWING_DEEP-6 NR7 / inside day multi-day breakout'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule SWING_DEEP-6 (old verdict: NIFTY fut 20d +570k 8/11; BN fut 2ATR+10d +590k 7/11; WF out-of-sample
+  -21k/-41k/-9k/+33k) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index (futures traded in the original; R52 tests the monthly ATM option version)'
+model_or_rule: '{''ex'': ''20d'', ''series'': ''month''} | ATM/month | exits sq_off=930 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 7
+results:
+  summary: 'Design original: 23 trades, win 26%, net Rs -158,993 (Rs -472/day), worst day Rs -27,950, max DD Rs -167,577,
+    p 0.958 (coin-flip p 0.858); walk-forward Rs -123,669. Re-tune pick g01 ({''ex'': ''5d'', ''series'': ''month''} · ATM/month
+    · exits sq_off=930): design 63 trades, win 40%, net Rs -16,369 (Rs -49/day), worst day Rs -24,575, max DD Rs -113,430,
+    p 0.111 (coin-flip p 0.112); walk-forward Rs +21,667. FINAL original: 11 trades, win 36%, net Rs -75,374 (Rs -567/day),
+    worst day Rs -24,771, max DD Rs -80,691, p 0.336 (coin-flip p 0.605), q 1.00 -> too few trades to judge. FINAL pick: 27
+    trades, win 33%, net Rs -91,871 (Rs -691/day), worst day Rs -23,989, max DD Rs -109,061, p 0.100 (coin-flip p 0.602),
+    q 0.62 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index (futures traded in the original; R52 tests the monthly ATM option version). Why this original:
+  NIFTY futures fixed 20d was the headline (+570k, 8/11 yrs); BN futures 2ATR + 10d (+590k). The lake has no futures: the
+  option version on the monthly ATM (SWING_DEEP''s own option leg). Grid = SWING_DEEP''s exits, and the two per-index headline
+  cells. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design
+  walk-forward > 0.'

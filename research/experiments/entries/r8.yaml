@@ -1,0 +1,25 @@
+id: r8
+title: Order-flow traps and protective rules
+family: diagnosis
+date: '2026-10-09'
+doc: research/HUNT_R8_ORDER_FLOW_TRAPS.md
+hypothesis: Describe the depth book's fakes.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 5-level depth
+model_or_rule: descriptive study
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: About half of visible size is cancelled within 3-5 s; walls mostly live about 1 s.
+  costs: n/a
+holdout_read: null
+verdict: not-a-test
+backfilled: true

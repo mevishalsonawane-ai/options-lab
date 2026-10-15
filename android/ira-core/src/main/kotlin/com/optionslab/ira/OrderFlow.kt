@@ -63,6 +63,13 @@ object OrderFlow {
 
     /** The 30 minutes each part is z-scored against. */
     const val HISTORY_SEC = 1800
+    /**
+     * Memory audit (14 Oct 2026, item 4): the live flow's tick queue holds at most this many batches (the oldest dropped and
+     * counted past it; about a minute and a half of the stream at its busiest - the flow's thread takes them every 250 ms).
+     */
+    const val LIVE_QUEUE_CAP = 2_000
+    /** ... and the 1-second recorder's buffer is written once it holds this many characters (was 512,000), or each minute. */
+    const val RECORDER_FLUSH_CHARS = 128_000
 
     /** Two minutes of seconds before a read is trusted (a strength is given). */
     const val WARM_SEC = 120
@@ -154,6 +161,26 @@ object OrderFlow {
         val mean = sum / k
         var sq = 0.0
         for (i in 0 until n) { val v = history[i]; if (!v.isNaN()) sq += (v - mean) * (v - mean) }
+        val sd = sqrt(sq / k)
+        if (sd < 1e-9) return if (abs(x - mean) < 1e-9) 0.0 else if (x > mean) 4.0 else -4.0
+        return ((x - mean) / sd).coerceIn(-4.0, 4.0)
+    }
+
+    /**
+     * [z] of [x] against a ring of [vals] stamped [secs] (seconds), counting only the slots stamped within [HISTORY_SEC] of
+     * [nowSec] (memory, 14 Oct 2026: the same figure as [z] over a copy with the old slots set to NaN, without the copy - the
+     * sums run over the same slots in the same order, so the result is the same to the last bit).
+     */
+    fun zLive(x: Double, secs: LongArray, vals: DoubleArray, nowSec: Long): Double? {
+        val n = minOf(secs.size, vals.size)
+        if (n < 30 || x.isNaN()) return null
+        fun live(k: Int) = secs[k] >= 0 && nowSec - secs[k] < HISTORY_SEC && !vals[k].isNaN()
+        var sum = 0.0; var k = 0
+        for (j in 0 until n) if (live(j)) { sum += vals[j]; k++ }
+        if (k < 30) return null
+        val mean = sum / k
+        var sq = 0.0
+        for (j in 0 until n) if (live(j)) { val v = vals[j]; sq += (v - mean) * (v - mean) }
         val sd = sqrt(sq / k)
         if (sd < 1e-9) return if (abs(x - mean) < 1e-9) 0.0 else if (x > mean) 4.0 else -4.0
         return ((x - mean) / sd).coerceIn(-4.0, 4.0)
@@ -794,8 +821,8 @@ object OrderFlow {
             val (secs, vals) = optHist.getOrPut(name) { LongArray(HISTORY_SEC) { -1 } to DoubleArray(HISTORY_SEC) { Double.NaN } }
             val i = (sec % HISTORY_SEC).toInt()
             if (secs[i] != sec) { secs[i] = sec; vals[i] = v }
-            val live = DoubleArray(HISTORY_SEC) { k -> if (secs[k] >= 0 && sec - secs[k] < HISTORY_SEC) vals[k] else Double.NaN }
-            return z(v, live)
+            // Memory (14 Oct): read in place - no 1,800-number copy made four times a second per underlying.
+            return zLive(v, secs, vals, sec)
         }
 
         /** The buyers' share every 10 seconds for the last 30 minutes (the detail's mini history). */

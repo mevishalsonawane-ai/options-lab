@@ -334,6 +334,16 @@ internal object IraSolo {
     /** Whether Solo holds an open trade (its saved list; no network): the 15-second check runs while it does. */
     fun holding(): Boolean = runCatching { all().any { !it.closed } }.getOrDefault(false)
 
+    /**
+     * [holding] that lets a vault or parse failure through (review, 14 Oct): the start-up's restore counts an unreadable book
+     * as open and starts the watch, where [holding] (and [all]) would read it as empty. A trade without its closed flag
+     * fails too, so it also counts as open.
+     */
+    internal fun holdingOrThrow(): Boolean {
+        val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
+        return (0 until a.length()).any { !a.getJSONObject(it).getBoolean("c") }
+    }
+
     /** One pass at [t], after the market watch's gates ([tick]); tests call it directly. */
     internal suspend fun passAt(t: LocalDateTime) = lock.withLock { pass(t) }
 
@@ -499,6 +509,7 @@ internal object IraSolo {
                 noteDay { com.optionslab.ira.SoloDay.late(it, if (clock.isAfter(t)) clock else t) }
                 return LATE
             }
+            runCatching { com.optionslab.app.data.LiveRecorder.signal("Solo", c.symbol, s.underlying, right.name, q.ltp, paper = true) }
             // PAPER ONLY: the paper account's MARKET buy, 1 lot - there is no Zerodha path here.
             val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()

@@ -443,10 +443,21 @@ object DayRecap {
     }
 
     private fun liqTrade(r: LiquidityRecord.Row): String =
-        "${hm(r.trade.entryTime.toLocalTime())} ${r.book} ${if (r.trade.right.equals("PE", true)) "PE" else "CE"} ${rs(r.perLot)} a lot"
+        "${hm(r.trade.entryTime.toLocalTime())} ${r.book} ${if (r.trade.right.equals("PE", true)) "PE" else "CE"} ${rs(r.perLot)} a lot" +
+            if (r.trailed) " (${com.optionslab.engine.orb.LiquidityTrail.TRAILED})" else ""
 
-    /** Liquidity 15+5's line: its trades that day - the count, net after charges per lot, best and worst. */
+    /**
+     * Liquidity 15+5's line: its trades that day - the count, net after charges per lot, best and worst. Trades under Boss's
+     * opt-in Rs 500 trail ([LiquidityRecord.Row.trailed]) are each labelled, and their share said apart.
+     */
     fun liquidityLine(f: Facts): String {
+        val trailed = f.liquidity.orEmpty().filter { it.trailed }
+        val apart = if (trailed.isEmpty() || f.liquidity.orEmpty().size < 2) ""
+            else " Of them, ${trailed.size} ${com.optionslab.engine.orb.LiquidityTrail.TRAILED} (not the plain rules): net ${rs(LiquidityRecord.tally(trailed).perLot)} a lot."
+        return liquidityTrades(f) + apart
+    }
+
+    private fun liquidityTrades(f: Facts): String {
         val rows = f.liquidity ?: return "Liquidity 15+5 (paper): its book could not be read just now."
         if (rows.isEmpty()) return "Liquidity 15+5 (paper): no trade that day${startsWords(f.liquidityFrom, f.day, f.today, "its paper book")}."
         val t = LiquidityRecord.tally(rows)

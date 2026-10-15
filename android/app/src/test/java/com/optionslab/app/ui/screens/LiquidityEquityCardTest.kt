@@ -185,6 +185,10 @@ class LiquidityEquityCardTest {
         assertEquals(500.0, q.net, 1e-6)
         // The same trades as Live vs backtest's.
         assertEquals(ForwardRecords.liquidity(closed).map { it.net }.sorted(), trades.map { it.net }.sorted())
+        // Boss's opt-in Rs 500 give-back trail (R19b): its paper trades stay out of the plain-rules record and chart.
+        val withTrail = closed + pos(LiquidityRules.ARM5.source, 7_000.0, hour = 12).copy(trail = 500.0)
+        assertEquals(trades, ForwardRecords.liquidityEquityTrades(withTrail))
+        assertEquals(ForwardRecords.liquidity(closed), ForwardRecords.liquidity(withTrail))
     }
 }
 

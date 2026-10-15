@@ -1,0 +1,36 @@
+id: r28-describe
+title: 'R28 describe: does the intraday GEX regime separate days (range, trend, ORB runs, expiry pins, flip crosses, hero
+  blasts, next gap)?'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_R28_GEX.md
+hypothesis: Negative GEX days are bigger / trendier, positive GEX days pin and revert; flip crosses accelerate; hero blasts
+  come under negative GEX; day-end GEX tells the next gap.
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_{WEEK,MONTH}
+  (ATM+-10 each minute, OI in units), index_1m incl. INDIAVIX, Aug 2021 - 12 Oct 2026; expiries found from the data; per-minute
+  GEX tables on Drive derived/r28_gex/'
+period:
+  design: 'Step-2 days: 2023-01-16..2023-12-17 and 2025-04-15..2026-10-12'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- intraday GEX S1/S2/S3, norm, flip, walls
+- index minutes
+- VIX
+model_or_rule: Descriptive comparisons (Mann-Whitney / proportion / Wilcoxon) with VIX and DTE strata
+settings: research/hunt/r28/PREREG.md
+prereg: research/hunt/r28/PREREG.md
+variants_tried: null
+results:
+  summary: '248 tests, BH q<0.10: 103: NIFTY Q1 q=0.007 0920 S1 rng; NIFTY Q1 q=0.007 0920 S1 rv; NIFTY Q1 q=0.003 0920 all
+    rng; NIFTY Q1 q=0.004 0920 all rv; NIFTY Q1 q=0.001 0920 S3 rng; NIFTY Q1 q=0.000 0920 S3 rv; NIFTY Q1 q=0.009 0920 S1
+    norm rng; NIFTY Q1 q=0.013 10 all rng; NIFTY Q1 q=0.016 10 all rv; NIFTY Q1 q=0.003 10 S3 rng; NIFTY Q1 q=0.000 10 S3
+    rv; NIFTY Q1 q=0.004 12 S3 rng'
+  costs: none (descriptive)
+holdout_read: null
+verdict: not-a-test
+notes: 'Descriptive only: no rule was chosen from it (the 10 filters were fixed in PREREG Part A).'

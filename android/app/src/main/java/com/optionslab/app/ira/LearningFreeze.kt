@@ -107,7 +107,9 @@ object LearningFreeze {
     internal fun changeDays(): Set<LocalDate> {
         val out = HashSet<LocalDate>()
         runCatching { Autopilot.ensureLoaded() }
-        Autopilot.book.value.entries.filter { it.status != AutoChange.Status.OFFERED && it.status != AutoChange.Status.DECLINED && it.status != AutoChange.Status.SKIPPED }
+        // Boss's own changes logged there (13 Oct: the park, the Liquidity paper trail) are not an agent's automatic change.
+        Autopilot.book.value.entries.filter { it.status != AutoChange.Status.OFFERED && it.status != AutoChange.Status.DECLINED && it.status != AutoChange.Status.SKIPPED &&
+            !AutoChange.bossOwn(it.change.kind) }
             .forEach { out += it.day }
         runCatching { com.optionslab.app.data.VariantRunner.variants.value.changes.filter { it.kind == com.optionslab.ira.VariantLab.ChangeKind.AUTO_PAPER }.forEach { out += it.day } }
         runCatching { out += SelfJobs.healthDays() }

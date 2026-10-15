@@ -1,0 +1,27 @@
+id: h33
+title: Unscheduled intraday news and price shocks
+family: calendar-events
+date: '2026-10-08'
+doc: research/HUNT_H33.md
+hypothesis: Following or fading news/shocks pays.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 59k timed headlines
+- price shocks
+model_or_rule: follow/fade after 1/3/5 minutes
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h33/PREREG.md
+variants_tried: 3072
+results:
+  summary: No variant survived (best BH q 0.09 vs 0.05 gate).
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

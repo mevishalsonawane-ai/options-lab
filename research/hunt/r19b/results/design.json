@@ -1,0 +1,471 @@
+{
+ "period": [
+  "2024-02-13",
+  "2025-02-28"
+ ],
+ "sessions": 258,
+ "folds": [
+  [
+   "2024-02-13",
+   "2024-06-21"
+  ],
+  [
+   "2024-06-24",
+   "2024-10-25"
+  ],
+  [
+   "2024-10-28",
+   "2025-02-28"
+  ]
+ ],
+ "rows": {
+  "liquidity15|CTRL": {
+   "summary": {
+    "trades": 65,
+    "win": 0.4307692307692308,
+    "net": 35534.590000000004,
+    "per_trade": 546.686,
+    "worst_day": -1830.950000000001,
+    "max_dd": -4129.220000000003,
+    "exits": {
+     "premium_stop": 10,
+     "time_stop": 11,
+     "next_liquidity": 18,
+     "session_end": 7,
+     "failed_break": 1,
+     "index_stop": 18
+    },
+    "mfe_captured": 0.36020854518748086,
+    "big_winners": 9
+   }
+  },
+  "liquidity15|A1": {
+   "summary": {
+    "trades": 65,
+    "win": 0.5076923076923077,
+    "net": 7468.7,
+    "per_trade": 114.90307692307692,
+    "worst_day": -1763.4299999999996,
+    "max_dd": -3505.2899999999977,
+    "exits": {
+     "trail": 30,
+     "next_liquidity": 11,
+     "premium_stop": 4,
+     "failed_break": 1,
+     "index_stop": 15,
+     "time_stop": 4
+    }
+   },
+   "delta": -28065.889999999996,
+   "fixed": {
+    "changed": 30,
+    "delta_fixed": -28065.890000000003,
+    "mfe_captured": 0.10804696033014277,
+    "big_winners": 9,
+    "big_cut": 7,
+    "big_cut_rs": 40526.88
+   },
+   "delta_next_open_fill": -30160.48999999999,
+   "fold_delta": [
+    -5175.820000000003,
+    -10044.020000000002,
+    -12846.049999999992
+   ],
+   "gate1": false
+  },
+  "liquidity15|A2": {
+   "summary": {
+    "trades": 65,
+    "win": 0.38461538461538464,
+    "net": 3232.779999999999,
+    "per_trade": 49.7350769230769,
+    "worst_day": -824.0500000000004,
+    "max_dd": -3641.04,
+    "exits": {
+     "trail": 53,
+     "next_liquidity": 8,
+     "premium_stop": 1,
+     "failed_break": 1,
+     "time_stop": 1,
+     "index_stop": 1
+    }
+   },
+   "delta": -32301.809999999998,
+   "fixed": {
+    "changed": 53,
+    "delta_fixed": -32301.809999999998,
+    "mfe_captured": 0.06998853969944961,
+    "big_winners": 9,
+    "big_cut": 7,
+    "big_cut_rs": 41453.45
+   },
+   "delta_next_open_fill": -32965.92,
+   "fold_delta": [
+    -5904.3200000000015,
+    -10825.050000000003,
+    -15572.439999999995
+   ],
+   "gate1": false
+  },
+  "liquidity15|B300": {
+   "summary": {
+    "trades": 65,
+    "win": 0.6,
+    "net": 7155.2000000000035,
+    "per_trade": 110.08000000000006,
+    "worst_day": -1763.4299999999996,
+    "max_dd": -3270.3600000000015,
+    "exits": {
+     "trail": 40,
+     "next_liquidity": 8,
+     "premium_stop": 2,
+     "failed_break": 1,
+     "index_stop": 11,
+     "time_stop": 3
+    }
+   },
+   "delta": -28379.39,
+   "fixed": {
+    "changed": 40,
+    "delta_fixed": -28379.39,
+    "mfe_captured": 0.1052303089976811,
+    "big_winners": 9,
+    "big_cut": 8,
+    "big_cut_rs": 43005.35
+   },
+   "delta_next_open_fill": -29760.149999999994,
+   "fold_delta": [
+    -3909.1099999999997,
+    -10175.610000000006,
+    -14294.66999999999
+   ],
+   "gate1": false
+  },
+  "liquidity15|B750": {
+   "summary": {
+    "trades": 65,
+    "win": 0.5076923076923077,
+    "net": 6964.609999999998,
+    "per_trade": 107.14784615384612,
+    "worst_day": -1830.950000000001,
+    "max_dd": -5891.860000000002,
+    "exits": {
+     "trail": 21,
+     "next_liquidity": 14,
+     "time_stop": 6,
+     "premium_stop": 7,
+     "failed_break": 1,
+     "index_stop": 16
+    }
+   },
+   "delta": -28569.98,
+   "fixed": {
+    "changed": 21,
+    "delta_fixed": -28569.980000000003,
+    "mfe_captured": 0.1035179894436105,
+    "big_winners": 9,
+    "big_cut": 7,
+    "big_cut_rs": 39145.48
+   },
+   "delta_next_open_fill": -29708.86,
+   "fold_delta": [
+    -7579.000000000003,
+    -9788.910000000002,
+    -11202.069999999996
+   ],
+   "gate1": false
+  },
+  "liquidity15|B1000": {
+   "summary": {
+    "trades": 65,
+    "win": 0.5230769230769231,
+    "net": 22457.26,
+    "per_trade": 345.49630769230765,
+    "worst_day": -1830.950000000001,
+    "max_dd": -6512.410000000001,
+    "exits": {
+     "trail": 18,
+     "time_stop": 7,
+     "next_liquidity": 15,
+     "premium_stop": 7,
+     "failed_break": 1,
+     "index_stop": 17
+    }
+   },
+   "delta": -13077.33,
+   "fixed": {
+    "changed": 18,
+    "delta_fixed": -13077.33,
+    "mfe_captured": 0.24271356243173592,
+    "big_winners": 9,
+    "big_cut": 7,
+    "big_cut_rs": 23591.469999999998
+   },
+   "delta_next_open_fill": -14059.139999999992,
+   "fold_delta": [
+    951.2899999999977,
+    -6441.210000000001,
+    -7587.409999999996
+   ],
+   "gate1": false
+  },
+  "liquidity15|P3": {
+   "summary": {
+    "trades": 65,
+    "win": 0.5538461538461539,
+    "net": 11431.460000000003,
+    "per_trade": 175.86861538461542,
+    "worst_day": -1763.4299999999996,
+    "max_dd": -2234.6399999999976,
+    "exits": {
+     "trail": 41,
+     "next_liquidity": 10,
+     "premium_stop": 2,
+     "index_stop": 9,
+     "time_stop": 3
+    }
+   },
+   "delta": -24103.129999999997,
+   "fixed": {
+    "changed": 41,
+    "delta_fixed": -24103.129999999994,
+    "mfe_captured": 0.14365056306124543,
+    "big_winners": 9,
+    "big_cut": 7,
+    "big_cut_rs": 40371.469999999994
+   },
+   "delta_next_open_fill": -26045.799999999992,
+   "fold_delta": [
+    -4417.970000000006,
+    -9155.770000000004,
+    -10529.38999999999
+   ],
+   "gate1": false
+  },
+  "liquidity5|CTRL": {
+   "summary": {
+    "trades": 161,
+    "win": 0.38509316770186336,
+    "net": 38975.16999999999,
+    "per_trade": 242.08180124223597,
+    "worst_day": -2786.7700000000023,
+    "max_dd": -17803.340000000004,
+    "exits": {
+     "time_stop": 26,
+     "new_liquidity": 6,
+     "failed_break": 15,
+     "premium_stop": 23,
+     "index_stop": 43,
+     "next_liquidity": 46,
+     "session_end": 2
+    },
+    "mfe_captured": 0.26423978675950593,
+    "big_winners": 15
+   }
+  },
+  "liquidity5|A1": {
+   "summary": {
+    "trades": 161,
+    "win": 0.4409937888198758,
+    "net": -9073.69,
+    "per_trade": -56.35832298136646,
+    "worst_day": -3856.610000000003,
+    "max_dd": -16711.310000000005,
+    "exits": {
+     "trail": 66,
+     "failed_break": 12,
+     "index_stop": 30,
+     "next_liquidity": 25,
+     "premium_stop": 17,
+     "time_stop": 11
+    }
+   },
+   "delta": -48048.85999999999,
+   "fixed": {
+    "changed": 66,
+    "delta_fixed": -48048.86,
+    "mfe_captured": 0.03145805000997299,
+    "big_winners": 15,
+    "big_cut": 13,
+    "big_cut_rs": 61872.51999999999
+   },
+   "delta_next_open_fill": -47798.05999999999,
+   "fold_delta": [
+    -15956.890000000001,
+    1411.330000000002,
+    -33503.29999999999
+   ],
+   "gate1": false
+  },
+  "liquidity5|A2": {
+   "summary": {
+    "trades": 162,
+    "win": 0.35185185185185186,
+    "net": -6124.930000000015,
+    "per_trade": -37.8082098765433,
+    "worst_day": -1638.4799999999996,
+    "max_dd": -12855.830000000013,
+    "exits": {
+     "trail": 130,
+     "failed_break": 6,
+     "next_liquidity": 16,
+     "premium_stop": 5,
+     "time_stop": 1,
+     "index_stop": 4
+    }
+   },
+   "delta": -45100.1,
+   "fixed": {
+    "changed": 129,
+    "delta_fixed": -45505.80000000002,
+    "mfe_captured": 0.03849716223322268,
+    "big_winners": 15,
+    "big_cut": 14,
+    "big_cut_rs": 65862.33
+   },
+   "delta_next_open_fill": -47820.41,
+   "fold_delta": [
+    -14413.480000000003,
+    3591.5800000000036,
+    -34278.200000000004
+   ],
+   "gate1": false
+  },
+  "liquidity5|B300": {
+   "summary": {
+    "trades": 161,
+    "win": 0.484472049689441,
+    "net": -13160.579999999998,
+    "per_trade": -81.74273291925465,
+    "worst_day": -2661.0100000000043,
+    "max_dd": -19858.76000000001,
+    "exits": {
+     "trail": 91,
+     "failed_break": 9,
+     "index_stop": 26,
+     "next_liquidity": 16,
+     "premium_stop": 14,
+     "time_stop": 5
+    }
+   },
+   "delta": -52135.74999999999,
+   "fixed": {
+    "changed": 91,
+    "delta_fixed": -52135.74999999999,
+    "mfe_captured": 0.011657872309561368,
+    "big_winners": 15,
+    "big_cut": 14,
+    "big_cut_rs": 65381.139999999985
+   },
+   "delta_next_open_fill": -53253.55999999999,
+   "fold_delta": [
+    -15045.14,
+    -3540.6500000000005,
+    -33549.959999999985
+   ],
+   "gate1": false
+  },
+  "liquidity5|B750": {
+   "summary": {
+    "trades": 161,
+    "win": 0.43478260869565216,
+    "net": 1452.0999999999922,
+    "per_trade": 9.019254658385044,
+    "worst_day": -2786.7700000000023,
+    "max_dd": -16503.1,
+    "exits": {
+     "trail": 43,
+     "failed_break": 13,
+     "index_stop": 38,
+     "next_liquidity": 34,
+     "premium_stop": 19,
+     "time_stop": 14
+    }
+   },
+   "delta": -37523.07,
+   "fixed": {
+    "changed": 43,
+    "delta_fixed": -37523.07000000001,
+    "mfe_captured": 0.08245226568024805,
+    "big_winners": 15,
+    "big_cut": 11,
+    "big_cut_rs": 50982.92
+   },
+   "delta_next_open_fill": -35928.93999999999,
+   "fold_delta": [
+    -15447.44,
+    3191.2600000000016,
+    -25266.889999999996
+   ],
+   "gate1": false
+  },
+  "liquidity5|B1000": {
+   "summary": {
+    "trades": 161,
+    "win": 0.43478260869565216,
+    "net": 23506.010000000002,
+    "per_trade": 146.00006211180124,
+    "worst_day": -2786.7700000000023,
+    "max_dd": -12688.580000000005,
+    "exits": {
+     "trail": 30,
+     "time_stop": 18,
+     "failed_break": 14,
+     "index_stop": 41,
+     "next_liquidity": 39,
+     "premium_stop": 19
+    }
+   },
+   "delta": -15469.159999999993,
+   "fixed": {
+    "changed": 30,
+    "delta_fixed": -15469.15999999999,
+    "mfe_captured": 0.18929663275852684,
+    "big_winners": 15,
+    "big_cut": 9,
+    "big_cut_rs": 29564.669999999995
+   },
+   "delta_next_open_fill": -12249.279999999984,
+   "fold_delta": [
+    -1195.62,
+    4655.290000000001,
+    -18928.82999999999
+   ],
+   "gate1": false
+  },
+  "liquidity5|P3": {
+   "summary": {
+    "trades": 161,
+    "win": 0.484472049689441,
+    "net": -10560.129999999986,
+    "per_trade": -65.5908695652173,
+    "worst_day": -2786.7700000000023,
+    "max_dd": -16534.569999999992,
+    "exits": {
+     "trail": 86,
+     "failed_break": 9,
+     "index_stop": 27,
+     "next_liquidity": 18,
+     "premium_stop": 13,
+     "time_stop": 8
+    }
+   },
+   "delta": -49535.299999999974,
+   "fixed": {
+    "changed": 86,
+    "delta_fixed": -49535.29999999996,
+    "mfe_captured": 0.02425646883896361,
+    "big_winners": 15,
+    "big_cut": 13,
+    "big_cut_rs": 61681.45999999999
+   },
+   "delta_next_open_fill": -47086.35999999998,
+   "fold_delta": [
+    -16276.839999999997,
+    -1238.8399999999986,
+    -32019.61999999998
+   ],
+   "gate1": false
+  }
+ }
+}

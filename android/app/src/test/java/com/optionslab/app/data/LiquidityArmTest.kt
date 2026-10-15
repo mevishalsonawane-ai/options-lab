@@ -373,6 +373,58 @@ class LiquidityArmTest : RobolectricTest() {
         assertTrue(row().status, row().status.contains("MIDCPNIFTY 15-min:") && row().status.contains("MIDCPNIFTY 5-min:"))
     }
 
+    // ---- 13 Oct audit fix: a failed index read stops only the books on that index --------------------------------
+
+    /** The index's feed down: every read of it throws. */
+    private fun down(index: String): Nothing = throw java.io.IOException("$index feed down")
+
+    @Test fun aBankniftyFeedFailureLeavesTheMidcpniftyBooksTrading() {
+        midcpniftyDay()
+        OrbArms.testIndexBars = { down("BANKNIFTY") }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("liquidity5_mid", p.arm)
+        assertTrue(p.symbol, p.symbol.startsWith("MIDCPNIFTY") && p.symbol.endsWith("12850CE"))
+        val status = row().status
+        assertTrue(status, status.contains("BANKNIFTY 5-min: No BANKNIFTY bars yet."))
+        assertTrue(status, status.contains("BANKNIFTY 15-min: No BANKNIFTY bars yet."))
+        assertFalse(status, status.contains("No MIDCPNIFTY bars") || status.contains("No FINNIFTY bars"))
+    }
+
+    @Test fun aBankniftyFeedFailureLeavesTheFinniftyBooksTrading() {
+        finniftyDay()
+        OrbArms.testIndexBars = { down("BANKNIFTY") }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertEquals("liquidity5_fin", row().today.single().arm)
+        assertTrue(row().status, row().status.contains("BANKNIFTY 5-min: No BANKNIFTY bars yet."))
+    }
+
+    @Test fun aMidcpniftyFeedFailureStopsOnlyTheMidcpniftyBooks() {
+        finniftyDay()
+        val fin = OrbArms.testOtherIndexBars!!
+        OrbArms.testOtherIndexBars = { u, t -> if (u == "MIDCPNIFTY") down(u) else fin(u, t) }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertEquals("FINNIFTY still trades on its own chart", "liquidity5_fin", row().today.single().arm)
+        val status = row().status
+        assertTrue(status, status.contains("MIDCPNIFTY 15-min: No MIDCPNIFTY bars yet.") && status.contains("MIDCPNIFTY 5-min: No MIDCPNIFTY bars yet."))
+        assertFalse(status, status.contains("No BANKNIFTY bars") || status.contains("No FINNIFTY bars"))
+    }
+
+    @Test fun everyIndexFailingStopsEveryBookEachNamingItsIndex() {
+        finniftyDay()
+        OrbArms.testIndexBars = { down("BANKNIFTY") }
+        OrbArms.testOtherIndexBars = { u, _ -> down(u) }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue(row().today.isEmpty())
+        assertTrue(Paper.state.orders.isEmpty())
+        val status = row().status
+        for (u in listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) assertTrue(status, status.contains("$u 5-min: No $u bars yet."))
+    }
+
     /** Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once; never cleared for Zerodha. */
     @Test fun theMidcpniftyBooksJoinAnArmedSwitchOnPaperOnce() {
         val books = listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin")
@@ -650,6 +702,170 @@ class LiquidityArmTest : RobolectricTest() {
     @Test fun inShadowLiquidityTradesExactlyAsBefore() = ManagerShadow.rerun("liquidity", { looks = it }) { buysTheCallWhenAPoolOnASwingHighIsTakenAndSellsWhenTheBreakFails() }
 
     @Test fun inShadowLiquidityStopTradesExactlyAsBefore() = ManagerShadow.rerun("liquidity", { looks = it }) { theOptionFalling15PercentIsSoldByItsStop() }
+
+    // ---- Boss's own Rs 500 give-back trail on paper (R19b, 13 Oct: failed research, their opt-in switch, off by default; from +Rs 1,000 a lot since R19c) ----
+
+    /** [body] with Boss's paper trail switch on; the state put back after. */
+    private fun <T> withTrail(body: () -> T): T {
+        val before = LiquidityTest.state.value
+        LiquidityTest.setStateForTest(before.copy(trail = true))
+        try { return body() } finally { LiquidityTest.setStateForTest(before) }
+    }
+
+    @Test fun offByDefaultTheTradeRunsOnPlainRules() {
+        assertFalse("off unless Boss switches it on", LiquidityTest.trailOn())
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertNull("plain rules", p.trail)
+        upstox.price(ceKey, p.entry * 1.10)
+        tick(LocalTime.of(13, 6))
+        assertEquals("no trail: the 15% stop stays where it was", com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), row().today.single().stopTrigger)
+        assertEquals(com.optionslab.engine.orb.LiquidityTrail.PLAIN, com.optionslab.engine.orb.LiquidityTrail.label(row().today.single().trail))
+    }
+
+    @Test fun withTheTrailTheRestingStopRisesAndFillsAsTheTrail() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("entered under Boss's Rs 500 a lot", com.optionslab.engine.orb.LiquidityTrail.GIVE_BACK_RS, p.trail!!, 0.0)
+        assertEquals("from +Rs 1,000 a lot (R19c, Boss's rule)", com.optionslab.engine.orb.LiquidityTrail.ACTIVATE_RS, p.trailFrom!!, 0.0)
+        assertEquals(30, p.lot)
+        assertFalse(p.live)
+        // +Rs 900 a lot (30 points): not yet +Rs 1,000, the stop stays at -15%.
+        upstox.price(ceKey, p.entry + 30.0)
+        tick(LocalTime.of(13, 6))
+        assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), row().today.single().stopTrigger)
+        // +Rs 1,200 a lot (40 points): the resting stop moves up to the best less Rs 500 a lot (16.67 points), on the tick.
+        upstox.price(ceKey, p.entry + 40.0)
+        tick(LocalTime.of(13, 7))
+        val up = row().today.single()
+        val want = com.optionslab.engine.orb.LiquidityTrail.level(p.entry, p.entry + 40.0, 30, 500.0, activateRs = 1000.0)!!
+        assertTrue("never under +Rs 500 a lot", (want - p.entry) * 30 >= 500.0 - 1e-6)
+        assertEquals(want, up.stopTrigger!!, 1e-9)
+        assertEquals("the paper book's stop order moved too", want, Paper.state.orders.single { it.orderId == up.stopOrderId }.triggerPrice!!.toDouble(), 1e-9)
+        // A smaller price never lowers it.
+        upstox.price(ceKey, p.entry + 30.0)
+        tick(LocalTime.of(13, 8))
+        assertEquals(want, row().today.single().stopTrigger!!, 1e-9)
+        assertTrue(row().today.single().open)
+        // Saved and read back: the trade keeps its rule over a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(500.0, row().today.single().trail!!, 0.0)
+        assertEquals(1000.0, row().today.single().trailFrom!!, 0.0)
+        // The price gives back through it: the paper book fills the resting stop, booked as the trail.
+        upstox.price(ceKey, p.entry + 5.0)
+        at(LocalTime.of(13, 9))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 9))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals(com.optionslab.engine.orb.LiquidityTrail.WHY, closed.why)
+        assertTrue("sold above the price paid", closed.exit!! > p.entry)
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+    }
+
+    @Test fun withTheTrailAndNoRestingStopTheAppSellsItItself() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        runBlocking { Paper.cancel(checkNotNull(p.stopOrderId), "test") }   // its resting stop is gone
+        upstox.price(ceKey, p.entry + 40.0)                                // +Rs 1,200 a lot: Boss's trail is on
+        tick(LocalTime.of(13, 6))
+        assertTrue(row().today.single().open)
+        upstox.price(ceKey, p.entry + 20.0)                                // Rs 600 a lot under its best, far above the 15% stop
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals(com.optionslab.engine.orb.LiquidityTrail.WHY, closed.why)
+    }
+
+    /** 13 Oct review: the trail starts at exactly +Rs 1,000 a lot (R19c, Boss's rule) - a hair under it, the stop stays put. */
+    @Test fun theTrailStartsAtExactlyPlusRs1000ALot() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals(30, p.lot)
+        val edge = p.entry + com.optionslab.engine.orb.LiquidityTrail.ACTIVATE_RS / 30     // +Rs 1,000 a lot, to the paisa
+        val own = com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry)
+        // One tick under the edge (+Rs 998.50 a lot): not yet, the stop stays at -15%.
+        upstox.price(ceKey, edge - 0.05)
+        tick(LocalTime.of(13, 6))
+        assertEquals(own, row().today.single().stopTrigger)
+        // At the edge itself: the stop moves up to the best less Rs 500 a lot, never under +Rs 500 a lot.
+        upstox.price(ceKey, edge)
+        tick(LocalTime.of(13, 7))
+        val want = com.optionslab.engine.orb.LiquidityTrail.level(p.entry, edge, 30, 500.0, activateRs = 1000.0)
+        assertTrue("the edge starts the trail", want != null)
+        assertEquals(want!!, row().today.single().stopTrigger!!, 1e-9)
+        assertTrue((want - p.entry) * 30 >= 500.0 - 1e-6)
+        assertTrue(row().today.single().open)
+    }
+
+    /**
+     * 13 Oct review: a trailed trade is kept out of the plain-rules records the 26 Oct decision reads - the paper test's judge
+     * (said apart, labelled) and the paper stop rule.
+     */
+    @Test fun aTrailedTradeIsKeptOutOfThePaperTestAndThePaperStopRule() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        upstox.price(ceKey, p.entry + 40.0)
+        tick(LocalTime.of(13, 6))
+        upstox.price(ceKey, p.entry + 5.0)
+        at(LocalTime.of(13, 7))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse(closed.open); assertEquals(500.0, closed.trail!!, 0.0)
+        assertEquals("the paper stop rule counts plain-rules trades only", 0, OrbArms.liquidityStopPaperHint.trades)
+        // The paper test's view is in every build but IraGoldAlgo (where it is never read).
+        val view = row().test
+        if (com.optionslab.app.BuildConfig.GOLD) assertNull(view) else {
+            org.junit.Assert.assertNotNull("the paper test's view is read", view)
+            val t = view!!
+            assertTrue(t.paperTest, t.paperTest.contains("0 trades since 13 Oct"))
+            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, with ₹500 trail (failed research, your choice): 1 trade,"))
+        }
+        assertTrue("not in the forward check either", ForwardRecords.liquidity(runBlocking { OrbArms.closedPaper() }).isEmpty())
+        // Jarvis's Liquidity record: the plain rules' (none yet), the trailed trade on a labelled line of its own.
+        assertTrue(com.optionslab.app.ira.IraBots.tradeOf(closed).trail)
+        val said = runBlocking { com.optionslab.app.ira.IraBots.liquidityRecord(com.optionslab.ira.LiquidityRecord.Q()) }
+        assertTrue(said, said.startsWith("Liquidity 15+5 has no closed paper trade on plain rules in its book yet"))
+        assertTrue(said, said.contains("With your ₹500 trail (failed research, your choice), kept apart from the plain-rules record above: 1 trade, "))
+    }
+
+    /**
+     * 13 Oct review: with the trail on under a lab lock variant, a stop that rests at the LOCK's level (the trail not started yet)
+     * fills as the profit lock, not as the trail.
+     */
+    @Test fun underALockVariantAStopAtTheLocksLevelIsTheProfitLockNotTheTrail() = withLockVariant(0.3) { withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.ladder); assertEquals(500.0, p.trail!!, 0.0)
+        // +25 points (+Rs 750 a lot): the lock's first rung (a quarter of its 30% reference) is earned, the trail (+Rs 1,000) is not.
+        upstox.price(ceKey, p.entry + 25.0)
+        tick(LocalTime.of(13, 6))
+        val held = row().today.single()
+        assertTrue(held.open)
+        assertTrue("the lock moved the stop to the price paid or higher", held.stopTrigger!! >= p.entry)
+        assertNull("the trail has not started", com.optionslab.engine.orb.LiquidityTrail.level(p.entry, held.peak, 30, 500.0, activateRs = 1000.0))
+        // Back under it: the paper book fills the resting stop - the lock's, so booked as the lock.
+        upstox.price(ceKey, p.entry - 5.0)
+        at(LocalTime.of(13, 7))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals("profit_lock", closed.why)
+    } }
 
     // ---- review G2-4 / G2-8 (11 Oct): Liquidity under a paper profit-lock variant ----
 

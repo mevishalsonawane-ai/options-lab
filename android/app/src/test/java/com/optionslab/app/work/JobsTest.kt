@@ -421,6 +421,94 @@ class JobsTest : RobolectricTest() {
         assertEquals("Market data service is unavailable (502)", Tasks.reason(com.optionslab.app.data.Net.HttpFailure(502)))
     }
 
+    // ---- the ticket's retry when the entry bar is late (13 Oct) -----------------------------------------
+
+    private fun ticketOf(day: LocalDate) = com.optionslab.engine.Live.Ticket(day, "NIFTY", day, "SELL", "PE", 24_000.0, 75, 1, 75,
+        20.0, 24_300.0, 23_980.0, 90_000.0, null, null, null)
+    private val tooEarly get() = com.optionslab.engine.Live.TooEarly("latest bar is 10:59, entry is 11:00; the signal does not exist yet")
+    /** The tries' pause: the market clock moves on by the wait, nothing really sleeps. */
+    private val waits = ArrayList<Long>()
+    private val pause: suspend (Long) -> Unit = { ms ->
+        waits += ms
+        com.optionslab.app.data.Market.testClock = java.time.Clock.offset(com.optionslab.app.data.Market.testClock!!, Duration.ofMillis(ms))
+    }
+    private fun diaryOf(text: String) = com.optionslab.app.data.Diag.lines().filter { it.contains(text) }
+
+    @Test fun aLateEntryBarIsTriedAgainAndTheTicketRecordedAtTheSecondTry() = com.optionslab.app.testing.bounded("aLateEntryBarIsTriedAgain") { runBlocking {
+        otherAlerts(true)
+        Background.at(WED, 11, 1)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = {
+            if (++tries == 1) throw tooEarly
+            com.optionslab.app.data.Market.TicketDraft(ticketOf(WED), "NSE_FO|1", null)
+        }, pause = pause)
+        assertEquals(2, tries)
+        assertEquals(listOf(30_000L), waits)
+        assertEquals(listOf(WED), com.optionslab.app.data.Ledger.all().map { it.row.ticket.session })
+        val n = Background.notifications(context).getNotification(2002)
+        assertEquals("Paper ticket: SELL NIFTY 24000 PE", Background.title(n))
+        assertNull("no failure notice", Background.notifications(context).getNotification(2900 + Jobs.Kind.TICKET.ordinal))
+        assertEquals(1, diaryOf("Ticket: the 11:00 prices are not out yet at 11:01:00 (try 1); trying again in 30 s, until 11:06").size)
+        assertEquals(1, diaryOf("Ticket: recorded at 11:01:30 on try 2").size)
+    } }
+
+    @Test fun anEntryBarThatNeverArrivesEndsAtTheCapWithAClearNotice() = com.optionslab.app.testing.bounded("anEntryBarThatNeverArrives") { runBlocking {
+        otherAlerts(true)
+        Background.at(WED, 11, 1)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = { tries++; throw tooEarly }, pause = pause)
+        assertEquals("11:01:00 to 11:06:00 every 30 s", 11, tries)
+        assertEquals(300_000L, waits.sum())
+        assertTrue(com.optionslab.app.data.Ledger.all().isEmpty())
+        val n = Background.notifications(context).getNotification(2900 + Jobs.Kind.TICKET.ordinal)
+        assertEquals("Ticket did not complete", Background.title(n))
+        assertTrue(Background.text(n)!!, Background.text(n)!!.startsWith("The 11:00 prices never arrived"))
+        assertEquals(10, diaryOf("Ticket: the 11:00 prices are not out yet").size)
+        assertEquals(1, diaryOf("Ticket: given up at 11:06:00. The 11:00 prices never arrived").size)
+    } }
+
+    @Test fun aTicketJobRunningPastTheCapTriesOnceAndGivesUp() = com.optionslab.app.testing.bounded("aTicketJobRunningPastTheCap") { runBlocking {
+        otherAlerts(true)
+        Background.at(WED, 11, 20)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = { tries++; throw tooEarly }, pause = pause)
+        assertEquals(1, tries)
+        assertTrue(waits.isEmpty())
+        assertTrue(Background.text(Background.notifications(context).getNotification(2900 + Jobs.Kind.TICKET.ordinal))!!.contains("(1 try)"))
+    } }
+
+    @Test fun otherTicketErrorsAreNotRetried() = com.optionslab.app.testing.bounded("otherTicketErrorsAreNotRetried") { runBlocking {
+        Background.at(WED, 11, 1)
+        var tries = 0
+        try {
+            Tasks.ticket(context, AppSettings.load(), draft = { tries++; throw com.optionslab.engine.ExpiryPut.SessionSkipped("no PE quote") }, pause = pause)
+            fail("a skipped session is passed on as before")
+        } catch (_: com.optionslab.engine.ExpiryPut.SessionSkipped) {}
+        assertEquals(1, tries)
+        // Too early first, then another error: that one is passed on, and the diary says so.
+        tries = 0
+        try {
+            Tasks.ticket(context, AppSettings.load(), draft = { if (++tries == 1) throw tooEarly else throw IllegalStateException("x") }, pause = pause)
+            fail("passed on")
+        } catch (_: IllegalStateException) {}
+        assertEquals(2, tries)
+        assertEquals(1, diaryOf("Ticket: try 2 at 11:01:30 stopped with IllegalStateException").size)
+        assertTrue(com.optionslab.app.data.Ledger.all().isEmpty())
+    } }
+
+    @Test fun aTicketAlreadyRecordedTodayStopsTheTries() = com.optionslab.app.testing.bounded("aTicketAlreadyRecordedTodayStopsTheTries") { runBlocking {
+        Background.at(WED, 11, 1)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = {
+            tries++
+            // Recorded meanwhile (the Expiry Put page): the next try finds it and stops.
+            com.optionslab.app.data.Ledger.record(ticketOf(WED), null, null)
+            throw tooEarly
+        }, pause = pause)
+        assertEquals(1, tries)
+        assertEquals(1, com.optionslab.app.data.Ledger.all().size)
+    } }
+
     // ---- the watch's pass ----------------------------------------------------------------------------
 
     @Test fun riskStepsRunBeforeTheQuotesAndTheQuotesUseTheQuickLane() = com.optionslab.app.testing.bounded("riskStepsRunBeforeTheQuotesAndTheQuotesUseTheQuickLane") { runBlocking {

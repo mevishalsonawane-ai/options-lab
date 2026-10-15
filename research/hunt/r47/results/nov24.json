@@ -1,0 +1,3427 @@
+{
+ "amendment": "4: Nov 2024+ view (Boss, 15 Oct)",
+ "spans": {
+  "N1": [
+   "2024-11-20",
+   "2025-06-30"
+  ],
+  "N2": [
+   "2025-07-01",
+   "2026-03-31"
+  ],
+  "design": [
+   "2024-11-20",
+   "2026-03-31"
+  ],
+  "final": [
+   "2026-04-01",
+   "2026-10-13"
+  ]
+ },
+ "warmup_from": "2024-06-01",
+ "fixed": [
+  {
+   "id": "C2",
+   "group": "candidate",
+   "fam": "U4_donchian",
+   "und": "NIFTY",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "exit_spec": [
+    0.0,
+    0.0,
+    1,
+    null
+   ],
+   "filt": "vix_lo",
+   "params": {
+    "n": 10
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 14,
+    "net": -2585.0,
+    "npt": -184.6,
+    "win": 57.1,
+    "top5": 42842.0,
+    "best_month": 18294.0,
+    "fallback": 1,
+    "mean_outlay": 16276.0
+   },
+   "N2": {
+    "trades": 50,
+    "net": -25481.0,
+    "npt": -509.6,
+    "win": 46.0,
+    "top5": 95616.0,
+    "best_month": 32732.0,
+    "fallback": 0,
+    "mean_outlay": 16829.0
+   },
+   "design": {
+    "trades": 64,
+    "net": -28066.0,
+    "npt": -438.5,
+    "win": 48.4,
+    "top5": 97323.0,
+    "best_month": 32732.0,
+    "fallback": 1,
+    "mean_outlay": 16708.0,
+    "twin_mean_npt": -347.1,
+    "p": 0.511
+   },
+   "final": {
+    "trades": 22,
+    "net": 53265.0,
+    "npt": 2421.2,
+    "win": 50.0,
+    "top5": 87551.0,
+    "best_month": 40232.0,
+    "fallback": 0,
+    "mean_outlay": 17170.0,
+    "twin_mean_npt": 763.3,
+    "p": 0.2116
+   },
+   "q_design": 0.5299,
+   "q_design_candidates_only": 0.511,
+   "q_final": 0.7676,
+   "q_final_candidates_only": 0.7355,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": true
+   },
+   "passes": false
+  },
+  {
+   "id": "C6",
+   "group": "candidate",
+   "fam": "C3_oishift",
+   "und": "NIFTY",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.3,
+     0.1
+    ]
+   ],
+   "filt": "dte0",
+   "params": {
+    "how": "follow"
+   },
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "N1": {
+    "trades": 15,
+    "net": 7873.0,
+    "npt": 524.9,
+    "win": 40.0,
+    "top5": 42148.0,
+    "best_month": 18609.0,
+    "fallback": 0,
+    "mean_outlay": 17311.0
+   },
+   "N2": {
+    "trades": 18,
+    "net": -2653.0,
+    "npt": -147.4,
+    "win": 55.6,
+    "top5": 41870.0,
+    "best_month": 23118.0,
+    "fallback": 0,
+    "mean_outlay": 16963.0
+   },
+   "design": {
+    "trades": 33,
+    "net": 5219.0,
+    "npt": 158.2,
+    "win": 48.5,
+    "top5": 64562.0,
+    "best_month": 23118.0,
+    "fallback": 0,
+    "mean_outlay": 17121.0,
+    "twin_mean_npt": -40.8,
+    "p": 0.4012
+   },
+   "final": {
+    "trades": 17,
+    "net": 19623.0,
+    "npt": 1154.3,
+    "win": 52.9,
+    "top5": 59257.0,
+    "best_month": 15081.0,
+    "fallback": 0,
+    "mean_outlay": 15768.0,
+    "twin_mean_npt": -94.1,
+    "p": 0.1796
+   },
+   "q_design": 0.4957,
+   "q_design_candidates_only": 0.4457,
+   "q_final": 0.7676,
+   "q_final_candidates_only": 0.7355,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": true
+   },
+   "passes": false
+  },
+  {
+   "id": "C7",
+   "group": "candidate",
+   "fam": "C1_pcr",
+   "und": "NIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "exit_spec": [
+    0.25,
+    1.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "at": [
+     11,
+     30
+    ],
+    "how": "follow"
+   },
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "N1": {
+    "trades": 69,
+    "net": 59369.0,
+    "npt": 860.4,
+    "win": 50.7,
+    "top5": 63965.0,
+    "best_month": 23049.0,
+    "fallback": 0,
+    "mean_outlay": 16856.0
+   },
+   "N2": {
+    "trades": 80,
+    "net": 36930.0,
+    "npt": 461.6,
+    "win": 41.2,
+    "top5": 70330.0,
+    "best_month": 27438.0,
+    "fallback": 0,
+    "mean_outlay": 14900.0
+   },
+   "design": {
+    "trades": 149,
+    "net": 96299.0,
+    "npt": 646.3,
+    "win": 45.6,
+    "top5": 80327.0,
+    "best_month": 27438.0,
+    "fallback": 0,
+    "mean_outlay": 15806.0,
+    "twin_mean_npt": 126.1,
+    "p": 0.1058
+   },
+   "final": {
+    "trades": 62,
+    "net": 21999.0,
+    "npt": 354.8,
+    "win": 41.9,
+    "top5": 72925.0,
+    "best_month": 31556.0,
+    "fallback": 0,
+    "mean_outlay": 15546.0,
+    "twin_mean_npt": 197.6,
+    "p": 0.4012
+   },
+   "q_design": 0.2469,
+   "q_design_candidates_only": 0.1663,
+   "q_final": 0.7676,
+   "q_final_candidates_only": 0.7355,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "O1-NIFTY (v3 rank 10, never sent)",
+   "group": "candidate",
+   "fam": "O1_prem_orb",
+   "und": "NIFTY",
+   "kind": "dir",
+   "instr": "own",
+   "exit_spec": [
+    0.0,
+    1.0,
+    "sq",
+    null
+   ],
+   "filt": "monthend",
+   "params": {
+    "or_min": 15
+   },
+   "signal_source": "non-default: option-chart signal (the option's own premium bars) - only Boss could switch it on",
+   "N1": {
+    "trades": 22,
+    "net": 5866.0,
+    "npt": 266.6,
+    "win": 54.5,
+    "top5": 47518.0,
+    "best_month": 21686.0,
+    "fallback": 0,
+    "mean_outlay": 15167.0
+   },
+   "N2": {
+    "trades": 24,
+    "net": -13916.0,
+    "npt": -579.8,
+    "win": 41.7,
+    "top5": 71029.0,
+    "best_month": 14663.0,
+    "fallback": 0,
+    "mean_outlay": 15313.0
+   },
+   "design": {
+    "trades": 46,
+    "net": -8050.0,
+    "npt": -175.0,
+    "win": 47.8,
+    "top5": 82660.0,
+    "best_month": 21686.0,
+    "fallback": 0,
+    "mean_outlay": 15243.0,
+    "twin_mean_npt": -653.1,
+    "p": 0.3693
+   },
+   "final": {
+    "trades": 19,
+    "net": 4240.0,
+    "npt": 223.2,
+    "win": 52.6,
+    "top5": 52612.0,
+    "best_month": 29924.0,
+    "fallback": 0,
+    "mean_outlay": 15253.0,
+    "twin_mean_npt": -539.0,
+    "p": 0.3553
+   },
+   "q_design": 0.4957,
+   "q_design_candidates_only": 0.4457,
+   "q_final": 0.7676,
+   "q_final_candidates_only": 0.7355,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best C2_ivcheap NIFTY",
+   "group": "family best",
+   "fam": "C2_ivcheap",
+   "und": "NIFTY",
+   "kind": "vol",
+   "instr": "strangle2",
+   "exit_spec": [
+    0.0,
+    0.0,
+    3,
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "pct": 0.2,
+    "when": "pos"
+   },
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "N1": {
+    "trades": 5,
+    "net": -19754.0,
+    "npt": -3950.7,
+    "win": 40.0,
+    "top5": -19754.0,
+    "best_month": 18505.0,
+    "fallback": 0,
+    "mean_outlay": 14526.0
+   },
+   "N2": {
+    "trades": 13,
+    "net": 11147.0,
+    "npt": 857.5,
+    "win": 46.2,
+    "top5": 78894.0,
+    "best_month": 27572.0,
+    "fallback": 0,
+    "mean_outlay": 15137.0
+   },
+   "design": {
+    "trades": 18,
+    "net": -8607.0,
+    "npt": -478.1,
+    "win": 44.4,
+    "top5": 88556.0,
+    "best_month": 27572.0,
+    "fallback": 0,
+    "mean_outlay": 14967.0,
+    "twin_mean_npt": -2045.8,
+    "p": 0.2834
+   },
+   "final": {
+    "trades": 7,
+    "net": 2392.0,
+    "npt": 341.7,
+    "win": 42.9,
+    "top5": 33976.0,
+    "best_month": 24519.0,
+    "fallback": 0,
+    "mean_outlay": 18001.0,
+    "twin_mean_npt": -3041.6,
+    "p": 0.1577
+   },
+   "q_design": 0.4931,
+   "q_final": 0.7676,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best E3_expiry_hero NIFTY",
+   "group": "family best",
+   "fam": "E3_expiry_hero",
+   "und": "NIFTY",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "exit_spec": [
+    0.0,
+    1.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "at": [
+     13,
+     30
+    ],
+    "th": 0.3
+   },
+   "signal_source": "calendar / event timing (expiry day, RBI, budget); any direction from the underlying",
+   "N1": {
+    "trades": 18,
+    "net": 44352.0,
+    "npt": 2464.0,
+    "win": 50.0,
+    "top5": 61317.0,
+    "best_month": 20463.0,
+    "fallback": 0,
+    "mean_outlay": 17463.0
+   },
+   "N2": {
+    "trades": 15,
+    "net": -33041.0,
+    "npt": -2202.7,
+    "win": 40.0,
+    "top5": 49996.0,
+    "best_month": 5248.0,
+    "fallback": 0,
+    "mean_outlay": 15591.0
+   },
+   "design": {
+    "trades": 33,
+    "net": 11311.0,
+    "npt": 342.7,
+    "win": 45.5,
+    "top5": 67956.0,
+    "best_month": 20463.0,
+    "fallback": 0,
+    "mean_outlay": 16612.0,
+    "twin_mean_npt": -82.8,
+    "p": 0.4012
+   },
+   "final": {
+    "trades": 14,
+    "net": 42913.0,
+    "npt": 3065.2,
+    "win": 78.6,
+    "top5": 46254.0,
+    "best_month": 17657.0,
+    "fallback": 0,
+    "mean_outlay": 15507.0,
+    "twin_mean_npt": -109.0,
+    "p": 0.0798
+   },
+   "q_design": 0.4957,
+   "q_final": 0.7635,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": true
+   },
+   "passes": false
+  },
+  {
+   "id": "best U3_lateday NIFTY",
+   "group": "family best",
+   "fam": "U3_lateday",
+   "und": "NIFTY",
+   "kind": "dir",
+   "instr": "otm2",
+   "exit_spec": [
+    0.0,
+    0.0,
+    5,
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "th": 0.5,
+    "how": "follow"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 32,
+    "net": 264065.0,
+    "npt": 8252.0,
+    "win": 31.2,
+    "top5": 487579.0,
+    "best_month": 204527.0,
+    "fallback": 1,
+    "mean_outlay": 16677.0
+   },
+   "N2": {
+    "trades": 34,
+    "net": 130569.0,
+    "npt": 3840.3,
+    "win": 26.5,
+    "top5": 420727.0,
+    "best_month": 103444.0,
+    "fallback": 3,
+    "mean_outlay": 16472.0
+   },
+   "design": {
+    "trades": 66,
+    "net": 394634.0,
+    "npt": 5979.3,
+    "win": 28.8,
+    "top5": 618570.0,
+    "best_month": 204527.0,
+    "fallback": 4,
+    "mean_outlay": 16571.0,
+    "twin_mean_npt": -653.5,
+    "p": 0.0719
+   },
+   "final": {
+    "trades": 22,
+    "net": 16036.0,
+    "npt": 728.9,
+    "win": 27.3,
+    "top5": 275886.0,
+    "best_month": 88842.0,
+    "fallback": 0,
+    "mean_outlay": 16839.0,
+    "twin_mean_npt": -2983.4,
+    "p": 0.1976
+   },
+   "q_design": 0.198,
+   "q_final": 0.7676,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U6_ema NIFTY",
+   "group": "family best",
+   "fam": "U6_ema",
+   "und": "NIFTY",
+   "kind": "dir",
+   "instr": "atm",
+   "exit_spec": [
+    0.4,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "f": 5,
+    "s": 20,
+    "vwap": false
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 198,
+    "net": 3629.0,
+    "npt": 18.3,
+    "win": 28.8,
+    "top5": 407167.0,
+    "best_month": 76017.0,
+    "fallback": 0,
+    "mean_outlay": 15587.0
+   },
+   "N2": {
+    "trades": 237,
+    "net": 188281.0,
+    "npt": 794.4,
+    "win": 32.9,
+    "top5": 526209.0,
+    "best_month": 168569.0,
+    "fallback": 0,
+    "mean_outlay": 16834.0
+   },
+   "design": {
+    "trades": 435,
+    "net": 191909.0,
+    "npt": 441.2,
+    "win": 31.0,
+    "top5": 673596.0,
+    "best_month": 168569.0,
+    "fallback": 0,
+    "mean_outlay": 16267.0,
+    "twin_mean_npt": -335.6,
+    "p": 0.0778
+   },
+   "final": {
+    "trades": 151,
+    "net": 48001.0,
+    "npt": 317.9,
+    "win": 32.5,
+    "top5": 334616.0,
+    "best_month": 177272.0,
+    "fallback": 0,
+    "mean_outlay": 16684.0,
+    "twin_mean_npt": 86.7,
+    "p": 0.3792
+   },
+   "q_design": 0.198,
+   "q_final": 0.7676,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C1",
+   "group": "candidate",
+   "fam": "U3_lateday",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "exit_spec": [
+    0.0,
+    1.0,
+    "am",
+    null
+   ],
+   "filt": "dte2p",
+   "params": {
+    "th": 0.5,
+    "how": "follow"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 63,
+    "net": 112952.0,
+    "npt": 1792.9,
+    "win": 69.8,
+    "top5": 67760.0,
+    "best_month": 27182.0,
+    "fallback": 3,
+    "mean_outlay": 25793.0
+   },
+   "N2": {
+    "trades": 65,
+    "net": -40078.0,
+    "npt": -616.6,
+    "win": 46.2,
+    "top5": 86812.0,
+    "best_month": 26613.0,
+    "fallback": 4,
+    "mean_outlay": 28055.0
+   },
+   "design": {
+    "trades": 128,
+    "net": 72873.0,
+    "npt": 569.3,
+    "win": 57.8,
+    "top5": 109119.0,
+    "best_month": 27182.0,
+    "fallback": 7,
+    "mean_outlay": 26942.0,
+    "twin_mean_npt": -528.4,
+    "p": 0.018
+   },
+   "final": {
+    "trades": 57,
+    "net": -42517.0,
+    "npt": -745.9,
+    "win": 43.9,
+    "top5": 79930.0,
+    "best_month": 47618.0,
+    "fallback": 5,
+    "mean_outlay": 34826.0,
+    "twin_mean_npt": -1084.0,
+    "p": 0.3872
+   },
+   "q_design": 0.1008,
+   "q_design_candidates_only": 0.0495,
+   "q_final": 0.7676,
+   "q_final_candidates_only": 0.7355,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C4",
+   "group": "candidate",
+   "fam": "C1_pcr",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.6,
+     0.3
+    ]
+   ],
+   "filt": "all",
+   "params": {
+    "at": [
+     10,
+     15
+    ],
+    "how": "follow"
+   },
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "N1": {
+    "trades": 63,
+    "net": 14937.0,
+    "npt": 237.1,
+    "win": 42.9,
+    "top5": 75901.0,
+    "best_month": 30313.0,
+    "fallback": 0,
+    "mean_outlay": 26281.0
+   },
+   "N2": {
+    "trades": 83,
+    "net": 32144.0,
+    "npt": 387.3,
+    "win": 50.6,
+    "top5": 64334.0,
+    "best_month": 20048.0,
+    "fallback": 0,
+    "mean_outlay": 29819.0
+   },
+   "design": {
+    "trades": 146,
+    "net": 47081.0,
+    "npt": 322.5,
+    "win": 47.3,
+    "top5": 85151.0,
+    "best_month": 30313.0,
+    "fallback": 0,
+    "mean_outlay": 28292.0,
+    "twin_mean_npt": -336.7,
+    "p": 0.0778
+   },
+   "final": {
+    "trades": 55,
+    "net": 61890.0,
+    "npt": 1125.3,
+    "win": 45.5,
+    "top5": 75932.0,
+    "best_month": 29255.0,
+    "fallback": 0,
+    "mean_outlay": 31907.0,
+    "twin_mean_npt": -206.9,
+    "p": 0.0719
+   },
+   "q_design": 0.198,
+   "q_design_candidates_only": 0.1426,
+   "q_final": 0.7635,
+   "q_final_candidates_only": 0.7355,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": true
+   },
+   "passes": false
+  },
+  {
+   "id": "C9",
+   "group": "candidate",
+   "fam": "U7_bigbar",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "exit_spec": [
+    0.4,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "dow0",
+   "params": {
+    "k": 2.0,
+    "how": "follow"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 26,
+    "net": 34886.0,
+    "npt": 1341.8,
+    "win": 53.8,
+    "top5": 49267.0,
+    "best_month": 16574.0,
+    "fallback": 0,
+    "mean_outlay": 24260.0
+   },
+   "N2": {
+    "trades": 33,
+    "net": 29539.0,
+    "npt": 895.1,
+    "win": 51.5,
+    "top5": 59555.0,
+    "best_month": 17133.0,
+    "fallback": 0,
+    "mean_outlay": 26244.0
+   },
+   "design": {
+    "trades": 59,
+    "net": 64426.0,
+    "npt": 1092.0,
+    "win": 52.5,
+    "top5": 70263.0,
+    "best_month": 17133.0,
+    "fallback": 0,
+    "mean_outlay": 25370.0,
+    "twin_mean_npt": -193.0,
+    "p": 0.014
+   },
+   "final": {
+    "trades": 22,
+    "net": -5641.0,
+    "npt": -256.4,
+    "win": 45.5,
+    "top5": 34435.0,
+    "best_month": 10818.0,
+    "fallback": 0,
+    "mean_outlay": 29322.0,
+    "twin_mean_npt": -326.4,
+    "p": 0.487
+   },
+   "q_design": 0.098,
+   "q_design_candidates_only": 0.0495,
+   "q_final": 0.8021,
+   "q_final_candidates_only": 0.7575,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": false,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best M1_gbm BANKNIFTY",
+   "group": "family best",
+   "fam": "M1_gbm",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "instr": "atm",
+   "exit_spec": [
+    0.4,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "th": 0.6
+   },
+   "signal_source": "gradient-boosted trees on underlying + option-chain features (ML ranker, relaxed item 5)",
+   "N1": {
+    "trades": 0,
+    "net": 0.0,
+    "npt": 0.0
+   },
+   "N2": {
+    "trades": 178,
+    "net": -26502.0,
+    "npt": -148.9,
+    "win": 36.0,
+    "top5": 173619.0,
+    "best_month": 66192.0,
+    "fallback": 1,
+    "mean_outlay": 19686.0
+   },
+   "design": {
+    "trades": 178,
+    "net": -26502.0,
+    "npt": -148.9,
+    "win": 36.0,
+    "top5": 173619.0,
+    "best_month": 66192.0,
+    "fallback": 1,
+    "mean_outlay": 19686.0,
+    "twin_mean_npt": -249.3,
+    "p": 0.4072
+   },
+   "final": {
+    "trades": 113,
+    "net": 3983.0,
+    "npt": 35.2,
+    "win": 40.7,
+    "top5": 159478.0,
+    "best_month": 57478.0,
+    "fallback": 0,
+    "mean_outlay": 26288.0,
+    "twin_mean_npt": -110.7,
+    "p": 0.3892
+   },
+   "q_design": 0.4957,
+   "q_final": 0.7676,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C3",
+   "group": "candidate",
+   "fam": "U3_lateday",
+   "und": "FINNIFTY",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "exit_spec": [
+    0.0,
+    1.0,
+    "am",
+    null
+   ],
+   "filt": "vix_lo",
+   "params": {
+    "th": 0.5,
+    "how": "follow"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 18,
+    "net": 37272.0,
+    "npt": 2070.7,
+    "win": 66.7,
+    "top5": 35082.0,
+    "best_month": 20317.0,
+    "fallback": 1,
+    "mean_outlay": 12201.0
+   },
+   "N2": {
+    "trades": 62,
+    "net": -70864.0,
+    "npt": -1143.0,
+    "win": 41.9,
+    "top5": 22545.0,
+    "best_month": 1004.0,
+    "fallback": 7,
+    "mean_outlay": 11085.0
+   },
+   "design": {
+    "trades": 80,
+    "net": -33592.0,
+    "npt": -419.9,
+    "win": 47.5,
+    "top5": 41567.0,
+    "best_month": 20317.0,
+    "fallback": 8,
+    "mean_outlay": 11336.0,
+    "twin_mean_npt": -2039.9,
+    "p": 0.014
+   },
+   "final": {
+    "trades": 22,
+    "net": -216598.0,
+    "npt": -9845.3,
+    "win": 22.7,
+    "top5": 15599.0,
+    "best_month": -401.0,
+    "fallback": 11,
+    "mean_outlay": 8485.0,
+    "twin_mean_npt": -6853.7,
+    "p": 0.8982
+   },
+   "q_design": 0.098,
+   "q_design_candidates_only": 0.0495,
+   "q_final": 0.9315,
+   "q_final_candidates_only": 0.8982,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": false,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best E2_expiry_vol FINNIFTY",
+   "group": "family best",
+   "fam": "E2_expiry_vol",
+   "und": "FINNIFTY",
+   "kind": "vol",
+   "instr": "strangle2",
+   "exit_spec": [
+    0.4,
+    0.0,
+    "exp",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "at": [
+     11,
+     0
+    ]
+   },
+   "signal_source": "calendar / event timing (expiry day, RBI, budget); any direction from the underlying",
+   "N1": {
+    "trades": 8,
+    "net": -14508.0,
+    "npt": -1813.5,
+    "win": 12.5,
+    "top5": 10257.0,
+    "best_month": 39118.0,
+    "fallback": 0,
+    "mean_outlay": 17782.0
+   },
+   "N2": {
+    "trades": 9,
+    "net": 71939.0,
+    "npt": 7993.3,
+    "win": 22.2,
+    "top5": 104775.0,
+    "best_month": 82777.0,
+    "fallback": 0,
+    "mean_outlay": 18020.0
+   },
+   "design": {
+    "trades": 17,
+    "net": 57432.0,
+    "npt": 3378.3,
+    "win": 17.6,
+    "top5": 153552.0,
+    "best_month": 82777.0,
+    "fallback": 0,
+    "mean_outlay": 17908.0,
+    "twin_mean_npt": 3445.1,
+    "p": 0.4731
+   },
+   "final": {
+    "trades": 6,
+    "net": 15825.0,
+    "npt": 2637.5,
+    "win": 33.3,
+    "top5": 24149.0,
+    "best_month": 26243.0,
+    "fallback": 0,
+    "mean_outlay": 18236.0,
+    "twin_mean_npt": 2371.9,
+    "p": 0.477
+   },
+   "q_design": 0.5266,
+   "q_final": 0.8021,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U10_trendday FINNIFTY",
+   "group": "family best",
+   "fam": "U10_trendday",
+   "und": "FINNIFTY",
+   "kind": "spread",
+   "instr": "sp_atm_otm3",
+   "exit_spec": [
+    0.0,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "th": 0.8,
+    "at": [
+     13,
+     0
+    ]
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 33,
+    "net": -39605.0,
+    "npt": -1200.1,
+    "win": 39.4,
+    "top5": 12599.0,
+    "best_month": 2790.0,
+    "fallback": 0,
+    "mean_outlay": 14564.0
+   },
+   "N2": {
+    "trades": 21,
+    "net": 4692.0,
+    "npt": 223.4,
+    "win": 28.6,
+    "top5": 48363.0,
+    "best_month": 32700.0,
+    "fallback": 0,
+    "mean_outlay": 12052.0
+   },
+   "design": {
+    "trades": 54,
+    "net": -34913.0,
+    "npt": -646.5,
+    "win": 35.2,
+    "top5": 51715.0,
+    "best_month": 32700.0,
+    "fallback": 0,
+    "mean_outlay": 13587.0,
+    "twin_mean_npt": -612.8,
+    "p": 0.489
+   },
+   "final": {
+    "trades": 20,
+    "net": -22647.0,
+    "npt": -1132.3,
+    "win": 50.0,
+    "top5": 5305.0,
+    "best_month": 2288.0,
+    "fallback": 0,
+    "mean_outlay": 6447.0,
+    "twin_mean_npt": -700.7,
+    "p": 0.6567
+   },
+   "q_design": 0.5266,
+   "q_final": 0.8756,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": false,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U1_orb FINNIFTY",
+   "group": "family best",
+   "fam": "U1_orb",
+   "und": "FINNIFTY",
+   "kind": "dir",
+   "instr": "otm2",
+   "exit_spec": [
+    0.0,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "or_min": 60
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 113,
+    "net": -110128.0,
+    "npt": -974.6,
+    "win": 38.9,
+    "top5": 66107.0,
+    "best_month": 30851.0,
+    "fallback": 0,
+    "mean_outlay": 19364.0
+   },
+   "N2": {
+    "trades": 149,
+    "net": -133512.0,
+    "npt": -896.1,
+    "win": 40.3,
+    "top5": 98345.0,
+    "best_month": 56306.0,
+    "fallback": 0,
+    "mean_outlay": 17501.0
+   },
+   "design": {
+    "trades": 262,
+    "net": -243640.0,
+    "npt": -929.9,
+    "win": 39.7,
+    "top5": 104853.0,
+    "best_month": 56306.0,
+    "fallback": 0,
+    "mean_outlay": 18304.0,
+    "twin_mean_npt": -574.3,
+    "p": 0.7764
+   },
+   "final": {
+    "trades": 92,
+    "net": -91333.0,
+    "npt": -992.7,
+    "win": 39.1,
+    "top5": 50123.0,
+    "best_month": 8688.0,
+    "fallback": 0,
+    "mean_outlay": 18024.0,
+    "twin_mean_npt": -527.5,
+    "p": 0.7864
+   },
+   "q_design": 0.7764,
+   "q_final": 0.9157,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U5_daily_mr FINNIFTY",
+   "group": "family best",
+   "fam": "U5_daily_mr",
+   "und": "FINNIFTY",
+   "kind": "spread",
+   "instr": "sp_atm_otm3",
+   "exit_spec": [
+    0.0,
+    1.0,
+    5,
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "kind": "streak3"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 26,
+    "net": -14941.0,
+    "npt": -574.7,
+    "win": 38.5,
+    "top5": 120921.0,
+    "best_month": 43219.0,
+    "fallback": 3,
+    "mean_outlay": 14372.0
+   },
+   "N2": {
+    "trades": 39,
+    "net": -109183.0,
+    "npt": -2799.6,
+    "win": 35.9,
+    "top5": 40724.0,
+    "best_month": 4048.0,
+    "fallback": 17,
+    "mean_outlay": 8539.0
+   },
+   "design": {
+    "trades": 65,
+    "net": -124124.0,
+    "npt": -1909.6,
+    "win": 36.9,
+    "top5": 123568.0,
+    "best_month": 43219.0,
+    "fallback": 20,
+    "mean_outlay": 10872.0,
+    "twin_mean_npt": -2698.7,
+    "p": 0.3313
+   },
+   "final": {
+    "trades": 18,
+    "net": -338688.0,
+    "npt": -18816.0,
+    "win": 16.7,
+    "top5": -2639.0,
+    "best_month": -6569.0,
+    "fallback": 14,
+    "mean_outlay": 13130.0,
+    "twin_mean_npt": -10456.1,
+    "p": 0.9681
+   },
+   "q_design": 0.4957,
+   "q_final": 0.9681,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": false,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U7_bigbar FINNIFTY",
+   "group": "family best",
+   "fam": "U7_bigbar",
+   "und": "FINNIFTY",
+   "kind": "dir",
+   "instr": "otm2",
+   "exit_spec": [
+    0.4,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "k": 3.0,
+    "how": "follow"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 55,
+    "net": -29762.0,
+    "npt": -541.1,
+    "win": 36.4,
+    "top5": 82700.0,
+    "best_month": 31650.0,
+    "fallback": 0,
+    "mean_outlay": 19858.0
+   },
+   "N2": {
+    "trades": 26,
+    "net": 14355.0,
+    "npt": 552.1,
+    "win": 53.8,
+    "top5": 42648.0,
+    "best_month": 12310.0,
+    "fallback": 0,
+    "mean_outlay": 19987.0
+   },
+   "design": {
+    "trades": 81,
+    "net": -15407.0,
+    "npt": -190.2,
+    "win": 42.0,
+    "top5": 91766.0,
+    "best_month": 31650.0,
+    "fallback": 0,
+    "mean_outlay": 19899.0,
+    "twin_mean_npt": -422.8,
+    "p": 0.2994
+   },
+   "final": {
+    "trades": 28,
+    "net": 27416.0,
+    "npt": 979.2,
+    "win": 46.4,
+    "top5": 54322.0,
+    "best_month": 24960.0,
+    "fallback": 0,
+    "mean_outlay": 17676.0,
+    "twin_mean_npt": -277.2,
+    "p": 0.0818
+   },
+   "q_design": 0.4931,
+   "q_final": 0.7635,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": true
+   },
+   "passes": false
+  },
+  {
+   "id": "C5",
+   "group": "candidate",
+   "fam": "U1_orb",
+   "und": "SENSEX",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.6,
+     0.3
+    ]
+   ],
+   "filt": "dte0",
+   "params": {
+    "or_min": 60
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 29,
+    "net": -4152.0,
+    "npt": -143.2,
+    "win": 37.9,
+    "top5": 80012.0,
+    "best_month": 25319.0,
+    "fallback": 0,
+    "mean_outlay": 17957.0
+   },
+   "N2": {
+    "trades": 31,
+    "net": 90681.0,
+    "npt": 2925.2,
+    "win": 45.2,
+    "top5": 117146.0,
+    "best_month": 49398.0,
+    "fallback": 1,
+    "mean_outlay": 17707.0
+   },
+   "design": {
+    "trades": 60,
+    "net": 86528.0,
+    "npt": 1442.1,
+    "win": 41.7,
+    "top5": 117146.0,
+    "best_month": 49398.0,
+    "fallback": 1,
+    "mean_outlay": 17828.0,
+    "twin_mean_npt": -220.5,
+    "p": 0.0279
+   },
+   "final": {
+    "trades": 27,
+    "net": -17596.0,
+    "npt": -651.7,
+    "win": 33.3,
+    "top5": 73882.0,
+    "best_month": 32560.0,
+    "fallback": 0,
+    "mean_outlay": 17942.0,
+    "twin_mean_npt": -295.1,
+    "p": 0.6228
+   },
+   "q_design": 0.1116,
+   "q_design_candidates_only": 0.0614,
+   "q_final": 0.8719,
+   "q_final_candidates_only": 0.7575,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": false,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C8",
+   "group": "candidate",
+   "fam": "U6_ema",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "otm2",
+   "exit_spec": [
+    0.0,
+    0.0,
+    60,
+    null
+   ],
+   "filt": "dow2",
+   "params": {
+    "f": 9,
+    "s": 21,
+    "vwap": true
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 52,
+    "net": -20578.0,
+    "npt": -395.7,
+    "win": 38.5,
+    "top5": 21031.0,
+    "best_month": 8014.0,
+    "fallback": 0,
+    "mean_outlay": 14705.0
+   },
+   "N2": {
+    "trades": 47,
+    "net": -4965.0,
+    "npt": -105.6,
+    "win": 51.1,
+    "top5": 56529.0,
+    "best_month": 17984.0,
+    "fallback": 0,
+    "mean_outlay": 17541.0
+   },
+   "design": {
+    "trades": 99,
+    "net": -25543.0,
+    "npt": -258.0,
+    "win": 44.4,
+    "top5": 57643.0,
+    "best_month": 17984.0,
+    "fallback": 0,
+    "mean_outlay": 16051.0,
+    "twin_mean_npt": -356.8,
+    "p": 0.4052
+   },
+   "final": {
+    "trades": 41,
+    "net": -17654.0,
+    "npt": -430.6,
+    "win": 34.1,
+    "top5": 44601.0,
+    "best_month": 6073.0,
+    "fallback": 0,
+    "mean_outlay": 17456.0,
+    "twin_mean_npt": -165.8,
+    "p": 0.5509
+   },
+   "q_design": 0.4957,
+   "q_design_candidates_only": 0.4457,
+   "q_final": 0.857,
+   "q_final_candidates_only": 0.7575,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C10",
+   "group": "candidate",
+   "fam": "O1_prem_orb",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "own",
+   "exit_spec": [
+    0.25,
+    1.0,
+    "sq",
+    null
+   ],
+   "filt": "dow4",
+   "params": {
+    "or_min": 15
+   },
+   "signal_source": "non-default: option-chart signal (the option's own premium bars) - only Boss could switch it on",
+   "N1": {
+    "trades": 29,
+    "net": 31416.0,
+    "npt": 1083.3,
+    "win": 41.4,
+    "top5": 56043.0,
+    "best_month": 18824.0,
+    "fallback": 0,
+    "mean_outlay": 13901.0
+   },
+   "N2": {
+    "trades": 39,
+    "net": 67787.0,
+    "npt": 1738.1,
+    "win": 56.4,
+    "top5": 56312.0,
+    "best_month": 18827.0,
+    "fallback": 0,
+    "mean_outlay": 15736.0
+   },
+   "design": {
+    "trades": 68,
+    "net": 99204.0,
+    "npt": 1458.9,
+    "win": 50.0,
+    "top5": 68531.0,
+    "best_month": 18827.0,
+    "fallback": 0,
+    "mean_outlay": 14953.0,
+    "twin_mean_npt": -111.1,
+    "p": 0.012
+   },
+   "final": {
+    "trades": 21,
+    "net": -16340.0,
+    "npt": -778.1,
+    "win": 28.6,
+    "top5": 24119.0,
+    "best_month": 11581.0,
+    "fallback": 0,
+    "mean_outlay": 14501.0,
+    "twin_mean_npt": -75.4,
+    "p": 0.6886
+   },
+   "q_design": 0.098,
+   "q_design_candidates_only": 0.0495,
+   "q_final": 0.8764,
+   "q_final_candidates_only": 0.7575,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": false,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best C1_pcr SENSEX",
+   "group": "family best",
+   "fam": "C1_pcr",
+   "und": "SENSEX",
+   "kind": "spread",
+   "instr": "sp_atm_otm3",
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.3,
+     0.1
+    ]
+   ],
+   "filt": "all",
+   "params": {
+    "at": [
+     11,
+     30
+    ],
+    "how": "follow"
+   },
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "N1": {
+    "trades": 61,
+    "net": 140116.0,
+    "npt": 2297.0,
+    "win": 54.1,
+    "top5": 154534.0,
+    "best_month": 57442.0,
+    "fallback": 0,
+    "mean_outlay": 18834.0
+   },
+   "N2": {
+    "trades": 80,
+    "net": 277839.0,
+    "npt": 3473.0,
+    "win": 50.0,
+    "top5": 336824.0,
+    "best_month": 98506.0,
+    "fallback": 1,
+    "mean_outlay": 18784.0
+   },
+   "design": {
+    "trades": 141,
+    "net": 417955.0,
+    "npt": 2964.2,
+    "win": 51.8,
+    "top5": 348518.0,
+    "best_month": 98506.0,
+    "fallback": 1,
+    "mean_outlay": 18806.0,
+    "twin_mean_npt": -21.8,
+    "p": 0.002
+   },
+   "final": {
+    "trades": 61,
+    "net": 30456.0,
+    "npt": 499.3,
+    "win": 42.6,
+    "top5": 130530.0,
+    "best_month": 37055.0,
+    "fallback": 0,
+    "mean_outlay": 18761.0,
+    "twin_mean_npt": 320.3,
+    "p": 0.4112
+   },
+   "q_design": 0.056,
+   "q_final": 0.7676,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best C3_oishift SENSEX",
+   "group": "family best",
+   "fam": "C3_oishift",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "atm",
+   "exit_spec": [
+    0.4,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "how": "follow"
+   },
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "N1": {
+    "trades": 65,
+    "net": 109400.0,
+    "npt": 1683.1,
+    "win": 41.5,
+    "top5": 221208.0,
+    "best_month": 145473.0,
+    "fallback": 0,
+    "mean_outlay": 15560.0
+   },
+   "N2": {
+    "trades": 89,
+    "net": 193026.0,
+    "npt": 2168.8,
+    "win": 34.8,
+    "top5": 367574.0,
+    "best_month": 108967.0,
+    "fallback": 0,
+    "mean_outlay": 17308.0
+   },
+   "design": {
+    "trades": 154,
+    "net": 302427.0,
+    "npt": 1963.8,
+    "win": 37.7,
+    "top5": 482986.0,
+    "best_month": 145473.0,
+    "fallback": 0,
+    "mean_outlay": 16570.0,
+    "twin_mean_npt": 253.1,
+    "p": 0.0419
+   },
+   "final": {
+    "trades": 49,
+    "net": -58369.0,
+    "npt": -1191.2,
+    "win": 28.6,
+    "top5": 84864.0,
+    "best_month": 63131.0,
+    "fallback": 0,
+    "mean_outlay": 16064.0,
+    "twin_mean_npt": 307.3,
+    "p": 0.8283
+   },
+   "q_design": 0.1467,
+   "q_final": 0.9157,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best O1_prem_orb SENSEX",
+   "group": "family best",
+   "fam": "O1_prem_orb",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "own",
+   "exit_spec": [
+    0.0,
+    1.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "or_min": 15
+   },
+   "signal_source": "non-default: option-chart signal (the option's own premium bars) - only Boss could switch it on",
+   "N1": {
+    "trades": 125,
+    "net": -59110.0,
+    "npt": -472.9,
+    "win": 43.2,
+    "top5": 84206.0,
+    "best_month": 18524.0,
+    "fallback": 0,
+    "mean_outlay": 14828.0
+   },
+   "N2": {
+    "trades": 157,
+    "net": -47153.0,
+    "npt": -300.3,
+    "win": 44.6,
+    "top5": 93855.0,
+    "best_month": 58880.0,
+    "fallback": 2,
+    "mean_outlay": 15886.0
+   },
+   "design": {
+    "trades": 282,
+    "net": -106263.0,
+    "npt": -376.8,
+    "win": 44.0,
+    "top5": 93855.0,
+    "best_month": 58880.0,
+    "fallback": 2,
+    "mean_outlay": 15417.0,
+    "twin_mean_npt": -459.2,
+    "p": 0.4511
+   },
+   "final": {
+    "trades": 110,
+    "net": -43624.0,
+    "npt": -396.6,
+    "win": 45.5,
+    "top5": 88124.0,
+    "best_month": 17292.0,
+    "fallback": 0,
+    "mean_outlay": 15288.0,
+    "twin_mean_npt": -161.6,
+    "p": 0.5908
+   },
+   "q_design": 0.5263,
+   "q_final": 0.8707,
+   "gates": {
+    "design_net_positive": false,
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best O2_prem_mom SENSEX",
+   "group": "family best",
+   "fam": "O2_prem_mom",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "own",
+   "exit_spec": [
+    0.0,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "x": 0.4
+   },
+   "signal_source": "non-default: option-chart signal (the option's own premium bars) - only Boss could switch it on",
+   "N1": {
+    "trades": 89,
+    "net": 61994.0,
+    "npt": 696.6,
+    "win": 44.9,
+    "top5": 124892.0,
+    "best_month": 42424.0,
+    "fallback": 0,
+    "mean_outlay": 15456.0
+   },
+   "N2": {
+    "trades": 127,
+    "net": 50489.0,
+    "npt": 397.6,
+    "win": 43.3,
+    "top5": 229231.0,
+    "best_month": 57529.0,
+    "fallback": 3,
+    "mean_outlay": 16143.0
+   },
+   "design": {
+    "trades": 216,
+    "net": 112483.0,
+    "npt": 520.8,
+    "win": 44.0,
+    "top5": 229231.0,
+    "best_month": 57529.0,
+    "fallback": 3,
+    "mean_outlay": 15860.0,
+    "twin_mean_npt": -377.9,
+    "p": 0.1337
+   },
+   "final": {
+    "trades": 89,
+    "net": -119444.0,
+    "npt": -1342.1,
+    "win": 33.7,
+    "top5": 143046.0,
+    "best_month": 37935.0,
+    "fallback": 0,
+    "mean_outlay": 15616.0,
+    "twin_mean_npt": 123.3,
+    "p": 0.8503
+   },
+   "q_design": 0.2674,
+   "q_final": 0.9157,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U2_gap SENSEX",
+   "group": "family best",
+   "fam": "U2_gap",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "otm5",
+   "exit_spec": [
+    0.25,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "th": 0.3,
+    "how": "fade"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 53,
+    "net": 164305.0,
+    "npt": 3100.1,
+    "win": 20.8,
+    "top5": 329025.0,
+    "best_month": 260109.0,
+    "fallback": 0,
+    "mean_outlay": 17872.0
+   },
+   "N2": {
+    "trades": 57,
+    "net": 133017.0,
+    "npt": 2333.6,
+    "win": 15.8,
+    "top5": 311912.0,
+    "best_month": 257792.0,
+    "fallback": 0,
+    "mean_outlay": 16545.0
+   },
+   "design": {
+    "trades": 110,
+    "net": 297322.0,
+    "npt": 2702.9,
+    "win": 18.2,
+    "top5": 593021.0,
+    "best_month": 260109.0,
+    "fallback": 0,
+    "mean_outlay": 17184.0,
+    "twin_mean_npt": 204.7,
+    "p": 0.1158
+   },
+   "final": {
+    "trades": 66,
+    "net": 49993.0,
+    "npt": 757.5,
+    "win": 22.7,
+    "top5": 173353.0,
+    "best_month": 56969.0,
+    "fallback": 0,
+    "mean_outlay": 17177.0,
+    "twin_mean_npt": 209.0,
+    "p": 0.3533
+   },
+   "q_design": 0.2494,
+   "q_final": 0.7676,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U4_donchian SENSEX",
+   "group": "family best",
+   "fam": "U4_donchian",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "otm5",
+   "exit_spec": [
+    0.0,
+    0.0,
+    5,
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "n": 10
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 31,
+    "net": 509308.0,
+    "npt": 16429.3,
+    "win": 32.3,
+    "top5": 612159.0,
+    "best_month": 295202.0,
+    "fallback": 3,
+    "mean_outlay": 17537.0
+   },
+   "N2": {
+    "trades": 44,
+    "net": -80119.0,
+    "npt": -1820.9,
+    "win": 22.7,
+    "top5": 338851.0,
+    "best_month": 100653.0,
+    "fallback": 5,
+    "mean_outlay": 17488.0
+   },
+   "design": {
+    "trades": 75,
+    "net": 429189.0,
+    "npt": 5722.5,
+    "win": 26.7,
+    "top5": 733514.0,
+    "best_month": 295202.0,
+    "fallback": 8,
+    "mean_outlay": 17508.0,
+    "twin_mean_npt": 2800.0,
+    "p": 0.2335
+   },
+   "final": {
+    "trades": 19,
+    "net": 3098.0,
+    "npt": 163.0,
+    "win": 21.1,
+    "top5": 223811.0,
+    "best_month": 135605.0,
+    "fallback": 1,
+    "mean_outlay": 18477.0,
+    "twin_mean_npt": -933.2,
+    "p": 0.3932
+   },
+   "q_design": 0.4359,
+   "q_final": 0.7676,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "best U8_pdhl SENSEX",
+   "group": "family best",
+   "fam": "U8_pdhl",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "atm",
+   "exit_spec": [
+    0.0,
+    0.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "params": {
+    "how": "break"
+   },
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "N1": {
+    "trades": 118,
+    "net": 371071.0,
+    "npt": 3144.7,
+    "win": 42.4,
+    "top5": 313388.0,
+    "best_month": 98455.0,
+    "fallback": 0,
+    "mean_outlay": 15617.0
+   },
+   "N2": {
+    "trades": 154,
+    "net": 72935.0,
+    "npt": 473.6,
+    "win": 44.2,
+    "top5": 267499.0,
+    "best_month": 117184.0,
+    "fallback": 2,
+    "mean_outlay": 16984.0
+   },
+   "design": {
+    "trades": 272,
+    "net": 444006.0,
+    "npt": 1632.4,
+    "win": 43.4,
+    "top5": 360302.0,
+    "best_month": 117184.0,
+    "fallback": 2,
+    "mean_outlay": 16391.0,
+    "twin_mean_npt": -109.2,
+    "p": 0.022
+   },
+   "final": {
+    "trades": 112,
+    "net": -133885.0,
+    "npt": -1195.4,
+    "win": 36.6,
+    "top5": 218181.0,
+    "best_month": 118137.0,
+    "fallback": 0,
+    "mean_outlay": 16777.0,
+    "twin_mean_npt": -183.4,
+    "p": 0.8144
+   },
+   "q_design": 0.1027,
+   "q_final": 0.9157,
+   "gates": {
+    "design_net_positive": true,
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  }
+ ],
+ "reselect": [
+  {
+   "fam": "C1_pcr",
+   "und": "NIFTY",
+   "kind": "dir",
+   "variants": 7840,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "at": [
+      11,
+      30
+     ],
+     "how": "follow"
+    },
+    "instr": "otm5",
+    "exit": [
+     0.25,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 48,
+    "train_t": 1.82,
+    "trades": 3,
+    "net": 19342.0,
+    "npt": 6447.3,
+    "t": 4.72,
+    "win": 100.0
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "at": [
+      11,
+      30
+     ],
+     "how": "follow"
+    },
+    "instr": "otm5",
+    "exit": [
+     0.25,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 51,
+    "train_t": 2.24,
+    "trades": 23,
+    "net": 49369.0,
+    "npt": 2146.5,
+    "t": 1.79,
+    "win": 43.5,
+    "p": 0.0339,
+    "q": 0.2274
+   }
+  },
+  {
+   "fam": "C2_ivcheap",
+   "und": "NIFTY",
+   "kind": "vol",
+   "variants": 3024,
+   "N1->N2": {
+    "picked": false
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "pct": 0.2,
+     "when": "day"
+    },
+    "instr": "strangle2",
+    "exit": [
+     0.4,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 72,
+    "train_t": 1.38,
+    "trades": 35,
+    "net": -30557.0,
+    "npt": -873.1,
+    "t": -1.45,
+    "win": 17.1,
+    "p": 0.4611,
+    "q": 0.7888
+   }
+  },
+  {
+   "fam": "C3_oishift",
+   "und": "NIFTY",
+   "kind": "spread",
+   "variants": 1120,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "how": "fade"
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 50,
+    "train_t": 0.67,
+    "trades": 5,
+    "net": -33483.0,
+    "npt": -6696.6,
+    "t": -3.34,
+    "win": 0.0
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "how": "follow"
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 55,
+    "train_t": 1.29,
+    "trades": 23,
+    "net": -70810.0,
+    "npt": -3078.7,
+    "t": -1.83,
+    "win": 47.8,
+    "p": 0.978,
+    "q": 1.0
+   }
+  },
+  {
+   "fam": "E3_expiry_hero",
+   "und": "NIFTY",
+   "kind": "spread",
+   "variants": 2240,
+   "N1->N2": {
+    "picked": false
+   },
+   "design->final": {
+    "picked": false
+   }
+  },
+  {
+   "fam": "O1_prem_orb",
+   "und": "NIFTY",
+   "kind": "dir",
+   "variants": 560,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "or_min": 30
+    },
+    "instr": "own",
+    "exit": [
+     0.4,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 41,
+    "train_t": 0.5,
+    "trades": 147,
+    "net": -7940.0,
+    "npt": -54.0,
+    "t": -0.11,
+    "win": 47.6
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "or_min": 30
+    },
+    "instr": "own",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow4",
+    "train_n": 59,
+    "train_t": 2.17,
+    "trades": 17,
+    "net": -16198.0,
+    "npt": -952.8,
+    "t": -0.81,
+    "win": 41.2,
+    "p": 0.5409,
+    "q": 0.7916
+   }
+  },
+  {
+   "fam": "U3_lateday",
+   "und": "NIFTY",
+   "kind": "dir",
+   "variants": 6272,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "th": 0.5,
+     "how": "follow"
+    },
+    "instr": "m_atm",
+    "exit": [
+     0.0,
+     1.0,
+     "am",
+     null
+    ],
+    "filt": "all",
+    "train_n": 59,
+    "train_t": 2.24,
+    "trades": 62,
+    "net": 17687.0,
+    "npt": 285.3,
+    "t": 0.34,
+    "win": 53.2
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "th": 0.5,
+     "how": "follow"
+    },
+    "instr": "itm1",
+    "exit": [
+     0.0,
+     1.0,
+     1,
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 59,
+    "train_t": 2.49,
+    "trades": 11,
+    "net": -41340.0,
+    "npt": -3758.1,
+    "t": -1.02,
+    "win": 27.3,
+    "p": 0.9222,
+    "q": 1.0
+   }
+  },
+  {
+   "fam": "U4_donchian",
+   "und": "NIFTY",
+   "kind": "spread",
+   "variants": 1344,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "n": 10
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     0.0,
+     "am",
+     null
+    ],
+    "filt": "all",
+    "train_n": 45,
+    "train_t": 0.88,
+    "trades": 58,
+    "net": -13994.0,
+    "npt": -241.3,
+    "t": -0.28,
+    "win": 46.6
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "n": 10
+    },
+    "instr": "sp_atm_otm3",
+    "exit": [
+     0.5,
+     0.0,
+     5,
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 43,
+    "train_t": 1.18,
+    "trades": 12,
+    "net": 135686.0,
+    "npt": 11307.2,
+    "t": 1.57,
+    "win": 50.0,
+    "p": 0.0479,
+    "q": 0.2299
+   }
+  },
+  {
+   "fam": "U6_ema",
+   "und": "NIFTY",
+   "kind": "dir",
+   "variants": 7840,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "f": 9,
+     "s": 21,
+     "vwap": true
+    },
+    "instr": "itm3",
+    "exit": [
+     0.4,
+     0.5,
+     60,
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 56,
+    "train_t": 2.15,
+    "trades": 234,
+    "net": -11895.0,
+    "npt": -50.8,
+    "t": -0.27,
+    "win": 42.7
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "f": 9,
+     "s": 21,
+     "vwap": false
+    },
+    "instr": "m_itm2",
+    "exit": [
+     0.25,
+     1.0,
+     "sq",
+     null
+    ],
+    "filt": "dow3",
+    "train_n": 65,
+    "train_t": 2.48,
+    "trades": 28,
+    "net": -34752.0,
+    "npt": -1241.1,
+    "t": -1.51,
+    "win": 35.7,
+    "p": 0.9242,
+    "q": 1.0
+   }
+  },
+  {
+   "fam": "C1_pcr",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "variants": 5600,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "at": [
+      10,
+      15
+     ],
+     "how": "fade"
+    },
+    "instr": "otm5",
+    "exit": [
+     0.25,
+     1.0,
+     60,
+     null
+    ],
+    "filt": "dte2p",
+    "train_n": 56,
+    "train_t": 1.62,
+    "trades": 73,
+    "net": -8549.0,
+    "npt": -117.1,
+    "t": -0.46,
+    "win": 42.5
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "at": [
+      11,
+      30
+     ],
+     "how": "follow"
+    },
+    "instr": "otm5",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dte2p",
+    "train_n": 135,
+    "train_t": 1.34,
+    "trades": 44,
+    "net": 16131.0,
+    "npt": 366.6,
+    "t": 0.43,
+    "win": 45.5,
+    "p": 0.2794,
+    "q": 0.7888
+   }
+  },
+  {
+   "fam": "M1_gbm",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "variants": 2800,
+   "N1->N2": {
+    "picked": false
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "th": 0.6
+    },
+    "instr": "otm2",
+    "exit": [
+     0.0,
+     0.5,
+     60,
+     null
+    ],
+    "filt": "monthend",
+    "train_n": 59,
+    "train_t": 1.87,
+    "trades": 30,
+    "net": 8056.0,
+    "npt": 268.5,
+    "t": 0.32,
+    "win": 36.7,
+    "p": 0.1796,
+    "q": 0.6569
+   }
+  },
+  {
+   "fam": "U3_lateday",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "variants": 4480,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "th": 0.5,
+     "how": "follow"
+    },
+    "instr": "itm3",
+    "exit": [
+     0.0,
+     0.0,
+     "am",
+     null
+    ],
+    "filt": "all",
+    "train_n": 67,
+    "train_t": 3.06,
+    "trades": 69,
+    "net": 89.0,
+    "npt": 1.3,
+    "t": 0.0,
+    "win": 47.8
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "th": 0.5,
+     "how": "follow"
+    },
+    "instr": "itm3",
+    "exit": [
+     0.5,
+     0.0,
+     "am",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 53,
+    "train_t": 1.99,
+    "trades": 30,
+    "net": 46584.0,
+    "npt": 1552.8,
+    "t": 1.08,
+    "win": 53.3,
+    "p": 0.0299,
+    "q": 0.2274
+   }
+  },
+  {
+   "fam": "U7_bigbar",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "variants": 5600,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "k": 3.0,
+     "how": "fade"
+    },
+    "instr": "atm",
+    "exit": [
+     0.25,
+     0.5,
+     60,
+     null
+    ],
+    "filt": "all",
+    "train_n": 61,
+    "train_t": 2.01,
+    "trades": 35,
+    "net": -1975.0,
+    "npt": -56.4,
+    "t": -0.07,
+    "win": 45.7
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "k": 2.0,
+     "how": "fade"
+    },
+    "instr": "atm",
+    "exit": [
+     0.25,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow3",
+    "train_n": 62,
+    "train_t": 2.61,
+    "trades": 18,
+    "net": 3234.0,
+    "npt": 179.7,
+    "t": 0.13,
+    "win": 55.6,
+    "p": 0.3693,
+    "q": 0.7888
+   }
+  },
+  {
+   "fam": "E2_expiry_vol",
+   "und": "FINNIFTY",
+   "kind": "vol",
+   "variants": 504,
+   "N1->N2": {
+    "picked": false
+   },
+   "design->final": {
+    "picked": false
+   }
+  },
+  {
+   "fam": "U10_trendday",
+   "und": "FINNIFTY",
+   "kind": "spread",
+   "variants": 2240,
+   "N1->N2": {
+    "picked": false
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "th": 0.8,
+     "at": [
+      14,
+      0
+     ]
+    },
+    "instr": "sp_atm_otm3",
+    "exit": [
+     0.4,
+     0.0,
+     "sq",
+     null
+    ],
+    "filt": "all",
+    "train_n": 63,
+    "train_t": 0.72,
+    "trades": 22,
+    "net": -12101.0,
+    "npt": -550.1,
+    "t": -0.74,
+    "win": 27.3,
+    "p": 0.3892,
+    "q": 0.7888
+   }
+  },
+  {
+   "fam": "U1_orb",
+   "und": "FINNIFTY",
+   "kind": "dir",
+   "variants": 4200,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "or_min": 30
+    },
+    "instr": "otm5",
+    "exit": [
+     0.25,
+     1.0,
+     60,
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 43,
+    "train_t": 1.72,
+    "trades": 154,
+    "net": 29961.0,
+    "npt": 194.6,
+    "t": 0.73,
+    "win": 46.1
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "or_min": 30
+    },
+    "instr": "itm1",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow4",
+    "train_n": 64,
+    "train_t": 2.16,
+    "trades": 21,
+    "net": 5472.0,
+    "npt": 260.6,
+    "t": 0.26,
+    "win": 57.1,
+    "p": 0.1916,
+    "q": 0.6569
+   }
+  },
+  {
+   "fam": "U3_lateday",
+   "und": "FINNIFTY",
+   "kind": "spread",
+   "variants": 1792,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "th": 0.5,
+     "how": "follow"
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     0.0,
+     "am",
+     null
+    ],
+    "filt": "all",
+    "train_n": 68,
+    "train_t": 2.76,
+    "trades": 75,
+    "net": -179180.0,
+    "npt": -2389.1,
+    "t": -3.51,
+    "win": 34.7
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "th": 0.5,
+     "how": "follow"
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     0.0,
+     "am",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 52,
+    "train_t": 0.03,
+    "trades": 26,
+    "net": -380491.0,
+    "npt": -14634.3,
+    "t": -5.52,
+    "win": 7.7,
+    "p": 1.0,
+    "q": 1.0
+   }
+  },
+  {
+   "fam": "U5_daily_mr",
+   "und": "FINNIFTY",
+   "kind": "spread",
+   "variants": 896,
+   "N1->N2": {
+    "picked": false
+   },
+   "design->final": {
+    "picked": false
+   }
+  },
+  {
+   "fam": "U7_bigbar",
+   "und": "FINNIFTY",
+   "kind": "dir",
+   "variants": 5600,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "k": 2.0,
+     "how": "follow"
+    },
+    "instr": "itm3",
+    "exit": [
+     0.4,
+     1.0,
+     60,
+     null
+    ],
+    "filt": "dow2",
+    "train_n": 40,
+    "train_t": 1.47,
+    "trades": 33,
+    "net": -1055.0,
+    "npt": -32.0,
+    "t": -0.06,
+    "win": 39.4
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "k": 2.0,
+     "how": "follow"
+    },
+    "instr": "atm",
+    "exit": [
+     0.25,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow0",
+    "train_n": 72,
+    "train_t": 2.05,
+    "trades": 21,
+    "net": 56002.0,
+    "npt": 2666.8,
+    "t": 2.44,
+    "win": 52.4,
+    "p": 0.002,
+    "q": 0.048
+   }
+  },
+  {
+   "fam": "C1_pcr",
+   "und": "SENSEX",
+   "kind": "spread",
+   "variants": 2240,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "at": [
+      10,
+      15
+     ],
+     "how": "follow"
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     1.0,
+     "sq",
+     null
+    ],
+    "filt": "all",
+    "train_n": 62,
+    "train_t": 2.16,
+    "trades": 86,
+    "net": -62903.0,
+    "npt": -731.4,
+    "t": -0.74,
+    "win": 48.8
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "at": [
+      11,
+      30
+     ],
+     "how": "follow"
+    },
+    "instr": "sp_atm_otm3",
+    "exit": [
+     0.3,
+     0.0,
+     "sq",
+     [
+      0.3,
+      0.1
+     ]
+    ],
+    "filt": "all",
+    "train_n": 141,
+    "train_t": 2.21,
+    "trades": 61,
+    "net": 30456.0,
+    "npt": 499.3,
+    "t": 0.42,
+    "win": 42.6,
+    "p": 0.4232,
+    "q": 0.7888
+   }
+  },
+  {
+   "fam": "C3_oishift",
+   "und": "SENSEX",
+   "kind": "dir",
+   "variants": 3920,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "how": "follow"
+    },
+    "instr": "m_itm2",
+    "exit": [
+     0.4,
+     1.0,
+     "sq",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 40,
+    "train_t": 1.79,
+    "trades": 2,
+    "net": 7455.0,
+    "npt": 3727.5,
+    "t": 4.07,
+    "win": 100.0
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "how": "follow"
+    },
+    "instr": "otm2",
+    "exit": [
+     0.4,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_mid",
+    "train_n": 49,
+    "train_t": 2.15,
+    "trades": 19,
+    "net": 1188.0,
+    "npt": 62.5,
+    "t": 0.04,
+    "win": 52.6,
+    "p": 0.479,
+    "q": 0.7888
+   }
+  },
+  {
+   "fam": "O1_prem_orb",
+   "und": "SENSEX",
+   "kind": "dir",
+   "variants": 560,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "or_min": 15
+    },
+    "instr": "own",
+    "exit": [
+     0.25,
+     0.5,
+     60,
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 46,
+    "train_t": 1.72,
+    "trades": 160,
+    "net": -18688.0,
+    "npt": -116.8,
+    "t": -0.4,
+    "win": 41.2
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "or_min": 30
+    },
+    "instr": "own",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow4",
+    "train_n": 57,
+    "train_t": 3.21,
+    "trades": 15,
+    "net": -5596.0,
+    "npt": -373.1,
+    "t": -0.32,
+    "win": 40.0,
+    "p": 0.4511,
+    "q": 0.7888
+   }
+  },
+  {
+   "fam": "O2_prem_mom",
+   "und": "SENSEX",
+   "kind": "dir",
+   "variants": 560,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "x": 0.2
+    },
+    "instr": "own",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 42,
+    "train_t": 2.42,
+    "trades": 139,
+    "net": -6016.0,
+    "npt": -43.3,
+    "t": -0.06,
+    "win": 51.1
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "x": 0.2
+    },
+    "instr": "own",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow4",
+    "train_n": 60,
+    "train_t": 3.49,
+    "trades": 18,
+    "net": -19622.0,
+    "npt": -1090.1,
+    "t": -0.95,
+    "win": 27.8,
+    "p": 0.6168,
+    "q": 0.7916
+   }
+  },
+  {
+   "fam": "U1_orb",
+   "und": "SENSEX",
+   "kind": "spread",
+   "variants": 1680,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "or_min": 15
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 46,
+    "train_t": 1.08,
+    "trades": 157,
+    "net": -66311.0,
+    "npt": -422.4,
+    "t": -0.65,
+    "win": 52.9
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "or_min": 30
+    },
+    "instr": "sp_itm2_otm2",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow4",
+    "train_n": 67,
+    "train_t": 2.74,
+    "trades": 19,
+    "net": -16013.0,
+    "npt": -842.8,
+    "t": -0.89,
+    "win": 47.4,
+    "p": 0.5848,
+    "q": 0.7916
+   }
+  },
+  {
+   "fam": "U2_gap",
+   "und": "SENSEX",
+   "kind": "dir",
+   "variants": 11760,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "th": 0.3,
+     "how": "follow"
+    },
+    "instr": "otm2",
+    "exit": [
+     0.3,
+     0.0,
+     "sq",
+     [
+      0.6,
+      0.3
+     ]
+    ],
+    "filt": "all",
+    "train_n": 53,
+    "train_t": 1.4,
+    "trades": 57,
+    "net": 76690.0,
+    "npt": 1345.4,
+    "t": 1.1,
+    "win": 49.1
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "th": 0.3,
+     "how": "follow"
+    },
+    "instr": "m_atm",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 43,
+    "train_t": 3.03,
+    "trades": 21,
+    "net": -27630.0,
+    "npt": -1315.7,
+    "t": -1.08,
+    "win": 42.9,
+    "p": 0.6267,
+    "q": 0.7916
+   }
+  },
+  {
+   "fam": "U4_donchian",
+   "und": "SENSEX",
+   "kind": "dir",
+   "variants": 4704,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "n": 10
+    },
+    "instr": "itm1",
+    "exit": [
+     0.5,
+     1.0,
+     1,
+     null
+    ],
+    "filt": "all",
+    "train_n": 45,
+    "train_t": 1.54,
+    "trades": 59,
+    "net": -12120.0,
+    "npt": -205.4,
+    "t": -0.12,
+    "win": 40.7
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "n": 10
+    },
+    "instr": "itm1",
+    "exit": [
+     0.5,
+     1.0,
+     1,
+     null
+    ],
+    "filt": "dte2p",
+    "train_n": 71,
+    "train_t": 1.91,
+    "trades": 25,
+    "net": 81886.0,
+    "npt": 3275.4,
+    "t": 1.6,
+    "win": 56.0,
+    "p": 0.0379,
+    "q": 0.2274
+   }
+  },
+  {
+   "fam": "U6_ema",
+   "und": "SENSEX",
+   "kind": "dir",
+   "variants": 7840,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "f": 5,
+     "s": 20,
+     "vwap": true
+    },
+    "instr": "atm",
+    "exit": [
+     0.0,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 47,
+    "train_t": 2.67,
+    "trades": 176,
+    "net": 35622.0,
+    "npt": 202.4,
+    "t": 0.3,
+    "win": 50.6
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "f": 5,
+     "s": 20,
+     "vwap": true
+    },
+    "instr": "itm1",
+    "exit": [
+     0.25,
+     1.0,
+     "sq",
+     null
+    ],
+    "filt": "vix_lo",
+    "train_n": 283,
+    "train_t": 2.21,
+    "trades": 96,
+    "net": -62657.0,
+    "npt": -652.7,
+    "t": -0.98,
+    "win": 25.0,
+    "p": 0.8343,
+    "q": 1.0
+   }
+  },
+  {
+   "fam": "U8_pdhl",
+   "und": "SENSEX",
+   "kind": "dir",
+   "variants": 3920,
+   "N1->N2": {
+    "picked": true,
+    "params": {
+     "how": "break"
+    },
+    "instr": "atm",
+    "exit": [
+     0.0,
+     0.0,
+     "sq",
+     null
+    ],
+    "filt": "all",
+    "train_n": 118,
+    "train_t": 2.0,
+    "trades": 154,
+    "net": 72935.0,
+    "npt": 473.6,
+    "t": 0.39,
+    "win": 44.2
+   },
+   "design->final": {
+    "picked": true,
+    "params": {
+     "how": "break"
+    },
+    "instr": "m_itm2",
+    "exit": [
+     0.4,
+     0.5,
+     "sq",
+     null
+    ],
+    "filt": "dow4",
+    "train_n": 41,
+    "train_t": 3.95,
+    "trades": 12,
+    "net": -2439.0,
+    "npt": -203.3,
+    "t": -0.17,
+    "win": 41.7,
+    "p": 0.493,
+    "q": 0.7888
+   }
+  }
+ ],
+ "any_pass": false
+}

@@ -110,6 +110,11 @@ object SettingsIndex {
             "liquidity", "notification", "skipped"),
         sub("OPENING", "Market alerts", "Opening read", "Just after 09:20: the gaps against the previous close (and GIFT Nifty), the open against Liquidity's levels, the first candle.",
             "gift", "opening", "gap", "liquidity"),
+        // 14 Oct (Boss approved): information only / a shadow record only.
+        sub("GAMMA", "Market alerts", "Morning gamma line", "10:00: dealer gamma negative or positive on each index, what such days did to the range, the gamma walls. Information only.",
+            "gamma", "gex", "dealer", "walls"),
+        sub("OIWALL", "Market alerts", "OI-wall check (shadow)", "Expiry days: your OI-wall rule checked from 13:45 to 14:30 and written down in points, never traded.",
+            "oi wall", "short covering", "shadow", "expiry"),
         sub("FORWARD", "Coach me", "Forward-test watch", "Liquidity 15+5, Solo and Hero against their backtests: a note when an arm's verdict changes.",
             "hero", "solo", "liquidity", "backtest", "drifting"),
         sub("LIQINSIGHT", "Coach me", "What's working (Liquidity)", "Saturday morning: Liquidity 15+5's paper trades cut by time, book, side, exit, room and weekday - what stands out beyond noise.",
@@ -233,6 +238,8 @@ object SettingsIndex {
             listOf("Bot settings", "Learning freeze"), listOf("freeze", "frozen", "unfreeze", "learning", "drawdown", "autopilot"), guarded = true),
         Entry("risk", "risk.paperonly", "Paper-only period", "An end date and a reason: until then switching to Live asks your PIN and shows them; exits are never blocked.",
             listOf("Bot settings", "Paper-only period"), listOf("paper only", "paper period", "no live", "practice", "break from live"), guarded = true),
+        Entry("risk", "risk.pretrade", "Pre-trade checks", "Charges check, smart stop and today's danger meter (shadow and advice); half size for paper arms on careful days, off by default.",
+            listOf("Bot settings", "Pre-trade checks"), listOf("danger meter", "careful day", "charges check", "smart stop", "half size", "expected move")),
 
         // ---- Settings → Data and harvest ----
         Entry("data", "data.record", "Include this phone's captures", "The days this phone collected extend the record forward.",
@@ -240,6 +247,10 @@ object SettingsIndex {
         Entry("data", "data.harvest", "Harvest now", "Collect today's option chains and bars now.", listOf("Data and harvest", "The Harvest"), listOf("harvest", "download", "data")),
         Entry("data", "data.recorder", "Record market data", "The market recorder: what the app already reads, kept for a later study, and its export.",
             listOf("Data and harvest", "Market recorder"), listOf("recorder", "record", "gift", "fii", "export")),
+        Entry("data", "data.recordings", "Record live data", "Recordings: the market at every signal and fill, every minute, and every second's order flow (tick zone); days kept, size, export.",
+            listOf("Data and harvest", "Recordings"), listOf("recordings", "recording", "snapshot", "chain", "export", "ticks", "tick zone")),
+        Entry("data", "data.github", "GitHub sync", "The recorded days and a sealed copy of the phone uploaded to GitHub each evening; the token, Upload now and Restore from GitHub.",
+            listOf("Data and harvest", "GitHub sync"), listOf("github", "upload", "token", "cloud", "sync")),
         Entry("data", "data.provenance", "Verify the record", "Re-reads every bundled chain against its provenance.", listOf("Data and harvest", "Provenance"),
             listOf("provenance", "check", "verify")),
         Entry("data", "data.delete", "Delete this phone's harvested data", "The data collected on this phone; asks you to confirm first.",

@@ -1,0 +1,35 @@
+id: r23-gap-or30
+title: 'R23 range family (e): the first 30 minutes'' range stretched to include the previous close, first 5-min close beyond;
+  ORB contract and exits'
+family: orb
+date: '2026-10-13'
+doc: research/HUNT_R23_ORB_RANGE.md
+hypothesis: This range definition makes the ORB arm money net of the app's paper fills and fees (fresh lake holdout daily net > 0, beats today's ORB,
+  random-level and random-time twins, BH q < 0.10 over 89 with R20/R20b/R20c/R22, >= 3 of 4 lake design blocks).
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
+  ALL sessions used as design (the release holdout was used up by R16-R22)
+period:
+  design: release 2024-03-05..2026-04-13 (all; 4 blocks) after 15 sessions for ATR14
+  holdout: lake 2026-04-27 onwards (fresh, not yet published; read only for the 3 finalists)
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- 1-minute index (range, 5/15/30-min candles)
+- ATR14
+- previous day high / low / close
+model_or_rule: the first 30 minutes' range stretched to include the previous close, first 5-min close beyond; first signal
+  per side per index-day closing by 14:00; ORB strike (09:20 ATM), next expiry; -40/+40 (NIFTY -20/+20) with ladder, 15:10
+settings: research/hunt/r23/PREREG.md part A3
+prereg: research/hunt/r23/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Release, all design (515 calendar days, BANKNIFTY + NIFTY): 938 trades, net Rs -67,239 (Rs -131 a day), 41% green
+    trade days, worst day Rs -4,295, max drawdown Rs -68,539, blocks [-9,894, -24,196, -11,399, -21,750] (0 of 4 positive),
+    BANKNIFTY Rs -46,676 / NIFTY Rs -20,563; in-sample t-test p 1.00 (BH q 1.00 over 80 with R20-R22). Today''s ORB on the
+    same days Rs -44,720, r22-brk15 Rs -17,455. Not a finalist under the pre-stated rule. FAILED.'
+  costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
+holdout_read: false
+verdict: rejected
+notes: One of R23's 22 range configurations (Steps 2-3 on release design data). Release numbers are in-sample (the release
+  holdout was already used by R16-R22).

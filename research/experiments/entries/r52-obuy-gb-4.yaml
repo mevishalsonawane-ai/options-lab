@@ -1,0 +1,33 @@
+id: r52-obuy-gb-4
+title: 'R52 re-test on Nov 2024+: OBUY_GB-4 EMA9 x TWAP cross (NIFTY)'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_GB-4 (old verdict: IS best -33.2k; WF -73.6k 1/5. H34 points WF +982 (gross +69.8k)
+  2/4) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''tf'': 15} | ITM1/near | exits stop_pct=0.2,tgt_pct=0.2,sq_off=915 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 289 trades, win 48%, net Rs -10,762 (Rs -32/day), worst day Rs -10,466, max DD Rs -27,563, p
+    0.994 (coin-flip p 0.156); walk-forward Rs +4,639. Re-tune pick s1.r0.x9 ({''tf'': 5} · ITM1/near · exits tgt_pct=0.2,sq_off=915):
+    design 620 trades, win 44%, net Rs -68,830 (Rs -204/day), worst day Rs -18,591, max DD Rs -95,917, p 1.000 (coin-flip
+    p 0.352); walk-forward Rs +6,830. FINAL original: 107 trades, win 39%, net Rs -24,522 (Rs -184/day), worst day Rs -5,104,
+    max DD Rs -42,544, p 0.981 (coin-flip p 0.677), q 1.00 -> FAIL. FINAL pick: 236 trades, win 36%, net Rs -59,049 (Rs -444/day),
+    worst day Rs -10,474, max DD Rs -69,701, p 1.000 (coin-flip p 0.775), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: in-sample best and WF pick 2023-26 (OBUY_GB.md). Gates: final net > 0, p
+  < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

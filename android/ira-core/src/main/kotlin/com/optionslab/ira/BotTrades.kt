@@ -35,13 +35,16 @@ object BotTrades {
      * "PE", [signalBar] the start of the bar that gave the signal, [why] the exit reason as booked, [live] at Zerodha,
      * [level]/[target] the index level broken and the next one (Liquidity only), [ladder] under the profit lock, [peak]
      * its best premium since entry, [trough] its worst (Liquidity 15+5: both kept while held, for [TradeLesson]; null: not
-     * recorded), [lot] the contract's lot size at the entry (null: not known - [qty] is taken as one lot).
+     * recorded), [lot] the contract's lot size at the entry (null: not known - [qty] is taken as one lot), [trail] a Liquidity
+     * PAPER trade entered under Boss's opt-in Rs 500 give-back trail (13 Oct, research R19b / R19c failed: kept apart from the
+     * plain-rules record, [LiquidityRecord.rows]).
      */
     data class Trade(
         val source: String, val symbol: String, val right: String, val qty: Int, val entry: Double, val entryTime: LocalDateTime,
         val signalBar: LocalDateTime, val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null,
         val charges: Double = 0.0, val live: Boolean = false, val level: Double? = null, val target: Double? = null,
         val ladder: Boolean = false, val peak: Double? = null, val trough: Double? = null, val lot: Int? = null,
+        val trail: Boolean = false,
     )
 
     /** An arm's switch as the app shows it ([label] "ORB", "Liquidity 15+5"...). */

@@ -234,7 +234,9 @@ object Strategies {
                 val saved = r.def.copy(id = id)
                 val i = b.defs.indexOfFirst { it.id == id }
                 if (i >= 0) b.defs[i] = saved else b.defs += saved
-                save(b); null
+                save(b)
+                GitHubSync.changed()            // G2 (13 Oct): the phone backup goes to GitHub that evening (after the MCX close, G4; charging)
+                null
             }
         }
     }
@@ -315,7 +317,9 @@ object Strategies {
         val b = book()
         if (b.runs[id]?.let { r -> b.defs.firstOrNull { it.id == id }?.let { Entry(it, r).running } } == true) return@withLock "Stop it first."
         b.defs.removeAll { it.id == id }; b.runs.remove(id)
-        save(b); null
+        save(b)
+        GitHubSync.changed()
+        null
     }
 
     suspend fun setLiveEnabled(id: Long, on: Boolean) = lock.withLock {

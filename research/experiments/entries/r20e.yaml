@@ -1,0 +1,31 @@
+id: r20e
+title: 'R20 B1.0: adaptive range, the 45-minute range only when W45 <= 1.0 x ATR14, else the 15-minute range'
+family: orb
+date: '2026-10-13'
+doc: research/HUNT_R20_RANGE.md
+hypothesis: The ORB arm under this range rule makes money net of the app's paper fills and fees on BANKNIFTY (holdout daily net > 0 and beats a
+  random-entry twin after BH over 14 tests) and beats the plain 09:15-10:00 rule.
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
+  Yahoo daily ^INDIAVIX for gaps
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY < 2025-10-13 (after 15 sessions for ATR14)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- 5-minute index bars
+- opening-range high/low
+- ATR14 (14 sessions before the day)
+model_or_rule: ORB arm (1 lot, 1 entry a side a day, -40/+40 premium points, ladder, 15:10); k = 1.0; decide 10:05-13:55
+settings: research/hunt/r20/PREREG.md
+prereg: research/hunt/r20/PREREG.md
+variants_tried: 1
+results:
+  summary: BANKNIFTY design 341 trades, -12,358 Rs over 361 sessions (plain rules -14,772), 2 of 4 blocks positive. Holdout
+    121 trades, -12,168 Rs over 122 sessions (plain -10,965); t p 0.93 (BH q 0.97), random-entry twin p 0.398 (q 0.91). NIFTY
+    (replication) design -3,999, holdout -14,157. FAILED (G1 fail, G2 fail, G3 fail, G4 fail).
+  costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
+holdout_read: true
+verdict: rejected
+notes: One of 7 R20 variants (BH family of 14 holdout tests with their random-entry twins).

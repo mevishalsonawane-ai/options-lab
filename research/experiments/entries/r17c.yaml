@@ -1,0 +1,30 @@
+id: r17c
+title: 'Daily danger meter: day types where the paper arms lost most (gap, VIX, VIX change, event, expiry, weekday) (TODO I4)'
+family: daily-filters
+date: '2026-10-13'
+doc: research/HUNT_R17_PRETRADE.md
+hypothesis: A walk-forward bucket score flags careful / paper-only days whose summed arm P&L is worse than normal days, and halving them beats halving random days.
+data_version: 'research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, NIFTY expiry chains 2025-04..2026-04); Yahoo daily ^INDIAVIX for the previous close; app fills (liq) and charges (app, current rates)'
+period:
+  design: sessions with both indices < 2025-08-25 (after a 120-session warm-up)
+  holdout: 2025-08-25..2026-02-23
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- abs gap
+- India VIX previous close
+- VIX change
+- event day (budget, RBI)
+- expiry day
+- day of week
+model_or_rule: shrunk bucket means (n/(n+20)), summed; careful = lowest 20% of past scores, paper-only = lowest 5%
+settings: research/hunt/r17/PREREG.md
+prereg: research/hunt/r17/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design (200 days): flagged -Rs 1,097 vs normal -Rs 955 a day, p 0.39. Holdout (122 days, 23 flagged): flagged -Rs 503 vs normal -Rs 844, p 0.70, twin 32%, BH q 0.70. FAILED: the meter does not find the bad days.'
+  costs: app charges, liq fills
+holdout_read: true
+verdict: rejected
+notes: No global cues in the data. Only 9 event days. Shown in the morning check as advice with its sample size and this result; the half-size switch is off and paper only.

@@ -1,0 +1,617 @@
+{
+ "candidates": 140,
+ "survivors": 45,
+ "trades": {
+  "discovery": 93650,
+  "selection": 134455
+ },
+ "random_baseline": {
+  "discovery": {
+   "twin_net_mean": -169.42803610959587,
+   "trades": 93650
+  },
+  "selection": {
+   "twin_net_mean": -98.72382397473608,
+   "trades": 134455
+  }
+ },
+ "top": [
+  {
+   "pattern": "P12_5",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 2,
+   "discovery_adj": 568.3099999999996,
+   "selection_n": 9,
+   "selection_adj": 1145.4683888888885,
+   "selection_exp": 597.5588888888891,
+   "selection_lift30": 19.400568801105656,
+   "selection_p": 0.17241716855192213,
+   "selection_q": 0.41617937236670854,
+   "survivor": false
+  },
+  {
+   "pattern": "P12_3",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 3,
+   "discovery_adj": 169.67999999999975,
+   "selection_n": 13,
+   "selection_adj": 552.7681153846156,
+   "selection_exp": 73.00538461538486,
+   "selection_lift30": 37.33515103501739,
+   "selection_p": 0.015821619591521705,
+   "selection_q": 0.050341516882114516,
+   "survivor": false
+  },
+  {
+   "pattern": "P12_5",
+   "sign": "bull",
+   "mode": "follow",
+   "discovery_n": 4,
+   "discovery_adj": -531.0577500000006,
+   "selection_n": 9,
+   "selection_adj": 366.05322222222213,
+   "selection_exp": 341.50222222222214,
+   "selection_lift30": 7.054186222989047,
+   "selection_p": 0.16639031717955932,
+   "selection_q": 0.41597579294889836,
+   "survivor": false
+  },
+  {
+   "pattern": "P12_3",
+   "sign": "bull",
+   "mode": "follow",
+   "discovery_n": 5,
+   "discovery_adj": -834.7446000000002,
+   "selection_n": 13,
+   "selection_adj": 271.47646153846165,
+   "selection_exp": 346.46999999999986,
+   "selection_lift30": 1.324931002350026,
+   "selection_p": 0.17073243671954041,
+   "selection_q": 0.41617937236670854,
+   "survivor": false
+  },
+  {
+   "pattern": "P11_5",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 124,
+   "discovery_adj": -36.6099106718715,
+   "selection_n": 176,
+   "selection_adj": 271.1276306818182,
+   "selection_exp": 67.07647727272716,
+   "selection_lift30": 5.837426500013857,
+   "selection_p": 0.029629031660168236,
+   "selection_q": 0.08641800900882401,
+   "survivor": false
+  },
+  {
+   "pattern": "P3_3",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 162,
+   "discovery_adj": 173.08215728282974,
+   "selection_n": 244,
+   "selection_adj": 226.56051952748308,
+   "selection_exp": -84.98500000000006,
+   "selection_lift30": 5.486043480291794,
+   "selection_p": 0.0019542340281117595,
+   "selection_q": 0.00882557303018214,
+   "survivor": true
+  },
+  {
+   "pattern": "P3_5",
+   "sign": "bull",
+   "mode": "fade",
+   "discovery_n": 104,
+   "discovery_adj": 154.8589542004048,
+   "selection_n": 157,
+   "selection_adj": 218.43862420382163,
+   "selection_exp": -10.042292993630605,
+   "selection_lift30": 2.5239972299183138,
+   "selection_p": 0.015375244304993698,
+   "selection_q": 0.050341516882114516,
+   "survivor": true
+  },
+  {
+   "pattern": "P5_15",
+   "sign": "bull",
+   "mode": "fade",
+   "discovery_n": 111,
+   "discovery_adj": 104.0886088720299,
+   "selection_n": 182,
+   "selection_adj": 212.51544230769227,
+   "selection_exp": -37.460934065934126,
+   "selection_lift30": 5.792405478574133,
+   "selection_p": 0.0037967223110835424,
+   "selection_q": 0.014799413804210432,
+   "survivor": true
+  },
+  {
+   "pattern": "P2_15",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 166,
+   "discovery_adj": 194.3280673749319,
+   "selection_n": 241,
+   "selection_adj": 194.3263086918541,
+   "selection_exp": -68.81502074688802,
+   "selection_lift30": 5.971146000338179,
+   "selection_p": 0.017982530855044594,
+   "selection_q": 0.05594565154902763,
+   "survivor": true
+  },
+  {
+   "pattern": "P5_3",
+   "sign": "bull",
+   "mode": "fade",
+   "discovery_n": 457,
+   "discovery_adj": 150.81349170712653,
+   "selection_n": 603,
+   "selection_adj": 191.9308500355366,
+   "selection_exp": -11.459635157545675,
+   "selection_lift30": 3.576029357153511,
+   "selection_p": 1.7171606912215517e-05,
+   "selection_q": 0.00015025156048188577,
+   "survivor": true
+  },
+  {
+   "pattern": "P12_5",
+   "sign": "bear",
+   "mode": "follow",
+   "discovery_n": 2,
+   "discovery_adj": 196.55824999999945,
+   "selection_n": 9,
+   "selection_adj": 189.25388888888867,
+   "selection_exp": 368.66444444444437,
+   "selection_lift30": -18.948430426687484,
+   "selection_p": 0.41732997337400984,
+   "selection_q": 0.8465744786702456,
+   "survivor": false
+  },
+  {
+   "pattern": "P3_5",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 97,
+   "discovery_adj": 125.55391405565656,
+   "selection_n": 166,
+   "selection_adj": 185.97413721552877,
+   "selection_exp": -217.4581927710844,
+   "selection_lift30": -0.2405408741400574,
+   "selection_p": 0.03569744138784322,
+   "selection_q": 0.10199268967955206,
+   "survivor": false
+  },
+  {
+   "pattern": "P9_5",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 206,
+   "discovery_adj": 150.83012763129057,
+   "selection_n": 338,
+   "selection_adj": 159.27742948717943,
+   "selection_exp": -28.544704142011945,
+   "selection_lift30": 4.267813167809966,
+   "selection_p": 0.0022330237909818458,
+   "selection_q": 0.009769479085545575,
+   "survivor": true
+  },
+  {
+   "pattern": "P3_3",
+   "sign": "bull",
+   "mode": "fade",
+   "discovery_n": 160,
+   "discovery_adj": 237.65678435877743,
+   "selection_n": 232,
+   "selection_adj": 156.36967672413792,
+   "selection_exp": -126.71599137931037,
+   "selection_lift30": 2.4190195681386943,
+   "selection_p": 0.015737201131553944,
+   "selection_q": 0.050341516882114516,
+   "survivor": true
+  },
+  {
+   "pattern": "P10_1",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 388,
+   "discovery_adj": 173.54418266599313,
+   "selection_n": 529,
+   "selection_adj": 154.1982287334594,
+   "selection_exp": -127.62404536862009,
+   "selection_lift30": 2.615844078518132,
+   "selection_p": 0.0003586802492988314,
+   "selection_q": 0.0019313551885321693,
+   "survivor": true
+  },
+  {
+   "pattern": "P2_5",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 486,
+   "discovery_adj": 188.62035470132628,
+   "selection_n": 661,
+   "selection_adj": 153.9340445497253,
+   "selection_exp": -111.04316187594563,
+   "selection_lift30": 3.6099341034722428,
+   "selection_p": 0.02083873177810408,
+   "selection_q": 0.06342222715075155,
+   "survivor": true
+  },
+  {
+   "pattern": "P1_5",
+   "sign": "bull",
+   "mode": "fade",
+   "discovery_n": 805,
+   "discovery_adj": 130.01931970332004,
+   "selection_n": 1267,
+   "selection_adj": 149.99021086556166,
+   "selection_exp": -67.6520363062353,
+   "selection_lift30": 1.9936817297415081,
+   "selection_p": 1.476505855059559e-07,
+   "selection_q": 2.953011710119118e-06,
+   "survivor": true
+  },
+  {
+   "pattern": "P4_15",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 162,
+   "discovery_adj": 74.95476754459472,
+   "selection_n": 216,
+   "selection_adj": 149.9480925925925,
+   "selection_exp": -8.139953703703886,
+   "selection_lift30": 0.4562668919644451,
+   "selection_p": 0.30068061954388553,
+   "selection_q": 0.6577388552522496,
+   "survivor": false
+  },
+  {
+   "pattern": "P7_3",
+   "sign": "bear",
+   "mode": "fade",
+   "discovery_n": 682,
+   "discovery_adj": 138.07325443598532,
+   "selection_n": 966,
+   "selection_adj": 141.212260220208,
+   "selection_exp": -193.40443064182205,
+   "selection_lift30": 2.1101251927644467,
+   "selection_p": 0.00019146527100932318,
+   "selection_q": 0.0011654407800567499,
+   "survivor": true
+  },
+  {
+   "pattern": "P3_1",
+   "sign": "bull",
+   "mode": "fade",
+   "discovery_n": 443,
+   "discovery_adj": 189.32640792454848,
+   "selection_n": 615,
+   "selection_adj": 137.78543739837397,
+   "selection_exp": -87.77531707317078,
+   "selection_lift30": 0.9685471732427291,
+   "selection_p": 0.003390932640088416,
+   "selection_q": 0.013962663812128772,
+   "survivor": true
+  }
+ ],
+ "survivor_list": [
+  {
+   "pattern": "P3_3",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 226.56051952748308,
+   "selection_q": 0.00882557303018214
+  },
+  {
+   "pattern": "P3_5",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 218.43862420382163,
+   "selection_q": 0.050341516882114516
+  },
+  {
+   "pattern": "P5_15",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 212.51544230769227,
+   "selection_q": 0.014799413804210432
+  },
+  {
+   "pattern": "P2_15",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 194.3263086918541,
+   "selection_q": 0.05594565154902763
+  },
+  {
+   "pattern": "P5_3",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 191.9308500355366,
+   "selection_q": 0.00015025156048188577
+  },
+  {
+   "pattern": "P9_5",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 159.27742948717943,
+   "selection_q": 0.009769479085545575
+  },
+  {
+   "pattern": "P3_3",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 156.36967672413792,
+   "selection_q": 0.050341516882114516
+  },
+  {
+   "pattern": "P10_1",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 154.1982287334594,
+   "selection_q": 0.0019313551885321693
+  },
+  {
+   "pattern": "P2_5",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 153.9340445497253,
+   "selection_q": 0.06342222715075155
+  },
+  {
+   "pattern": "P1_5",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 149.99021086556166,
+   "selection_q": 2.953011710119118e-06
+  },
+  {
+   "pattern": "P7_3",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 141.212260220208,
+   "selection_q": 0.0011654407800567499
+  },
+  {
+   "pattern": "P3_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 137.78543739837397,
+   "selection_q": 0.013962663812128772
+  },
+  {
+   "pattern": "P8_1",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 134.72027363990782,
+   "selection_q": 0.004243588917661274
+  },
+  {
+   "pattern": "P4_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 133.41227978033916,
+   "selection_q": 4.203782968197272e-13
+  },
+  {
+   "pattern": "P2_15",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 133.1342614678899,
+   "selection_q": 0.03407367517695449
+  },
+  {
+   "pattern": "P1_3",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 131.99916668532043,
+   "selection_q": 6.977301295150492e-05
+  },
+  {
+   "pattern": "P1_5",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 129.54271968183662,
+   "selection_q": 0.017355748361577328
+  },
+  {
+   "pattern": "P4_3",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 126.44051365187714,
+   "selection_q": 0.00011133953284253706
+  },
+  {
+   "pattern": "P2_3",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 125.29268752582895,
+   "selection_q": 0.028310154482514376
+  },
+  {
+   "pattern": "P6_15",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 124.36800959079282,
+   "selection_q": 0.0002863285863570066
+  },
+  {
+   "pattern": "P2_3",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 122.48911222370569,
+   "selection_q": 0.0006597708944216474
+  },
+  {
+   "pattern": "P4_1",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 120.79418204881392,
+   "selection_q": 5.5070796239309234e-05
+  },
+  {
+   "pattern": "P7_5",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 117.90253135249105,
+   "selection_q": 0.014799413804210432
+  },
+  {
+   "pattern": "P4_5",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 117.70846194068233,
+   "selection_q": 0.012483242632777135
+  },
+  {
+   "pattern": "P2_5",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 106.36642771084335,
+   "selection_q": 0.025657816191521323
+  },
+  {
+   "pattern": "P5_3",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 105.77510712387033,
+   "selection_q": 0.08030679161366316
+  },
+  {
+   "pattern": "P10_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 105.05943279482379,
+   "selection_q": 1.0929442108786705e-06
+  },
+  {
+   "pattern": "P2_1",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 102.8466422033365,
+   "selection_q": 0.0015208031084129174
+  },
+  {
+   "pattern": "P1_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 101.10403722561666,
+   "selection_q": 4.1331106786528915e-10
+  },
+  {
+   "pattern": "P7_5",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 99.50965298419439,
+   "selection_q": 0.002003542774473858
+  },
+  {
+   "pattern": "P1_3",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 97.92632820499843,
+   "selection_q": 5.3703258896506884e-05
+  },
+  {
+   "pattern": "P7_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 97.87601128677049,
+   "selection_q": 3.8562814187848774e-09
+  },
+  {
+   "pattern": "P2_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 92.94039339409066,
+   "selection_q": 5.3703258896506884e-05
+  },
+  {
+   "pattern": "P4_3",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 91.24117881007454,
+   "selection_q": 0.00011669487986853699
+  },
+  {
+   "pattern": "P6_3",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 87.110743777961,
+   "selection_q": 6.721234234503861e-09
+  },
+  {
+   "pattern": "P1_1",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 86.91517459225938,
+   "selection_q": 3.0980942692152606e-06
+  },
+  {
+   "pattern": "P6_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 85.1287463835491,
+   "selection_q": 1.504063423769138e-07
+  },
+  {
+   "pattern": "P4_5",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 83.60130362021856,
+   "selection_q": 0.0002160611233287084
+  },
+  {
+   "pattern": "P9_5",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 79.1668857142857,
+   "selection_q": 0.0008390112788576624
+  },
+  {
+   "pattern": "P6_5",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 78.00877948950767,
+   "selection_q": 6.817107490960775e-06
+  },
+  {
+   "pattern": "P6_5",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 77.804625106343,
+   "selection_q": 0.0028422390987969796
+  },
+  {
+   "pattern": "P7_1",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 76.16849134282752,
+   "selection_q": 0.0013879893618345613
+  },
+  {
+   "pattern": "P8_1",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 75.12095212215323,
+   "selection_q": 0.0008480072386868217
+  },
+  {
+   "pattern": "P7_3",
+   "sign": "bull",
+   "mode": "fade",
+   "selection_adj": 56.10798133748055,
+   "selection_q": 0.01824854268968233
+  },
+  {
+   "pattern": "P6_3",
+   "sign": "bear",
+   "mode": "fade",
+   "selection_adj": 47.24784203429925,
+   "selection_q": 0.008172964114382035
+  }
+ ]
+}

@@ -83,11 +83,12 @@ object Kite {
     )
 
     /**
-     * Rows of GET /instruments/NFO for the requested underlyings' options.
+     * Rows of GET /instruments/NFO for the requested underlyings' options ([segment] "BFO-OPT" for GET /instruments/BFO's:
+     * SENSEX's options, 15 Oct - the Hero ₹1,000 ticket's paper SENSEX side, priced on the stream).
      * Columns: instrument_token,exchange_token,tradingsymbol,name,last_price,
      * expiry,strike,tick_size,lot_size,instrument_type,segment,exchange
      */
-    fun parseInstruments(lines: Sequence<String>, underlyings: Set<String>): List<Instrument> {
+    fun parseInstruments(lines: Sequence<String>, underlyings: Set<String>, segment: String = "NFO-OPT"): List<Instrument> {
         val out = ArrayList<Instrument>()
         var head: Map<String, Int>? = null
         for (line in lines) {
@@ -97,7 +98,7 @@ object Kite {
             fun col(n: String) = c.getOrNull(head.getValue(n))?.trim() ?: ""
             val type = col("instrument_type")
             val name = col("name")
-            if ((type != "CE" && type != "PE") || name !in underlyings || col("segment") != "NFO-OPT") continue
+            if ((type != "CE" && type != "PE") || name !in underlyings || col("segment") != segment) continue
             out += Instrument(col("instrument_token").toLong(), col("tradingsymbol"), name, LocalDate.parse(col("expiry")),
                 col("strike").toDouble(), col("lot_size").toDouble().toInt(), if (type == "CE") Right.CE else Right.PE,
                 col("tick_size").toDoubleOrNull() ?: 0.05)

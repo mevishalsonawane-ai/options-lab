@@ -285,7 +285,7 @@ object GrammarArm {
         val v = _view.value
         val act = v.active
         return "$LABEL: ${act.size} of ${GrammarPaper.MAX_HOSTED} on paper" + act.joinToString("") { iv ->
-            " · ${iv.idea.id} ${iv.nets.size} trades %,.0f".format(Locale.ENGLISH, iv.nets.sum()) + (if (iv.open != null) " (holding)" else "")
+            " · %s %d trades %,.0f".format(Locale.ENGLISH, iv.idea.id, iv.nets.size, iv.nets.sum()) + (if (iv.open != null) " (holding)" else "")
         } + (v.ideas.count { !it.idea.active }.takeIf { it > 0 }?.let { " · $it stopped" } ?: "")
     }
 
@@ -412,6 +412,7 @@ object GrammarArm {
         // The account-wide guard (paper: it refuses nothing today, but every entry asks it).
         Guard.check(Guard.paperOrder(c, "BUY", 1, 0.0), null, exit = false, paper = true).takeIf { it.isNotEmpty() }
             ?.let { return refused("account guard: " + it.joinToString(" ")) }
+        runCatching { LiveRecorder.signal("Grammar ${x.id}", c.symbol, u, right.name, null, paper = true) }
         val placed = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = placed.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {

@@ -1,0 +1,2086 @@
+{
+ "rows": 173624,
+ "days": 467,
+ "base_jackpot_pct": 2.42,
+ "base_dud_pct": 80.9,
+ "base_exp_hold": -678.3,
+ "base_exp_half5": -680.3,
+ "cuts": {
+  "mv5": [
+   -0.018628951960852902,
+   0.01824469740248446
+  ],
+  "mv15": [
+   -0.0318787419447538,
+   0.031384477961449164
+  ],
+  "mv30": [
+   -0.04293818667923483,
+   0.04294516064606846
+  ],
+  "speed5": [
+   -0.4081276494886344,
+   0.4008582636965477
+  ],
+  "dist_pct": [
+   0.7576459065532061,
+   1.205424822198768
+  ],
+  "dist_k": [
+   4.0,
+   7.0
+  ],
+  "dist_rng": [
+   1.075688559497618,
+   1.8698294454730824
+  ],
+  "dist_prev": [
+   0.8519891777737372,
+   1.4928535889168162
+  ],
+  "dist_em": [
+   1.442280654613118,
+   2.229661762994927
+  ],
+  "iv": [
+   23.061866124471027,
+   35.23774973551432
+  ],
+  "iv_ch15": [
+   -0.04346466064453125,
+   1.1923383076985674
+  ],
+  "oi_ch30": [
+   -2.4245719886346757,
+   3.212767271439968
+  ],
+  "opp_oi_ch30": [
+   -2.841625029296317,
+   2.858326100083134
+  ],
+  "pcr_ch30": [
+   -0.02606535580074599,
+   0.02064999301935644
+  ],
+  "st15": [
+   -7.3080481036077565,
+   -2.1538461538461506
+  ],
+  "st_low": [
+   0.0,
+   2.214689265536718
+  ],
+  "volb": [
+   0.8336516702546614,
+   1.2466086088362098
+  ],
+  "vix": [
+   11.98,
+   13.77
+  ],
+  "vix_ch": [
+   -0.15000000000000036,
+   0.16000000000000014
+  ],
+  "maxpain": [
+   -0.05767563168101252,
+   0.04997501249374711
+  ],
+  "gap": [
+   -0.13047459340351786,
+   0.13323256912645132
+  ],
+  "trend_open": [
+   -0.14824208041949954,
+   0.20803414444280355
+  ],
+  "trend_12": [
+   -0.043543276284596644,
+   0.05692838346456064
+  ],
+  "own_run": [
+   1.0518518518518518,
+   1.207547169811321
+  ],
+  "price": [
+   2.2,
+   4.65
+  ],
+  "mins_left": [
+   125.0,
+   200.0
+  ]
+ },
+ "single": [
+  {
+   "state": "dist_em=lo",
+   "rows": 57875,
+   "days": 445,
+   "jackpot_pct": 3.77,
+   "lift": 1.56,
+   "dud_pct": 71.7,
+   "dud_lift": 0.89,
+   "exp_hold": -493.3,
+   "exp_half5": -519.7,
+   "share_profitable_hold": 6.3
+  },
+  {
+   "state": "dist_rng=lo",
+   "rows": 57875,
+   "days": 464,
+   "jackpot_pct": 3.56,
+   "lift": 1.47,
+   "dud_pct": 72.4,
+   "dud_lift": 0.9,
+   "exp_hold": -477.3,
+   "exp_half5": -506.8,
+   "share_profitable_hold": 6.5
+  },
+  {
+   "state": "or_brk=yes",
+   "rows": 59943,
+   "days": 435,
+   "jackpot_pct": 3.46,
+   "lift": 1.43,
+   "dud_pct": 75.3,
+   "dud_lift": 0.93,
+   "exp_hold": -669.1,
+   "exp_half5": -624.0,
+   "share_profitable_hold": 4.0
+  },
+  {
+   "state": "vix=hi",
+   "rows": 57790,
+   "days": 201,
+   "jackpot_pct": 3.47,
+   "lift": 1.43,
+   "dud_pct": 78.0,
+   "dud_lift": 0.96,
+   "exp_hold": -664.5,
+   "exp_half5": -658.4,
+   "share_profitable_hold": 2.8
+  },
+  {
+   "state": "maxpain=lo",
+   "rows": 57878,
+   "days": 464,
+   "jackpot_pct": 3.41,
+   "lift": 1.41,
+   "dud_pct": 76.8,
+   "dud_lift": 0.95,
+   "exp_hold": -635.0,
+   "exp_half5": -619.1,
+   "share_profitable_hold": 4.1
+  },
+  {
+   "state": "dist_k=lo",
+   "rows": 67090,
+   "days": 459,
+   "jackpot_pct": 3.25,
+   "lift": 1.35,
+   "dud_pct": 74.1,
+   "dud_lift": 0.92,
+   "exp_hold": -507.1,
+   "exp_half5": -540.6,
+   "share_profitable_hold": 6.1
+  },
+  {
+   "state": "dist_pct=lo",
+   "rows": 57875,
+   "days": 462,
+   "jackpot_pct": 3.2,
+   "lift": 1.32,
+   "dud_pct": 73.5,
+   "dud_lift": 0.91,
+   "exp_hold": -527.8,
+   "exp_half5": -550.0,
+   "share_profitable_hold": 6.3
+  },
+  {
+   "state": "dist_prev=lo",
+   "rows": 57875,
+   "days": 462,
+   "jackpot_pct": 3.18,
+   "lift": 1.32,
+   "dud_pct": 72.9,
+   "dud_lift": 0.9,
+   "exp_hold": -535.9,
+   "exp_half5": -564.5,
+   "share_profitable_hold": 5.7
+  },
+  {
+   "state": "trend_open=hi",
+   "rows": 57870,
+   "days": 426,
+   "jackpot_pct": 3.16,
+   "lift": 1.31,
+   "dud_pct": 76.2,
+   "dud_lift": 0.94,
+   "exp_hold": -689.0,
+   "exp_half5": -642.2,
+   "share_profitable_hold": 3.8
+  },
+  {
+   "state": "price=hi",
+   "rows": 57547,
+   "days": 467,
+   "jackpot_pct": 3.09,
+   "lift": 1.28,
+   "dud_pct": 74.7,
+   "dud_lift": 0.92,
+   "exp_hold": -592.3,
+   "exp_half5": -595.0,
+   "share_profitable_hold": 5.5
+  },
+  {
+   "state": "iv_ch15=lo",
+   "rows": 57106,
+   "days": 467,
+   "jackpot_pct": 3.04,
+   "lift": 1.26,
+   "dud_pct": 75.5,
+   "dud_lift": 0.93,
+   "exp_hold": -608.7,
+   "exp_half5": -617.6,
+   "share_profitable_hold": 4.2
+  },
+  {
+   "state": "st_low=hi",
+   "rows": 57840,
+   "days": 467,
+   "jackpot_pct": 3.02,
+   "lift": 1.25,
+   "dud_pct": 79.0,
+   "dud_lift": 0.98,
+   "exp_hold": -611.0,
+   "exp_half5": -622.8,
+   "share_profitable_hold": 3.8
+  },
+  {
+   "state": "oi_ch30=hi",
+   "rows": 51052,
+   "days": 422,
+   "jackpot_pct": 2.98,
+   "lift": 1.23,
+   "dud_pct": 76.6,
+   "dud_lift": 0.95,
+   "exp_hold": -619.6,
+   "exp_half5": -613.3,
+   "share_profitable_hold": 4.5
+  },
+  {
+   "state": "vix_ch=lo",
+   "rows": 58219,
+   "days": 264,
+   "jackpot_pct": 2.97,
+   "lift": 1.23,
+   "dud_pct": 79.4,
+   "dud_lift": 0.98,
+   "exp_hold": -742.9,
+   "exp_half5": -718.5,
+   "share_profitable_hold": 2.5
+  },
+  {
+   "state": "own_run=hi",
+   "rows": 57864,
+   "days": 467,
+   "jackpot_pct": 2.98,
+   "lift": 1.23,
+   "dud_pct": 76.6,
+   "dud_lift": 0.95,
+   "exp_hold": -582.2,
+   "exp_half5": -598.1,
+   "share_profitable_hold": 4.4
+  },
+  {
+   "state": "opp_oi_ch30=hi",
+   "rows": 51012,
+   "days": 422,
+   "jackpot_pct": 2.96,
+   "lift": 1.22,
+   "dud_pct": 77.9,
+   "dud_lift": 0.96,
+   "exp_hold": -562.7,
+   "exp_half5": -599.9,
+   "share_profitable_hold": 4.6
+  },
+  {
+   "state": "iv=mid",
+   "rows": 57870,
+   "days": 423,
+   "jackpot_pct": 2.93,
+   "lift": 1.21,
+   "dud_pct": 79.8,
+   "dud_lift": 0.99,
+   "exp_hold": -637.2,
+   "exp_half5": -640.7,
+   "share_profitable_hold": 3.5
+  },
+  {
+   "state": "brk15=yes",
+   "rows": 24186,
+   "days": 402,
+   "jackpot_pct": 2.8,
+   "lift": 1.16,
+   "dud_pct": 74.9,
+   "dud_lift": 0.93,
+   "exp_hold": -708.7,
+   "exp_half5": -643.5,
+   "share_profitable_hold": 3.9
+  },
+  {
+   "state": "mins_left=hi",
+   "rows": 56501,
+   "days": 441,
+   "jackpot_pct": 2.78,
+   "lift": 1.15,
+   "dud_pct": 81.0,
+   "dud_lift": 1.0,
+   "exp_hold": -730.8,
+   "exp_half5": -708.9,
+   "share_profitable_hold": 2.8
+  },
+  {
+   "state": "mv30=hi",
+   "rows": 57865,
+   "days": 467,
+   "jackpot_pct": 2.74,
+   "lift": 1.14,
+   "dud_pct": 78.6,
+   "dud_lift": 0.97,
+   "exp_hold": -691.5,
+   "exp_half5": -668.3,
+   "share_profitable_hold": 3.3
+  },
+  {
+   "state": "dist_rng=mid",
+   "rows": 57874,
+   "days": 447,
+   "jackpot_pct": 2.67,
+   "lift": 1.1,
+   "dud_pct": 80.5,
+   "dud_lift": 1.0,
+   "exp_hold": -735.9,
+   "exp_half5": -717.0,
+   "share_profitable_hold": 2.4
+  },
+  {
+   "state": "st15=hi",
+   "rows": 57811,
+   "days": 461,
+   "jackpot_pct": 2.64,
+   "lift": 1.09,
+   "dud_pct": 79.8,
+   "dud_lift": 0.99,
+   "exp_hold": -650.9,
+   "exp_half5": -652.1,
+   "share_profitable_hold": 3.8
+  },
+  {
+   "state": "mv5=hi",
+   "rows": 57873,
+   "days": 467,
+   "jackpot_pct": 2.6,
+   "lift": 1.08,
+   "dud_pct": 79.5,
+   "dud_lift": 0.98,
+   "exp_hold": -662.6,
+   "exp_half5": -665.6,
+   "share_profitable_hold": 3.4
+  },
+  {
+   "state": "gap=hi",
+   "rows": 57753,
+   "days": 293,
+   "jackpot_pct": 2.61,
+   "lift": 1.08,
+   "dud_pct": 80.6,
+   "dud_lift": 1.0,
+   "exp_hold": -562.6,
+   "exp_half5": -618.0,
+   "share_profitable_hold": 3.3
+  },
+  {
+   "state": "pcr_ch30=hi",
+   "rows": 52048,
+   "days": 422,
+   "jackpot_pct": 2.58,
+   "lift": 1.07,
+   "dud_pct": 78.6,
+   "dud_lift": 0.97,
+   "exp_hold": -624.5,
+   "exp_half5": -637.8,
+   "share_profitable_hold": 3.8
+  },
+  {
+   "state": "mv15=hi",
+   "rows": 57869,
+   "days": 467,
+   "jackpot_pct": 2.57,
+   "lift": 1.06,
+   "dud_pct": 79.1,
+   "dud_lift": 0.98,
+   "exp_hold": -681.5,
+   "exp_half5": -671.6,
+   "share_profitable_hold": 3.4
+  },
+  {
+   "state": "speed5=mid",
+   "rows": 57875,
+   "days": 466,
+   "jackpot_pct": 2.55,
+   "lift": 1.06,
+   "dud_pct": 80.9,
+   "dud_lift": 1.0,
+   "exp_hold": -696.0,
+   "exp_half5": -690.3,
+   "share_profitable_hold": 3.1
+  },
+  {
+   "state": "iv=lo",
+   "rows": 57871,
+   "days": 371,
+   "jackpot_pct": 2.57,
+   "lift": 1.06,
+   "dud_pct": 76.5,
+   "dud_lift": 0.95,
+   "exp_hold": -645.2,
+   "exp_half5": -646.6,
+   "share_profitable_hold": 4.5
+  },
+  {
+   "state": "dist_prev=mid",
+   "rows": 57874,
+   "days": 446,
+   "jackpot_pct": 2.53,
+   "lift": 1.05,
+   "dud_pct": 81.5,
+   "dud_lift": 1.01,
+   "exp_hold": -675.6,
+   "exp_half5": -683.5,
+   "share_profitable_hold": 2.6
+  },
+  {
+   "state": "gap=lo",
+   "rows": 57995,
+   "days": 294,
+   "jackpot_pct": 2.51,
+   "lift": 1.04,
+   "dud_pct": 80.6,
+   "dud_lift": 1.0,
+   "exp_hold": -740.9,
+   "exp_half5": -713.2,
+   "share_profitable_hold": 3.1
+  },
+  {
+   "state": "speed5=hi",
+   "rows": 57870,
+   "days": 467,
+   "jackpot_pct": 2.48,
+   "lift": 1.03,
+   "dud_pct": 79.7,
+   "dud_lift": 0.99,
+   "exp_hold": -668.9,
+   "exp_half5": -670.2,
+   "share_profitable_hold": 3.4
+  },
+  {
+   "state": "volb=mid",
+   "rows": 57863,
+   "days": 456,
+   "jackpot_pct": 2.48,
+   "lift": 1.03,
+   "dud_pct": 80.6,
+   "dud_lift": 1.0,
+   "exp_hold": -682.0,
+   "exp_half5": -684.5,
+   "share_profitable_hold": 3.1
+  },
+  {
+   "state": "price=mid",
+   "rows": 57687,
+   "days": 452,
+   "jackpot_pct": 2.47,
+   "lift": 1.02,
+   "dud_pct": 81.7,
+   "dud_lift": 1.01,
+   "exp_hold": -709.1,
+   "exp_half5": -702.5,
+   "share_profitable_hold": 2.7
+  },
+  {
+   "state": "mins_left=mid",
+   "rows": 58701,
+   "days": 455,
+   "jackpot_pct": 2.45,
+   "lift": 1.02,
+   "dud_pct": 80.7,
+   "dud_lift": 1.0,
+   "exp_hold": -701.2,
+   "exp_half5": -700.5,
+   "share_profitable_hold": 2.8
+  },
+  {
+   "state": "st15=lo",
+   "rows": 57817,
+   "days": 462,
+   "jackpot_pct": 2.44,
+   "lift": 1.01,
+   "dud_pct": 81.1,
+   "dud_lift": 1.0,
+   "exp_hold": -651.7,
+   "exp_half5": -669.4,
+   "share_profitable_hold": 3.1
+  },
+  {
+   "state": "volb=hi",
+   "rows": 57864,
+   "days": 467,
+   "jackpot_pct": 2.45,
+   "lift": 1.01,
+   "dud_pct": 78.2,
+   "dud_lift": 0.97,
+   "exp_hold": -622.7,
+   "exp_half5": -630.0,
+   "share_profitable_hold": 4.2
+  },
+  {
+   "state": "trend_open=lo",
+   "rows": 57875,
+   "days": 401,
+   "jackpot_pct": 2.4,
+   "lift": 0.99,
+   "dud_pct": 84.3,
+   "dud_lift": 1.04,
+   "exp_hold": -569.6,
+   "exp_half5": -641.9,
+   "share_profitable_hold": 3.4
+  },
+  {
+   "state": "trend_12=mid",
+   "rows": 41720,
+   "days": 451,
+   "jackpot_pct": 2.39,
+   "lift": 0.99,
+   "dud_pct": 81.3,
+   "dud_lift": 1.01,
+   "exp_hold": -625.4,
+   "exp_half5": -659.7,
+   "share_profitable_hold": 3.4
+  },
+  {
+   "state": "mv15=lo",
+   "rows": 57872,
+   "days": 466,
+   "jackpot_pct": 2.38,
+   "lift": 0.98,
+   "dud_pct": 82.1,
+   "dud_lift": 1.02,
+   "exp_hold": -665.9,
+   "exp_half5": -682.0,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "dist_pct=mid",
+   "rows": 57874,
+   "days": 467,
+   "jackpot_pct": 2.37,
+   "lift": 0.98,
+   "dud_pct": 81.7,
+   "dud_lift": 1.01,
+   "exp_hold": -671.9,
+   "exp_half5": -681.3,
+   "share_profitable_hold": 2.4
+  },
+  {
+   "state": "mv5=lo",
+   "rows": 57874,
+   "days": 466,
+   "jackpot_pct": 2.34,
+   "lift": 0.97,
+   "dud_pct": 81.6,
+   "dud_lift": 1.01,
+   "exp_hold": -657.4,
+   "exp_half5": -671.4,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "brk15=no",
+   "rows": 149438,
+   "days": 465,
+   "jackpot_pct": 2.35,
+   "lift": 0.97,
+   "dud_pct": 81.8,
+   "dud_lift": 1.01,
+   "exp_hold": -673.4,
+   "exp_half5": -686.3,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "mv30=lo",
+   "rows": 57872,
+   "days": 462,
+   "jackpot_pct": 2.31,
+   "lift": 0.96,
+   "dud_pct": 82.9,
+   "dud_lift": 1.02,
+   "exp_hold": -676.2,
+   "exp_half5": -694.0,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "iv_ch15=mid",
+   "rows": 57103,
+   "days": 463,
+   "jackpot_pct": 2.31,
+   "lift": 0.96,
+   "dud_pct": 81.2,
+   "dud_lift": 1.0,
+   "exp_hold": -725.9,
+   "exp_half5": -712.0,
+   "share_profitable_hold": 2.9
+  },
+  {
+   "state": "volb=lo",
+   "rows": 57864,
+   "days": 450,
+   "jackpot_pct": 2.32,
+   "lift": 0.96,
+   "dud_pct": 83.8,
+   "dud_lift": 1.04,
+   "exp_hold": -730.2,
+   "exp_half5": -726.6,
+   "share_profitable_hold": 2.6
+  },
+  {
+   "state": "vix=mid",
+   "rows": 57897,
+   "days": 185,
+   "jackpot_pct": 2.31,
+   "lift": 0.96,
+   "dud_pct": 81.4,
+   "dud_lift": 1.01,
+   "exp_hold": -606.1,
+   "exp_half5": -644.7,
+   "share_profitable_hold": 3.9
+  },
+  {
+   "state": "vix_ch=hi",
+   "rows": 56988,
+   "days": 245,
+   "jackpot_pct": 2.33,
+   "lift": 0.96,
+   "dud_pct": 81.8,
+   "dud_lift": 1.01,
+   "exp_hold": -541.9,
+   "exp_half5": -599.6,
+   "share_profitable_hold": 4.3
+  },
+  {
+   "state": "mv5=mid",
+   "rows": 57871,
+   "days": 464,
+   "jackpot_pct": 2.31,
+   "lift": 0.95,
+   "dud_pct": 81.6,
+   "dud_lift": 1.01,
+   "exp_hold": -715.0,
+   "exp_half5": -704.0,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "mv15=mid",
+   "rows": 57875,
+   "days": 462,
+   "jackpot_pct": 2.3,
+   "lift": 0.95,
+   "dud_pct": 81.4,
+   "dud_lift": 1.01,
+   "exp_hold": -687.6,
+   "exp_half5": -687.4,
+   "share_profitable_hold": 3.3
+  },
+  {
+   "state": "dist_em=mid",
+   "rows": 57874,
+   "days": 463,
+   "jackpot_pct": 2.29,
+   "lift": 0.95,
+   "dud_pct": 80.9,
+   "dud_lift": 1.0,
+   "exp_hold": -704.8,
+   "exp_half5": -708.7,
+   "share_profitable_hold": 2.3
+  },
+  {
+   "state": "own_run=lo",
+   "rows": 57867,
+   "days": 467,
+   "jackpot_pct": 2.28,
+   "lift": 0.94,
+   "dud_pct": 82.5,
+   "dud_lift": 1.02,
+   "exp_hold": -703.0,
+   "exp_half5": -706.4,
+   "share_profitable_hold": 2.8
+  },
+  {
+   "state": "speed5=lo",
+   "rows": 57873,
+   "days": 466,
+   "jackpot_pct": 2.21,
+   "lift": 0.92,
+   "dud_pct": 82.0,
+   "dud_lift": 1.01,
+   "exp_hold": -670.2,
+   "exp_half5": -680.4,
+   "share_profitable_hold": 3.3
+  },
+  {
+   "state": "pcr_ch30=lo",
+   "rows": 52049,
+   "days": 421,
+   "jackpot_pct": 2.22,
+   "lift": 0.92,
+   "dud_pct": 83.3,
+   "dud_lift": 1.03,
+   "exp_hold": -714.1,
+   "exp_half5": -705.0,
+   "share_profitable_hold": 2.9
+  },
+  {
+   "state": "mv30=mid",
+   "rows": 57878,
+   "days": 463,
+   "jackpot_pct": 2.19,
+   "lift": 0.91,
+   "dud_pct": 81.1,
+   "dud_lift": 1.0,
+   "exp_hold": -667.2,
+   "exp_half5": -678.6,
+   "share_profitable_hold": 3.3
+  },
+  {
+   "state": "trend_12=lo",
+   "rows": 41720,
+   "days": 434,
+   "jackpot_pct": 2.21,
+   "lift": 0.91,
+   "dud_pct": 81.8,
+   "dud_lift": 1.01,
+   "exp_hold": -621.1,
+   "exp_half5": -662.2,
+   "share_profitable_hold": 3.5
+  },
+  {
+   "state": "st_low=lo",
+   "rows": 73447,
+   "days": 467,
+   "jackpot_pct": 2.17,
+   "lift": 0.9,
+   "dud_pct": 81.6,
+   "dud_lift": 1.01,
+   "exp_hold": -712.8,
+   "exp_half5": -709.2,
+   "share_profitable_hold": 2.9
+  },
+  {
+   "state": "trend_12=hi",
+   "rows": 41714,
+   "days": 462,
+   "jackpot_pct": 2.17,
+   "lift": 0.9,
+   "dud_pct": 79.5,
+   "dud_lift": 0.98,
+   "exp_hold": -732.0,
+   "exp_half5": -690.4,
+   "share_profitable_hold": 3.6
+  },
+  {
+   "state": "st15=mid",
+   "rows": 57814,
+   "days": 460,
+   "jackpot_pct": 2.13,
+   "lift": 0.88,
+   "dud_pct": 81.8,
+   "dud_lift": 1.01,
+   "exp_hold": -736.4,
+   "exp_half5": -722.8,
+   "share_profitable_hold": 2.9
+  },
+  {
+   "state": "gap=mid",
+   "rows": 57876,
+   "days": 150,
+   "jackpot_pct": 2.13,
+   "lift": 0.88,
+   "dud_pct": 81.4,
+   "dud_lift": 1.01,
+   "exp_hold": -731.2,
+   "exp_half5": -709.6,
+   "share_profitable_hold": 3.4
+  },
+  {
+   "state": "dist_k=mid",
+   "rows": 61429,
+   "days": 461,
+   "jackpot_pct": 2.11,
+   "lift": 0.87,
+   "dud_pct": 82.3,
+   "dud_lift": 1.02,
+   "exp_hold": -734.2,
+   "exp_half5": -731.7,
+   "share_profitable_hold": 1.8
+  },
+  {
+   "state": "oi_ch30=mid",
+   "rows": 51051,
+   "days": 418,
+   "jackpot_pct": 2.07,
+   "lift": 0.86,
+   "dud_pct": 82.9,
+   "dud_lift": 1.02,
+   "exp_hold": -682.3,
+   "exp_half5": -696.0,
+   "share_profitable_hold": 3.0
+  },
+  {
+   "state": "opp_oi_ch30=mid",
+   "rows": 51011,
+   "days": 417,
+   "jackpot_pct": 2.08,
+   "lift": 0.86,
+   "dud_pct": 82.6,
+   "dud_lift": 1.02,
+   "exp_hold": -702.0,
+   "exp_half5": -699.6,
+   "share_profitable_hold": 2.9
+  },
+  {
+   "state": "mins_left=lo",
+   "rows": 58422,
+   "days": 467,
+   "jackpot_pct": 2.03,
+   "lift": 0.84,
+   "dud_pct": 80.9,
+   "dud_lift": 1.0,
+   "exp_hold": -604.6,
+   "exp_half5": -632.5,
+   "share_profitable_hold": 4.3
+  },
+  {
+   "state": "st_low=mid",
+   "rows": 42239,
+   "days": 461,
+   "jackpot_pct": 1.98,
+   "lift": 0.82,
+   "dud_pct": 82.1,
+   "dud_lift": 1.02,
+   "exp_hold": -713.6,
+   "exp_half5": -711.6,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "maxpain=mid",
+   "rows": 57873,
+   "days": 408,
+   "jackpot_pct": 1.97,
+   "lift": 0.82,
+   "dud_pct": 82.4,
+   "dud_lift": 1.02,
+   "exp_hold": -662.9,
+   "exp_half5": -678.2,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "own_run=mid",
+   "rows": 57863,
+   "days": 467,
+   "jackpot_pct": 1.99,
+   "lift": 0.82,
+   "dud_pct": 83.5,
+   "dud_lift": 1.03,
+   "exp_hold": -749.7,
+   "exp_half5": -736.6,
+   "share_profitable_hold": 2.7
+  },
+  {
+   "state": "pcr_ch30=mid",
+   "rows": 52049,
+   "days": 420,
+   "jackpot_pct": 1.93,
+   "lift": 0.8,
+   "dud_pct": 82.6,
+   "dud_lift": 1.02,
+   "exp_hold": -689.8,
+   "exp_half5": -698.7,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "vix_ch=mid",
+   "rows": 58417,
+   "days": 303,
+   "jackpot_pct": 1.94,
+   "lift": 0.8,
+   "dud_pct": 81.4,
+   "dud_lift": 1.01,
+   "exp_hold": -747.1,
+   "exp_half5": -721.1,
+   "share_profitable_hold": 3.1
+  },
+  {
+   "state": "iv_ch15=hi",
+   "rows": 57105,
+   "days": 463,
+   "jackpot_pct": 1.89,
+   "lift": 0.78,
+   "dud_pct": 85.9,
+   "dud_lift": 1.06,
+   "exp_hold": -698.6,
+   "exp_half5": -711.2,
+   "share_profitable_hold": 2.8
+  },
+  {
+   "state": "or_brk=no",
+   "rows": 113681,
+   "days": 428,
+   "jackpot_pct": 1.87,
+   "lift": 0.77,
+   "dud_pct": 83.8,
+   "dud_lift": 1.04,
+   "exp_hold": -683.2,
+   "exp_half5": -710.1,
+   "share_profitable_hold": 2.9
+  },
+  {
+   "state": "maxpain=hi",
+   "rows": 57873,
+   "days": 437,
+   "jackpot_pct": 1.87,
+   "lift": 0.77,
+   "dud_pct": 83.4,
+   "dud_lift": 1.03,
+   "exp_hold": -737.1,
+   "exp_half5": -743.7,
+   "share_profitable_hold": 2.6
+  },
+  {
+   "state": "opp_oi_ch30=lo",
+   "rows": 51012,
+   "days": 420,
+   "jackpot_pct": 1.75,
+   "lift": 0.73,
+   "dud_pct": 83.2,
+   "dud_lift": 1.03,
+   "exp_hold": -751.0,
+   "exp_half5": -731.8,
+   "share_profitable_hold": 2.4
+  },
+  {
+   "state": "iv=hi",
+   "rows": 57871,
+   "days": 348,
+   "jackpot_pct": 1.75,
+   "lift": 0.72,
+   "dud_pct": 86.3,
+   "dud_lift": 1.07,
+   "exp_hold": -752.7,
+   "exp_half5": -753.8,
+   "share_profitable_hold": 1.9
+  },
+  {
+   "state": "price=lo",
+   "rows": 58390,
+   "days": 416,
+   "jackpot_pct": 1.71,
+   "lift": 0.71,
+   "dud_pct": 86.2,
+   "dud_lift": 1.07,
+   "exp_hold": -732.8,
+   "exp_half5": -742.5,
+   "share_profitable_hold": 1.6
+  },
+  {
+   "state": "dist_pct=hi",
+   "rows": 57875,
+   "days": 452,
+   "jackpot_pct": 1.68,
+   "lift": 0.7,
+   "dud_pct": 87.4,
+   "dud_lift": 1.08,
+   "exp_hold": -835.3,
+   "exp_half5": -809.7,
+   "share_profitable_hold": 1.1
+  },
+  {
+   "state": "trend_open=mid",
+   "rows": 57879,
+   "days": 309,
+   "jackpot_pct": 1.69,
+   "lift": 0.7,
+   "dud_pct": 82.1,
+   "dud_lift": 1.02,
+   "exp_hold": -776.5,
+   "exp_half5": -756.9,
+   "share_profitable_hold": 2.6
+  },
+  {
+   "state": "oi_ch30=lo",
+   "rows": 51052,
+   "days": 418,
+   "jackpot_pct": 1.63,
+   "lift": 0.68,
+   "dud_pct": 85.0,
+   "dud_lift": 1.05,
+   "exp_hold": -726.7,
+   "exp_half5": -734.2,
+   "share_profitable_hold": 2.5
+  },
+  {
+   "state": "dist_k=hi",
+   "rows": 45105,
+   "days": 441,
+   "jackpot_pct": 1.59,
+   "lift": 0.66,
+   "dud_pct": 89.0,
+   "dud_lift": 1.1,
+   "exp_hold": -856.9,
+   "exp_half5": -818.3,
+   "share_profitable_hold": 1.1
+  },
+  {
+   "state": "dist_prev=hi",
+   "rows": 57875,
+   "days": 344,
+   "jackpot_pct": 1.53,
+   "lift": 0.63,
+   "dud_pct": 88.2,
+   "dud_lift": 1.09,
+   "exp_hold": -823.4,
+   "exp_half5": -793.0,
+   "share_profitable_hold": 1.5
+  },
+  {
+   "state": "vix=lo",
+   "rows": 57937,
+   "days": 155,
+   "jackpot_pct": 1.48,
+   "lift": 0.61,
+   "dud_pct": 83.2,
+   "dud_lift": 1.03,
+   "exp_hold": -764.3,
+   "exp_half5": -737.7,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "dist_em=hi",
+   "rows": 57875,
+   "days": 433,
+   "jackpot_pct": 1.18,
+   "lift": 0.49,
+   "dud_pct": 89.9,
+   "dud_lift": 1.11,
+   "exp_hold": -836.9,
+   "exp_half5": -812.6,
+   "share_profitable_hold": 1.3
+  },
+  {
+   "state": "dist_rng=hi",
+   "rows": 57875,
+   "days": 393,
+   "jackpot_pct": 1.02,
+   "lift": 0.42,
+   "dud_pct": 89.7,
+   "dud_lift": 1.11,
+   "exp_hold": -821.8,
+   "exp_half5": -817.1,
+   "share_profitable_hold": 1.0
+  }
+ ],
+ "pairs": [
+  {
+   "state": "dist_rng=lo & mins_left=hi",
+   "rows": 7354,
+   "days": 294,
+   "jackpot_pct": 5.53,
+   "lift": 2.29,
+   "dud_pct": 67.3,
+   "dud_lift": 0.83,
+   "exp_hold": -365.4,
+   "exp_half5": -359.6,
+   "share_profitable_hold": 8.6
+  },
+  {
+   "state": "or_brk=yes & vix_ch=lo",
+   "rows": 18183,
+   "days": 224,
+   "jackpot_pct": 5.29,
+   "lift": 2.19,
+   "dud_pct": 75.1,
+   "dud_lift": 0.93,
+   "exp_hold": -767.1,
+   "exp_half5": -668.0,
+   "share_profitable_hold": 2.6
+  },
+  {
+   "state": "dist_em=lo & maxpain=lo",
+   "rows": 18418,
+   "days": 430,
+   "jackpot_pct": 5.23,
+   "lift": 2.16,
+   "dud_pct": 67.6,
+   "dud_lift": 0.84,
+   "exp_hold": -371.8,
+   "exp_half5": -402.7,
+   "share_profitable_hold": 8.3
+  },
+  {
+   "state": "dist_em=lo & or_brk=yes",
+   "rows": 19257,
+   "days": 396,
+   "jackpot_pct": 5.13,
+   "lift": 2.12,
+   "dud_pct": 65.4,
+   "dud_lift": 0.81,
+   "exp_hold": -489.7,
+   "exp_half5": -454.0,
+   "share_profitable_hold": 7.6
+  },
+  {
+   "state": "vix_ch=lo & brk15=yes",
+   "rows": 6881,
+   "days": 175,
+   "jackpot_pct": 5.13,
+   "lift": 2.12,
+   "dud_pct": 74.8,
+   "dud_lift": 0.93,
+   "exp_hold": -777.7,
+   "exp_half5": -661.7,
+   "share_profitable_hold": 2.7
+  },
+  {
+   "state": "dist_rng=lo & maxpain=lo",
+   "rows": 21432,
+   "days": 455,
+   "jackpot_pct": 5.09,
+   "lift": 2.11,
+   "dud_pct": 69.5,
+   "dud_lift": 0.86,
+   "exp_hold": -335.1,
+   "exp_half5": -384.5,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "trend_open=hi & vix_ch=lo",
+   "rows": 18797,
+   "days": 207,
+   "jackpot_pct": 5.06,
+   "lift": 2.1,
+   "dud_pct": 76.2,
+   "dud_lift": 0.94,
+   "exp_hold": -761.2,
+   "exp_half5": -676.6,
+   "share_profitable_hold": 2.6
+  },
+  {
+   "state": "dist_pct=lo & mins_left=hi",
+   "rows": 10907,
+   "days": 306,
+   "jackpot_pct": 5.02,
+   "lift": 2.08,
+   "dud_pct": 70.6,
+   "dud_lift": 0.87,
+   "exp_hold": -427.2,
+   "exp_half5": -439.3,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "maxpain=lo & dist_pct=lo",
+   "rows": 18732,
+   "days": 452,
+   "jackpot_pct": 4.82,
+   "lift": 1.99,
+   "dud_pct": 70.1,
+   "dud_lift": 0.87,
+   "exp_hold": -402.1,
+   "exp_half5": -432.9,
+   "share_profitable_hold": 8.1
+  },
+  {
+   "state": "dist_em=lo & mins_left=hi",
+   "rows": 18779,
+   "days": 372,
+   "jackpot_pct": 4.76,
+   "lift": 1.97,
+   "dud_pct": 72.4,
+   "dud_lift": 0.89,
+   "exp_hold": -508.7,
+   "exp_half5": -503.5,
+   "share_profitable_hold": 5.8
+  },
+  {
+   "state": "or_brk=yes & price=hi",
+   "rows": 18757,
+   "days": 430,
+   "jackpot_pct": 4.7,
+   "lift": 1.95,
+   "dud_pct": 67.6,
+   "dud_lift": 0.84,
+   "exp_hold": -527.5,
+   "exp_half5": -482.7,
+   "share_profitable_hold": 7.0
+  },
+  {
+   "state": "dist_k=lo & mins_left=hi",
+   "rows": 15164,
+   "days": 305,
+   "jackpot_pct": 4.72,
+   "lift": 1.95,
+   "dud_pct": 73.1,
+   "dud_lift": 0.9,
+   "exp_hold": -448.1,
+   "exp_half5": -464.2,
+   "share_profitable_hold": 6.6
+  },
+  {
+   "state": "dist_rng=lo & or_brk=yes",
+   "rows": 25308,
+   "days": 420,
+   "jackpot_pct": 4.68,
+   "lift": 1.94,
+   "dud_pct": 70.3,
+   "dud_lift": 0.87,
+   "exp_hold": -465.3,
+   "exp_half5": -462.5,
+   "share_profitable_hold": 6.4
+  },
+  {
+   "state": "or_brk=yes & dist_prev=lo",
+   "rows": 20256,
+   "days": 420,
+   "jackpot_pct": 4.7,
+   "lift": 1.94,
+   "dud_pct": 69.6,
+   "dud_lift": 0.86,
+   "exp_hold": -390.1,
+   "exp_half5": -439.1,
+   "share_profitable_hold": 7.2
+  },
+  {
+   "state": "dist_em=lo & trend_open=hi",
+   "rows": 18151,
+   "days": 393,
+   "jackpot_pct": 4.64,
+   "lift": 1.92,
+   "dud_pct": 66.8,
+   "dud_lift": 0.83,
+   "exp_hold": -523.2,
+   "exp_half5": -480.1,
+   "share_profitable_hold": 7.6
+  },
+  {
+   "state": "dist_em=lo & brk15=yes",
+   "rows": 6976,
+   "days": 335,
+   "jackpot_pct": 4.62,
+   "lift": 1.91,
+   "dud_pct": 64.3,
+   "dud_lift": 0.8,
+   "exp_hold": -470.8,
+   "exp_half5": -423.5,
+   "share_profitable_hold": 8.6
+  },
+  {
+   "state": "maxpain=lo & price=hi",
+   "rows": 18627,
+   "days": 464,
+   "jackpot_pct": 4.61,
+   "lift": 1.91,
+   "dud_pct": 69.2,
+   "dud_lift": 0.86,
+   "exp_hold": -487.2,
+   "exp_half5": -479.8,
+   "share_profitable_hold": 7.0
+  },
+  {
+   "state": "or_brk=yes & dist_pct=lo",
+   "rows": 20031,
+   "days": 414,
+   "jackpot_pct": 4.59,
+   "lift": 1.9,
+   "dud_pct": 69.2,
+   "dud_lift": 0.86,
+   "exp_hold": -482.7,
+   "exp_half5": -469.2,
+   "share_profitable_hold": 7.4
+  },
+  {
+   "state": "maxpain=lo & dist_prev=lo",
+   "rows": 19466,
+   "days": 447,
+   "jackpot_pct": 4.59,
+   "lift": 1.9,
+   "dud_pct": 71.6,
+   "dud_lift": 0.89,
+   "exp_hold": -329.6,
+   "exp_half5": -416.7,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "opp_oi_ch30=hi & brk15=yes",
+   "rows": 4389,
+   "days": 333,
+   "jackpot_pct": 4.58,
+   "lift": 1.89,
+   "dud_pct": 66.3,
+   "dud_lift": 0.82,
+   "exp_hold": -440.0,
+   "exp_half5": -421.1,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "dist_pct=lo & brk15=yes",
+   "rows": 7263,
+   "days": 348,
+   "jackpot_pct": 4.49,
+   "lift": 1.86,
+   "dud_pct": 68.6,
+   "dud_lift": 0.85,
+   "exp_hold": -469.8,
+   "exp_half5": -432.8,
+   "share_profitable_hold": 8.3
+  },
+  {
+   "state": "or_brk=yes & vix=hi",
+   "rows": 21762,
+   "days": 187,
+   "jackpot_pct": 4.44,
+   "lift": 1.84,
+   "dud_pct": 71.8,
+   "dud_lift": 0.89,
+   "exp_hold": -645.3,
+   "exp_half5": -600.4,
+   "share_profitable_hold": 3.1
+  },
+  {
+   "state": "maxpain=lo & vix_ch=lo",
+   "rows": 19237,
+   "days": 252,
+   "jackpot_pct": 4.44,
+   "lift": 1.84,
+   "dud_pct": 77.4,
+   "dud_lift": 0.96,
+   "exp_hold": -723.1,
+   "exp_half5": -673.0,
+   "share_profitable_hold": 2.9
+  },
+  {
+   "state": "dist_prev=lo & trend_open=hi",
+   "rows": 20119,
+   "days": 414,
+   "jackpot_pct": 4.4,
+   "lift": 1.82,
+   "dud_pct": 71.2,
+   "dud_lift": 0.88,
+   "exp_hold": -423.4,
+   "exp_half5": -468.0,
+   "share_profitable_hold": 7.1
+  },
+  {
+   "state": "dist_rng=lo & trend_open=hi",
+   "rows": 24930,
+   "days": 416,
+   "jackpot_pct": 4.38,
+   "lift": 1.81,
+   "dud_pct": 71.1,
+   "dud_lift": 0.88,
+   "exp_hold": -490.3,
+   "exp_half5": -482.2,
+   "share_profitable_hold": 6.3
+  },
+  {
+   "state": "maxpain=lo & dist_k=lo",
+   "rows": 21351,
+   "days": 442,
+   "jackpot_pct": 4.37,
+   "lift": 1.81,
+   "dud_pct": 70.9,
+   "dud_lift": 0.88,
+   "exp_hold": -419.3,
+   "exp_half5": -449.9,
+   "share_profitable_hold": 7.6
+  },
+  {
+   "state": "dist_em=lo & mv30=hi",
+   "rows": 17859,
+   "days": 430,
+   "jackpot_pct": 4.35,
+   "lift": 1.8,
+   "dud_pct": 69.7,
+   "dud_lift": 0.86,
+   "exp_hold": -455.5,
+   "exp_half5": -469.1,
+   "share_profitable_hold": 6.9
+  },
+  {
+   "state": "or_brk=yes & maxpain=lo",
+   "rows": 33403,
+   "days": 407,
+   "jackpot_pct": 4.36,
+   "lift": 1.8,
+   "dud_pct": 72.3,
+   "dud_lift": 0.89,
+   "exp_hold": -585.1,
+   "exp_half5": -550.1,
+   "share_profitable_hold": 4.7
+  },
+  {
+   "state": "or_brk=yes & dist_k=lo",
+   "rows": 22707,
+   "days": 415,
+   "jackpot_pct": 4.36,
+   "lift": 1.8,
+   "dud_pct": 69.1,
+   "dud_lift": 0.86,
+   "exp_hold": -508.5,
+   "exp_half5": -485.2,
+   "share_profitable_hold": 7.0
+  },
+  {
+   "state": "dist_pct=lo & trend_open=hi",
+   "rows": 18194,
+   "days": 413,
+   "jackpot_pct": 4.35,
+   "lift": 1.8,
+   "dud_pct": 69.8,
+   "dud_lift": 0.86,
+   "exp_hold": -492.7,
+   "exp_half5": -475.4,
+   "share_profitable_hold": 7.7
+  },
+  {
+   "state": "vix=hi & iv=mid",
+   "rows": 20794,
+   "days": 184,
+   "jackpot_pct": 4.32,
+   "lift": 1.79,
+   "dud_pct": 77.6,
+   "dud_lift": 0.96,
+   "exp_hold": -633.8,
+   "exp_half5": -628.8,
+   "share_profitable_hold": 3.2
+  },
+  {
+   "state": "or_brk=yes & mins_left=hi",
+   "rows": 16577,
+   "days": 356,
+   "jackpot_pct": 4.3,
+   "lift": 1.78,
+   "dud_pct": 71.8,
+   "dud_lift": 0.89,
+   "exp_hold": -713.1,
+   "exp_half5": -616.4,
+   "share_profitable_hold": 4.3
+  },
+  {
+   "state": "vix=hi & st_low=hi",
+   "rows": 20223,
+   "days": 200,
+   "jackpot_pct": 4.29,
+   "lift": 1.78,
+   "dud_pct": 76.5,
+   "dud_lift": 0.95,
+   "exp_hold": -621.0,
+   "exp_half5": -614.8,
+   "share_profitable_hold": 3.0
+  },
+  {
+   "state": "dist_em=lo & iv_ch15=lo",
+   "rows": 26626,
+   "days": 444,
+   "jackpot_pct": 4.23,
+   "lift": 1.75,
+   "dud_pct": 68.5,
+   "dud_lift": 0.85,
+   "exp_hold": -439.6,
+   "exp_half5": -470.1,
+   "share_profitable_hold": 7.1
+  },
+  {
+   "state": "dist_em=lo & iv=mid",
+   "rows": 19499,
+   "days": 342,
+   "jackpot_pct": 4.24,
+   "lift": 1.75,
+   "dud_pct": 73.8,
+   "dud_lift": 0.91,
+   "exp_hold": -477.0,
+   "exp_half5": -502.8,
+   "share_profitable_hold": 5.6
+  },
+  {
+   "state": "dist_em=lo & st_low=hi",
+   "rows": 18372,
+   "days": 426,
+   "jackpot_pct": 4.2,
+   "lift": 1.74,
+   "dud_pct": 70.8,
+   "dud_lift": 0.88,
+   "exp_hold": -455.4,
+   "exp_half5": -483.1,
+   "share_profitable_hold": 6.9
+  },
+  {
+   "state": "or_brk=yes & opp_oi_ch30=hi",
+   "rows": 13648,
+   "days": 383,
+   "jackpot_pct": 4.2,
+   "lift": 1.74,
+   "dud_pct": 69.7,
+   "dud_lift": 0.86,
+   "exp_hold": -589.4,
+   "exp_half5": -548.8,
+   "share_profitable_hold": 5.6
+  },
+  {
+   "state": "dist_prev=lo & brk15=yes",
+   "rows": 7128,
+   "days": 354,
+   "jackpot_pct": 4.21,
+   "lift": 1.74,
+   "dud_pct": 71.3,
+   "dud_lift": 0.88,
+   "exp_hold": -491.5,
+   "exp_half5": -470.9,
+   "share_profitable_hold": 8.0
+  },
+  {
+   "state": "trend_open=hi & price=hi",
+   "rows": 19152,
+   "days": 421,
+   "jackpot_pct": 4.2,
+   "lift": 1.74,
+   "dud_pct": 69.5,
+   "dud_lift": 0.86,
+   "exp_hold": -572.7,
+   "exp_half5": -524.0,
+   "share_profitable_hold": 6.4
+  },
+  {
+   "state": "maxpain=lo & opp_oi_ch30=hi",
+   "rows": 13126,
+   "days": 418,
+   "jackpot_pct": 4.19,
+   "lift": 1.73,
+   "dud_pct": 72.5,
+   "dud_lift": 0.9,
+   "exp_hold": -484.8,
+   "exp_half5": -497.4,
+   "share_profitable_hold": 6.2
+  }
+ ],
+ "by_expectancy": [
+  {
+   "state": "dist_rng=lo & mins_left=hi",
+   "rows": 7354,
+   "days": 294,
+   "jackpot_pct": 5.53,
+   "lift": 2.29,
+   "dud_pct": 67.3,
+   "dud_lift": 0.83,
+   "exp_hold": -365.4,
+   "exp_half5": -359.6,
+   "share_profitable_hold": 8.6
+  },
+  {
+   "state": "dist_rng=lo & maxpain=lo",
+   "rows": 21432,
+   "days": 455,
+   "jackpot_pct": 5.09,
+   "lift": 2.11,
+   "dud_pct": 69.5,
+   "dud_lift": 0.86,
+   "exp_hold": -335.1,
+   "exp_half5": -384.5,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "dist_em=lo & maxpain=lo",
+   "rows": 18418,
+   "days": 430,
+   "jackpot_pct": 5.23,
+   "lift": 2.16,
+   "dud_pct": 67.6,
+   "dud_lift": 0.84,
+   "exp_hold": -371.8,
+   "exp_half5": -402.7,
+   "share_profitable_hold": 8.3
+  },
+  {
+   "state": "maxpain=lo & dist_prev=lo",
+   "rows": 19466,
+   "days": 447,
+   "jackpot_pct": 4.59,
+   "lift": 1.9,
+   "dud_pct": 71.6,
+   "dud_lift": 0.89,
+   "exp_hold": -329.6,
+   "exp_half5": -416.7,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "opp_oi_ch30=hi & brk15=yes",
+   "rows": 4389,
+   "days": 333,
+   "jackpot_pct": 4.58,
+   "lift": 1.89,
+   "dud_pct": 66.3,
+   "dud_lift": 0.82,
+   "exp_hold": -440.0,
+   "exp_half5": -421.1,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "dist_em=lo & brk15=yes",
+   "rows": 6976,
+   "days": 335,
+   "jackpot_pct": 4.62,
+   "lift": 1.91,
+   "dud_pct": 64.3,
+   "dud_lift": 0.8,
+   "exp_hold": -470.8,
+   "exp_half5": -423.5,
+   "share_profitable_hold": 8.6
+  },
+  {
+   "state": "dist_pct=lo & brk15=yes",
+   "rows": 7263,
+   "days": 348,
+   "jackpot_pct": 4.49,
+   "lift": 1.86,
+   "dud_pct": 68.6,
+   "dud_lift": 0.85,
+   "exp_hold": -469.8,
+   "exp_half5": -432.8,
+   "share_profitable_hold": 8.3
+  },
+  {
+   "state": "maxpain=lo & dist_pct=lo",
+   "rows": 18732,
+   "days": 452,
+   "jackpot_pct": 4.82,
+   "lift": 1.99,
+   "dud_pct": 70.1,
+   "dud_lift": 0.87,
+   "exp_hold": -402.1,
+   "exp_half5": -432.9,
+   "share_profitable_hold": 8.1
+  },
+  {
+   "state": "or_brk=yes & dist_prev=lo",
+   "rows": 20256,
+   "days": 420,
+   "jackpot_pct": 4.7,
+   "lift": 1.94,
+   "dud_pct": 69.6,
+   "dud_lift": 0.86,
+   "exp_hold": -390.1,
+   "exp_half5": -439.1,
+   "share_profitable_hold": 7.2
+  },
+  {
+   "state": "dist_pct=lo & mins_left=hi",
+   "rows": 10907,
+   "days": 306,
+   "jackpot_pct": 5.02,
+   "lift": 2.08,
+   "dud_pct": 70.6,
+   "dud_lift": 0.87,
+   "exp_hold": -427.2,
+   "exp_half5": -439.3,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "dist_em=lo & own_run=hi",
+   "rows": 21769,
+   "days": 434,
+   "jackpot_pct": 4.12,
+   "lift": 1.7,
+   "dud_pct": 67.8,
+   "dud_lift": 0.84,
+   "exp_hold": -416.1,
+   "exp_half5": -443.9,
+   "share_profitable_hold": 7.9
+  },
+  {
+   "state": "maxpain=lo & dist_k=lo",
+   "rows": 21351,
+   "days": 442,
+   "jackpot_pct": 4.37,
+   "lift": 1.81,
+   "dud_pct": 70.9,
+   "dud_lift": 0.88,
+   "exp_hold": -419.3,
+   "exp_half5": -449.9,
+   "share_profitable_hold": 7.6
+  },
+  {
+   "state": "own_run=hi & opp_oi_ch30=hi",
+   "rows": 15122,
+   "days": 419,
+   "jackpot_pct": 3.76,
+   "lift": 1.56,
+   "dud_pct": 71.9,
+   "dud_lift": 0.89,
+   "exp_hold": -370.9,
+   "exp_half5": -451.7,
+   "share_profitable_hold": 6.5
+  },
+  {
+   "state": "dist_em=lo & or_brk=yes",
+   "rows": 19257,
+   "days": 396,
+   "jackpot_pct": 5.13,
+   "lift": 2.12,
+   "dud_pct": 65.4,
+   "dud_lift": 0.81,
+   "exp_hold": -489.7,
+   "exp_half5": -454.0,
+   "share_profitable_hold": 7.6
+  },
+  {
+   "state": "dist_k=lo & brk15=yes",
+   "rows": 8245,
+   "days": 339,
+   "jackpot_pct": 3.89,
+   "lift": 1.61,
+   "dud_pct": 68.7,
+   "dud_lift": 0.85,
+   "exp_hold": -496.5,
+   "exp_half5": -455.4,
+   "share_profitable_hold": 8.1
+  },
+  {
+   "state": "dist_em=lo & dist_rng=lo",
+   "rows": 36448,
+   "days": 442,
+   "jackpot_pct": 3.73,
+   "lift": 1.54,
+   "dud_pct": 69.1,
+   "dud_lift": 0.85,
+   "exp_hold": -410.5,
+   "exp_half5": -457.7,
+   "share_profitable_hold": 7.9
+  },
+  {
+   "state": "dist_k=lo & own_run=hi",
+   "rows": 26167,
+   "days": 451,
+   "jackpot_pct": 3.6,
+   "lift": 1.49,
+   "dud_pct": 70.3,
+   "dud_lift": 0.87,
+   "exp_hold": -422.7,
+   "exp_half5": -460.3,
+   "share_profitable_hold": 7.6
+  },
+  {
+   "state": "dist_rng=lo & or_brk=yes",
+   "rows": 25308,
+   "days": 420,
+   "jackpot_pct": 4.68,
+   "lift": 1.94,
+   "dud_pct": 70.3,
+   "dud_lift": 0.87,
+   "exp_hold": -465.3,
+   "exp_half5": -462.5,
+   "share_profitable_hold": 6.4
+  },
+  {
+   "state": "dist_k=lo & price=hi",
+   "rows": 29535,
+   "days": 459,
+   "jackpot_pct": 3.56,
+   "lift": 1.47,
+   "dud_pct": 69.7,
+   "dud_lift": 0.86,
+   "exp_hold": -422.0,
+   "exp_half5": -462.9,
+   "share_profitable_hold": 8.4
+  },
+  {
+   "state": "dist_k=lo & mins_left=hi",
+   "rows": 15164,
+   "days": 305,
+   "jackpot_pct": 4.72,
+   "lift": 1.95,
+   "dud_pct": 73.1,
+   "dud_lift": 0.9,
+   "exp_hold": -448.1,
+   "exp_half5": -464.2,
+   "share_profitable_hold": 6.6
+  },
+  {
+   "state": "dist_em=lo & opp_oi_ch30=hi",
+   "rows": 23710,
+   "days": 398,
+   "jackpot_pct": 3.85,
+   "lift": 1.59,
+   "dud_pct": 71.0,
+   "dud_lift": 0.88,
+   "exp_hold": -400.4,
+   "exp_half5": -467.5,
+   "share_profitable_hold": 7.3
+  },
+  {
+   "state": "dist_prev=lo & trend_open=hi",
+   "rows": 20119,
+   "days": 414,
+   "jackpot_pct": 4.4,
+   "lift": 1.82,
+   "dud_pct": 71.2,
+   "dud_lift": 0.88,
+   "exp_hold": -423.4,
+   "exp_half5": -468.0,
+   "share_profitable_hold": 7.1
+  },
+  {
+   "state": "dist_rng=lo & own_run=hi",
+   "rows": 26275,
+   "days": 463,
+   "jackpot_pct": 3.82,
+   "lift": 1.58,
+   "dud_pct": 69.9,
+   "dud_lift": 0.86,
+   "exp_hold": -444.7,
+   "exp_half5": -468.0,
+   "share_profitable_hold": 7.3
+  },
+  {
+   "state": "dist_em=lo & mv30=hi",
+   "rows": 17859,
+   "days": 430,
+   "jackpot_pct": 4.35,
+   "lift": 1.8,
+   "dud_pct": 69.7,
+   "dud_lift": 0.86,
+   "exp_hold": -455.5,
+   "exp_half5": -469.1,
+   "share_profitable_hold": 6.9
+  },
+  {
+   "state": "or_brk=yes & dist_pct=lo",
+   "rows": 20031,
+   "days": 414,
+   "jackpot_pct": 4.59,
+   "lift": 1.9,
+   "dud_pct": 69.2,
+   "dud_lift": 0.86,
+   "exp_hold": -482.7,
+   "exp_half5": -469.2,
+   "share_profitable_hold": 7.4
+  },
+  {
+   "state": "dist_rng=lo & price=hi",
+   "rows": 29785,
+   "days": 464,
+   "jackpot_pct": 3.85,
+   "lift": 1.59,
+   "dud_pct": 69.3,
+   "dud_lift": 0.86,
+   "exp_hold": -450.8,
+   "exp_half5": -469.8,
+   "share_profitable_hold": 8.0
+  },
+  {
+   "state": "dist_em=lo & iv_ch15=lo",
+   "rows": 26626,
+   "days": 444,
+   "jackpot_pct": 4.23,
+   "lift": 1.75,
+   "dud_pct": 68.5,
+   "dud_lift": 0.85,
+   "exp_hold": -439.6,
+   "exp_half5": -470.1,
+   "share_profitable_hold": 7.1
+  },
+  {
+   "state": "dist_prev=lo & brk15=yes",
+   "rows": 7128,
+   "days": 354,
+   "jackpot_pct": 4.21,
+   "lift": 1.74,
+   "dud_pct": 71.3,
+   "dud_lift": 0.88,
+   "exp_hold": -491.5,
+   "exp_half5": -470.9,
+   "share_profitable_hold": 8.0
+  },
+  {
+   "state": "dist_k=lo & opp_oi_ch30=hi",
+   "rows": 25133,
+   "days": 412,
+   "jackpot_pct": 3.54,
+   "lift": 1.47,
+   "dud_pct": 72.0,
+   "dud_lift": 0.89,
+   "exp_hold": -402.2,
+   "exp_half5": -473.9,
+   "share_profitable_hold": 7.5
+  },
+  {
+   "state": "dist_pct=lo & trend_open=hi",
+   "rows": 18194,
+   "days": 413,
+   "jackpot_pct": 4.35,
+   "lift": 1.8,
+   "dud_pct": 69.8,
+   "dud_lift": 0.86,
+   "exp_hold": -492.7,
+   "exp_half5": -475.4,
+   "share_profitable_hold": 7.7
+  }
+ ],
+ "jackpot_vs_dud_medians": {
+  "mv5": [
+   0.002465094649406474,
+   -0.0006173373007456462,
+   -0.00011945508889832368
+  ],
+  "mv15": [
+   0.006307828815677041,
+   -0.0014218494119588865,
+   0.0
+  ],
+  "mv30": [
+   0.010254330797687672,
+   -0.0026453101956702696,
+   -0.00019290104852354162
+  ],
+  "speed5": [
+   0.049611891964390975,
+   -0.013759945830305167,
+   -0.00309500090173121
+  ],
+  "brk15": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "or_brk": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "dist_pct": [
+   0.8260155388014936,
+   1.0173393482116895,
+   0.9763892288820744
+  ],
+  "dist_k": [
+   4.0,
+   6.0,
+   5.0
+  ],
+  "dist_rng": [
+   1.0864941082970767,
+   1.536085292652765,
+   1.4395901261196666
+  ],
+  "dist_prev": [
+   0.9419536671088853,
+   1.202191241096053,
+   1.1340978744896384
+  ],
+  "dist_em": [
+   1.4026482665757078,
+   1.8997778566964711,
+   1.8036625363991676
+  ],
+  "iv": [
+   27.148975372314453,
+   29.545286178588867,
+   28.75624179840088
+  ],
+  "iv_ch15": [
+   0.1864795684814453,
+   0.6020545959472656,
+   0.5173921585083008
+  ],
+  "oi_ch30": [
+   2.2591267510279067,
+   0.050902906101701895,
+   0.3379949365344581
+  ],
+  "opp_oi_ch30": [
+   1.5806255861422258,
+   -0.2013583281655129,
+   0.007601357187780877
+  ],
+  "pcr_ch30": [
+   0.0020434940375639865,
+   -0.0033557493159345197,
+   -0.0022165720268612077
+  ],
+  "st15": [
+   -4.236706689536884,
+   -4.607977991746914,
+   -4.547803617571066
+  ],
+  "st_low": [
+   1.087866108786617,
+   0.48738532110093047,
+   0.5252407353370403
+  ],
+  "volb": [
+   1.0121413071980667,
+   0.9931081587569651,
+   1.0069506892265765
+  ],
+  "vix": [
+   13.58,
+   12.73,
+   12.77
+  ],
+  "vix_ch": [
+   -0.049999999999998934,
+   0.019999999999999574,
+   0.010000000000001563
+  ],
+  "maxpain": [
+   -0.04462700024590057,
+   0.0005500455345193731,
+   -0.0036715714541735826
+  ],
+  "gap": [
+   0.03523983978610534,
+   -0.005585533468321913,
+   0.0018496307026993897
+  ],
+  "trend_open": [
+   0.13535319483788388,
+   0.0094698884507749,
+   0.026945496419550352
+  ],
+  "trend_12": [
+   0.0,
+   0.0,
+   0.00046271482718740486
+  ],
+  "own_run": [
+   1.147393048128342,
+   1.1090909090909091,
+   1.1136363636363635
+  ],
+  "price": [
+   3.975,
+   3.05,
+   3.2
+  ],
+  "mins_left": [
+   175.0,
+   165.0,
+   165.0
+  ]
+ }
+}

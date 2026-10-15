@@ -1,0 +1,37 @@
+id: rc2-r8
+title: 'RC2 crypto options R8_pdl_break: Prior UTC day high/low break, 01:00-22:00'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/HUNT_RC2_CRYPTO_OPTIONS.md
+hypothesis: Buying a Delta India BTC/ETH option on 'Prior UTC day high/low break, 01:00-22:00', with a stop-loss and a profit
+  lock, makes money after real costs and beats random same-clock entries.
+data_version: 'Delta Exchange India public API: .DEXBTUSD/.DEETHUSD 5-min index 2024-03-01..2026-10-13, MARK 5-min candles
+  of 1,912 BTC/ETH daily expiries (956 per coin) (2024-03-02..2026-10-13, strikes +-3.5% fine grid + 3.5-8% OTM); live chain
+  polls 13 Oct 2026; Deribit DVOL and funding (hourly) and option trades (history API). Raw data in the session scratchpad,
+  not in git.'
+period:
+  design: 2024-03-02..2026-04-12 (772 expiries per coin)
+  holdout: 2026-04-13..2026-10-13 12:00 UTC (184 expiries per coin; read once; partly seen by NN_CRYPTO/STRAD_CRYPTO)
+instruments:
+- CRYPTO
+features:
+- previous UTC day high/low
+- 5-min close
+model_or_rule: 'Prior UTC day high/low break, 01:00-22:00; strike atm; expiry >= 3 h left; max hold 3 h; exits: stop -40%/-25%
+  (hero -50%/-70%) x step lock / trailing lock'
+settings: research/hunt/rc2/signals.py, exits.py, config.py
+prereg: research/hunt/rc2/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Pick s40_step (best design mean). Design: 1184 trades, 34% win, +0.4% a trade net (gross +9.2%), Rs +9,123 at
+    Rs 1 lakh / 2% a trade; same-clock twin p 0.000 (BH q 0.001), direction twin p 0.043; walk-forward Rs -12,864; stress
+    Rs -112,908. Holdout: 290 trades, +1.5% a trade, Rs +8,910 (after VDA tax Rs -34,173). Gates passed on design: not all.
+    All exits: s40_step: design n 1184 net +0.4%/trade Rs +9,123, holdout n 290 +1.5% Rs +8,910; s40_trail: design n 1184
+    net +0.1%/trade Rs +2,373, holdout n 290 +1.0% Rs +5,632; s25_step: design n 1184 net -2.0%/trade Rs -46,826, holdout
+    n 290 -2.0% Rs -11,273; s25_trail: design n 1184 net -2.2%/trade Rs -51,497, holdout n 290 -2.4% Rs -13,996.'
+  costs: Delta India fee min(0.01% notional, 3.5% premium) + 18% GST per side; spread model (wider of two live-chain fits)
+    on entry and exit; exits less 1 tick + 1%; stress spread x1.5 and fee 0.03%
+holdout_read: true
+verdict: rejected
+notes: One of 8 RC2 rules (32 variants, one BH family). Every trade had a stop and a profit lock (Boss's crypto rule). Design
+  was re-run once after a data fix (listing-glitch marks, PREREG amendment 4).

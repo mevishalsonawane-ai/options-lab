@@ -100,7 +100,7 @@ internal object Autopilot {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) scope.launch { runCatching { ensureLoaded() } }
+        if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
     }
 
     private fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }
@@ -325,6 +325,36 @@ internal object Autopilot {
                 val key = c.target.removePrefix("paper:")
                 if (c.to == AutoChange.PAUSED) SmartWorkers.pausePaperByAutopilot(key) else SmartWorkers.resumePaperByAutopilot(key)
             }
+            // Boss's 13 Oct park ([logBossPark]): only its Undo applies here - the arm switched back on, ON PAPER (never cleared
+            // for Zerodha: in Live an ordinary arm asks for the PIN, which is never given here, so nothing changes). Never re-parked.
+            // 14 Oct: the MCX paper arm switched off on Boss's OK (research R42, [logMcxPark], target "mcx:"): its Undo switches it
+            // back on - the MCX arms are paper only, always (nothing there can reach Zerodha). Only the SILVERM morning call.
+            AutoChange.Kind.ARM_PARK -> if (c.target.startsWith(AutoChange.MCX_ARM)) {
+                val source = c.target.removePrefix(AutoChange.MCX_ARM)
+                if (c.to != AutoChange.ON || source != com.optionslab.engine.mcx.McxMorningPark.SOURCE) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.McxPaperArms.setArmed(source, true) }
+                said.takeIf { it.contains("on, paper only") || it.contains("already on") }
+            } else {
+                val source = c.target.removePrefix("arm:")
+                if ((c.to != AutoChange.ON && c.to != AutoChange.ON_APPROVE) || !com.optionslab.engine.orb.FamilyPark.covers(source)) return null
+                val said = kotlinx.coroutines.runBlocking {
+                    com.optionslab.app.data.OrbArms.setArmed(source, true, automatic = c.to == AutoChange.ON, pinConfirmed = false)
+                }
+                said.takeIf { it.contains("armed on paper") }
+            }
+            // Boss's own Liquidity paper trail switch ([logBossTrail]): only its Undo applies here - the switch flipped back,
+            // without logging the flip again (log = false: the Undo marks this entry undone, nothing new is recorded). Paper only.
+            AutoChange.Kind.LIQ_TRAIL -> {
+                if (c.target != AutoChange.TRAIL_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                com.optionslab.app.data.LiquidityTest.setTrail(c.to == AutoChange.ON, log = false)
+            }
+            // 15 Oct: Boss's Hero ₹1,000 ticket switched on by the update on their choice ([logBossTicketOn]): its Undo switches the
+            // arm off (or, undone twice, back on) - a PAPER arm, never Zerodha, so no PIN either way; the flip is not logged again.
+            AutoChange.Kind.PAPER_ARM_ON -> {
+                if (c.target != AutoChange.TICKET_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.HeroTicketArm.setArmed(c.to == AutoChange.ON, log = false) }
+                said.takeIf { !it.contains("not ready") }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -432,6 +462,8 @@ internal object Autopilot {
     /** Boss's Undo on [id] (the change log): the inverse through the same setter; a live raise only with [pinConfirmed]. */
     fun undo(id: String, pinConfirmed: Boolean = false): String {
         ensureLoaded()
+        // An older flip of Boss's Liquidity paper trail switch: only the newest one undoes (13 Oct review). Said, nothing changed.
+        AutoChange.entry(_book.value, id)?.let { e -> if (e.applied && AutoChange.superseded(_book.value, e)) return AutoChange.SUPERSEDED_UNDO }
         val u = AutoChange.undo(_book.value, id) ?: return "That change can't be undone now (it was already undone or reverted)."
         if (needsPin(u.inverse, u.needsPin) && !pinConfirmed) return PIN_UNDO
         val said = runCatching { apply(u.inverse, pinConfirmed) }.getOrNull() ?: return "Nothing changed: ${u.entry.change.what} could not be put back just now."
@@ -621,6 +653,149 @@ internal object Autopilot {
             _book.value = b
         }
         saveSoon()
+    }
+
+    /**
+     * Boss's 13 Oct park of [source] ([label]; [com.optionslab.engine.orb.FamilyPark]), just applied by the arms' one-time
+     * change: logged as Boss's (kept, not on probation) so "Today's changes" shows it and one tap undoes it (back on, on paper).
+     * [wasLive]: it was armed for Zerodha; [holding]: its open position is still managed to its exit. In the background, on
+     * Autopilot's own worker: the arms' load never waits for the log's disk.
+     */
+    fun logBossPark(source: String, label: String, automatic: Boolean, wasLive: Boolean, holding: Boolean) {
+        if (!enabled()) return
+        val fp = com.optionslab.engine.orb.FamilyPark
+        val c = AutoChange.armPark(source, label, fp.record(source), fp.TESTED[source]?.let { it.first + it.second } ?: 0.0, automatic)
+        val note = "your choice, 13 Oct" +
+            (if (wasLive) "; it was armed for Zerodha - in Live, switch it on with your PIN on its row" else "") +
+            (if (holding) "; its open position is still managed to its exit" else "")
+        logBossOwnOnce(c, note)
+    }
+
+    /** How long a park logged at start-up waits for [init] (the arms' books are read before Autopilot's own init runs). */
+    private const val INIT_WAIT_MS = 120_000L
+
+    /**
+     * Boss's own change [c] (an arm's park, [AutoChange.bossOwn]) logged once, kept, by "your choice", with [note]: never twice
+     * for the same target (a second load of an old book, a restore). In the background, on Autopilot's own worker. 14 Oct
+     * review: it first waits for [init] - the arms' books are read at start-up before Autopilot's init, and reading the log
+     * before its file is known would load an empty log, mark it read and later save over Boss's real change history.
+     */
+    private fun logBossOwnOnce(c: AutoChange.Change, note: String) {
+        scope.launch {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target }) {
+                        _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+                        save()
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 14 Oct (research R42, Boss's OK; [com.optionslab.engine.mcx.McxMorningPark]): the SILVERM morning call, an MCX PAPER
+     * arm, just switched off by the MCX arms' one-time change. Logged as Boss's (kept, not on probation) so "Today's changes"
+     * and the change log show it with R42's reason, and one tap undoes it (back on, paper only - no PIN: the MCX arms never
+     * reach Zerodha). [holding]: its open position still closes by its own exit. Once: never logged twice (a second load, a
+     * restart). In the background, on Autopilot's own worker: the arms' load never waits for the log's disk.
+     */
+    fun logMcxPark(source: String, label: String, holding: Boolean) {
+        if (!enabled()) return
+        val mp = com.optionslab.engine.mcx.McxMorningPark
+        val c = AutoChange.mcxArmPark(source, label, mp.REASON, mp.WALK_FORWARD_TRADES, mp.WALK_FORWARD_RS.toDouble())
+        logBossOwnOnce(c, "your OK, 14 Oct (research R42); paper only" + (if (holding) "; its open position still closes by its own exit" else ""))
+    }
+
+    /**
+     * Boss switched the MCX arm [source] back on from its own row after its 14 Oct switch-off ([logMcxPark]): the change log's
+     * entry is closed as undone, so it no longer shows "on → parked" with an Undo that could switch the arm on again later
+     * (after Boss switched it off by hand). Its own Undo lands here too; marking it undone twice changes nothing.
+     */
+    fun mcxUnparkedByBoss(source: String) {
+        if (!enabled()) return
+        scope.launch {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.ARM_PARK && it.change.target == AutoChange.MCX_ARM + source }
+                    if (e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
+                }
+            }
+        }
+    }
+
+    /**
+     * 15 Oct (Boss: "add it directly to arm"): the Hero ₹1,000 ticket, a PAPER arm that did not pass research (R50), just switched
+     * on once by its book's one-time change ([com.optionslab.app.data.HeroTicketArm]). Logged as Boss's (kept, not on probation,
+     * never Autopilot's) so "Today's changes" and the change log show it with R50's verdict, and one tap undoes it (the arm off).
+     * Once: never logged twice (a second load, a restart). In the background, on Autopilot's own worker.
+     */
+    fun logBossTicketOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.heroTicketOn(), "your choice, 15 Oct; paper only - it never trades on Zerodha; its trades are kept in their own record")
+    }
+
+    /**
+     * Boss switched the Hero ₹1,000 ticket from its own row. Off: the newest "off → on" entry ([logBossTicketOn]) is closed as
+     * undone, so its Undo can never switch the arm off (or on) again later; marking it undone twice changes nothing. On: logged
+     * as Boss's again ("off → on", kept, undone in one tap). One lane, in the order Boss flipped it; it waits for Autopilot's
+     * start like [logBossOwnOnce], so a flip right after a restart is not lost.
+     */
+    fun heroTicketSwitchedByBoss(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): Hero ₹1,000 ticket ${if (on) "on" else "off"}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == AutoChange.TICKET_TARGET }
+                    if (!on && e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
+                    if (on && e?.status != AutoChange.Status.KEPT) {
+                        _book.value = AutoChange.record(_book.value, AutoChange.heroTicketOn(), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                            by = "your choice", note = "switched on from its row; paper only - it never trades on Zerodha").first
+                        save()
+                    }
+                }
+            }
+        }
+    }
+
+    /** One lane for [logBossTrail]: the switch's flips are logged in the order they were made. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val trailLane = Dispatchers.IO.limitedParallelism(1)
+
+    /**
+     * Boss switched their own Rs 500 give-back trail on the Liquidity PAPER books [on] or off ([com.optionslab.app.data.LiquidityTest.setTrail],
+     * the Strategy lab card): logged as Boss's (kept, not on probation, never counted as Autopilot's change) so "Today's
+     * changes" shows it and one tap undoes it (the switch flipped back, on paper; only the newest flip undoes). Called only on a
+     * real change. In the background, on Autopilot's own worker: the switch never waits for the log's disk.
+     */
+    fun logBossTrail(on: Boolean) {
+        if (!enabled()) return
+        val c = AutoChange.liqTrail(on)
+        val note = if (on) "your choice; live trades never use it" else "your choice"
+        // One lane, in the order Boss flipped it: two quick taps are logged as they were made.
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                // Every call is a real change ([com.optionslab.app.data.LiquidityTest.setTrail] logs only those): each is kept, and the
+                // older flips are no longer undoable ([AutoChange.superseded]), so the newest entry always matches the switch.
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+                    save()
+                }
+            }
+        }
     }
 
     // ---- telling -------------------------------------------------------------------------------------------------------------

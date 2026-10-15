@@ -1,0 +1,35 @@
+id: r51-r44-ema926-adx20-rt
+title: 'R51 R44-ema926_adx20-RT: ema926_adx20 re-tune: exits A/B/C x ATM / 1-ITM'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this re-tune makes money after real costs on one held contract (gates:
+  final net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (5-min)'
+model_or_rule: 'ema926_adx20 re-tune: exits A/B/C x ATM / 1-ITM'
+settings: research/hunt/r51/fam_r44.py (ema926_adx20|B|m1)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 6
+results:
+  summary: 'design 1597 trades, win 45%, net Rs 65,695 (Rs 195/day), avg win Rs 1,757 / loss Rs -1,336, worst day Rs -28,109,
+    max DD Rs 72,014, without top 5 Rs 13,370; chosen ema926_adx20|B|m1; walk-forward out-of-fold Rs 64,465 on 1175 trades.
+    final test (1 Apr - 13 Oct 2026, read once) 664 trades, win 45%, net Rs -23,143 (Rs -174/day), avg win Rs 1,516 / loss
+    Rs -1,282, worst day Rs -16,151, max DD Rs 76,796, without top 5 Rs -59,393; twin p 0.1337, BH q 0.3343: final net <=
+    0; p >= 0.05; q > 0.10; top-5 trades >= net. OLD: R44 (2021 - Oct 2026, 5 indices + CRUDEOIL): out of sample 0 of 14 strategy-side
+    combinations positive, 0 of 112 cells pass; EMA8/21+ADX15 alone -Rs 8.3 lakh on 9,455 NSE trades'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

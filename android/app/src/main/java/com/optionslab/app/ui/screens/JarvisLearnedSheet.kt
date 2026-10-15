@@ -54,6 +54,20 @@ internal fun rememberLearnedBook(): AgentLessons.Book {
     return b
 }
 
+/**
+ * One line per agent: what it read from the shared knowledge and what it added today (13 Oct; memory only - the shared knowledge
+ * itself is built off the main thread by [com.optionslab.app.data.SharedKnowledgeHost]).
+ */
+@Composable
+internal fun rememberSharedLines(): List<String> {
+    val l by com.optionslab.app.data.SharedKnowledgeHost.lines.collectAsState()
+    val first = remember { com.optionslab.app.data.SharedKnowledgeHost.agentLines() }
+    return l.ifEmpty { first }
+}
+
+/** The section's title. */
+internal const val SHARED_TITLE = "Shared knowledge today"
+
 /** The Ira page's card: how many lessons and how strong, the day's line, and the way into the sheet. */
 @Composable
 internal fun JarvisLearnedCard(book: AgentLessons.Book, onOpen: () -> Unit) {
@@ -75,7 +89,9 @@ internal fun JarvisLearnedCard(book: AgentLessons.Book, onOpen: () -> Unit) {
 @Composable
 internal fun JarvisLearnedSheet(book: AgentLessons.Book, onClose: (() -> Unit)?, modifier: Modifier = Modifier,
                                 /** What he tries to learn next ([com.optionslab.ira.LearningGoals]); the section shows only when there are some. */
-                                goals: List<com.optionslab.ira.LearningGoals.Goal> = emptyList()) {
+                                goals: List<com.optionslab.ira.LearningGoals.Goal> = emptyList(),
+                                /** One line per agent: what it read from the shared knowledge and added today; the section shows only when given. */
+                                agents: List<String> = emptyList()) {
     val p = LocalPalette.current
     var picked by rememberSaveable { mutableStateOf("") }
     val topic = remember(picked) { AgentLessons.Topic.entries.firstOrNull { it.name == picked } }
@@ -121,6 +137,8 @@ internal fun JarvisLearnedSheet(book: AgentLessons.Book, onClose: (() -> Unit)?,
                 Note("No lessons yet. Jarvis needs the agents' records to hold some numbers first.", Modifier.padding(vertical = 8.dp))
             }
             items(shown, key = { "l:" + it.id }) { l -> LessonRow(l) }
+            // 13 Oct: every agent reads the shared knowledge (the research, these lessons, the findings) and adds to it.
+            if (agents.isNotEmpty()) item(key = "shared") { SharedKnowledgeSection(agents) }
             // What he tries to learn next (11 Oct): where the evidence is thinnest but worth the most. Recording only.
             if (goals.isNotEmpty()) item(key = "goals") { LearningGoalsSection(goals) }
             if (book.timeline.isNotEmpty()) {
@@ -137,6 +155,18 @@ internal fun JarvisLearnedSheet(book: AgentLessons.Book, onClose: (() -> Unit)?,
                 }
             }
         }
+    }
+}
+
+/** What each agent read from the shared knowledge and added today, one line each; one plain note that it never trades. */
+@Composable
+private fun SharedKnowledgeSection(agents: List<String>) {
+    val p = LocalPalette.current
+    Column(Modifier.fillMaxWidth().background(p.card, RoundedCornerShape(14.dp)).border(1.dp, p.rule, RoundedCornerShape(14.dp))
+        .padding(horizontal = 14.dp, vertical = 10.dp).testTag("learned-shared"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(SHARED_TITLE, style = Type.label.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+        agents.forEach { a -> Text("• $a", style = Type.label.copy(color = p.ink, fontSize = 13.sp)) }
+        Note("The research, my lessons and the findings, shared by every agent: they only explain and rank, never place or enlarge a trade.")
     }
 }
 

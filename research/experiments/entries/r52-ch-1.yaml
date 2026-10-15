@@ -1,0 +1,35 @@
+id: r52-ch-1
+title: 'R52 re-test on Nov 2024+: CH-1 Chandelier Exit flips (Boss''s ATR 7 x 2)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule CH-1 (old verdict: Not reliable: 60-min SL1/TP1 +38.3k (71 tr) / +5.8k (76); 5-min loses
+  all) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''mode'': 1, ''tf'': 60} | ATM/near | exits default | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 16
+results:
+  summary: 'Design original: 101 trades, win 50%, net Rs +38,068 (Rs +113/day), worst day Rs -7,345, max DD Rs -29,762, p
+    0.953 (coin-flip p 0.103); walk-forward Rs +26,545. Re-tune pick g05 ({''tf'': 30, ''mode'': 1} · ATM/near · exits default):
+    design 166 trades, win 51%, net Rs +29,817 (Rs +88/day), worst day Rs -7,050, max DD Rs -23,071, p 0.794 (coin-flip p
+    0.052); walk-forward Rs +18,201. FINAL original: 58 trades, win 34%, net Rs -50,649 (Rs -384/day), worst day Rs -6,251,
+    max DD Rs -66,189, p 1.000 (coin-flip p 0.946), q 1.00 -> FAIL. FINAL pick: 77 trades, win 42%, net Rs -48,518 (Rs -368/day),
+    worst day Rs -8,521, max DD Rs -68,334, p 1.000 (coin-flip p 0.853), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the close row: 60-min, SL 1 ATR / TP 1R on the index, opposite
+  signal, 09:20-14:30, 15:10, ATR 7 x 2 (Boss''s settings; research/chandelier_exit.py). Grid = its 4 charts x 4 exits.. Gates:
+  final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

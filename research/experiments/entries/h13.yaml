@@ -1,0 +1,29 @@
+id: h13
+title: Which option should Liquidity buy
+family: option-structure
+date: '2026-10-11'
+doc: research/HUNT_H13.md
+hypothesis: Another strike or expiry raises realistic Rs/day.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- strike
+- expiry
+- stop scaling
+model_or_rule: pre-registered strike/expiry choice
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h13/PREREG.md
+variants_tried: null
+results:
+  summary: ATM's advantage was fragile; keep 1-ITM nearest expiry.
+  costs: app costs plus impact
+holdout_read: true
+verdict: rejected
+backfilled: true

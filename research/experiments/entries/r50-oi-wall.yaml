@@ -1,0 +1,42 @@
+id: r50-oi-wall
+title: 'Cancelled hero rules on the Nov 2024+ market: OI-wall short covering'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R50_HERO_RECENT.md
+hypothesis: A cancelled OI-wall short covering hero rule (R21-R43), or a small pre-registered re-tune of it, makes money on
+  the market since NSE's weekly-expiry change (20 Nov 2024) after real costs, on one held contract, and beats random entry
+  times.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: opt_<UND>_WEEK_2024-2026 (rolling ATM+-10 1-minute, rebuilt per held strike),
+  index_1m 2024-2026, equity_1m 2024-2026 (R35 heavyweights); lake to 13 Oct 2026'
+period:
+  design: expiry days 20 Nov 2024 - 31 Mar 2026 (walk-forward blocks B0-B4)
+  holdout: 'final test: expiry days 1 Apr - 13 Oct 2026, read once (not pristine: R43-R45 saw 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index break of the OI wall; OI as filter'
+model_or_rule: O-P = R26 P; O-A6 = R26 A6; T-OI (E3) = R26 P
+settings: research/hunt/r50/r50rules.py (rules), research/hunt/r50/r50cfg.py (dates, lots)
+prereg: research/hunt/r50/PREREG.md
+variants_tried: 6
+results:
+  summary: '2 original rules and a re-tune grid of 4 cells (one cell chosen on design by walk-forward), on 193 design and
+    73 final-test index-expiry-days (20 Nov 2024 - 13 Oct 2026; NIFTY and SENSEX weekly, BANKNIFTY / FINNIFTY / MIDCPNIFTY
+    monthly). 0 pass. O-P: design 4 trades net Rs +577 (walk-forward Rs +576); final 1 trades, win 100.0%, peaks 5x/10x 0/0,
+    net Rs +28, without top 5 Rs 0 (top-5 share 100%), p 1.000, q 1.000: fail, too few trades to judge; O-A6: design 4 trades
+    net Rs +4,924 (walk-forward Rs +4,924); final 1 trades, win 100.0%, peaks 5x/10x 0/0, net Rs +28, without top 5 Rs 0 (top-5
+    share 100%), p 1.000, q 1.000: fail, too few trades to judge; T-OI (E3): design 4 trades net Rs +4,924 (walk-forward Rs
+    +444); final 1 trades, win 100.0%, peaks 5x/10x 0/0, net Rs +28, without top 5 Rs 0 (top-5 share 100%), p 1.000, q 1.000:
+    fail, too few trades to judge.'
+  costs: charges in force on the trade date (obuy Costs('dated'), BSE rates for SENSEX); next-minute fills + 5 bps + 1/2/4-tick
+    half-spread by 5-minute volume; entry limit ref x 1.2 + 0.10 for 3 minutes; gap fills at the worse open; 2x spread stress
+    reported
+holdout_read: true
+verdict: rejected
+notes: 'BH over all 28 R50 final-test tests (20 originals + 8 chosen re-tunes). Random-entry twins: 500 per rule, same day,
+  side, strike rule, budget and exit at a random minute of the rule''s window. Signal-source labels: ''OPTION''S OWN CHART''
+  rules are not the default kind.'

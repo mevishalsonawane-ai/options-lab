@@ -105,8 +105,26 @@ class LiquidityPanelTest {
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
-    @Before fun fresh() { SecurePrefs.put("chart.liq", true) }
+    /**
+     * Every Compose state write seen while a test runs, made off the main thread (15 Oct): the writer's thread and the
+     * state's class. The layer's effects resumed on the IO / Default worker under the test rule's unconfined dispatcher and
+     * wrote their state there, which measured the layer off the main thread ("multithreaded SnapshotStateObserver", CI
+     * 14 Oct). Checked after every test here, so any such write fails on every run, not once in a while.
+     */
+    private val offMain = java.util.concurrent.ConcurrentLinkedQueue<String>()
+    private var watch: androidx.compose.runtime.snapshots.ObserverHandle? = null
+
+    @Before fun fresh() {
+        SecurePrefs.put("chart.liq", true)
+        watch = androidx.compose.runtime.snapshots.Snapshot.registerGlobalWriteObserver { state ->
+            if (Looper.myLooper() != Looper.getMainLooper()) offMain += "${Thread.currentThread().name}: ${state.javaClass.simpleName}"
+        }
+    }
     @After fun noNetwork() { assertEquals("no host may be reached", emptyList<String>(), NetworkGuard.blocked.toList()) }
+    @After fun onlyFromTheMainThread() {
+        watch?.dispose()
+        assertTrue("state written off the main thread: ${offMain.distinct()}", offMain.isEmpty())
+    }
 
     private fun shows(t: String, sub: Boolean = false) = compose.onAllNodesWithText(t, substring = sub).fetchSemanticsNodes().isNotEmpty()
     private fun idle() { shadowOf(Looper.getMainLooper()).idle(); compose.waitForIdle() }
@@ -147,6 +165,47 @@ class LiquidityPanelTest {
         until { shows("▲ L15 11:10") }
         assertTrue(shows("▼ L5 10:00"))
         assertTrue(shows("■ 11:45 next liquidity"))
+    }
+
+    /** The layer's trades as the poll reads them: changed by the test between polls; every read counted. */
+    private class Polled : LiquiditySource {
+        @Volatile var list: List<LiquidityOverlay.Trade> = listOf(LiquidityFixtures.closed, LiquidityFixtures.open)
+        val reads = java.util.concurrent.atomic.AtomicInteger()
+        override suspend fun trades(underlying: String): List<LiquidityOverlay.Trade> { reads.incrementAndGet(); return list }
+        override fun now(): LocalDateTime = LiquidityFixtures.now
+    }
+
+    /** The poll's 30 s wait, on whichever clock drives it here (the main looper's or Compose's). */
+    private fun nextPoll() {
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(31))
+        compose.mainClock.advanceTimeBy(31_000)
+    }
+
+    /**
+     * 15 Oct (the CI flake of 14 Oct): the background path driven many times - a read on IO, the levels built on Default,
+     * the result shown - and every new set of trades drawn. [onlyFromTheMainThread] fails it if any of that state was set
+     * from a worker.
+     */
+    @Test fun everyPollIsDrawnAndSetFromTheMainThread() {
+        val src = Polled()
+        compose.setContent {
+            IraAlgoTheme("light") {
+                LiquidityPanel("BANKNIFTY", true, bars = { LiquidityFixtures.feed }, source = src,
+                    modifier = androidx.compose.ui.Modifier.height(900.dp))
+            }
+        }
+        idle()
+        until { shows("▼ L5 10:00") }
+        repeat(8) { i ->
+            // The open trade gone, then back, poll after poll.
+            val withOpen = i % 2 == 1
+            src.list = if (withOpen) listOf(LiquidityFixtures.closed, LiquidityFixtures.open) else listOf(LiquidityFixtures.closed)
+            val before = src.reads.get()
+            compose.waitUntil(15_000) { nextPoll(); idle(); src.reads.get() > before }
+            until { shows("▼ L5 10:00") == withOpen }
+            assertTrue("poll $i", shows("▲ L15 11:00"))
+        }
+        assertTrue(shows("Liquidity 15+5 · BANKNIFTY"))
     }
 
     @Test fun theOwnersChoiceIsRemembered() {

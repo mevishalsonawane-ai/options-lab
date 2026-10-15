@@ -1,0 +1,32 @@
+id: r51-night-hold-rt
+title: 'R51 NIGHT-HOLD-RT: re-tune: option target = stop Rs {10, 15, 20, 30, 40} a unit, 10:30 cap'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this re-tune makes money after real costs on one held contract (gates:
+  final net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index close + breadth + OI build-up'
+model_or_rule: 're-tune: option target = stop Rs {10, 15, 20, 30, 40} a unit, 10:30 cap'
+settings: research/hunt/r51/fam_night.py (night|RT_P10)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 6
+results:
+  summary: 'design 245 trades, win 52%, net Rs 95,294 (Rs 284/day), avg win Rs 3,222 / loss Rs -2,711, worst day Rs -15,519,
+    max DD Rs 55,975, without top 5 Rs 29,467; chosen night|RT_P10; walk-forward out-of-fold Rs -28,691 on 184 trades. final
+    test (1 Apr - 13 Oct 2026, read once) 86 trades, win 50%, net Rs 34,639 (Rs 262/day), avg win Rs 4,576 / loss Rs -3,771,
+    worst day Rs -15,032, max DD Rs 45,179, without top 5 Rs -26,747; twin p 0.0579, BH q 0.2335: p >= 0.05; q > 0.10; top-5
+    trades >= net; design walk-forward <= 0. OLD: R27: 0 of 8 holds passed; in the locked year (173 trades) all 8 lost to
+    the 09:16 sale by Rs 4.6k-25.9k'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

@@ -131,7 +131,7 @@ object PositionTalk {
 
     fun lines(p: Pos): String {
         val pnl = (p.ltp - p.avg) * p.qty
-        val sb = StringBuilder("${p.where} ${p.symbol}, ${p.qty} at %.2f, now %.2f: ${AppFacts.rs(pnl)}".format(Locale.ENGLISH, p.avg, p.ltp))
+        val sb = StringBuilder("%s %s, %d at %.2f, now %.2f: %s".format(Locale.ENGLISH, p.where, p.symbol, p.qty, p.avg, p.ltp, AppFacts.rs(pnl)))
         if (p.qty > 0) {
             sb.append(p.stop?.let { "; %.2f points to the stop at %.2f".format(Locale.ENGLISH, p.ltp - it, it) } ?: "; no stop")
             p.target?.let { sb.append("; %.2f points to the target at %.2f".format(Locale.ENGLISH, it - p.ltp, it)) }

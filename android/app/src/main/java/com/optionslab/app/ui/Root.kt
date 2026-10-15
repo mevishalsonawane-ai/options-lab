@@ -340,6 +340,9 @@ fun eraseEverything() {
     com.optionslab.app.data.Protections.wipe()
     com.optionslab.app.data.TradeBook.wipe()
     runCatching { com.optionslab.app.data.FillSlippage.wipe() }
+    runCatching { com.optionslab.app.data.LiveRecorder.wipe() }
+    // The OI-wall shadow log (14 Oct): its own encrypted file.
+    runCatching { com.optionslab.app.data.OiWallShadowHost.wipe() }
     com.optionslab.app.data.Diag.wipe()
     com.optionslab.app.data.Journal.wipe()
     com.optionslab.app.data.Strategies.wipe()

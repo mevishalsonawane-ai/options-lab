@@ -1,0 +1,23 @@
+id: r19-rupee-trail
+title: 'Liquidity rupee trail: once +Rs 1,000 open profit, stop Rs 500 under the best profit (Boss, 13 Oct, exploratory in R19; the full study is r19b)'
+family: trade-management
+date: '2026-10-13'
+doc: research/HUNT_R19_LIQUIDITY_LOCK.md
+hypothesis: A rupee give-back trail (arm at +Rs 1,000, trail Rs 500) keeps more of Liquidity's gains than the plain rules.
+data_version: 'research-data release BANKNIFTY 2024-02-13..2026-02-23; R19 simulator and costs'
+period:
+  design: R19 design sessions (362)
+instruments:
+- BANKNIFTY
+features:
+- best open profit in rupees since the entry
+model_or_rule: 'stop = max(breakeven after charges, best price - 500 / qty) once (best - fill) x qty >= 1,000; resting, rises only'
+settings: research/hunt/r19/rupee_trail.py
+prereg: null
+variants_tried: 2
+results:
+  summary: 'Design only (exploratory): 15m 91 trades +Rs 35,759 -> -Rs 1,952 (-37,711; 12 winners cut short for -57,272); 5m 283 trades +Rs 39,548 -> +Rs 7,221 (-32,326; 33 winners cut for -83,073). Worse than every R19 lock but c1.'
+  costs: R19 costs (app charges, liq fills, lock fills as resting stops)
+holdout_read: null
+verdict: rejected
+notes: 'No holdout read: the design result is already strongly negative. On Boss''s 13 Oct MIDCPNIFTY trade (best about +Rs 2,520) it would have sold near +Rs 2,000 before charges; one trade is not evidence.'

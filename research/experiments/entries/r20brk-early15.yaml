@@ -1,0 +1,32 @@
+id: r20brk-early15
+title: Early break (by 10:30) of R1 / S1 / PDH / PDL confirmed by 2 closing 15-minute candles, Liquidity exits
+family: patterns-indicators
+date: '2026-10-13'
+doc: research/HUNT_R20C_SR_BREAK.md
+hypothesis: Buying the option in the direction of a confirmed level break makes money net of the app's paper fills and fees
+  (holdout daily net > 0, beats a random-level twin and a random-time twin after BH over 40 tests with R20 and R20b).
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, FINNIFTY index 2024-02-12..2026-02-24)
+  via research/hunt/r17/data.py; NSE F&O bhavcopy (previous-day OI); Yahoo daily ^INDIAVIX for gaps
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY / FINNIFTY < 2025-10-13 (after 15 sessions for ATR14)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- 5- / 15-minute index candles
+- previous-day high/low and floor pivots (R1/S1)
+- India VIX previous close
+model_or_rule: PIV + PDHL breaks, 15-min candles, N=2, decide by 10:30, 1-ITM, 15% premium stop, failed break, 20-min +5%
+  time stop, 15:10
+settings: research/hunt/r20c/PREREG.md part B
+prereg: research/hunt/r20c/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design (395 sessions, BANKNIFTY + NIFTY): 331 trades, net Rs 33,393 (Rs 85 a session), blocks [3662, 7048, 25195,
+    -2511], G1 pass, G2 pass. Holdout (153 sessions): 127 trades, net Rs -7,117 (Rs -47 a session), t-test p 0.59 (q 1.00),
+    random-level twin p 0.13 (q 1.00), random-time twin p 0.51 (q 1.00), 2x ticks Rs -7,814. FAILED.'
+  costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
+holdout_read: true
+verdict: rejected
+notes: One of 4 R20c rules picked from the design event study (BH family of 40 with R20 / R20b).

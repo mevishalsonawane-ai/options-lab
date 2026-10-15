@@ -1,0 +1,35 @@
+date: '2026-10-15'
+doc: research/HUNT_R47_RELAXED_OPTION_BUYING.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m opt_{NIFTY,BANKNIFTY,FINNIFTY,SENSEX}_{WEEK,MONTH}
+  2021-2026, index_1m, index_daily; foreign-underlying rows dropped (amendment 2)'
+period:
+  design: 1 Aug 2021 - 31 Oct 2025 (walk-forward blocks B1 2021-22, B2 2023, B3 2024, B4 Jan-Oct 2025)
+  holdout: 10 Nov 2025 - 13 Oct 2026, read once for 10 frozen candidates (1-9 Nov 2025 embargo)
+prereg: research/hunt/r47/PREREG.md
+settings: research/hunt/r47/r47cfg.py
+id: r47-u3-lateday
+title: R47 relaxed option buying, family U3_lateday (underlying (index spot))
+family: overnight
+hypothesis: 'Some version of U3_lateday (params [{''th'': 0.5, ''how'': ''follow''}, {''th'': 0.5, ''how'': ''fade''}, {''th'':
+  1.0, ''how'': ''follow''}, {''th'': 1.0, ''how'': ''fade''}]) buying index options (any strike, near or month expiry, debit
+  spreads, straddles; intraday to 5-session holds; regime filters) makes money after real costs on one fixed contract.'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- underlying (index spot) - the CLAUDE.md default
+model_or_rule: 'U3_lateday: see research/hunt/r47/PREREG.md table and r47sig.py'
+variants_tried: 2048
+results:
+  summary: 'Design only. 2048 variants (params x instrument x exit x 14 filters); 1677 with 100+ trades, of which 587 net
+    positive; median Rs -1080.7/trade. best single variant with 100+ trades (selection-biased): NIFTY otm2 exit [0.0, 0.0,
+    5, None], 199 trades, Rs +4631/trade, 4/4 blocks green. Walk-forward qualifying families: BANKNIFTY dir (WF 130 OOS trades,
+    Rs +1316/trade); FINNIFTY spread (WF 109 OOS trades, Rs +1431/trade); FINNIFTY dir (WF 105 OOS trades, Rs +1557/trade).
+    Sent to the holdout: C1, C3.'
+  costs: research/obuy Costs('dated') on every order of every leg + R17 'liq' fills (5 bps + 1/2/4 ticks by traded lots; stops
+    10 bps, 2x ticks), stray-print guard; one fixed contract per leg; Rs 20,000 premium budget
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: underlying (index spot) - the CLAUDE.md default.'

@@ -49,6 +49,12 @@ object HeroRules {
     const val OWNER = "Hero"
     /** Shown wherever the arm is. */
     const val NOT_PROVEN = "Not proven — paper only"
+    /**
+     * Where its signal comes from (14 Oct, Boss: by default a signal is read on the index, then the option is bought). Its
+     * pre-registered trigger reads the ATM straddle's premium beside NIFTY's move, so it is not the default: said on its row,
+     * in its diagnostics and by Jarvis. The rule itself is unchanged.
+     */
+    const val SIGNAL_SOURCE = "Signal uses the option straddle's premium (not the default index-only signal); paper only, armed by you"
 
     const val UNDERLYING = "NIFTY"
     const val STRIKE_STEP = 50
@@ -267,7 +273,7 @@ object HeroRules {
     /** "signal 13:46 · bid 3.95 ×1,300 / ask 4.05 ×650 · spread 0.10 (2.5%)", or the last price alone. */
     fun seenLine(s: Seen): String {
         val l = java.util.Locale.ENGLISH
-        val head = "${s.what} %02d:%02d".format(l, s.at.hour, s.at.minute)
+        val head = "%s %02d:%02d".format(l, s.what, s.at.hour, s.at.minute)
         val sp = s.spread ?: return "$head · LTP ${s.ltp?.let { "%.2f".format(l, it) } ?: "-"} only (no depth in the feed)"
         fun q(x: Long?) = x?.takeIf { it > 0 }?.let { " ×%,d".format(l, it) } ?: ""
         val mid = (s.bid!! + s.ask!!) / 2

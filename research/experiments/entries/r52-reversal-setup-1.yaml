@@ -1,0 +1,36 @@
+id: r52-reversal-setup-1
+title: 'R52 re-test on Nov 2024+: REVERSAL_SETUP-1 Boss''s 29 Sep reversal setup'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule REVERSAL_SETUP-1 (old verdict: Too few: next-expiry 3:1 15-37 tr -2.5k..-11k; 20k move
+  0.3% +10% no stop +4,506 (37 tr), hold to 15:10 +5,749) makes money net of real costs on the recent market (Nov 2024+) at
+  its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''drop'': 0.003} | ATM/near | exits tgt_pct=0.1 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 7
+results:
+  summary: 'Design original: 59 trades, win 59%, net Rs +9,658 (Rs +29/day), worst day Rs -3,724, max DD Rs -9,108, p 0.000
+    (coin-flip p 0.371); walk-forward Rs +7,259. Re-tune pick g04 ({''drop'': 0.003} · ATM/near · exits default): design 59
+    trades, win 46%, net Rs +18,073 (Rs +54/day), worst day Rs -4,378, max DD Rs -9,363, p 0.000 (coin-flip p 0.264); walk-forward
+    Rs +15,344. FINAL original: 16 trades, win 56%, net Rs +2,229 (Rs +17/day), worst day Rs -4,451, max DD Rs -12,430, p
+    0.004 (coin-flip p 0.313), q 0.08 -> too few trades to judge. FINAL pick: 16 trades, win 31%, net Rs +6,729 (Rs +51/day),
+    worst day Rs -4,451, max DD Rs -17,483, p 0.001 (coin-flip p 0.501), q 0.03 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the close row: BANKNIFTY next-expiry, capital Rs 20k, move 0.3%,
+  +10% target, no stop, 15:10 (REVERSAL_SETUP.md). Grid = the study''s other exits and the 0.5% move / Rs 5k capital.. Gates:
+  final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

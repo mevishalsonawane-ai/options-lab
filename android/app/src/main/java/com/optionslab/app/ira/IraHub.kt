@@ -218,6 +218,9 @@ object IraHub {
         scope.launch(Dispatchers.IO) {
             try {
                 testLoadHold?.await()
+                // Positions first (review, 14 Oct): these two vault decryptions queue on the same Keystore as the position books,
+                // so they wait until the start-up has read those (milliseconds normally; never more than 20 s).
+                com.optionslab.app.data.PositionsFirst.awaitPositions()
                 val bookRead = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }
                 val savedRead = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }
                 val readBook = bookRead.getOrNull() ?: PatternBook()
@@ -402,6 +405,8 @@ object IraHub {
                 }
                 if (added > 0) save()
                 val snaps = hs.mapNotNull { (m, h) -> Brain.read(h)?.let { m to it } }.toMap()
+                // India VIX's previous close for the pre-trade shadow checks (R17), handed over here, off the order path.
+                snaps[IraMarket.VIX]?.let { v -> runCatching { com.optionslab.app.data.PreTradeShadow.vixFrom(v.price, v.prevClose, v.at, com.optionslab.app.data.Market.today()) } }
                 histories = hs
                 // Majority Rule 14 on weekly NIFTY (research R13): the reading for the brain and Jarvis, from closes in memory -
                 // context only, nothing acts on it ([majorityUpdate]).
@@ -1048,6 +1053,7 @@ object IraHub {
         runCatching { com.optionslab.app.data.McxPaperArms.view.value.open.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.NightArm.view.value.open.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.VixDivArm.view.value.open.forEach { bots += it.symbol } }
+        runCatching { com.optionslab.app.data.HeroTicketArm.view.value.open.forEach { bots += it.symbol } }
         runCatching {
             val owners = com.optionslab.app.data.Strategies.owners()
             val trades = com.optionslab.app.data.Paper.state.trades
@@ -1753,6 +1759,7 @@ object IraHub {
                 com.optionslab.ira.FillQuality.asked(q) || com.optionslab.ira.LiquidityGoLive.asked(q) ||
                 com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.MoveEvents.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
                 com.optionslab.ira.Findings.asked(q) != null || com.optionslab.ira.TradeManager.asked(q) != null ||
+                com.optionslab.ira.GammaMorning.asked(q) != null || com.optionslab.ira.OiWallBlast.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
@@ -3369,6 +3376,20 @@ object IraHub {
             }
             return true
         }
+        // "How is the hero ticket doing", "what did the 1000 ticket do today" ([com.optionslab.ira.HeroTicketTalk], 15 Oct): the
+        // Hero ₹1,000 ticket's own book - its switch (paper only), Boss's exit pick, today's tickets with their P&L, its own record,
+        // always with R50's verdict (Boss's choice, it did not pass). Before HeroDay (which reads "hero" alone). Its paper trades
+        // are in it, so never on a locked phone; reads only - nothing is switched, bought, sold or set. (Not in IraGoldAlgo.)
+        val heroTicketAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.HeroTicketTalk.asked(q) }.getOrDefault(false) else false
+        if (heroTicketAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.HeroTicketTalk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraHero.ticket() }.getOrElse { "I could not read the Hero ₹1,000 ticket just now, Boss." })
+            }
+            return true
+        }
         // "What did hero do today?", "why no hero trade", "is today a hero day", "hero ne aaj kya kiya", "when is the next hero
         // day" ([com.optionslab.ira.HeroDay], [IraHero.day]): from the expiry-day Hero arm's own records - whether today is a
         // NIFTY expiry day (else the next), its switch, its window, what it read (the ATM straddle, its legs and low, NIFTY's
@@ -4021,6 +4042,28 @@ object IraHub {
                 // One strong lesson of Jarvis's about it, where he has one (11 Oct; memory only) - not on a locked phone (G4 L6).
                 (if (managerLocked) "" else (JarvisLearning.appendFor(managerAsk.family, if (managerAsk.family == null) com.optionslab.ira.AgentLessons.Topic.MANAGER else null)?.let { " $it" } ?: "")) }
                 .getOrElse { "I could not read the trade manager's record just now, Boss." })
+            return true
+        }
+        // "What's gamma saying?" (14 Oct, Boss approved; R28): the 10:00 dealer-gamma reading of each index whose chain is on the
+        // phone, else one read now and labelled with its time - information only, never a trade signal. The live regime's own
+        // words ("gamma regime", "zero gamma") stay the order flow's answer below. Memory only. Not in IraGoldAlgo.
+        val gammaAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.GammaMorning.asked(q) }.getOrNull() else null
+        if (gammaAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.GammaMorningHost.answer(gammaAsk.ifEmpty { null }) }
+                    .getOrElse { "I could not read the gamma just now, Boss." })
+            }
+            return true
+        }
+        // "Did the OI-wall check fire?" (14 Oct; R26 in shadow): today's line and the tally, in points. A record only.
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.OiWallBlast.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.OiWallShadowHost.answer() }.getOrElse { "I could not read the OI-wall log just now, Boss." })
+            }
             return true
         }
         // "What is the order flow on BankNifty?", "nifty me buyers or sellers?" (9 Oct): the live read of the index's near future
@@ -4907,7 +4950,32 @@ object IraHub {
             scope.launch(Dispatchers.IO) { reply(runCatching { IraImprove.say() }.getOrElse { "I could not read my own goals just now, Boss." }) }
             return true
         }
+        // "What did the research say about ORB?", "is Liquidity profitable?", "how does BankNifty behave on expiry after a gap
+        // down?", "research kya kehta hai liquidity ke baare me" ([com.optionslab.ira.Knowledge], ARCHITECTURE L5 Level 4): the
+        // research's findings, strategy cards, study pages and h42 answers from the bundled knowledge pack, best first, each with
+        // its source and date. Market knowledge, so fine on a locked phone - but the few facts that quote Boss's own fills or paper
+        // days are left out there, and the model does not reword it there. Every number is a fact's own; nothing acts.
+        if (!bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.Knowledge.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val knowLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) { knowledgeAnswer(q, knowLocked) }
+            return true
+        }
         return false
+    }
+
+    /** [askedToReason]'s research answer: shown at once, then reworded by the model (unlocked only) if it passes the checks. */
+    private suspend fun knowledgeAnswer(q: String, locked: Boolean) {
+        val (said, facts) = runCatching { KnowledgeLibrary.answer(app, q, locked) }.getOrElse { com.optionslab.ira.Knowledge.NOT_LOADED to emptyList() }
+        val write = !locked && facts.isNotEmpty() && IraModel.usable()
+        val msg = Msg(true, said, facts, writing = write)
+        _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
+        if (!write) return
+        val better = runCatching { IraModel.rewriteWhenFree(q, facts, said) }.getOrNull()
+        _state.update { s -> s.copy(messages = s.messages.map { m ->
+            if (m !== msg) m else if (better != null && better != said) m.copy(text = better, draft = said, writing = false) else m.copy(writing = false)
+        }) }
     }
 
     /** On a day with no session, why (a holiday's name, "weekend"), for a greeting; null on a trading day. */

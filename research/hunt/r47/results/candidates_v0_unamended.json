@@ -1,0 +1,552 @@
+{
+ "prereg": "research/hunt/r47/PREREG.md",
+ "design_end": "2025-10-31",
+ "holdout_start": "2025-11-10",
+ "candidates": [
+  {
+   "id": "C1",
+   "fam": "U3_lateday",
+   "label": "U",
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "und": "FINNIFTY",
+   "kind": "dir",
+   "wf": {
+    "oos_n": 158,
+    "oos_net": 266873.77,
+    "oos_npt": 1689.074493670886,
+    "oos_t": 3.5570788520033325,
+    "green": 3
+   },
+   "params": {
+    "th": 0.5,
+    "how": "follow"
+   },
+   "instr": "itm1",
+   "exit": 12,
+   "exit_spec": [
+    0.5,
+    1.0,
+    "am",
+    null
+   ],
+   "filt": "all",
+   "n": 380,
+   "net": 528809.0,
+   "npt": 1391.6,
+   "t": 4.29,
+   "top5": 98539.0,
+   "fb": 32,
+   "outlay": 16793.0,
+   "blocks": {
+    "B1": {
+     "n": 121,
+     "net": 106973.0
+    },
+    "B2": {
+     "n": 80,
+     "net": 143715.0
+    },
+    "B3": {
+     "n": 89,
+     "net": 182287.0
+    },
+    "B4": {
+     "n": 90,
+     "net": 95833.0
+    }
+   }
+  },
+  {
+   "id": "C2",
+   "fam": "U4_donchian",
+   "label": "U",
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "und": "NIFTY",
+   "kind": "spread",
+   "wf": {
+    "oos_n": 163,
+    "oos_net": 329670.18,
+    "oos_npt": 2022.5164417177914,
+    "oos_t": 2.7259445296414677,
+    "green": 3
+   },
+   "params": {
+    "n": 10
+   },
+   "instr": "sp_itm2_otm2",
+   "exit": 1,
+   "exit_spec": [
+    0.0,
+    0.0,
+    1,
+    null
+   ],
+   "filt": "vix_lo",
+   "n": 163,
+   "net": 363994.0,
+   "npt": 2233.1,
+   "t": 3.25,
+   "top5": 126081.0,
+   "fb": 1,
+   "outlay": 17555.0,
+   "blocks": {
+    "B1": {
+     "n": 17,
+     "net": 94225.0
+    },
+    "B2": {
+     "n": 66,
+     "net": 153461.0
+    },
+    "B3": {
+     "n": 40,
+     "net": 115271.0
+    },
+    "B4": {
+     "n": 40,
+     "net": 1037.0
+    }
+   }
+  },
+  {
+   "id": "C3",
+   "fam": "C1_pcr",
+   "label": "C",
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "wf": {
+    "oos_n": 229,
+    "oos_net": 171802.06,
+    "oos_npt": 750.2273362445414,
+    "oos_t": 1.673370776288208,
+    "green": 3
+   },
+   "params": {
+    "at": [
+     10,
+     15
+    ],
+    "how": "follow"
+   },
+   "instr": "itm3",
+   "exit": 19,
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.6,
+     0.3
+    ]
+   ],
+   "filt": "all",
+   "n": 440,
+   "net": 483544.0,
+   "npt": 1099.0,
+   "t": 3.32,
+   "top5": 135555.0,
+   "fb": 0,
+   "outlay": 17700.0,
+   "blocks": {
+    "B1": {
+     "n": 135,
+     "net": 223256.0
+    },
+    "B2": {
+     "n": 97,
+     "net": 170219.0
+    },
+    "B3": {
+     "n": 114,
+     "net": 89003.0
+    },
+    "B4": {
+     "n": 94,
+     "net": 1066.0
+    }
+   }
+  },
+  {
+   "id": "C4",
+   "fam": "C1_pcr",
+   "label": "C",
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "und": "NIFTY",
+   "kind": "dir",
+   "wf": {
+    "oos_n": 221,
+    "oos_net": 94049.48,
+    "oos_npt": 425.56325791855204,
+    "oos_t": 1.1079708633182228,
+    "green": 2
+   },
+   "params": {
+    "at": [
+     11,
+     30
+    ],
+    "how": "follow"
+   },
+   "instr": "itm3",
+   "exit": 3,
+   "exit_spec": [
+    0.25,
+    1.0,
+    "sq",
+    null
+   ],
+   "filt": "all",
+   "n": 429,
+   "net": 369748.0,
+   "npt": 861.9,
+   "t": 3.17,
+   "top5": 93986.0,
+   "fb": 0,
+   "outlay": 15549.0,
+   "blocks": {
+    "B1": {
+     "n": 133,
+     "net": 177681.0
+    },
+    "B2": {
+     "n": 97,
+     "net": 78956.0
+    },
+    "B3": {
+     "n": 108,
+     "net": 92572.0
+    },
+    "B4": {
+     "n": 91,
+     "net": 20538.0
+    }
+   }
+  },
+  {
+   "id": "C5",
+   "fam": "C3_oishift",
+   "label": "C",
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "und": "NIFTY",
+   "kind": "spread",
+   "wf": {
+    "oos_n": 159,
+    "oos_net": 184978.32,
+    "oos_npt": 1163.3856603773586,
+    "oos_t": 1.0960127248390177,
+    "green": 3
+   },
+   "params": {
+    "how": "follow"
+   },
+   "instr": "sp_itm2_otm2",
+   "exit": 18,
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.3,
+     0.1
+    ]
+   ],
+   "filt": "dte0",
+   "n": 110,
+   "net": 250544.0,
+   "npt": 2277.7,
+   "t": 2.89,
+   "top5": 113643.0,
+   "fb": 0,
+   "outlay": 17462.0,
+   "blocks": {
+    "B1": {
+     "n": 26,
+     "net": 90322.0
+    },
+    "B2": {
+     "n": 28,
+     "net": 71183.0
+    },
+    "B3": {
+     "n": 34,
+     "net": 77770.0
+    },
+    "B4": {
+     "n": 22,
+     "net": 11269.0
+    }
+   }
+  },
+  {
+   "id": "C6",
+   "fam": "U1_orb",
+   "label": "U",
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "und": "SENSEX",
+   "kind": "spread",
+   "wf": {
+    "oos_n": 120,
+    "oos_net": 80927.96999999997,
+    "oos_npt": 674.3997499999998,
+    "oos_t": 1.0815058013015997,
+    "green": 2
+   },
+   "params": {
+    "or_min": 60
+   },
+   "instr": "sp_itm2_otm2",
+   "exit": 19,
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.6,
+     0.3
+    ]
+   ],
+   "filt": "dte0",
+   "n": 103,
+   "net": 330338.0,
+   "npt": 3207.2,
+   "t": 3.08,
+   "top5": 143172.0,
+   "fb": 1,
+   "outlay": 18582.0,
+   "blocks": {
+    "B1": {
+     "n": 0,
+     "net": 0.0
+    },
+    "B2": {
+     "n": 29,
+     "net": -25684.0
+    },
+    "B3": {
+     "n": 41,
+     "net": 235919.0
+    },
+    "B4": {
+     "n": 33,
+     "net": 120103.0
+    }
+   }
+  },
+  {
+   "id": "C7",
+   "fam": "U6_ema",
+   "label": "U",
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "und": "SENSEX",
+   "kind": "dir",
+   "wf": {
+    "oos_n": 166,
+    "oos_net": 44163.91999999999,
+    "oos_npt": 266.04771084337347,
+    "oos_t": 0.9081031186428457,
+    "green": 2
+   },
+   "params": {
+    "f": 9,
+    "s": 21,
+    "vwap": true
+   },
+   "instr": "otm2",
+   "exit": 16,
+   "exit_spec": [
+    0.0,
+    0.0,
+    60,
+    null
+   ],
+   "filt": "dow2",
+   "n": 187,
+   "net": 156825.0,
+   "npt": 838.6,
+   "t": 2.31,
+   "top5": 92873.0,
+   "fb": 0,
+   "outlay": 16587.0,
+   "blocks": {
+    "B1": {
+     "n": 0,
+     "net": 0.0
+    },
+    "B2": {
+     "n": 47,
+     "net": 52079.0
+    },
+    "B3": {
+     "n": 74,
+     "net": 103670.0
+    },
+    "B4": {
+     "n": 66,
+     "net": 1076.0
+    }
+   }
+  },
+  {
+   "id": "C8",
+   "fam": "U2_gap",
+   "label": "U",
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "und": "BANKNIFTY",
+   "kind": "spread",
+   "wf": {
+    "oos_n": 121,
+    "oos_net": 81685.36999999994,
+    "oos_npt": 675.0857024793384,
+    "oos_t": 0.8563858309885191,
+    "green": 2
+   },
+   "params": {
+    "th": 0.3,
+    "how": "follow"
+   },
+   "instr": "sp_atm_otm3",
+   "exit": 18,
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.3,
+     0.1
+    ]
+   ],
+   "filt": "vix_lo",
+   "n": 203,
+   "net": 292163.0,
+   "npt": 1439.2,
+   "t": 2.17,
+   "top5": 202039.0,
+   "fb": 0,
+   "outlay": 18679.0,
+   "blocks": {
+    "B1": {
+     "n": 12,
+     "net": -3031.0
+    },
+    "B2": {
+     "n": 90,
+     "net": 211509.0
+    },
+    "B3": {
+     "n": 58,
+     "net": 82608.0
+    },
+    "B4": {
+     "n": 43,
+     "net": 1078.0
+    }
+   }
+  },
+  {
+   "id": "C9",
+   "fam": "O1_prem_orb",
+   "label": "O",
+   "signal_source": "non-default: option-chart signal (the option's own premium bars) - only Boss could switch it on",
+   "und": "SENSEX",
+   "kind": "dir",
+   "wf": {
+    "oos_n": 215,
+    "oos_net": 75379.93000000002,
+    "oos_npt": 350.60432558139547,
+    "oos_t": 0.6967707328112778,
+    "green": 2
+   },
+   "params": {
+    "or_min": 15
+   },
+   "instr": "own",
+   "exit": 3,
+   "exit_spec": [
+    0.25,
+    1.0,
+    "sq",
+    null
+   ],
+   "filt": "dow4",
+   "n": 100,
+   "net": 206902.0,
+   "npt": 2069.0,
+   "t": 2.47,
+   "top5": 97851.0,
+   "fb": 0,
+   "outlay": 16739.0,
+   "blocks": {
+    "B1": {
+     "n": 0,
+     "net": 0.0
+    },
+    "B2": {
+     "n": 27,
+     "net": 25816.0
+    },
+    "B3": {
+     "n": 33,
+     "net": 118286.0
+    },
+    "B4": {
+     "n": 40,
+     "net": 62801.0
+    }
+   }
+  },
+  {
+   "id": "C10",
+   "fam": "U7_bigbar",
+   "label": "U",
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "und": "NIFTY",
+   "kind": "dir",
+   "wf": {
+    "oos_n": 131,
+    "oos_net": 34768.32000000004,
+    "oos_npt": 265.4070229007637,
+    "oos_t": 0.39928820113560737,
+    "green": 3
+   },
+   "params": {
+    "k": 2.0,
+    "how": "follow"
+   },
+   "instr": "otm2",
+   "exit": 13,
+   "exit_spec": [
+    0.0,
+    0.5,
+    "sq",
+    null
+   ],
+   "filt": "dow4",
+   "n": 216,
+   "net": 178905.0,
+   "npt": 828.3,
+   "t": 1.97,
+   "top5": 49083.0,
+   "fb": 0,
+   "outlay": 17208.0,
+   "blocks": {
+    "B1": {
+     "n": 67,
+     "net": 45511.0
+    },
+    "B2": {
+     "n": 46,
+     "net": -24554.0
+    },
+    "B3": {
+     "n": 58,
+     "net": 130393.0
+    },
+    "B4": {
+     "n": 45,
+     "net": 27556.0
+    }
+   }
+  }
+ ]
+}

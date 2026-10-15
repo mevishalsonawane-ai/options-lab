@@ -50,10 +50,87 @@ object WhatsNew {
     private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
     private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
     private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
+    private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
+    private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
+    private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-15-hero-1000-ticket", OCT15, "Hero ₹1,000 ticket (paper, your choice)",
+            "On your choice, a new paper bot buys a call and a put of up to ₹1,000 each at 12:30 on NIFTY's and SENSEX's own expiry days, " +
+                "and sells on your 25% trail (for now it starts once a ticket has doubled; your choice waits on a follow-up study) or at 15:05. It did not pass research (R50: about −₹525 per ₹1,000 on average; jackpots are rare), " +
+                "its trades are kept in their own record, it never trades on Zerodha, and one tap switches it off.",
+            "Home → Strategies → Hero ₹1,000 ticket (its switch, today's tickets, the 2× / 3× / trail-only exit and where the trail starts); " +
+                "the change is also in Home → Automation card → Autopilot → Change log",
+            ask = "how is the hero ticket doing"),
+        Entry("2026-10-14-silverm-morning-off", OCT14, "SILVERM morning call switched off (paper)",
+            "On your OK, the SILVERM morning call paper bot is switched off once: research R42 found no proven edge on cleaned prices " +
+                "(+₹336 a trade over 53 holdout trades, no better than a random minute; walk-forward −₹44.6k over 129 trades). " +
+                "An open position still closes by its own exit, and one tap on the change undoes it, on paper only.",
+            "Home → Strategies → MCX (commodities) (its row and switch); the change is also in Home → Automation card → Autopilot → Change log"),
+        Entry("2026-10-14-gamma-line-oi-wall-shadow", OCT14, "Morning gamma line, and the OI-wall check in shadow",
+            "At 10:00 Jarvis says whether dealer gamma is negative or positive on each index whose chain is on the phone, how such days' " +
+                "rest-of-day range compared in the research, and the biggest call- and put-gamma strikes to watch; it says nothing about direction and is never a trade signal. " +
+                "On expiry days your OI-wall short-covering rule is checked from 13:45 to 14:30 and only written down, with what its ticket would have made in points " +
+                "and one evening line from Jarvis; it never places an order.",
+            "Settings → Jarvis → Market alerts (Morning gamma line; OI-wall check (shadow)); the OI-wall check is also in the evening Order Review and the diagnostics",
+            jarvisOnly = true, to = "jarvis"),
+        Entry("2026-10-14-signal-on-the-index", OCT14, "Signals read from the index, then the option is bought",
+            "Strategies read their signal from the index and then buy the option (the default); a Pine script set to an option chart is refused; option-derived ideas are labelled.",
+            "Research → Pine → a script → Auto-trade (its symbol); Home → Strategies (Hero's row); Home → Automation card → Strategy lab"),
+        Entry("2026-10-14-memory-positions-first", OCT14, "Memory: open positions first, the rest gives way",
+            "Memory: the app now gives back the memory it does not need (Jarvis's model, the research notes, old prices), so Android should stop closing it. " +
+                "Open positions and orders always come first: their prices and stop checks never slow down, and after any restart they are restored and watched before anything else.",
+            "Lab → Health → background trims (also in the diagnostics: Start-up)"),
+        Entry("2026-10-14-battery-rest", OCT14, "Battery: background work rests when nothing needs it",
+            "Battery: the evening MCX watch, the order-flow recorder and other background work now rest when nothing needs them, so the phone should last the day again. " +
+                "With an MCX position open, paper or live, every stop and exit is checked as often as before, and a new setting chooses when Jarvis listens for his name (Always stays the default).",
+            "Lab → Health → Background work today (also in the diagnostics); Jarvis's page → Listen for \"Jarvis\""),
+        Entry("2026-10-13-orb-family-parked", OCT13, "ORB, ORB Fresh, Sweep and Range Fade parked",
+            "On your choice, these four arms are paused once for research (they will be studied again on the full Dhan data), because each lost money after costs in every tested year; an open position is still managed to its own exit. " +
+                "Each row says \"parked on your choice (13 Oct)\" with a tap to switch it back on, and the morning check and Jarvis no longer nag about them.",
+            "Home → Strategies (each arm's row); the change is also in Home → Automation card → Autopilot → Change log"),
+        Entry("2026-10-13-market-context", OCT13, "Market context: events, expiry, days like today",
+            "Home now warns you the evening before and the morning of an RBI, Budget, US CPI or Fed day, with how BankNifty and Nifty moved on such days and how many days that is; on expiry days it shows how fast option time value melts, and from 09:21 the past days most like today, as context, not a forecast. " +
+                "On the chart, add \"Ira: level map\" for support and resistance with how often each held, and long-press any candle and pick \"Explain this candle\" for what the app knows about those minutes; a new switch can pause paper arms on event days, and it is off.",
+            "Home → Market context; Chart → indicators → Market context; Settings → Bot settings → Pause paper arms on event days",
+            to = "chart"),
+        Entry("2026-10-13-pretrade-checks", OCT13, "Three checks before each paper trade",
+            "Before each paper trade (Liquidity aside) the app notes how much of the expected 30-minute move the charges eat. " +
+                "It also notes where a stop sized to that move would sit, beside the fixed stop. " +
+                "Each morning it rates the day normal, careful or paper-only, with how many past days back the rating. " +
+                "We tested all three on two years of data and none beat chance. " +
+                "The held-back tests had 499 trades for the charges, 15 for the stop and 122 days for the rating. " +
+                "Hero had only 8 test trades and 2 held-back ones, far too few to judge. " +
+                "So they are notes and advice only: they never skip, resize or move a trade. " +
+                "The one switch, half size for paper arms on careful days, is off.",
+            "Settings → Bot settings → Pre-trade checks; Order review; Arms · today; the Good morning check"),
+        Entry("2026-10-13-shared-knowledge", OCT13, "All the agents now learn from one shared knowledge",
+            "Every agent now reads one shared knowledge: the research, Jarvis's lessons and the latest findings. " +
+                "The trade manager, order review, order flow, strategy lab and study now say what the research found. " +
+                "The slippage record, the Liquidity test and the study now add to Jarvis's lessons. " +
+                "Each night a lessons summary is saved for the research, with your money in it encrypted. " +
+                "It only explains and ranks: it never adds a trade or raises a size. " +
+                "A new skip rule only counts in shadow, and stays off until you turn it on.",
+            "Home → Ira → What Jarvis has learned → Shared knowledge today; the shadow switch in Bot settings → Shared knowledge",
+            ask = "what have you learned", jarvisOnly = true),
+        Entry("2026-10-13-exit-research", OCT13, "Exit research: today's exits stay",
+            "Five new ways to exit were tested against today's exits on every arm, over two years of data: VWAP bands, the next support or resistance, a 45-minute time stop, the expected range, and breakeven after +15%. " +
+                "None beat today's exits after charges once chance was allowed for, so nothing in the app changes (Liquidity BANKNIFTY was only studied, as it is frozen to 26 Oct, and none helped it either).",
+            "Not in the app: the research write-up HUNT_R18_EXITS.md"),
+        Entry("2026-10-13-github-sync", LocalDate.of(2026, 10, 13), "Recordings and backups go to GitHub by themselves",
+            "Each evening after the MCX evening close (15:45 on days without an MCX session), on Wi-Fi while charging, the phone uploads each recorded day and a backup to GitHub (a private data-only repository, never the app's code), sealed with your backup passphrase so GitHub sees only noise. " +
+                "A new phone gets everything back with Restore from GitHub: strategies and Pine scripts return switched off, and your PIN, Live switches and tokens are never in it.",
+            "Settings → Data and harvest → GitHub sync", to = "data"),
+        Entry("2026-10-13-github-diagnostics", OCT13, "Each evening's upload carries the day's diagnostics",
+            "With each evening's upload to the private data repository goes one small file for that day: each arm's signals, which were taken or skipped and why, its trades in points and percent, the app's health and the day's changes. " +
+                "It is cleaned on the phone first (no tokens, ids, names, phone, e-mail or rupee amounts), so the research sessions can read it to find and fix problems.",
+            "Settings → Data and harvest → GitHub sync (the Diagnostics line)", to = "data"),
+        Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
+            "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
+                "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",
+            "Settings → Data and harvest → Recordings", to = "data"),
         Entry("2026-10-12-order-review", OCT12, "Order review: every order studied daily",
             "A new agent studies every order and trade each day after the close - live, paper, the bots, Pine and your own - and lists the flaws with their numbers. " +
                 "A flaw that keeps coming back is flagged for a fix or tested by the strategy lab on paper first; it never places, changes or cancels an order.",

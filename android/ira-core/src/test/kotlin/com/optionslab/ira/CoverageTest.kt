@@ -181,6 +181,8 @@ class CoverageTest {
         if (Honest.asked(q) != null) return Kind.HONEST
         if (Chat.smallTalk(q, 0) != null) return Kind.CHAT
         if (Agenda.asked(q) || Improve.asked(q) || Latency.asked(q)) return Kind.JARVIS
+        // (What the research found - findings, strategy cards, h42's answers: market knowledge, nothing of the account.)
+        if (Knowledge.asked(q)) return Kind.MARKET
         if (ReminderBook.cancelOne(q) != null) return Kind.ACT
         if (ReminderBook.listAsked(q)) return Kind.ACCOUNT
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return Kind.ACT
@@ -522,6 +524,9 @@ class CoverageTest {
         "how much market data have we recorded" to J, "market recorder status" to J, "kitna market data record hua hai" to J,
         // ---- GIFT Nifty's gap and the FIIs' positioning from the market recorder (MorningCues): the market's ----
         "fii position" to M, "fii kya kar rahe hain" to M, "are fiis long or short" to M, "what is gift nifty saying" to M, "morning cues" to M,
+        // ---- What the research found (Knowledge, L5 Level 4): market knowledge ----
+        "what did research say about orb" to M, "is liquidity profitable" to M, "research kya kehta hai liquidity ke baare me" to M,
+        "how does banknifty behave on expiry after a gap down" to M,
         // ---- Majority Rule 14 on weekly NIFTY (MajorityRule, research R13): the market's, context only ----
         "what about majority rule" to M, "majority rule 14" to M, "mr 14 kya hai" to M,
         // ---- How likely a big 5-minute candle is now (BigMoveRisk): the market's ----
@@ -785,6 +790,7 @@ class CoverageTest {
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
         if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"
+        if (alone && HeroTicketTalk.asked(q)) return "HeroTicket"
         if (alone && HeroDay.asked(q) != null) return "HeroDay"
         if (alone && PortfolioRisk.asked(q) != null) return "PortfolioRisk"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
@@ -879,6 +885,7 @@ class CoverageTest {
         if (alone && Causes.asked(q) != null) return "Causes"
         if (alone && Agenda.asked(q)) return "Agenda"
         if (alone && Improve.asked(q)) return "Improve"
+        if (alone && Knowledge.asked(q)) return "Knowledge"
         if (ReminderBook.listAsked(q) || ReminderBook.cancelOne(q) != null) return "ReminderBook"
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return "Reminder"
         // The app's own health and Jarvis's growth (11 Oct): just before the self-check, as in the hub.
@@ -1087,6 +1094,10 @@ class CoverageTest {
         // ---- HeroDay: the Hero arm's day (expiry days, paper only) and why, from its own records ----
         "what did hero do today" to "HeroDay", "why no hero trade" to "HeroDay", "hero ne aaj kya kiya" to "HeroDay",
         "is today a hero day" to "HeroDay", "when is the next hero day" to "HeroDay", "hero ne trade kyu nahi liya" to "HeroDay",
+        // ---- HeroTicket: the Hero ₹1,000 ticket (15 Oct, Boss's choice, paper only), from its own book (before HeroDay) ----
+        "how is the hero ticket doing" to "HeroTicket", "what did the hero ticket do today" to "HeroTicket",
+        "how did the 1000 ticket do" to "HeroTicket", "hero ticket kaisa chal raha hai" to "HeroTicket",
+        "tell me about the hero 1000 ticket" to "HeroTicket",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",
@@ -1098,6 +1109,10 @@ class CoverageTest {
         "help me journal" to "DayJournal", "draft my journal" to "DayJournal", "journal my day" to "DayJournal", "my journal entry" to "DayJournal",
         "aaj ka journal likhne mein madad karo" to "DayJournal", "journal likhne mein help karo" to "DayJournal",
         "mera journal likhwao" to "DayJournal",
+        // ---- Knowledge: what the research found (L5 Level 4) ----
+        "what did research say about orb" to "Knowledge", "is liquidity profitable" to "Knowledge", "does orb make money" to "Knowledge",
+        "research kya kehta hai liquidity ke baare me" to "Knowledge", "how does banknifty behave after a gap down" to "Knowledge",
+        "what does the research say about gann and fibonacci" to "Knowledge", "is the vix divergence strategy profitable" to "Knowledge",
         // ---- Improve and Lessons ----
         "how are you improving" to "Improve", "tum kaise improve ho rahe ho" to "Improve", "are you getting better" to "Improve",
         "how are you getting better" to "Improve", "what are you improving" to "Improve", "what have you learned this week" to "Learnings",

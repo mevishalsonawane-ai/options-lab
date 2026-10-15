@@ -1,0 +1,1757 @@
+{
+ "n_final_tests": 44,
+ "rows": [
+  {
+   "book": "mcx",
+   "design": {
+    "net": 19353.13835474998,
+    "p": 0.013972055888223553,
+    "trades": 140,
+    "win_rate": 0.4642857142857143
+   },
+   "final": {
+    "avg_loss": -1501.4569491115387,
+    "avg_win": 1881.741215625,
+    "max_dd": 20728.378544625004,
+    "net": -3507.640911000005,
+    "top5_share": null,
+    "trades": 115,
+    "win_rate": 0.43478260869565216,
+    "worst_day": -3319.00406875
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -25.60321832846719,
+   "note": "",
+   "p": 0.16367265469061876,
+   "q": 0.4500998003992016,
+   "rule": "MA1",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 9162.32537562498
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": 23047.734348125,
+    "p": 0.011976047904191617,
+    "trades": 140,
+    "win_rate": 0.4857142857142857
+   },
+   "final": {
+    "avg_loss": -1536.4906716586538,
+    "avg_win": 1881.741215625,
+    "max_dd": 24307.7131115625,
+    "net": -5784.832876562494,
+    "top5_share": null,
+    "trades": 115,
+    "win_rate": 0.43478260869565216,
+    "worst_day": -3652.9350075
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": true,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -42.22505749315689,
+   "note": "",
+   "p": 0.249500998003992,
+   "q": 0.4647371922821024,
+   "rule": "MA1",
+   "variant": "stop25",
+   "verdict": "fail",
+   "wf_net": 10299.363771562501
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": 191444.3644496,
+    "p": 0.07984031936127745,
+    "trades": 64,
+    "win_rate": 0.59375
+   },
+   "final": {
+    "avg_loss": -8935.3218688905,
+    "avg_win": 6405.508342878002,
+    "max_dd": 84318.916753672,
+    "net": -66099.04978771199,
+    "top5_share": null,
+    "trades": 28,
+    "win_rate": 0.42857142857142855,
+    "worst_day": -60266.834071672
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -478.9786216500869,
+   "note": "",
+   "p": 0.8163672654690619,
+   "q": 0.8552418971580649,
+   "rule": "MA10",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 156510.46774904
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -37966.384271999996,
+    "p": 0.40718562874251496,
+    "trades": 159,
+    "win_rate": 0.4779874213836478
+   },
+   "final": {
+    "avg_loss": -3613.9682244788733,
+    "avg_win": 4749.203474453334,
+    "max_dd": 92331.71079720001,
+    "net": -42877.587587600014,
+    "top5_share": null,
+    "trades": 116,
+    "win_rate": 0.3879310344827586,
+    "worst_day": -11968.201888
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -312.9750918802921,
+   "note": "",
+   "p": 0.437125748502994,
+   "q": 0.6869118905047049,
+   "rule": "MA1b",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -74650.92985839999
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -33044.440332100006,
+    "p": 0.29740518962075846,
+    "trades": 145,
+    "win_rate": 0.43448275862068964
+   },
+   "final": {
+    "avg_loss": -3893.3546969527633,
+    "avg_win": 4243.414598975,
+    "max_dd": 119511.50142572999,
+    "net": -92211.05621761004,
+    "top5_share": null,
+    "trades": 124,
+    "win_rate": 0.3870967741935484,
+    "worst_day": -13356.8857378
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -673.0734030482485,
+   "note": "",
+   "p": 0.6906187624750499,
+   "q": 0.8096976778151015,
+   "rule": "MA1c",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -15969.696386950007
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": 142879.97416144004,
+    "p": 0.04790419161676647,
+    "trades": 122,
+    "win_rate": 0.5163934426229508
+   },
+   "final": {
+    "avg_loss": -2994.1465560629786,
+    "avg_win": 3283.4708311206455,
+    "max_dd": 18507.053845599985,
+    "net": 62850.30339451999,
+    "top5_share": 0.7781865575348116,
+    "trades": 109,
+    "win_rate": 0.5688073394495413,
+    "worst_day": -9237.45510256
+   },
+   "gates": {
+    "net_pos": true,
+    "p": true,
+    "q": false,
+    "top5": true,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": 458.7613386461313,
+   "note": "",
+   "p": 0.03592814371257485,
+   "q": 0.19760479041916168,
+   "rule": "MA2",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 141636.39815808
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": 82665.51649699996,
+    "p": 0.011976047904191617,
+    "trades": 147,
+    "win_rate": 0.54421768707483
+   },
+   "final": {
+    "avg_loss": -395.24693333802855,
+    "avg_win": 445.2351972777782,
+    "max_dd": 7435.307488000014,
+    "net": -4019.8316140000043,
+    "top5_share": null,
+    "trades": 125,
+    "win_rate": 0.432,
+    "worst_day": -1635.1566419999972
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -29.341836598540176,
+   "note": "",
+   "p": 0.1536926147704591,
+   "q": 0.4500998003992016,
+   "rule": "MA3_fut",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 84472.26771
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": 86344.14746000002,
+    "p": 0.02594810379241517,
+    "trades": 147,
+    "win_rate": 0.5238095238095238
+   },
+   "final": {
+    "avg_loss": -1226.7964403623193,
+    "avg_win": 1149.6924251607145,
+    "max_dd": 22497.171180000023,
+    "net": -20266.17857600001,
+    "top5_share": null,
+    "trades": 125,
+    "win_rate": 0.448,
+    "worst_day": -5184.8040399999945
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": true,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -147.9283107737227,
+   "note": "",
+   "p": 0.7445109780439122,
+   "q": 0.8096976778151015,
+   "rule": "MA3_fut",
+   "variant": "xeod",
+   "verdict": "fail",
+   "wf_net": 82798.28405700003
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": 48783.8199,
+    "p": 0.011976047904191617,
+    "trades": 139,
+    "win_rate": 0.539568345323741
+   },
+   "final": {
+    "avg_loss": -1123.3086091346154,
+    "avg_win": 1398.7118721990744,
+    "max_dd": 19304.2365825,
+    "net": 2515.3815049999976,
+    "top5_share": 9.301726594352145,
+    "trades": 119,
+    "win_rate": 0.453781512605042,
+    "worst_day": -4333.7644925
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": 18.36044894160582,
+   "note": "",
+   "p": 0.09181636726546906,
+   "q": 0.3366600133067199,
+   "rule": "MA3_opt",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 47063.64987375
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -432.90087480000057,
+    "p": 0.22954091816367264,
+    "trades": 84,
+    "win_rate": 0.40476190476190477
+   },
+   "final": {
+    "avg_loss": -931.9438486303029,
+    "avg_win": 1212.8417922545455,
+    "max_dd": 5201.5017975999945,
+    "net": 22610.891854399993,
+    "top5_share": 1.0043352472883964,
+    "trades": 77,
+    "win_rate": 0.5714285714285714,
+    "worst_day": -3062.4212216
+   },
+   "gates": {
+    "net_pos": true,
+    "p": true,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": 165.0430062364963,
+   "note": "",
+   "p": 0.031936127744510975,
+   "q": 0.19760479041916168,
+   "rule": "MA4_crudeoilm",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 2640.2872203999996
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -9415.826626,
+    "p": 0.6047904191616766,
+    "trades": 88,
+    "win_rate": 0.48863636363636365
+   },
+   "final": {
+    "avg_loss": -471.71154916428577,
+    "avg_win": 629.94457916,
+    "max_dd": 3342.897417520002,
+    "net": 17029.41642308,
+    "top5_share": 0.6113401569563046,
+    "trades": 76,
+    "win_rate": 0.631578947368421,
+    "worst_day": -2055.79754668
+   },
+   "gates": {
+    "net_pos": true,
+    "p": true,
+    "q": true,
+    "top5": true,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": 124.30230965751826,
+   "note": "",
+   "p": 0.003992015968063872,
+   "q": 0.05854956753160345,
+   "rule": "MA4_goldten",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -9070.080569720001
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -13434.971122499997,
+    "p": 0.4031936127744511,
+    "trades": 83,
+    "win_rate": 0.5542168674698795
+   },
+   "final": {
+    "avg_loss": -746.4816779545455,
+    "avg_win": 988.5895340878379,
+    "max_dd": 4086.57658875,
+    "net": 20155.21584625,
+    "top5_share": 0.5287066559489438,
+    "trades": 59,
+    "win_rate": 0.6271186440677966,
+    "worst_day": -1638.99071125
+   },
+   "gates": {
+    "net_pos": true,
+    "p": true,
+    "q": true,
+    "top5": true,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": 147.1183638412409,
+   "note": "",
+   "p": 0.007984031936127744,
+   "q": 0.08782435129740518,
+   "rule": "MA4_ng_opt",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -20009.45805875
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -28931.186764899998,
+    "p": 0.7984031936127745,
+    "trades": 55,
+    "win_rate": 0.32727272727272727
+   },
+   "final": {
+    "avg_loss": -1234.0681547939396,
+    "avg_win": 2348.7405065733333,
+    "max_dd": 16266.797862399999,
+    "net": -5493.141509600001,
+    "top5_share": null,
+    "trades": 48,
+    "win_rate": 0.3125,
+    "worst_day": -6921.3082491
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -40.09592342773723,
+   "note": "MA5 as run: first signal a day only (a deviation)",
+   "p": 0.11377245508982035,
+   "q": 0.38507600184246893,
+   "rule": "MA5",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -29345.1659018
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -17432.208387750004,
+    "p": 0.17165668662674652,
+    "trades": 88,
+    "win_rate": 0.3977272727272727
+   },
+   "final": {
+    "avg_loss": -1267.1490931606484,
+    "avg_win": 1302.1097809604478,
+    "max_dd": 62947.54062064998,
+    "net": -49610.746737,
+    "top5_share": null,
+    "trades": 175,
+    "win_rate": 0.38285714285714284,
+    "worst_day": -6150.7566885
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -362.1222389562044,
+   "note": "",
+   "p": 0.6227544910179641,
+   "q": 0.7828913601368691,
+   "rule": "MA6",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -12749.996772450002
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": 33290.78056076,
+    "p": 0.07784431137724551,
+    "trades": 106,
+    "win_rate": 0.5188679245283019
+   },
+   "final": {
+    "avg_loss": -1669.3869558160002,
+    "avg_win": 2163.60914650625,
+    "max_dd": 30092.5046364,
+    "net": -14233.855102599999,
+    "top5_share": null,
+    "trades": 82,
+    "win_rate": 0.3902439024390244,
+    "worst_day": -6304.40455168
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -103.89675257372262,
+   "note": "",
+   "p": 0.5548902195608783,
+   "q": 0.7594223318069743,
+   "rule": "MA7",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 18935.109136960004
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -23590.58217116,
+    "p": 0.7684630738522954,
+    "trades": 45,
+    "win_rate": 0.28888888888888886
+   },
+   "final": {
+    "avg_loss": -1093.9456978428573,
+    "avg_win": 1393.1754477822221,
+    "max_dd": 26542.019897100003,
+    "net": -13883.3036988,
+    "top5_share": null,
+    "trades": 115,
+    "win_rate": 0.391304347826087,
+    "worst_day": -2916.9928515
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -101.33798320291972,
+   "note": "",
+   "p": 0.05588822355289421,
+   "q": 0.27323131514748283,
+   "rule": "MA8",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -23024.285646199998
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -7285.303672999991,
+    "p": 0.6487025948103793,
+    "trades": 29,
+    "win_rate": 0.5517241379310345
+   },
+   "final": {
+    "avg_loss": -1854.1974277999996,
+    "avg_win": 1445.5372532400004,
+    "max_dd": 12739.557293600003,
+    "net": -567.3103349999914,
+    "top5_share": null,
+    "trades": 27,
+    "win_rate": 0.5555555555555556,
+    "worst_day": -3291.6895264
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": -4.140951350364901,
+   "note": "",
+   "p": 0.25349301397205587,
+   "q": 0.4647371922821024,
+   "rule": "MA9",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": -6971.9965937999905
+  },
+  {
+   "book": "mcx",
+   "design": {
+    "net": -122190.45938920003,
+    "p": 0.8902195608782435,
+    "trades": 237,
+    "win_rate": 0.3670886075949367
+   },
+   "final": {
+    "avg_loss": -1084.6093310633332,
+    "avg_win": 1811.3460713587301,
+    "max_dd": 21996.8056016,
+    "net": 16499.962699900003,
+    "top5_share": 2.158775457081237,
+    "trades": 153,
+    "win_rate": 0.4117647058823529,
+    "worst_day": -10205.5082194
+   },
+   "gates": {
+    "net_pos": true,
+    "p": true,
+    "q": true,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "Rs",
+   "net_per_day": 120.43768394087593,
+   "note": "post-lock correction",
+   "p": 0.001996007984031936,
+   "q": 0.04391217564870259,
+   "rule": "MA5u",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -119760.4018789
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 24572.50000000051,
+    "p": 0.07984031936127745,
+    "trades": 140,
+    "win_rate": 0.4714285714285714
+   },
+   "final": {
+    "avg_loss": -1928.3761904761882,
+    "avg_win": 1709.3076923077474,
+    "max_dd": 19967.89999999949,
+    "net": -18274.89999999924,
+    "top5_share": null,
+    "trades": 34,
+    "win_rate": 0.38235294117647056,
+    "worst_day": -6807.99999999996
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -132.4268115941974,
+   "note": "boss-opt1 (M15 EMA9/21+RSI, H1 bias)",
+   "p": 0.8502994011976048,
+   "q": 0.8700738058766189,
+   "rule": "GB1",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 24898.3000000008
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 25538.399999996655,
+    "p": 0.07385229540918163,
+    "trades": 251,
+    "win_rate": 0.41832669322709165
+   },
+   "final": {
+    "avg_loss": -543.8086956521893,
+    "avg_win": 893.031707317083,
+    "max_dd": 7633.50000000042,
+    "net": 11599.099999999695,
+    "top5_share": 2.0054400772474192,
+    "trades": 87,
+    "win_rate": 0.47126436781609193,
+    "worst_day": -3063.000000000098
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 84.05144927536011,
+   "note": "liq-india-15+5",
+   "p": 0.08183632734530938,
+   "q": 0.3273453093812375,
+   "rule": "GB10",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 22063.299999998
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 48230.400000001,
+    "p": 0.06187624750499002,
+    "trades": 197,
+    "win_rate": 0.40609137055837563
+   },
+   "final": {
+    "avg_loss": -1314.483673469373,
+    "avg_win": 2545.3150000000305,
+    "max_dd": 24901.09999999955,
+    "net": -13503.399999998652,
+    "top5_share": null,
+    "trades": 69,
+    "win_rate": 0.2898550724637681,
+    "worst_day": -3903.9999999999345
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -97.85072463767139,
+   "note": "hammer-1h",
+   "p": 0.7005988023952096,
+   "q": 0.8096976778151015,
+   "rule": "GB11",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 52235.50000000115
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 112865.50000000332,
+    "p": 0.017964071856287425,
+    "trades": 464,
+    "win_rate": 0.5732758620689655
+   },
+   "final": {
+    "avg_loss": -2040.9886075948807,
+    "avg_win": 2065.4654320988056,
+    "max_dd": 37299.09999999635,
+    "net": 6064.600000007646,
+    "top5_share": 5.6253751277837605,
+    "trades": 160,
+    "win_rate": 0.50625,
+    "worst_day": -12624.999999999785
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 43.94637681164961,
+   "note": "dip-keephalf (2 ATR, 8 h)",
+   "p": 0.23952095808383234,
+   "q": 0.4647371922821024,
+   "rule": "GB12",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 111569.00000000541
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 144135.42681679322,
+    "p": 0.07385229540918163,
+    "trades": 26,
+    "win_rate": 0.6923076923076923
+   },
+   "final": {
+    "avg_loss": -4370.9464439419335,
+    "avg_win": 8449.959736109924,
+    "max_dd": 19342.692966468672,
+    "net": -875.7994553218286,
+    "top5_share": null,
+    "trades": 9,
+    "win_rate": 0.3333333333333333,
+    "worst_day": -13019.999999999865
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -6.346372864650932,
+   "note": "trend-gb3 (Supertrend 4h, 3-ATR giveback, wait)",
+   "p": 0.3253493013972056,
+   "q": 0.5505911254414249,
+   "rule": "GB13",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 139999.19483335823
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 245309.59609950174,
+    "p": 0.017964071856287425,
+    "trades": 26,
+    "win_rate": 0.6153846153846154
+   },
+   "final": {
+    "avg_loss": -6386.191548958163,
+    "avg_win": 21460.85000000013,
+    "max_dd": 22905.99999999971,
+    "net": -1781.6408427068855,
+    "top5_share": null,
+    "trades": 9,
+    "win_rate": 0.2222222222222222,
+    "worst_day": -13019.999999999865
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": true,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -12.910440889180329,
+   "note": "trend-gb3 (Supertrend 4h, 3-ATR giveback, wait)",
+   "p": 0.29740518962075846,
+   "q": 0.5234331337325349,
+   "rule": "GB13",
+   "variant": "rt_giveback5",
+   "verdict": "too few trades to judge",
+   "wf_net": 224052.64946165323
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 12631.699999999822,
+    "p": 0.07584830339321358,
+    "trades": 117,
+    "win_rate": 0.13675213675213677
+   },
+   "final": {
+    "avg_loss": -561.9399999999952,
+    "avg_win": 4123.666666666677,
+    "max_dd": 12384.699999999859,
+    "net": -6164.699999999677,
+    "top5_share": null,
+    "trades": 61,
+    "win_rate": 0.09836065573770492,
+    "worst_day": -2217.9999999999673
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -44.67173913043244,
+   "note": "boss-opt2 (M5 Asian-range sweep)",
+   "p": 0.5768463073852296,
+   "q": 0.7594223318069743,
+   "rule": "GB2",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 16220.899999999738
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 59296.68280842236,
+    "p": 0.5349301397205589,
+    "trades": 471,
+    "win_rate": 0.37154989384288745
+   },
+   "final": {
+    "avg_loss": -1953.924515789418,
+    "avg_win": 3350.6962359361733,
+    "max_dd": 48569.76307578281,
+    "net": -30078.471502623674,
+    "top5_share": null,
+    "trades": 181,
+    "win_rate": 0.3370165745856354,
+    "worst_day": -7831.855157894548
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -217.95993842480922,
+   "note": "tas-15m (ATR 19, flip + delayed)",
+   "p": 0.47105788423153694,
+   "q": 0.6908848968729209,
+   "rule": "GB3",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 54754.31063895014
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 129771.04789473854,
+    "p": 0.2754491017964072,
+    "trades": 471,
+    "win_rate": 0.35668789808917195
+   },
+   "final": {
+    "avg_loss": -1951.4775857936968,
+    "avg_win": 3539.8431034483215,
+    "max_dd": 50556.54031578546,
+    "net": -34720.843052622105,
+    "top5_share": null,
+    "trades": 181,
+    "win_rate": 0.32044198895027626,
+    "worst_day": -7831.855157894548
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": true,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -251.60031197552252,
+   "note": "tas-15m (ATR 19, flip + delayed)",
+   "p": 0.47105788423153694,
+   "q": 0.6908848968729209,
+   "rule": "GB3",
+   "variant": "rt_notargets",
+   "verdict": "fail",
+   "wf_net": 101808.16342263616
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 171711.87094736984,
+    "p": 0.16966067864271456,
+    "trades": 216,
+    "win_rate": 0.4398148148148148
+   },
+   "final": {
+    "avg_loss": -3077.8917599260785,
+    "avg_win": 4951.551724137973,
+    "max_dd": 59510.39252631334,
+    "net": -31844.830315785155,
+    "top5_share": null,
+    "trades": 86,
+    "win_rate": 0.3372093023255814,
+    "worst_day": -11953.999999999935
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -230.75963996945765,
+   "note": "tas-30m no targets",
+   "p": 0.4930139720558882,
+   "q": 0.6997617667890026,
+   "rule": "GB4-30m",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 137929.53305263392
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 157420.46155947345,
+    "p": 0.13972055888223553,
+    "trades": 28,
+    "win_rate": 0.7142857142857143
+   },
+   "final": {
+    "avg_loss": -6512.759999999932,
+    "avg_win": 14093.7145578947,
+    "max_dd": 43008.59999999955,
+    "net": -36940.17088420992,
+    "top5_share": null,
+    "trades": 12,
+    "win_rate": 0.16666666666666666,
+    "worst_day": -12197.999999999894
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -267.68239771166606,
+   "note": "tas-4h with targets",
+   "p": 0.6746506986027944,
+   "q": 0.8096976778151015,
+   "rule": "GB4-4h",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 134442.84378999984
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 49804.60408940769,
+    "p": 0.3932135728542914,
+    "trades": 229,
+    "win_rate": 0.38427947598253276
+   },
+   "final": {
+    "avg_loss": -2063.019015129519,
+    "avg_win": 4258.422715293739,
+    "max_dd": 24372.84058453489,
+    "net": 22273.94231713729,
+    "top5_share": 1.3730277697724853,
+    "trades": 75,
+    "win_rate": 0.37333333333333335,
+    "worst_day": -4692.999999999876
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 161.4053791096905,
+   "note": "ai-opinion Robust 1h",
+   "p": 0.07784431137724551,
+   "q": 0.3273453093812375,
+   "rule": "GB5-1h",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 47234.1690098257
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 170046.0669410872,
+    "p": 0.007984031936127744,
+    "trades": 86,
+    "win_rate": 0.5348837209302325
+   },
+   "final": {
+    "avg_loss": -4092.3728743128086,
+    "avg_win": 7470.989712376167,
+    "max_dd": 55014.40940136968,
+    "net": -36307.76317574972,
+    "top5_share": null,
+    "trades": 23,
+    "win_rate": 0.21739130434782608,
+    "worst_day": -7209.576795327513
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": -263.0997331576067,
+   "note": "ai-opinion Robust 4h",
+   "p": 0.7544910179640718,
+   "q": 0.8096976778151015,
+   "rule": "GB5-4h",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 155096.51505240635
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 39656.20000000333,
+    "p": 0.12375249500998003,
+    "trades": 348,
+    "win_rate": 0.5316091954022989
+   },
+   "final": {
+    "avg_loss": -796.9961038960396,
+    "avg_win": 1176.2116666667305,
+    "max_dd": 16232.299999998351,
+    "net": 9204.000000008788,
+    "top5_share": 2.297077357668416,
+    "trades": 137,
+    "win_rate": 0.43795620437956206,
+    "worst_day": -3291.9999999998545
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 66.69565217397673,
+   "note": "reopen-drift (reopen +5 to +120 min)",
+   "p": 0.17564870259481039,
+   "q": 0.4546201714218622,
+   "rule": "GB6",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": 40436.600000005055
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 64855.00000000267,
+    "p": 0.003992015968063872,
+    "trades": 337,
+    "win_rate": 0.5637982195845698
+   },
+   "final": {
+    "avg_loss": -700.1066666666122,
+    "avg_win": 662.6441558442101,
+    "max_dd": 9078.99999999897,
+    "net": 9017.20000000743,
+    "top5_share": 1.2031118307225501,
+    "trades": 137,
+    "win_rate": 0.5620437956204379,
+    "worst_day": -2815.9999999999236
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": true
+   },
+   "is_pick": true,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 65.34202898556109,
+   "note": "reopen-drift (reopen +5 to +120 min)",
+   "p": 0.13373253493013973,
+   "q": 0.420302252637582,
+   "rule": "GB6",
+   "variant": "rt_fixed2300",
+   "verdict": "fail",
+   "wf_net": 57251.100000004306
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 36306.69999999917,
+    "p": 0.023952095808383235,
+    "trades": 63,
+    "win_rate": 0.5555555555555556
+   },
+   "final": {
+    "avg_loss": -777.7700000000023,
+    "avg_win": 1095.07692307693,
+    "max_dd": 3365.000000000018,
+    "net": 6458.300000000067,
+    "top5_share": 1.9378629050988263,
+    "trades": 23,
+    "win_rate": 0.5652173913043478,
+    "worst_day": -2146.9999999999927
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 46.79927536231932,
+   "note": "liq-india-1h15",
+   "p": 0.2375249500998004,
+   "q": 0.4647371922821024,
+   "rule": "GB7",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 30144.799999999566
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 81985.59999999918,
+    "p": 0.007984031936127744,
+    "trades": 40,
+    "win_rate": 0.625
+   },
+   "final": {
+    "avg_loss": -4009.2142857143212,
+    "avg_win": 4348.757142857173,
+    "max_dd": 20425.000000000087,
+    "net": 2376.7999999999593,
+    "top5_share": 11.683061258835624,
+    "trades": 14,
+    "win_rate": 0.5,
+    "worst_day": -14435.999999999996
+   },
+   "gates": {
+    "net_pos": true,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 17.223188405796805,
+   "note": "liq-2h (confirm 15, second level)",
+   "p": 0.3852295409181637,
+   "q": 0.6277814740888593,
+   "rule": "GB8",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 80267.69999999953
+  },
+  {
+   "book": "gold",
+   "design": {
+    "net": 87500.9999999991,
+    "p": 0.03792415169660679,
+    "trades": 69,
+    "win_rate": 0.4782608695652174
+   },
+   "final": {
+    "avg_loss": -1531.8500000000224,
+    "avg_win": 4108.699999999991,
+    "max_dd": 6948.200000000204,
+    "net": 26813.499999999625,
+    "top5_share": 1.2202211572528903,
+    "trades": 23,
+    "win_rate": 0.4782608695652174,
+    "worst_day": -2689.000000000062
+   },
+   "gates": {
+    "net_pos": true,
+    "p": true,
+    "q": false,
+    "top5": false,
+    "trades40": false,
+    "wf_pos": true
+   },
+   "is_pick": false,
+   "key_net": null,
+   "money": "USD/lot",
+   "net_per_day": 194.30072463767846,
+   "note": "liq-1h-conf20 (second level)",
+   "p": 0.01996007984031936,
+   "q": 0.14637391882900866,
+   "rule": "GB9",
+   "variant": "orig",
+   "verdict": "too few trades to judge",
+   "wf_net": 87169.59999999945
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -54023.51769457187,
+    "net_after_tax": -138576.24685040885,
+    "p": 0.005988023952095809,
+    "trades": 790
+   },
+   "final": {
+    "avg_loss": -623.9945178299588,
+    "avg_win": 961.1856449405218,
+    "cs_gst": [
+     -4430.651916363737,
+     -48312.943070262714
+    ],
+    "cs_nogst": [
+     3173.8583830661382,
+     -41468.020612427616
+    ],
+    "max_dd": 47420.73358637757,
+    "net": 16901.716917465634,
+    "net_after_tax": -28866.366989876668,
+    "tds_locked": 6529.001942774398,
+    "top5_share": null,
+    "trades": 313,
+    "win_rate": 0.3354632587859425,
+    "worst_day": -2810.120484687761
+   },
+   "gates": {
+    "net_pos": false,
+    "p": true,
+    "q": true,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -28866.366989876668,
+   "money": "Rs",
+   "net_per_day": -148.03265123013676,
+   "note": "rc2-r8-pdl",
+   "p": 0.001996007984031936,
+   "q": 0.04391217564870259,
+   "rule": "CC1",
+   "variant": "s40_step",
+   "verdict": "fail",
+   "wf_net": -84796.92776832845
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -60980.42228021521,
+    "net_after_tax": -229129.86484497008,
+    "p": 0.001996007984031936,
+    "trades": 1578
+   },
+   "final": {
+    "avg_loss": -649.5299577608977,
+    "avg_win": 512.3194826691201,
+    "cs_gst": [
+     -118743.58889539583,
+     -161508.25449651902
+    ],
+    "cs_nogst": [
+     -107780.00010897033,
+     -151602.30004123415
+    ],
+    "max_dd": 139434.58056086875,
+    "net": -89923.01459247047,
+    "net_after_tax": -135227.54558896652,
+    "tds_locked": 10369.282842699315,
+    "top5_share": null,
+    "trades": 557,
+    "win_rate": 0.3500897666068223,
+    "worst_day": -5413.4585996938895
+   },
+   "gates": {
+    "net_pos": false,
+    "p": true,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -135227.54558896652,
+   "money": "Rs",
+   "net_per_day": -693.4745927639309,
+   "note": "rc2-r4-burst",
+   "p": 0.013972055888223553,
+   "q": 0.12295409181636727,
+   "rule": "CC2",
+   "variant": "s40_trail",
+   "verdict": "fail",
+   "wf_net": -194083.05018539669
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -26717.604781394617,
+    "net_after_tax": -78109.24467324972,
+    "p": 0.001996007984031936,
+    "trades": 199
+   },
+   "final": {
+    "avg_loss": -1487.0790659711263,
+    "avg_win": 548.5991355300948,
+    "cs_gst": [
+     -119406.71869977504,
+     -123079.86351558575
+    ],
+    "cs_nogst": [
+     -106909.505098115,
+     -111014.79530355036
+    ],
+    "max_dd": 55816.85900355422,
+    "net": -46983.996357868746,
+    "net_after_tax": -53203.579580448306,
+    "tds_locked": 968.5068647228798,
+    "top5_share": null,
+    "trades": 70,
+    "win_rate": 0.35714285714285715,
+    "worst_day": -3895.087674110114
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -53203.579580448306,
+   "money": "Rs",
+   "net_per_day": -272.83886964332464,
+   "note": "rc2-r6-hero",
+   "p": 0.2375249500998004,
+   "q": 0.4647371922821024,
+   "rule": "CC3",
+   "variant": "s70_step",
+   "verdict": "fail",
+   "wf_net": -63396.534961059566
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -102667.61761545629,
+    "net_after_tax": -144509.15661838884,
+    "p": 0.9940119760479041,
+    "trades": 471
+   },
+   "final": {
+    "avg_loss": -587.511591854137,
+    "avg_win": 453.0585289118928,
+    "cs_gst": [
+     -26290.380068602928,
+     -38617.78655294978
+    ],
+    "cs_nogst": [
+     -23260.124135858227,
+     -35920.14940531133
+    ],
+    "max_dd": 43801.34313319408,
+    "net": -26290.380068602928,
+    "net_after_tax": -38617.78655294978,
+    "tds_locked": 168315.59515897924,
+    "top5_share": null,
+    "trades": 172,
+    "win_rate": 0.3488372093023256,
+    "worst_day": -3476.2562487427326
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -38617.78655294978,
+   "money": "Rs",
+   "net_per_day": -198.0399310407681,
+   "note": "f1c-p07",
+   "p": 0.8902195608782435,
+   "q": 0.8902195608782435,
+   "rule": "CC4",
+   "variant": "s15_trail",
+   "verdict": "fail",
+   "wf_net": -97502.98764899318
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -89580.86965985168,
+    "net_after_tax": -149841.1714804888,
+    "p": 0.9161676646706587,
+    "trades": 593
+   },
+   "final": {
+    "avg_loss": -611.9043096458819,
+    "avg_win": 355.4239823775392,
+    "cs_gst": [
+     -18964.257558751007,
+     -31375.167082934146
+    ],
+    "cs_nogst": [
+     -15907.014253580439,
+     -28758.305934487224
+    ],
+    "max_dd": 32612.342241916274,
+    "net": -18964.257558751007,
+    "net_after_tax": -31375.167082934146,
+    "tds_locked": 169852.33141987422,
+    "top5_share": null,
+    "trades": 173,
+    "win_rate": 0.44508670520231214,
+    "worst_day": -4954.401373598571
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -31375.167082934146,
+   "money": "Rs",
+   "net_per_day": -160.89829273299563,
+   "note": "f1c-p13",
+   "p": 0.5868263473053892,
+   "q": 0.7594223318069743,
+   "rule": "CC5",
+   "variant": "s15_step",
+   "verdict": "fail",
+   "wf_net": -100612.56653640576
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -48648.52596343627,
+    "net_after_tax": -123041.7254695061,
+    "p": 0.001996007984031936,
+    "trades": 841
+   },
+   "final": {
+    "avg_loss": -504.3067098008924,
+    "avg_win": 616.2090740160993,
+    "cs_gst": [
+     -47061.88794594904,
+     -68390.0327016137
+    ],
+    "cs_nogst": [
+     -41608.096926090824,
+     -63395.033411542085
+    ],
+    "max_dd": 71331.27395262397,
+    "net": -34252.19114933865,
+    "net_after_tax": -56607.683136899475,
+    "tds_locked": 5530.580282449059,
+    "top5_share": null,
+    "trades": 290,
+    "win_rate": 0.27586206896551724,
+    "worst_day": -2905.346860429557
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -56607.683136899475,
+   "money": "Rs",
+   "net_per_day": -290.29581095845884,
+   "note": "f1c-o19",
+   "p": 0.21756487025948104,
+   "q": 0.4647371922821024,
+   "rule": "CC6",
+   "variant": "s25_step",
+   "verdict": "fail",
+   "wf_net": -97175.61217772284
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -52754.87699467954,
+    "net_after_tax": -101574.04761456841,
+    "p": 0.017964071856287425,
+    "trades": 470
+   },
+   "final": {
+    "avg_loss": -674.3428455730195,
+    "avg_win": 759.0728611058702,
+    "cs_gst": [
+     -23259.451411962054,
+     -42488.569614321015
+    ],
+    "cs_nogst": [
+     -19326.84079387849,
+     -38891.34816488044
+    ],
+    "max_dd": 46005.343199350566,
+    "net": -12883.476918375862,
+    "net_after_tax": -32848.858451183754,
+    "tds_locked": 3363.5629186864,
+    "top5_share": null,
+    "trades": 172,
+    "win_rate": 0.3372093023255814,
+    "worst_day": -2888.2682130525573
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -32848.858451183754,
+   "money": "Rs",
+   "net_per_day": -168.4556843650449,
+   "note": "f1c-o18",
+   "p": 0.2435129740518962,
+   "q": 0.4647371922821024,
+   "rule": "CC7",
+   "variant": "s40_trail",
+   "verdict": "fail",
+   "wf_net": -77661.453566996
+  },
+  {
+   "book": "crypto",
+   "design": {
+    "net": -47254.79649156959,
+    "net_after_tax": -98102.057882396,
+    "p": 0.6866267465069861,
+    "trades": 98
+   },
+   "final": {
+    "avg_loss": -2139.8663605931138,
+    "avg_win": 4153.390880276669,
+    "cs_gst": [
+     -10246.536407179292,
+     -29081.68109680605
+    ],
+    "cs_nogst": [
+     -9490.428724097988,
+     -28382.276200077813
+    ],
+    "max_dd": 45386.384242564185,
+    "net": -10246.536407179292,
+    "net_after_tax": -29081.68109680605,
+    "tds_locked": 41987.86920176177,
+    "top5_share": null,
+    "trades": 43,
+    "win_rate": 0.23255813953488372,
+    "worst_day": -6402.084040589588
+   },
+   "gates": {
+    "net_pos": false,
+    "p": false,
+    "q": false,
+    "top5": false,
+    "trades40": true,
+    "wf_pos": false
+   },
+   "is_pick": false,
+   "key_net": -29081.68109680605,
+   "money": "Rs",
+   "net_per_day": -149.13682613746693,
+   "note": "rc1-g-breakout",
+   "p": 0.7504990019960079,
+   "q": 0.8096976778151015,
+   "rule": "CC8",
+   "variant": "orig",
+   "verdict": "fail",
+   "wf_net": -36099.03731808476
+  }
+ ]
+}

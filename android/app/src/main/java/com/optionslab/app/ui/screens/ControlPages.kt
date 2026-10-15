@@ -222,6 +222,10 @@ fun DataPage(model: AppModel) {
         }
         // The market recorder (Boss's 06 Oct approval): its switch, what it keeps, and the export.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recorder") { MarketRecorderCard(model) } }
+        // The Data Brain's live recording (signals, fills, the minute grid): days kept, size, last written, export.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recordings") { RecordingsCard(model) } }
+        // GitHub sync (13 Oct, TODO G1/G2): the recorded days and the phone backup to GitHub, sealed; and restore from it.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.github") { GitHubSyncCard(model) } }
         for ((u, rows) in manifests) item {
             LedgerCard(title = "Manifest · $u") {
                 val same = rows.count { it.scope == Manifest.SAME_DAY }
@@ -662,12 +666,18 @@ fun RiskPage(model: AppModel) {
         if (!com.optionslab.app.BuildConfig.GOLD) {
             item { PortfolioSettingCard() }
             item { EventCalendarCard() }
+            // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
+            item { EventShieldSwitchCard() }
             item { HistoryVaultCard() }
+            // The shared knowledge's shadow rule (13 Oct): off by default; on, it only counts what it would skip.
+            item { SharedKnowledgeCard() }
         }
         // The learning freeze (S14): its state, Boss's own line and the unfreeze (PIN when live). Never from a backup.
         if (com.optionslab.app.ira.LearningFreeze.enabled()) item { com.optionslab.app.ui.SettingSpot("learn.freeze") { LearningFreezeCard(model) } }
         // Boss's paper-only period (12 Oct): until its end date, going Live asks the PIN and shows why. Never from a backup.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.paperonly") { PaperOnlyCard(model) } }
+        // The pre-trade checks (13 Oct, R17): shadow lines and the danger meter's half-size switch (off; paper arms only).
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.pretrade") { PreTradeCard(model) } }
     }
 }
 

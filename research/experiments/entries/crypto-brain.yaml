@@ -1,0 +1,25 @@
+id: crypto-brain
+title: 'Crypto Data Brain: 24x7 cube, point-in-time features, labels, locked holdout (BTC, ETH)'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/brain/crypto/README.md
+hypothesis: Infrastructure, not a test. The Indian Data Brain's layers rebuilt for Binance crypto by reuse (quality
+  flags, labels, splits, look-ahead guard, volume-profile maths, feature catalogue).
+data_version: Binance bulk archive sample, 1 Oct 2023 - 31 Mar 2026, BTCUSDT and ETHUSDT (2,186 files, sha256-checked)
+period:
+  design: 2023-10-01 .. 2026-03-31
+  holdout: 2026-04-01 onward, locked (config.HOLDOUT_START), not downloaded
+instruments:
+- CRYPTO
+features:
+- 64 point-in-time features (research/brain/crypto/FEATURES.md)
+model_or_rule: none
+settings: research/brain/crypto/config.py
+prereg: null
+variants_tried: null
+results:
+  summary: 'Cube: 913 days per symbol, 1,314,720 minutes each, no gap minutes; look-ahead guard PASS on the real cube
+    and on synthetic data for all 64 features.'
+  costs: n/a
+holdout_read: null
+verdict: not-a-test

@@ -1,0 +1,35 @@
+id: c1-crypto-direction
+title: 'Crypto C1: is the direction of the next hour / day predictable after costs (BTC, ETH)?'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/CRYPTO_C1_PREDICTABILITY.md
+hypothesis: An L2 logistic model on returns, funding z, basis z, OI change, taker imbalance, VWAP z and the clock
+  predicts the sign of the next hour (B1) / day (B2) with AUC >= 0.52 and a positive net after perp costs.
+data_version: Binance bulk archive BTCUSDT/ETHUSDT 1m spot+perp, funding, metrics; crypto cube v2, signature afe36b892dd9
+period:
+  design: 2023-11-02 .. 2026-03-31 (walk-forward, 30 blocks)
+  holdout: 2026-04-01 onward, locked, not read
+instruments:
+- CRYPTO
+features:
+- ret_60m
+- ret_240m
+- ret_1440m
+- funding_z_30d
+- basis_z_7d
+- oi_chg_60m_pct
+- perp_taker_imb_60m
+- vwap24_z
+- hour
+- is_weekend
+model_or_rule: L2 logistic regression (C 1.0); trade when p >= 0.55 (long) or <= 0.45 (short)
+settings: research/brain/crypto/PREREG.md tests B1, B2
+prereg: research/brain/crypto/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Next hour AUC 0.535 (BTC) / 0.543 (ETH), q < 0.001, a real short-term reversal, but net -11.74 / -13.16 bps
+    a trade (4,340 / 5,168 trades; gross +0.29 / -1.13 bps). Next day AUC 0.495 / 0.512 (q 0.91 / 0.71), net -17.54 /
+    -32.24 bps. 0 of 4 pass.'
+  costs: perp taker 0.05% + 1 bp slippage a side (0.12% round trip) + funding at the last settled rate; 2x slippage stress
+holdout_read: false
+verdict: rejected

@@ -1,0 +1,32 @@
+id: iv1-o2
+title: 'IV1 O2: best 20 tercile-pair cells per side on option-market inputs only'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_IV1_OPTION_MARKET.md
+hypothesis: Option-market signals (IV skew, straddle, PCR, OI build-up) pick CE/PE buys that make money after costs.
+data_version: R30 decision table (Dhan lake, 5 indices, chain OI/IV/volume)
+period:
+  design: train expanding from Aug 2021 (F1 holdout Jan 2023 - Jun 2024 never used)
+  walk_forward: 'Jul-Dec 2024, 2025, Jan-12 Oct 2026 (descriptive: inputs chosen after R30)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- option chain OI/IV/PCR/straddle/volume
+- time
+- dte
+- VIX
+model_or_rule: best 20 tercile-pair cells per side on option-market inputs only
+settings: research/hunt/iv1/PREREG.md
+prereg: research/hunt/iv1/PREREG.md
+variants_tried: 5
+results:
+  summary: 'Out of sample: NIFTY 888 trades +6/trade (p 0.030, q 0.150); BANKNIFTY 1060 trades -64/trade (p 0.092, q 0.197);
+    FINNIFTY 927 trades -42/trade (p 0.002, q 0.030); MIDCPNIFTY 1103 trades -171/trade (p 0.127, q 0.238); SENSEX 915 trades
+    +35/trade (p 0.013, q 0.097). None positive in every test period; none frozen for the forward test.'
+  costs: app charges at today's rates; fills next open + 5 bps + 1/2/4-tick half-spread; Boss's lock exit
+holdout_read: null
+verdict: rejected

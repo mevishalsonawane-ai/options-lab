@@ -325,6 +325,7 @@ object SmartWorkers {
     fun holdingAny(): Boolean = runCatching {
         com.optionslab.app.work.PositionCards.anyOpen || OrbArms.holdingHint || PineAuto.holding() || Strategies.runningHint ||
             NightArm.view.value.open.isNotEmpty() || VixDivArm.view.value.open.isNotEmpty() || McxPaperArms.view.value.open.isNotEmpty() ||
+            HeroTicketArm.view.value.open.isNotEmpty() ||
             Paper.state.positions.any { it.quantity != 0 }
     }.getOrDefault(true)
 
@@ -375,13 +376,29 @@ object SmartWorkers {
     @Volatile private var flushedAt = 0L
     @Volatile private var countsDay: LocalDate? = null
 
-    /** While market hours, NSE's or MCX's: every [REFRESH_MS]; else asleep (null). */
+    /**
+     * While NSE's market hours, or MCX's while something is held there or an armed MCX arm is inside its entry minutes (the
+     * brain's flags are its entry brake): every [REFRESH_MS]; else asleep (null). Battery (14 Oct): MCX's hours alone (an
+     * arm switched on, nothing held, outside its minutes) no longer keep it running every 10 s to 23:30.
+     */
     fun refreshDelay(lastRunMs: Long): Long? {
         val open = runCatching { Market.isTradingDay() && Market.minuteNow() in Market.OPEN - 15..Market.foClose() + 15 }.getOrDefault(false) ||
-            runCatching { McxMarket.isOpen() }.getOrDefault(false)
-        if (!open) return null
-        return (REFRESH_MS - (System.currentTimeMillis() - lastRunMs)).coerceIn(0L, REFRESH_MS)
+            runCatching { com.optionslab.ira.McxRest.brainCounts(McxMarket.isOpen(), McxMarket.heldQuick(), McxPaperArms.inEntryMinutesQuick()) }.getOrDefault(false)
+        if (open) return (REFRESH_MS - (System.currentTimeMillis() - lastRunMs)).coerceIn(0L, REFRESH_MS)
+        val pending = runCatching { com.optionslab.app.ira.JarvisLearning.pendingToday() }.getOrDefault(false)
+        if (!nightlyRetry(pending, runCatching { Market.minuteNow() }.getOrDefault(0))) return null
+        return (NIGHTLY_RETRY_MS - (System.currentTimeMillis() - lastRunMs)).coerceIn(0L, NIGHTLY_RETRY_MS)
     }
+
+    /**
+     * Review, 14 Oct: after the close, while Jarvis's nightly pass is still due ([pending]), the brain looks every
+     * [NIGHTLY_RETRY_MS] until 23:30, so the nightly passes (his learning, the shared knowledge's bundle, Autopilot) run once
+     * the battery budget allows them (before the battery fix, MCX's evening kept it looking every 10 s).
+     */
+    internal fun nightlyRetry(pending: Boolean, minute: Int): Boolean = pending && minute in 15 * 60 + 45 until 23 * 60 + 30
+
+    /** How often the brain looks for the nightly passes after the close while they are still due. */
+    const val NIGHTLY_RETRY_MS = 5 * 60_000L
 
     /**
      * One look (the brain's worker, a worker thread): the regimes from the cash indices' last 30 minutes (the move recorder's
@@ -477,6 +494,8 @@ object SmartWorkers {
                     // The order review first (12 Oct): its recurring flaws are one of the agents' records Jarvis learns from tonight.
                     runCatching { OrderReviewHost.runIfDue(context) }
                     runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
+                    // The shared knowledge rebuilt with tonight's lessons, and the lessons bundle for the research (13 Oct).
+                    runCatching { SharedKnowledgeHost.nightly(context) }
                     runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
                 } finally { nightlyRunning.set(false) }
             }
@@ -786,6 +805,7 @@ object SmartWorkers {
         feed(15, now).ifEmpty { listOf("none standing") }.forEach { out += "    $it" }
         runCatching { TradeManagerHost.diagLines() }.getOrDefault(emptyList()).forEach { out += "  $it" }
         if (com.optionslab.app.ira.JarvisLearning.enabled()) runCatching { out += "  " + com.optionslab.app.ira.JarvisLearning.diagLine() }
+        if (SharedKnowledgeHost.enabled()) runCatching { out += "  " + SharedKnowledgeHost.diagLine() }
         if (com.optionslab.app.ira.Autopilot.enabled()) runCatching { out += "  " + com.optionslab.app.ira.Autopilot.diagLine() }
         return out
     }

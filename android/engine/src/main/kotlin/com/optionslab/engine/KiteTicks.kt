@@ -47,6 +47,8 @@ object KiteTicks {
         val lastTradeTime: Long? = null,
         /** The five best bids and offers (full mode only; null otherwise): the order flow's book. */
         val depth: Depth? = null,
+        /** The day's average traded price, Zerodha's VWAP (quote and full mode; null otherwise; 12 Oct: the tick zone's exact VWAP). */
+        val avgPrice: Double? = null,
     ) {
         val changePct: Double get() = if (close > 0) (last - close) / close else 0.0
     }
@@ -123,7 +125,7 @@ object KiteTicks {
                     oi = if (p.size == 184) int(48) else 0, bid = bid, ask = ask,
                     exchangeTime = if (p.size == 184) int(60) else null, bidQty = bidQty, askQty = askQty,
                     buyQty = int(20), sellQty = int(24), lastQty = int(8),
-                    lastTradeTime = if (p.size == 184) int(44) else null, depth = depth,
+                    lastTradeTime = if (p.size == 184) int(44) else null, depth = depth, avgPrice = px(12).takeIf { it > 0 },
                 )
             }
             else -> null

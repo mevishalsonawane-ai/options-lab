@@ -115,8 +115,11 @@ object KiteStream {
         if (wants[owner] == set) return
         if (set.isEmpty()) wants.remove(owner) else wants[owner] = set
         resubscribe()
-        // The order flow's instruments ride along with the stream; they never wake it or keep it running by themselves.
-        if (set.isNotEmpty() && owner != "index" && owner != OrderFlowLive.OWNER) wake()
+        // The order flow's and the tick zone's instruments ride along with the stream; they never wake it or keep it running
+        // by themselves (12 Oct: the tick zone records only while something else has the stream on; 14 Oct: the OI-wall shadow
+        // log's one option too).
+        if (set.isNotEmpty() && owner != "index" && owner != OrderFlowLive.OWNER && owner != TickZoneRecorder.OWNER &&
+            owner != OiWallShadowHost.OWNER) wake()
     }
 
     private val touched = ConcurrentHashMap<Long, Long>()
@@ -226,7 +229,7 @@ object KiteStream {
     /** Something reads live prices: the app on screen (or unknown), a part following instruments, a quote asked in the last 3 min. */
     private fun needed(): Boolean {
         if (foreground() != false) return true
-        if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER }) return true
+        if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER && it != TickZoneRecorder.OWNER && it != OiWallShadowHost.OWNER }) return true
         // The big-move recorder (on by default): kept on 09:15 to F&O's close, never in battery saver ([OrderFlowLive.keepStreamOn]).
         if (runCatching { OrderFlowLive.keepStreamOn() }.getOrDefault(false)) return true
         wanted()                                          // drops touches older than 3 minutes
@@ -482,6 +485,41 @@ object KiteStream {
         if (s != null) runCatching { OrderTiming.clock(now, s) }
     }
 
+    /**
+     * Memory trim (audit, 14 Oct, item 7): the paths and the candles grew with every instrument streamed today and were never
+     * let go. Dropped now: the tick paths of instruments nothing follows any more, and the candles of those quiet for two
+     * hours ([com.optionslab.ira.LiveCandles.IDLE_SEC]). What anything follows now - the open positions, the live exits, the
+     * armed arms' indices, every subscribed or recently quoted instrument - is never touched, however quiet. Memory only (a
+     * background thread; the socket thread's next tick simply starts a new path). Returns (paths, candles) dropped.
+     */
+    fun pruneIdle(nowMs: Long = System.currentTimeMillis()): Pair<Int, Int> {
+        val keep = followedNow()
+        var paths = 0
+        val it = this.paths.keys.iterator()
+        while (it.hasNext()) {
+            val t = it.next()
+            // Looked at again just before it goes (review, 14 Oct): one followed this very moment keeps its path.
+            if (t !in keep && !followsNow(t)) { it.remove(); paths++ }
+        }
+        val candles = runCatching { candles.prune(keep, nowMs / 1000) }.getOrDefault(0)
+        return paths to candles
+    }
+
+    /** Everything followed now: every part's instruments, the ones just quoted, and every subscribed one (memory only). */
+    fun followedNow(): Set<Long> {
+        val keep = HashSet<Long>(MoveRecorder.INDEX_TOKENS.keys)
+        for (v in wants.values) keep.addAll(v)
+        keep.addAll(touched.keys)
+        synchronized(subscribed) { keep.addAll(subscribed) }
+        return keep
+    }
+
+    private fun followsNow(t: Long): Boolean = t in MoveRecorder.INDEX_TOKENS || touched.containsKey(t) || wants.values.any { t in it } ||
+        synchronized(subscribed) { t in subscribed }
+
+    /** The instruments with a tick path and with candles kept (the trim's figures; memory only). */
+    fun keptCounts(): Pair<Int, Int> = paths.size to candles.instruments()
+
     /** The last tick for [token] as it arrived (the exchange's stamp and the phone's arrival time), however old. */
     fun seen(token: Long): Seen? = ticks[token]
 
@@ -510,10 +548,16 @@ object KiteStream {
      */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
-        ticks.clear(); paths.clear(); candles.clear()
+        ticks.clear(); paths.clear(); candles.clear(); touched.clear()
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF
+    }
+
+    /** TEST ONLY: the instruments a price read keeps the stream awake for now (Battery, 14 Oct). Throws unless BuildConfig.DEBUG. */
+    internal fun touchedForTest(): Set<Long> {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        return touched.keys.toSet()
     }
 
     /** TEST ONLY: a text frame as if the socket had brought it (an order update). Throws unless BuildConfig.DEBUG. */

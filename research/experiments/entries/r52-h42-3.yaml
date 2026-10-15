@@ -1,0 +1,37 @@
+id: r52-h42-3
+title: 'R52 re-test on Nov 2024+: H42-3 MIDCP 14:00 early-extreme fade'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H42-3 (old verdict: Q0176 pre +69/day, hold 80 tr -55/day (gross +15); Q0177 pre +108,
+  hold 90 tr -23/day (gross +65)) makes money net of real costs on the recent market (Nov 2024+) at its original setting or
+  a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- MIDCPNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''qid'': ''Q0176''} | ITM1/near | exits stop_pts=20.0,tgt_pts=25.0,time_stop=30,time_gain=None | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 120 trades, win 52%, net Rs +36,889 (Rs +109/day), worst day Rs -2,870, max DD Rs -15,224, p
+    1.000 (coin-flip p 0.001); walk-forward Rs +35,917. Re-tune pick g01 ({''qid'': ''Q0177''} · ITM1/near · exits default):
+    design 108 trades, win 61%, net Rs +59,543 (Rs +177/day), worst day Rs -6,909, max DD Rs -28,651, p 1.000 (coin-flip p
+    0.001); walk-forward Rs +19,230. FINAL original: 39 trades, win 46%, net Rs -5,368 (Rs -41/day), worst day Rs -2,777,
+    max DD Rs -17,130, p 1.000 (coin-flip p 0.407), q 1.00 -> too few trades to judge. FINAL pick: 51 trades, win 43%, net
+    Rs -13,496 (Rs -102/day), worst day Rs -6,495, max DD Rs -28,276, p 1.000 (coin-flip p 0.586), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = Q0176 as pre-registered for h42''s holdout (prereg.json: day high
+  made in the first 15 min at 14:00 -> PE, 1-ITM near, +25 / -20 pts, 30 min). Q0177 (early low -> CE, out 15:10, also pre-registered)
+  is the key''s other half: one exit menu cannot carry both, so it is g01 and both questions'' exits fill the grid (h42''s
+  38-exit menu, fixed random subset).. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades,
+  top-5 < 100% of net, design walk-forward > 0.'

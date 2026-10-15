@@ -1,0 +1,27 @@
+id: h46
+title: VWAP reject (EMA9 vs VWAP)
+family: outside-strategies
+date: '2026-10-11'
+doc: research/HUNT_H46.md
+hypothesis: The VWAP reject strategy pays.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- EMA9
+- VWAP
+model_or_rule: as described
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h46/PREREG.md
+variants_tried: null
+results:
+  summary: Gross a coin flip; loses Rs 75-155 a trade after costs.
+  costs: real costs
+holdout_read: true
+verdict: rejected
+backfilled: true

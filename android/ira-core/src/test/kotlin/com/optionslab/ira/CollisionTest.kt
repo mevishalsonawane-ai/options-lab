@@ -199,6 +199,7 @@ class CollisionTest {
         "TradeCase" to { q -> TradeCase.asked(q) },
         "Scenarios" to { q -> Scenarios.asked(q) != null },
         "Causes" to { q -> Causes.asked(q) != null },
+        "Knowledge" to { q -> Knowledge.asked(q) },
         "MarketDays" to { q -> MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null },
         // The account's own sections, in Account.sections' precedence (STREAKS is set last, then NEED; each wins over HEALTH).
         "Account:NUMBERS" to { q -> MyNumbers.asked(q) },
@@ -911,6 +912,13 @@ class CollisionTest {
         "what is the fii long short ratio" to "MorningCues", "fii ka position kya hai" to "MorningCues", "fii kya kar rahe hain" to "MorningCues",
         "are fiis long or short" to "MorningCues", "fii index futures position" to "MorningCues", "morning cues" to "MorningCues",
         "pre market cues" to "MorningCues",
+        // ---- Knowledge: the research's findings, strategy cards and h42 answers (L5 Level 4; market knowledge, nothing acts) ----
+        "how does banknifty behave on expiry after a gap down" to "Knowledge", "what did research say about ORB" to "Knowledge",
+        "is liquidity profitable" to "Knowledge", "research kya kehta hai liquidity ke baare me" to "Knowledge",
+        "is selling straddles profitable" to "Knowledge", "does the supertrend strategy make money" to "Knowledge",
+        "what did the study find about big candles" to "Knowledge", "is expiry hero profitable" to "Knowledge",
+        "does machine learning work for option buying" to "Knowledge", "what did research find about orb re-entries" to "Knowledge",
+        "is there an edge in gap fills" to "Knowledge", "liquidity munafa deta hai kya" to "Knowledge",
         // ---- MajorityRule: Majority Rule 14 on weekly NIFTY (research R13; context only, never a trade) ----
         "what about majority rule" to "MajorityRule", "what about the majority rule" to "MajorityRule", "majority rule 14" to "MajorityRule",
         "MR 14" to "MajorityRule", "what is MR14 now" to "MajorityRule", "is nifty in the sell-off zone" to "MajorityRule",
@@ -1628,9 +1636,9 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "SelfTalk", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroTicketTalk", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "GammaMorning", "OiWallBlast", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
-        "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
+        "TradeCase", "Scenarios", "Causes", "Agenda", "Improve", "Knowledge")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
         val hub = java.io.File("../app/src/main/java/com/optionslab/app/ira/IraHub.kt").takeIf { it.isFile }?.readText() ?: return

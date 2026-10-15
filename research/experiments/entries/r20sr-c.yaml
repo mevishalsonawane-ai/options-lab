@@ -1,0 +1,34 @@
+id: r20sr-c
+title: R20b (c) an opening-range break is taken only when the close also clears the nearest ALL level within 0.5 x ATR14 beyond
+  the edge
+family: orb
+date: '2026-10-13'
+doc: research/HUNT_R20B_SR_RANGE.md
+hypothesis: The ORB arm with this level rule nets money on BANKNIFTY (app fills and fees, as the ORB studies) (holdout daily net > 0 and beats a
+  random-level twin after BH over R20b's 14 + R20's 14 tests) and beats the plain 09:15-10:00 rule.
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
+  NSE F&O bhavcopy (previous-day OI); Yahoo daily ^INDIAVIX for gaps
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY < 2025-10-13 (after 15 sessions for ATR14)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- 5-minute index bars
+- opening-range high/low
+- ATR14 (14 sessions before the day)
+- support/resistance levels (see prereg)
+model_or_rule: ORB arm (1 lot, 1 entry a side a day, -40/+40 premium points, ladder, 15:10); plain range; break confirmed
+  by clearing the nearest level in [edge, edge+0.5xATR14]
+settings: research/hunt/r20b/PREREG.md
+prereg: research/hunt/r20b/PREREG.md
+variants_tried: 1
+results:
+  summary: 'BANKNIFTY design (361 sessions): 250 trades, net Rs -13,266 (V0 Rs -14,772), blocks [-380, -10385, -4263, 1763],
+    G1 fail, G2 fail. Holdout (122 sessions): 85 trades, net Rs -22,075 (V0 Rs -10,965), t-test p 1.00, random-level twin
+    p 0.96; nothing survives BH over 28 tests (R20 + R20b). NIFTY (replication): design Rs -17,674, holdout Rs -642. FAILED.'
+  costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
+holdout_read: true
+verdict: rejected
+notes: One of 7 R20b variants (BH family of 28 holdout tests with R20's 14, random-level twins).

@@ -1,0 +1,35 @@
+id: r52-obuy-gc-14
+title: 'R52 re-test on Nov 2024+: OBUY_GC-14 BTST strong close (overnight)'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_GC-14 (old verdict: Paper control only. IS best +318k (1,236 tr, 7/7; 2024 +4.1k,
+  2025 +0.7k); WF -42.4k (863) 3/5, 2026 -111.6k; SPA 0.93. H4 pick hold -8.5k (rand p 0.23). H31 R04 NIFTY W 10:15: 254 tr
+  +186k, q 0.22) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''filt'': ''strong'', ''mirror'': True, ''skipfri'': False, ''xmin'': 930} | ITM1/near | exits stop_pct=0.3,sq_off=930
+  | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 316 trades, win 42%, net Rs -14,304 (Rs -42/day), worst day Rs -27,005, max DD Rs -65,989, p
+    1.000 (coin-flip p 0.166); walk-forward Rs -12,247. FINAL original: 122 trades, win 47%, net Rs +37,885 (Rs +285/day),
+    worst day Rs -16,874, max DD Rs -53,353, p 0.993 (coin-flip p 0.090), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: in-sample best (strong close, mirrored, out 09:30, ITM1, -30%; skip-Friday
+  off). Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design
+  walk-forward > 0.'

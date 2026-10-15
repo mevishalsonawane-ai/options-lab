@@ -165,4 +165,36 @@ class LiveCandlesTest {
         lc.clear()
         assertNull(lc.latest(tok))
     }
+
+    // ---- memory (audit, 14 Oct 2026, item 7) ----
+
+    @Test fun pruneDropsQuietInstrumentsButNeverTheHeldOrArmedOnes() {
+        val lc = LiveCandles()
+        val held = 111L; val armed = 222L; val quiet = 333L; val busy = 444L; val feedOnly = 555L
+        for (t in listOf(held, armed, quiet)) lc.record(t, 100.0, t0)
+        lc.record(busy, 100.0, t0 + 3 * 3600)
+        lc.reconcile(feedOnly, listOf(bar(t0, 1.0, 1.0, 1.0, 1.0)))
+        assertEquals(5, lc.instruments())
+        val now = t0 + 3 * 3600 + 30
+        // Three hours on: the held and the armed are kept however quiet; the quiet one and the feed-only one go.
+        assertEquals(2, lc.prune(setOf(held, armed), now))
+        assertEquals(3, lc.instruments())
+        for (t in listOf(held, armed, busy)) assertNotNull(lc.latest(t), "$t")
+        assertNull(lc.latest(quiet)); assertNull(lc.candle(feedOnly, t0))
+        // Their candles are untouched.
+        assertNotNull(lc.candle(held, t0))
+        // A second prune finds nothing; a dropped one starts afresh at its next tick (its first minute partial).
+        assertEquals(0, lc.prune(setOf(held, armed), now))
+        lc.record(quiet, 101.0, now)
+        assertFalse(lc.candle(quiet, LiveCandles.minuteOf(now) * 60)!!.whole)
+    }
+
+    @Test fun pruneKeepsAnythingTickedInTheLastTwoHours() {
+        val lc = LiveCandles()
+        lc.record(tok, 100.0, t0)
+        assertEquals(0, lc.prune(emptySet(), t0 + LiveCandles.IDLE_SEC))
+        assertEquals(1, lc.prune(emptySet(), t0 + LiveCandles.IDLE_SEC + 1))
+        // Nothing at all: nothing to do.
+        assertEquals(0, LiveCandles().prune(emptySet(), t0))
+    }
 }

@@ -103,6 +103,40 @@ class LiquidityTestCardTest {
         assertEquals(listOf(true), set)
     }
 
+    @Test fun bossesTrailSwitchIsOffSaysItFailedAndFlipsInOneTap() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val set = ArrayList<Boolean>()
+        var state = LiquidityFreeze.State()
+        compose.setContent { IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
+            LiquidityTrailRow(state) { set += it }
+        } } }
+        compose.waitForIdle()
+        assertTrue(shows("failed research, your choice", sub = true))
+        assertTrue(shows("off. Liquidity trades on plain rules.", sub = true))
+        assertTrue(shows("12 of 13 big winners", sub = true))
+        // What it costs the plain-rules record, said before the tap.
+        assertTrue(shows(LiquidityFreeze.TRAIL_RECORD))
+        compose.onNodeWithTag("lab-liq-trail-record").assertExists()
+        compose.onNodeWithText(LiquidityFreeze.TRAIL_ON).performClick()
+        compose.waitForIdle()
+        assertEquals("one tap on, no PIN (paper only)", listOf(true), set)
+    }
+
+    @Test fun bossesTrailSwitchWhenOnSaysPaperOnlyAndGoesBackInOneTap() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val set = ArrayList<Boolean>()
+        compose.setContent { IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
+            LiquidityTrailRow(LiquidityFreeze.State(trail = true)) { set += it }
+        } } }
+        compose.waitForIdle()
+        assertTrue(shows("ON for new Liquidity PAPER trades", sub = true))
+        assertTrue(shows("live trades never use it", sub = true))
+        assertTrue(shows("so the plain-rules record (used for the 26 Oct decision) does not grow", sub = true))
+        compose.onNodeWithText(LiquidityFreeze.TRAIL_OFF).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(false), set)
+    }
+
     @Test fun afterTheTenthDayNoButton() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         compose.setContent { IraAlgoTheme("light") { Column { LiquidityFreezeRow(LiquidityFreeze.State(), LocalDate.of(2026, 11, 2)) {} } } }

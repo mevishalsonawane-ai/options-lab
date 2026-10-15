@@ -285,6 +285,7 @@ object VixDivArm {
         // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(VixDivRules.SOURCE, u, sig.side, false, "$today ${hhmm(sig.check)}", right.name, contract = c)
         if (flow.skip) return Decision(true, flow.pausedWhy?.let { "vix_$it ($said)" } ?: "vix_${FlowGate.SKIPPED} ($said)")
+        runCatching { LiveRecorder.signal(VixDivRules.LABEL, c.symbol, u, right.name, q?.ltp, paper = true) }
         val r = Paper.place(c, "BUY", VixDivRules.LOTS, "MARKET", "MIS", null, null)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
@@ -298,6 +299,9 @@ object VixDivArm {
             Paper.place(c, "SELL", VixDivRules.LOTS, "SL-M", "MIS", null, VixDivRules.stop(fill.price, vp.stopPct))
         }.getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · stop") } }
         b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
+        // R17 shadow (I3 / I5): the charges check and smart stop noted beside the trade (memory only; nothing changes).
+        runCatching { PreTradeShadow.vixDiv("${VixDivRules.SOURCE}_${u.lowercase()}", "${VixDivRules.LABEL} $u", index, c, fill.price, fill.quantity, now,
+            if (VixDivRules.liquidityExit(u)) fill.price - VixDivRules.stop(fill.price, vp.stopPct) else null) }
         val exits = if (VixDivRules.liquidityExit(u)) "stop %.2f on the low, out after %d min unless +5%%, else 15:10".format(Locale.ENGLISH,
                 VixDivRules.stop(fill.price, vp.stopPct), vp.minutes)
             else "held to 15:10"
@@ -373,9 +377,9 @@ object VixDivArm {
 
     private fun closed(b: Book, p: Pos) {
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
-        note(b, "${p.symbol}: sold (${p.why}) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)))
+        note(b, "%s: sold (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0), Notifier.SELL, "${VixDivRules.LABEL} sold ${p.symbol} · Paper",
-            "Sold (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
+            "Sold (%s) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
     }
 
     /** For tests: the book forgotten (its file goes with the test's directory). */

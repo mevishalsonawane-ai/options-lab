@@ -1,0 +1,35 @@
+id: r51-r44-donchian20-rt
+title: 'R51 R44-donchian20-RT: donchian20 re-tune: exits A/B/C x ATM / 1-ITM'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this re-tune makes money after real costs on one held contract (gates:
+  final net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (5-min)'
+model_or_rule: 'donchian20 re-tune: exits A/B/C x ATM / 1-ITM'
+settings: research/hunt/r51/fam_r44.py (donchian20|B|m1)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 6
+results:
+  summary: 'design 4517 trades, win 45%, net Rs 33,681 (Rs 100/day), avg win Rs 1,704 / loss Rs -1,368, worst day Rs -54,846,
+    max DD Rs 207,301, without top 5 Rs -19,626; chosen donchian20|B|m1; walk-forward out-of-fold Rs 181,820 on 3274 trades.
+    final test (1 Apr - 13 Oct 2026, read once) 1775 trades, win 44%, net Rs 48,689 (Rs 366/day), avg win Rs 1,567 / loss
+    Rs -1,188, worst day Rs -23,012, max DD Rs 92,452, without top 5 Rs 5,845; twin p 0.002, BH q 0.025: PASS. OLD: R44 (2021
+    - Oct 2026, 5 indices + CRUDEOIL): out of sample 0 of 14 strategy-side combinations positive, 0 of 112 cells pass; EMA8/21+ADX15
+    alone -Rs 8.3 lakh on 9,455 NSE trades'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: paper-only

@@ -1,0 +1,30 @@
+id: r45-t0
+title: 'Premium scalp audit T0: their rule as reproduced (rolling ATM call, WEEK + MONTH pooled, band across sessions, Rs
+  95, lot 75)'
+hypothesis: Their rule, reproduced on the lake, makes money.
+instruments:
+- NIFTY
+features:
+- 5-minute ATM call premium
+- Bollinger(20, 2) lower band
+model_or_rule: their rule as reproduced (rolling ATM call, WEEK + MONTH pooled, band across sessions, Rs 95, lot 75)
+variants_tried: 1
+results:
+  summary: Design 2843 trades, win 59.8%, Rs +264.4/trade, net Rs +751,769, PF 1.7, green months 51/57, max DD Rs 25,937,
+    worst month Rs -19,982; by year 2021 +384 (n 244), 2022 +323 (n 575), 2023 +347 (n 626), 2024 +177 (n 640), 2025 +241
+    (n 601), 2026 -21 (n 157); random-entry twins Rs -189.7/trade, p 0.0033, BH q 0.0055 (family 20). Holdout 265 trades,
+    Rs +117.6/trade, PF 1.3. The rolling ATM strike moved during 68.6% of the trades.
+  costs: Rs 95/trade (T0) or research/obuy Costs('dated') with 0 / 0.5 / 1% slippage a side, as named
+holdout_read: true
+verdict: rejected
+notes: 'SIGNAL SOURCE: the option''s own price chart (not the default kind of rule; only Boss can switch it on for paper).'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R45_PREMIUM_SCALP_AUDIT.md
+data_version: Drive lake gdrive:IraAlgo-data-lake/options_rolling_1m, opt_{NIFTY,BANKNIFTY}_{WEEK,MONTH}_2021-2026 (1-minute
+  rolling ATM+-10, Aug 2021 - 13 Oct 2026)
+period:
+  design: sessions Aug 2021 - 13 Apr 2026 (each year its own out-of-sample block; nothing fitted)
+  holdout: 27 Apr - 13 Oct 2026, read once (14-26 Apr embargo)
+prereg: research/hunt/r45/PREREG.md
+settings: research/hunt/r45/r45cfg.py

@@ -1,0 +1,27 @@
+id: r6
+title: Gann/Fib/magic numbers on MCX
+family: mcx-crypto
+date: '2026-10-09'
+doc: research/HUNT_R6_MCX_GANN_FIB.md
+hypothesis: R4's topics pay on MCX.
+data_version: see doc (backfilled at summary level)
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- special levels
+model_or_rule: option buys and mini futures
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/r6/PREREG.md
+variants_tried: null
+results:
+  summary: None makes money; a small silver round-number effect only.
+  costs: real costs
+holdout_read: true
+verdict: rejected
+backfilled: true

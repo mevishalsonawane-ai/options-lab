@@ -38,6 +38,8 @@ object LiquidityNotice {
         /** The option's resting stop (15% under the fill) and the index stop's points (BANKNIFTY 30, FINNIFTY 15, MIDCPNIFTY 8). */
         val stop: Double?, val indexStopPoints: Double,
         val timeStopMinutes: Long = 20, val timeStopGain: Double = 0.05,
+        /** A paper trade's rules ([com.optionslab.engine.orb.LiquidityTrail.label]: "plain rules" / "with ₹500 trail"); null: not said. */
+        val label: String? = null,
     ) {
         val side: Int get() = if (right == "PE") -1 else 1
     }
@@ -50,6 +52,8 @@ object LiquidityNotice {
         /** The whole trade's P&L before charges, and its charges (both sides). */
         val gross: Double, val charges: Double,
         val tally: Tally,
+        /** As [Entry.label]. */
+        val label: String? = null,
     ) {
         val side: Int get() = if (right == "PE") -1 else 1
         val net: Double get() = gross - charges
@@ -75,7 +79,7 @@ object LiquidityNotice {
         val by = e.time.plusMinutes(e.timeStopMinutes)
         val gain = "%.0f".format(Locale.ENGLISH, e.timeStopGain * 100)
         val time = "Time stop: out at ${hm(by)} unless up $gain%" + (if (hide) "" else " (${px(e.fill * (1 + e.timeStopGain))})")
-        return Said(title, first, listOf(first, levels, stops, time))
+        return Said(title, first, listOfNotNull(first, levels, stops, time, e.label?.let { "Rules: $it" }))
     }
 
     fun exit(x: Exit, hide: Boolean): Said {
@@ -89,7 +93,7 @@ object LiquidityNotice {
             else "P&L ${signed(x.net)} after ${rupees(x.charges)} charges" + (x.lots?.takeIf { it > 0 }?.let { " (${signed(x.net / it)} a lot)" } ?: "")
         val tally = "Today's Liquidity: ${x.tally.trades} trade${if (x.tally.trades == 1) "" else "s"}, ${x.tally.won} won" +
             (if (hide) "" else ", net ${signed(x.tally.net)}")
-        return Said(title, reason, listOf(reason, prices, pnl, tally))
+        return Said(title, reason, listOfNotNull(reason, prices, pnl, tally, x.label?.let { "Rules: $it" }))
     }
 
     /** "Skipped: BankNifty 5-min break of 54,180 — only 22 pts to the next level (needs 30)". No rupee figure in it. */
@@ -110,6 +114,7 @@ object LiquidityNotice {
         "session_end", "backstop_square_off" -> "end of day"
         "operator_stop" -> "stopped for today"
         "closed_by_you" -> "closed by you"
+        com.optionslab.engine.orb.LiquidityTrail.WHY -> "₹500 trail"
         else -> why.replace('_', ' ')
     }
 
@@ -128,6 +133,7 @@ object LiquidityNotice {
             "backstop_square_off" -> "End of day: squared off by the account"
             "operator_stop" -> "You stopped the strategies for today"
             "closed_by_you" -> "Closed by you"
+            com.optionslab.engine.orb.LiquidityTrail.WHY -> "₹500 trail: the option gave back ₹500 a lot from its best (your paper choice)"
             else -> "Exit: ${x.why.replace('_', ' ')}"
         }
     }

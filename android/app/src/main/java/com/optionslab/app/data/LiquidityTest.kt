@@ -11,6 +11,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.getAndUpdate
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -24,6 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * object's own background scope, in noBackupFilesDir (never in a backup, so a restore cannot unfreeze anything or bring back
  * an old stop): the state as a few plain lines, the fills as encrypted lines (Vault), at most [FillQuality.KEEP].
  * Until the state is read from its file it is the default - frozen, nothing re-enabled - which can only hold changes back.
+ * Every change to the state is one atomic step on its flow ([update]; 13 Oct review: a plain read-then-write could lose a
+ * change made at the same moment by another thread) - never a lock, so nothing on the order or tick path waits.
  */
 object LiquidityTest {
     private const val STATE = "liquidity_test.txt"
@@ -55,7 +59,8 @@ object LiquidityTest {
             if (loaded) return
             val d = dir ?: return
             val s = runCatching { File(d, STATE).takeIf { it.isFile }?.readText() }.getOrNull()
-            if (_state.value == LiquidityFreeze.State()) _state.value = LiquidityFreeze.decode(s)
+            // Only over the defaults: a change made before the file was read is kept (atomic: never over one made meanwhile).
+            _state.compareAndSet(LiquidityFreeze.State(), LiquidityFreeze.decode(s))
             val kept = runCatching {
                 File(d, FILLS).takeIf { it.isFile }?.readLines(Charsets.US_ASCII).orEmpty().mapNotNull { l ->
                     if (l.isBlank()) null else runCatching {
@@ -89,31 +94,52 @@ object LiquidityTest {
 
     /** Boss's choice from the Strategy lab card: unfrozen (automatic changes that lower risk may apply again) or frozen again. */
     fun setUnfrozen(unfrozen: Boolean): String {
-        _state.value = _state.value.copy(unfrozen = unfrozen)
+        _state.update { it.copy(unfrozen = unfrozen) }
         saveSoon()
         runCatching { Diag.record("liquidity", "Liquidity BANKNIFTY ${if (unfrozen) "unfrozen" else "frozen again"} for its paper test (by you)") }
         return if (unfrozen) "Liquidity BANKNIFTY unfrozen: the strategy lab, Autopilot and the regime lessons may change it again (only ever lowering risk by themselves)."
             else "Liquidity BANKNIFTY frozen for its paper test until ${LiquidityFreeze.UNTIL.dayOfMonth} Oct: automatic changes only record."
     }
 
+    /**
+     * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail]; from +Rs 1,000
+     * a lot since R19c; research R19b and R19c failed, so it is their choice and off by default). Memory only: the order path
+     * reads it at a paper entry.
+     */
+    fun trailOn(): Boolean = _state.value.trail
+
+    /**
+     * Boss's switch from the Strategy lab card (one tap on, one tap off): new paper entries carry the trail or plain rules;
+     * open trades keep the rule they entered with. Live trades never use it. Said back and kept in the diagnostics.
+     * When it really changes, it is also logged in the Autopilot change timeline as Boss's own choice
+     * ([com.optionslab.app.ira.Autopilot.logBossTrail]: shown to Boss, undone in one tap, never counted as Autopilot's change);
+     * [log] false: that Undo itself flipping it back, which is not logged again.
+     */
+    fun setTrail(on: Boolean, log: Boolean = true): String {
+        val was = _state.getAndUpdate { it.copy(trail = on) }.trail
+        saveSoon()
+        val said = LiquidityFreeze.trailSaid(on)
+        runCatching { Diag.record("liquidity", "$said (by you${if (log) "" else ", undone from the change timeline"})") }
+        if (log && was != on) runCatching { com.optionslab.app.ira.Autopilot.logBossTrail(on) }
+        return said
+    }
+
     /** Boss's tick: he watched the first live trade with the app open (or took the tick back). */
     fun setWatched(watched: Boolean) {
-        _state.value = _state.value.copy(watched = watched)
+        _state.update { it.copy(watched = watched) }
         saveSoon()
     }
 
     /** Live entries re-enabled by Boss with his PIN ([OrbArms.reenableLiquidityLive]): the stop rule counts from [atMs]. */
     internal fun resetStop(atMs: Long) {
-        _state.value = _state.value.copy(stopResetAtMs = atMs, stopTold = "")
+        _state.update { it.copy(stopResetAtMs = atMs, stopTold = "") }
         saveSoon()
     }
 
     /** The stop [key] told once; false when it already was. Memory first, written in the background. */
     internal fun markStopTold(key: String): Boolean {
-        synchronized(lock) {
-            if (_state.value.stopTold == key) return false
-            _state.value = _state.value.copy(stopTold = key)
-        }
+        val before = _state.getAndUpdate { if (it.stopTold == key) it else it.copy(stopTold = key) }
+        if (before.stopTold == key) return false
         saveSoon()
         return true
     }

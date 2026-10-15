@@ -1,0 +1,44 @@
+id: r50b-hero-1000-ticket
+title: "Boss's Hero Rs 1,000 ticket (paper arm, Boss's choice): its exact rules measured on R50's data"
+family: calendar-events
+date: '2026-10-15'
+doc: android/engine/src/main/kotlin/com/optionslab/engine/orb/HeroTicketRules.kt
+hypothesis: 'A description (no search), for Boss, of what the paper arm he chose (15 Oct, after R50 found 0 of 28 hero rules
+  pass) would have done on R50''s data with its exact rules - the 12:30 basket''s strike rule (R50 "cheap": nearest-the-money
+  OTM within 5% of spot, Rs 5-30, traded in the last 5 bars, stale-slack) limited to one lot costing at most Rs 1,000, 1 lot
+  a side, Boss''s 25% trail (R50 "tr25"), else 15:05; and the 2x / 3x target options beside the trail.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: opt_NIFTY_WEEK / opt_SENSEX_WEEK 2024-2026, index_1m 2024-2026 (R50''s
+  day pickles rebuilt with research/hunt/r50/r50data.py on branch claude/r50-hero-recent); lake to 13 Oct 2026'
+period:
+  design: NIFTY and SENSEX expiry days 20 Nov 2024 - 31 Mar 2026 (142 index-expiry-days)
+  holdout: 'R50''s final test 1 Apr - 13 Oct 2026 (55 index-expiry-days): a SECOND look (R50 read it once), so not pristine; reported, never used to choose'
+instruments:
+- NIFTY
+- SENSEX
+features:
+- 'signal source: none (the clock only, 12:30 on the index''s own expiry day)'
+model_or_rule: 'Hero Rs 1,000 ticket: decision on the 1-minute bar closing 12:30, R25 entry (3 minutes, cap min(ref x 1.2
+  + 0.10, Rs 1,000 / lot)), 1 lot CE + 1 lot PE whose ltp x lot <= Rs 1,000; exit tr25 (close <= 0.75 x the best close since
+  the fill sells at the next open), optional target 2x / 3x (fills only when the high trades a tick through and the bar confirms),
+  else 15:05'
+settings: android/engine/src/main/kotlin/com/optionslab/engine/orb/HeroTicketRules.kt (the app arm's constants); the run
+  used R50's engine (r50lib.simulate's fill, path and charge code) in a scratch script, checked against r50lib.simulate tr25
+  on every ticket (0 mismatches)
+prereg: null
+variants_tried: 3
+results:
+  summary: 'Trail only (Boss''s pick): design 252 tickets, 42 winners, net Rs -14,351 on Rs 1,63,126 staked (-Rs 88 per Rs
+    1,000), Rs -28,440 without the top 5; final test 110 tickets, 27 winners, net Rs +3,047 (+Rs 46 per Rs 1,000), Rs -10,144
+    without the top 5 (one NIFTY 23,350 CE on 2 Jun 2026: +Rs 9,073). 2x target + trail: design net Rs -23,318 (19 targets
+    hit), final Rs -5,314. 3x target + trail: design Rs -21,622 (7 hit), final Rs -5,000. Every ticket ended on the trail or
+    the target, none held to 15:05. The 2 Apr 2026 SENSEX 72,500 CE (bought Rs 24.91) is sold by the trail at +Rs 280 (2.8x
+    peak seen before the 25% give-back); R50''s hold-to-15:05 baskets made 26-37x on it. Best on design: trail only.'
+  costs: R50's (charges in force on each date, BSE rates for SENSEX; next-minute fills + 5 bps + 1/2/4-tick half-spread by
+    5-minute volume; exits on a close sell at the next open)
+holdout_read: true
+verdict: rejected
+notes: 'Counted in its family as 3 variants (the three exits) and as a second look at R50''s final test. No search: Boss chose the arm and the trail (15 Oct: "25% trail it is, and 1000 rs worth of lots"); the three exits
+  were run once each. It does not pass R50''s gates (design net < 0, negative without the top 5) and runs on paper only, by
+  Boss''s choice, with its own record. Differences from R50''s cells: R50''s 12:30 basket (O-BASE) decided on the 12:25 bar
+  with a Rs 5,000 budget and a -50% stop; T-LOT used Rs 1-5 tickets. The app arm reads the chain outward until three strikes
+  in a row are under Rs 5 (R50 read the whole 5% band) and books a target gap at the target.'

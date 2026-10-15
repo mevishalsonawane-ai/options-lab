@@ -36,17 +36,27 @@ object Diag {
         return out
     }
 
+    /**
+     * The file could not be read when the lines were last loaded (review, 14 Oct): the lines in memory are only the new ones,
+     * so the file is never written over with them - the next write reads it again and adds them after it.
+     */
+    private var unread = false
+
     @Synchronized
     private fun diary(): ArrayDeque<String> {
         cache?.let { return it }
         val out = ArrayDeque<String>()
-        runCatching {
-            val a = JSONArray(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
-            for (i in 0 until a.length()) out.addLast(a.getString(i))
-        }
+        unread = readInto(out).not()
         cache = out
         return out
     }
+
+    /** The file's lines added to [out]; false when it exists and could not be read (a missing file reads as none). */
+    private fun readInto(out: ArrayDeque<String>): Boolean = runCatching {
+        val a = JSONArray(String(Vault.readFileSteady(file) ?: return true, Charsets.UTF_8))
+        for (i in 0 until a.length()) out.addLast(a.getString(i))
+        true
+    }.getOrDefault(false)
 
     /** One writer thread: a banner shown from the screen's thread never waits on the disk. */
     private val writer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "diag").apply { isDaemon = true } }
@@ -95,15 +105,36 @@ object Diag {
 
     /** Writes the lines kept since the last write (on the writer thread, or the caller's in [flush]). */
     @Synchronized
-    private fun save() {
+    private fun save(): Boolean {
         scheduled = false
-        if (!dirty) return
+        if (!dirty) return true
+        if (unread) {
+            // The earlier read failed: read again and put the new lines after the file's (never the new ones alone over it).
+            val disk = ArrayDeque<String>()
+            if (!readInto(disk)) return false
+            cache?.let { disk.addAll(it) }
+            while (disk.size > MAX) disk.removeFirst()
+            cache = disk; unread = false
+        }
         dirty = false
-        runCatching { Vault.writeFile(file, JSONArray(diary().toList()).toString().toByteArray(Charsets.UTF_8)) }
+        // 14 Oct: a failed write leaves the lines marked unwritten (the next line tries again; a trim never lets them go).
+        return runCatching { Vault.writeFile(file, JSONArray(diary().toList()).toString().toByteArray(Charsets.UTF_8)) }.isSuccess.also { if (!it) dirty = true }
     }
 
     /** Waits for the lines recorded so far and writes them (tests, and the report, read what was just recorded). */
     fun flush() { runCatching { writer.submit(Runnable { save() }).get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+
+    /**
+     * Memory trim (audit, 14 Oct, item 8): the diary's lines in memory (up to [MAX]) written if any are new, then let go; the
+     * next line or report reads the file again. On the diary's own thread (never the caller's, never the main thread).
+     */
+    fun trimMemory() {
+        if (!::file.isInitialized) return
+        runCatching { writer.execute { synchronized(this) { if (runCatching { save() }.getOrDefault(false) && !dirty) cache = null } } }
+    }
+
+    /** Lines held in memory now (0 when let go; the trim's figure). */
+    @Synchronized fun linesInMemory(): Int = cache?.size ?: 0
 
     /** The app is crashing: the lines kept so far written now, on the crashing thread (never throws). */
     fun saveNow() { if (::file.isInitialized) runCatching { save() } }
@@ -135,6 +166,8 @@ object Diag {
         if (com.optionslab.app.BuildConfig.GOLD) append(gold())
         // Battery, round 1: what runs in the background now (listening, the stream, the watch's pace, the AI model, the phone's charge).
         append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
+        // Battery (14 Oct): which background loops ran today and for how long (the evening watch, the recorder, the stream).
+        append(com.optionslab.app.work.BatteryMeter.line()).append('\n')
         // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
         // The settings vault's size (12 Oct): its biggest key classes and the large values kept in their own files - names and
@@ -142,6 +175,13 @@ object Diag {
         append(runCatching { com.optionslab.app.security.SecurePrefs.sizeLine() }.getOrElse { "Settings size: could not read" }).append('\n')
         // The app's own health (11 Oct): stalls today, the last ANR and crash and where, what its tuner slowed now.
         append(runCatching { AppHealth.diagLine() }.getOrElse { "Health: could not read" }).append('\n')
+        // Memory audit (14 Oct): the start-up's order (positions first) and what the last memory trim let go.
+        append(runCatching { PositionsFirst.diagLine() }.getOrElse { "Start-up: could not read" }).append('\n')
+        append("Memory: ").append(runCatching { MemoryTrim.lastLine ?: "no trim in this run" }.getOrDefault("could not read"))
+            .append(runCatching { KiteStream.keptCounts().let { (p, c) -> " · stream memory: $p paths, $c instruments' candles" } }.getOrDefault(""))
+            .append(runCatching { " · research index ${com.optionslab.app.ira.KnowledgeLibrary.madeFrom?.let { "open ($it)" } ?: "not open"}" }.getOrDefault(""))
+            .append(runCatching { OrderFlowLive.droppedTicks().takeIf { it > 0 }?.let { " · order flow dropped $it tick batches" } ?: "" }.getOrDefault(""))
+            .append('\n')
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
         // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')
@@ -168,6 +208,8 @@ object Diag {
             append(runCatching { AppState.line() }.getOrElse { "Shared state: could not read" }).append('\n')
             append("One-index claims standing: ").append(runCatching { AutoExposure.claims().ifEmpty { listOf("none") }.joinToString("; ") }.getOrElse { "could not read" }).append('\n')
         }
+        // GitHub sync (13 Oct): states and dates only - never the token or a key.
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { GitHubSync.diagLine() }.getOrElse { "GitHub sync: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderFlowLive.coverageLine() }.getOrElse { "Order flow: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FlowGate.diagLine() }.getOrElse { "Order flow modes: could not read" }).append('\n')
         // Honest paper (08 Oct): the bid/ask spread paper fills paid today (the "[paper] Stale price" lines below: fills on old prices).
@@ -176,6 +218,7 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { NightArm.diagLine() }.getOrElse { "Night (R3): could not read" }).append('\n')
         // VIX divergence (9 Oct, paper only, not proven): on or off, what it holds, each index's last decision (the "[vix-div]" lines below carry each signal's bid/ask).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { VixDivArm.diagLine() }.getOrElse { "VIX divergence: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { HeroTicketArm.diagLine() }.getOrElse { "Hero ₹1,000 ticket: could not read" }).append('\n')
         // The MCX paper arms (9 Oct, paper only, not proven): on or off, what each holds, its last decision (the "[mcx-arms]" lines below).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }).append('\n')
         // The approved forge ideas on paper (S2, paper only): how many hosted, each one's record (the "[forge-paper]" lines below).
@@ -277,5 +320,5 @@ object Diag {
     }
 
     @Synchronized
-    fun wipe() { cache = null; dirty = false; if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; dirty = false; unread = false; if (::file.isInitialized) file.delete() }
 }

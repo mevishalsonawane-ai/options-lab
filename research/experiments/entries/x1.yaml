@@ -1,0 +1,24 @@
+id: x1
+title: Forward paper tests against the backtests
+family: diagnosis
+date: '2026-10-08'
+doc: research/X1_TODAY_AND_FORWARD.md
+hypothesis: Do forward tests match the replay.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- BANKNIFTY
+features:
+- app logs
+model_or_rule: replay
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Trade counts match; ORB's +5,068 is luck (1.8% of 30-trade stretches).
+  costs: app paper fills and charges
+holdout_read: null
+verdict: not-a-test
+backfilled: true

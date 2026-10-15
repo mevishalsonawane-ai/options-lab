@@ -1,0 +1,32 @@
+date: '2026-10-15'
+doc: research/HUNT_R48_HIGH_WINRATE.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m opt_<UND>_WEEK_2021-2026 (nearest expiry, ATM+-10,
+  held contracts), index_1m, index_daily (to 13 Oct 2026)'
+period:
+  design: entries 1 Nov 2024 - 17 Oct 2025 (amendment 3, Boss)
+  holdout: entries 3 Nov 2025 - 13 Oct 2026, read once (20-31 Oct 2025 embargo)
+prereg: research/hunt/r48/PREREG.md
+settings: research/hunt/r48/r48cfg.py
+id: r48-c08
+family: option-structure
+title: 'R48 candidate 8: BANKNIFTY buy 0-ITM on orb (fade), DTE any, 0930, target +3%, stop -10%, time 30; VIX all, events
+  all'
+hypothesis: This rule, picked by the pre-registered design rule, keeps a >= 60% win rate and makes money on the holdout.
+instruments:
+- BANKNIFTY
+features:
+- index signals as named
+- ATM strike (strike rule)
+model_or_rule: BANKNIFTY buy 0-ITM on orb (fade), DTE any, 0930, target +3%, stop -10%, time 30; VIX all, events all
+variants_tried: 1
+results:
+  summary: 'Design 77 trades, win 76.6%, net Rs +22,446, avg win Rs 768 / avg loss Rs -1,271, worst day Rs -3,323, max DD
+    Rs -6,257. Holdout 70 trades, win 62.9%, net Rs +3,771, avg win Rs 853 / avg loss Rs -1,298, worst day Rs -3,922, max
+    DD Rs -11,160; p_twin 0.096, BH q 0.339, bootstrap p(mean<=0) 0.358. Gates failed: top5, p.'
+  costs: research/obuy Costs('dated') per order per leg (STT on sold premium at the dated rate, exchange, SEBI, stamp, GST,
+    Rs 20); exercise STT on ITM longs left to expire; 5 bps + 1-4 ticks a leg by 5-minute volume, +1 far OTM, x2 on stops;
+    next-minute fills; 1 lot at the dated lot size
+holdout_read: true
+verdict: rejected
+notes: 'SIGNAL SOURCE: the index (index_1m closes / index_daily), the default; the ATM strike (straddle for selling) sets
+  the strike distance; stops and targets on the spread or premium value.'

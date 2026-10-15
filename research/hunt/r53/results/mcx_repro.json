@@ -1,0 +1,211 @@
+[
+ {
+  "check": "M3 EVE NG option design",
+  "gross_per_trade": 200.729695431472,
+  "longs_net_per_trade": 99.69075187701603,
+  "net": 2352.7760066249757,
+  "net_per_day": 9.969389858580406,
+  "net_per_trade": 11.943025414339978,
+  "old": "197 tr, +Rs 47/tr",
+  "trades": 197,
+  "window": "2025-08-05 - 2026-07-07"
+ },
+ {
+  "check": "M3 EVE NG option holdout",
+  "gross_per_trade": 280.46874999999994,
+  "longs_net_per_trade": 207.194844875,
+  "net": 7523.951090875002,
+  "net_per_day": 113.99925895265154,
+  "net_per_trade": 134.35626947991074,
+  "old": "55 tr, +Rs 93/tr",
+  "trades": 56,
+  "window": "2026-07-08 - 2026-10-08"
+ },
+ {
+  "check": "M3 EVE GOLDM future design",
+  "gross_per_trade": 32.13636363636363,
+  "longs_net_per_trade": -811.3404664000002,
+  "net": -84867.149206,
+  "net_per_day": -359.6065644322034,
+  "net_per_trade": -385.75976911818185,
+  "old": "192 tr, +Rs 313/tr",
+  "trades": 220,
+  "window": "2025-08-05 - 2026-07-07"
+ },
+ {
+  "check": "M3 EVE GOLDM future holdout",
+  "gross_per_trade": 537.0370370370371,
+  "longs_net_per_trade": 980.5038995130433,
+  "net": 4498.066202399996,
+  "net_per_day": 68.15251821818175,
+  "net_per_trade": 83.29752226666659,
+  "old": "53 tr, +Rs 143/tr",
+  "trades": 54,
+  "window": "2026-07-08 - 2026-10-08"
+ },
+ {
+  "check": "M3 EVE CRUDEOIL option design",
+  "gross_per_trade": -454.27536231884056,
+  "longs_net_per_trade": -806.635290284737,
+  "net": -136082.5353633,
+  "net_per_day": -576.620912556356,
+  "net_per_trade": -657.4035524797101,
+  "old": "203 tr, -Rs 633/tr",
+  "trades": 207,
+  "window": "2025-08-05 - 2026-07-07"
+ },
+ {
+  "check": "M3 EVE CRUDEOIL option holdout",
+  "gross_per_trade": 520.4249999999995,
+  "longs_net_per_trade": 781.6577469303126,
+  "net": 17935.021617089984,
+  "net_per_day": 271.74275177409066,
+  "net_per_trade": 298.91702695149974,
+  "old": "60 tr, +Rs 303/tr",
+  "trades": 60,
+  "window": "2026-07-08 - 2026-10-08"
+ },
+ {
+  "check": "M3 INORB GOLDM option design",
+  "gross_per_trade": 22.707070707070706,
+  "longs_net_per_trade": -503.07353885466677,
+  "net": -31206.007443159997,
+  "net_per_day": -132.2288450981356,
+  "net_per_trade": -315.2121963955555,
+  "old": "68 tr, +Rs 110/tr",
+  "trades": 99,
+  "window": "2025-08-05 - 2026-07-07"
+ },
+ {
+  "check": "M3 INORB GOLDM option holdout",
+  "gross_per_trade": 164.15254237288136,
+  "longs_net_per_trade": -227.85810207199995,
+  "net": -8341.572235300002,
+  "net_per_day": -126.38745811060609,
+  "net_per_trade": -141.38258025932205,
+  "old": "58 tr, -Rs 67/tr",
+  "trades": 59,
+  "window": "2026-07-08 - 2026-10-08"
+ },
+ {
+  "check": "M3 EVT EIA crude design",
+  "gross_per_trade": -205.95238095238057,
+  "longs_net_per_trade": -481.4590391578937,
+  "net": -16835.20904819998,
+  "net_per_day": -71.3356315601694,
+  "net_per_trade": -400.8383106714281,
+  "old": "41 tr, -Rs 361/tr",
+  "trades": 42,
+  "window": "2025-08-05 - 2026-07-07"
+ },
+ {
+  "check": "M3 EVT EIA crude holdout",
+  "gross_per_trade": 857.857142857143,
+  "longs_net_per_trade": 1123.9548204500002,
+  "net": 8982.5950402,
+  "net_per_day": 136.09992485151514,
+  "net_per_trade": 641.6139314428572,
+  "old": "14 tr, +Rs 645/tr",
+  "trades": 14,
+  "window": "2026-07-08 - 2026-10-08"
+ },
+ {
+  "check": "R2 C2 silver holdout (app rule)",
+  "gross_per_trade": 1187.548717948718,
+  "longs_net_per_trade": 508.3461103405942,
+  "net": 210201.0892308,
+  "net_per_day": 808.4657278107692,
+  "net_per_trade": 1077.9543037476922,
+  "old": "166 tr, +Rs 1,189/tr",
+  "trades": 195,
+  "window": "2025-10-01 - 2026-10-06"
+ },
+ {
+  "check": "R2 C1 NG future holdout",
+  "gross_per_trade": 439.9784482758618,
+  "longs_net_per_trade": 484.1702018230766,
+  "net": 82340.89457499995,
+  "net_per_day": 316.6957483653844,
+  "net_per_trade": 354.91764903017224,
+  "old": "233 tr, +Rs 346/tr",
+  "trades": 232,
+  "window": "2025-10-01 - 2026-10-06"
+ },
+ {
+  "check": "R2 C1 NG option holdout",
+  "gross_per_trade": 540.9090909090909,
+  "longs_net_per_trade": 343.89940366935474,
+  "net": 59392.132202500004,
+  "net_per_day": 228.4312777019231,
+  "net_per_trade": 269.9642372840909,
+  "old": "208 tr, +Rs 181/tr",
+  "trades": 220,
+  "window": "2025-10-01 - 2026-10-06"
+ },
+ {
+  "check": "R2 C3 GOLDTEN holdout",
+  "gross_per_trade": 140.5174825174825,
+  "longs_net_per_trade": 280.164947576,
+  "net": 7709.231925519998,
+  "net_per_day": 29.650892021230764,
+  "net_per_trade": 53.910712765874116,
+  "old": "123 tr, +Rs 126/tr",
+  "trades": 143,
+  "window": "2025-10-01 - 2026-10-06"
+ },
+ {
+  "check": "R2 C3 NG option holdout",
+  "gross_per_trade": 369.140625,
+  "longs_net_per_trade": 94.64559071180558,
+  "net": 11369.48564,
+  "net_per_day": 43.72879092307693,
+  "net_per_trade": 88.8241065625,
+  "old": "116 tr, +Rs 262/tr",
+  "trades": 128,
+  "window": "2025-10-01 - 2026-10-06"
+ },
+ {
+  "check": "R2 C3 CRUDEOILM holdout (R2 exit: close)",
+  "gross_per_trade": 342.8169014084507,
+  "longs_net_per_trade": 182.89781787341775,
+  "net": 37794.64305839999,
+  "net_per_day": 145.3640117630769,
+  "net_per_trade": 266.1594581577464,
+  "old": "141 tr, +Rs 274/tr",
+  "trades": 142,
+  "window": "2025-10-01 - 2026-10-06"
+ },
+ {
+  "check": "R2 C4 XAU lead holdout",
+  "gross_per_trade": -40.94736842105263,
+  "longs_net_per_trade": 234.7296620723404,
+  "net": -37499.825314,
+  "net_per_day": -144.23009736153847,
+  "net_per_trade": -394.73500330526315,
+  "old": "128 tr, +Rs 228/tr",
+  "trades": 95,
+  "window": "2025-10-01 - 2026-10-06"
+ },
+ {
+  "check": "R3 GOLDM 5m ATM AM, Oct 2025 - 8 Oct 2026",
+  "gross_per_trade": 60.71,
+  "longs_net_per_trade": -193.78781502821977,
+  "net": -67913.64705214999,
+  "net_per_day": -259.21239332881674,
+  "net_per_trade": -271.65458820859993,
+  "old": "222 tr, -Rs 274/tr",
+  "trades": 250,
+  "window": "2025-10-01 - 2026-10-08"
+ },
+ {
+  "check": "R6 SILVERMIC swing (both sides) holdout",
+  "gross_per_trade": 269.08677685950414,
+  "longs_net_per_trade": 287.33684306885243,
+  "net": 38376.88670931999,
+  "net_per_day": 146.47666682946561,
+  "net_per_trade": 158.58217648479334,
+  "old": "+Rs 439/day; longs +Rs 833/tr",
+  "trades": 242,
+  "window": "2025-10-01 - 2026-10-08"
+ }
+]

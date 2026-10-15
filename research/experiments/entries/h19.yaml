@@ -1,0 +1,24 @@
+id: h19
+title: Did the ORB arms carry Boss's good days
+family: diagnosis
+date: '2026-10-11'
+doc: research/HUNT_H19.md
+hypothesis: Replay of the arms on recent days.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- BANKNIFTY
+features:
+- app rules replayed
+model_or_rule: replay
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: The old arms did not make the good paper days; they lost on them.
+  costs: app paper fills and charges
+holdout_read: null
+verdict: not-a-test
+backfilled: true

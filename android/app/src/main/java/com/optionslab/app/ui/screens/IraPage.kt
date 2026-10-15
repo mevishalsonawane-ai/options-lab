@@ -198,7 +198,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     var learnedOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = learnedOpen) { learnedOpen = false }
     if (learnedOpen && learnedShown()) {
-        JarvisLearnedSheet(rememberLearnedBook(), onClose = { learnedOpen = false }, goals = rememberLearningGoals())
+        JarvisLearnedSheet(rememberLearnedBook(), onClose = { learnedOpen = false }, goals = rememberLearningGoals(), agents = rememberSharedLines())
         return
     }
     // The phone's Back closes the chat (back to the globe) in Jarvis.
@@ -629,6 +629,12 @@ internal fun VoiceSwitch() {
             }
         }
         Note(com.optionslab.ira.ListenSaver.WHAT + " Alerts and stops never wait on listening.")
+        // Battery (14 Oct): when the wake word is listened for; Always (as before) unless Boss picks another.
+        var listenWhen by remember { mutableStateOf(JarvisVoice.listenWhen) }
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.when") {
+            ListenWhenPicker(listenWhen) { m -> listenWhen = m; JarvisVoice.listenWhen = m }
+        }
+        Note(listenWhen.what + " A question you have started, the Talk button and hold to talk always work; alerts never wait on listening.")
         var hin by remember { mutableStateOf(JarvisVoice.hindi) }
         com.optionslab.app.ui.SettingSpot("jarvis.voice.hindi") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
@@ -1184,7 +1190,7 @@ private fun SoloCard() {
  */
 /** A behaviour with its own switch beneath its group (e.g. Market alerts → skipped Liquidity breaks): on only while the group is. */
 @Composable
-private fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
+internal fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
     val p = LocalPalette.current
     var own by remember { mutableStateOf(com.optionslab.app.ira.Automations.ownSwitch(a)) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 6.dp)) {
@@ -1250,4 +1256,11 @@ private fun AutomationsCard() {
         }
         Note("Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice.")
     }
+}
+
+/** "Listen for 'Jarvis'" (14 Oct): Always (the default), only when unlocked or charging, or market hours only. */
+@Composable
+internal fun ListenWhenPicker(current: com.optionslab.ira.ListenWhen.Mode, onPick: (com.optionslab.ira.ListenWhen.Mode) -> Unit) {
+    val modes = com.optionslab.ira.ListenWhen.Mode.entries
+    ParamTokens("Listen for \"Jarvis\"", modes.map { it.label to (it == current) }) { i -> onPick(modes[i]) }
 }

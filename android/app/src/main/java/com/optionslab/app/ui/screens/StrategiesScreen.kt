@@ -178,6 +178,9 @@ private fun StrategyCard(actions: StrategyActions, e: Strategies.Entry, liveAllo
                 (d.entryTime?.let { " · $it–${d.exitTime}" } ?: ""), style = Type.figure.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
             if (e.running && r != null) Stamp(if (r.mode == RunMode.LIVE) "Live" else "Paper", if (r.mode == RunMode.LIVE) p.oxblood else p.verdigris, animate = false)
         }
+        // 14 Oct (Boss): a signal leg that reads an option's own chart is not the default (signal on the index, then buy the
+        // option); it keeps working as set and is labelled here.
+        com.optionslab.engine.strategy.SignalSource.note(d)?.let { Note(it) }
         if (r != null) {
             LedgerLine("Run", "${r.status.name.lowercase()}${r.stopReason?.let { " · $it" } ?: ""}")
             LedgerLine("P&L", "${rs(r.pnlTotal, true)}  (realised ${rs(r.pnlRealized, true)})", if (r.pnlTotal >= 0) p.verdigris else p.oxblood)

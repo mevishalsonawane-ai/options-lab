@@ -101,7 +101,8 @@ internal object IraDayRecap {
         if (locked) return base.copy(flows = flows, slow = slow.hit)
         // The paper arms: the arms' closed paper trades (a short wait on their lock), Solo (midday)'s own list.
         val closed = bounded(BOOK_MS, slow) { com.optionslab.app.data.OrbArms.closedPaper() }
-        val liqAll = closed?.let { c -> runCatching { com.optionslab.ira.LiquidityRecord.rows(c.map { IraBots.tradeOf(it) }) }.getOrNull() }
+        // The day's trades all listed, those under Boss's opt-in Rs 500 paper trail labelled ([com.optionslab.ira.DayRecap.liquidityLine]).
+        val liqAll = closed?.let { c -> runCatching { com.optionslab.ira.LiquidityRecord.rows(c.map { IraBots.tradeOf(it) }, withTrail = true) }.getOrNull() }
         val heroAll = closed?.filter { it.arm == HeroRules.ARM.source && !it.live && !it.open }
         val soloAll = runCatching { IraSolo.midday(IraSolo.all()) }.getOrNull()
         val soloDays = soloAll?.mapNotNull { t -> runCatching { LocalDate.parse(t.day) }.getOrNull() }

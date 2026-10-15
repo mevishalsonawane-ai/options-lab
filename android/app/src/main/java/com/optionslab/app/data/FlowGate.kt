@@ -91,7 +91,8 @@ object FlowGate {
             cached = m; _modes.value = m
             runCatching { SecurePrefs.putAllSoon(mapOf(K_MODES to FlowShadow.encode(m))) }
         }
-        runCatching { Diag.record("flow", "${st.label}: order flow ${mode.name}" + if (mode == OrderFlow.Mode.CONFIRM) " at $th" else "") }
+        runCatching { Diag.record("flow", "${st.label}: order flow ${mode.name}" + (if (mode == OrderFlow.Mode.CONFIRM) " at $th" else "") +
+            (researchVerdict()?.let { " ($it)" } ?: "")) }
         return when (mode) {
             OrderFlow.Mode.OFF -> "${st.label}: order flow off."
             OrderFlow.Mode.SHADOW -> "${st.label}: the order flow is logged beside each signal; nothing changes."
@@ -145,16 +146,20 @@ object FlowGate {
         // out (size 0) - paper by itself after its shadow days, live only once Boss approved it with the PIN. Memory only; skip only.
         // Asked BEFORE the portfolio guard (review R1): an entry sat out never reaches the guard.
         // Liquidity BANKNIFTY frozen for its paper test (12 Oct): a regime lesson does not sit its entries out (recorded only).
-        val regime = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD && !runCatching { LiquidityTest.frozenKey(key) }.getOrDefault(false))
+        // The event shield (TODO I6, 13 Oct): Boss's "pause paper arms on event days" - OFF by default, SHADOW only logs, ON
+        // skips a PAPER entry on an event day. Memory only; never live, never Liquidity BANKNIFTY while frozen; skip only.
+        val event = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD) runCatching { MarketContext.entry(key, live) }.getOrNull() else null
+        event?.shadow?.let { w -> runCatching { Diag.record("context", "${FlowShadow.strategy(key)?.label ?: key}: paper entry on $underlying - $w (shadow, taken)") } }
+        val regime = if (decide && brake?.block != true && event?.block != true && !com.optionslab.app.BuildConfig.GOLD && !runCatching { LiquidityTest.frozenKey(key) }.getOrDefault(false))
             runCatching { com.optionslab.ira.RegimeParams.overrideToday(key, live, date = Market.today())?.get(com.optionslab.ira.RegimeParams.SIZE_KEY)?.takeIf { it <= 0.0 }
                 ?.let { "sits out today's kind of day (a proven regime lesson; it lowers risk only)" } }.getOrNull() else null
         // The portfolio guard (TODO S12, 11 Oct): correlated arms already in the same way today past the cap - the later entry
         // is skipped for the day. Memory only; it can only skip, and only a decided entry asks it. A let-through is counted as
         // opened only once the entry is taken ([taken], an entered [outcome]), never here.
-        val asked = decide && brake?.block != true && regime == null && !com.optionslab.app.BuildConfig.GOLD
+        val asked = decide && brake?.block != true && event?.block != true && regime == null && !com.optionslab.app.BuildConfig.GOLD
         val portfolio = if (asked) runCatching { PortfolioHost.entry(key, side, live) }.getOrNull() else null
-        val paused = decide && (brake?.block == true || portfolio != null || regime != null)
-        val pauseWhy = if (brake?.block == true) brake?.why else portfolio ?: regime
+        val paused = decide && (brake?.block == true || event?.block == true || portfolio != null || regime != null)
+        val pauseWhy = if (brake?.block == true) brake?.why else if (event?.block == true) event?.why else portfolio ?: regime
         val opens = if (asked && portfolio == null) side else 0
         if (paused) runCatching {
             val label = FlowShadow.strategy(key)?.label ?: key
@@ -407,7 +412,14 @@ object FlowGate {
     }
 
     /** Jarvis's "how is order flow helping?" (reads the log; call off the main thread). */
-    fun helpAnswer(): String = FlowShadow.helpAnswer(refreshRecords())
+    fun helpAnswer(): String = FlowShadow.helpAnswer(refreshRecords()) + (researchVerdict()?.let { " $it" } ?: "")
+
+    /**
+     * The research's verdict on order flow (13 Oct, the shared knowledge: still unproven while the S7 re-test is open), said beside
+     * the log in the answer, the diagnostics and a mode change. Words only; memory only; null before the knowledge is built.
+     */
+    fun researchVerdict(): String? = runCatching { com.optionslab.ira.SharedKnowledge.flowVerdict(SharedKnowledgeHost.snapshot) }.getOrNull()
+        ?.also { SharedKnowledgeHost.read("Order flow", "the research's verdict on order flow (unproven until S7)") }
 
     /** The Diagnostics line: modes set, signals logged. */
     fun diagLine(): String {
@@ -416,7 +428,7 @@ object FlowGate {
         val off = m.filterValues { it.mode == OrderFlow.Mode.OFF }.keys
         return "Order flow modes: SHADOW by default" + (if (confirm.isNotEmpty()) " · CONFIRM ${confirm.joinToString(", ")}" else "") +
             (if (off.isNotEmpty()) " · OFF ${off.joinToString(", ")}" else "") +
-            " · log %,d bytes".format(Locale.ENGLISH, files().sumOf { it.length() })
+            " · log %,d bytes".format(Locale.ENGLISH, files().sumOf { it.length() }) + (researchVerdict()?.let { " · $it" } ?: "")
     }
 
     // ---- tests --------------------------------------------------------------------------------------------------------------

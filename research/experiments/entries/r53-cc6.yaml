@@ -1,0 +1,26 @@
+id: r53-cc6
+title: 'R53: F1C O19 volatility burst in the window, Delta options, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (ATM option, -25% stop + step lock, 120 min) earns after real costs on the recent market only
+  (Boss, 15 Oct).
+data_version: Binance USD-M 1m perps, Deribit DVOL, Binance 5m OI, Delta India 1m option marks
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- CRYPTO
+features:
+- 'signal source: BTC/ETH perp + DVOL (underlying)'
+model_or_rule: ATM option, -25% stop + step lock, 120 min
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Rs. s25_step: design 841 trades net -48,649, walk-forward -97,176; final 290 trades, win 28%, net -34,252 before
+    tax, -56,608 after tax (Delta), p 0.218, q 0.465 -> fail'
+  costs: Delta India fees + 18% GST, RC2 spread model, fills 1 min later; CoinSwitch PRO with/without GST; 31.2% tax per winning
+    trade, TDS as cash flow
+holdout_read: true
+verdict: rejected

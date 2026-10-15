@@ -1,0 +1,35 @@
+id: r52-obuy-search-2
+title: 'R52 re-test on Nov 2024+: OBUY_SEARCH-2 FINNIFTY expiry-day afternoon CE (search rule #3)'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_SEARCH-2 (old verdict: IS 41 tr t 3.81 +836/tr; hold 0 trades (FIN weekly gone))
+  makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- FINNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''atoms'': [''vwap_far_with'', ''ema5_with'', ''expiry_day''], ''side'': 1, ''und'': ''FINNIFTY'', ''window'':
+  ''1200-1430''} | ITM1/near | exits stop_pct=0.35,tgt_pct=0.5,time_stop=120,time_gain=None | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design original: 2 trades, win 100%, net Rs +5,568 (Rs +17/day), worst day Rs +2,554, max DD Rs +0, p 1.000 (coin-flip
+    p 1.000); walk-forward Rs +5,568. Re-tune pick g05 ({''und'': ''FINNIFTY'', ''side'': 1, ''atoms'': (''vwap_far_with'',
+    ''ema5_with'', ''expiry_day''), ''window'': ''1200-1430''} · ITM1/near · exits stop_pct=0.35,tgt_pct=1.0,time_stop=120,time_gain=None):
+    design 2 trades, win 100%, net Rs +9,256 (Rs +27/day), worst day Rs +4,084, max DD Rs +0, p 1.000 (coin-flip p 1.000);
+    walk-forward Rs +9,256. FINAL original: 0 trades, win 0%, net Rs +0 (Rs +0/day), worst day Rs +0, max DD Rs +0, p 1.000
+    (coin-flip p 1.000), q 1.00 -> too few trades to judge. FINAL pick: 0 trades, win 0%, net Rs +0 (Rs +0/day), worst day
+    Rs +0, max DD Rs +0, p 1.000 (coin-flip p 1.000), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: OBUY_SEARCH.md rule #3 as listed (in-sample t 3.81, 41 trades). Gates: final
+  net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

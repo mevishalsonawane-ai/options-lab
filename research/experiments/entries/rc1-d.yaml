@@ -1,0 +1,32 @@
+id: rc1-d
+title: 'Crypto vol-targeted trend: rc1-c sized by 40% / 30-day realised vol'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/HUNT_RC1_CRYPTO_SMALL_ACCOUNT.md
+hypothesis: Constant-risk sizing keeps trend returns with a much smaller drawdown.
+data_version: 'Binance public archive (data.binance.vision): spot BTCUSDT/ETHUSDT 1d+1h 2017-08-17..2026-10-12, USD-M perps
+  1d+1h 2020-01-01..2026-10-12, funding 2020-01..2026-09-30; USD/INR ECB (frankfurter.dev); parquet cache outside git'
+period:
+  design: walk-forward OOS 2019-10-13..2025-10-12 (6 yearly OOS years, anchored; training from 2018-03-05)
+  holdout: 2025-10-13..2026-10-12 (13 months), read once
+instruments:
+- CRYPTO
+features:
+- BTC / ETH prices in INR
+- funding (perp ideas)
+- realised volatility (d)
+model_or_rule: rc1-c rule x 0.5 x min(1, 40% / 30-day vol), 0.10 no-trade band
+settings: research/hunt/rc1/config.py
+prereg: research/hunt/rc1/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Walk-forward 50/50 Rs 1L: +19.9%/yr after tax (pre-tax +35.3%), max DD -46% vs hold -76%, worst month -19%, 76
+    entries (35 orders/yr), Calmar 0.44 vs hold 0.77. Twin p 0.075, BH q 0.356. Holdout -26.8% (DD -31%) vs hold -30.4% (-53%).
+    FAILED gates 1, 2, 4.'
+  costs: Indian spot taker 0.25% + 18% GST + 0.15% half-spread per side (low 0.168% / high 0.890%); INR perps 0.05% + GST
+    + 0.02% (0.079%); real funding; 31.2% VDA tax per profitable sale, no loss set-off; 1% TDS locked 365 d; perps tax readings
+    A (VDA) and B (business)
+holdout_read: true
+verdict: rejected
+notes: 'RC1 (Boss 13 Oct 2026, small Indian account). BH across 8 active tests (b x2, c, c-perp, d, f, g, g-perp). Tax figures
+  are modelling assumptions; confirm with a CA. Research only: nothing in the app trades crypto.'

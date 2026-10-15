@@ -1,0 +1,30 @@
+id: r28-g1
+title: 'R28 G1: ORB: keep only S1 at 10:00 < 0'
+family: orb
+date: '2026-10-14'
+doc: research/HUNT_R28_GEX.md
+hypothesis: 'Filtering the arm by intraday dealer gamma (GEX) raises its P&L per session: ORB: keep only S1 at 10:00 < 0.'
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_{WEEK,MONTH}
+  (ATM+-10 each minute, OI in units), index_1m incl. INDIAVIX, Aug 2021 - 12 Oct 2026; expiries found from the data; per-minute
+  GEX tables on Drive derived/r28_gex/'
+period:
+  design: 2023-01-16..2026-10-12 (walk-forward years 2023, 2024, 2025, 2026)
+  holdout: lake start (Aug 2021) .. 2022-12-31; embargo 2023-01-01..15
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- intraday GEX (S1/S2/norm/flip) from ATM+-10 option prices and OI
+model_or_rule: 'ORB: keep only S1 at 10:00 < 0 (skip rule on the arm''s unfiltered lake rebuild; missing GEX = keep)'
+settings: research/hunt/r28/PREREG.md
+prereg: research/hunt/r28/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 1499 trades -> 425 kept, Rs/day -130.0 -> -56.7 (change +73.3; 921 sessions), twin p 0.9405, q R28 0.9855,
+    q joined 1.0, years better 3/4; design pass False. Holdout: 533 trades -> 50 kept, Rs/day -182.3 -> -16.4 (change +165.9;
+    351 sessions), twin p 0.4723. FAILED the gates.'
+  costs: R17 Fills 'liq' + app charges (R22 trade()); x2 spread stress
+holdout_read: true
+verdict: rejected
+notes: One of 10 R28 filters; BH across the 10 and in the joined family (R9's 68 gamma tests + the arm families' recorded
+  holdout p-values). Random-filter twins skip the same number of index-days at random.

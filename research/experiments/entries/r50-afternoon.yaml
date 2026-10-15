@@ -1,0 +1,41 @@
+id: r50-afternoon
+title: 'Cancelled hero rules on the Nov 2024+ market: afternoon window'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R50_HERO_RECENT.md
+hypothesis: A cancelled afternoon window hero rule (R21-R43), or a small pre-registered re-tune of it, makes money on the
+  market since NSE's weekly-expiry change (20 Nov 2024) after real costs, on one held contract, and beats random entry times.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: opt_<UND>_WEEK_2024-2026 (rolling ATM+-10 1-minute, rebuilt per held strike),
+  index_1m 2024-2026, equity_1m 2024-2026 (R35 heavyweights); lake to 13 Oct 2026'
+period:
+  design: expiry days 20 Nov 2024 - 31 Mar 2026 (walk-forward blocks B0-B4)
+  holdout: 'final test: expiry days 1 Apr - 13 Oct 2026, read once (not pristine: R43-R45 saw 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: O-K1 = R34 K1e; O-T1 = R25 T1; T-AFT (cheap-tr25) = R34 K1e
+settings: research/hunt/r50/r50rules.py (rules), research/hunt/r50/r50cfg.py (dates, lots)
+prereg: research/hunt/r50/PREREG.md
+variants_tried: 6
+results:
+  summary: '2 original rules and a re-tune grid of 4 cells (one cell chosen on design by walk-forward), on 193 design and
+    73 final-test index-expiry-days (20 Nov 2024 - 13 Oct 2026; NIFTY and SENSEX weekly, BANKNIFTY / FINNIFTY / MIDCPNIFTY
+    monthly). 0 pass. O-K1: design 156 trades net Rs -99,713 (walk-forward Rs -70,721); final 49 trades, win 30.6%, peaks
+    5x/10x 3/0, net Rs +387, without top 5 Rs -35,049 (top-5 share 9153%), p 0.994, q 1.000: fail; O-T1: design 125 trades
+    net Rs -227 (walk-forward Rs -7,934); final 56 trades, win 10.7%, peaks 5x/10x 5/1, net Rs -3,174, without top 5 Rs -25,516
+    (top-5 share n/a (net <= 0)), p 0.685, q 1.000: fail; T-AFT (cheap-tr25): design 104 trades net Rs -23,069 (walk-forward
+    Rs -19,509); final 46 trades, win 19.6%, peaks 5x/10x 0/0, net Rs -8,542, without top 5 Rs -20,011 (top-5 share n/a (net
+    <= 0)), p 0.756, q 1.000: fail.'
+  costs: charges in force on the trade date (obuy Costs('dated'), BSE rates for SENSEX); next-minute fills + 5 bps + 1/2/4-tick
+    half-spread by 5-minute volume; entry limit ref x 1.2 + 0.10 for 3 minutes; gap fills at the worse open; 2x spread stress
+    reported
+holdout_read: true
+verdict: rejected
+notes: 'BH over all 28 R50 final-test tests (20 originals + 8 chosen re-tunes). Random-entry twins: 500 per rule, same day,
+  side, strike rule, budget and exit at a random minute of the rule''s window. Signal-source labels: ''OPTION''S OWN CHART''
+  rules are not the default kind.'

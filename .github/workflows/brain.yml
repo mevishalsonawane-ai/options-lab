@@ -1,0 +1,39 @@
+name: Data Brain (cube + features + look-ahead guard)
+
+# Lightweight: unit tests on the committed fixture (< 1 MB, 4 sessions). No data download, no secrets.
+on:
+  push:
+    paths:
+      - "research/brain/**"
+      - "research/context/**"
+      - "indicator/liquidity.py"
+      - ".github/workflows/brain.yml"
+  pull_request:
+    paths:
+      - "research/brain/**"
+      - "research/context/**"
+      - "indicator/liquidity.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Brain tests (look-ahead guard)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: research/brain/requirements.txt
+      - run: pip install -r research/brain/requirements.txt
+      - name: Tests (cube point-in-time, every feature point-in-time, labels separate, purged splits)
+        run: python -m pytest research/brain/tests -q
+      - name: Market-context study tests (event mapping, level rules, max pain, BH)
+        run: python -m pytest research/context/tests -q
+      - name: FEATURES.md matches the feature definitions
+        run: python -m research.brain.features catalog --check

@@ -167,7 +167,7 @@ internal object IraBots {
     /** An arm position as [com.optionslab.ira.BotTrades] reads it (also [IraTradeLessons]'s, so both say the same lesson). */
     internal fun tradeOf(p: com.optionslab.app.data.OrbArms.Position): com.optionslab.ira.BotTrades.Trade =
         com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
-            p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot)
+            p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot, trail = p.trail != null)
 
     /**
      * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their
@@ -183,11 +183,14 @@ internal object IraBots {
     /**
      * "How did liquidity do this week", "liquidity last 10 trades", "is liquidity on track" ([com.optionslab.ira.LiquidityRecord]):
      * Liquidity 15+5's record over time from the arms' own book of closed paper trades ([com.optionslab.app.data.OrbArms.closedPaper],
-     * every day it keeps). Reads only.
+     * every day it keeps). The plain-rules record only (the one the 26 Oct decision reads); trades under Boss's opt-in Rs 500
+     * give-back trail are said on a labelled line of their own, never counted in it. Reads only.
      */
     suspend fun liquidityRecord(q: com.optionslab.ira.LiquidityRecord.Q): String {
-        val rows = com.optionslab.ira.LiquidityRecord.rows(com.optionslab.app.data.OrbArms.closedPaper().map { tradeOf(it) })
-        return com.optionslab.ira.LiquidityRecord.answer(q, rows, com.optionslab.app.data.Market.today())
+        val trades = com.optionslab.app.data.OrbArms.closedPaper().map { tradeOf(it) }
+        val rows = com.optionslab.ira.LiquidityRecord.rows(trades)
+        val trailed = com.optionslab.ira.LiquidityRecord.rows(trades, withTrail = true).filter { it.trailed }
+        return com.optionslab.ira.LiquidityRecord.answer(q, rows, com.optionslab.app.data.Market.today(), trailed)
     }
 
     /**
@@ -195,12 +198,16 @@ internal object IraBots {
      * trades. Reads only. With the answer, the first armed arm that lost in both records (null: none), for [offerSwitchOff].
      */
     suspend fun switchOff(q: com.optionslab.ira.SwitchOff.Q): Pair<com.optionslab.ira.SwitchOff.Answer, com.optionslab.ira.SwitchOff.Arm?> {
-        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
+        val views = com.optionslab.app.data.OrbArms.view().arms
+        val armed = views.associate { it.arm.label to it.armed }
+        val bossParked = views.filter { it.bossParked }.map { it.arm.source }.toSet()
         val paper = bots().filter { it.where == "Paper" && it.name in armed }.associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
         val arms = armed.map { (name, on) -> com.optionslab.ira.SwitchOff.arm(name, on, paper[name].orEmpty()) }
         val a0 = com.optionslab.ira.SwitchOff.answer(q, arms)
-        // Asked about ORB, ORB Fresh, ORB Sweep or Range Fade: said first that Boss un-retired it on 07 Oct, with its record.
-        val record = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { com.optionslab.engine.orb.RetiredArms.history(it) }
+        // Asked about ORB, ORB Fresh, ORB Sweep or Range Fade: said first that it is parked on Boss's choice (13 Oct), or else
+        // that Boss un-retired it on 07 Oct, with its record.
+        val record = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { r ->
+            if (r.arm.source in bossParked) com.optionslab.engine.orb.FamilyPark.history(r.arm.label) else com.optionslab.engine.orb.RetiredArms.history(r) }
         val a = if (record.isEmpty()) a0 else a0.copy(text = "$record ${a0.text}")
         return a to a.offer.firstOrNull()?.let { n -> arms.firstOrNull { it.name == n } }
     }
@@ -264,7 +271,9 @@ internal object IraBots {
         val closed = com.optionslab.app.data.OrbArms.closedPaper().mapNotNull { p ->
             val out = p.exitTime ?: return@mapNotNull null
             val gross = p.grossPnl ?: return@mapNotNull null
-            com.optionslab.ira.WeakLink.Trade(com.optionslab.ira.BotTrades.label(p.arm), p.entryTime, out, p.why, gross - p.charges)
+            // Boss's opt-in Liquidity paper trail (13 Oct): its trades as a group of their own, never mixed into the book's.
+            val name = com.optionslab.ira.BotTrades.label(p.arm) + if (p.trail != null) " (${com.optionslab.engine.orb.LiquidityTrail.TRAILED})" else ""
+            com.optionslab.ira.WeakLink.Trade(name, p.entryTime, out, p.why, gross - p.charges)
         }
         return com.optionslab.ira.WeakLink.answer(closed, bankNifty)
     }
@@ -391,7 +400,8 @@ internal object IraBots {
             // ORB, ORB Fresh, ORB Sweep and Range Fade, un-retired on paper by Boss on 07 Oct: judged only on their trades from
             // then (their record from before is what he already weighed), from the same 15 trades as any arm.
             val back = com.optionslab.engine.orb.RetiredArms.of(a.arm.source)?.let { com.optionslab.engine.orb.RetiredArms.UNRETIRED_ON }
-            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since)
+            // Liquidity on its plain rules only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) are not the rules' record.
+            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) && it.trail == null
                     else it.arm == a.arm.source && (back == null || !it.day.isBefore(back)) }
                 .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
             val src = a.arm.source; val auto = a.automatic

@@ -135,6 +135,8 @@ object LiquidityRecord {
     /** One closed paper trade of the arm, as read from its book: [net] rupees after charges in all, [perLot] per lot. */
     data class Row(val trade: BotTrades.Trade, val index: String, val book: String, val lots: Double, val net: Double, val perLot: Double) {
         val day: LocalDate get() = trade.entryTime.toLocalDate()
+        /** Entered under Boss's opt-in Rs 500 give-back trail ([BotTrades.Trade.trail]): not the plain rules' trade. */
+        val trailed: Boolean get() = trade.trail
         val win: Boolean get() = net > 0
         val why: String get() = trade.why ?: "exit"
     }
@@ -144,10 +146,12 @@ object LiquidityRecord {
     /**
      * The arm's closed paper trades among [trades] (any arm's; Liquidity 15+5's six books kept, renamed books included),
      * oldest exit first: each with its net after charges, in all and per lot (its lots bought: [BotTrades.Trade.qty] over the
-     * contract's lot, 1 when not known).
+     * contract's lot, 1 when not known). The PLAIN-RULES record by default: trades under Boss's opt-in Rs 500 give-back trail
+     * (13 Oct, research R19b / R19c failed) are left out, so every record, drawdown and pattern read stays the rules' own (the
+     * 26 Oct decision reads it). [withTrail] true: those too, each marked [Row.trailed] (a day's list of trades, labelled).
      */
-    fun rows(trades: List<BotTrades.Trade>): List<Row> = trades
-        .filter { BotTrades.group(it.source) == "liquidity" && !it.live && it.exit != null && it.exitTime != null }
+    fun rows(trades: List<BotTrades.Trade>, withTrail: Boolean = false): List<Row> = trades
+        .filter { BotTrades.group(it.source) == "liquidity" && !it.live && it.exit != null && it.exitTime != null && (withTrail || !it.trail) }
         .sortedWith(compareBy({ it.exitTime }, { it.entryTime }))
         .map { t ->
             val lots = t.lot?.takeIf { it > 0 }?.let { t.qty.toDouble() / it }?.takeIf { it > 0 } ?: 1.0
@@ -368,8 +372,27 @@ object LiquidityRecord {
     // ---- the answer -------------------------------------------------------------------------------------------------
 
     /** The answer to [q] at [today] from the arm's closed paper trades [all] ([rows]' order: oldest exit first). */
-    fun answer(q: Q, all: List<Row>, today: LocalDate): String {
-        if (all.isEmpty()) return "Liquidity 15+5 has no closed paper trade in its book yet, Boss - nothing to judge. $NOTE"
+    /**
+     * The trades under Boss's opt-in Rs 500 give-back trail among [trailed] ([rows] with the trail, [Row.trailed]) in [q]'s
+     * span, as one line apart from the plain-rules record ("With your ₹500 trail (failed research, your choice), kept apart:
+     * 2 trades, ..."), or null for none.
+     */
+    fun trailLine(q: Q, trailed: List<Row>, today: LocalDate): String? {
+        val shown = pick(q, trailed.filter { it.trailed }, today)
+        if (shown.isEmpty()) return null
+        val t = tally(shown)
+        return "With your ₹500 trail (${com.optionslab.engine.orb.LiquidityTrail.NOTE}), kept apart from the plain-rules record above: " +
+            "${s(t.trades, "trade")}, ${t.wins} won, net ${rs(t.perLot)} a lot after charges (${rs(t.net)} in all)."
+    }
+
+    /**
+     * The answer to [q] from the PLAIN-RULES record [all] ([rows]); [trailed]: the trades under Boss's opt-in trail, said on a
+     * line of their own ([trailLine]) and never counted in the record.
+     */
+    fun answer(q: Q, all: List<Row>, today: LocalDate, trailed: List<Row> = emptyList()): String {
+        val trail = trailLine(q, trailed, today)
+        if (all.isEmpty()) return if (trail == null) "Liquidity 15+5 has no closed paper trade in its book yet, Boss - nothing to judge. $NOTE"
+            else "Liquidity 15+5 has no closed paper trade on plain rules in its book yet, Boss - nothing to judge.\n$trail\n$NOTE"
         val shown = pick(q, all, today)
         val span = spanWords(q, today, shown)
         val out = ArrayList<String>()
@@ -378,6 +401,7 @@ object LiquidityRecord {
             out += "Liquidity 15+5 closed no paper trade $span, Boss. Its book has ${s(all.size, "closed trade")}, the last on ${date(last.day)} " +
                 "(${tally(all).let { "${it.wins} won, ${rs(it.perLot)} a lot in all" }})."
             out += forwardLine(forward(all))
+            trail?.let { out += it }
             out += NOTE
             return out.joinToString("\n")
         }
@@ -435,6 +459,7 @@ object LiquidityRecord {
                 out += forwardLine(forward(all))
             }
         }
+        trail?.let { out += it }
         out += NOTE
         return out.joinToString("\n")
     }

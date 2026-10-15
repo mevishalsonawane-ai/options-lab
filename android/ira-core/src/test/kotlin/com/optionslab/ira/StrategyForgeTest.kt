@@ -205,4 +205,46 @@ class StrategyForgeTest {
         assertEquals(40, StrategyForge.MIN_TRADES); assertEquals(0.05, StrategyForge.TWIN_ALPHA); assertEquals(0.10, StrategyForge.Q)
         assertEquals(20, StrategyForge.FWD_MIN_DAYS); assertEquals(30, StrategyForge.FWD_MIN_TRADES)
     }
+
+    // ---- 14 Oct (Boss): signal on the index, then buy the option ------------------------------------------------------------
+
+    @Test fun byDefaultTheForgeDrawsOnlyEntriesReadFromTheIndex() {
+        assertEquals(listOf(ShadowSim.Entry.OI_BUILDUP), ShadowSim.Entry.entries.filter { it.optionDerived })
+        assertTrue(ShadowSim.Entry.OI_BUILDUP !in StrategyForge.entriesFor())
+        assertEquals(StrategyForge.ENTRIES, StrategyForge.entriesFor(optionDerived = true))
+        assertTrue(ShadowSim.Entry.OI_BUILDUP in StrategyForge.ENTRIES, "the idea is kept in the grammar")
+        // Even when the book's weights favour OI build-up above all, it is never drawn without the opt-in.
+        val blocks = mapOf(StrategyForge.key(ShadowSim.Entry.OI_BUILDUP) to StrategyForge.BlockStat(1_000, 1_000))
+        val w = StrategyForge.weights(StrategyForge.Book(blocks = blocks))
+        val rng = DiscoveryStats.Rng(11)
+        repeat(3_000) { i -> assertTrue(StrategyForge.generate(i + 1, day, listOf("BANKNIFTY"), w, rng).rules.entry != ShadowSim.Entry.OI_BUILDUP) }
+        val night = StrategyForge.night(StrategyForge.Book(), day, mapOf("BANKNIFTY" to noise), { 0L }, n = 20, prior = w)
+        assertTrue(night.made.none { it.c.optionDerived }, night.made.map { it.c.name }.toString())
+    }
+
+    @Test fun theOptInLetsItInAndEveryOptionDerivedIdeaIsLabelled() {
+        val blocks = mapOf(StrategyForge.key(ShadowSim.Entry.OI_BUILDUP) to StrategyForge.BlockStat(1_000, 1_000))
+        val w = StrategyForge.weights(StrategyForge.Book(blocks = blocks))
+        val rng = DiscoveryStats.Rng(11)
+        val made = List(300) { i -> StrategyForge.generate(i + 1, day, listOf("BANKNIFTY"), w, rng, optionDerived = true) }
+        val oi = made.filter { it.rules.entry == ShadowSim.Entry.OI_BUILDUP }
+        assertTrue(oi.isNotEmpty(), "drawn when asked for")
+        for (c in oi) {
+            assertTrue(c.optionDerived)
+            assertTrue(c.name.endsWith(" (option-derived signal, not the default)"), c.name)
+            assertNull(c.rules.invalid())
+        }
+        // An index-read idea's name is as before; a block's words stay plain (the lessons' keywords are read from them).
+        assertEquals("F1 ORB break Banknifty 1m", orb.name)
+        assertEquals("OI build-up", StrategyForge.words(StrategyForge.key(ShadowSim.Entry.OI_BUILDUP)))
+        // What the forge leans toward next never names an entry it would not draw.
+        val leaning = LabLessons.exploring(StrategyForge.Book(blocks = blocks), n = StrategyForge.ENTRIES.size)
+        assertTrue(leaning.none { it.first == StrategyForge.key(ShadowSim.Entry.OI_BUILDUP) }, leaning.toString())
+        assertEquals(StrategyForge.ENTRIES.size - 1, leaning.size)
+        // An old option-derived idea read back from the phone keeps its label (its record is kept, never deleted).
+        val old = StrategyForge.Record(oi.first(), StrategyForge.Stage.FORWARD, null, why = "in forward test", since = day)
+        val back = StrategyForge.decode(StrategyForge.encode(StrategyForge.Book(tried = 1, records = listOf(old)))).records.single()
+        assertTrue(back.c.optionDerived); assertTrue(back.c.name.contains(StrategyForge.OPTION_DERIVED))
+        assertTrue(LabTalk.candidate(StrategyForge.Book(records = listOf(back)), back.c.id).contains(StrategyForge.OPTION_DERIVED))
+    }
 }

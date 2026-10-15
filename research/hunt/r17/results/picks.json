@@ -1,0 +1,13 @@
+{
+ "i3_x": 0.1,
+ "i5": {
+  "orb": "fixed",
+  "orb_sweep": "fixed",
+  "range_fade": "fixed",
+  "vix_div_banknifty": "fixed",
+  "vix_div_nifty": "tight_k1",
+  "hero": "fixed"
+ },
+ "i4": "pre-registered (no pick)",
+ "frozen": "2026-10-13T03:34:16.333684+00:00"
+}

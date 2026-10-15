@@ -49,10 +49,18 @@ object DailyReports {
          * day of a week with a holiday), Jarvis's weekly review ([com.optionslab.app.ira.IraWeekly]). One alarm a week.
          */
         WEEKLY("ol.report.weekly", LocalTime.of(15, 47), 2024),
+        /**
+         * Jarvis only (not IraGoldAlgo), trading days: the danger meter read again once BANKNIFTY's open is in
+         * ([dangerAfterOpen]; review of TODO I4, 13 Oct). A chat note only: no notification, nothing acts.
+         */
+        DANGER("ol.report.danger", LocalTime.of(9, 16), 2025),
     }
 
     /** The Sunday report runs in Jarvis (not IraGoldAlgo) whether or not Zerodha is set up: the arms trade on paper. */
     private fun weekOn() = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
+
+    /** The danger meter's 09:16 re-read: where the morning check reads it and the Pre-trade checks card shows it. */
+    internal fun dangerOn() = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
 
     fun of(action: String?): Kind? = Kind.entries.firstOrNull { it.action == action }
 
@@ -100,6 +108,24 @@ object DailyReports {
             }
             return
         }
+        if (k == Kind.DANGER) {
+            // The next trading day's 09:16 (at most three weeks ahead), whether or not Zerodha is set up: the arms trade on paper.
+            if (!dangerOn()) return
+            val now = Market.now()
+            var d = now.toLocalDate()
+            if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
+            var n = 0
+            while (!Market.isTradingDay(d) && n < 21) { d = d.plusDays(1); n++ }
+            if (n >= 21) return
+            val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
+            try {
+                if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            } catch (_: SecurityException) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            }
+            return
+        }
         // Jarvis's morning check runs whether or not Zerodha is set up (it says so); the rest need Zerodha.
         if (!Broker.linked && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val now = Market.now()
@@ -121,12 +147,37 @@ object DailyReports {
         schedule(context, k)
         if (k == Kind.WEEK) { if (!weekOn() || Market.today().dayOfWeek != java.time.DayOfWeek.SUNDAY) return }
         else if (k == Kind.WEEKLY) { if (!weekOn() || !com.optionslab.ira.WeeklyReview.isLastSession(Market.today()) { Market.isTradingDay(it) }) return }
+        else if (k == Kind.DANGER) { if (!dangerOn() || !Market.isTradingDay()) return }
         else if (!Market.isTradingDay() && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val req = OneTimeWorkRequestBuilder<ReportWorker>()
             .setInputData(workDataOf("kind" to k.name))
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork("report.${k.name}", ExistingWorkPolicy.REPLACE, req)
+    }
+
+    /**
+     * 09:16 on a trading day (review of TODO I4, 13 Oct): the danger meter read again once BANKNIFTY's open is in. The gap is
+     * its strongest sign, and the 09:00 check runs before the open. Up to four tries a minute apart while today's first
+     * bar has not reached the phone. The new reading replaces the morning's (the Pre-trade checks card shows it) and is
+     * noted in the chat as the morning check's follow-up: no notification, nothing spoken, nothing acts. A worker's
+     * thread, never the main one or the order path. Nothing to do when today's reading already has the gap.
+     */
+    suspend fun dangerAfterOpen() {
+        val today = Market.today()
+        if (com.optionslab.app.data.DangerToday.today(today)?.provisional == false) return
+        var r: com.optionslab.ira.DangerMeter.Reading? = null
+        for (attempt in 0 until 4) {
+            if (attempt > 0) kotlinx.coroutines.delay(60_000)
+            runCatching { com.optionslab.app.ira.IraHub.refresh() }
+            r = runCatching { com.optionslab.app.data.DangerToday.readFrom(com.optionslab.app.ira.IraHub.state.value.snaps, today) }.getOrNull()
+            if (r != null && !r.provisional) break
+        }
+        val reading = r ?: return
+        runCatching {
+            com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning check, after the open: " + reading.line()),
+                from = null, kind = com.optionslab.ira.TodayNotes.Category.PLANS)
+        }
     }
 
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
@@ -251,6 +302,11 @@ object DailyReports {
                 }
             }
             ok(ira.liveMissing.size < 3, if (ira.liveMissing.isEmpty()) "Live prices reaching the app" else "No live prices yet from ${ira.liveMissing.joinToString { it.label }}")
+            // The danger meter (TODO I4, research R17): today's day type with its sample size. Advice only: it failed its holdout
+            // test; it acts only through Boss's half-size switch (paper arms, off by default). At 09:00 the gap is not known
+            // yet, so this reading is provisional; the DANGER run reads it again at 09:16 ([dangerAfterOpen]). VIX counts only
+            // from a snapshot of today or the previous session (review, 13 Oct).
+            runCatching { lines += "• " + com.optionslab.app.data.DangerToday.readFrom(ira.snaps, Market.today()).line() }
             // The day's expected move, from India VIX.
             runCatching {
                 val n = ira.snaps[com.optionslab.ira.Market.NIFTY]; val v = ira.snaps[com.optionslab.ira.Market.VIX]?.price
@@ -275,6 +331,8 @@ object DailyReports {
             // and the FIIs' index positioning from NSE's participant OI - each only when a recent one is held. Facts only.
             runCatching { com.optionslab.app.ira.IraHub.morningCues() }.getOrDefault(emptyList()).forEach { lines += "• $it" }
             com.optionslab.app.ira.IraEvents.upcoming(1).forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, Market.today()).removeSuffix(".") }
+            // The market context (TODO I6, I10, I11): today's event warning, the expiry card, when "days like today" comes.
+            runCatching { com.optionslab.app.data.MarketContext.morningLines() }.getOrDefault(emptyList()).forEach { lines += "• $it" }
             // A mute said by voice lasts that day only (Boss, 5 Oct): yesterday's ends here, and the check says so.
             val voiceBack = runCatching { com.optionslab.app.ira.JarvisVoice.morningUnmute() }.getOrNull()
             voiceBack?.let { lines += "• $it" }
@@ -402,9 +460,13 @@ object DailyReports {
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraPreMarket.remember(com.optionslab.app.ira.IraPreMarket.armedNow()) }
         if (AppSettings.load().guardKill) lines += "⚠ The kill switch is on"
         if (lines.isEmpty()) lines += "No trades today."
+        // The event shield (TODO I6): the next session's event warning, the evening before.
+        runCatching { com.optionslab.app.data.MarketContext.eveningLines() }.getOrDefault(emptyList()).forEach { lines += it }
         // Jarvis: what he learned from the agents today (his pass runs now if the brain's worker has not run it yet).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching {
             com.optionslab.app.ira.JarvisLearning.learnIfDue(context)
+            // The shared knowledge and the lessons bundle right after his pass (13 Oct; its own once-a-day check).
+            runCatching { com.optionslab.app.data.SharedKnowledgeHost.nightly(context) }
             // Autopilot learning right after his pass (its own once-a-day check; it tells its own changes).
             runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
             com.optionslab.app.ira.JarvisLearning.eveningLine()
@@ -467,6 +529,8 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 DailyReports.Kind.WEEK -> DailyReports.week()
                 // Kept for the Ira page, noted in the chat, "Weekly review ready" notified (no rupee figure in it).
                 DailyReports.Kind.WEEKLY -> com.optionslab.app.ira.IraWeekly.prepare(applicationContext)
+                // The danger meter again once BANKNIFTY's open is in: a chat note and the card, no notification.
+                DailyReports.Kind.DANGER -> DailyReports.dangerAfterOpen()
             }
             Result.success()
         } catch (e: Exception) {

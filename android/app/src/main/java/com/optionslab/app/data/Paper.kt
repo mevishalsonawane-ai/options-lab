@@ -5,6 +5,7 @@ import com.optionslab.app.security.Vault
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.fmtG
+import com.optionslab.engine.risk.PriceWatch
 import com.optionslab.engine.sandbox.Instrument
 import com.optionslab.engine.sandbox.InstrumentMaster
 import com.optionslab.engine.sandbox.OrderChange
@@ -55,7 +56,17 @@ object Paper {
     }
 
     /** The exchange a paper symbol trades on (NFO unless it is a remembered MCX contract). */
-    private fun exchangeOf(symbol: String): String = book().contracts[symbol]?.exchange ?: "NFO"
+    private fun exchangeOf(symbol: String): String = exchangeIn(book().contracts, symbol)
+
+    /** [exchangeOf] in a given list of [contracts] (one rule for the books and the no-price failsafe, 15 Oct). */
+    internal fun exchangeIn(contracts: Map<String, Contract>, symbol: String): String = contracts[symbol]?.exchange ?: "NFO"
+
+    /**
+     * The open positions [symbols] as the no-price failsafe judges them (15 Oct, [Sweeper]): each one's price key as
+     * [quotes] keys it, its exchange and its expiry (null when its contract is not remembered).
+     */
+    internal fun failsafeHeld(symbols: Collection<String>, contracts: Map<String, Contract>): List<PriceWatch.Held> =
+        symbols.map { s -> exchangeIn(contracts, s).let { ex -> PriceWatch.Held(Sandbox.key(s, ex), ex, contracts[s]?.expiry) } }
 
     /** [why]: why the app cancelled an order (order id -> a reason key, see [cancel]); the newest [WHY_KEPT] only. */
     private data class Book(val state: SandboxState, val capital: BigDecimal, val contracts: Map<String, Contract>,
@@ -229,7 +240,9 @@ object Paper {
             pnlAlwaysToFunds = true, paperSpread = true, mcxSessionAware = true),
         InstrumentMaster { sym, ex ->
             when (ex) {
-                "NFO" -> contracts[sym]?.takeIf { !it.isMcx }?.let { Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
+                "NFO" -> contracts[sym]?.takeIf { !it.isMcx && it.exchange == "NFO" }?.let { Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
+                // 15 Oct: SENSEX's options on BSE (the Hero ₹1,000 ticket, paper only); F&O hours, lots and charges as NFO's.
+                "BFO" -> contracts[sym]?.takeIf { it.exchange == "BFO" }?.let { Instrument(sym, "BFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
                 com.optionslab.engine.mcx.Mcx.EXCHANGE -> contracts[sym]?.takeIf { it.isMcx }?.let { mcxInstrument(it) }
                 else -> null
             }
@@ -387,6 +400,14 @@ object Paper {
             val m = McxMarket.find(c.symbol) ?: return null
             return m.token.takeIf { it > 0 }?.also { kiteTokens[c.symbol] = it }
         }
+        // 15 Oct: a SENSEX option (BFO, the Hero ₹1,000 ticket's paper side) from Zerodha's BFO list - read in the background,
+        // never here (memory only); not read yet: asked again next time, not remembered as unlisted.
+        if (c.exchange == "BFO") {
+            val bfo = Broker.cachedBfoOptions() ?: run { Broker.loadBfoOptionsInBackground(); return null }
+            val t = Broker.find(bfo, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
+            kiteTokens[c.symbol] = t
+            return t.takeIf { it > 0 }
+        }
         val list = Broker.cachedInstruments() ?: return null
         val t = Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
         // G1-2: "not listed" (0) is remembered only from today's list; from an older one the contract may simply be new, so it
@@ -458,7 +479,9 @@ object Paper {
      * process's stream exits (the LIVE lane waits for the paper cover) are not held until the next watch pass loads it.
      */
     private fun loadSoon() {
-        if (!::file.isInitialized || !loading.compareAndSet(false, true)) return
+        if (!::file.isInitialized) return
+        if (loadInlineForTest) { runCatching { book() }; return }
+        if (!loading.compareAndSet(false, true)) return
         Thread({ try { runCatching { book() } } finally { loading.set(false) } }, "paper-load").apply { isDaemon = true }.start()
     }
 
@@ -511,6 +534,21 @@ object Paper {
             else -> r.message ?: "Paper order placed"
         }
         return Result(r.ok, msg, events, r.orderId)
+    }
+
+    /** The one BSE index whose options the paper account takes (15 Oct, the Hero ₹1,000 ticket's SENSEX side). */
+    const val BFO_UNDERLYING = "SENSEX"
+
+    /**
+     * The Hero ₹1,000 ticket's own door (15 Oct): SENSEX's options are BSE's (BFO), from the list saved on the phone today
+     * ([Market.cachedBfoContracts]; never a download here); NIFTY's as [contractFor]. Every other caller keeps [contractFor],
+     * where SENSEX is still not listed (nothing else in the app trades it).
+     */
+    fun ticketContract(underlying: String, expiry: LocalDate, strike: Double, right: Right): Contract? {
+        if (underlying != BFO_UNDERLYING) return contractFor(underlying, expiry, strike, right)
+        val saved = Market.cachedBfoContracts()?.takeIf { it.first == Market.today() }?.second ?: return null
+        val c = saved.firstOrNull { it.underlying == underlying && it.expiry == expiry && it.strike == strike && it.right == right } ?: return null
+        return Contract(symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey, exchange = "BFO")
     }
 
     /** Resolve a listed option into a paper contract (and remember it). An MCX name resolves on MCX's list (9 Oct). */
@@ -582,6 +620,7 @@ object Paper {
     private suspend fun restQuote(c: Contract): Quote? {
         if (!Broker.loggedIn) return null
         val key = if (c.isMcx) McxMarket.find(c.symbol)?.kiteKey ?: return null
+            else if (c.exchange == "BFO") "BFO:" + (Broker.cachedBfoOptions()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
             else "NFO:" + (Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
         val r = runCatching { Broker.quotes(listOf(key)) }.getOrNull()?.get(key) ?: return null
         if (!(r.last > 0)) return null
@@ -701,7 +740,12 @@ object Paper {
 
     /** Each paper fill in [r] measured against [intended] ([FillSlippage.paper]: kept in the background, never the book's). */
     private fun modelled(r: Result, entry: Boolean, intended: Double?, limit: Boolean) {
-        if (!r.ok || intended == null) return
+        if (!r.ok) return
+        // The live recording's snapshot of each paper fill (a queue add; built and written in the background).
+        r.events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
+            runCatching { LiveRecorder.fill(f.symbol, f.action, !entry, f.quantity, f.price, intended, paper = true, arm = null) }
+        }
+        if (intended == null) return
         r.events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
             runCatching { FillSlippage.paper(f.symbol, f.action, entry, f.quantity, intended, f.price, limit) }
         }
@@ -799,6 +843,10 @@ object Paper {
      */
     suspend fun tick(): List<SandboxEvent> {
         val events = tickLocked()
+        // Resting paper orders that filled on this pass (stops, limits): the live recording's snapshot of each.
+        events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
+            runCatching { LiveRecorder.fill(f.symbol, f.action, f.action.equals("SELL", true), f.quantity, f.price, null, paper = true, arm = null, note = "resting") }
+        }
         // The engine's own 15:15 MIS square-off is named on the order it placed.
         events.filterIsInstance<SandboxEvent.SquareOff>().mapNotNull { it.result.orderId }
             .forEach { runCatching { Strategies.tagOwner("paper:$it", Origins.AUTO_SQUARE_OFF) } }
@@ -893,11 +941,15 @@ object Paper {
             if (s != b.state) save(b.copy(state = s))
         }
         noteStale(fill, events)
-        return Sweep(out, q.isNotEmpty(), held.isNotEmpty())
+        return Sweep(out, failsafeHeld(held, book().contracts), q.keys)
     }
 
-    /** What [sweepMissedStops] did: the stops it sold, whether any price was read, and whether any position is open. */
-    data class Sweep(val swept: List<Swept>, val priced: Boolean, val holding: Boolean)
+    /**
+     * What [sweepMissedStops] did: the stops it sold, the open positions ([held]: their price keys, exchanges and expiries)
+     * and the keys priced this pass ([quoted]). 15 Oct: the positions themselves, not two yes/no answers, so the no-price
+     * failsafe can judge each in its own market's hours ([Sweeper]).
+     */
+    data class Sweep(val swept: List<Swept>, val held: List<PriceWatch.Held>, val quoted: Set<String>)
 
     /**
      * Views, priced with fresh quotes where the engine uses them. [reuseQuotesMs] > 0 only for words and cards (never the
@@ -979,6 +1031,13 @@ object Paper {
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
     fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) } }
+
+    /**
+     * TEST ONLY: [loadSoon] reads the book on the caller's thread - the background load as fast as it can be, done before
+     * [streamCover] even returns (the race [FastPath]'s snapshot must survive). False in the app. Throws unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var loadInlineForTest = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
 
     /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
     internal fun forgetForTest() { flush(); synchronized(this) { cache = null; savedAtMs = 0L } }

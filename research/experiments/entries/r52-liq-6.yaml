@@ -1,0 +1,37 @@
+id: r52-liq-6
+title: 'R52 re-test on Nov 2024+: LIQ-6 FINNIFTY Liquidity 15m+5m (pre-30+5 version)'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule LIQ-6 (old verdict: Replaced: index +5.8 pts (494 tr, t 1.98) / +3.6 (475); real options
+  -6.0k / 83 tr. B-pick fails held-out (+61k vs base +73k est.)) makes money net of real costs on the recent market (Nov 2024+)
+  at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- FINNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''books'': [[15, 20, 10], [5, 20, 10]], ''source'': ''both'', ''stop'': True, ''unds'': [''FINNIFTY'']} |
+  ATM/near | exits stop_pct=0.15 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 612 trades, win 42%, net Rs +47,358 (Rs +141/day), worst day Rs -5,450, max DD Rs -25,966, p
+    0.218 (coin-flip p 0.000); walk-forward Rs +66,357. Re-tune pick g10 ({''unds'': (''FINNIFTY'',), ''books'': ((15, 20,
+    5), (5, 20, 5)), ''source'': ''both'', ''stop'': True} · ATM/near · exits stop_pct=0.15): design 688 trades, win 44%,
+    net Rs +67,804 (Rs +201/day), worst day Rs -5,450, max DD Rs -20,703, p 0.127 (coin-flip p 0.000); walk-forward Rs +71,490.
+    FINAL original: 209 trades, win 37%, net Rs -24,273 (Rs -184/day), worst day Rs -5,037, max DD Rs -34,959, p 0.910 (coin-flip
+    p 0.217), q 1.00 -> FAIL. FINAL pick: 219 trades, win 39%, net Rs -6,996 (Rs -53/day), worst day Rs -5,037, max DD Rs
+    -28,508, p 0.510 (coin-flip p 0.067), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = liquidity_finnifty_plus.py BASE (= LIQUIDITY_FINNIFTY.md''s 15+5,
+  later replaced by 30+5); grid = the study''s A/B picks, single changes and option knobs (LIQ-7). Gates: final net > 0, p
+  < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

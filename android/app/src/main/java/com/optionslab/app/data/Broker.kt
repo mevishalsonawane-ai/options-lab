@@ -786,10 +786,12 @@ object Broker {
      * are answered from it at once; only the rest go to Kite's quote API (and are
      * followed by the stream from then on).
      */
-    suspend fun quotes(keys: List<String>): Map<String, Quote> {
+    suspend fun quotes(keys: List<String>, keepStream: Boolean = true): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
         val tokens = keys.associateWith { tokenOf(it) }
-        KiteStream.touch(tokens.values.filterNotNull())
+        // [keepStream] false (Battery, 14 Oct: the MCX price reads with nothing held on MCX): answered from the stream if it
+        // runs, else by the quote call, without keeping the stream awake for these instruments.
+        if (keepStream) KiteStream.touch(tokens.values.filterNotNull())
         val streamed = keys.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
         val rest = keys.filter { it !in streamed }
         if (rest.isEmpty()) return streamed
@@ -1000,14 +1002,11 @@ object Broker {
         val f = File(app.filesDir, "kite_instruments.json")
         val stamp = f.lastModified() to f.length()
         instrumentsMemo?.let { if (it.stamp == stamp && stamp.first != 0L) return it }
+        // Memory audit (14 Oct, item 5): read as a stream, the repeated names and expiries shared - no whole-file string, no
+        // JSON tree (several MB at once after every restart).
         return runCatching {
-            val o = JSONObject(f.readText())
-            val a = o.getJSONArray("i")
-            val list = (0 until a.length()).map { a.getJSONArray(it) }.map {
-                Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
-                    it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
-            }
-            InstrumentsMemo(stamp, o.optString("day"), list).also { instrumentsMemo = it }
+            val (day, list) = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.read(it) } ?: return@runCatching null
+            InstrumentsMemo(stamp, day, list).also { instrumentsMemo = it }
         }.getOrNull() ?: instrumentsMemo?.takeIf { f.exists() }   // G1-6: a file that does not parse keeps the list in memory; a file gone (cleared data) has none
     }
 
@@ -1029,7 +1028,7 @@ object Broker {
         val f = File(app.filesDir, "kite_instruments.json")
         instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
-        val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"))
+        val list = com.optionslab.ira.InstrumentsFile.compact(Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")))
         // The market recorder's index futures from the same dump (never a second download for them).
         runCatching { keepNfoFutures(text) }
         val a = JSONArray()
@@ -1070,6 +1069,37 @@ object Broker {
         val got = Kite.lookup(text.lineSequence(), setOf(symbol))[symbol] ?: throw IOException("$exchange:$symbol is not listed on Zerodha today")
         specs["$exchange:$symbol"] = got
         return got
+    }
+
+    // ---- SENSEX's options at Zerodha (BFO), for the stream's prices of the Hero ₹1,000 ticket's paper SENSEX side (15 Oct) ----
+
+    /** Today's SENSEX options from GET /instruments/BFO (memory only), or null when not read today. */
+    @Volatile private var bfoOptions: Pair<LocalDate, List<Kite.Instrument>>? = null
+    @Volatile private var bfoTriedAt = 0L
+    private val bfoLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** Today's SENSEX options list, memory only (never the network or a file): null when not read today. */
+    fun cachedBfoOptions(): List<Kite.Instrument>? = bfoOptions?.takeIf { it.first == Market.today() }?.second
+
+    /**
+     * Read today's SENSEX options in the background (logged in only; at most every 10 minutes after a failure). Returns at once:
+     * the stream's price of a SENSEX paper ticket follows on the next look once the list is in.
+     */
+    fun loadBfoOptionsInBackground() {
+        if (!loggedIn || cachedBfoOptions() != null) return
+        val now = System.currentTimeMillis()
+        if (now - bfoTriedAt < 10 * 60_000L || !bfoLoading.compareAndSet(false, true)) return
+        bfoTriedAt = now
+        readScope.launch {
+            try {
+                val text = call("GET", "/instruments/BFO", raw = true) as String
+                bfoOptions = Market.today() to Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Tried again after 10 minutes; until then the ticket is priced from the candle feed, as before.
+            } finally { bfoLoading.set(false) }
+        }
     }
 
     fun find(list: List<Kite.Instrument>, underlying: String, expiry: LocalDate, strike: Double, right: Right) =

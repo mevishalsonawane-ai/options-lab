@@ -1,0 +1,37 @@
+id: r52-obuy-ga-11
+title: 'R52 re-test on Nov 2024+: OBUY_GA-11 NR4/NR7 next-day breakout (intraday leg)'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_GA-11 (old verdict: IS best +31.5k (329 tr) 5/7; WF -28.1k (168) 1/5; PBO 76%) makes
+  money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''inside'': True, ''n'': 7, ''tgt_k'': None, ''trigger'': ''touch''} | ITM1/near | exits sq_off=915 | expiry
+  skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 23 trades, win 39%, net Rs -21,898 (Rs -65/day), worst day Rs -11,109, max DD Rs -34,656, p 0.512
+    (coin-flip p 0.881); walk-forward Rs -10,829. Re-tune pick s6.r1.x0 ({''n'': 4, ''inside'': False, ''trigger'': ''touch'',
+    ''tgt_k'': None} · ITM1/month · exits sq_off=915): design 126 trades, win 49%, net Rs +83,789 (Rs +249/day), worst day
+    Rs -11,141, max DD Rs -49,816, p 0.004 (coin-flip p 0.016); walk-forward Rs +72,472. FINAL original: 7 trades, win 71%,
+    net Rs +21,335 (Rs +160/day), worst day Rs -1,084, max DD Rs -1,951, p 0.000 (coin-flip p 0.000), q 0.02 -> too few trades
+    to judge. FINAL pick: 66 trades, win 41%, net Rs -24,983 (Rs -188/day), worst day Rs -28,515, max DD Rs -57,157, p 0.909
+    (coin-flip p 0.796), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: NR7 inside day, touch, levels only, ITM1 (the catalog''s NR7 base). Gates:
+  final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

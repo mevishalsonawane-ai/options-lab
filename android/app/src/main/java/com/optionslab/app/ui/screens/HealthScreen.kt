@@ -43,7 +43,9 @@ fun HealthScreen(model: AppModel) {
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { source = "imported"; model.importLedger(it) } }
 
     LaunchedEffect(Unit) { if (h is Load.Idle) model.runHealth(source) }
-    HealthContent(s, h, source, onSource = { source = it; model.runHealth(it) },
+    // Battery (14 Oct): which background loops ran today (memory only, no read).
+    val battery = remember { com.optionslab.app.work.BatteryMeter.line() }
+    HealthContent(s, h, source, battery = battery, onSource = { source = it; model.runHealth(it) },
         onImport = { pick.launch(arrayOf("text/*", "text/csv", "application/octet-stream")) },
         onWindow = { w -> model.update { it.copy(healthLast = w) }; model.runHealth(source) },
         onCheck = { model.runHealth(source) })
@@ -59,9 +61,17 @@ internal fun HealthContent(
     onImport: () -> Unit,
     onWindow: (Int) -> Unit,
     onCheck: () -> Unit,
+    /** The "Battery today:" line ([com.optionslab.app.work.BatteryMeter]); null: not shown. */
+    battery: String? = null,
 ) {
     val p = LocalPalette.current
     Page {
+        if (battery != null) item {
+            LedgerCard(title = "Background work today") {
+                Text(battery, style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                Note("With nothing held on MCX the evening watch should show mostly 60 s passes, and the tick recorder should stop at the close.")
+            }
+        }
         item {
             LedgerCard(title = "Kill Conditions") {
                 Note("Not a learner. It adapts nothing. It asks whether the conditions this strategy depends on are still true - now, not on average since 2023.")

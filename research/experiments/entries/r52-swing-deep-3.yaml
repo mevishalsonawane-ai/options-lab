@@ -1,0 +1,34 @@
+id: r52-swing-deep-3
+title: 'R52 re-test on Nov 2024+: SWING_DEEP-3 RSI(2) pullback above/below 200DMA'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule SWING_DEEP-3 (old verdict: NIFTY monthly ATM 10d +23.3k (63 tr) 4/7; BN options -229k..-289k;
+  BN fut 2ATR+10d +264k) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small
+  design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''ex'': ''10d'', ''rule'': ''rsi2'', ''series'': ''month''} | ATM/month | exits sq_off=930 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design original: 24 trades, win 17%, net Rs -162,093 (Rs -481/day), worst day Rs -20,994, max DD Rs -162,093,
+    p 0.615 (coin-flip p 0.913); walk-forward Rs -121,270. FINAL original: 6 trades, win 17%, net Rs -86,573 (Rs -651/day),
+    worst day Rs -45,789, max DD Rs -86,573, p 0.116 (coin-flip p 0.888), q 0.64 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: NIFTY monthly ATM fixed 10d was the close cell (+23.3k, 63 tr, 4/7 yrs; SWING_DEEP.md
+  section 2); grid = its options exits (fixed 5d / 10d, 2ATR + 3ATR chandelier) + the 2ATR + 10d exit, per index as its per-index
+  walk-forward. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net,
+  design walk-forward > 0.'

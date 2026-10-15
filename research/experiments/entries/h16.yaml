@@ -1,0 +1,27 @@
+id: h16
+title: Cheaper, more convex options for Liquidity
+family: option-structure
+date: '2026-10-11'
+doc: research/HUNT_H16.md
+hypothesis: OTM options earn more per rupee.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- strike
+model_or_rule: strike choice at Rs 1 lakh
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h16/PREREG.md
+variants_tried: null
+results:
+  summary: Cheaper options do not earn more per rupee; keep 1-ITM, at most a third of equity a trade.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

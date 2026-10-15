@@ -95,7 +95,8 @@ object AutomationSupport {
      */
     fun orbState(context: Context, o: JSONObject) {
         if (!o.has("migrated")) o.put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)
-            .put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN).put(com.optionslab.engine.orb.ParkedArms.MIGRATION))
+            .put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN).put(com.optionslab.engine.orb.ParkedArms.MIGRATION)
+            .put(com.optionslab.engine.orb.FamilyPark.MIGRATION))
         OrbArms.wipe()
         Vault.writeFile(File(context.filesDir, "orb.vault"), o.toString().toByteArray(Charsets.UTF_8))
     }

@@ -1,0 +1,23 @@
+id: r13
+title: Majority Rule 14 on weekly NIFTY
+family: market-facts
+date: '2026-10-11'
+doc: research/HUNT_R13_MAJORITY_RULE.md
+hypothesis: Boss's MR(14) touch + green week gives +1,000 points.
+data_version: NIFTY weekly closes, 20 years (see doc)
+period:
+  design: about 2006 .. 2026 (weekly)
+instruments:
+- NIFTY
+features:
+- weekly closes
+model_or_rule: MR(14) touch rule
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Not special (13 touches in 20 years); generic post-sell-off drift; context only.
+  costs: 1 futures lot
+holdout_read: null
+verdict: rejected
+backfilled: true

@@ -1,0 +1,25 @@
+id: r7
+title: Can order flow tell the direction (review)
+family: diagnosis
+date: '2026-10-09'
+doc: research/HUNT_R7_ORDER_FLOW.md
+hypothesis: Review of order-flow evidence and data sources.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- order flow
+model_or_rule: review
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Order flow explains same-second moves; direction lasts too short to pay an option buyer.
+  costs: n/a
+holdout_read: null
+verdict: not-a-test
+backfilled: true

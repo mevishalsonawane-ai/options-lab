@@ -342,4 +342,46 @@ class OrderFlowTest {
         val c = OrderFlow.components(read(50).copy(ratio = Double.NaN))
         assertTrue(c.any { it.second == "no options followed" } && c.any { it.second == "not known yet" })
     }
+
+    // ---- memory (audit, 14 Oct 2026, item 4) ----
+
+    /** The option net's z read in place gives the very number the copy gave (bit for bit), with no 1,800-number copy per read. */
+    @Test fun theInPlaceZIsTheSameAsTheCopiedOne() {
+        val r = kotlin.random.Random(5)
+        for (case in 0 until 200) {
+            val n = OrderFlow.HISTORY_SEC
+            val now = 1_000_000L + r.nextInt(5_000)
+            val secs = LongArray(n) { if (r.nextInt(10) == 0) -1 else now - r.nextInt(n + 600) }
+            val vals = DoubleArray(n) { if (r.nextInt(20) == 0) Double.NaN else r.nextDouble(-500.0, 500.0) * (if (case % 7 == 0) 0.0 else 1.0) }
+            val x = if (case % 11 == 0) Double.NaN else r.nextDouble(-800.0, 800.0)
+            val copied = DoubleArray(n) { k -> if (secs[k] >= 0 && now - secs[k] < OrderFlow.HISTORY_SEC) vals[k] else Double.NaN }
+            assertEquals(OrderFlow.z(x, copied), OrderFlow.zLive(x, secs, vals, now), "case $case")
+        }
+    }
+
+    @Test fun theInPlaceZNeedsThirtyLiveSeconds() {
+        val n = OrderFlow.HISTORY_SEC
+        val secs = LongArray(n) { -1 }; val vals = DoubleArray(n) { Double.NaN }
+        assertNull(OrderFlow.zLive(1.0, secs, vals, 100L), "empty")
+        for (k in 0 until 29) { secs[k] = 100L - k; vals[k] = k.toDouble() }
+        assertNull(OrderFlow.zLive(1.0, secs, vals, 100L), "29 seconds")
+        secs[29] = 71L; vals[29] = 29.0
+        assertNotNull(OrderFlow.zLive(1.0, secs, vals, 100L))
+        // Stale seconds (older than the history) do not count.
+        assertNull(OrderFlow.zLive(1.0, secs, vals, 100L + OrderFlow.HISTORY_SEC + 100))
+        // A flat history: 0 at the mean, the cap either side.
+        val flat = DoubleArray(n) { 5.0 }; val all = LongArray(n) { 100L }
+        assertEquals(0.0, OrderFlow.zLive(5.0, all, flat, 100L)); assertEquals(4.0, OrderFlow.zLive(6.0, all, flat, 100L)); assertEquals(-4.0, OrderFlow.zLive(4.0, all, flat, 100L))
+        assertNull(OrderFlow.zLive(1.0, LongArray(10), DoubleArray(10), 0L), "too short a ring")
+    }
+
+    @Test fun theLiveQueueAndTheRecorderAreBounded() {
+        assertTrue(OrderFlow.LIVE_QUEUE_CAP in 500..10_000)
+        assertEquals(128_000, OrderFlow.RECORDER_FLUSH_CHARS)
+        // The queue the live flow uses: past its cap the oldest go and are counted.
+        val q = LiveRecord.Queue<Int>(OrderFlow.LIVE_QUEUE_CAP)
+        repeat(OrderFlow.LIVE_QUEUE_CAP + 25) { q.offer(it) }
+        assertEquals(OrderFlow.LIVE_QUEUE_CAP, q.size()); assertEquals(25L, q.dropped)
+        assertEquals(25, q.drain().first()); assertEquals(0, q.size())
+    }
 }

@@ -1,0 +1,183 @@
+{
+ "built_from": "2026-10-12",
+ "indices": {
+  "NIFTY": {
+   "days": 2354,
+   "first": "2017-04-03",
+   "last": "2026-10-12",
+   "sources": {
+    "lake": 2354
+   },
+   "chain_days": 1285,
+   "vix_days": 1283,
+   "futures_days": 52,
+   "feature_days": 2354,
+   "label_days": 2230,
+   "label_last": "2026-04-13",
+   "design_days": 2230,
+   "embargo_days": 8,
+   "holdout_days": 116,
+   "weekday_gaps": 138
+  },
+  "BANKNIFTY": {
+   "days": 1283,
+   "first": "2021-08-04",
+   "last": "2026-10-12",
+   "sources": {
+    "lake": 785,
+    "release": 498
+   },
+   "chain_days": 498,
+   "vix_days": 1283,
+   "futures_days": 550,
+   "feature_days": 1283,
+   "label_days": 1159,
+   "label_last": "2026-04-13",
+   "design_days": 1159,
+   "embargo_days": 8,
+   "holdout_days": 116,
+   "weekday_gaps": 76
+  },
+  "FINNIFTY": {
+   "days": 1283,
+   "first": "2021-08-04",
+   "last": "2026-10-12",
+   "sources": {
+    "lake": 1283
+   },
+   "chain_days": 0,
+   "vix_days": 1283,
+   "futures_days": 15,
+   "feature_days": 1283,
+   "label_days": 1159,
+   "label_last": "2026-04-13",
+   "design_days": 1159,
+   "embargo_days": 8,
+   "holdout_days": 116,
+   "weekday_gaps": 76
+  },
+  "MIDCPNIFTY": {
+   "days": 1162,
+   "first": "2022-01-31",
+   "last": "2026-10-12",
+   "sources": {
+    "lake": 1162
+   },
+   "chain_days": 0,
+   "vix_days": 1162,
+   "futures_days": 52,
+   "feature_days": 1162,
+   "label_days": 1038,
+   "label_last": "2026-04-13",
+   "design_days": 1038,
+   "embargo_days": 8,
+   "holdout_days": 116,
+   "weekday_gaps": 69
+  },
+  "SENSEX": {
+   "days": 1283,
+   "first": "2021-08-04",
+   "last": "2026-10-12",
+   "sources": {
+    "lake": 1283
+   },
+   "chain_days": 0,
+   "vix_days": 1283,
+   "futures_days": 50,
+   "feature_days": 1283,
+   "label_days": 1159,
+   "label_last": "2026-04-13",
+   "design_days": 1159,
+   "embargo_days": 8,
+   "holdout_days": 116,
+   "weekday_gaps": 76
+  },
+  "BANKEX": {
+   "days": 1282,
+   "first": "2021-08-04",
+   "last": "2026-10-12",
+   "sources": {
+    "lake": 1282
+   },
+   "chain_days": 0,
+   "vix_days": 1282,
+   "futures_days": 12,
+   "feature_days": 1282,
+   "label_days": 1158,
+   "label_last": "2026-04-13",
+   "design_days": 1158,
+   "embargo_days": 8,
+   "holdout_days": 116,
+   "weekday_gaps": 77
+  }
+ },
+ "lake_files": [
+  "fut_1m_live_index.parquet",
+  "fut_1m_live_mcx.parquet",
+  "fut_daily_continuous.parquet",
+  "index_1m_BANKEX_2021.parquet",
+  "index_1m_BANKEX_2022.parquet",
+  "index_1m_BANKEX_2023.parquet",
+  "index_1m_BANKEX_2024.parquet",
+  "index_1m_BANKEX_2025.parquet",
+  "index_1m_BANKEX_2026.parquet",
+  "index_1m_BANKNIFTY_2021.parquet",
+  "index_1m_BANKNIFTY_2022.parquet",
+  "index_1m_BANKNIFTY_2023.parquet",
+  "index_1m_BANKNIFTY_2024.parquet",
+  "index_1m_BANKNIFTY_2025.parquet",
+  "index_1m_BANKNIFTY_2026.parquet",
+  "index_1m_FINNIFTY_2021.parquet",
+  "index_1m_FINNIFTY_2022.parquet",
+  "index_1m_FINNIFTY_2023.parquet",
+  "index_1m_FINNIFTY_2024.parquet",
+  "index_1m_FINNIFTY_2025.parquet",
+  "index_1m_FINNIFTY_2026.parquet",
+  "index_1m_INDIAVIX_2021.parquet",
+  "index_1m_INDIAVIX_2022.parquet",
+  "index_1m_INDIAVIX_2023.parquet",
+  "index_1m_INDIAVIX_2024.parquet",
+  "index_1m_INDIAVIX_2025.parquet",
+  "index_1m_INDIAVIX_2026.parquet",
+  "index_1m_MIDCPNIFTY_2022.parquet",
+  "index_1m_MIDCPNIFTY_2023.parquet",
+  "index_1m_MIDCPNIFTY_2024.parquet",
+  "index_1m_MIDCPNIFTY_2025.parquet",
+  "index_1m_MIDCPNIFTY_2026.parquet",
+  "index_1m_NIFTY_2017.parquet",
+  "index_1m_NIFTY_2018.parquet",
+  "index_1m_NIFTY_2019.parquet",
+  "index_1m_NIFTY_2020.parquet",
+  "index_1m_NIFTY_2021.parquet",
+  "index_1m_NIFTY_2022.parquet",
+  "index_1m_NIFTY_2023.parquet",
+  "index_1m_NIFTY_2024.parquet",
+  "index_1m_NIFTY_2025.parquet",
+  "index_1m_NIFTY_2026.parquet",
+  "index_1m_SENSEX_2021.parquet",
+  "index_1m_SENSEX_2022.parquet",
+  "index_1m_SENSEX_2023.parquet",
+  "index_1m_SENSEX_2024.parquet",
+  "index_1m_SENSEX_2025.parquet",
+  "index_1m_SENSEX_2026.parquet",
+  "index_daily.parquet",
+  "opt_NIFTY_WEEK_2021.parquet",
+  "opt_NIFTY_WEEK_2022.parquet",
+  "opt_NIFTY_WEEK_2023.parquet",
+  "opt_NIFTY_WEEK_2024.parquet",
+  "opt_NIFTY_WEEK_2025.parquet",
+  "opt_NIFTY_WEEK_2026.parquet"
+ ],
+ "not_used": {
+  "fut_1m_live_mcx": "MCX futures, 1-minute, live contracts only (mid-2026 on); the cube is the NSE 09:15-15:29 grid",
+  "options_rolling_1m (opt_*_MONTH_*, MCX)": "monthly-expiry and MCX option series (the cube uses the nearest weekly)",
+  "fut_daily_continuous": "daily continuous futures (no minutes)",
+  "index_daily": "daily index OHLC (the cube is built from the minutes)",
+  "equity_daily": "daily constituents; breadth needs constituent MINUTES (equity_1m), not on Drive yet",
+  "nse_bhavcopy": "end-of-day NSE F&O sample (validation; R16 max pain)"
+ },
+ "holdout": {
+  "design_end": "2026-04-13",
+  "holdout_start": "2026-04-27"
+ }
+}

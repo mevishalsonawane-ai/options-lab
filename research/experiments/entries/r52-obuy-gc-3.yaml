@@ -1,0 +1,33 @@
+id: r52-obuy-gc-3
+title: 'R52 re-test on Nov 2024+: OBUY_GC-3 Expiry-day +10% scalp'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_GC-3 (old verdict: OBUY: 1/day WF -23.4k (421) 0/5. H34 points WF +2,635 (gross
+  +28.5k) 3/4 yrs, fails BH/SPA. EXPIRY_SCALP no-stop NIFTY follow-5 +8,651 (53 tr) vs coin -2.6k) makes money net of real
+  costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''dirn'': ''last5''} | ATM/near | exits stop_pct=0.033,tgt_pct=0.1,sq_off=915 | expiry only'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design original: 88 trades, win 20%, net Rs -7,575 (Rs -22/day), worst day Rs -610, max DD Rs -8,123, p 0.985
+    (coin-flip p 0.818); walk-forward Rs -6,447. FINAL original: 34 trades, win 24%, net Rs -3,019 (Rs -23/day), worst day
+    Rs -470, max DD Rs -3,019, p 0.885 (coin-flip p 0.730), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: the catalog''s EXP-05 setting (follow last 5 min, -3.3%/+10%, 1 a day). Gates:
+  final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

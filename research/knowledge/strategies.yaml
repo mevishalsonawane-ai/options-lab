@@ -1,0 +1,368 @@
+# Strategy statistics for the knowledge pack (research/knowledge/build_pack.py).
+# One card per strategy the app runs or the research tested in depth: what it does, the verdict, and its key numbers,
+# each with the period, the costs counted and the source doc + section it was copied from.
+# build_pack.py checks that every number in every `text` appears in the cited source file; a card that fails is an error.
+# Sources are repo-relative. Keep the words plain; amounts are per lot unless the text says otherwise.
+
+- id: liquidity-15-5
+  name: Liquidity 15+5 (BANKNIFTY)
+  instruments: [BANKNIFTY]
+  tags: [liquidity, option-buying]
+  what: >-
+    On BANKNIFTY it waits for the price to close through a liquidity level from the 15- and 5-minute charts, buys one
+    lot of the option in the break's direction and exits at the next liquidity, on a failed break or on its time stop.
+  verdict: weak
+  facts:
+    - text: "Liquidity 15+5 BANKNIFTY made about Rs 65/day after all costs before the locked year and Rs 167/day in the locked year (1 lot)."
+      period: "2021-10-01 .. 2026-10-06; locked year 1 Oct 2025 - 6 Oct 2026"
+      costs: "app fills and charges plus the measured real spread (h24)"
+      src: research/HUNT_FINAL.md
+      sec: Verdict
+    - text: "Liquidity 15+5 is Rs 1,400-3,500 a month on average, with 40-50% of months losing and drawdowns of Rs 32-40k; a Rs 5,000 day comes about once in 30-45 sessions."
+      period: "2021-10-01 .. 2026-10-06"
+      costs: "all costs"
+      src: research/HUNT_FINAL.md
+      sec: Verdict
+    - text: "Liquidity 15+5 with the 15% premium stop stayed positive in both years: +Rs 55.6k / +21.6k per lot (vs +58.4k / +31.7k with no premium stop)."
+      period: "Feb 2024 - Feb 2026 (two BANKNIFTY years)"
+      costs: "Rs 40 a trip, no slippage on stops (optimistic)"
+      src: research/FINDINGS.md
+      sec: Green candles
+    - text: "A 30-point index stop beyond the broken level plus a time stop lifted Liquidity 15+5 from +55.6k / +21.6k to +103.0k / +30.3k and cut the worst trade from -15.7k to -9.6k (best of 11 variants)."
+      period: "Feb 2024 - Feb 2026"
+      costs: "Rs 40 a trip"
+      src: research/FINDINGS.md
+      sec: Green candles
+    - text: "Point targets hurt Liquidity badly (h34): they cut the rare big runners that pay for everything; do not switch to +20/-15 style targets."
+      period: "2021-2026"
+      costs: "all costs"
+      src: research/HUNT_FINAL.md
+      sec: What to do
+    - text: "R15: none of 5 pre-open daily filters helped Liquidity BANKNIFTY (best BH q 0.50); low-VIX days were good for the arm (skipping them -Rs 73/day)."
+      period: "design Feb 2024 - Sep 2025; holdout part Oct 2025 - Feb 2026"
+      costs: "app exits, ATM, real spread and charges, 1 lot"
+      src: research/FINDINGS.md
+      sec: Daily filters on Liquidity BANKNIFTY
+    - text: "Why no profit lock on Liquidity: R19 tested 6 locks on BANKNIFTY 15m and 5m and 0 of 12 passed; on the holdout 11 of 12 lost against the plain rules, because Liquidity's profit comes from a few trades that run to the next level and a lock sells them early. MIDCPNIFTY could not be tested (no data)."
+      period: "design 2024-02-13 .. 2024-07-31 and 2025-02-17 .. 2026-02-23; holdout 1 Aug 2024 - 14 Feb 2025"
+      costs: "app fills plus modelled spread, app charges, 1 lot"
+      src: research/FINDINGS.md
+      sec: Profit lock for Liquidity 15+5
+
+- id: orb
+  name: ORB (opening range breakout)
+  instruments: [BANKNIFTY]
+  tags: [orb, option-buying]
+  what: >-
+    Buys an ATM option when BANKNIFTY breaks out of the opening range; the app's version re-entered while the price
+    stayed beyond the range until R14 capped it at one entry a side a day.
+  verdict: negative
+  facts:
+    - text: "ORB over one year: 1109 trades, 45% winners, net -193,592, t -4.94, 0 of 13 green months."
+      period: "17 Feb 2025 .. 23 Feb 2026"
+      costs: "Rs 40 a trip, 1 lot of 30 (optimistic vs live)"
+      src: research/FINDINGS.md
+      sec: Every arm, one year
+    - text: "ORB re-entries made about Rs 0 before charges (Rs 75-110 a trade); capping at 1 entry a side a day cut ORB's loss from -Rs 6.50 lakh to -0.97 lakh (design) and -1.89 to -0.18 lakh (holdout)."
+      period: "design to 30 Sep 2025; holdout 1 Oct 2025 - 5 Oct 2026"
+      costs: "app charges"
+      src: research/FINDINGS.md
+      sec: ORB re-entry churn
+    - text: "All four ORB arms lost in every 1-, 3- and 6-month window to 5 Oct 2026; ORB had 3 winning months out of 63, and its losses are mostly charges from over-trading."
+      period: "to 5 Oct 2026"
+      costs: "app charges"
+      src: android/app/src/main/assets/study/pages.txt
+      sec: The ORB family
+    - text: "Rebuilt exactly as the app has them (matches R14 / R12 within a few percent), BANKNIFTY + NIFTY over 5 years: ORB -Rs 2,23,040 (2,489 trades); 0 of 6 years in profit; 16 pre-registered versions all lose (R3)."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, ORB lost -Rs 88,644 in design (1,595 trades, 5 indices) and -Rs 9,813 in the final test (636 trades, Apr - Oct 2026); 0 of 336 R49 tests pass."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
+
+- id: orb-fresh
+  name: ORB Fresh
+  instruments: [BANKNIFTY]
+  tags: [orb, option-buying]
+  what: "Buys when BANKNIFTY breaks out of the opening range on a fresh high or low."
+  verdict: negative
+  facts:
+    - text: "ORB Fresh over one year: 410 trades, 47% winners, net -56,777, t -2.39, 4 of 13 green months."
+      period: "17 Feb 2025 .. 23 Feb 2026"
+      costs: "Rs 40 a trip, 1 lot of 30"
+      src: research/FINDINGS.md
+      sec: Every arm, one year
+    - text: "Capping ORB Fresh at 1 entry a side a day: -2.00 -> -0.97 lakh (design), -38k -> -18k (holdout); a damage limiter, not an edge."
+      period: "design to 30 Sep 2025; holdout 1 Oct 2025 - 5 Oct 2026"
+      costs: "app charges"
+      src: research/FINDINGS.md
+      sec: ORB re-entry churn
+    - text: "ORB Fresh -Rs 2,23,812 over 5 years on BANKNIFTY + NIFTY and -Rs 1,49,434 on the unseen indices; 0 of 16 R3 versions pass."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, ORB Fresh equals ORB with the 1-a-side cap: -Rs 88,644 in design (1,595 trades) and -Rs 9,813 in the final test (636 trades); R49: stays off."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
+
+- id: orb-sweep
+  name: ORB Sweep
+  instruments: [BANKNIFTY]
+  tags: [orb, option-buying]
+  what: "Buys when BANKNIFTY sweeps one side of the opening range and comes back (-40/+80 exits)."
+  verdict: negative
+  facts:
+    - text: "ORB Sweep (-40/+80) over one year: 291 trades, 30% winners, net -73,480, t -2.95, 1 of 13 green months."
+      period: "17 Feb 2025 .. 23 Feb 2026"
+      costs: "Rs 40 a trip, 1 lot of 30"
+      src: research/FINDINGS.md
+      sec: Every arm, one year
+    - text: "ORB Sweep -Rs 5,05,954 (3,156) over 5 years on BANKNIFTY + NIFTY and -Rs 5,85,798 on the unseen indices; 0 of 16 R3 versions pass."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, ORB Sweep lost -Rs 4,12,532 in design (2,093 trades) and -Rs 92,211 in the final test (870 trades); R49: stays off."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
+
+- id: range-fade
+  name: Range Fade
+  instruments: [BANKNIFTY]
+  tags: [orb, range, option-buying, reversal]
+  what: "Fades a move back into the opening range."
+  verdict: negative
+  facts:
+    - text: "Range Fade over one year: 322 trades, 40% winners, net -84,458, t -4.14, 4 of 13 green months."
+      period: "17 Feb 2025 .. 23 Feb 2026"
+      costs: "Rs 40 a trip, 1 lot of 30"
+      src: research/FINDINGS.md
+      sec: Every arm, one year
+    - text: "Range Fade made +19,916 on days that closed inside the opening range and -104,375 on trend days."
+      period: "17 Feb 2025 .. 23 Feb 2026"
+      costs: "Rs 40 a trip"
+      src: research/FINDINGS.md
+      sec: Every arm, one year
+    - text: "Range Fade -Rs 5,10,978 (3,512) over 5 years on BANKNIFTY + NIFTY and -Rs 5,77,344 on the unseen indices; 0 of 16 R3 versions pass."
+      period: "Aug 2021 .. 12 Oct 2026 (Dhan lake)"
+      costs: "app charges, liq fills, 1 lot"
+      src: research/FINDINGS.md
+      sec: The ORB family on the full lake
+    - text: "On the Nov-2024+ market only, Range Fade lost -Rs 4,06,570 in design (2,363 trades) and -Rs 1,14,187 in the final test (1,020 trades); R49: stays off."
+      period: "21 Nov 2024 .. 13 Oct 2026 (design to 31 Mar 2026, final test from 1 Apr 2026)"
+      costs: "charges in force on the date, liq fills, 1 lot of the day's contract"
+      src: research/HUNT_R49_ORB_RECENT.md
+      sec: Verdict for Boss
+
+- id: big-candle-pullback
+  name: Big-candle pullback (Solo)
+  instruments: [BANKNIFTY, NIFTY]
+  tags: [candles, option-buying, trend]
+  what: >-
+    After a big 15-minute candle, waits for a 40% pullback that does not break it, then trades its direction with the
+    stop at the level and a 2R target (Jarvis's Solo arm).
+  verdict: weak
+  facts:
+    - text: "Big-candle pullback on the BANKNIFTY index: +0.20 R a trade, t = 2.35, 285 trades, 9/13 months positive; as ATM options it nets only +Rs 7.5k a year (t 0.27)."
+      period: "Feb 2025 - Feb 2026"
+      costs: "Rs 40 a trip"
+      src: research/FINDINGS.md
+      sec: Green candles
+    - text: "Out of sample (Feb 2024 - Feb 2025) the big-candle pullback was weaker: +0.09 R (t 1.11, 299 trades); the GEX split did not replicate."
+      period: "Feb 2024 - Feb 2025"
+      costs: "Rs 40 a trip"
+      src: research/FINDINGS.md
+      sec: Green candles
+    - text: "Solo's chosen variant made +Rs 52,151 on NIFTY 2024-25 (217 trades, t 0.92) and lost Rs 42,968 on NIFTY 2025-26 (219 trades, t -1.72): no edge you can rely on."
+      period: "NIFTY 2024-25 and 2025-26"
+      costs: "1 lot"
+      src: android/app/src/main/assets/study/pages.txt
+      sec: Solo and Pine
+
+- id: expiry-hero
+  name: Expiry Hero (zero to hero)
+  instruments: [NIFTY]
+  tags: [expiry, straddle, option-buying]
+  what: "On a NIFTY expiry day from 12:00 it buys the moving side when the ATM straddle expands late, sells half at 5x and holds the rest."
+  verdict: negative
+  facts:
+    - text: "Expiry Hero made +Rs 4.40 lakh on 20 trades in-sample (NIFTY 2023-24), three of which made all of it; out of sample (2025 - Apr 2026) 13 trades, 0 wins, -Rs 64,190."
+      period: "in-sample 2023-24; out of sample 2025 - Apr 2026"
+      costs: "1 lot"
+      src: android/app/src/main/assets/study/pages.txt
+      sec: Expiry Hero
+
+- id: night-r3
+  name: Night (R3)
+  instruments: [NIFTY, BANKNIFTY]
+  tags: [overnight, oi, option-buying]
+  what: "At 15:20 on a strong close the day-end OI build-up agrees with, buys a 1-ITM option and sells it at 09:16 next session."
+  verdict: weak
+  facts:
+    - text: "Night (R3) made about Rs 207 a day before the holdout and Rs 150 in it, and the holdout was not significant: small and decaying."
+      period: "to 6 Oct 2026"
+      costs: "app charges and spread"
+      src: android/app/src/main/assets/study/pages.txt
+      sec: Night (R3)
+    - text: "Holding the Night option past 09:16 for +20/+30 points did not pay: in the locked year (173 trades) all 8 pre-registered holds lost to the 09:16 sale, Rs -4,576 to Rs -25,893; keep the 09:16 sale."
+      period: "1 Oct 2025 - 12 Oct 2026"
+      costs: "app charges and spread"
+      src: research/HUNT_R27_NIGHT_EXIT.md
+      sec: Verdict for Boss
+
+- id: vix-divergence
+  name: VIX divergence
+  instruments: [NIFTY, BANKNIFTY, INDIAVIX]
+  tags: [vix, option-buying]
+  what: "At set times it takes the day's first divergence between the index and India VIX and buys the 1-ITM option against the index move."
+  verdict: negative
+  facts:
+    - text: "VIX divergence failed the luck checks (HUNT R1, idea N13): within what random entries with the same exits produce; it needs about 150 paper trades before anyone trusts it."
+      period: "R1 study"
+      costs: "app charges"
+      src: android/app/src/main/assets/study/pages.txt
+      sec: VIX divergence
+
+- id: short-straddle
+  name: ATM short straddle (selling)
+  instruments: [BANKNIFTY]
+  tags: [straddle, option-selling]
+  what: "Sells the ATM call and put (naked) with a stop on the credit."
+  verdict: weak
+  facts:
+    - text: "The naked ATM short straddle was the only structure positive in both years: intraday with a 50%-of-credit stop +Rs 60k / +29k per lot; overnight +Rs 26-28k / +91-104k (t 1.5, worst day about -Rs 17-28k, margin about Rs 2 lakh+)."
+      period: "Feb 2024 - Feb 2026"
+      costs: "Rs 40 a trip"
+      src: research/FINDINGS.md
+      sec: Green candles
+
+- id: long-straddle
+  name: Buying the straddle / strangle
+  instruments: [BANKNIFTY, NIFTY]
+  tags: [straddle, option-buying, iv]
+  what: "Buys the ATM straddle or strangle at a fixed time and holds it to the close or to a target/stop."
+  verdict: negative
+  facts:
+    - text: "Buying the ATM straddle every day lost in both years at every entry time, -Rs 0.5 to -1.5 lakh a year per lot: the 09:20 straddle cost a median 835 / 1169 pts while BANKNIFTY moved a median about 200 pts by 15:10."
+      period: "Feb 2024 - Feb 2026"
+      costs: "Rs 40 a trip"
+      src: research/FINDINGS.md
+      sec: Green candles
+
+- id: supertrend-ema
+  name: Supertrend + EMA (owner's Pine)
+  instruments: [BANKNIFTY]
+  tags: [supertrend, trend, pine]
+  what: "Supertrend(10,3) flip on the side of the 50 EMA, reversing, out at 15:15."
+  verdict: negative
+  facts:
+    - text: "Supertrend + 50 EMA on 5-min: +8.5 index pts a trade, 357 trades, t = 0.85 (not significant); the next year +0.7 pts: no stable edge."
+      period: "Feb 2024 - Feb 2026"
+      costs: "before costs on futures; options separately"
+      src: research/FINDINGS.md
+      sec: Green candles
+
+- id: majority-rule-14
+  name: Majority Rule 14 (weekly NIFTY)
+  instruments: [NIFTY]
+  tags: [majority-rule, swing]
+  what: "Percent of the last 14 weekly closes above the previous close; 28.57 = 4 of 14 up (a deep sell-off zone)."
+  verdict: negative
+  facts:
+    - text: "Majority Rule 14 touched 13 times in 20 years; after a deep weekly sell-off NIFTY drifts up (4 weeks +6.2% vs +0.9%) but Boss's +1,000-point rule is not special: -Rs 69k to +Rs 39k over 20 years on 1 futures lot."
+      period: "20 years of weekly NIFTY"
+      costs: "1 futures lot"
+      src: research/FINDINGS.md
+      sec: Majority Rule 14, NIFTY weekly
+
+- id: mcx-bots
+  name: MCX bots
+  instruments: [CRUDE, NATURALGAS, SILVER, GOLD]
+  tags: [mcx]
+  what: "Commodity paper arms on the evening and morning MCX sessions using mini contracts."
+  verdict: negative
+  facts:
+    - text: "MCX: the best honest case was a NATURALGAS evening breakout, about +Rs 40-80 a day, not significant, with a Rs 40k drawdown; GOLD and SILVER options cost Rs 1.6-2.7 lakh an ATM lot."
+      period: "MCX_GUIDE / MCX_INTRADAY studies"
+      costs: "real charges"
+      src: android/app/src/main/assets/study/pages.txt
+      sec: MCX bots
+
+- id: crypto-expected-range
+  name: Crypto expected range (BTC, ETH)
+  instruments: [CRYPTO]
+  tags: [crypto, ml]
+  what: >-
+    A forecast of how far BTC or ETH will move in the next hour or the next day, from the recent realised ranges and the
+    hour of day. It says how big the move is likely to be, never which way. Research only: crypto is not traded.
+  verdict: context
+  facts:
+    - text: "Crypto next-hour range forecast: error 24.7% smaller than the hour-of-day average for BTC and 19.9% for ETH (16,823 hours each); next-day range 19.9% / 15.1% smaller than the 20-day average (670 days)."
+      period: "design 2 Nov 2023 - 31 Mar 2026; holdout from 1 Apr 2026 not read"
+      costs: "n/a (a forecast of size)"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "A) Size: PREDICTABLE, next hour and next day"
+    - text: "BTC's median next-hour range is 0.546% (10-90%: 0.244-1.307%) and next-day range 3.34%; ETH 0.786% and 4.64%."
+      period: "design 2 Nov 2023 - 31 Mar 2026"
+      costs: "n/a"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "A) Size: PREDICTABLE, next hour and next day"
+    - text: "Crypto weekends are quieter: weekend hours move 0.595x (BTC) and 0.672x (ETH) of weekday hours; the busiest hour is 14:00-15:00 UTC (the US open), 2.29x the quietest for BTC."
+      period: "design, 126 weeks"
+      costs: "n/a"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "D) Calendar"
+
+- id: crypto-direction
+  name: Crypto direction (BTC, ETH)
+  instruments: [CRYPTO]
+  tags: [crypto, direction, ml]
+  what: >-
+    Predicting whether BTC or ETH goes up or down over the next hour or day, from returns, funding, basis, open interest,
+    taker flow and the clock, traded as a perpetual.
+  verdict: negative
+  facts:
+    - text: "Crypto next-hour direction has a real short-term reversal (AUC 0.535 BTC, 0.543 ETH) but it is worth about 0 bps gross a trade, so after a 12 bps perp round trip it loses 11.74 (BTC, 4,340 trades) and 13.16 bps (ETH, 5,168 trades) a trade."
+      period: "design 2 Nov 2023 - 31 Mar 2026; holdout not read"
+      costs: "perp taker 0.05% + 1 bp slippage a side, plus funding; 2x slippage stress"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "B) Direction: real reversal next hour, but it cannot pay"
+    - text: "Crypto next-day direction is a coin: AUC 0.495 (BTC) and 0.512 (ETH) over 670 days."
+      period: "design 2 Nov 2023 - 31 Mar 2026"
+      costs: "perp taker round trip 0.12% plus funding"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "B) Direction: real reversal next hour, but it cannot pay"
+    - text: "Funding, basis and OI change do not predict the next crypto day: rank correlations -0.060 to +0.026 over 877-880 days per coin, best q 0.28."
+      period: "design 2 Nov 2023 - 30 Mar 2026"
+      costs: "n/a (a correlation test)"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "C) Funding, basis and OI: no next-day signal"
+
+- id: crypto-window
+  name: Crypto in Boss's window (00:00-09:00 IST)
+  instruments: [CRYPTO]
+  tags: [crypto, time-of-day]
+  what: >-
+    Boss's rule for crypto: it is studied, and would only ever be acted on, from 00:00 to 09:00 IST, flat by 09:00
+    before NSE opens. Research only: the app does not trade crypto.
+  verdict: context
+  facts:
+    - text: "Inside the 00:00-09:00 IST window the crypto range is predictable: next window hour error 27.8% (BTC) / 23.4% (ETH) below the window-hour average (6,308 hours), whole window 17.2% / 15.2% below the last 20 windows (670 windows). Median BTC window range 1.83%."
+      period: "design 2 Nov 2023 - 31 Mar 2026; holdout from 1 Apr 2026 not read"
+      costs: "n/a (a forecast of size)"
+      src: research/CRYPTO_C2_WINDOW.md
+      sec: "Verdict (read this first)"
+    - text: "Crypto direction inside the 00:00-09:00 IST window: window hours lose 10.45 (BTC) / 10.73 bps (ETH) a trade after costs. The whole-window ETH reversal passed its pre-registered bar by only 0.37 bps a trade (351 trades), is negative at 2x slippage and lost in 2024; it is a candidate for one holdout read, not an edge."
+      period: "design 2 Nov 2023 - 31 Mar 2026"
+      costs: "perp taker 0.05% + 1 bp slippage a side, plus funding"
+      src: research/CRYPTO_C2_WINDOW.md
+      sec: "Verdict (read this first)"

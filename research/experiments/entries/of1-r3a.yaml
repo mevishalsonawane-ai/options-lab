@@ -1,0 +1,22 @@
+id: of1-r3a
+title: 'Rule R3 as first (wrongly) picked: follow FII index-futures change (S1) -> BANKNIFTY ATM option (superseded)'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_OF1_ORDERFLOW_INDIA.md
+hypothesis: Same as of1-r3, on the survivor an unstable sort picked before Amendment 2.
+data_version: 'NSE public archives (nsearchives.nseindia.com) fetched 13 Oct 2026: participant OI/volume 3,644 days 2 Jan 2012 - 13 Oct 2026 (3,632 usable), F&O bhavcopy index rows 3,644 days, all-index closes (Dhan lake index_daily for gaps), NSDL FPI 3,560 reporting days; copies on gdrive:IraAlgo-data-lake/participants'
+period:
+  design: signal days 2014 .. 2025-10-12
+instruments:
+- BANKNIFTY
+features:
+- S1_FII
+model_or_rule: as of1-r0 on BANKNIFTY
+settings: research/hunt/of1/PREREG.md section 8, Amendment 2
+prereg: research/hunt/of1/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 511 trades, 186 wins, net Rs +22,549, twin p 0.36 (fails the design gates). Holdout not run.'
+  costs: as of1-r0
+holdout_read: false
+verdict: superseded

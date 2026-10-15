@@ -1,0 +1,27 @@
+id: r53-ma1
+title: 'R53: app NG evening breakout (M3 EVE) as the app runs it, re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (17:00-19:00 close range, first close beyond it 19:00-22:00, 1-ITM option, -15% stop, mid stop,
+  edge + width, 120 min) earns after real costs on the recent market only (Boss, 15 Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- NATURALGAS
+features:
+- 'signal source: NATURALGAS near future (underlying)'
+model_or_rule: 17:00-19:00 close range, first close beyond it 19:00-22:00, 1-ITM option, -15% stop, mid stop, edge + width,
+  120 min
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Rs. orig: design 140 trades net 19,353, walk-forward 9,162; final 115 trades, win 43%, net -3,508, p 0.164, q
+    0.450 -> fail; stop25: design 140 trades net 23,048, walk-forward 10,299; final 115 trades, win 43%, net -5,785, p 0.250,
+    q 0.465 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected

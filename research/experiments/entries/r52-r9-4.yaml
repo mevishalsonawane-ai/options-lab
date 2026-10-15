@@ -1,0 +1,33 @@
+id: r52-r9-4
+title: 'R52 re-test on Nov 2024+: R9-4 Absorption proxy reversal'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R9-4 (old verdict: 0/12 BH. NIFTY 52 events +2.2/+2.7/+4.7 bp vs control (p 0.034, q
+  0.29); hold 18 events -2.7 bp; under ~2 bp cost) makes money net of real costs on the recent market (Nov 2024+) at its original
+  setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index + option-chain context (option volume)'
+model_or_rule: '{''horizon'': 60} | ATM/near | exits sq_off=915 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design original: 33 trades, win 36%, net Rs -8,399 (Rs -25/day), worst day Rs -3,133, max DD Rs -12,293, p 0.304
+    (coin-flip p 0.626); walk-forward Rs -7,859. FINAL original: 21 trades, win 29%, net Rs -8,674 (Rs -65/day), worst day
+    Rs -4,739, max DD Rs -12,220, p 0.192 (coin-flip p 0.745), q 0.86 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index + option-chain context (option volume). Why this original: HUNT_R9_VOLUME_GAMMA.md D2 (NIFTY
+  best at 60 min, +4.7 bp); option wrapper ATM, exit at the horizon. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every
+  final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

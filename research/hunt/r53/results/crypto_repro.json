@@ -1,0 +1,227 @@
+{
+ "rc1_g_identical": {
+  "BTC": {
+   "same_bars": true,
+   "same_stop_fills": true,
+   "spells_ours": 72,
+   "spells_rc1": 72
+  },
+  "ETH": {
+   "same_bars": true,
+   "same_stop_fills": true,
+   "spells_ours": 77,
+   "spells_rc1": 77
+  }
+ },
+ "rc2_quarters": [
+  {
+   "exit": "s40_trail",
+   "quarter": "2025Q1",
+   "r53_inr": -4440.999862177589,
+   "r53_trades": 294,
+   "rc2_inr": -4320.473715860308,
+   "rc2_trades": 263,
+   "rule": "CC2"
+  },
+  {
+   "exit": "s40_trail",
+   "quarter": "2025Q2",
+   "r53_inr": -31127.998505683157,
+   "r53_trades": 272,
+   "rc2_inr": -42842.07810201158,
+   "rc2_trades": 242,
+   "rule": "CC2"
+  },
+  {
+   "exit": "s40_step",
+   "quarter": "2025Q3",
+   "r53_inr": -4899.924359549753,
+   "r53_trades": 241,
+   "rc2_inr": 7700.557973074459,
+   "rc2_trades": 231,
+   "rule": "CC2"
+  },
+  {
+   "exit": "s40_step",
+   "quarter": "2025Q4",
+   "r53_inr": 1158.0887273383996,
+   "r53_trades": 308,
+   "rc2_inr": 22239.48052473736,
+   "rc2_trades": 284,
+   "rule": "CC2"
+  },
+  {
+   "exit": "s40_trail",
+   "quarter": "2026Q1",
+   "r53_inr": -36878.069334474094,
+   "r53_trades": 336,
+   "rc2_inr": -27456.46438129989,
+   "rc2_trades": 310,
+   "rule": "CC2"
+  },
+  {
+   "exit": "s50_trail",
+   "quarter": "2025Q1",
+   "r53_inr": null,
+   "r53_trades": null,
+   "rc2_inr": 10998.015584009743,
+   "rc2_trades": 30,
+   "rule": "CC3"
+  },
+  {
+   "exit": "s50_trail",
+   "quarter": "2025Q2",
+   "r53_inr": null,
+   "r53_trades": null,
+   "rc2_inr": -11335.054288854746,
+   "rc2_trades": 24,
+   "rule": "CC3"
+  },
+  {
+   "exit": "s50_step",
+   "quarter": "2025Q3",
+   "r53_inr": 17285.981520432553,
+   "r53_trades": 26,
+   "rc2_inr": -12662.489596735662,
+   "rc2_trades": 19,
+   "rule": "CC3"
+  },
+  {
+   "exit": "s70_step",
+   "quarter": "2025Q4",
+   "r53_inr": -12001.26711193241,
+   "r53_trades": 37,
+   "rc2_inr": -10932.138836888087,
+   "rc2_trades": 29,
+   "rule": "CC3"
+  },
+  {
+   "exit": "s70_step",
+   "quarter": "2026Q1",
+   "r53_inr": -8986.256643638668,
+   "r53_trades": 47,
+   "rc2_inr": -19353.84502783134,
+   "rc2_trades": 37,
+   "rule": "CC3"
+  },
+  {
+   "exit": "s40_step",
+   "quarter": "2025Q1",
+   "r53_inr": -24250.725652791836,
+   "r53_trades": 136,
+   "rc2_inr": -11070.156627668965,
+   "rc2_trades": 127,
+   "rule": "CC1"
+  },
+  {
+   "exit": "s40_step",
+   "quarter": "2025Q2",
+   "r53_inr": -4503.115308291104,
+   "r53_trades": 142,
+   "rc2_inr": -16851.371414937326,
+   "rc2_trades": 136,
+   "rule": "CC1"
+  },
+  {
+   "exit": "s40_step",
+   "quarter": "2025Q3",
+   "r53_inr": -28861.86851259179,
+   "r53_trades": 156,
+   "rc2_inr": -28572.91749712505,
+   "rc2_trades": 154,
+   "rule": "CC1"
+  },
+  {
+   "exit": "s40_step",
+   "quarter": "2025Q4",
+   "r53_inr": 31083.336774923133,
+   "r53_trades": 151,
+   "rc2_inr": 30342.74802754837,
+   "rc2_trades": 146,
+   "rule": "CC1"
+  },
+  {
+   "exit": "s40_step",
+   "quarter": "2026Q1",
+   "r53_inr": -15744.01415004256,
+   "r53_trades": 136,
+   "rc2_inr": -11103.617239644962,
+   "rc2_trades": 130,
+   "rule": "CC1"
+  }
+ ],
+ "signals": {
+  "BTC O19 spot-vs-perp": {
+   "n_a": 1172,
+   "n_b": 1170,
+   "same": 1146,
+   "share_of_a": 0.9778156996587031
+  },
+  "BTC P07 spot-vs-perp": {
+   "n_a": 240,
+   "n_b": 243,
+   "same": 193,
+   "share_of_a": 0.8041666666666667
+  },
+  "BTC P13 spot-vs-perp": {
+   "n_a": 1239,
+   "n_b": 1197,
+   "same": 1194,
+   "share_of_a": 0.9636803874092009
+  },
+  "BTC R4_vol_burst index-vs-perp": {
+   "n_a": 717,
+   "n_b": 723,
+   "same": 692,
+   "share_of_a": 0.9651324965132496
+  },
+  "BTC R6_hero index-vs-perp": {
+   "n_a": 79,
+   "n_b": 79,
+   "same": 74,
+   "share_of_a": 0.9367088607594937
+  },
+  "BTC R8_pdl_break index-vs-perp": {
+   "n_a": 403,
+   "n_b": 402,
+   "same": 360,
+   "share_of_a": 0.8933002481389578
+  },
+  "ETH O19 spot-vs-perp": {
+   "n_a": 1453,
+   "n_b": 1474,
+   "same": 1441,
+   "share_of_a": 0.9917412250516173
+  },
+  "ETH P07 spot-vs-perp": {
+   "n_a": 234,
+   "n_b": 228,
+   "same": 193,
+   "share_of_a": 0.8247863247863247
+  },
+  "ETH P13 spot-vs-perp": {
+   "n_a": 1508,
+   "n_b": 1451,
+   "same": 1449,
+   "share_of_a": 0.9608753315649867
+  },
+  "ETH R4_vol_burst index-vs-perp": {
+   "n_a": 849,
+   "n_b": 856,
+   "same": 832,
+   "share_of_a": 0.9799764428739693
+  },
+  "ETH R6_hero index-vs-perp": {
+   "n_a": 127,
+   "n_b": 127,
+   "same": 125,
+   "share_of_a": 0.984251968503937
+  },
+  "ETH R8_pdl_break index-vs-perp": {
+   "n_a": 394,
+   "n_b": 389,
+   "same": 347,
+   "share_of_a": 0.8807106598984772
+  }
+ }
+}

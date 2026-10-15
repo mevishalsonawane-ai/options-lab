@@ -1,0 +1,31 @@
+date: '2026-10-14'
+doc: research/HUNT_R29_EMA_RIBBON.md
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): index_1m NIFTY/BANKNIFTY/FINNIFTY/MIDCPNIFTY/SENSEX (2017/2021-12 Oct
+  2026), options_rolling_1m opt_<UND>_WEEK (nearest expiry, ATM+-10; options from Aug 2021, MIDCPNIFTY Jan 2022, SENSEX May
+  2023); Data Brain ribbon features (research/brain/features/ribbon.py)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+settings: research/hunt/r29/PREREG.md
+prereg: research/hunt/r29/PREREG.md
+id: r29-named-stack-pullback
+title: 'Boss''s idea: 15-min fully stacked + 5-min pullback to the 21/34 band, follow'
+family: patterns-indicators
+hypothesis: Boss's named multi-EMA entry makes money after costs on unseen data.
+period:
+  design: discovery 2021-08..2022-12, selection 2024
+features:
+- EMA ribbon 5..200
+model_or_rule: 'Boss''s idea: 15-min fully stacked + 5-min pullback to the 21/34 band, follow; ATM, exit X1, 1 lot'
+variants_tried: 2
+results:
+  summary: 'Failed the mining gate (stays a note): P9_5 bull: disc 371 trades -192/trade, sel 771 trades -62/trade (adj -23,
+    q 1.00); P9_5 bear: disc 221 trades -125/trade, sel 340 trades -209/trade (adj -196, q 1.00)'
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    minute's open + 5 bps + a 1/2/4-tick half-spread by 5-min volume (stops 10 bps, 2x ticks); stress 2x spread
+holdout_read: false
+verdict: rejected
+notes: Mined as a candidate in r29-mining; not a survivor, so not run on the holdout.

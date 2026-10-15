@@ -65,6 +65,14 @@ object PineDupes {
             g.filter { it.id != keep.id }.sortedBy { it.id }.map { it to keep.id }
         }
 
+    /**
+     * 14 Oct: the repeats [extraArmed] finds where either side is one of [renamed] - the armed scripts whose symbol was just
+     * written the index's own way ("NIFTY 50" -> "NIFTY", [PineUnderlying]) - so two spellings of one index that the
+     * one-time 06 Oct check could not see as the same never both trade. Other repeats are left as they are. The oldest is kept.
+     */
+    fun extraArmedAfterRename(saved: List<Script>, renamed: Set<Long>): List<Pair<Script, Long>> =
+        if (renamed.isEmpty()) emptyList() else extraArmed(saved).filter { (s, kept) -> s.id in renamed || kept in renamed }
+
     /** The Pine log's line for a script disarmed as a repeat of [kept]. */
     fun note(kept: Long): String = "Switched off: the same strategy as #$kept (same code, symbol and chart), so every trade was doubled. " +
         "#$kept keeps trading; this one is kept (not deleted) and any open holding is managed to its exit."
