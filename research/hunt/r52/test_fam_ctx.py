@@ -579,11 +579,11 @@ def test_h29_cheap_lookahead_and_expiry():
     mk, days, M, t = _h29_mk()
     s0 = F.h29_cheap(mk, q=0.1, dirn="mom30", unds=("NIFTY",))
     F._H29.clear()
-    mk2 = FakeMk({"NIFTY": FakeIndex(days, after(M, t, 599 - OPEN), exp=set(mk.ixs["NIFTY"].d) and
-                                     {d for d, x in mk.ixs["NIFTY"].d.items() if x["exp"]})}, opts=mk.opts)
-    s1 = F.h29_cheap(mk2, q=0.1, dirn="mom30", unds=("NIFTY",))
-    pd.testing.assert_frame_equal(upto(s0, days[t], 599), upto(s1, days[t], 599))
     expd = {d for d, x in mk.ixs["NIFTY"].d.items() if x["exp"]}
+    mk2 = FakeMk({"NIFTY": FakeIndex(days, after(M, t, 599 - OPEN), exp=expd)}, opts=mk.opts)
+    s1 = F.h29_cheap(mk2, q=0.1, dirn="mom30", unds=("NIFTY",))
+    assert len(upto(s0, days[t], 599)) > 0
+    pd.testing.assert_frame_equal(upto(s0, days[t], 599), upto(s1, days[t], 599))
     assert not (set(s0.day) & expd)                           # expiry days skipped
 
 

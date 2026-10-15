@@ -36,9 +36,24 @@ def _dump(p, d):
     p.write_text(json.dumps(d, indent=1, default=str, sort_keys=True))
 
 
+KEYDIR = K.OUT / "design_keys"        # one file per rule, so several workers can run at once
+
+
+def _merge():
+    """Merge the per-rule files into DESIGN and add design q over every design setting (information only)."""
+    out = {p.stem.replace("__", "@"): json.loads(p.read_text()) for p in sorted(KEYDIR.glob("*.json"))}
+    ids = [(k, v) for k in out for v in out[k]["scores"]]
+    qs = L.bh([out[k]["scores"][v]["p"] for k, v in ids]) if ids else []
+    for (k, v), q in zip(ids, qs):
+        out[k]["scores"][v]["q_design"] = q
+    _dump(DESIGN, out)
+    return out
+
+
 def design(keys=None):
     L.env_check()
-    out = _load(DESIGN)
+    KEYDIR.mkdir(parents=True, exist_ok=True)
+    out = {}
     for key, spec in RR.RULES.items():
         if keys and key not in keys:
             continue
@@ -58,13 +73,8 @@ def design(keys=None):
                             next(r for r in variants if r.vid == pick)) if pick else None)
         print(f"{key}: orig {sc['orig']['trades']} tr net {sc['orig']['net']:+,.0f} p {sc['orig']['p']:.3f} "
               f"wf {wf_orig['net']:+,.0f} | pick {pick} | {len(variants)} settings, {time.time() - t0:.0f}s", flush=True)
-        _dump(DESIGN, out)
-    # design q over every design setting run so far (information only)
-    ids = [(k, v) for k in out for v in out[k]["scores"]]
-    qs = L.bh([out[k]["scores"][v]["p"] for k, v in ids])
-    for (k, v), q in zip(ids, qs):
-        out[k]["scores"][v]["q_design"] = q
-    _dump(DESIGN, out)
+        _dump(KEYDIR / f"{key.replace('@', '__')}.json", out[key])
+    _merge()
 
 
 def prereg(keys=None):
@@ -119,9 +129,12 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "design":
         design(sys.argv[2:] or None)
-    elif cmd == "pending":           # every registered rule not yet in the working design results
-        done = _load(DESIGN)
+    elif cmd == "pending":           # every registered rule not yet run; optional "i/n" shard for parallel workers
+        done = {p.stem.replace("__", "@") for p in KEYDIR.glob("*.json")}
         todo = [k for k in RR.RULES if k not in done]
+        if len(sys.argv) > 2:
+            i, n = map(int, sys.argv[2].split("/"))
+            todo = todo[i::n]
         print("pending:", " ".join(todo), flush=True)
         if todo:
             design(todo)
@@ -129,7 +142,10 @@ if __name__ == "__main__":
         final()
     elif cmd == "prereg":
         prereg(sys.argv[2:] or None)
+    elif cmd == "merge":
+        print(len(_merge()), "rules merged")
     elif cmd == "publish":
+        _merge()
         for p in (DESIGN, FINAL):
             if p.exists():
                 (K.RESULTS / p.name).write_text(p.read_text())
