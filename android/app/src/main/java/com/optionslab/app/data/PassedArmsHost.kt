@@ -699,14 +699,14 @@ object PassedArmsHost {
             val ck = "$today|$src|${c.key}"
             val words = "%s %s %s %.4f".format(Locale.ENGLISH, c.setup.key, c.underlying, if (c.side > 0) "call" else "put", sc.score)
             if (!sc.score.isFinite() || !m.take(sc.score)) {
-                b.decided += ck; b.scores += "$today|${c.key}|$words: below ${"%.4f".format(Locale.ENGLISH, m.threshold)}, skipped"; changed = true
+                b.decided += ck; b.scores += "$today|${c.key.replace('|', ':')}|$words: below ${"%.4f".format(Locale.ENGLISH, m.threshold)}, skipped"; changed = true
                 continue
             }
             val (p, why) = buy(b, src, c.underlying, c.side, c.strikes, now, c.setup.key, c.index, c.atr)
             changed = true
             if (p != null) {
                 b.decided += ck; b.decided += dayKey
-                b.scores += "$today|${c.key}|$words: bought ${p.symbol}"
+                b.scores += "$today|${c.key.replace('|', ':')}|$words: bought ${p.symbol}"
                 say(b, src, "bought ${p.symbol} @ ${px(p.entry)}: ${Solo2.why(c, sc.score, m)}", final = true)
                 return true
             }
@@ -809,6 +809,12 @@ object PassedArmsHost {
 
     /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
     internal fun wipe() { cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear() }
+
+    /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */
+    internal suspend fun addClosedForTest(list: List<Pos>) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "a test seam" }
+        lock.withLock { val b = book(); b.positions += list; save(b) }
+    }
 
     /** For tests: the model forgotten (read again on the next pass). */
     internal fun forgetModel() { model = null; modelFailed = null }

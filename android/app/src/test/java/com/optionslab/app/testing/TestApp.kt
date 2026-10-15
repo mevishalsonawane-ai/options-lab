@@ -123,7 +123,7 @@ class TestApp : Application() {
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
         com.optionslab.app.data.VixDivArm.wipe()
         com.optionslab.app.data.HeroTicketArm.wipe()
-        com.optionslab.app.data.PassedArmsHost.wipe()
+        com.optionslab.app.data.PassedArmsHost.wipe(); com.optionslab.app.data.PassedArmsHost.testHistory = null; com.optionslab.app.data.PassedArmsHost.testDaily = null
         com.optionslab.app.data.WatchlistHost.resetForTest()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
