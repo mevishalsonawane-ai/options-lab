@@ -130,16 +130,19 @@ def _comps():
 
 
 # ====================================================================================== ARM engine (h4 / h11 port)
-_ARM = {}
+def _cache(mk, name):
+    """Per-market memo (kept on the market object, so a new market - e.g. a test's - never sees another's results)."""
+    c = mk.__dict__.setdefault("_r52_fam_liq", {})
+    return c.setdefault(name, {})
 
 
 def _arm_raw(mk, und, tf):
     """research/hunt/h11/sig.py raw_signals for ONE (index, tf), without the entry window and without the room filter.
     Rows: day, done (bar end = clock minute of the fill), side, close, level, target (nan = none), fb / nl (bar end of
     the first failed-break close / of the first new same-side level after the break; nan = none)."""
-    key = (id(mk), und, tf)
-    if key in _ARM:
-        return _ARM[key]
+    memo = _cache(mk, "arm")
+    if (und, tf) in memo:
+        return memo[(und, tf)]
     cp = _comps()
     fold, swing_zones, pool_zones, L = cp.fold, cp.swing_zones, cp.pool_zones, cp.L
     rows = []
@@ -197,7 +200,7 @@ def _arm_raw(mk, und, tf):
                                      fb=np.nan if fb is None else float(fb), nl=np.nan if nl is None else float(nl)))
         hist.append((d, real_today, today1))
     out = pd.DataFrame(rows, columns=["day", "done", "side", "close", "level", "target", "fb", "nl"])
-    _ARM[key] = out
+    memo[(und, tf)] = out
     return out
 
 
@@ -338,14 +341,12 @@ class Chart:
         return OPEN_M + int(self.E[k])
 
 
-_CH = {}
-
-
 def chart(mk, und, tf, length=20, confirm=10):
-    key = (id(mk), und, tf, length, confirm)
-    if key not in _CH:
-        _CH[key] = Chart(mk, und, tf, length, confirm)
-    return _CH[key]
+    memo = _cache(mk, "chart")
+    key = (und, tf, length, confirm)
+    if key not in memo:
+        memo[key] = Chart(mk, und, tf, length, confirm)
+    return memo[key]
 
 
 class DayInfo:
@@ -384,14 +385,11 @@ class DayInfo:
                              for d in self.days])
 
 
-_DI = {}
-
-
 def dayinfo(mk, und):
-    key = (id(mk), und)
-    if key not in _DI:
-        _DI[key] = DayInfo(mk, und)
-    return _DI[key]
+    memo = _cache(mk, "day")
+    if und not in memo:
+        memo[und] = DayInfo(mk, und)
+    return memo[und]
 
 
 def break_signals(mk, unds=("BANKNIFTY",), books=((15, 20, 10),), source="both", stop=True, win=(5, 315),

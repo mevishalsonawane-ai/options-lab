@@ -454,7 +454,12 @@ def h37_swing(mk, unds=("NIFTY",), tf=5, k=4, name="FIB_K786"):
 def _gtc_d(B, A, k, dord):
     """Port of the GTC_D block of h37 sigs.all_events: calendar days since the last confirmed daily pivot reaching
     30/45/.../360 -> the first trading day t at or after it, signal at day t-1's close: PE if that close is above the
-    pivot price, CE if below."""
+    pivot price, CE if below.
+
+    ONE DEVIATION (look-ahead fix, 15 Oct 2026): the original kept the signal only if t <= b, b = the bar before the
+    NEXT pivot's confirmation, so a signal decided at day t-1's close was dropped when day t itself confirmed a new
+    pivot - day t's bars decided a trade bought at day t's 09:16 open (found by the look-ahead guard in
+    test_fam_h25h37.py). Here the pivot only has to be the last one confirmed at day t-1's close: a <= t-1 <= b."""
     _, P = S37.swing_signals(B, A, k, daily_mode=True)
     pb, pp, pt, pc = P
     lst = []
@@ -463,7 +468,7 @@ def _gtc_d(B, A, k, dord):
         for T in S37.GTC_D:
             tgt = dord[pb[j]] + T
             t = int(np.searchsorted(dord, tgt))
-            if a + 1 <= t <= b and t >= 1:
+            if a + 1 <= t <= b + 1 and t >= 1:            # original: a + 1 <= t <= b (see above)
                 lst.append((t - 1, -1 if B["c"][t - 1] > pp[j] else 1))
     lst.sort(key=lambda e: e[0])
     return lst
