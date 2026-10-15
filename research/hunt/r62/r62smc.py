@@ -313,6 +313,32 @@ def leg_zones(leg: Leg, M: np.ndarray, V: np.ndarray, b5: Bars, s5: Structure) -
     return out
 
 
+def walk_zone(b5: Bars, leg: Leg, zlo: float, zhi: float, j0: int, nxt: int, act_di: int, st15_5: np.ndarray) -> list:
+    """The 5-minute bars j (in order) whose close signals an entry on the zone [zlo, zhi] of an active leg (PREREG 5):
+    the price was beyond the zone at activation, bar j-1 touched it, bar j closed back beyond it in the trend's colour,
+    inside the signal window; the walk stops at a newer leg, the end of the next session, a close beyond the anchor or
+    a 15-minute structure flip."""
+    d = leg.dir
+    edge = zhi if d > 0 else zlo
+    if not ((d > 0 and b5.c[j0] > edge) or (d < 0 and b5.c[j0] < edge)):
+        return []
+    out = []
+    for j in range(j0 + 1, len(b5)):
+        if b5.t[j] >= nxt or b5.di[j] > act_di + 1:
+            break
+        if (d > 0 and b5.c[j] < leg.lo) or (d < 0 and b5.c[j] > leg.hi):
+            break
+        if st15_5[j] != d:
+            break
+        if j - 1 <= j0:
+            continue
+        touched = b5.l[j - 1] <= zhi if d > 0 else b5.h[j - 1] >= zlo
+        confirm = (b5.c[j] > b5.o[j] and b5.c[j] > zhi) if d > 0 else (b5.c[j] < b5.o[j] and b5.c[j] < zlo)
+        if touched and confirm and K.SIG_FIRST <= b5.rend[j] <= K.SIG_LAST:
+            out.append(j)
+    return out
+
+
 def candidates(M: np.ndarray, V: np.ndarray, zones=K.ZONES) -> tuple[list, dict]:
     """All entry candidates of one instrument (PREREG 5), in time order, and some counts.
     M: (nd, 375, 4) minute O H L C; V: (nd, 375) the volume source (NaN = unknown)."""
@@ -342,22 +368,8 @@ def candidates(M: np.ndarray, V: np.ndarray, zones=K.ZONES) -> tuple[list, dict]
             zlo, zhi, conf = zs[zname]
             cnt[zname] += 1
             cnt[zname + "_conf"] += int(conf)
-            edge = zhi if d > 0 else zlo
-            if not ((d > 0 and b5.c[j0] > edge) or (d < 0 and b5.c[j0] < edge)):
-                continue
-            for j in range(j0 + 1, len(b5)):
-                if b5.t[j] >= nxt or b5.di[j] > act_di + 1:
-                    break
-                if (d > 0 and b5.c[j] < leg.lo) or (d < 0 and b5.c[j] > leg.hi):
-                    break
-                if st15_5[j] != d:
-                    break
-                if j - 1 <= j0:
-                    continue
-                touched = b5.l[j - 1] <= zhi if d > 0 else b5.h[j - 1] >= zlo
-                confirm = (b5.c[j] > b5.o[j] and b5.c[j] > zhi) if d > 0 else (b5.c[j] < b5.o[j] and b5.c[j] < zlo)
-                if touched and confirm and K.SIG_FIRST <= b5.rend[j] <= K.SIG_LAST:
-                    out.append(Cand(int(b5.di[j]), int(b5.rend[j]), d, li, zname, bool(conf), bool(st60_5[j] == d),
-                                    float(stop), float(st_tgt), float(zlo), float(zhi), act_di))
+            for j in walk_zone(b5, leg, zlo, zhi, j0, nxt, act_di, st15_5):
+                out.append(Cand(int(b5.di[j]), int(b5.rend[j]), d, li, zname, bool(conf), bool(st60_5[j] == d),
+                                float(stop), float(st_tgt), float(zlo), float(zhi), act_di))
     out.sort(key=lambda c: (c.di, c.s, c.zone))
     return out, cnt
