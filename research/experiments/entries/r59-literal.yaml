@@ -1,0 +1,40 @@
+id: r59-literal
+title: S2 Mean Reversion Dip Buy (outside AI) reproduced on the rolling stock-option series
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R59_STOCK_DIP_AUDIT.md
+hypothesis: Their +Rs 1,695 a trade (6,945 trades, 73.4% win) reproduces on the lake's rolling 15-minute ATM series, and most
+  of it comes from the series switching strike or expiry, not from held options.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: stock_options_rolling_1m stkopt_<SYM>_MONTH (rolling ATM-1..ATM+1, nearest
+  monthly expiry, 1-minute, rebuilt per held contract), equity_1m 2024-2026, nse_bhavcopy weekly UDiFF files (expiries, lots);
+  options to 14 Oct 2026, equity to 12 Oct 2026'
+period:
+  design: 4 Nov 2024 - 14 Oct 2026 (their span; an audit, no split)
+instruments:
+- RELIANCE
+- HDFCBANK
+- ICICIBANK
+- INFY
+- TCS
+- SBIN
+- AXISBANK
+- KOTAKBANK
+- ITC
+- TMPV
+features:
+- 'signal source: the OPTION''s own price chart (NON-DEFAULT, labelled)'
+- rolling ATM 15-minute closes (offset 0, last close in the bin)
+model_or_rule: 'their code: pct_change of the rolling 15-minute ATM close <= -20% and close >= 5, CE and PE separately; entry
+  close[t], exit close[t+4]; Rs 10,000 notional, fractional contracts, Rs 95'
+settings: research/hunt/r59/r59lit.py, research/hunt/r59/r59cfg.py
+prereg: research/hunt/r59/PREREG.md
+variants_tried: null
+results:
+  summary: 'Reproduced: 6,689 trades, 73.5% win, Rs +1,836 a trade, total Rs +12,282,484 (claim 6,945, 73.4%, +1,695, +1.177
+    crore); TCS CE Rs +3,940 a trade (claim ~+3,900). 89.5% of trades and 100.1% of profit involve a strike switch or expiry
+    roll; the 701 one-contract trades average Rs -18. 42 exits on the next expiry made Rs +3,296,381. Their trades valued
+    on the contract actually held: 6,509 trades, Rs -3 a trade (still with their Rs 95, no spread).'
+  costs: 'theirs: Rs 95 a trade flat, no spread, fractional Rs 10,000 notional'
+holdout_read: null
+verdict: not-a-test
+notes: An audit of another AI's claim (shared by Boss on 15 Oct 2026). Nothing in the app changes.
