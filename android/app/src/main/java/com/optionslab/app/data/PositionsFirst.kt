@@ -99,6 +99,8 @@ object PositionsFirst {
         one { VixDivArm.refresh().open.isNotEmpty() }
         // 15 Oct: the Hero ₹1,000 ticket's paper tickets (its own book) - restored here, before any other start-up work.
         one { HeroTicketArm.refresh().open.isNotEmpty() }
+        // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0; their own book) - restored here, with their stops, first.
+        one { PassedArmsHost.refresh().open.isNotEmpty() }
         one { GrammarArm.refresh(); false }
         one { Ledger.openTicket() != null }
         one { McxMarket.liveExposureOrThrow() }

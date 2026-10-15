@@ -91,6 +91,9 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.NightArm.init(this)
         com.optionslab.app.data.VixDivArm.init(this)
         com.optionslab.app.data.HeroTicketArm.init(this)
+        // 15 Oct (Boss: "Both"): the passed-research paper arms (R51, R52, Solo 2.0) and the shadow Watchlist (files only; no I/O here).
+        com.optionslab.app.data.PassedArmsHost.init(this)
+        com.optionslab.app.data.WatchlistHost.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.ShadowArms.init(this)

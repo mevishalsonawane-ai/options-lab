@@ -350,8 +350,16 @@ internal object Autopilot {
             }
             // 15 Oct: Boss's Hero ₹1,000 ticket switched on by the update on their choice ([logBossTicketOn]): its Undo switches the
             // arm off (or, undone twice, back on) - a PAPER arm, never Zerodha, so no PIN either way; the flip is not logged again.
-            AutoChange.Kind.PAPER_ARM_ON -> {
-                if (c.target != AutoChange.TICKET_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+            // 15 Oct (Boss's "Both"): a passed-research paper arm ("paperarm:<source>": R51, R52, Solo 2.0) - its Undo switches it
+            // off (or back on after its forward bar switched it off). Paper only, never Zerodha: no PIN either way; not logged again.
+            AutoChange.Kind.PAPER_ARM_ON -> if (c.target != AutoChange.TICKET_TARGET) {
+                val source = c.target.removePrefix(AutoChange.PAPER_ARM)
+                if (!c.target.startsWith(AutoChange.PAPER_ARM) || source !in com.optionslab.app.data.PassedArmsHost.SOURCES ||
+                    (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setArmed(source, c.to == AutoChange.ON, log = false) }
+                said.takeIf { !it.contains("not ready") }
+            } else {
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.HeroTicketArm.setArmed(c.to == AutoChange.ON, log = false) }
                 said.takeIf { !it.contains("not ready") }
             }
@@ -764,6 +772,64 @@ internal object Autopilot {
                             by = "your choice", note = "switched on from its row; paper only - it never trades on Zerodha").first
                         save()
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * 15 Oct (Boss's "Both"): the paper arm [source] PASSED research and was switched on once by the update under the PAPER rule
+     * ([com.optionslab.app.data.PassedArmsHost]). Logged as Boss's (kept, never Autopilot's) so the change log shows it and one
+     * tap undoes it (the arm off; paper only, no PIN). Once: never logged twice. In the background, on Autopilot's own worker.
+     */
+    fun logPassedArmOn(source: String, label: String, research: String) {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedArmOn(source, label, research), "the 15 Oct update (your \"Both\"); paper only - never live")
+    }
+
+    /**
+     * The paper arm [source] switched itself off on its forward-test bar ([why]): logged (kept, by its bar) so the change log and
+     * "Today's changes" show it; one tap undoes it (back on, paper only - Boss's choice). Its "on" entry is closed as undone.
+     */
+    fun logPassedArmOff(source: String, label: String, why: String) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val target = AutoChange.PAPER_ARM + source
+                    _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target && it.status == AutoChange.Status.KEPT }
+                        ?.let { _book.value = AutoChange.undone(_book.value, it.id, today) }
+                    _book.value = AutoChange.record(_book.value, AutoChange.passedArmOff(source, label, why), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "its forward-test bar", note = "paper only; switching it back on is your choice").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * Boss switched the passed-research paper arm [source] from its row: off closes the newest kept entry of that arm (so its Undo
+     * can never flip it later); on records "off → on" as Boss's (kept, undone in one tap). One lane, in the order Boss flipped it.
+     */
+    fun passedArmSwitchedByBoss(source: String, label: String, research: String, on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val target = AutoChange.PAPER_ARM + source
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
+                    if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
+                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.passedArmOn(source, label, research), AutoChange.Status.KEPT,
+                        System.currentTimeMillis(), today, by = "your choice", note = "switched on from its row; paper only - never live").first
+                    save()
                 }
             }
         }

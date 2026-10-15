@@ -109,7 +109,7 @@ object DiagDayHost {
             com.optionslab.app.work.WatchWorkers.diagLines() + com.optionslab.app.work.WatchWorkers.slowestLine(8)
         }.getOrDefault(emptyList()).map(::r)
         val others = if (GOLD) emptyList() else listOf(
-            { NightArm.diagLine() }, { VixDivArm.diagLine() }, { HeroTicketArm.diagLine() }, { McxPaperArms.diagLine() }, { GrammarArm.diagLine() },
+            { NightArm.diagLine() }, { VixDivArm.diagLine() }, { HeroTicketArm.diagLine() }, { PassedArmsHost.diagLine() }, { WatchlistHost.diagLine() }, { McxPaperArms.diagLine() }, { GrammarArm.diagLine() },
             // 14 Oct (Boss approved): the morning gamma line (signs and strikes) and the OI-wall shadow log (points only).
             { GammaMorningHost.diagLine(day) }, { OiWallShadowHost.diagLine(day) },
         ).mapNotNull { f -> runCatching { r(f()) }.getOrNull() }

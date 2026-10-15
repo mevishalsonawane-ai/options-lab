@@ -89,7 +89,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         // failed): the NSE paper-only arms under the ORB rows.
         // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
         // Home's Automation card, each opening its section ([AutomationHomeCard]).
-        nightRow = { NightRow(); VixDivRow(); HeroTicketRow() },
+        nightRow = { NightRow(); VixDivRow(); HeroTicketRow(); PassedArmRows(); WatchlistCard() },
     )
 }
 

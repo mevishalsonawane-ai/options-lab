@@ -153,6 +153,7 @@ object FastPath {
         val minuteArms = NightArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
             VixDivArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
             HeroTicketArm.holding() ||
+            PassedArmsHost.holding() ||
             McxPaperArms.view.value.let { v -> v.armed.values.any { it } || v.open.isNotEmpty() } ||
             (jarvis && runCatching { com.optionslab.app.ira.IraSolo.holding() }.getOrDefault(false)) ||
             holding || liveHolding || anyLive
@@ -300,6 +301,9 @@ object FastPath {
                     // 15 Oct: the Hero ₹1,000 ticket (paper): its open tickets' trail, target and 15:05 every minute (exits only - its
                     // 12:30 chain reads run in the watch's arms passes, never in this lane).
                     step(HERO_TICKET) { HeroTicketArm.manageOnly() }
+                    // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0): their open trades' stops, targets, locks, time exits
+                    // and square-offs every minute (exits only - their entries' reads run in the watch's arms passes).
+                    step(PASSED_ARMS) { PassedArmsHost.manageOnly() }
                     // Smart scheduling (10 Oct): these looked at this minute; the watch's passes need not look again for it.
                     runCatching { SmartWorkers.ranByLane(MINUTE_ARMS) }
                 }
@@ -319,6 +323,8 @@ object FastPath {
      * it only when it needs a pass ([HeroTicketArm.wantsPass]), and then it always runs.
      */
     const val HERO_TICKET = "Hero 1000 ticket"
+    /** The passed-research paper arms' step name (as [HERO_TICKET]: in the rounds only when they need a pass, [PassedArmsHost.wantsPass]). */
+    const val PASSED_ARMS = "Passed-research arms"
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.
