@@ -41,6 +41,80 @@ else. Pre-registered in `research/hunt/r51/PREREG.md` (commit 11fbca1d, before a
 - **Honesty:** earlier studies already looked at parts of 2025-26 (F1 design, R29 2025/26, R41 folds, B2, R44, R45, R27,
   R42 holdouts), so the final test is **not pristine**. Only paper from 15 Oct 2026 on is truly unseen.
 
+## Amendment A: foreign-rows and stray-print re-pricing (15 Oct 2026): R44-donchian20-RT still passes, but thinner
+
+**Verdict: R44-donchian20-RT still passes every gate on cleaned data. Final test: 1,787 trades, +Rs 55,439, twin p
+0.002, BH q 0.025. About 16% of its profit on the current lake came from bad rows: the same rules on the uncleaned
+current lake make +Rs 66,047, so cleaning removes Rs 10,608, almost all on FINNIFTY. It stays thin:**
+- its cleaned design net is only +Rs 8,281 on 4,518 trades (was +Rs 33,681), though the walk-forward is +Rs 169,661;
+- at twice the spread and slippage the final test falls to +Rs 5,757 and the design to -Rs 111,255;
+- the top 5 trades are 76% of the final net, and NIFTY loses -Rs 18,955.
+
+None of the 6 R44 near-misses turns into a pass: every one still fails the design walk-forward gate.
+
+Why it was re-priced: R47 found rows of another underlying in the lake's rolling option files (their own spot more than
+3% from the index) and added a stray-print guard; R51 applied neither. Amendment A (PREREG.md, committed before any
+cleaned number) re-prices on cleaned data, with the same rules, spans, gates and twins; the final test is re-priced,
+not re-selected (the frozen config donchian20|B|m1; the cleaned walk-forward picks the same config in every fold). Code:
+`research/hunt/lakeclean.py` (shared with R52), `hunt/r51/amend.py`, `R51_CLEAN=1 r51data.py build`; results
+`hunt/r51/results/amend_clean.json` and `.md`.
+
+**What changed against the plan (all written in PREREG.md before the numbers concerned were seen):**
+- **The lake changed under R51.** The Drive option files were re-fetched and re-uploaded at 04:25-04:47 UTC on 15 Oct,
+  after R51's final read (04:06 UTC). On the current lake the original code reproduces the design exactly (4,517
+  trades, +Rs 33,681) but not the final test. The final is now 1,787 trades and +Rs 66,047, against the committed 1,775
+  and +Rs 48,689, on the same 133 sessions. So three numbers are given below, and the bad-row share is current raw minus
+  current cleaned.
+- **Expiry labels held fixed.** Dropping stray rows hid 15:15 straddle prices and un-flagged expiry days (NIFTY 99 ->
+  71). The expiry test now reads the same rows as the ATM label (after the foreign step, before the stray step). The
+  cleaned stores keep exactly the original expiry days; the ATM label changes on 22 FINNIFTY days (foreign rows).
+- **Fewer near-misses re-priced.** Only the 6 R44 near-misses were re-priced:
+  - F1, R41 and B2 (10 variants) need the brain feature store, which was built from June 2023 data and from the
+    uncleaned chain;
+  - R29 (10 variants) needs 2023 index bars for warm-up, and Boss limited the study to Nov 2024 onwards;
+  - M4-SILVERM is MCX and has no index to check against.
+
+  These 21 keep their original p in the BH over the same 125 variants.
+
+**What cleaning removed** (R51's WEEK files, 21 Nov 2024 - 13 Oct 2026):
+
+| Index | option rows | foreign dropped | stray opens dropped | highs capped |
+|---|---:|---:|---:|---:|
+| NIFTY | 7,390,477 | 0 | 33,702 | 71,841 |
+| BANKNIFTY | 7,384,644 | 440 (0.01%) | 11,582 | 14,004 |
+| FINNIFTY | 6,522,558 | 115,698 (1.77%) | 23,971 | 13,528 |
+| MIDCPNIFTY | 7,244,519 | 0 | 12,781 | 16,004 |
+| SENSEX | 7,371,834 | 0 | 58,276 | 62,186 |
+
+**Results:**
+
+| Variant | COMMITTED final: trades, net, p, q | CLEANED final: trades, net, p, q | cleaned design walk-forward | verdict now |
+|---|---|---|---:|---|
+| R44-donchian20-RT | 1,775, +48,689, 0.002, 0.025 | 1,787, +55,439, 0.002, 0.025 | +169,661 | PASS |
+| R44-ema821_adx15-RT | 1,262, -34,495, 0.014, 0.103 | 1,270, -24,854, 0.006, 0.054 | -43,858 | fail (net, top-5, WF) |
+| R44-ema821_adx15_plock-RT | 1,262, -32,749, 0.014, 0.103 | 1,270, -23,109, 0.006, 0.054 | -42,272 | fail (net, top-5, WF) |
+| R44-ema921_adx20 | 774, +75,769, 0.018, 0.113 | 781, +89,213, 0.008, 0.067 | -86,460 | fail (WF) |
+| R44-ema821_adx15 | 1,231, +19,511, 0.032, 0.160 | 1,239, +38,867, 0.016, 0.102 | -168,932 | fail (q, top-5, WF) |
+| R44-ema821_adx15_plock | 1,231, +21,480, 0.032, 0.160 | 1,239, +40,837, 0.018, 0.102 | -207,077 | fail (q, top-5, WF) |
+| R44-ema926_adx20 | 653, +78,014, 0.040, 0.178 | 660, +92,013, 0.030, 0.144 | -126,448 | fail (q, WF) |
+
+**R44-donchian20-RT in detail:**
+- **Current lake, uncleaned:** 1,787 trades, +Rs 66,047, p 0.002.
+- **Cleaned, by index:** FINNIFTY +41,263 (was +51,255), SENSEX +14,166 (was +14,784), BANKNIFTY +13,504,
+  MIDCPNIFTY +5,461, NIFTY -18,955.
+- **Original trades that touched a removed or capped row:**
+  - final: 6 of 1,787 (their net +Rs 18,814): 5 stray opens, 1 capped high, 0 foreign;
+  - design: 29 of 4,517 (their net -Rs 21,996).
+
+- **Where the Rs 10,608 went** (trade by trade, current raw vs cleaned): no trade changed strike. Only 4 trades moved:
+  - two FINNIFTY puts (5 May and 11 Sep 2026, 09:20 entries) had "hit" their +30% target only through a stray high;
+    cleaned, they leave at the 30-minute time exit (-Rs 4,125 and -Rs 5,866);
+  - a SENSEX stop filled worse (-Rs 1,213);
+  - one SENSEX trade moved a minute later (+Rs 595).
+
+  The foreign filter touched none of this rule's trades.
+- **Twice the spread and slippage (cleaned):** final +Rs 5,757 (1,787 trades, p 0.002), design -Rs 111,255 (4,518).
+
 ## What would come back on PAPER under the Nov-2024+ view, and what stays off
 
 | strategy | decision | exact settings |

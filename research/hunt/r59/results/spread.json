@@ -1,0 +1,102 @@
+{
+ "RELIANCE_CE": {
+  "roll": 0.00525,
+  "half": 0.00262,
+  "contract_days": 977
+ },
+ "RELIANCE_PE": {
+  "roll": 0.00613,
+  "half": 0.00307,
+  "contract_days": 977
+ },
+ "HDFCBANK_CE": {
+  "roll": 0.00605,
+  "half": 0.00302,
+  "contract_days": 914
+ },
+ "HDFCBANK_PE": {
+  "roll": 0.00716,
+  "half": 0.00358,
+  "contract_days": 858
+ },
+ "ICICIBANK_CE": {
+  "roll": 0.00647,
+  "half": 0.00324,
+  "contract_days": 873
+ },
+ "ICICIBANK_PE": {
+  "roll": 0.0072,
+  "half": 0.0036,
+  "contract_days": 874
+ },
+ "INFY_CE": {
+  "roll": 0.00557,
+  "half": 0.00279,
+  "contract_days": 769
+ },
+ "INFY_PE": {
+  "roll": 0.00563,
+  "half": 0.00281,
+  "contract_days": 769
+ },
+ "TCS_CE": {
+  "roll": 0.00638,
+  "half": 0.00319,
+  "contract_days": 913
+ },
+ "TCS_PE": {
+  "roll": 0.00641,
+  "half": 0.00321,
+  "contract_days": 986
+ },
+ "SBIN_CE": {
+  "roll": 0.00622,
+  "half": 0.00311,
+  "contract_days": 958
+ },
+ "SBIN_PE": {
+  "roll": 0.0074,
+  "half": 0.0037,
+  "contract_days": 959
+ },
+ "AXISBANK_CE": {
+  "roll": 0.00731,
+  "half": 0.00365,
+  "contract_days": 966
+ },
+ "AXISBANK_PE": {
+  "roll": 0.00822,
+  "half": 0.00411,
+  "contract_days": 907
+ },
+ "KOTAKBANK_CE": {
+  "roll": 0.00654,
+  "half": 0.00327,
+  "contract_days": 926
+ },
+ "KOTAKBANK_PE": {
+  "roll": 0.00737,
+  "half": 0.00369,
+  "contract_days": 925
+ },
+ "ITC_CE": {
+  "roll": 0.00903,
+  "half": 0.00452,
+  "contract_days": 844
+ },
+ "ITC_PE": {
+  "roll": 0.01007,
+  "half": 0.00504,
+  "contract_days": 844
+ },
+ "TMPV_CE": {
+  "roll": 0.00628,
+  "half": 0.00314,
+  "contract_days": 715
+ },
+ "TMPV_PE": {
+  "roll": 0.00648,
+  "half": 0.00324,
+  "contract_days": 769
+ }
+}
