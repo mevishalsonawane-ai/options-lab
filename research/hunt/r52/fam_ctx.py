@@ -145,7 +145,8 @@ def _lake_adapter(lake):
 def r24_features(und, lake=None, cache=True) -> pd.DataFrame:
     """The brain features R24's patterns read, one row per cube minute: ts + R24_FEATS (the other R24 items, unused by
     p2..p8, are NaN). Built exactly as the brain does (cube.build_day on the lake, features.registry), one calendar
-    month at a time with 260 sessions of minute history (iv_rank / levels) and that month's chain."""
+    month at a time with that month's chain and the minute history the features need (115 sessions for the levels,
+    which read 110; 260 for the IV rank, which reads 252)."""
     if und in _R24:
         return _R24[und]
     from research.brain import cube
@@ -965,7 +966,7 @@ H35_X += [dict(stop_pts=40.0, tgt_pts=40.0, ladder=LADDER, ladder_ref_pts=40.0, 
 H35_X += [dict(time_stop=m, time_gain=None, sig_levels=False) for m in (15, 30, 60)]          # h35 run.EXITS x0..x16
 SPECS.append(dict(
     key="H35-1", title="h35: the app's S/R levels - daily pivots break-and-hold",
-    source="index",
+    source="index (grid rows maxoi / maxpain: levels from chain OI)",
     why="HUNT_H35.md pivD break (7,525 trades, best gross exit = time 60); the other families / modes are in the grid",
     orig=dict(fn=h35_levels, params=dict(fam="pivD", mode="brk"), money=1, series="near", unds=UNDS5,
               exits=H35_X[16], expiry="skip", pos=dict(one_at_a_time=True, max_per_day=3),
