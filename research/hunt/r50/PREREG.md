@@ -30,7 +30,7 @@ small re-tune of it, make money on the market as it is now?
   B1 = Q2 2025, B2 = Q3 2025, B3 = Q4 2025, B4 = Q1 2026. A re-tune picks its cell on B0..B(i-1) (expanding, highest
   net) and trades B(i); walk-forward net = the sum over B1..B4. Original rules have nothing fitted; their walk-forward
   net is their net over B1..B4 (and every block is reported).
-- **FINAL TEST:** expiry days 1 Apr - 13 Oct 2026, read ONCE by `study.py final`, which refuses a second run if
+- **FINAL TEST:** expiry days 1 Apr - 13 Oct 2026, read ONCE by `r50study.py final`, which refuses a second run if
   `results/final.json` exists. A re-tune trades its cell chosen on the whole design.
 - **Honesty note:** R43 (holdout 2025-26), R44, R45 and the brain studies already looked at parts of 2025-26, so this
   final test is not pristine. Only live paper from 15 Oct 2026 is truly unseen.
@@ -88,12 +88,12 @@ Original rules keep their old settings and run on all 5 indices, except O-H0 (NI
 | O-RSIF | sweep signals | R43 rsi_fade cheap all hold | RSI14 crosses under 30 (CE) / over 70 (PE), 09:20-14:45 | as E821 | s50 | index |
 | O-DON | sweep signals | R43 donchian20 otm2 all hold | close beyond the prior 20-bar high / low, 09:20-14:45 | 2nd OTM strike, Rs 5,000, floor | s50 | index |
 | O-S3 | volume / supertrend | R35 S3 | 14:00-14:45: ST(7,3) and ST(10,2) both turn green on the OPTION'S own 1-min bars + option volume >= 2x EMA10 + index on the trade's side of its TWAP | ATM+-1, Rs 2,000, skip | E3 | OPTION'S OWN CHART (non-default) |
-| O-S5 | volume / supertrend | R35 S5 (without the heavyweight check: the lake copy has no equity minutes here) | as S3 with both Supertrends on the INDEX 1-min bars | as S3 | E3 | index (+ option volume filter) |
+| O-S5 | volume / supertrend | R35 S5 | as S3 with both Supertrends on the INDEX 1-min bars, plus R35's check that HDFCBANK, RELIANCE and ICICIBANK minute candles all close in the trade's direction | as S3 | E3 | index (+ option volume, heavyweight stocks) |
 | O-K1 | afternoon window | R34 K1e | 14:30-14:45 index range; first 1-min close outside it by 15:00 | ATM+-1, Rs 2,000, min1 | hold | index |
 | O-T1 | afternoon window | R25 T1 | 11:00-14:30: fresh 15-min break of the day's high (CE) / low (PE) + strike within 1.25 expected moves; one per side a day | Rs 1-10, Rs 1,000, floor | app | index |
 
-R37 (gamma flip) and R39/R40 (mined patterns / ML scores) are not re-run: R37 needs the heavyweight equity minutes and a
-spot-grid GEX solve, and R39/R40 were fitted year by year and have no fixed rule to carry over. They stay off.
+R37 (gamma flip) and R39/R40 (mined patterns / ML scores) are not re-run: R37 needs a spot-grid GEX solve (out of this
+study's scope), and R39/R40 were fitted year by year and have no fixed rule to carry over. They stay off.
 
 ## Small re-tunes (one per family; the cell is chosen on design by the walk-forward above)
 
@@ -124,3 +124,14 @@ spot-grid GEX solve, and R39/R40 were fitted year by year and have no fixed rule
 
 Research only: nothing in the app changes. A rule that passes every gate is named as a candidate to come back on PAPER
 (Boss decides; logged and undoable). Live is never touched. A rule that fails stays off.
+
+## Amendment 1 (15 Oct 2026, still before any P&L)
+
+O-S5 keeps R35's heavyweight check (HDFCBANK, RELIANCE, ICICIBANK, lake `equity_1m_<YEAR>.parquet`), as R35 ran it: the
+equity minutes were fetched after Part 1 was pushed. O-S3 stays without it, as R35 S3.
+
+## Amendment 2 (15 Oct 2026, still before any P&L)
+
+The expiry test skips sessions with no 15:15 ATM time value (a missing 15:15 print), so an expiry is compared with the
+next session that has one. Without this, FINNIFTY's 30 Mar 2026 and 25 Aug 2026 monthly expiries were missed (the next
+session had no 15:15 row). The same rule applies to every index.
