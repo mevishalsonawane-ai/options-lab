@@ -18,7 +18,7 @@ FAMILY = {"Liquidity 15+5 (paused arm)": "liquidity", "Liquidity 15+5 (live arm)
           "MCX paper arm": "mcx-crypto", "R44 sweep": "patterns-indicators",
           "R45 premium scalp (non-default)": "outside-strategies", "F1 factory": "patterns-indicators",
           "R29 EMA ribbons": "patterns-indicators", "R41 neural nets": "ml", "B2 all-at-once": "ml"}
-INSTR = {"M4": ["SILVERM"], "LIQ-FIN": ["FINNIFTY"], "LIQ-BN": ["BANKNIFTY"], "G7": ["BANKNIFTY"],
+INSTR = {"M4": ["SILVER"], "LIQ-FIN": ["FINNIFTY"], "LIQ-BN": ["BANKNIFTY"], "G7": ["BANKNIFTY"],
          "NIGHT": ["NIFTY", "BANKNIFTY"], "G10": ["NIFTY", "BANKNIFTY"], "R45": ["NIFTY"]}
 
 
@@ -74,7 +74,7 @@ def main():
                  instruments=instr, features=[f"signal source: {d['source']}"], model_or_rule=d["desc"],
                  settings=f"research/hunt/r51/fam_{d['module']}.py ({f.get('config', '')})",
                  prereg="research/hunt/r51/PREREG.md",
-                 variants_tried=len(d.get("grid_design_net", {})) or 1,
+                 variants_tried=None if d["kind"] == "ref" else (len(d.get("grid_design_net", {})) or 1),
                  results=dict(summary=f"{des}. {fin}. OLD: {old_of(name) or 'see the write-up'}",
                               costs="dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap "
                                     "fills at the worse price, one held contract, lots in force"),

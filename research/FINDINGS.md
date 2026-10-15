@@ -794,3 +794,33 @@ Bollinger(20, 2) lower band). That is not the default; it is reported separately
   shows -106 and -127 (122 and 130 trades). On the fixed contract the signal is no better than random entries (q 0.62).
 - BANKNIFTY: +Rs 237 on the rolling series, -Rs 124 a trade on one contract at real lots (1,405 trades).
 - Rule for every lake study: never trade the rolling ATM series as one instrument; hold the strike that was bought.
+
+## Every other cancelled strategy on the Nov 2024+ market only (R51, 15 Oct 2026) - 1 of 125 passes, and it is thin
+Full study: `HUNT_R51_CANCELLED_RECENT.md` (pre-registered `hunt/r51/PREREG.md`, commit 11fbca1d; trades only 21 Nov 2024 -
+13 Oct 2026; design to 31 Mar 2026 walk-forward; final test 1 Apr - 13 Oct 2026 read once, not pristine because earlier
+studies saw parts of 2025-26). Every trade is priced on ONE held contract, with dated charges, liq fills, next-minute fills and gap fills
+at the worse price. The ORB family (R49) and zero-to-hero rules (R50) are not in it.
+- Tested: Liquidity FINNIFTY (parked arm), R27's 8 Night holds, R28's GEX filters (G7 Liquidity BANKNIFTY, G10 Night),
+  M4 SILVERM, Boss's 7 R44 sweep rules, R45's premium scalp (option-chart signal, non-default), F1's 20 rules, R29's
+  EMA 9 x 21 cross + Boss's 3 ribbon ideas + R1-R10, R41's neural-net rules (R1-R6, R13, always-the-call), and B2's 4
+  rules. Each was tested as originally specified, then with one small pre-registered re-tune: 68 originals and 57
+  re-tunes gated, with BH over all 125.
+- PASS (1): Boss's Donchian 20 on 5-minute index bars with re-tuned exits (1-ITM, stop -15%, target +30%, 30
+  minutes, square-off 15:15, max 2 a day a side, no expiry days, 5 indices).
+  - Final test: +Rs 48,689 on 1,775 trades (+Rs 27 a trade), p 0.002, q 0.025.
+  - Design walk-forward: +Rs 1.82 lakh out of fold.
+  - It is thin. At 2x spread and slippage it is about zero (-Rs 670 final, -Rs 85,770 design). It lost on NIFTY and
+    MIDCPNIFTY in both periods, and its puts lost in both periods.
+  - A paper forward test at most, if Boss wants it. R51 changes nothing in the app.
+- Near misses (stay off):
+  - M4 SILVERM: final +Rs 1.0 lakh on 93 trades, p 0.026, q 0.14; design no better than random, p 0.66.
+  - EMA 9/21 and 9/26 + ADX20: final +Rs 76-78k, but they lost in design.
+  - F1-C1 and S7, R29 fades R3 / R6 / R8: positive in the final test, but they lost in design or depend on their top 5
+    trades.
+- Night: all 8 holds and the re-tune made less than the 09:16 sale on the same 86 final-test nights (Rs -5k to -19k).
+  Keep the sale. G10's GEX filter fails (design p 0.75).
+- Liquidity FINNIFTY: design +Rs 99,350 (252 trades, p 0.094); final +Rs 4,861 (94 trades, p 0.49), all from its top 5
+  trades. It stays parked. G7 does not help (+Rs 4,653 vs +Rs 10,978 unfiltered).
+- Everything else loses in the final test or is no better than random entries: R45, 19 of 20 F1 rules, R29's cross
+  and Boss's ribbon ideas, every R41 rule (always buying the call overnight -Rs 5.36 lakh on 520 trades) and all 4 B2
+  rules.

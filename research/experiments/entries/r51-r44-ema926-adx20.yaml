@@ -1,0 +1,35 @@
+id: r51-r44-ema926-adx20
+title: 'R51 R44-ema926_adx20: ema926_adx20: 5-min index signal, ATM, stop -25% / target +50% / 60 min'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (5-min)'
+model_or_rule: 'ema926_adx20: 5-min index signal, ATM, stop -25% / target +50% / 60 min'
+settings: research/hunt/r51/fam_r44.py (ema926_adx20|A|m0)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1574 trades, win 42%, net Rs -138,489 (Rs -411/day), avg win Rs 2,138 / loss Rs -1,725, worst day Rs -30,564,
+    max DD Rs 163,757, without top 5 Rs -211,082; twin p 0.5569; folds [39326.0, -17821.0, -26375.0, -24471.0]. final test
+    (1 Apr - 13 Oct 2026, read once) 653 trades, win 42%, net Rs 78,014 (Rs 587/day), avg win Rs 2,340 / loss Rs -1,506, worst
+    day Rs -21,169, max DD Rs 65,270, without top 5 Rs 20,861; twin p 0.0399, BH q 0.1781: q > 0.10; design walk-forward <=
+    0. OLD: R44 (2021 - Oct 2026, 5 indices + CRUDEOIL): out of sample 0 of 14 strategy-side combinations positive, 0 of 112
+    cells pass; EMA8/21+ADX15 alone -Rs 8.3 lakh on 9,455 NSE trades'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

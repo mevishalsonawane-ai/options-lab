@@ -133,7 +133,7 @@ def main():
             rt = n + "-RT"
             if rt in D:
                 r, fr = D[rt], F.get(rt, {})
-                lines += [row(f"RE-TUNE design ({r['final_pick']})", r["design"], None, None,
+                lines += [row(f"RE-TUNE design ({r['final_pick'].replace('|', ' / ')})", r["design"], None, None,
                               f"walk-forward out-of-fold {rs(r['wf_net'])} on {r['wf_trades']} trades"),
                           row("RE-TUNE FINAL", fr, fr.get("p"), fr.get("q"), fr.get("verdict", "not read"))]
             if n in nb:

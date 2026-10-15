@@ -1,0 +1,35 @@
+id: r51-r44-ema921-adx20
+title: 'R51 R44-ema921_adx20: ema921_adx20: 5-min index signal, ATM, stop -25% / target +50% / 60 min'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (5-min)'
+model_or_rule: 'ema921_adx20: 5-min index signal, ATM, stop -25% / target +50% / 60 min'
+settings: research/hunt/r51/fam_r44.py (ema921_adx20|A|m0)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1824 trades, win 43%, net Rs -98,038 (Rs -291/day), avg win Rs 2,103 / loss Rs -1,683, worst day Rs -35,420,
+    max DD Rs 162,354, without top 5 Rs -170,631; twin p 0.1457; folds [25611.0, 6561.0, -56678.0, -19112.0]. final test (1
+    Apr - 13 Oct 2026, read once) 774 trades, win 42%, net Rs 75,769 (Rs 570/day), avg win Rs 2,196 / loss Rs -1,397, worst
+    day Rs -20,212, max DD Rs 76,789, without top 5 Rs 15,709; twin p 0.018, BH q 0.1125: q > 0.10; design walk-forward <=
+    0. OLD: R44 (2021 - Oct 2026, 5 indices + CRUDEOIL): out of sample 0 of 14 strategy-side combinations positive, 0 of 112
+    cells pass; EMA8/21+ADX15 alone -Rs 8.3 lakh on 9,455 NSE trades'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

@@ -1,0 +1,35 @@
+id: r51-r41-always-call
+title: 'R51 R41-ALWAYS-CALL: the 1-ITM call bought 15:20, sold next 09:16, every night'
+family: ml
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the clock (every non-expiry night)'
+model_or_rule: the 1-ITM call bought 15:20, sold next 09:16, every night
+settings: research/hunt/r51/fam_r41.py (r41|ALWAYS_CALL)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1441 trades, win 43%, net Rs -744,207 (Rs -2,208/day), avg win Rs 2,630 / loss Rs -2,906, worst day Rs
+    -44,859, max DD Rs 783,972, without top 5 Rs -815,925; twin p 1.0; folds [18300.0, -141197.0, -70455.0, -351316.0]. final
+    test (1 Apr - 13 Oct 2026, read once) 520 trades, win 43%, net Rs -536,420 (Rs -4,033/day), avg win Rs 2,953 / loss Rs
+    -4,095, worst day Rs -47,545, max DD Rs 561,519, without top 5 Rs -599,048; twin p 1.0, BH q 1.0: final net <= 0; p >=
+    0.05; q > 0.10; top-5 trades >= net; design walk-forward <= 0. OLD: R41: +Rs 22/day on the same nights (baseline, never
+    gated)'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

@@ -1,0 +1,35 @@
+id: r51-r29-r7-rt
+title: 'R51 R29-R7-RT: re-tune: exit {X1, X1 30 min, -20%/+40%/60 min} x strike {ATM, 1-ITM}'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this re-tune makes money after real costs on one held contract (gates:
+  final net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (EMA ribbons on 1/3/5/15-min bars)'
+model_or_rule: 're-tune: exit {X1, X1 30 min, -20%/+40%/60 min} x strike {ATM, 1-ITM}'
+settings: research/hunt/r51/fam_r29.py (r29|P3_3|1|fade|S20T40|m1)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 6
+results:
+  summary: 'design 325 trades, win 41%, net Rs -56,630 (Rs -168/day), avg win Rs 1,677 / loss Rs -1,441, worst day Rs -10,053,
+    max DD Rs 66,825, without top 5 Rs -88,486; chosen r29|P3_3|1|fade|S20T40|m1; walk-forward out-of-fold Rs -55,942 on 236
+    trades. final test (1 Apr - 13 Oct 2026, read once) 139 trades, win 45%, net Rs -18,731 (Rs -141/day), avg win Rs 1,324
+    / loss Rs -1,309, worst day Rs -7,473, max DD Rs 26,943, without top 5 Rs -37,853; twin p 0.1158, BH q 0.308: final net
+    <= 0; p >= 0.05; q > 0.10; top-5 trades >= net; design walk-forward <= 0. OLD: R29 holdout 2023: -Rs 43 to -223 a trade;
+    0 of 55 rule x index tests pass'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected
