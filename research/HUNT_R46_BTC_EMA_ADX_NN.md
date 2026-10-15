@@ -160,3 +160,173 @@ Other readings:
   checked against a price that is a few minutes old. Entries always need a real trade; exits do not, since a market exit
   would fill against the book at once. The 1% exit slippage and the half spread cover part of that gap.
 - Missing data: none. All 1,018 Delta expiry days are present, and no BTC minute is missing.
+
+## Amendments (15 Oct 2026, labelled): CoinSwitch costs, the "v2 Ensemble", and the 25% dip buy
+
+Boss asked for three more checks after R46 was finished. R46's own results above stay exactly as they were. Everything
+below is new: code `hunt/r46/amend*.py`, `chain.py`, `panel.py`, `ens.py`, `dip.py`, `costs.py` (tests
+`hunt/r46/test_amend.py`); numbers in `hunt/r46/results/amend.json` and `amend_report.md`. Research only; nothing in
+the app trades crypto, and nothing here placed an order.
+
+**Which view to read.** Boss (15 Oct) wants only 20 Nov 2024 onwards. So the **PRIMARY view** is:
+
+- design: 20 Nov 2024 - 31 Mar 2026 (no trade or training before 20 Nov 2024);
+- final test: 1 Apr - 12 Oct 2026.
+
+The full span (design from 1 Jan 2024) is shown beside it. **The final test is the same span as R46's holdout, which
+R46 already read once.** The amendment reports on that same span. The spans were fixed in `amend_cfg.py` (commit
+d492524) before the amendment run, and no rule, threshold or span was changed after any result. Before that commit only
+a 4-day smoke test had been seen.
+
+**Verdict: nothing passes, in either view, under Delta's or CoinSwitch's costs, with or without GST.** 0 of 22
+variants pass: R46's 14, v2 x 4 and dip x 4, with BH across all 22.
+
+### Amendment 1: CoinSwitch PRO costs
+
+**Costs used.**
+
+- CoinSwitch PRO BTC options: 0.015% of notional a side.
+- CoinSwitch futures: 0.05% taker, 0.02% maker.
+- These are third-party figures, NOT verified. We charge the option fee on notional with no cap, which is the dearer
+  reading. If CoinSwitch charges it on the premium, the fee is about zero and the results move toward the "no fee"
+  case.
+- GST is shown with 18% on the fee and without.
+- Tax is unchanged: 30% + 4% cess on each winning trade, no set-off. 1% TDS is withheld on each sale (cash flow), for
+  example about $4,600 on the 991 design trades of A call L2.
+- CoinSwitch PRO routes BTC options under "dtrade", most likely Delta's own book, so the spread model and the
+  one-minute-later fill stay.
+
+**R46 A call L2 (best lock), 1,000 contracts = 1 BTC, after tax:**
+
+| view | trades | Delta + GST | CoinSwitch + GST | CoinSwitch, no GST |
+|---|---|---|---|---|
+| Nov24+ design | 991 (win 27.8%) | -$89,295 | -$77,822 | -$72,640 |
+| Nov24+ final test | 391 (win 41.4%) | -$11,003 | -$14,895 | -$13,370 |
+| full-span design | 1,486 | -$127,828 | -$106,221 | -$99,300 |
+
+- CoinSwitch's 0.015% is cheaper than Delta's old 0.03% (to Jul 2025), but dearer than Delta's current 0.01% with
+  its premium cap. So it helps the older months and hurts the final test.
+- **No variant turns positive.**
+- **Their net B:** 4 design trades in the Nov 2024+ view (+$410 to +$549 after tax) and 0 in the final test. Its
+  walk-forward MLP may only train on data from 20 Nov 2024, so it starts in May 2025.
+- **Perp:** even at the CoinSwitch maker fee without GST, the perp long loses $101k (design) and $24k (final) per
+  1 BTC after tax.
+
+### Amendment 2: the other AI's "v2 Ensemble"
+
+**Their claim:**
+
+- Entry: the R46 entry (EMA 8/21 cross up + ADX(14) > 15 on 5-minute BTC spot, ATM call next bar, 60 minutes, 50%
+  stop, max 2 a day).
+- Filter: the average of an MLP (12 -> 64 -> 32 -> 1, dropout 0.2), GradientBoosting (200 trees, depth 4, lr 0.05) and
+  a RandomForest (200 trees, depth 10) above 0.65.
+- Target: "the call premium is up 60 minutes later".
+- 12 inputs from the call's 5-minute chart and BTC.
+- Result claimed: Sep-Oct 2026, 35 trades, 85.7% win, +$132.20 a trade, AUC 0.78.
+- Signal source: the entry is on the underlying. The filter reads the option's own chart (non-default, labelled).
+
+**What we did.**
+
+- We rebuilt the 12 inputs twice:
+  - on the **rolling** ATM call series, which is what a "btc_atm" file holds: the strike nearest spot, rolling to the
+    next daily expiry;
+  - on the **held** contract: the ATM call at the decision minute, followed on its own prices.
+- We scored AUC with a shuffled 80/20 split and with time-ordered walk-forward blocks (quarterly, purge + 12-bar
+  embargo).
+- We traded it with walk-forward ensembles only, on the held contract, with the one-minute-later fill, Delta and
+  CoinSwitch costs and per-trade tax.
+- Every trade had a profit lock: L1 step or L2 trail (a no-lock version was not tested).
+
+**AUC, Nov 2024+ view (n = rows scored):**
+
+| inputs + label | random split (design) | walk-forward design | walk-forward final | the same rolling model judged on the held contract's own move |
+|---|---|---|---|---|
+| rolling series | 0.786 (28,618) | 0.782 (122,068) | 0.796 (56,148) | 0.510 design / 0.502 final |
+| held contract | 0.575 (28,354) | 0.538 (121,112) | 0.543 (56,045) | - |
+
+What this means:
+
+- **Their 0.78 is real, and worthless.** It comes from the rolling series, not mainly from the random split. The
+  leakage gap is only 0.004 on rolling and 0.037 on held.
+- The rolling strike or expiry changes inside **97.9%** of the 60-minute label windows. **98%** of the rolling "up"
+  labels coincide with such a switch. The rolling label agrees with the held contract's real move only 57% of the time.
+  So the model learns *when the series will jump to another contract*, which no trade can capture.
+- Judged on the contract you would actually hold, the same model is a coin flip (AUC 0.50-0.51).
+- On the held contract the honest AUC is 0.54, with a base rate of 42% "up". The ensemble then almost never clears
+  0.65: **1 design trade, 0 final-test trades**.
+
+**Trades (1,000 contracts, Delta costs; L1 step lock shown, L2 similar):**
+
+| filter inputs | Nov24+ design | Nov24+ final test | full-span design |
+|---|---|---|---|
+| rolling series | 281 trades, win 24.6%, -$12,814 before tax, -$16,561 after; worst -$525; max DD $16,561; p 0.006, q 0.11 | 140 trades, win 30.7%, -$2,656 / -$4,027; p 0.095 | 496 trades, -$33,795 after tax |
+| held contract | 1 trade (+$6 after tax) | 0 trades | 6 trades, -$24 |
+
+- CoinSwitch costs (with or without GST) change no sign: for the rolling L1 design, -$15,893 and -$14,401 after tax.
+- **In their own window (Sep - 12 Oct 2026)** the rolling-filter version made 23 trades, 43.5% win, -$183 before tax.
+  Their claim was 35 trades, 85.7% and +$132 a trade.
+- The ensemble's design p of 0.006 means its entries were better than random times on the same days. They still lost
+  after costs.
+- GradientBoosting was fitted with histogram split finding (sklearn HistGradientBoosting, same 200 trees, depth 4 and
+  lr 0.05) to make 38 walk-forward fits feasible.
+
+### Amendment 3: "BTC options mean reversion: buy after a 25% drop"
+
+**Their claim:**
+
+- The rule: on 15-minute bars of the BTC ATM call (and separately the put), buy at the bar close when the premium fell
+  25% or more in that bar and is at least $50. Sell 4 bars (60 minutes) later. $300 a trade, no stop.
+- Results claimed, Sep 2024 - Oct 2026:
+  - CE: 5,504 trades, 59.5% win, average +$424, median +$28, total +$2.34 M, max DD -$2,875;
+  - PE: 5,743 trades, 59.1% win, +$408 average.
+- How: synthetic fills, a $5 cost, a 2.1 M-row file, `df.premium.pct_change()` over the whole frame, exit at row
+  idx + 4.
+- Signal source: the option's own chart (NON-DEFAULT, labelled).
+
+**Reproduced in kind.** We built a frame like theirs: the rolling ATM call and put, one row per minute each,
+interleaved. It has 2,223,282 rows for Sep 2024 - 12 Oct 2026.
+
+1. **Their code, literally.**
+   - Every call row's `pct_change` compares it with the **put row** before it, so 100% of signals are mixed rows.
+   - `idx + 4` is **2 minutes** later, not 60.
+   - It "finds" 66,150 call trades (58% win, +$49 average, +$3.24 M) and 109,097 put trades (+$5.40 M).
+   - **84% of that profit** is from exits on another strike or expiry.
+   - The rest is +$10 a trade over 2 minutes on stale last-trade prices with no spread.
+2. **Their words (15-minute closes of one side's rolling series).**
+   - Calls: 3,482 trades, 69.6% win, +$323 average, median +$44, total +$1.12 M, max DD -$398. Puts are similar
+     (3,697 trades, +$296 average). This is close to their claim's shape.
+   - But **99.5% of the profit comes from rows that are not one contract**. 68% of signals are strike switches.
+   - The daily expiry roll alone made **$1.03 M** on 645 call trades: the exit is priced on the next day's contract,
+     which has a day more of time value.
+   - The 351 trades that were one contract throughout averaged +$17.6, before any spread.
+
+**Re-tested honestly on held contracts.**
+
+- Rule: at each 15-minute close, the ATM contract whose own price fell 25% or more since the previous close and is at
+  least $50.
+- Fill: buy it at the first real trade 1-5 minutes after the close, plus half the spread.
+- Exit: 60 minutes on the same contract, with a 50% stop and an L1 step or L2 trailing lock. Exits pay half the
+  spread, a tick and 1%. $300 a trade.
+
+| variant | Nov24+ design: trades, win, before / after tax, worst, max DD, p | Nov24+ final test | full-span design |
+|---|---|---|---|
+| call L1 | 3,548, 26.8%, -$181,242 / -$226,911, -$260, $227,164, p 0.97 | 1,380, 33.8%, -$43,685 / -$61,249, p 0.57 | 5,044, -$338,443 after tax |
+| call L2 | 3,502, 30.1%, -$180,779 / -$223,641, -$260, $223,894, p 0.99 | 1,362, 43.5%, -$47,405 / -$62,887, p 0.76 | 4,977, -$337,229 |
+| put L1 | 3,727, 27.1%, -$196,630 / -$244,824, -$276, $245,060, p 1.00 | 1,401, 31.1%, -$57,460 / -$72,744, p 1.00 | 5,206, -$357,321 |
+| put L2 | 3,688, 29.7%, -$198,164 / -$243,667, -$276, $244,042, p 1.00 | 1,378, 40.2%, -$55,741 / -$71,069, p 1.00 | 5,153, -$354,962 |
+
+- On the held contract, a call that dropped 25% in 15 minutes loses about $51 a trade on $300 (-17%), before tax.
+  That is worse than random entries (p 0.97-1.00).
+- The spread on a $50-$100 premium costs about 10% each way.
+- CoinSwitch costs make it worse in the final test: call L1 -$93,109 after tax with GST, -$84,264 without.
+- Over their whole claim window (Sep 2024 - Oct 2026), the honest call L1 made 4,928 trades, 28.7% win, -$224,927
+  before tax.
+
+### Honest limits of the amendments
+
+- The final test is R46's already-read holdout span. Nothing was tuned on it, but it is not a fresh test.
+- The rolling ATM series is our construction of a "btc_atm" file: R46's expiry rule (roll 90 minutes before the 12:00
+  UTC settlement), the strike nearest spot within 1%, and the last traded price. Their file may roll at expiry itself.
+  That would add even more roll artefacts, not fewer.
+- The CoinSwitch fee figures are unverified, and the spread model is Delta's. Both readings lose by a wide margin.
+- The tax reading (A) still needs a CA. Every result here loses before tax too.

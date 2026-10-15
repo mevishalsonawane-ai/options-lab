@@ -815,3 +815,22 @@ premium stop AND a profit lock (the other AI's no-lock exit was not run), 60-min
   $1.36M. Nothing goes to paper; nothing in the app trades crypto.
 - Their "1,000 contracts ~ $300" is right in kind (0.001 BTC a contract; median ATM premium $278 holdout, $410 design),
   but 1,000 contracts is far beyond what Delta's daily-option book fills at the modelled spread.
+- **Amendments (15 Oct, labelled; primary view 20 Nov 2024 - 31 Mar 2026 design, 1 Apr - 12 Oct 2026 final = R46's
+  already-read holdout span): still 0 of 22 pass.**
+  - CoinSwitch PRO costs (0.015% of notional, unverified; GST with and without): A call L2 Nov24+ design 991 trades,
+    -$72,640 to -$89,295 after tax; final 391 trades, -$11,003 to -$14,895. No sign changes.
+  - The other AI's v2 "Ensemble" (MLP+GB+RF > 0.65 on the call's chart): its AUC 0.78 is real but comes from the
+    ROLLING ATM series. The strike or expiry changes inside 98% of the 60-minute label windows. We get 0.786 on a random
+    split and still 0.782 walk-forward, but the same model scores 0.50-0.51 against the held contract's own move. On
+    held contracts the AUC is 0.54 and the filter almost never fires (1 design trade, 0 final). The rolling-filter
+    version lost: 281 design trades, -$16,561 after tax; 140 final trades, -$4,027. In their Sep-Oct window: 23 trades,
+    43.5% win.
+  - The "buy after a 25% drop" claim (+$2.3 M per side) is a data artefact:
+    - their code's `pct_change` compares a call row with the put row before it, and `idx + 4` is 2 minutes later;
+    - on 15-minute rolling bars, 99.5% of the profit is strike switches and the daily expiry roll (the roll alone made
+      $1.03 M).
+    - On held contracts with real fills, a stop and a lock, the calls lost $181k before tax on 3,548 Nov24+ design
+      trades ($300 each; p 0.97) and $44k on 1,380 final trades. The puts lost the same way.
+    - Option-chart signal: non-default.
+  - **Lesson for every study:** never label or build features on a rolling ATM series. Price and label on the held
+    contract.
