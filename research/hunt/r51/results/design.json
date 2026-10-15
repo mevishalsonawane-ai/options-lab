@@ -138,33 +138,33 @@
   "design_start": "2024-11-20",
   "sessions": 337,
   "design": {
-   "trades": 336,
-   "win": 0.4226,
-   "net": 118828.0,
-   "per_day": 352.6,
-   "avg_win": 2009.0,
-   "avg_loss": -858.0,
-   "worst_day": -6164.0,
-   "max_dd": 12691.0,
-   "ex_top5": 51193.0,
-   "top5_share": 0.569,
-   "days": 203,
+   "trades": 239,
+   "win": 0.4561,
+   "net": 116438.0,
+   "per_day": 345.5,
+   "avg_win": 2081.0,
+   "avg_loss": -849.0,
+   "worst_day": -5806.0,
+   "max_dd": 10547.0,
+   "ex_top5": 50676.0,
+   "top5_share": 0.565,
+   "days": 145,
    "why": {
-    "rule_exit": 225,
-    "time": 93,
-    "stop": 10,
-    "squareoff": 8
+    "rule_exit": 164,
+    "time": 65,
+    "squareoff": 6,
+    "stop": 4
    },
-   "p": 0.0279,
-   "twin_mean": 40815.0
+   "p": 0.008,
+   "twin_mean": 28224.0
   },
   "folds": [
-   16712.0,
-   12134.0,
-   692.0,
-   43190.0
+   18267.0,
+   11507.0,
+   -3220.0,
+   51251.0
   ],
-  "wf_net": 118828.0
+  "wf_net": 116438.0
  },
  "NIGHT-B0": {
   "family": "Night (R3) arm",
@@ -569,30 +569,30 @@
   "design_start": "2024-11-20",
   "sessions": 335,
   "design": {
-   "trades": 245,
-   "win": 0.5265,
-   "net": 98273.0,
-   "per_day": 293.4,
-   "avg_win": 3144.0,
-   "avg_loss": -2649.0,
+   "trades": 83,
+   "win": 0.5181,
+   "net": 13665.0,
+   "per_day": 40.8,
+   "avg_win": 3094.0,
+   "avg_loss": -2985.0,
    "worst_day": -15106.0,
-   "max_dd": 53128.0,
-   "ex_top5": 33329.0,
-   "top5_share": 0.661,
-   "days": 169,
+   "max_dd": 34821.0,
+   "ex_top5": -36453.0,
+   "top5_share": 3.668,
+   "days": 72,
    "why": {
-    "b0_0916": 245
+    "b0_0916": 83
    },
-   "p": 0.8423,
-   "twin_mean": 98273.0
+   "p": 0.7545,
+   "twin_mean": 33800.0
   },
   "folds": [
-   10783.0,
-   864.0,
-   5154.0,
-   -10093.0
+   4579.0,
+   2074.0,
+   5291.0,
+   -3623.0
   ],
-  "wf_net": 98273.0
+  "wf_net": 13665.0
  },
  "M4-SILVERM": {
   "family": "MCX paper arm",
@@ -2731,5 +2731,464 @@
     "missing": 16
    }
   }
+ },
+ "F1-C1": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "Trend stack: 5-min EMA9>EMA21, 5-min Supertrend up, index above option-volume VWAP (mirror for puts); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 2195,
+   "win": 0.5535,
+   "net": -45134.0,
+   "per_day": -133.9,
+   "avg_win": 993.0,
+   "avg_loss": -1277.0,
+   "worst_day": -21097.0,
+   "max_dd": 65573.0,
+   "ex_top5": -71136.0,
+   "top5_share": null,
+   "days": 337,
+   "why": {
+    "lock": 1138,
+    "time": 535,
+    "stop": 520,
+    "squareoff": 2
+   },
+   "p": 0.0319,
+   "twin_mean": -152236.0
+  },
+  "folds": [
+   -24524.0,
+   21486.0,
+   -27256.0,
+   -13795.0
+  ],
+  "wf_net": -45134.0
+ },
+ "F1-C1-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|C1|q0.2|x1",
+   "f1|C1|q0.2|x1",
+   "f1|C1|q0.2|x1",
+   "f1|C1|q0.2|x1"
+  ],
+  "wf_net": -44089.0,
+  "wf_trades": 1594,
+  "final_pick": "f1|C1|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|C1|q0.2|x1": -45134.0,
+   "f1|C1|q0.2|x2": -149631.0,
+   "f1|C1|q0.1|x1": -45134.0,
+   "f1|C1|q0.1|x2": -149631.0
+  },
+  "design": {
+   "trades": 2195,
+   "win": 0.5535,
+   "net": -45134.0,
+   "per_day": -133.9,
+   "avg_win": 993.0,
+   "avg_loss": -1277.0,
+   "worst_day": -21097.0,
+   "max_dd": 65573.0,
+   "ex_top5": -71136.0,
+   "top5_share": null,
+   "days": 337,
+   "why": {
+    "lock": 1138,
+    "time": 535,
+    "stop": 520,
+    "squareoff": 2
+   }
+  }
+ },
+ "F1-C2": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "OI + VWAP: put-writing bias > 0 and index above option-volume VWAP (mirror for puts); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 2586,
+   "win": 0.5387,
+   "net": -234802.0,
+   "per_day": -696.7,
+   "avg_win": 971.0,
+   "avg_loss": -1330.0,
+   "worst_day": -18582.0,
+   "max_dd": 257030.0,
+   "ex_top5": -267393.0,
+   "top5_share": null,
+   "days": 337,
+   "why": {
+    "lock": 1318,
+    "stop": 679,
+    "time": 586,
+    "squareoff": 2,
+    "missing": 1
+   },
+   "p": 0.1856,
+   "twin_mean": -285453.0
+  },
+  "folds": [
+   6231.0,
+   -5920.0,
+   -83416.0,
+   -43958.0
+  ],
+  "wf_net": -234802.0
+ },
+ "F1-C2-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|C2|q0.2|x2",
+   "f1|C2|q0.2|x1",
+   "f1|C2|q0.2|x1",
+   "f1|C2|q0.2|x1"
+  ],
+  "wf_net": -169336.0,
+  "wf_trades": 1902,
+  "final_pick": "f1|C2|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|C2|q0.2|x1": -234802.0,
+   "f1|C2|q0.2|x2": -245335.0,
+   "f1|C2|q0.1|x1": -234802.0,
+   "f1|C2|q0.1|x2": -245335.0
+  },
+  "design": {
+   "trades": 2586,
+   "win": 0.5387,
+   "net": -234802.0,
+   "per_day": -696.7,
+   "avg_win": 971.0,
+   "avg_loss": -1330.0,
+   "worst_day": -18582.0,
+   "max_dd": 257030.0,
+   "ex_top5": -267393.0,
+   "top5_share": null,
+   "days": 337,
+   "why": {
+    "lock": 1318,
+    "stop": 679,
+    "time": 586,
+    "squareoff": 2,
+    "missing": 1
+   }
+  }
+ },
+ "F1-S1": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "atr_14m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 279,
+   "win": 0.6201,
+   "net": -56545.0,
+   "per_day": -167.8,
+   "avg_win": 931.0,
+   "avg_loss": -2053.0,
+   "worst_day": -5858.0,
+   "max_dd": 60193.0,
+   "ex_top5": -71731.0,
+   "top5_share": null,
+   "days": 279,
+   "why": {
+    "lock": 163,
+    "time": 78,
+    "stop": 38
+   },
+   "p": 0.7106,
+   "twin_mean": -43891.0
+  },
+  "folds": [
+   4647.0,
+   4427.0,
+   -10139.0,
+   -31789.0
+  ],
+  "wf_net": -56545.0
+ },
+ "F1-S1-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S1|q0.2|x1",
+   "f1|S1|q0.2|x1",
+   "f1|S1|q0.2|x1",
+   "f1|S1|q0.2|x1"
+  ],
+  "wf_net": -32853.0,
+  "wf_trades": 197,
+  "final_pick": "f1|S1|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S1|q0.2|x1": -56545.0,
+   "f1|S1|q0.2|x2": -74032.0,
+   "f1|S1|q0.1|x1": -56545.0,
+   "f1|S1|q0.1|x2": -74032.0
+  },
+  "design": {
+   "trades": 279,
+   "win": 0.6201,
+   "net": -56545.0,
+   "per_day": -167.8,
+   "avg_win": 931.0,
+   "avg_loss": -2053.0,
+   "worst_day": -5858.0,
+   "max_dd": 60193.0,
+   "ex_top5": -71731.0,
+   "top5_share": null,
+   "days": 279,
+   "why": {
+    "lock": 163,
+    "time": 78,
+    "stop": 38
+   }
+  }
+ },
+ "F1-S2": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "rv_30m top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 233,
+   "win": 0.6137,
+   "net": -35794.0,
+   "per_day": -106.2,
+   "avg_win": 827.0,
+   "avg_loss": -1712.0,
+   "worst_day": -5353.0,
+   "max_dd": 35794.0,
+   "ex_top5": -50293.0,
+   "top5_share": null,
+   "days": 233,
+   "why": {
+    "lock": 135,
+    "time": 72,
+    "stop": 26
+   },
+   "p": 0.5329,
+   "twin_mean": -34710.0
+  },
+  "folds": [
+   -10879.0,
+   8561.0,
+   14815.0,
+   -30606.0
+  ],
+  "wf_net": -35794.0
+ },
+ "F1-S2-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S2|q0.2|x1",
+   "f1|S2|q0.2|x1",
+   "f1|S2|q0.2|x1",
+   "f1|S2|q0.2|x1"
+  ],
+  "wf_net": -18109.0,
+  "wf_trades": 156,
+  "final_pick": "f1|S2|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S2|q0.2|x1": -35794.0,
+   "f1|S2|q0.2|x2": -48015.0,
+   "f1|S2|q0.1|x1": -35794.0,
+   "f1|S2|q0.1|x2": -48015.0
+  },
+  "design": {
+   "trades": 233,
+   "win": 0.6137,
+   "net": -35794.0,
+   "per_day": -106.2,
+   "avg_win": 827.0,
+   "avg_loss": -1712.0,
+   "worst_day": -5353.0,
+   "max_dd": 35794.0,
+   "ex_top5": -50293.0,
+   "top5_share": null,
+   "days": 233,
+   "why": {
+    "lock": 135,
+    "time": 72,
+    "stop": 26
+   }
+  }
+ },
+ "F1-S3": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "atr14_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 268,
+   "win": 0.6231,
+   "net": -48639.0,
+   "per_day": -144.3,
+   "avg_win": 929.0,
+   "avg_loss": -2018.0,
+   "worst_day": -5858.0,
+   "max_dd": 50848.0,
+   "ex_top5": -64004.0,
+   "top5_share": null,
+   "days": 268,
+   "why": {
+    "lock": 157,
+    "time": 77,
+    "stop": 34
+   },
+   "p": 0.6886,
+   "twin_mean": -39882.0
+  },
+  "folds": [
+   6507.0,
+   2543.0,
+   -2398.0,
+   -32111.0
+  ],
+  "wf_net": -48639.0
+ },
+ "F1-S3-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S3|q0.2|x1",
+   "f1|S3|q0.2|x1",
+   "f1|S3|q0.2|x1",
+   "f1|S3|q0.2|x1"
+  ],
+  "wf_net": -25459.0,
+  "wf_trades": 186,
+  "final_pick": "f1|S3|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S3|q0.2|x1": -48639.0,
+   "f1|S3|q0.2|x2": -61405.0,
+   "f1|S3|q0.1|x1": -48639.0,
+   "f1|S3|q0.1|x2": -61405.0
+  },
+  "design": {
+   "trades": 268,
+   "win": 0.6231,
+   "net": -48639.0,
+   "per_day": -144.3,
+   "avg_win": 929.0,
+   "avg_loss": -2018.0,
+   "worst_day": -5858.0,
+   "max_dd": 50848.0,
+   "ex_top5": -64004.0,
+   "top5_share": null,
+   "days": 268,
+   "why": {
+    "lock": 157,
+    "time": 77,
+    "stop": 34
+   }
+  }
+ },
+ "F1-S4": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "range_15m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 308,
+   "win": 0.6396,
+   "net": -37645.0,
+   "per_day": -111.7,
+   "avg_win": 887.0,
+   "avg_loss": -1913.0,
+   "worst_day": -5858.0,
+   "max_dd": 41989.0,
+   "ex_top5": -51416.0,
+   "top5_share": null,
+   "days": 308,
+   "why": {
+    "lock": 183,
+    "time": 85,
+    "stop": 40
+   },
+   "p": 0.3273,
+   "twin_mean": -47968.0
+  },
+  "folds": [
+   13149.0,
+   2445.0,
+   407.0,
+   -29346.0
+  ],
+  "wf_net": -37645.0
  }
 }
