@@ -28,10 +28,10 @@ model_or_rule: 'r56-boss-orb: range = NIFTY 1-minute bars 09:15-09:29; first 1-m
 settings: research/hunt/r56/PREREG.md A3-A4; results/summary.json
 variants_tried: 4
 results:
-  summary: 'Whole span 21 Nov 2024 - 14 Oct 2026: 467 trades, win rate 69% (target 69% / range stop 22% / square-off 9%),
-    avg win Rs +983, avg loss Rs -2,754, net Rs -79,190 (Rs -170 a trade), worst day Rs -6,963, worst 5 sessions Rs -13,977,
+  summary: 'Whole span 21 Nov 2024 - 14 Oct 2026 (trades: 467): win rate 69% (target 69% / range stop 22% / square-off 9%),
+    avg win Rs +983, avg loss Rs -2,754, net Rs -79,190 (Rs -170 a trade), worst day Rs -6,963, worst five sessions Rs -13,977,
     max DD Rs -82,634, 7 of 24 months green; losses worse than -Rs 1,000: 128 of 144 (median loss Rs 2,606, 90th pct Rs
-    4,845); twin p 0.974 (1,000 twins). Design: 333 trades, net Rs -45,736, p 0.907. Recent: 134 trades, 67% win, net Rs
+    4,845); twin p 0.974 (1,000 twins). Design (trades: 333): net Rs -45,736, p 0.907. Recent (trades: 134): 67% win, net Rs
     -33,454 (Rs -250 a trade), max DD Rs -33,797, 2 of 7 months green, p 0.946. Context only (not decisions): no target
     Rs -156,206; Rs 1,000 hard stop instead of the range stop Rs -40,765; limit-at-target Rs -94,368.'
   costs: charges in force on the date (STT 0.1% to 31 Mar 2026, 0.15% from 1 Apr 2026); R49 liq fills (5 bps + 1-4 ticks,

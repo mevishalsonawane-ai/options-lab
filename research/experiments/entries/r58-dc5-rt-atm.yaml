@@ -11,16 +11,7 @@ period:
   design: 20 Nov 2024 - 31 Mar 2026 (336 sessions), 10 stocks
   holdout: final test 1 Apr - 12 Oct 2026 (132 sessions), read once 15 Oct 2026; stock options not read before
 instruments:
-- RELIANCE
-- SBIN
-- MARUTI
-- ICICIBANK
-- INFY
-- LT
-- KOTAKBANK
-- M&M
-- TRENT
-- TATASTEEL
+- F&O stocks
 features:
 - stock 5-minute bars
 - previous-day TPO value area
@@ -42,4 +33,5 @@ results:
     the date (bhavcopy / traded volumes)
 holdout_read: true
 verdict: rejected
-notes: One of 38 R58 variants in one BH family (research/hunt/r58/results/report.md).
+notes: 'One of 38 R58 variants in one BH family (research/hunt/r58/results/report.md). Stocks (instrument F&O stocks): RELIANCE,
+  SBIN, MARUTI, ICICIBANK, INFY, LT, KOTAKBANK, M&M, TRENT, TATASTEEL.'

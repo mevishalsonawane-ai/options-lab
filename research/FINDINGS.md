@@ -1075,9 +1075,15 @@ of every rule: the underlying (MCX near future, US future + USD/INR, XAUUSD, BTC
 - Validated against NSE bhavcopy, NSE index closes and Yahoo: index closes 99.7-100% within 0.05%. Option contract-day
   high/low match 87-98%. Dhan's option OI runs about 1-5% above NSE end-of-day OI, so treat it as intraday OI.
 - Dhan does not give historical bid/ask, expired futures minutes, or next-month continuous futures
-  (expiryCode 1/2 = same as 0). Data APIs are capped at 100,000 requests/day; the stock-option download hit it, so
-  stock options are partial (51 of 59 stocks, ATM 78%, ±1..5 ~23%; see data/README.md) and match NSE only ~69% at
-  contract-day high/low (index options 87-98%). Use stock-option minutes with care.
+  (expiryCode 1/2 = same as 0). Data APIs are capped at 100,000 requests/day, so stock options are still partial
+  (15 Oct note, per data/README.md): fetched share of the planned 30-day chunks is ATM 99.4%, ATM±1 100%, ATM±2 23%,
+  ATM±3..±5 0%; every stock-option file runs to 14 Oct 2026. The fill is paused because the Dhan token expired. Stock
+  options match NSE only ~68% at contract-day high/low (index options 86-98%). Use stock-option minutes with care.
+- `STOCK_OPTIONS_COVERAGE.json` counts fetched chunks, not rows, so it overstates what is usable (R58, 15 Oct). Share
+  of design sessions (20 Nov 2024 - 31 Mar 2026) with ATM CE and PE for >= 300 minutes differs by name: HDFCBANK,
+  TCS and AXISBANK about 91% (HDFCBANK has no ATM puts Dec 2025 - Jan 2026, TCS no ATM calls Feb - Mar 2026);
+  BSE 63% and BAJFINANCE 58%, with no option rows before Jun 2025 although the coverage file shows >= 99% for both.
+  Check rows per stock before using its options.
 
 ## Solo 2.0: a trained Solo that picks its own paper trades (R57, 15 Oct 2026) - 1 default pass (A2), paper candidate only
 Full study: `HUNT_R57_SOLO_2.md` (pre-registered `hunt/r57/PREREG.md`, commit a2278995; NIFTY, BANKNIFTY, FINNIFTY,

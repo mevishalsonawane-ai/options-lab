@@ -56,7 +56,8 @@ def main():
             hypothesis=("Buying the nearest-monthly ATM option of a top-10 NIFTY 50 stock on this stock signal makes money "
                         "after real costs on one held contract (final net > 0, twin p < 0.05, BH q <= 0.10 over 38, 40+ "
                         "trades, top-5 < net, design gate)."),
-            data_version=DATA, period=PERIOD, instruments=list(RR.stocks_for(r)), features=FEAT[r.family],
+            # 15 Oct 2026: the knowledge pack only knows market labels, so the stocks go in the notes (below).
+            data_version=DATA, period=PERIOD, instruments=["F&O stocks"], features=FEAT[r.family],
             model_or_rule=(f"{r.id} ({r.kind}, {r.p}, hold {r.hold} session(s)); signal source: the stock "
                            "(NIFTY for relative strength); band exit at 1.25 strike steps; out by 15:15 on T-3 before expiry"),
             settings="research/hunt/r58/PREREG.md section 5; research/hunt/r58/r58rules.py", prereg=PREREG,
@@ -66,7 +67,8 @@ def main():
                                   f"{f['x2']['net']:+,.0f}; stock in cash (same minutes) Rs {f['cash_x1']['net']:+,.0f} "
                                   f"on {f['cash_x1']['trades']} trades. Final by stock: {stocks}."), costs=COSTS),
             holdout_read=True, verdict="paper-only" if v.startswith("PASS") else "rejected",
-            notes="One of 38 R58 variants in one BH family (research/hunt/r58/results/report.md).",
+            notes=("One of 38 R58 variants in one BH family (research/hunt/r58/results/report.md). Stocks (instrument "
+                   f"F&O stocks): {', '.join(RR.stocks_for(r))}."),
         )
         (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
         n += 1
