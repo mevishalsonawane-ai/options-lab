@@ -1,0 +1,42 @@
+id: r50-lottery
+title: 'Cancelled hero rules on the Nov 2024+ market: cheap OTM lottery'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R50_HERO_RECENT.md
+hypothesis: A cancelled cheap OTM lottery hero rule (R21-R43), or a small pre-registered re-tune of it, makes money on the
+  market since NSE's weekly-expiry change (20 Nov 2024) after real costs, on one held contract, and beats random entry times.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: opt_<UND>_WEEK_2024-2026 (rolling ATM+-10 1-minute, rebuilt per held strike),
+  index_1m 2024-2026, equity_1m 2024-2026 (R35 heavyweights); lake to 13 Oct 2026'
+period:
+  design: expiry days 20 Nov 2024 - 31 Mar 2026 (walk-forward blocks B0-B4)
+  holdout: 'final test: expiry days 1 Apr - 13 Oct 2026, read once (not pristine: R43-R45 saw 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: none (time only, both sides)'
+model_or_rule: O-L1 = R25 L1; O-L3 = R25 L3; O-BASE = R43 base cheap hero hold (12:30); T-LOT (1230-tr25) = R25 L1
+settings: research/hunt/r50/r50rules.py (rules), research/hunt/r50/r50cfg.py (dates, lots)
+prereg: research/hunt/r50/PREREG.md
+variants_tried: 9
+results:
+  summary: '3 original rules and a re-tune grid of 6 cells (one cell chosen on design by walk-forward), on 193 design and
+    73 final-test index-expiry-days (20 Nov 2024 - 13 Oct 2026; NIFTY and SENSEX weekly, BANKNIFTY / FINNIFTY / MIDCPNIFTY
+    monthly). 0 pass. O-L1: design 283 trades net Rs -1,03,789 (walk-forward Rs -75,692); final 121 trades, win 8.3%, peaks
+    5x/10x 6/2, net Rs -28,693, without top 5 Rs -41,813 (top-5 share n/a (net <= 0)), p 0.106, q 0.329: fail; O-L3: design
+    281 trades net Rs -78,129 (walk-forward Rs -68,247); final 124 trades, win 12.9%, peaks 5x/10x 9/2, net Rs -26,486, without
+    top 5 Rs -36,052 (top-5 share n/a (net <= 0)), p 0.034, q 0.251: fail; O-BASE: design 356 trades net Rs -1,17,686 (walk-forward
+    Rs -43,531); final 146 trades, win 15.8%, peaks 5x/10x 12/3, net Rs +1,26,738, without top 5 Rs -1,58,833 (top-5 share
+    225%), p 0.004, q 0.056: fail; T-LOT (1230-tr25): design 277 trades net Rs -21,197 (walk-forward Rs -22,307); final 115
+    trades, win 13.0%, peaks 5x/10x 5/2, net Rs +4,072, without top 5 Rs -12,146 (top-5 share 398%), p 0.002, q 0.056: fail.'
+  costs: charges in force on the trade date (obuy Costs('dated'), BSE rates for SENSEX); next-minute fills + 5 bps + 1/2/4-tick
+    half-spread by 5-minute volume; entry limit ref x 1.2 + 0.10 for 3 minutes; gap fills at the worse open; 2x spread stress
+    reported
+holdout_read: true
+verdict: rejected
+notes: 'BH over all 28 R50 final-test tests (20 originals + 8 chosen re-tunes). Random-entry twins: 500 per rule, same day,
+  side, strike rule, budget and exit at a random minute of the rule''s window. Signal-source labels: ''OPTION''S OWN CHART''
+  rules are not the default kind.'
