@@ -790,6 +790,7 @@ class CoverageTest {
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
         if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"
+        if (alone && HeroTicketTalk.asked(q)) return "HeroTicket"
         if (alone && HeroDay.asked(q) != null) return "HeroDay"
         if (alone && PortfolioRisk.asked(q) != null) return "PortfolioRisk"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
@@ -1093,6 +1094,10 @@ class CoverageTest {
         // ---- HeroDay: the Hero arm's day (expiry days, paper only) and why, from its own records ----
         "what did hero do today" to "HeroDay", "why no hero trade" to "HeroDay", "hero ne aaj kya kiya" to "HeroDay",
         "is today a hero day" to "HeroDay", "when is the next hero day" to "HeroDay", "hero ne trade kyu nahi liya" to "HeroDay",
+        // ---- HeroTicket: the Hero ₹1,000 ticket (15 Oct, Boss's choice, paper only), from its own book (before HeroDay) ----
+        "how is the hero ticket doing" to "HeroTicket", "what did the hero ticket do today" to "HeroTicket",
+        "how did the 1000 ticket do" to "HeroTicket", "hero ticket kaisa chal raha hai" to "HeroTicket",
+        "tell me about the hero 1000 ticket" to "HeroTicket",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",

@@ -90,6 +90,12 @@ object AutoChange {
          * flips the switch back. Never proposed or applied by Autopilot.
          */
         LIQ_TRAIL("strategies", "your ₹500 trail on Liquidity paper"),
+        /**
+         * A PAPER arm Boss switched on by their own choice although it did not pass research (15 Oct: the Hero ₹1,000 ticket,
+         * R50, [heroTicketOn]): logged so the change timeline shows it and its Undo switches the arm off. Never proposed or
+         * applied by Autopilot; paper only, so neither way needs the PIN.
+         */
+        PAPER_ARM_ON("strategies", "a paper arm switched on by your choice"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -243,6 +249,8 @@ object AutoChange {
             Kind.ARM_PARK -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
             // The trail only ever adds an earlier exit, on paper: on lowers risk, off takes that away.
             Kind.LIQ_TRAIL -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // A paper arm on adds paper trades (risk up, on paper); off takes them away.
+            Kind.PAPER_ARM_ON -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -277,7 +285,7 @@ object AutoChange {
      * Boss's own changes, only logged here so they show in the timeline and undo in one tap (13 Oct: the arms' park, the
      * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
      */
-    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL
+    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -348,6 +356,20 @@ object AutoChange {
         else "your choice: new Liquidity paper trades are back on plain rules",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "Liquidity's ₹500 trail (paper)")
+
+    /** The target of Boss's Hero ₹1,000 ticket switch ([Kind.PAPER_ARM_ON]). */
+    const val TICKET_TARGET = "paperarm:hero_ticket"
+
+    /**
+     * 15 Oct (Boss: "add it directly to arm"): the Hero ₹1,000 ticket, a PAPER-only arm that did not pass research (R50), switched
+     * on once by the update, on Boss's own choice - "off → on" on paper, logged as Boss's (kept, never Autopilot's), so the change
+     * timeline shows it and one tap undoes it (the arm off; paper only, no PIN either way).
+     */
+    fun heroTicketOn(): Change = Change(Kind.PAPER_ARM_ON, TICKET_TARGET, SWITCHED_OFF, ON,
+        "your choice (15 Oct): the Hero ₹1,000 ticket on, paper only - it did not pass research (R50: 0 of 28 hero rules passed; " +
+            "cheap expiry tickets lose about ₹525 of every ₹1,000 on average, jackpots are rare); its trades are kept in their own record, " +
+            "apart from the arms that passed and from the plain-rules record for 26 Oct",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Hero ₹1,000 ticket's switch (paper)")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {

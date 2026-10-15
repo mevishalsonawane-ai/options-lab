@@ -26,6 +26,19 @@ internal object IraHero {
     }
 
     /**
+     * "How is the hero ticket doing" (15 Oct, [com.optionslab.ira.HeroTicketTalk]): the Hero ₹1,000 ticket's own book (read off
+     * the main thread, its own lock), today's tickets at their last price, and its own record. Read only.
+     */
+    suspend fun ticket(): String {
+        val v = com.optionslab.app.data.HeroTicketArm.refresh()
+        val today = v.today.map { p ->
+            com.optionslab.ira.HeroTicketTalk.Ticket(p.index, p.symbol, p.qty, p.entry, p.exit, p.why, p.net, if (p.open) v.marks[p.symbol] else null)
+        }
+        val status = v.status.filterKeys { it in com.optionslab.engine.orb.HeroTicketRules.UNDERLYINGS }
+        return com.optionslab.ira.HeroTicketTalk.answer(com.optionslab.ira.HeroTicketTalk.Facts(v.armed, v.target, today, status, v.nets.size, v.nets.sum()))
+    }
+
+    /**
      * "What did hero do today", "why no hero trade", "is today a hero day", "when is the next hero day": its switch, status
      * and today's trades ([com.optionslab.app.data.OrbArms.view], a short wait on the arms' lock, else said as not read), the
      * decisions it kept in memory ([com.optionslab.app.data.OrbArms.heroDecisions], no lock), NIFTY's expiries, and its closed

@@ -91,6 +91,20 @@ class WhatsNewChangelogTest {
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
     }
 
+    @Test fun theHero1000TicketIsSaidAsBossChoiceThatDidNotPassResearch() {
+        // 15 Oct (Boss: "add it directly to arm"): the newest entry; a paper arm on by Boss's choice, R50's verdict said with it.
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-15-hero-1000-ticket" }
+        assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(LocalDate.of(2026, 10, 15), x.date)
+        for (w in listOf("On your choice", "₹1,000", "12:30", "NIFTY", "SENSEX", "own expiry days", "25% trail", "15:05", "did not pass research",
+            "R50", "−₹525 per ₹1,000", "jackpots are rare", "own record", "never trades on Zerodha", "one tap switches it off"))
+            assertTrue(w in x.what, w)
+        assertTrue("Home → Strategies → Hero ₹1,000 ticket" in x.where && "2× / 3× / trail-only" in x.where && "Autopilot → Change log" in x.where, x.where)
+        assertEquals("how is the hero ticket doing", x.ask)
+        assertTrue(HeroTicketTalk.asked(x.ask!!))
+        assertFalse(x.jarvisOnly); assertFalse(x.gold); assertNull(x.to)
+    }
+
     @Test fun signalOnTheIndexIsSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-signal-on-the-index" }
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
@@ -98,13 +112,13 @@ class WhatsNewChangelogTest {
             "chart is refused; option-derived ideas are labelled.", x.what)
         assertTrue("Pine" in x.where && "Strategies" in x.where && "Strategy lab" in x.where, x.where)
         assertNull(x.ask)
-        assertEquals(2, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day)")
+        assertEquals(3, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day; 15 Oct's Hero ticket on top)")
     }
 
     @Test fun theSilvermMorningCallSwitchOffIsSaidWithR42sNumbersAndTheUndo() {
         // 14 Oct (research R42, Boss's OK): the newest entry; a paper bot switched off once, as the 13 Oct ORB park was told.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-silverm-morning-off" }
-        assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(1, WhatsNew.ENTRIES.indexOf(x), "the newest 14 Oct entry (15 Oct's Hero ticket above it)")
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
         for (w in listOf("R42", "53 holdout trades", "random minute", "129 trades", "open position still closes by its own exit", "one tap", "paper only"))
             assertTrue(w in x.what, w)
@@ -115,7 +129,7 @@ class WhatsNewChangelogTest {
     @Test fun theGammaLineAndTheOiWallShadowAreSaidAsInformationOnly() {
         // 14 Oct (Boss approved): two non-trading additions, right under the SILVERM morning call's switch-off (later that day).
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-gamma-line-oi-wall-shadow" }
-        assertEquals(1, WhatsNew.ENTRIES.indexOf(x), "under the SILVERM morning call's entry")
+        assertEquals(2, WhatsNew.ENTRIES.indexOf(x), "under the SILVERM morning call's entry")
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
         for (w in listOf("10:00", "dealer gamma", "says nothing about direction", "never a trade signal", "expiry days", "13:45 to 14:30",
             "only written down", "in points", "never places an order"))
@@ -520,7 +534,7 @@ class WhatsNewChangelogTest {
             "explain my bots' trades today" to "BotTrades", "weekly review" to "WeeklyReview", "where are the liquidity levels" to "LiquidityMap",
             "how is Solo doing" to "Solo", "what's GIFT Nifty saying" to "MorningCues", "is a big move likely now" to "BigMoveRisk",
             "what is the stop loss for news trades" to "Glossary", "how many lots is liquidity trading" to "Honest",
-            "what went wrong today" to "OrderReview")
+            "what went wrong today" to "OrderReview", "how is the hero ticket doing" to "HeroTicket")
         val asks = WhatsNew.ENTRIES.mapNotNull { it.ask }
         assertEquals(want.keys, asks.toSet())
         for (a in asks) {

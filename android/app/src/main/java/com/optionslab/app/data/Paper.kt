@@ -240,7 +240,9 @@ object Paper {
             pnlAlwaysToFunds = true, paperSpread = true, mcxSessionAware = true),
         InstrumentMaster { sym, ex ->
             when (ex) {
-                "NFO" -> contracts[sym]?.takeIf { !it.isMcx }?.let { Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
+                "NFO" -> contracts[sym]?.takeIf { !it.isMcx && it.exchange == "NFO" }?.let { Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
+                // 15 Oct: SENSEX's options on BSE (the Hero ₹1,000 ticket, paper only); F&O hours, lots and charges as NFO's.
+                "BFO" -> contracts[sym]?.takeIf { it.exchange == "BFO" }?.let { Instrument(sym, "BFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
                 com.optionslab.engine.mcx.Mcx.EXCHANGE -> contracts[sym]?.takeIf { it.isMcx }?.let { mcxInstrument(it) }
                 else -> null
             }
@@ -398,6 +400,14 @@ object Paper {
             val m = McxMarket.find(c.symbol) ?: return null
             return m.token.takeIf { it > 0 }?.also { kiteTokens[c.symbol] = it }
         }
+        // 15 Oct: a SENSEX option (BFO, the Hero ₹1,000 ticket's paper side) from Zerodha's BFO list - read in the background,
+        // never here (memory only); not read yet: asked again next time, not remembered as unlisted.
+        if (c.exchange == "BFO") {
+            val bfo = Broker.cachedBfoOptions() ?: run { Broker.loadBfoOptionsInBackground(); return null }
+            val t = Broker.find(bfo, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
+            kiteTokens[c.symbol] = t
+            return t.takeIf { it > 0 }
+        }
         val list = Broker.cachedInstruments() ?: return null
         val t = Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
         // G1-2: "not listed" (0) is remembered only from today's list; from an older one the contract may simply be new, so it
@@ -526,6 +536,21 @@ object Paper {
         return Result(r.ok, msg, events, r.orderId)
     }
 
+    /** The one BSE index whose options the paper account takes (15 Oct, the Hero ₹1,000 ticket's SENSEX side). */
+    const val BFO_UNDERLYING = "SENSEX"
+
+    /**
+     * The Hero ₹1,000 ticket's own door (15 Oct): SENSEX's options are BSE's (BFO), from the list saved on the phone today
+     * ([Market.cachedBfoContracts]; never a download here); NIFTY's as [contractFor]. Every other caller keeps [contractFor],
+     * where SENSEX is still not listed (nothing else in the app trades it).
+     */
+    fun ticketContract(underlying: String, expiry: LocalDate, strike: Double, right: Right): Contract? {
+        if (underlying != BFO_UNDERLYING) return contractFor(underlying, expiry, strike, right)
+        val saved = Market.cachedBfoContracts()?.takeIf { it.first == Market.today() }?.second ?: return null
+        val c = saved.firstOrNull { it.underlying == underlying && it.expiry == expiry && it.strike == strike && it.right == right } ?: return null
+        return Contract(symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey, exchange = "BFO")
+    }
+
     /** Resolve a listed option into a paper contract (and remember it). An MCX name resolves on MCX's list (9 Oct). */
     fun contractFor(underlying: String, expiry: LocalDate, strike: Double, right: Right): Contract? {
         if (com.optionslab.engine.mcx.Mcx.isMcxName(underlying))
@@ -595,6 +620,7 @@ object Paper {
     private suspend fun restQuote(c: Contract): Quote? {
         if (!Broker.loggedIn) return null
         val key = if (c.isMcx) McxMarket.find(c.symbol)?.kiteKey ?: return null
+            else if (c.exchange == "BFO") "BFO:" + (Broker.cachedBfoOptions()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
             else "NFO:" + (Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
         val r = runCatching { Broker.quotes(listOf(key)) }.getOrNull()?.get(key) ?: return null
         if (!(r.last > 0)) return null

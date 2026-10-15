@@ -219,11 +219,14 @@ class BatteryRestTest {
     @Test fun whatsNewSaysItInPlainEnglishFirst() {
         // 14 Oct: the gamma line's entry, the signal-on-the-index entry, then the memory fix's, sit above it (the same day,
         // after it); the battery's is the one right below them. The SILVERM morning call's switch-off (14 Oct, R42) is newest.
-        assertEquals("2026-10-14-silverm-morning-off", WhatsNew.ENTRIES[0].id)
-        assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[1].id)
-        assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[2].id)
-        assertEquals("2026-10-14-memory-positions-first", WhatsNew.ENTRIES[3].id)
-        val x = WhatsNew.ENTRIES[4]
+        // (15 Oct: the Hero ₹1,000 ticket's entry sits above them all.)
+        val o = WhatsNew.ENTRIES.indexOfFirst { it.id == "2026-10-14-silverm-morning-off" }
+        assertEquals(1, o)
+        assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
+        assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
+        assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)
+        assertEquals("2026-10-14-memory-positions-first", WhatsNew.ENTRIES[o + 3].id)
+        val x = WhatsNew.ENTRIES[o + 4]
         assertEquals("2026-10-14-battery-rest", x.id)
         assertTrue(x.what.startsWith("Battery: the evening MCX watch, the order-flow recorder and other background work now rest when nothing needs them"), x.what)
         assertTrue("paper or live" in x.what && "Always stays the default" in x.what, x.what)

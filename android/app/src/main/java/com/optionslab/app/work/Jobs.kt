@@ -542,6 +542,8 @@ object Tasks {
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
             com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
             com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            // 15 Oct: the Hero ₹1,000 ticket only when it needs a pass (a ticket held, or 12:25-12:33 switched on): never a round by itself.
+            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
@@ -837,13 +839,16 @@ object Tasks {
         }
         // The arms side by side (10 Oct), each under its own lock as before; every new position still goes through the one
         // entry door and the one-index claims. Outside the service (a test's pass) one after another, in this order.
-        together("arms", armsDue(lanes != null, listOf(
+        together("arms", armsDue(lanes != null, listOfNotNull(
             // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
             // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
             com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
             // VIX divergence, paper only (9 Oct, research R1 N13): its exits, and its 10:30-13:30 checks when armed.
             com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            // The Hero ₹1,000 ticket, paper only (15 Oct, Boss's choice; R50 failed): its exits, and its 12:30 tickets on expiry days
+            // (only when it needs a pass: a ticket held, or 12:25-12:33 switched on).
+            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
         )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
@@ -1521,7 +1526,7 @@ class WatchService : Service() {
                 // the next full pass a minute or more later. The same pass as the full one (paper fills, then the arms), so
                 // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
-                    com.optionslab.app.data.VixDivArm.view.value.armed) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                    com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
                 val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
@@ -1537,10 +1542,11 @@ class WatchService : Service() {
                             Tasks.stepFailed("bar-close entry check: paper orders", e)
                         }
                         // The three arms side by side (10 Oct), each in its own try, with this check's timing trigger.
-                        Tasks.together("bar-close entry check", listOf(
+                        Tasks.together("bar-close entry check", listOfNotNull(
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: ORB arms") { com.optionslab.app.data.OrbArms.tick() },
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: Night (R3)") { com.optionslab.app.data.NightArm.tick() },
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+                            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Hero 1000 ticket") { com.optionslab.app.data.HeroTicketArm.tick() } else null,
                         ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
                         // Smart scheduling: the minute arms just looked at this minute; the next pass need not look again for it.
                         // (Not the ORB arms: a bar the feed has not finished yet is looked at again on the next minute, as before.)

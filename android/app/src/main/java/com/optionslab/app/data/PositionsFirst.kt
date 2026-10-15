@@ -13,7 +13,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  *  1. [StartOrder.Step.POSITIONS] - on a thread of its own at the top priority, started first thing in the app's start: every
  *     position book (paper NSE and MCX, the ORB family with its live positions, the protections with Zerodha's stops, the Pine
- *     scripts' holdings, the Strategy Module's runs, the night, VIX and MCX arms, the expiry ticket) is read, so the fast
+ *     scripts' holdings, the Strategy Module's runs, the night, VIX and MCX arms, the Hero ₹1,000 ticket, the expiry ticket) is read, so the fast
  *     exits' memory signals are right from the first tick; then, when anything is open, the watch is started (it is a no-op
  *     when it runs already, and it waits for the start's restore-disarm step first).
  *  2. [StartOrder.Step.STREAM] - the price stream brought back ([KiteStream.ensure]); the arms and the paper book are read.
@@ -97,6 +97,8 @@ object PositionsFirst {
         one { McxPaperArms.refresh().open.isNotEmpty() }
         one { NightArm.refresh().open.isNotEmpty() }
         one { VixDivArm.refresh().open.isNotEmpty() }
+        // 15 Oct: the Hero ₹1,000 ticket's paper tickets (its own book) - restored here, before any other start-up work.
+        one { HeroTicketArm.refresh().open.isNotEmpty() }
         one { GrammarArm.refresh(); false }
         one { Ledger.openTicket() != null }
         one { McxMarket.liveExposureOrThrow() }

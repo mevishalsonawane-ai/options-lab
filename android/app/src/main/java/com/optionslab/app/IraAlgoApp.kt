@@ -90,6 +90,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.OrbArms.init(this)
         com.optionslab.app.data.NightArm.init(this)
         com.optionslab.app.data.VixDivArm.init(this)
+        com.optionslab.app.data.HeroTicketArm.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.ShadowArms.init(this)

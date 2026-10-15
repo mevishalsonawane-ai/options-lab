@@ -1053,6 +1053,7 @@ object IraHub {
         runCatching { com.optionslab.app.data.McxPaperArms.view.value.open.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.NightArm.view.value.open.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.VixDivArm.view.value.open.forEach { bots += it.symbol } }
+        runCatching { com.optionslab.app.data.HeroTicketArm.view.value.open.forEach { bots += it.symbol } }
         runCatching {
             val owners = com.optionslab.app.data.Strategies.owners()
             val trades = com.optionslab.app.data.Paper.state.trades
@@ -3372,6 +3373,20 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.SoloDay.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { IraSolo.day(soloDayAsk) }.getOrElse { "I could not read Solo's day just now, Boss." })
+            }
+            return true
+        }
+        // "How is the hero ticket doing", "what did the 1000 ticket do today" ([com.optionslab.ira.HeroTicketTalk], 15 Oct): the
+        // Hero ₹1,000 ticket's own book - its switch (paper only), Boss's exit pick, today's tickets with their P&L, its own record,
+        // always with R50's verdict (Boss's choice, it did not pass). Before HeroDay (which reads "hero" alone). Its paper trades
+        // are in it, so never on a locked phone; reads only - nothing is switched, bought, sold or set. (Not in IraGoldAlgo.)
+        val heroTicketAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.HeroTicketTalk.asked(q) }.getOrDefault(false) else false
+        if (heroTicketAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.HeroTicketTalk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraHero.ticket() }.getOrElse { "I could not read the Hero ₹1,000 ticket just now, Boss." })
             }
             return true
         }

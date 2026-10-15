@@ -66,6 +66,9 @@ class TestApp : Application() {
         ShadowArms.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.VixDivArm.init(this)
+        com.optionslab.app.data.HeroTicketArm.init(this)
+        // 15 Oct: the Hero ₹1,000 ticket's one-time switch-on stays out of every other test (its own tests turn it back on).
+        com.optionslab.app.data.HeroTicketArm.testNoAutoOn = true
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
         PineAuto.init(this)
@@ -116,6 +119,7 @@ class TestApp : Application() {
         com.optionslab.app.data.McxMarket.wipe()
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
         com.optionslab.app.data.VixDivArm.wipe()
+        com.optionslab.app.data.HeroTicketArm.wipe()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
         com.optionslab.app.work.PositionCards.forgetPostedForTest()

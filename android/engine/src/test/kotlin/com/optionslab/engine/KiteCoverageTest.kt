@@ -72,6 +72,8 @@ class KiteCoverageTest {
         assertEquals(65, got[1].lotSize); assertEquals(LocalDate.of(2026, 9, 29), got[0].expiry); assertEquals(101L, got[0].token)
         assertEquals(24500.0, got[0].strike); assertEquals("NIFTY", got[0].name)
         assertEquals(emptyList(), Kite.parseInstruments(emptySequence(), setOf("NIFTY")))
+        // 15 Oct: a BFO dump's options when asked for (the BFO-OPT row only; never an NFO row).
+        assertEquals(listOf("NIFTY26SEP24600PE"), Kite.parseInstruments(dump.lineSequence(), setOf("NIFTY"), segment = "BFO-OPT").map { it.tradingSymbol })
     }
 
     @Test fun `parseFutures keeps the named index futures of NFO and BFO, skipping broken rows`() {

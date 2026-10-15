@@ -85,10 +85,11 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         stopWhy = botStopWhy,
         dayLock = dayLock,
         paperSince = paperSince,
-        // Night (R3), then VIX divergence (9 Oct, research R1 N13): the NSE paper-only arms under the ORB rows.
+        // Night (R3), then VIX divergence (9 Oct, research R1 N13), then the Hero ₹1,000 ticket (15 Oct, Boss's choice; R50
+        // failed): the NSE paper-only arms under the ORB rows.
         // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
         // Home's Automation card, each opening its section ([AutomationHomeCard]).
-        nightRow = { NightRow(); VixDivRow() },
+        nightRow = { NightRow(); VixDivRow(); HeroTicketRow() },
     )
 }
 
