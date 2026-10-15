@@ -1,0 +1,61 @@
+id: r55-t2
+title: Rs 1,000 hero ticket, trail armed after 2x, out at 15:05 / 15:15 / expiry settlement
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R55_HERO_TRAIL.md
+hypothesis: On NIFTY / SENSEX own expiry days, the Rs 1,000 CE + PE hero ticket with the trail armed after 2x makes money
+  after real costs, beats random afternoon entry minutes, beats the trail from the fill (T0), and holding to expiry settlement
+  beats the 15:05 square-off.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: opt_NIFTY_WEEK / opt_SENSEX_WEEK 2024-2026 (rolling ATM+-10 1-minute,
+  rebuilt per held strike), index_1m 2024-2026 (settlement = mean of the 15:00-15:29 closes); lake to 13 Oct 2026'
+period:
+  design: expiry days 20 Nov 2024 - 31 Mar 2026
+  holdout: 'final test: expiry days 1 Apr - 13 Oct 2026, read once (not pristine: R43-R54 saw it; R54 read these tickets with
+    T0 and H)'
+instruments:
+- NIFTY
+- SENSEX
+features:
+- 'signal source: none (time only, both sides)'
+- option-chain prices for the strike rule
+- stops and trail on the option premium
+model_or_rule: 'at the bar closing 12:30 (or 14:30): nearest-the-money eligible OTM CE and PE priced Rs 5 - min(30, 1000 /
+  lot); 1 lot each, skipped if fill x lot > Rs 1,000; exit: no stop; once a minute close >= 2x the fill, a close <= 0.75 x
+  the best close since sells at the next open; the rest sells at the open of the 15:05 / 15:15 bar, or is cash-settled at
+  the index''s last-30-minute mean (ITM pays intrinsic less STT on exercise and charges; OTM worthless)'
+settings: research/hunt/r55/r55cfg.py, research/hunt/r55/r55lib.py
+prereg: research/hunt/r55/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Rs 1,000 hero ticket (1 lot CE + 1 lot PE, R54''s cheap band) with the trail armed after 2x, entered at 12:30
+    (primary) or 14:30, out at 15:05 / 15:15 or held to expiry settlement, on 142 design and 55 final-test NIFTY / SENSEX
+    expiry days (20 Nov 2024 - 13 Oct 2026). 0 of 6 cells pass. Best trail start at 12:30 on design (per end): {''1505'':
+    ''T0'', ''1515'': ''T0'', ''SETTLE'': ''T0''}. 1230-1505-T2: design 248 tickets net Rs -59,286 (-371 per Rs 1,000), p
+    0.693; final 107 tickets, hit 32%, reached 2x/5x/10x 31/6/1, net Rs -9,680 (-149 per Rs 1,000), without top 5 Rs -27,899
+    (top-5 share n/a (net <= 0)), p 0.046, q 0.15: fail; 1230-1515-T2: design 248 tickets net Rs -63,233 (-396 per Rs 1,000),
+    p 0.790; final 107 tickets, hit 32%, reached 2x/5x/10x 31/6/1, net Rs -9,747 (-150 per Rs 1,000), without top 5 Rs -27,880
+    (top-5 share n/a (net <= 0)), p 0.068, q 0.15: fail; 1230-SETTLE-T2: design 248 tickets net Rs -61,465 (-385 per Rs 1,000),
+    p 0.816; final 107 tickets, hit 30%, reached 2x/5x/10x 33/7/1, net Rs -14,427 (-223 per Rs 1,000), without top 5 Rs -32,560
+    (top-5 share n/a (net <= 0)), settled ITM/OTM 0/73, p 0.066, q 0.15: fail; 1430-1505-T2: design 208 tickets net Rs -40,527
+    (-367 per Rs 1,000), p 0.242; final 98 tickets, hit 33%, reached 2x/5x/10x 27/6/0, net Rs -6,440 (-115 per Rs 1,000),
+    without top 5 Rs -19,702 (top-5 share n/a (net <= 0)), p 0.088, q 0.16: fail; 1430-1515-T2: design 208 tickets net Rs
+    -41,432 (-375 per Rs 1,000), p 0.281; final 98 tickets, hit 32%, reached 2x/5x/10x 28/6/1, net Rs -3,377 (-60 per Rs 1,000),
+    without top 5 Rs -18,588 (top-5 share n/a (net <= 0)), p 0.054, q 0.15: fail; 1430-SETTLE-T2: design 208 tickets net Rs
+    -37,406 (-338 per Rs 1,000), p 0.216; final 98 tickets, hit 29%, reached 2x/5x/10x 32/6/1, net Rs -11,628 (-207 per Rs
+    1,000), without top 5 Rs -26,738 (top-5 share n/a (net <= 0)), settled ITM/OTM 3/63, p 0.144, q 0.20: fail. Paired day-by-day:
+    T2 vs T0 | 1230-1505 (design -315, final -204 a day: worse); T2 vs T0 | 1230-1515 (design -343, final -206 a day: worse);
+    T2 vs T0 | 1230-SETTLE (design -331, final -291 a day: worse); 1515 vs 1505 | 1230-T2 (design -28, final -1 a day: worse);
+    SETTLE vs 1505 | 1230-T2 (design -15, final -86 a day: no clear difference); T2 vs T0 | 1430-1505 (design -22, final -8
+    a day: no clear difference); T2 vs T0 | 1430-1515 (design -29, final +44 a day: no clear difference); T2 vs T0 | 1430-SETTLE
+    (design -0, final -87 a day: no clear difference); 1515 vs 1505 | 1430-T2 (design -6, final +56 a day: no clear difference);
+    SETTLE vs 1505 | 1430-T2 (design +22, final -94 a day: no clear difference).'
+  costs: 'R54''s pricing: charges in force on the trade date (obuy Costs(''dated''), BSE rates for SENSEX); next-minute fills
+    + 5 bps + 1/2/4-tick half-spread by 5-minute volume (R17 liq), x2.25 from 15:00 and x2.75 from 15:10; entry limit ref
+    x 1.2 + 0.10 for 3 minutes; gap fills at the worse open; R47 stray-print guard and foreign-rows filter; 2x spread stress
+    reported. Settlement: no spread; STT on exercise 0.125% of the settlement value to 31 Mar 2026 and 0.15% from 1 Apr 2026,
+    plus brokerage Rs 20, exchange, SEBI and GST; OTM pays no sell charges'
+holdout_read: true
+verdict: rejected
+notes: 'BH over all 30 R55 cells in each period. Random twins: 500 per cell, each ticket re-entered at a random minute of
+  12:00-14:45 with the same end and exit. Nothing in the app changes; the 15:05 square-off stays for every arm and anything
+  live; holding the hero paper ticket longer is Boss''s call.'
