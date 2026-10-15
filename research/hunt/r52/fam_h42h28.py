@@ -195,8 +195,10 @@ def h42_exit(name, horizon):
 # ------------------------------------------------------------------------------------------------ H42 tables (ports)
 def h42_day_table(ix, dly=False):
     """The columns of h42's day table (tables.py `build_all`, DAY table) and dly table (`dly_table`) that the R52 rules
-    read, one row per session: day = row index into ix.days. Day table rows: real index days with < 20% missing closes
-    before 15:00 (build.py `has`, tables.py `keep`). dly rows: every session with bars."""
+    read, one row per session: day = row index into ix.days. Day table rows: real index days (tables.py `keep`; its
+    other half, build.py `has` = an option chain and < 20% missing index closes before 15:00, is left to the harness's
+    own contract / fill checks, since the missing-bar count would read bars after an early decision minute).
+    dly rows: every session with bars."""
     M = ix.mat()
     n = len(ix.days)
     o, h, l, c = M["o"], M["h"], M["l"], M["c"]
@@ -230,8 +232,7 @@ def h42_day_table(ix, dly=False):
     if dly:
         keep = any_bar
     else:
-        has = np.array([np.isnan(c[i, :345]).mean() <= 0.2 for i in range(n)]) if n else np.zeros(0, bool)
-        keep = has & np.array([_real(ix, d) for d in ix.days], bool)
+        keep = any_bar & np.array([_real(ix, d) for d in ix.days], bool)
     return T[keep].reset_index(drop=True)
 
 
@@ -272,7 +273,10 @@ def h42_signals(mk, qid="Q0176", hz=None):
     out = []
     if len(df):
         days, s, sd = h42_holdout().events(q, df)
+        cl = ix.mat()["c"]
         for di, si, sdi in zip(days, s, sd):
+            if not np.isfinite(cl[int(di), :int(si) + 1]).any():      # no index bar yet at the decision: no trade
+                continue
             legs = (1, -1) if sdi == 0 else (int(sdi),)
             for side in legs:
                 out.append(dict(und=u, day=ix.days[int(di)], sig_min=int(C.OPEN_M + si), side=side,

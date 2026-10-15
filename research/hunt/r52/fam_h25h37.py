@@ -129,14 +129,15 @@ def ta_ema(x, n):
 
 
 def ta_wma(x, n):
-    """TA_WMA with TA-Lib's periodSum / periodSub running sums."""
+    """TA_WMA (ta-lib C core bundled with TA-Lib 0.8.1, src/ta_func/ta_WMA.c): periodSum / periodSub running sums,
+    rebuilt from the window (oldest first, weights 1..n) every 8 x n bars."""
     x = np.asarray(x, float)
     out = np.full(len(x), np.nan)
     if len(x) < n:
         return out
     if n == 1:
         return x.copy()
-    div = (n * (n + 1)) >> 1
+    div = float(n) * (n + 1) / 2.0
     psum = psub = 0.0
     i = 0
     for w in range(1, n):
@@ -144,6 +145,7 @@ def ta_wma(x, n):
         psub += v
         psum += v * w
         i += 1
+    reseed = 8 * n
     trail_v = 0.0
     tr = 0
     while i < len(x):
@@ -151,6 +153,15 @@ def ta_wma(x, n):
         psub += v
         psub -= trail_v
         psum += v * n
+        reseed -= 1
+        if reseed <= 0:
+            reseed = 8 * n
+            psub = psum = 0.0
+            rw = 1
+            for j in range(i - (n - 1), i + 1):
+                psub += x[j]
+                psum += x[j] * rw
+                rw += 1
         trail_v = x[tr]
         tr += 1
         out[i] = psum / div

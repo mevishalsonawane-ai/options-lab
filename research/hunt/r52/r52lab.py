@@ -101,7 +101,7 @@ def run(rules: list, part: str, twins: bool = True, seed: int = K.SEED) -> dict:
         if len(s):
             keep = in_part(s.day, part)
             if "exit_day" in s.columns:          # a multi-day hold must also end inside the part
-                keep &= in_part(s.exit_day, part)
+                keep = keep & in_part(s.exit_day, part)
             s = s[keep].reset_index(drop=True)
         jobs.append((s, r.rule, r.exe(), POOL_K if twins else 0, r.window, True))
         meta.append(r)
