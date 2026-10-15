@@ -893,6 +893,9 @@ object SignalTesterHost {
 
     /** TEST ONLY: forget the memory (the file stays), as a restart would; the seams back to the app's own. */
     internal fun resetForTest() {
+        // A round a new call started in the background finishes first, on the test's own stand-ins (never the real feed).
+        val end = System.currentTimeMillis() + 10_000
+        while ((pricing.get() || modelBusy.get()) && System.currentTimeMillis() < end) Thread.sleep(10)
         synchronized(lock) {
             cache = null; written.forget(); _view.value = View()
             testModel = null; testModelMissing = false; testHolding = null; testBars = null; testContracts = null

@@ -126,7 +126,10 @@ class TestApp : Application() {
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
         com.optionslab.app.data.VixDivArm.wipe()
         com.optionslab.app.data.HeroTicketArm.wipe()
-        com.optionslab.app.data.PassedArmsHost.wipe(); com.optionslab.app.data.PassedArmsHost.testHistory = null; com.optionslab.app.data.PassedArmsHost.testDaily = null
+        // 15 Oct: the earlier sessions' history is empty unless a test gives its own - the watch's Watchlist step starts its
+        // background reads (JobsTest's "a test reached the internet: api.upstox.com" on main came from them).
+        com.optionslab.app.data.PassedArmsHost.wipe(); com.optionslab.app.data.PassedArmsHost.testHistory = { emptyList() }
+        com.optionslab.app.data.PassedArmsHost.testDaily = { emptyList() }
         com.optionslab.app.data.WatchlistHost.resetForTest()
         com.optionslab.app.data.SignalTesterHost.resetForTest()
         com.optionslab.app.data.SignalPaperArm.wipe()

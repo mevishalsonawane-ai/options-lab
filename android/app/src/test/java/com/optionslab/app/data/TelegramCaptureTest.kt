@@ -78,10 +78,16 @@ class TelegramCaptureTest : RobolectricTest() {
         TelegramCapture.testTransport = { Fake() }
         SignalTesterHost.testHolding = false
         SignalTesterHost.testModelMissing = true
+        // Stand-ins for prices and contracts: a call read live starts a pricing round at once, never on the real feed.
+        SignalTesterHost.testBars = { _, _ -> emptyList() }
+        SignalTesterHost.testContracts = emptyList()
         SignalTesterHost.setOn(true)
     }
 
-    @After fun down() { TelegramCapture.resetForTest(); SignalTesterHost.resetForTest(); Market.testClock = null }
+    @After fun down() {
+        TelegramCapture.resetForTest(); SignalTesterHost.resetForTest(); Market.testClock = null
+        assertEquals("no test may reach the internet", emptyList<String>(), com.optionslab.app.testing.NetworkGuard.blocked.toList())
+    }
 
     /** Keys saved, logged in (phone, code), the channel list read. */
     private fun login() {
