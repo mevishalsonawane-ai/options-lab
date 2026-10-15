@@ -79,6 +79,7 @@ BUDGET = 20_000.0                                # premium budget per position (
 LOT_CAP = 20                                     # never more than 20 lots
 VOL_CAP = 0.10                                   # nor more than 10% of the contract's lots traded in the 5 minutes before
 TICK = 0.05
+BAD_PRINT = 0.20                                 # amendment 1: stray-print guard on fills (r47price)
 
 # ------------------------------------------------------------------------------------------------ instruments
 # (name, series, legs) with legs = ((strike offset in moneyness steps, +1 OTM / -1 ITM; sign +1 buy / -1 sell), ...)

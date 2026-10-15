@@ -129,3 +129,15 @@ Events: `research/brain/calendar_data/events.csv` (2024+) plus the 2021-2023 RBI
 
 Anything that passes every gate would be described exactly (instrument, entry, exit, size, signal source) as a PAPER
 proposal for Boss; an option-chart (O) rule only with Boss's own yes. Nothing in R47 changes the app.
+
+## Amendment 1 (15 Oct 2026, after the first design run, BEFORE any candidate was frozen or the holdout touched)
+
+Auditing the first selection's top design trades showed stray prints in thin contracts: e.g. FINNIFTY 18200 CE on
+5 Apr 2022 printed a 09:15 open of 500 and a 09:16 open of 151 while trading near 60, and a sell at that 09:16 open made
+a +107% "win" while the index fell. This is a MEASUREMENT error, so it is fixed (never relaxed): a fill can no longer
+profit from a stray print. When a row's open is more than 20% (and 2 ticks) away from the median of the contract's
+closes on the rows before, at and after it, the fill takes the WORSE of the open and that median; a high more than 20%
+above that median cannot hit a target or arm a lock. Stops still trigger on any low. (`r47price.open_for_sell /
+open_for_buy / confirmed_high`, `r47cfg.BAD_PRINT`, tests in `test_r47.py`.) The fix can only lower results. The
+whole design search and the unchanged selection rule were run again; the first run's output is kept as
+`results/design_v0_unamended.json` and `results/candidates_v0_unamended.json` (never sent to the holdout).
