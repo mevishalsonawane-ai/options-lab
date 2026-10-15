@@ -997,6 +997,10 @@ at the worse price. The ORB family (R49) and zero-to-hero rules (R50) are not in
   - A separate review after the read found two small issues (13 Oct expiry not flagged; time-stop spread volume).
     Together they change the final net to +Rs 47,563, and it still passes.
   - A paper forward test at most, if Boss wants it. R51 changes nothing in the app.
+  - 15 Oct, cleaned re-pricing (Amendment A, foreign rows and stray prints removed): it still passes. Final 1,787 trades,
+    +Rs 55,439, p 0.002, q 0.025; thinner at 2x costs (+Rs 5,757); the top 5 trades are 76% of the net; NIFTY loses
+    (-Rs 18,955). R52's pass, H37-10:g17, is unchanged after cleaning (Amendment 2: 294 trades, +Rs 48,772, p 0.001,
+    q 0.027).
 - Near misses (stay off):
   - M4 SILVERM: final +Rs 1.0 lakh on 93 trades, p 0.026, q 0.14; design no better than random, p 0.66.
   - EMA 9/21 and 9/26 + ADX20: final +Rs 76-78k, but they lost in design.
