@@ -94,7 +94,7 @@ class WhatsNewChangelogTest {
     @Test fun theHero1000TicketIsSaidAsBossChoiceThatDidNotPassResearch() {
         // 15 Oct (Boss: "add it directly to arm"): the newest entry; a paper arm on by Boss's choice, R50's verdict said with it.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-15-hero-1000-ticket" }
-        assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(2, WhatsNew.ENTRIES.indexOf(x), "the first 15 Oct entry (the passed arms and the Watchlist came later that day)")
         assertEquals(LocalDate.of(2026, 10, 15), x.date)
         for (w in listOf("On your choice", "₹1,000", "12:30", "NIFTY", "SENSEX", "own expiry days", "25% trail", "15:05", "did not pass research",
             "R50", "−₹525 per ₹1,000", "jackpots are rare", "own record", "never trades on Zerodha", "one tap switches it off"))
@@ -105,6 +105,24 @@ class WhatsNewChangelogTest {
         assertFalse(x.jarvisOnly); assertFalse(x.gold); assertNull(x.to)
     }
 
+    @Test fun thePassedArmsAndTheWatchlistAreSaidWithTheirLabels() {
+        // 15 Oct (Boss: "Both"): the newest two entries.
+        val a = WhatsNew.ENTRIES.first { it.id == "2026-10-15-passed-paper-arms" }
+        assertEquals(0, WhatsNew.ENTRIES.indexOf(a), "the newest entry")
+        for (w in listOf("R51 Donchian 20", "R52 Open outside value", "Solo 2.0", "1 lot each", "passed every research gate", "paper rule",
+            "stays on paper forever", "signal from the index", "stop", "own record", "forward test", "None ever trades on Zerodha", "one tap switches each off"))
+            assertTrue(w in a.what, w)
+        assertTrue("Passed research (R51/R52/R57) — paper only" in a.where && "Autopilot → Change log" in a.where, a.where)
+        assertEquals(PassedArmsTalk.Topic.ALL, PassedArmsTalk.asked(a.ask!!))
+        val w = WhatsNew.ENTRIES.first { it.id == "2026-10-15-watchlist-shadow" }
+        assertEquals(1, WhatsNew.ENTRIES.indexOf(w))
+        for (x in listOf("shadow", "R47 C4", "option-chain signal, marked non-default", "R52 R4-8", "R52 H45-1", "never traded", "paper costs",
+            "40 new trades", "which to drop")) assertTrue(x in w.what, x)
+        assertTrue("Watchlist (shadow)" in w.where && "evening summary" in w.where)
+        assertEquals(PassedArmsTalk.Topic.WATCHLIST, PassedArmsTalk.asked(w.ask!!))
+        for (x in listOf(a, w)) { assertFalse(x.jarvisOnly); assertFalse(x.gold); assertNull(x.to) }
+    }
+
     @Test fun signalOnTheIndexIsSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-signal-on-the-index" }
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
@@ -112,13 +130,13 @@ class WhatsNewChangelogTest {
             "chart is refused; option-derived ideas are labelled.", x.what)
         assertTrue("Pine" in x.where && "Strategies" in x.where && "Strategy lab" in x.where, x.where)
         assertNull(x.ask)
-        assertEquals(3, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day; 15 Oct's Hero ticket on top)")
+        assertEquals(5, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day; 15 Oct's three entries on top)")
     }
 
     @Test fun theSilvermMorningCallSwitchOffIsSaidWithR42sNumbersAndTheUndo() {
         // 14 Oct (research R42, Boss's OK): the newest entry; a paper bot switched off once, as the 13 Oct ORB park was told.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-silverm-morning-off" }
-        assertEquals(1, WhatsNew.ENTRIES.indexOf(x), "the newest 14 Oct entry (15 Oct's Hero ticket above it)")
+        assertEquals(3, WhatsNew.ENTRIES.indexOf(x), "the newest 14 Oct entry (15 Oct's three entries above it)")
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
         for (w in listOf("R42", "53 holdout trades", "random minute", "129 trades", "open position still closes by its own exit", "one tap", "paper only"))
             assertTrue(w in x.what, w)
@@ -129,7 +147,7 @@ class WhatsNewChangelogTest {
     @Test fun theGammaLineAndTheOiWallShadowAreSaidAsInformationOnly() {
         // 14 Oct (Boss approved): two non-trading additions, right under the SILVERM morning call's switch-off (later that day).
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-gamma-line-oi-wall-shadow" }
-        assertEquals(2, WhatsNew.ENTRIES.indexOf(x), "under the SILVERM morning call's entry")
+        assertEquals(4, WhatsNew.ENTRIES.indexOf(x), "under the SILVERM morning call's entry")
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
         for (w in listOf("10:00", "dealer gamma", "says nothing about direction", "never a trade signal", "expiry days", "13:45 to 14:30",
             "only written down", "in points", "never places an order"))
@@ -534,7 +552,8 @@ class WhatsNewChangelogTest {
             "explain my bots' trades today" to "BotTrades", "weekly review" to "WeeklyReview", "where are the liquidity levels" to "LiquidityMap",
             "how is Solo doing" to "Solo", "what's GIFT Nifty saying" to "MorningCues", "is a big move likely now" to "BigMoveRisk",
             "what is the stop loss for news trades" to "Glossary", "how many lots is liquidity trading" to "Honest",
-            "what went wrong today" to "OrderReview", "how is the hero ticket doing" to "HeroTicket")
+            "what went wrong today" to "OrderReview", "how is the hero ticket doing" to "HeroTicket",
+            "how are the passed arms doing" to "PassedArms", "what's on the watchlist" to "PassedArms")
         val asks = WhatsNew.ENTRIES.mapNotNull { it.ask }
         assertEquals(want.keys, asks.toSet())
         for (a in asks) {

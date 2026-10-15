@@ -94,6 +94,9 @@ object AutoChange {
          * A PAPER arm Boss switched on by their own choice although it did not pass research (15 Oct: the Hero ₹1,000 ticket,
          * R50, [heroTicketOn]): logged so the change timeline shows it and its Undo switches the arm off. Never proposed or
          * applied by Autopilot; paper only, so neither way needs the PIN.
+         * Also (15 Oct, Boss's "Both") the paper arms that PASSED research - R51 Donchian 20, R52 Open outside value, Solo 2.0
+         * ([passedArmOn]) - switched on by the update under CLAUDE.md's PAPER rule, and their forward-test bar switching one
+         * off by itself ([passedArmOff], lowering risk). Paper only: no PIN either way.
          */
         PAPER_ARM_ON("strategies", "a paper arm switched on by your choice"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
@@ -370,6 +373,27 @@ object AutoChange {
             "cheap expiry tickets lose about ₹525 of every ₹1,000 on average, jackpots are rare); its trades are kept in their own record, " +
             "apart from the arms that passed and from the plain-rules record for 26 Oct",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Hero ₹1,000 ticket's switch (paper)")
+
+    /** The target of a passed-research paper arm's switch ([Kind.PAPER_ARM_ON]): "paperarm:" + its source. */
+    const val PAPER_ARM = "paperarm:"
+
+    /**
+     * 15 Oct (Boss: "Both"): the paper arm [source] ([label]) PASSED every research gate ([research]), so under CLAUDE.md's
+     * PAPER rule the update switches it on at once - "off → on" on paper, logged as Boss's (kept, never Autopilot's), shown in
+     * the timeline and undone in one tap (the arm off; paper only, no PIN). It never carries over to live by itself.
+     */
+    fun passedArmOn(source: String, label: String, research: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, SWITCHED_OFF, ON,
+        "your \"Both\" (15 Oct): $label passed every research gate ($research), so under the PAPER rule it trades on paper at once - " +
+            "1 lot, its own record, never live; it never carries over to live by itself",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "$label's switch (paper)")
+
+    /**
+     * The paper arm [source] ([label]) switched itself off on its forward-test bar, set in advance ([why]): "on → off" on paper,
+     * lowering risk, logged so the timeline shows it; its Undo switches it back on (Boss's choice; paper only, no PIN).
+     */
+    fun passedArmOff(source: String, label: String, why: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, ON, SWITCHED_OFF,
+        "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {

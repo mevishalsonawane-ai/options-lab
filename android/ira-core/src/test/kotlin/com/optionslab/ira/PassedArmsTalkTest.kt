@@ -1,0 +1,88 @@
+package com.optionslab.ira
+
+import com.optionslab.engine.orb.DonchianArm
+import com.optionslab.engine.orb.OovArm
+import com.optionslab.engine.orb.Solo2
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * Jarvis on the passed-research paper arms and the shadow Watchlist ([PassedArmsTalk], 15 Oct): which questions are his, that
+ * a sentence with something to do never is, and that every answer carries its label ("Passed research ... paper only";
+ * "shadow, not traded; information only, not a trade signal"; C4 NON-DEFAULT), the index reported apart and the bar. The
+ * change log's entries for them ([AutoChange.passedArmOn] / [AutoChange.passedArmOff]): paper, Boss's, no PIN.
+ */
+class PassedArmsTalkTest {
+    @Test fun whichQuestionsAreHis() {
+        assertEquals(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.asked("how is the donchian arm doing"))
+        assertEquals(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.asked("R51 donchian kaisa chal raha hai"))
+        assertEquals(PassedArmsTalk.Topic.OOV, PassedArmsTalk.asked("what did open outside value do today"))
+        assertEquals(PassedArmsTalk.Topic.OOV, PassedArmsTalk.asked("how is the R52 arm doing"))
+        assertEquals(PassedArmsTalk.Topic.SOLO2, PassedArmsTalk.asked("how is Solo 2.0 doing"))
+        assertEquals(PassedArmsTalk.Topic.SOLO2, PassedArmsTalk.asked("solo two ne aaj kya kiya"))
+        assertEquals(PassedArmsTalk.Topic.WATCHLIST, PassedArmsTalk.asked("what's on the watchlist"))
+        assertEquals(PassedArmsTalk.Topic.WATCHLIST, PassedArmsTalk.asked("how are the near misses doing"))
+        assertEquals(PassedArmsTalk.Topic.ALL, PassedArmsTalk.asked("how are the passed arms doing"))
+        // Not his: plain Solo, the Donchian channel itself, anything with something to do.
+        for (q in listOf("what did solo do today", "how is solo doing", "what is a donchian channel", "explain the donchian indicator",
+            "switch off the donchian arm", "turn off solo 2.0", "add nifty to my watchlist", "remove the watchlist", "stop open outside value",
+            "how is nifty doing", "donchian", "what is in my watchlist"))
+            assertNull(PassedArmsTalk.asked(q), q)
+    }
+
+    private val arm = PassedArmsTalk.Arm(DonchianArm.SOURCE, true, listOf("NIFTY26OCT25150CE 1 lot @ 120.00 → 150.00 (target), +₹1,800"),
+        3, 2_500.0, 2, 1, 1_200.0, "Forward test: 3 of 40 paper trades, net ₹2,500 after charges, at twice the spread ₹2,100")
+
+    @Test fun eachArmIsSaidWithItsLabelRulesRecordAndBar() {
+        val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm), emptyList(), true))
+        assertTrue(w.startsWith("R51 Donchian 20: on, paper only. Passed research (R51/R52/R57) — paper only. "), w)
+        for (x in listOf(DonchianArm.RULES, "Signal: the index's own bars", "Today: NIFTY26OCT25150CE", "3 trades, 2 won, +₹2,500 after charges",
+            "FINNIFTY apart: 1 trade, +₹1,200", "Forward test: 3 of 40", "40 paper trades", DonchianArm.RECORD)) assertTrue(x in w, x)
+        val oov = arm.copy(source = OovArm.SOURCE, on = false, todayLines = emptyList(), closed = 0, pausedWhy = "net −₹500 at 40 trades")
+        val o = PassedArmsTalk.answer(PassedArmsTalk.Topic.OOV, PassedArmsTalk.Facts(listOf(oov), emptyList(), true))
+        assertTrue(o.startsWith("R52 Open outside value: off (it switched itself off: net −₹500 at 40 trades)."), o)
+        for (x in listOf(OovArm.STOP_ADDED, "No trade today.", "no closed trade yet", "MIDCPNIFTY apart")) assertTrue(x in o, x)
+        val s = arm.copy(source = Solo2.SOURCE, on = null, scores = listOf("S3 MIDCPNIFTY call 0.5123: bought"))
+        val so = PassedArmsTalk.answer(PassedArmsTalk.Topic.SOLO2, PassedArmsTalk.Facts(listOf(s), emptyList(), true, modelLoaded = false))
+        for (x in listOf("Solo 2.0: its switch could not be read just now", "Today's candidates: S3 MIDCPNIFTY call 0.5123: bought", "60 trades",
+            Solo2.RETRAIN_TODO, "Its model is not loaded yet")) assertTrue(x in so, x)
+        // A book that could not be read is said so.
+        assertTrue(PassedArmsTalk.answer(PassedArmsTalk.Topic.SOLO2, PassedArmsTalk.Facts(emptyList(), emptyList(), null)).startsWith("I could not read Solo 2.0"))
+        assertTrue(PassedArmsTalk.answer(PassedArmsTalk.Topic.OOV, PassedArmsTalk.Facts(emptyList(), emptyList(), null)).contains("could not read"))
+        assertTrue(PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(emptyList(), emptyList(), null)).contains("could not read"))
+    }
+
+    @Test fun theWatchlistIsSaidAsShadowWithC4MarkedNonDefault() {
+        val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.WATCHLIST, PassedArmsTalk.Facts(emptyList(), listOf("R52 R4-8 Gann swing break: 2 shadow trades"), false))
+        assertTrue(w.startsWith("The Watchlist (shadow, not traded; information only, not a trade signal), switched off: "), w)
+        for (x in listOf("R47 C4 BANKNIFTY high PCR (R47 (C4), NON-DEFAULT (option-chain signal))", "R52 R4-8 Gann swing break: 2 shadow trades",
+            "net > 0", "M4", "MA2")) assertTrue(x in w, x)
+        assertTrue(PassedArmsTalk.answer(PassedArmsTalk.Topic.WATCHLIST, PassedArmsTalk.Facts(emptyList(), emptyList(), true)).contains("No shadow trade yet."))
+        val all = PassedArmsTalk.answer(PassedArmsTalk.Topic.ALL, PassedArmsTalk.Facts(listOf(arm), emptyList(), true))
+        assertTrue(all.contains("R51 Donchian 20: on, paper only") && all.contains("The Watchlist (") && !all.contains(DonchianArm.RULES))
+        assertEquals("Unlock the phone for that, Boss.", PassedArmsTalk.LOCKED)
+    }
+
+    @Test fun theChangeLogEntriesArePaperBossOwnAndNeedNoPin() {
+        val on = AutoChange.passedArmOn(DonchianArm.SOURCE, DonchianArm.LABEL, DonchianArm.RESEARCH_ID)
+        assertEquals(AutoChange.Kind.PAPER_ARM_ON, on.kind)
+        assertEquals("paperarm:r51_donchian20", on.target)
+        assertEquals(AutoChange.SWITCHED_OFF to AutoChange.ON, on.from to on.to)
+        assertEquals(AutoChange.Scope.PAPER, on.scope)
+        assertEquals(AutoChange.Risk.RAISE, AutoChange.riskOf(on))
+        assertTrue(AutoChange.bossOwn(on.kind))
+        assertFalse(AutoChange.undoNeedsPin(on))
+        assertTrue(on.reason.contains("passed every research gate (R51 (R44-donchian20-RT))") && on.reason.contains("never live"))
+        val off = AutoChange.passedArmOff(Solo2.SOURCE, Solo2.LABEL, "a drawdown of −₹26,000")
+        assertEquals(AutoChange.ON to AutoChange.SWITCHED_OFF, off.from to off.to)
+        assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(off))
+        assertFalse(AutoChange.undoNeedsPin(off))
+        assertTrue(off.reason.contains("switched itself off") && off.reason.contains("your choice"))
+        assertEquals("Solo 2.0's switch (paper)", off.what)
+        // Its undo is the arm back on: a paper raise, Boss's tap, no PIN.
+        assertEquals(AutoChange.ON, AutoChange.inverse(off, "").to)
+    }
+}

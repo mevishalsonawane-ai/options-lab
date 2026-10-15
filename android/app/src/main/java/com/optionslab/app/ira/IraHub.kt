@@ -3359,6 +3359,22 @@ object IraHub {
             }
             return true
         }
+        // 15 Oct (Boss: "Both"): "how is the Donchian arm doing", "how is Solo 2.0 doing", "what's on the watchlist", "how are the
+        // passed arms doing" ([com.optionslab.ira.PassedArmsTalk], [com.optionslab.app.data.PassedArmsHost.talk]): the paper arms
+        // that passed research (always "Passed research (R51/R52/R57) — paper only") and the shadow Watchlist (always "shadow, not
+        // traded; information only, not a trade signal"), from their own books. Before SoloDay ("solo 2.0" is this one's; plain
+        // "solo" stays Solo's). Its paper trades are in it, so never on a locked phone; reads only - nothing is switched, bought,
+        // sold or promoted. (Not in IraGoldAlgo.)
+        val passedArmsAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.PassedArmsTalk.asked(q) }.getOrNull() else null
+        if (passedArmsAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.PassedArmsTalk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.PassedArmsHost.talk(passedArmsAsk) }.getOrElse { "I could not read the passed arms' books just now, Boss." })
+            }
+            return true
+        }
         // "What did Solo do today?", "why didn't Solo trade", "solo ne aaj kya kiya", "how did Solo decide"
         // ([com.optionslab.ira.SoloDay], [IraSolo.day]): from Solo (midday)'s own records of the day - its switch; before 12:00
         // what it will read and its early reads; at 12:00 each index's read against the others, what set an index aside (its

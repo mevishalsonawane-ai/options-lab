@@ -789,6 +789,7 @@ class CoverageTest {
         if (alone && ExpiryEve.asked(q)) return "ExpiryEve"
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
         if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
+        if (alone && PassedArmsTalk.asked(q) != null) return "PassedArms"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"
         if (alone && HeroTicketTalk.asked(q)) return "HeroTicket"
         if (alone && HeroDay.asked(q) != null) return "HeroDay"
@@ -1088,6 +1089,11 @@ class CoverageTest {
         // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, and what it waits for ----
         "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot",
         "liquidity ne trade kyu nahi liya" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
+        // ---- PassedArms: the paper arms that passed research (15 Oct) and the shadow Watchlist, from their own books (before SoloDay) ----
+        "how is the donchian arm doing" to "PassedArms", "what did the r51 donchian arm do today" to "PassedArms",
+        "how is open outside value doing" to "PassedArms", "how is solo 2.0 doing" to "PassedArms", "solo 2.0 kaisa chal raha hai" to "PassedArms",
+        "what did solo two do today" to "PassedArms", "what's on the watchlist" to "PassedArms", "how are the near misses doing" to "PassedArms",
+        "how are the passed arms doing" to "PassedArms", "how is the watchlist doing" to "PassedArms",
         // ---- SoloDay: what Solo (midday) did today and why, from its own records ----
         "what did solo do today" to "SoloDay", "why didn't solo trade" to "SoloDay", "solo ne aaj kya kiya" to "SoloDay",
         "how did solo decide" to "SoloDay", "why no solo trade today" to "SoloDay", "solo ne trade kyu nahi liya" to "SoloDay",

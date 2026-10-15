@@ -57,6 +57,22 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-15-passed-paper-arms", OCT15, "Three paper arms that passed research",
+            "R51 Donchian 20, R52 Open outside value and Solo 2.0 now trade on paper, 1 lot each. " +
+                "They passed every research gate, so your paper rule switches them on at once. " +
+                "Solo 2.0 is Jarvis's own trained Solo (R57), next to Solo midday, and stays on paper forever. " +
+                "Each reads its signal from the index and buys the option, always with a stop. " +
+                "Each keeps its own record and switches itself off if its forward test fails. " +
+                "None ever trades on Zerodha, and one tap switches each off.",
+            "Home → Strategies → the rows marked \"Passed research (R51/R52/R57) — paper only\" (switch, today, record, forward test); " +
+                "the switch-on is also in Home → Automation card → Autopilot → Change log, where one tap undoes it",
+            ask = "how are the passed arms doing"),
+        Entry("2026-10-15-watchlist-shadow", OCT15, "Watchlist of near misses (shadow only)",
+            "Three research near misses are followed in shadow: R47 C4 (an option-chain signal, marked non-default), R52 R4-8 and R52 H45-1. " +
+                "They are never traded; each would-be trade is priced with the paper costs. " +
+                "At 40 new trades Jarvis tells you once which passed on unseen data and which to drop.",
+            "Home → Strategies → Watchlist (shadow); its line is also in the evening summary",
+            ask = "what's on the watchlist"),
         Entry("2026-10-15-hero-1000-ticket", OCT15, "Hero ₹1,000 ticket (paper, your choice)",
             "On your choice, a new paper bot buys a call and a put of up to ₹1,000 each at 12:30 on NIFTY's and SENSEX's own expiry days, " +
                 "and sells on your 25% trail (for now it starts once a ticket has doubled; your choice waits on a follow-up study) or at 15:05. It did not pass research (R50: about −₹525 per ₹1,000 on average; jackpots are rare), " +
