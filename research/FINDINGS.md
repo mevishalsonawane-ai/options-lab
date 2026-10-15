@@ -820,3 +820,26 @@ Full study: `HUNT_R50_HERO_RECENT.md` (pre-registered `hunt/r50/PREREG.md`, comm
 - The app's Hero arm: 12 design trades -Rs 26,417, 2 final -Rs 3,776; no trade on 13 Oct 2026. The OI-wall rules fire
   about once a quarter now (too few to judge).
 - Nothing comes back on paper; every hero rule stays off. Across R21-R50, 0 of 198 hero rules pass.
+
+## The Rs 1,000 hero ticket at 14:30 vs 12:30, exits 15:05 / 15:10 / 15:15 (R54, 15 Oct 2026) - 14:30 is not better; later exits add nothing reliable; 0 of 24 pass
+Full study: `HUNT_R54_HERO_1430.md` (pre-registered `hunt/r54/PREREG.md`, commit 04437bbf). Boss: "What if we enter at 2:30
+pm and exit at 3:10/3:15?" The ticket: on NIFTY / SENSEX own expiry days, 1 lot of a CE and 1 lot of a PE, nearest eligible
+OTM priced Rs 5 - min(30, 1000 / lot), exited by Boss's 25% trail or held to the end time. Signal source: none (time only).
+Window: 20 Nov 2024 - 13 Oct 2026 only. Design to 31 Mar 2026 (142 expiry days); final test 1 Apr - 13 Oct 2026 (55 days),
+read once and not pristine (R43-R50 saw it). One held contract per ticket, next-minute fills, dated charges, R17 spread
+widened x2.25 from 15:00 and x2.75 from 15:10 (measured on design days), R47 filters.
+- With the trail, 14:30 is worse than 12:30. Design: -Rs 37,353 on 208 tickets (5% profitable) vs -Rs 14,507 on 248. Final:
+  -Rs 6,029 (98) vs +Rs 1,559 (107). Paired: -Rs 161 a day in design (CI -307 to -56), -Rs 138 in final. After 14:00 a
+  cheap expiry option swings about as much in a minute as the 25% trail allows: half the 14:30 tickets were out within
+  4 minutes.
+- Held without a trail, 14:30 and 12:30 lose about the same (design -Rs 45k vs -Rs 49k; final -Rs 12.3k each), about
+  Rs 190-410 of every Rs 1,000 staked.
+- 15:10 / 15:15 instead of 15:05:
+  - With the trail it makes no difference: 0 of 940 design trail tickets were still held at 15:05 (5 of 417 in final).
+  - Held, the later exits change the result by -Rs 31 to +Rs 76 a day, and every CI includes 0.
+  - Changing the 15:05 rule is Boss's decision; the data gives no reason to.
+- The best final cell (12:30 + trail, p 0.024, q 0.21) is 582% its top ticket and -Rs 11,411 without its top 5, and it
+  lost in design.
+- 2 Apr 2026 SENSEX: the 12:30 CE went 29x if held (+Rs 13,958 at 15:05), but the trail sold it at 2.7x (+Rs 280). By
+  14:30 the move was over (-Rs 584 held). 13 Oct 2026 NIFTY: 14:30 + trail caught the CE (+Rs 2,633); 12:30 + trail was
+  stopped out before it (-Rs 140).

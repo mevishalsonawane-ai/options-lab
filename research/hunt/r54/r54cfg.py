@@ -30,7 +30,6 @@ CACHE = K50.CACHE
 LAKE = K50.LAKE
 OUT = Path(os.environ.get("R54_OUT", CACHE.root / "r54")).expanduser()
 RESULTS = HERE / "results"
-K50.K43.OUT = OUT                       # R43's builder writes nothing; kept off R50's cache all the same
 
 UNDS = ("NIFTY", "SENSEX")              # each on its own expiry days only
 BSE = K50.BSE

@@ -1,0 +1,51 @@
+id: r54-entry-1330
+title: Rs 1,000 hero ticket entered at 13:30, out by trail or 15:05 / 15:10 / 15:15
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R54_HERO_1430.md
+hypothesis: On NIFTY / SENSEX own expiry days, the Rs 1,000 CE + PE hero ticket entered at 13:30 makes money after real costs
+  with Boss's 25% trail or held to 15:05 / 15:10 / 15:15, beats random afternoon entry minutes, and (14:30) beats the 12:30
+  entry; later exits (15:10 / 15:15) add to 15:05.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: opt_NIFTY_WEEK / opt_SENSEX_WEEK 2024-2026 (rolling ATM+-10 1-minute,
+  rebuilt per held strike), index_1m 2024-2026; lake to 13 Oct 2026'
+period:
+  design: expiry days 20 Nov 2024 - 31 Mar 2026
+  holdout: 'final test: expiry days 1 Apr - 13 Oct 2026, read once (not pristine: R43-R50 saw it)'
+instruments:
+- NIFTY
+- SENSEX
+features:
+- 'signal source: none (time only, both sides)'
+- option-chain prices for the strike rule
+model_or_rule: 'at the bar closing 13:30: nearest-the-money eligible OTM CE and PE priced Rs 5 - min(30, 1000 / lot); 1 lot
+  each, skipped if fill x lot > Rs 1,000; exit 25% trail on minute closes (also a 25% stop) or hold; sell the rest at the
+  open of the 15:05 / 15:10 / 15:15 bar'
+settings: research/hunt/r54/r54cfg.py, research/hunt/r54/r54lib.py
+prereg: research/hunt/r54/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Rs 1,000 hero ticket (1 lot CE + 1 lot PE, R50 cheap band capped at Rs 1,000 a lot) entered at 13:30 (context)
+    on 142 design and 55 final-test NIFTY / SENSEX expiry days (20 Nov 2024 - 13 Oct 2026). 0 of 6 cells pass. 1330-1505-tr25:
+    design 245 tickets net Rs -13,475 (-92 per Rs 1,000); final 107 tickets, hit 15%, reached 2x/5x/10x 12/0/0, net Rs -10,350
+    (-158 per Rs 1,000), without top 5 Rs -15,027 (top-5 share n/a (net <= 0)), p 0.802, q 0.84: fail; 1330-1510-tr25: design
+    245 tickets net Rs -13,475 (-92 per Rs 1,000); final 107 tickets, hit 15%, reached 2x/5x/10x 12/0/0, net Rs -10,073 (-154
+    per Rs 1,000), without top 5 Rs -15,027 (top-5 share n/a (net <= 0)), p 0.770, q 0.84: fail; 1330-1515-tr25: design 245
+    tickets net Rs -13,475 (-92 per Rs 1,000); final 107 tickets, hit 15%, reached 2x/5x/10x 12/0/0, net Rs -10,436 (-159
+    per Rs 1,000), without top 5 Rs -15,027 (top-5 share n/a (net <= 0)), p 0.822, q 0.84: fail; 1330-1505-hold: design 245
+    tickets net Rs -57,457 (-390 per Rs 1,000); final 107 tickets, hit 14%, reached 2x/5x/10x 25/4/1, net Rs -25,786 (-394
+    per Rs 1,000), without top 5 Rs -42,305 (top-5 share n/a (net <= 0)), p 0.836, q 0.84: fail; 1330-1510-hold: design 245
+    tickets net Rs -59,556 (-405 per Rs 1,000); final 107 tickets, hit 15%, reached 2x/5x/10x 25/4/1, net Rs -22,537 (-344
+    per Rs 1,000), without top 5 Rs -41,565 (top-5 share n/a (net <= 0)), p 0.820, q 0.84: fail; 1330-1515-hold: design 245
+    tickets net Rs -59,107 (-402 per Rs 1,000); final 107 tickets, hit 16%, reached 2x/5x/10x 25/5/1, net Rs -21,616 (-330
+    per Rs 1,000), without top 5 Rs -41,257 (top-5 share n/a (net <= 0)), p 0.790, q 0.84: fail. Paired day-by-day: 1510 vs
+    1505 | 1330-hold (design -15, final +59 a day: no clear difference); 1515 vs 1505 | 1330-hold (design -12, final +76 a
+    day: no clear difference).'
+  costs: charges in force on the trade date (obuy Costs('dated'), BSE rates for SENSEX); next-minute fills + 5 bps + 1/2/4-tick
+    half-spread by 5-minute volume (R17 liq), x2.25 from 15:00 and x2.75 from 15:10 (measured on design days); entry limit
+    ref x 1.2 + 0.10 for 3 minutes; gap fills at the worse open; R47 stray-print guard and foreign-rows filter; 2x spread
+    stress reported
+holdout_read: true
+verdict: rejected
+notes: 'BH over all 24 R54 cells in each period. Random twins: 500 per cell, each ticket re-entered at a random minute of
+  12:00-14:45 with the same end and exit. With the trail, no design ticket was open at 15:05, so the end time changes nothing.
+  Nothing in the app changes; the 15:05 square-off is Boss''s decision.'
