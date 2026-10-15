@@ -380,7 +380,10 @@ def test_gtc_d_fires_reversal_after_high_pivot():
         t = int(np.searchsorted(ords, ords[peak] + T))
         assert ("NIFTY", days[t], OPEN_M, 1) in rows(got), T  # below the high pivot -> CE, bought 09:16 on day t
     # every entry is the first trading day on/after some pivot + a Gann count of calendar days
-    starts = {0, peak}
+    B = F._bars(FakeIx(days, M), "D")
+    _, P = F.S37.swing_signals(B, F.S37.atr(B), 2, daily_mode=True)
+    assert peak in set(P[0])
+    starts = set(int(p) for p in P[0])
     ok = {days[int(np.searchsorted(ords, ords[p] + T))] for p in starts for T in F.S37.GTC_D
           if int(np.searchsorted(ords, ords[p] + T)) < len(days)}
     assert set(got.day) <= ok

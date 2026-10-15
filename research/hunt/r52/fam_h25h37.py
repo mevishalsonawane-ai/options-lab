@@ -502,6 +502,8 @@ def _box(ix, par):
     if par.endswith("pct"):
         return float(par[1:-3]) / 100.0 * prevc
     B15 = S37.bars(M, 15)
+    if len(B15["c"]) < 2:
+        return np.full(nd, np.nan)
     A15 = S37.atr(B15)
     last_of_day = np.full(nd, np.nan)
     ends = np.nonzero(np.concatenate([B15["dpos"][1:] != B15["dpos"][:-1], [True]]))[0]
@@ -534,6 +536,8 @@ def h37_mp(mk, unds=UNDS5, tf=5, name="MP_OOV"):
             continue
         M = ix.mat()
         B = S37.bars(M, int(tf))
+        if not len(B["c"]):
+            continue
         lev = S37.profile_levels(M["h"], M["l"], M["c"])
         levp = np.vstack([np.full((1, 3), np.nan), lev[:-1]])
         s = S37.mp_signals(B, M["o"], M["h"], M["l"], levp)[name].astype(np.int64)
