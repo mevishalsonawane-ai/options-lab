@@ -1,0 +1,3765 @@
+{
+ "part": "final",
+ "n_days": 55,
+ "by_index": {
+  "NIFTY": 28,
+  "SENSEX": 27
+ },
+ "late_mult": {
+  "345": 2.25,
+  "350": 2.25,
+  "355": 2.75,
+  "360": 2.75,
+  "365": 2.75,
+  "370": 2.75
+ },
+ "cells": {
+  "1230-1505-T0": {
+   "cell": "1230-1505-T0",
+   "entry": "1230",
+   "end": "1505",
+   "exit": "T0",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": 1559.0,
+    "hit": 22.4,
+    "x2": 12,
+    "x5": 2,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": 24.0,
+    "worst_day": -557.0,
+    "max_dd": 5359.0,
+    "top1": 582.0,
+    "top5": 832.0,
+    "ex5": -11411.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -1846.08
+     ],
+     "NIFTY": [
+      55,
+      3405.33
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 107,
+    "armed": 107
+   },
+   "p": 0.043912175648702596,
+   "twin_mean": -7495.0,
+   "spread2x": 1011.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 208,
+     "exit": 41.38,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 2.7,
+     "net": 280.43,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 209,
+     "exit": 19.89,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.0,
+     "net": -204.58,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 202,
+     "exit": 8.15,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.2,
+     "net": -139.5,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 219,
+     "exit": 8.05,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.1,
+     "net": -185.65,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": 3047.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": true,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1505-T2": {
+   "cell": "1230-1505-T2",
+   "entry": "1230",
+   "end": "1505",
+   "exit": "T2",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -9680.0,
+    "hit": 31.8,
+    "x2": 31,
+    "x5": 6,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -149.0,
+    "worst_day": -1752.0,
+    "max_dd": 13429.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -27899.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -7369.42
+     ],
+     "NIFTY": [
+      55,
+      -2310.76
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 31,
+    "armed": 32
+   },
+   "p": 0.04590818363273453,
+   "twin_mean": -20228.0,
+   "spread2x": -9951.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 208,
+     "exit": 41.38,
+     "why": "trail",
+     "armed_row": 201,
+     "peak": 2.7,
+     "net": 280.43,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.15,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -598.64,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 317,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.44,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -679.35,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -8849.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1505-T3": {
+   "cell": "1230-1505-T3",
+   "entry": "1230",
+   "end": "1505",
+   "exit": "T3",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -6823.0,
+    "hit": 24.3,
+    "x2": 32,
+    "x5": 9,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -105.0,
+    "worst_day": -1752.0,
+    "max_dd": 14312.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -26943.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -5448.24
+     ],
+     "NIFTY": [
+      55,
+      -1374.61
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 18,
+    "armed": 19
+   },
+   "p": 0.005988023952095809,
+   "twin_mean": -22183.0,
+   "spread2x": -7140.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 229,
+     "exit": 56.07,
+     "why": "trail",
+     "armed_row": 225,
+     "peak": 3.2,
+     "net": 573.68,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.15,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -598.64,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 319,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.44,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -679.35,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -1698.0,
+   "q": 0.11976047904191615,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1505-T5": {
+   "cell": "1230-1505-T5",
+   "entry": "1230",
+   "end": "1505",
+   "exit": "T5",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -9264.0,
+    "hit": 19.6,
+    "x2": 32,
+    "x5": 11,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -143.0,
+    "worst_day": -1752.0,
+    "max_dd": 17157.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -29383.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -8222.41
+     ],
+     "NIFTY": [
+      55,
+      -1041.15
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 11,
+    "armed": 12
+   },
+   "p": 0.015968063872255488,
+   "twin_mean": -23513.0,
+   "spread2x": -9591.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 261,
+     "exit": 137.78,
+     "why": "trail",
+     "armed_row": 251,
+     "peak": 8.3,
+     "net": 2204.8,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.15,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -598.64,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 333,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.44,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -679.35,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -4517.0,
+   "q": 0.11976047904191615,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1505-H": {
+   "cell": "1230-1505-H",
+   "entry": "1230",
+   "end": "1505",
+   "exit": "H",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -12331.0,
+    "hit": 15.0,
+    "x2": 32,
+    "x5": 11,
+    "x10": 3,
+    "staked": 64800.0,
+    "per1000": -190.0,
+    "worst_day": -1752.0,
+    "max_dd": 27730.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -41971.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -6008.8
+     ],
+     "NIFTY": [
+      55,
+      -6322.64
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 0,
+    "armed": 0
+   },
+   "p": 0.1497005988023952,
+   "twin_mean": -21354.0,
+   "spread2x": -12683.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 726.53,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 29.1,
+     "net": 13957.6,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.15,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -598.64,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 52.21,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 9.1,
+     "net": 2718.9,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 350,
+     "exit": 0.44,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -679.35,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -8321.0,
+   "q": 0.20413718018508434,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1515-T0": {
+   "cell": "1230-1515-T0",
+   "entry": "1230",
+   "end": "1515",
+   "exit": "T0",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": 1559.0,
+    "hit": 22.4,
+    "x2": 12,
+    "x5": 2,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": 24.0,
+    "worst_day": -557.0,
+    "max_dd": 5359.0,
+    "top1": 582.0,
+    "top5": 832.0,
+    "ex5": -11411.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -1846.08
+     ],
+     "NIFTY": [
+      55,
+      3405.33
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 107,
+    "armed": 107
+   },
+   "p": 0.043912175648702596,
+   "twin_mean": -7527.0,
+   "spread2x": 1011.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 208,
+     "exit": 41.38,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 2.7,
+     "net": 280.43,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 209,
+     "exit": 19.89,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.0,
+     "net": -204.58,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 202,
+     "exit": 8.15,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.2,
+     "net": -139.5,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 219,
+     "exit": 8.05,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.1,
+     "net": -185.65,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": 3047.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": true,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1515-T2": {
+   "cell": "1230-1515-T2",
+   "entry": "1230",
+   "end": "1515",
+   "exit": "T2",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -9747.0,
+    "hit": 31.8,
+    "x2": 31,
+    "x5": 6,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -150.0,
+    "worst_day": -1739.0,
+    "max_dd": 13514.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -27880.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -6925.37
+     ],
+     "NIFTY": [
+      55,
+      -2821.98
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 32,
+    "armed": 32
+   },
+   "p": 0.06786427145708583,
+   "twin_mean": -19659.0,
+   "spread2x": -9709.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 208,
+     "exit": 41.38,
+     "why": "trail",
+     "armed_row": 201,
+     "peak": 2.7,
+     "net": 280.43,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.0,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 317,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.41,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -681.3,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -8946.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1515-T3": {
+   "cell": "1230-1515-T3",
+   "entry": "1230",
+   "end": "1515",
+   "exit": "T3",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -7127.0,
+    "hit": 23.4,
+    "x2": 32,
+    "x5": 9,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -110.0,
+    "worst_day": -1739.0,
+    "max_dd": 14344.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -27161.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -5352.35
+     ],
+     "NIFTY": [
+      55,
+      -1774.91
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 19,
+    "armed": 20
+   },
+   "p": 0.011976047904191617,
+   "twin_mean": -21846.0,
+   "spread2x": -7119.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 229,
+     "exit": 56.07,
+     "why": "trail",
+     "armed_row": 225,
+     "peak": 3.2,
+     "net": 573.68,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.0,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 319,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.41,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -681.3,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -1536.0,
+   "q": 0.11976047904191615,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1515-T5": {
+   "cell": "1230-1515-T5",
+   "entry": "1230",
+   "end": "1515",
+   "exit": "T5",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -10692.0,
+    "hit": 17.8,
+    "x2": 32,
+    "x5": 11,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -165.0,
+    "worst_day": -1739.0,
+    "max_dd": 18289.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -30726.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -8974.51
+     ],
+     "NIFTY": [
+      55,
+      -1717.82
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 12,
+    "armed": 12
+   },
+   "p": 0.0499001996007984,
+   "twin_mean": -23043.0,
+   "spread2x": -10590.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 261,
+     "exit": 137.78,
+     "why": "trail",
+     "armed_row": 251,
+     "peak": 8.3,
+     "net": 2204.8,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.0,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 333,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.41,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -681.3,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -5855.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-1515-H": {
+   "cell": "1230-1515-H",
+   "entry": "1230",
+   "end": "1515",
+   "exit": "H",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -9545.0,
+    "hit": 13.1,
+    "x2": 32,
+    "x5": 11,
+    "x10": 3,
+    "staked": 64800.0,
+    "per1000": -147.0,
+    "worst_day": -1739.0,
+    "max_dd": 28806.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -43191.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -3214.19
+     ],
+     "NIFTY": [
+      55,
+      -6331.08
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 0,
+    "armed": 0
+   },
+   "p": 0.20359281437125748,
+   "twin_mean": -18210.0,
+   "spread2x": -9419.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 892.01,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 35.8,
+     "net": 17260.97,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.0,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 60.53,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 9.1,
+     "net": 3258.66,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 360,
+     "exit": 0.41,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -681.3,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -5545.0,
+   "q": 0.25449101796407186,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-SETTLE-T0": {
+   "cell": "1230-SETTLE-T0",
+   "entry": "1230",
+   "end": "SETTLE",
+   "exit": "T0",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": 1559.0,
+    "hit": 22.4,
+    "x2": 12,
+    "x5": 2,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": 24.0,
+    "worst_day": -557.0,
+    "max_dd": 5359.0,
+    "top1": 582.0,
+    "top5": 832.0,
+    "ex5": -11411.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -1846.08
+     ],
+     "NIFTY": [
+      55,
+      3405.33
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 107,
+    "armed": 107
+   },
+   "p": 0.041916167664670656,
+   "twin_mean": -7732.0,
+   "spread2x": 1011.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 208,
+     "exit": 41.38,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 2.7,
+     "net": 280.43,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 209,
+     "exit": 19.89,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.0,
+     "net": -204.58,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 202,
+     "exit": 8.15,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.2,
+     "net": -139.5,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 219,
+     "exit": 8.05,
+     "why": "trail",
+     "armed_row": 195,
+     "peak": 1.1,
+     "net": -185.65,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": 3047.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": true,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-SETTLE-T2": {
+   "cell": "1230-SETTLE-T2",
+   "entry": "1230",
+   "end": "SETTLE",
+   "exit": "T2",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -14427.0,
+    "hit": 29.9,
+    "x2": 33,
+    "x5": 7,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -223.0,
+    "worst_day": -1752.0,
+    "max_dd": 18410.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -32560.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -8476.37
+     ],
+     "NIFTY": [
+      55,
+      -5950.97
+     ]
+    },
+    "itm": 0,
+    "otm": 73,
+    "settle_flagged": 0,
+    "trail_exits": 34,
+    "armed": 35
+   },
+   "p": 0.0658682634730539,
+   "twin_mean": -24523.0,
+   "spread2x": -14753.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 208,
+     "exit": 41.38,
+     "why": "trail",
+     "armed_row": 201,
+     "peak": 2.7,
+     "net": 280.43,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 317,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -684.3,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -13430.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-SETTLE-T3": {
+   "cell": "1230-SETTLE-T3",
+   "entry": "1230",
+   "end": "SETTLE",
+   "exit": "T3",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -13789.0,
+    "hit": 20.6,
+    "x2": 34,
+    "x5": 10,
+    "x10": 1,
+    "staked": 64800.0,
+    "per1000": -213.0,
+    "worst_day": -1752.0,
+    "max_dd": 19191.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -33823.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -8360.01
+     ],
+     "NIFTY": [
+      55,
+      -5428.96
+     ]
+    },
+    "itm": 3,
+    "otm": 84,
+    "settle_flagged": 0,
+    "trail_exits": 20,
+    "armed": 21
+   },
+   "p": 0.011976047904191617,
+   "twin_mean": -29022.0,
+   "spread2x": -14074.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 229,
+     "exit": 56.07,
+     "why": "trail",
+     "armed_row": 225,
+     "peak": 3.2,
+     "net": 573.68,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 319,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -684.3,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -9469.0,
+   "q": 0.11976047904191615,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-SETTLE-T5": {
+   "cell": "1230-SETTLE-T5",
+   "entry": "1230",
+   "end": "SETTLE",
+   "exit": "T5",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -20265.0,
+    "hit": 14.0,
+    "x2": 34,
+    "x5": 13,
+    "x10": 2,
+    "staked": 64800.0,
+    "per1000": -313.0,
+    "worst_day": -1752.0,
+    "max_dd": 26075.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -40299.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -13859.96
+     ],
+     "NIFTY": [
+      55,
+      -6405.41
+     ]
+    },
+    "itm": 4,
+    "otm": 91,
+    "settle_flagged": 0,
+    "trail_exits": 12,
+    "armed": 14
+   },
+   "p": 0.031936127744510975,
+   "twin_mean": -33280.0,
+   "spread2x": -20531.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 261,
+     "exit": 137.78,
+     "why": "trail",
+     "armed_row": 251,
+     "peak": 8.3,
+     "net": 2204.8,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 333,
+     "peak": 9.1,
+     "net": 2884.33,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -684.3,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -16679.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1230-SETTLE-H": {
+   "cell": "1230-SETTLE-H",
+   "entry": "1230",
+   "end": "SETTLE",
+   "exit": "H",
+   "m": {
+    "tickets": 107,
+    "n_days": 55,
+    "net": -22644.0,
+    "hit": 8.4,
+    "x2": 34,
+    "x5": 13,
+    "x10": 5,
+    "staked": 64800.0,
+    "per1000": -349.0,
+    "worst_day": -1752.0,
+    "max_dd": 39601.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -54240.0,
+    "by_index": {
+     "SENSEX": [
+      52,
+      -10710.97
+     ],
+     "NIFTY": [
+      55,
+      -11933.39
+     ]
+    },
+    "itm": 10,
+    "otm": 97,
+    "settle_flagged": 0,
+    "trail_exits": 0,
+    "armed": 0
+   },
+   "p": 0.11377245508982035,
+   "twin_mean": -34271.0,
+   "spread2x": -22875.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 72500.0,
+     "entry": 24.91,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 817.3060000000114,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 36.4,
+     "net": 15769.7,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 71200.0,
+     "entry": 27.71,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -578.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 9.55,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 48.048333333332266,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 9.1,
+     "net": 2448.91,
+     "settle_px": 22698.05
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22450.0,
+     "entry": 10.16,
+     "fill_row": 195,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.1,
+     "net": -684.3,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -19920.0,
+   "q": 0.19627411842980705,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1505-T0": {
+   "cell": "1430-1505-T0",
+   "entry": "1430",
+   "end": "1505",
+   "exit": "T0",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -6029.0,
+    "hit": 23.5,
+    "x2": 10,
+    "x5": 2,
+    "x10": 0,
+    "staked": 56064.0,
+    "per1000": -108.0,
+    "worst_day": -706.0,
+    "max_dd": 8361.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -13775.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -3371.57
+     ],
+     "NIFTY": [
+      47,
+      -2657.73
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 95,
+    "armed": 98
+   },
+   "p": 0.46706586826347307,
+   "twin_mean": -5828.0,
+   "spread2x": -6455.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 322,
+     "exit": 11.24,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.3,
+     "net": -382.25,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 318,
+     "exit": 13.39,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.0,
+     "net": -257.3,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 318,
+     "exit": 3.9,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.0,
+     "net": -301.42,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -3638.0,
+   "q": 0.5004277159965783,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1505-T2": {
+   "cell": "1430-1505-T2",
+   "entry": "1430",
+   "end": "1505",
+   "exit": "T2",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -6440.0,
+    "hit": 32.7,
+    "x2": 27,
+    "x5": 6,
+    "x10": 0,
+    "staked": 56064.0,
+    "per1000": -115.0,
+    "worst_day": -1283.0,
+    "max_dd": 8882.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -19702.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -5071.74
+     ],
+     "NIFTY": [
+      47,
+      -1367.99
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 25,
+    "armed": 29
+   },
+   "p": 0.08782435129740519,
+   "twin_mean": -14584.0,
+   "spread2x": -6935.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.87,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 332,
+     "exit": 28.94,
+     "why": "trail",
+     "armed_row": 325,
+     "peak": 3.6,
+     "net": 53.11,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 319,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -480.47,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -3185.0,
+   "q": 0.16467065868263472,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1505-T3": {
+   "cell": "1430-1505-T3",
+   "entry": "1430",
+   "end": "1505",
+   "exit": "T3",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -8133.0,
+    "hit": 26.5,
+    "x2": 29,
+    "x5": 6,
+    "x10": 0,
+    "staked": 56064.0,
+    "per1000": -145.0,
+    "worst_day": -1521.0,
+    "max_dd": 10286.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -21395.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -6354.14
+     ],
+     "NIFTY": [
+      47,
+      -1778.65
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 12,
+    "armed": 16
+   },
+   "p": 0.11776447105788423,
+   "twin_mean": -15205.0,
+   "spread2x": -8655.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.87,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 332,
+     "exit": 28.94,
+     "why": "trail",
+     "armed_row": 328,
+     "peak": 3.6,
+     "net": 53.11,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 328,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -480.47,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -6757.0,
+   "q": 0.19627411842980705,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1505-T5": {
+   "cell": "1430-1505-T5",
+   "entry": "1430",
+   "end": "1505",
+   "exit": "T5",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -10231.0,
+    "hit": 21.4,
+    "x2": 29,
+    "x5": 7,
+    "x10": 0,
+    "staked": 56064.0,
+    "per1000": -182.0,
+    "worst_day": -1521.0,
+    "max_dd": 12383.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -23493.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -6353.14
+     ],
+     "NIFTY": [
+      47,
+      -3877.37
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 3,
+    "armed": 7
+   },
+   "p": 0.1437125748502994,
+   "twin_mean": -16831.0,
+   "spread2x": -10769.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.87,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.04,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 3.6,
+     "net": -503.84,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 335,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -480.47,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -8472.0,
+   "q": 0.20413718018508434,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1505-H": {
+   "cell": "1430-1505-H",
+   "entry": "1430",
+   "end": "1505",
+   "exit": "H",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -12284.0,
+    "hit": 20.4,
+    "x2": 29,
+    "x5": 7,
+    "x10": 0,
+    "staked": 56064.0,
+    "per1000": -219.0,
+    "worst_day": -1521.0,
+    "max_dd": 14272.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -26169.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -9129.7
+     ],
+     "NIFTY": [
+      47,
+      -3154.66
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 0,
+    "armed": 0
+   },
+   "p": 0.3772455089820359,
+   "twin_mean": -14798.0,
+   "spread2x": -12824.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.87,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.04,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 3.6,
+     "net": -503.84,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 52.21,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 6.5,
+     "net": 2467.89,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 350,
+     "exit": 1.14,
+     "why": "end1505",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -480.47,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -10526.0,
+   "q": 0.45269461077844314,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1515-T0": {
+   "cell": "1430-1515-T0",
+   "entry": "1430",
+   "end": "1515",
+   "exit": "T0",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -5822.0,
+    "hit": 23.5,
+    "x2": 10,
+    "x5": 2,
+    "x10": 0,
+    "staked": 56064.0,
+    "per1000": -104.0,
+    "worst_day": -706.0,
+    "max_dd": 8154.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -13481.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -3231.63
+     ],
+     "NIFTY": [
+      47,
+      -2590.27
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 95,
+    "armed": 98
+   },
+   "p": 0.44510978043912175,
+   "twin_mean": -5803.0,
+   "spread2x": -6251.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 322,
+     "exit": 11.24,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.3,
+     "net": -382.25,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 318,
+     "exit": 13.39,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.0,
+     "net": -257.3,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 318,
+     "exit": 3.9,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.0,
+     "net": -301.42,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -3430.0,
+   "q": 0.4945664227101353,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1515-T2": {
+   "cell": "1430-1515-T2",
+   "entry": "1430",
+   "end": "1515",
+   "exit": "T2",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -3377.0,
+    "hit": 31.6,
+    "x2": 28,
+    "x5": 6,
+    "x10": 1,
+    "staked": 56064.0,
+    "per1000": -60.0,
+    "worst_day": -1345.0,
+    "max_dd": 8826.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -18588.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -3447.28
+     ],
+     "NIFTY": [
+      47,
+      69.79
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 26,
+    "armed": 31
+   },
+   "p": 0.05389221556886228,
+   "twin_mean": -13707.0,
+   "spread2x": -3384.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 5.16,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -503.62,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 332,
+     "exit": 28.94,
+     "why": "trail",
+     "armed_row": 325,
+     "peak": 3.6,
+     "net": 53.11,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 319,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 0.71,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -508.37,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -701.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1515-T3": {
+   "cell": "1430-1515-T3",
+   "entry": "1430",
+   "end": "1515",
+   "exit": "T3",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -4247.0,
+    "hit": 25.5,
+    "x2": 31,
+    "x5": 7,
+    "x10": 1,
+    "staked": 56064.0,
+    "per1000": -76.0,
+    "worst_day": -1632.0,
+    "max_dd": 8854.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -21078.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -3072.55
+     ],
+     "NIFTY": [
+      47,
+      -1174.51
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 12,
+    "armed": 16
+   },
+   "p": 0.06187624750499002,
+   "twin_mean": -14430.0,
+   "spread2x": -4122.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 5.16,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -503.62,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 332,
+     "exit": 28.94,
+     "why": "trail",
+     "armed_row": 328,
+     "peak": 3.6,
+     "net": 53.11,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 328,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 0.71,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -508.37,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -2819.0,
+   "q": 0.1454234388366125,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1515-T5": {
+   "cell": "1430-1515-T5",
+   "entry": "1430",
+   "end": "1515",
+   "exit": "T5",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -6476.0,
+    "hit": 21.4,
+    "x2": 31,
+    "x5": 9,
+    "x10": 1,
+    "staked": 56064.0,
+    "per1000": -116.0,
+    "worst_day": -1632.0,
+    "max_dd": 8836.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -23356.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -2372.88
+     ],
+     "NIFTY": [
+      47,
+      -4102.98
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 4,
+    "armed": 9
+   },
+   "p": 0.08183632734530938,
+   "twin_mean": -16048.0,
+   "spread2x": -6326.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 5.16,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -503.62,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 0.11,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 3.6,
+     "net": -522.4,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 335,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 0.71,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -508.37,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -5215.0,
+   "q": 0.16367265469061876,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-1515-H": {
+   "cell": "1430-1515-H",
+   "entry": "1430",
+   "end": "1515",
+   "exit": "H",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -9779.0,
+    "hit": 20.4,
+    "x2": 31,
+    "x5": 9,
+    "x10": 1,
+    "staked": 56064.0,
+    "per1000": -174.0,
+    "worst_day": -1632.0,
+    "max_dd": 12278.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -27034.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -5370.42
+     ],
+     "NIFTY": [
+      47,
+      -4408.54
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 0,
+    "armed": 0
+   },
+   "p": 0.4151696606786427,
+   "twin_mean": -11466.0,
+   "spread2x": -9634.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 5.16,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -503.62,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 0.11,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 3.6,
+     "net": -522.4,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 60.53,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 6.5,
+     "net": 3007.65,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 360,
+     "exit": 0.71,
+     "why": "end1515",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -508.37,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -8518.0,
+   "q": 0.4790419161676646,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-SETTLE-T0": {
+   "cell": "1430-SETTLE-T0",
+   "entry": "1430",
+   "end": "SETTLE",
+   "exit": "T0",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -6865.0,
+    "hit": 21.4,
+    "x2": 10,
+    "x5": 2,
+    "x10": 0,
+    "staked": 56064.0,
+    "per1000": -122.0,
+    "worst_day": -706.0,
+    "max_dd": 9197.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -14513.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -3486.95
+     ],
+     "NIFTY": [
+      47,
+      -3377.85
+     ]
+    },
+    "itm": 0,
+    "otm": 0,
+    "settle_flagged": 0,
+    "trail_exits": 98,
+    "armed": 98
+   },
+   "p": 0.5249500998003992,
+   "twin_mean": -6015.0,
+   "spread2x": -7293.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 322,
+     "exit": 11.24,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.3,
+     "net": -382.25,
+     "settle_px": null
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 318,
+     "exit": 13.39,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.0,
+     "net": -257.3,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 318,
+     "exit": 3.9,
+     "why": "trail",
+     "armed_row": 315,
+     "peak": 1.0,
+     "net": -301.42,
+     "settle_px": null
+    }
+   ],
+   "no_guard_net": -4473.0,
+   "q": 0.5249500998003992,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-SETTLE-T2": {
+   "cell": "1430-SETTLE-T2",
+   "entry": "1430",
+   "end": "SETTLE",
+   "exit": "T2",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -11628.0,
+    "hit": 28.6,
+    "x2": 32,
+    "x5": 6,
+    "x10": 1,
+    "staked": 56064.0,
+    "per1000": -207.0,
+    "worst_day": -1628.0,
+    "max_dd": 17228.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -26738.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -6581.22
+     ],
+     "NIFTY": [
+      47,
+      -5046.84
+     ]
+    },
+    "itm": 3,
+    "otm": 63,
+    "settle_flagged": 0,
+    "trail_exits": 32,
+    "armed": 36
+   },
+   "p": 0.1437125748502994,
+   "twin_mean": -18650.0,
+   "spread2x": -11927.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 332,
+     "exit": 28.94,
+     "why": "trail",
+     "armed_row": 325,
+     "peak": 3.6,
+     "net": 53.11,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 319,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -530.83,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -9402.0,
+   "q": 0.20413718018508434,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-SETTLE-T3": {
+   "cell": "1430-SETTLE-T3",
+   "entry": "1430",
+   "end": "SETTLE",
+   "exit": "T3",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -15382.0,
+    "hit": 20.4,
+    "x2": 35,
+    "x5": 8,
+    "x10": 1,
+    "staked": 56064.0,
+    "per1000": -274.0,
+    "worst_day": -1707.0,
+    "max_dd": 19884.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -31418.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -7412.85
+     ],
+     "NIFTY": [
+      47,
+      -7969.51
+     ]
+    },
+    "itm": 4,
+    "otm": 78,
+    "settle_flagged": 0,
+    "trail_exits": 16,
+    "armed": 19
+   },
+   "p": 0.1377245508982036,
+   "twin_mean": -22291.0,
+   "spread2x": -15631.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 332,
+     "exit": 28.94,
+     "why": "trail",
+     "armed_row": 328,
+     "peak": 3.6,
+     "net": 53.11,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 328,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -530.83,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -16703.0,
+   "q": 0.20413718018508434,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-SETTLE-T5": {
+   "cell": "1430-SETTLE-T5",
+   "entry": "1430",
+   "end": "SETTLE",
+   "exit": "T5",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -20321.0,
+    "hit": 13.3,
+    "x2": 35,
+    "x5": 11,
+    "x10": 3,
+    "staked": 56064.0,
+    "per1000": -362.0,
+    "worst_day": -1707.0,
+    "max_dd": 22423.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -36672.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -6658.17
+     ],
+     "NIFTY": [
+      47,
+      -13662.37
+     ]
+    },
+    "itm": 7,
+    "otm": 84,
+    "settle_flagged": 0,
+    "trail_exits": 7,
+    "armed": 12
+   },
+   "p": 0.16367265469061876,
+   "twin_mean": -26933.0,
+   "spread2x": -20543.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 3.6,
+     "net": -501.0,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 345,
+     "exit": 54.76,
+     "why": "trail",
+     "armed_row": 335,
+     "peak": 6.5,
+     "net": 2633.32,
+     "settle_px": null
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -530.83,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -21835.0,
+   "q": 0.2134860713355897,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  },
+  "1430-SETTLE-H": {
+   "cell": "1430-SETTLE-H",
+   "entry": "1430",
+   "end": "SETTLE",
+   "exit": "H",
+   "m": {
+    "tickets": 98,
+    "n_days": 55,
+    "net": -29235.0,
+    "hit": 10.2,
+    "x2": 35,
+    "x5": 12,
+    "x10": 4,
+    "staked": 56064.0,
+    "per1000": -521.0,
+    "worst_day": -1707.0,
+    "max_dd": 30902.0,
+    "top1": null,
+    "top5": null,
+    "ex5": -44443.0,
+    "by_index": {
+     "SENSEX": [
+      51,
+      -14186.78
+     ],
+     "NIFTY": [
+      47,
+      -15047.78
+     ]
+    },
+    "itm": 11,
+    "otm": 87,
+    "settle_flagged": 0,
+    "trail_exits": 0,
+    "armed": 0
+   },
+   "p": 0.5229540918163673,
+   "twin_mean": -28343.0,
+   "spread2x": -29431.0,
+   "callouts": [
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "CE",
+     "strike": 73500.0,
+     "entry": 27.96,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.3,
+     "net": -583.03,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "SENSEX",
+     "d": "2026-04-02",
+     "side": "PE",
+     "strike": 72700.0,
+     "entry": 23.86,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 3.6,
+     "net": -501.0,
+     "settle_px": 73317.31
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "CE",
+     "strike": 22650.0,
+     "entry": 13.41,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 48.048333333332266,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 6.5,
+     "net": 2197.9,
+     "settle_px": 22698.05
+    },
+    {
+     "und": "NIFTY",
+     "d": "2026-10-13",
+     "side": "PE",
+     "strike": 22550.0,
+     "entry": 7.8,
+     "fill_row": 315,
+     "exit_row": 375,
+     "exit": 0.0,
+     "why": "settle",
+     "armed_row": null,
+     "peak": 1.0,
+     "net": -530.83,
+     "settle_px": 22698.05
+    }
+   ],
+   "no_guard_net": -30749.0,
+   "q": 0.5249500998003992,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ tickets": true,
+    "net without top 5 > 0": false,
+    "design net > 0": false,
+    "pass": false
+   }
+  }
+ },
+ "compare": {
+  "T2 vs T0 | 1230-1505": {
+   "n": 55,
+   "mean": -204.4,
+   "lo": -401.0,
+   "hi": 19.1,
+   "total": -11239.0,
+   "reading": "worse"
+  },
+  "T3 vs T0 | 1230-1505": {
+   "n": 55,
+   "mean": -152.4,
+   "lo": -392.0,
+   "hi": 118.7,
+   "total": -8382.0,
+   "reading": "worse"
+  },
+  "T5 vs T0 | 1230-1505": {
+   "n": 55,
+   "mean": -196.8,
+   "lo": -450.9,
+   "hi": 90.6,
+   "total": -10823.0,
+   "reading": "worse"
+  },
+  "H vs T0 | 1230-1505": {
+   "n": 55,
+   "mean": -252.6,
+   "lo": -686.3,
+   "hi": 375.6,
+   "total": -13891.0,
+   "reading": "no clear difference"
+  },
+  "T2 vs T0 | 1230-1515": {
+   "n": 55,
+   "mean": -205.6,
+   "lo": -410.4,
+   "hi": 21.7,
+   "total": -11307.0,
+   "reading": "worse"
+  },
+  "T3 vs T0 | 1230-1515": {
+   "n": 55,
+   "mean": -157.9,
+   "lo": -409.6,
+   "hi": 125.3,
+   "total": -8687.0,
+   "reading": "worse"
+  },
+  "T5 vs T0 | 1230-1515": {
+   "n": 55,
+   "mean": -222.8,
+   "lo": -490.4,
+   "hi": 78.3,
+   "total": -12252.0,
+   "reading": "worse"
+  },
+  "H vs T0 | 1230-1515": {
+   "n": 55,
+   "mean": -201.9,
+   "lo": -700.7,
+   "hi": 539.6,
+   "total": -11105.0,
+   "reading": "no clear difference"
+  },
+  "T2 vs T0 | 1230-SETTLE": {
+   "n": 55,
+   "mean": -290.7,
+   "lo": -489.8,
+   "hi": -67.4,
+   "total": -15987.0,
+   "reading": "worse"
+  },
+  "T3 vs T0 | 1230-SETTLE": {
+   "n": 55,
+   "mean": -279.1,
+   "lo": -536.9,
+   "hi": 12.9,
+   "total": -15348.0,
+   "reading": "worse"
+  },
+  "T5 vs T0 | 1230-SETTLE": {
+   "n": 55,
+   "mean": -396.8,
+   "lo": -667.1,
+   "hi": -88.1,
+   "total": -21825.0,
+   "reading": "worse"
+  },
+  "H vs T0 | 1230-SETTLE": {
+   "n": 55,
+   "mean": -440.1,
+   "lo": -896.7,
+   "hi": 246.6,
+   "total": -24204.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1230-T0": {
+   "n": 55,
+   "mean": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "total": 0.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1230-T0": {
+   "n": 55,
+   "mean": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "total": 0.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1230-T2": {
+   "n": 55,
+   "mean": -1.2,
+   "lo": -53.0,
+   "hi": 41.6,
+   "total": -67.0,
+   "reading": "worse"
+  },
+  "SETTLE vs 1505 | 1230-T2": {
+   "n": 55,
+   "mean": -86.3,
+   "lo": -150.8,
+   "hi": -31.7,
+   "total": -4747.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1230-T3": {
+   "n": 55,
+   "mean": -5.5,
+   "lo": -62.1,
+   "hi": 41.1,
+   "total": -304.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1230-T3": {
+   "n": 55,
+   "mean": -126.7,
+   "lo": -248.7,
+   "hi": -14.2,
+   "total": -6966.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1230-T5": {
+   "n": 55,
+   "mean": -26.0,
+   "lo": -85.4,
+   "hi": 25.7,
+   "total": -1429.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1230-T5": {
+   "n": 55,
+   "mean": -200.0,
+   "lo": -343.4,
+   "hi": -69.5,
+   "total": -11002.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1230-H": {
+   "n": 55,
+   "mean": 50.7,
+   "lo": -72.9,
+   "hi": 203.5,
+   "total": 2786.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1230-H": {
+   "n": 55,
+   "mean": -187.5,
+   "lo": -365.0,
+   "hi": -13.2,
+   "total": -10313.0,
+   "reading": "no clear difference"
+  },
+  "T2 vs T0 | 1430-1505": {
+   "n": 55,
+   "mean": -7.5,
+   "lo": -171.1,
+   "hi": 178.1,
+   "total": -410.0,
+   "reading": "no clear difference"
+  },
+  "T3 vs T0 | 1430-1505": {
+   "n": 55,
+   "mean": -38.2,
+   "lo": -230.9,
+   "hi": 168.2,
+   "total": -2103.0,
+   "reading": "no clear difference"
+  },
+  "T5 vs T0 | 1430-1505": {
+   "n": 55,
+   "mean": -76.4,
+   "lo": -296.7,
+   "hi": 164.0,
+   "total": -4201.0,
+   "reading": "no clear difference"
+  },
+  "H vs T0 | 1430-1505": {
+   "n": 55,
+   "mean": -113.7,
+   "lo": -372.0,
+   "hi": 156.0,
+   "total": -6255.0,
+   "reading": "no clear difference"
+  },
+  "T2 vs T0 | 1430-1515": {
+   "n": 55,
+   "mean": 44.4,
+   "lo": -162.7,
+   "hi": 285.0,
+   "total": 2444.0,
+   "reading": "no clear difference"
+  },
+  "T3 vs T0 | 1430-1515": {
+   "n": 55,
+   "mean": 28.6,
+   "lo": -224.3,
+   "hi": 311.0,
+   "total": 1575.0,
+   "reading": "no clear difference"
+  },
+  "T5 vs T0 | 1430-1515": {
+   "n": 55,
+   "mean": -11.9,
+   "lo": -299.4,
+   "hi": 306.9,
+   "total": -654.0,
+   "reading": "no clear difference"
+  },
+  "H vs T0 | 1430-1515": {
+   "n": 55,
+   "mean": -71.9,
+   "lo": -377.7,
+   "hi": 255.0,
+   "total": -3957.0,
+   "reading": "no clear difference"
+  },
+  "T2 vs T0 | 1430-SETTLE": {
+   "n": 55,
+   "mean": -86.6,
+   "lo": -316.1,
+   "hi": 167.0,
+   "total": -4763.0,
+   "reading": "no clear difference"
+  },
+  "T3 vs T0 | 1430-SETTLE": {
+   "n": 55,
+   "mean": -154.9,
+   "lo": -424.2,
+   "hi": 133.3,
+   "total": -8518.0,
+   "reading": "no clear difference"
+  },
+  "T5 vs T0 | 1430-SETTLE": {
+   "n": 55,
+   "mean": -244.6,
+   "lo": -551.8,
+   "hi": 87.5,
+   "total": -13456.0,
+   "reading": "no clear difference"
+  },
+  "H vs T0 | 1430-SETTLE": {
+   "n": 55,
+   "mean": -406.7,
+   "lo": -702.6,
+   "hi": -81.4,
+   "total": -22370.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1430-T0": {
+   "n": 55,
+   "mean": 3.8,
+   "lo": -3.1,
+   "hi": 13.0,
+   "total": 207.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1430-T0": {
+   "n": 55,
+   "mean": -15.2,
+   "lo": -36.6,
+   "hi": 0.0,
+   "total": -836.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1430-T2": {
+   "n": 55,
+   "mean": 55.7,
+   "lo": -8.0,
+   "hi": 134.1,
+   "total": 3062.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1430-T2": {
+   "n": 55,
+   "mean": -94.3,
+   "lo": -217.7,
+   "hi": 28.6,
+   "total": -5188.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1430-T3": {
+   "n": 55,
+   "mean": 70.6,
+   "lo": -17.1,
+   "hi": 174.3,
+   "total": 3886.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1430-T3": {
+   "n": 55,
+   "mean": -131.8,
+   "lo": -278.4,
+   "hi": 16.5,
+   "total": -7250.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1430-T5": {
+   "n": 55,
+   "mean": 68.3,
+   "lo": -26.9,
+   "hi": 177.9,
+   "total": 3755.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1430-T5": {
+   "n": 55,
+   "mean": -183.5,
+   "lo": -354.6,
+   "hi": -6.3,
+   "total": -10090.0,
+   "reading": "no clear difference"
+  },
+  "1515 vs 1505 | 1430-H": {
+   "n": 55,
+   "mean": 45.6,
+   "lo": -73.7,
+   "hi": 171.6,
+   "total": 2505.0,
+   "reading": "no clear difference"
+  },
+  "SETTLE vs 1505 | 1430-H": {
+   "n": 55,
+   "mean": -308.2,
+   "lo": -479.3,
+   "hi": -135.9,
+   "total": -16950.0,
+   "reading": "no clear difference"
+  }
+ },
+ "bh_family": 30,
+ "settle_flagged_days": [],
+ "passed": []
+}

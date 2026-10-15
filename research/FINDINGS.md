@@ -951,3 +951,28 @@ widened x2.25 from 15:00 and x2.75 from 15:10 (measured on design days), R47 fil
 - 2 Apr 2026 SENSEX: the 12:30 CE went 29x if held (+Rs 13,958 at 15:05), but the trail sold it at 2.7x (+Rs 280). By
   14:30 the move was over (-Rs 584 held). 13 Oct 2026 NIFTY: 14:30 + trail caught the CE (+Rs 2,633); 12:30 + trail was
   stopped out before it (-Rs 140).
+
+## When the hero ticket's 25% trail should start, and holding to expiry settlement (R55, 15 Oct 2026) - keep the trail from the fill; settlement does not beat 15:05; 0 of 30 pass
+Full study: `HUNT_R55_HERO_TRAIL.md` (pre-registered `hunt/r55/PREREG.md`, commit 1fbcc46). Boss had understood the 25%
+trail to start "once the option has run up", and asked about removing the 15:05 square-off for hero tickets. The ticket is
+R54's (NIFTY / SENSEX own expiry days, 1 lot CE + 1 lot PE in the cheap band, 12:30 entry; 14:30 for reference). Signal
+source: none (time only); the trail works on the option premium. Design 142 expiry days (20 Nov 2024 - 31 Mar 2026), final
+test 55 days (1 Apr - 13 Oct 2026), read once and not pristine (R43-R54 saw it). R54's pricing unchanged.
+- Trail from the fill (T0, also a 25% stop) is the best start in design at every end time: -Rs 14,507 on 248 tickets
+  (-91 per Rs 1,000). Armed after 2x / 3x / 5x (no stop before arming): -Rs 59,286 / -53,943 / -57,356. Hold:
+  -Rs 48,733.
+- Day by day, the armed trails lose Rs 278-315 more per expiry day than T0 in design (CIs below 0) and Rs 152-204 more in
+  final. The reading is "worse" in all 9 comparisons at 12:30. Final at 15:05: T0 +Rs 1,559 (107 tickets), T2 -Rs 9,680,
+  T3 -Rs 6,823, T5 -Rs 9,264, hold -Rs 12,331.
+- Why: about 7 in 10 tickets never double. With T0 they are out in about 12 minutes, losing about Rs 175 each; without a
+  stop they lose about Rs 624 each. T2's 175 never-armed design tickets lost Rs 1.10 lakh, and its 73 armed ones made
+  +Rs 50k (sold at a median 1.7x).
+- Settlement (the trail stays on until 15:29; ITM pays intrinsic at the mean of the index's 15:00-15:29 closes, less STT on
+  exercise 0.125% / 0.15% from 1 Apr 2026; OTM is worthless): with T0 there is no difference (no ticket open at 15:05).
+  Held, settlement minus 15:05 is +Rs 36 a day in design (CI -59 to +138) and -Rs 188 in final (-Rs 22,644 vs -Rs 12,331).
+  Selling at 15:05 still collects time value that an OTM option loses at expiry. No settlement or 15:15 comparison reads
+  "better".
+- 2 Apr 2026 SENSEX 72,500 CE: T0 +Rs 280, T5 +Rs 2,205, held to settlement +Rs 15,770. 13 Oct 2026 NIFTY 22,650 CE: T0
+  -Rs 140, T2 / T3 / T5 +Rs 2,884. These days motivated the question; they are not evidence for it.
+- 0 of 30 cells pass; every cell lost in design. Keep T0 for the hero paper arm. 15:05 stays for everything else and
+  anything live; changing it for the hero paper arm is Boss's call, and the data does not support it.
