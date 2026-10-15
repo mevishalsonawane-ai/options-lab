@@ -60,6 +60,7 @@ from __future__ import annotations
 import importlib.util
 import math
 import sys
+from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
@@ -115,6 +116,19 @@ def ta_sma(x, n):
     return out
 
 
+def _fma(a: float, b: float, c: float) -> float:
+    """a * b + c rounded once. math.fma exists only from Python 3.13; the repo's research Python is 3.11 (15 Oct merge:
+    the R52 tests failed to import on 3.11), so older Pythons get the same single rounding from exact fractions."""
+    if _MATH_FMA is not None:
+        return _MATH_FMA(a, b, c)
+    if not (math.isfinite(a) and math.isfinite(b) and math.isfinite(c)):
+        return a * b + c
+    return float(Fraction(a) * Fraction(b) + Fraction(c))   # int / int true division is correctly rounded
+
+
+_MATH_FMA = getattr(math, "fma", None)
+
+
 def ta_ema(x, n):
     """TA_EMA (classic compatibility): seed = SMA of the first n, then prev = (x - prev) * k + prev, k = 2/(n+1),
     evaluated as one fused multiply-add as the TA-Lib 0.8.1 wheel does (bit-identical; a plain multiply-then-add
@@ -130,7 +144,7 @@ def ta_ema(x, n):
     prev = tot / n
     out[n - 1] = prev
     for i in range(n, len(x)):
-        prev = math.fma(x[i] - prev, k, prev)    # the wheel's C build contracts (x - prev) * k + prev to an FMA
+        prev = _fma(x[i] - prev, k, prev)   # the wheel's C build contracts (x - prev) * k + prev to an FMA
         out[i] = prev
     return out
 

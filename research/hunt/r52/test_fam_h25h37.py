@@ -578,3 +578,30 @@ def test_ladder_bottom_synthetic_matches_talib():
             o, h, lo, c = (np.asarray(B[k], float) for k in "ohlc")
             for nm, f in F.CDL.items():
                 assert np.array_equal(getattr(talib, nm)(o, h, lo, c), f(o, h, lo, c)), (nm, tf)
+
+
+# ---- math.fma fallback (15 Oct merge): the repo's research Python is 3.11, which has no math.fma ----
+
+def test_fma_fallback_rounds_once(monkeypatch):
+    monkeypatch.setattr(F, "_MATH_FMA", None)
+    # 0.1 * 10 - 1: two roundings give 0.0; one rounding keeps the 2**-54 that 0.1 carries.
+    assert 0.1 * 10.0 - 1.0 == 0.0
+    assert F._fma(0.1, 10.0, -1.0) == 2.0 ** -54
+    assert F._fma(2.0, 3.0, 1.0) == 7.0
+    assert np.isnan(F._fma(float("nan"), 1.0, 1.0))
+    assert F._fma(float("inf"), 2.0, 1.0) == float("inf")
+    rng = np.random.default_rng(7)
+    for a, b, c in rng.normal(0, 1e4, (500, 3)):
+        exact = F._fma(a, b, c)
+        assert abs(exact - (a * b + c)) <= np.spacing(abs(a * b)) + np.spacing(abs(a * b + c))   # at most the product's rounding
+
+
+def test_fma_fallback_matches_math_fma_when_present(monkeypatch):
+    import math
+    if not hasattr(math, "fma"):
+        pytest.skip("math.fma needs Python 3.13+")
+    rng = np.random.default_rng(11)
+    vals = rng.normal(0, 1e4, (2000, 3))
+    want = [math.fma(a, b, c) for a, b, c in vals]
+    monkeypatch.setattr(F, "_MATH_FMA", None)
+    assert [F._fma(a, b, c) for a, b, c in vals] == want
