@@ -184,3 +184,22 @@ holdout had NOT been read. From here:
   half), top 10, their result on 1 May - 17 Oct 2025.
 - Caution, said before the read: one design year and ~2.1 million configs make the best design results very likely
   overfitted; the full-period scan's walk-forward already showed the top picks losing in each following year.
+
+## Amendment 4 (15 Oct 2026, Boss: "Ignore selling completely ... only buying options") - before the holdout was read
+
+The Nov 2024 design scan of amendment 3 was stopped before it finished (no candidate list was produced); the holdout
+is still unread. From here:
+- **Only option BUYING (section B) can be a candidate.** Selling (section A) is dropped: it stays in the code and in
+  the experiment log as "tried on the full-period design, not a candidate", and is not read on the holdout.
+- The buying grid is widened (all on design 1 Nov 2024 - 17 Oct 2025 only):
+  decision times 09:20, 09:30, 10:00, 10:30, 11:00, 12:00, 13:00, 14:00 (orb from 09:30); signals gap / ema / twap /
+  orb, each "with" (buy the call when up) or "fade" (buy the put when up); strike ATM, 2, 4 or 6 steps in the money;
+  target +3, +5, +10, +15, +20 or +30% of premium; stop none, -10, -20, -33 or -50%; time exit 15, 30, 60 or 120
+  minutes after the fill, or 15:15 (15:05 on expiry day); DTE 0, 1, 2, 3, 4 or "any" (every session, the nearest
+  expiry whatever its DTE - this gives the monthly-only BANKNIFTY / FINNIFTY / MIDCPNIFTY a daily trade); VIX and
+  event filters as before. Intraday only, 1 lot, same fills and charges.
+- Candidate rule as amendment 3 (43+ trades, win >= 65%, net > 0, both halves positive with 10+ trades each, worst
+  day, drawdown, top-5, 90% priced). Ranking by t; skip a candidate with the same index and entry (DTE, time, strike,
+  signal, direction) as one taken; at most 2 per index; at most 10.
+- Twins: random session with the same DTE (any session for "any"), random minute 09:20-14:30, coin-flip side.
+- Holdout gates unchanged.
