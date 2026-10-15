@@ -2,6 +2,8 @@
 """Validate the data lake against independent sources and write research/data/VALIDATION.md.
 
   python -I validate.py LAKE_DIR BHAV_DIR [OUT_MD]
+  python -I validate.py --spikes [LAKE_DIR]   # rewrite only section 6 (bad ticks) of VALIDATION.md/.json, from the
+                                              # option files in LAKE_DIR, else from CATALOG.json qa.spikes
 
 LAKE_DIR  : built Parquet files (lake_build.py output, with _qa/*.json)
 BHAV_DIR  : sampled NSE F&O bhavcopies (bhav_fetch.py), plus BHAV_DIR/idx/<date>.csv (NSE all-index close)
@@ -10,9 +12,12 @@ BHAV_DIR/yahoo : Yahoo chart JSON for ^NSEI ^NSEBANK ^INDIAVIX ^BSESN (also writ
 import glob, io, json, os, sys, zipfile
 import numpy as np, pandas as pd
 
-LAKE, BHAV = sys.argv[1:3]
-YAH = os.path.join(BHAV, "yahoo")
-OUT = sys.argv[3] if len(sys.argv) > 3 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "VALIDATION.md")
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import spikes
+
+LAKE = BHAV = YAH = None
+OUT = os.path.join(HERE, "VALIDATION.md")
 R = {}  # machine-readable summary
 md = []
 
@@ -323,7 +328,106 @@ def check_qa():
     table(rows, list(rows[0]))
 
 
-if __name__ == "__main__":
+SPIKE_H = "6. Bad ticks: one-minute price spikes in option files"
+SPIKE_SUMMARY = "- Bad ticks (one-minute spikes"
+
+
+def check_spikes():
+    """Section 6. Per file from LAKE option files when present, else from CATALOG.json qa.spikes. Returns summary line."""
+    H(SPIKE_H)
+    md.append("A *spike* is a contract-minute whose close is more than 50% above both neighbouring closes, or below "
+              "both by more than a factor 1.5, while the two neighbours are within 50% of each other (the price "
+              "reverts). Neighbours are the previous and next bar of the same strike and side on the same day (no-trade "
+              "minutes are skipped); a sustained jump, or a spike lasting two minutes, is not counted. Rows are "
+              "de-duplicated on (ts, strike, side); zero/missing prices are left out. Share = spikes / contract-minutes. "
+              "*Early* = 09:15-10:44 IST for NSE/BSE, 09:00-10:44 (the first 105 minutes) for MCX; *late* = 10:45 onward. "
+              "Exact definition and tests: `spikes.py`, `test_spikes.py`.\n")
+    cat = json.load(open(os.path.join(HERE, "CATALOG.json")))["files"]
+    per = {}
+    for e in cat:
+        b = spikes.book(e["file"])
+        if not b:
+            continue
+        fn = f"{LAKE}/{e['file']}" if LAKE else None
+        m = spikes.file_spikes(fn) if fn and os.path.exists(fn) else e.get("qa", {}).get("spikes")
+        if m:
+            per[e["file"]] = dict(m, book=b, same_contract_as=e.get("same_contract_as"))
+    R["spikes_per_file"] = {f: {k: v for k, v in m.items() if k != "book"} for f, m in per.items()}
+    books = {}
+    for f, m in per.items():
+        und, flag, _ = m["book"]
+        key = ("stock options" if f.startswith("stkopt_") else und, flag)
+        a = books.setdefault(key, dict(files=0, **{f"{p}{k}": 0 for p in ("", "early_", "late_") for k in ("minutes", "spikes")}))
+        a["files"] += 1
+        for k in list(a):
+            if k != "files":
+                a[k] += m[k]
+    sh = lambda a, p: f"{100 * a[f'{p}spikes'] / a[f'{p}minutes']:.3f}%" if a[f"{p}minutes"] else "n/a"
+    rows = []
+    for (und, flag), a in sorted(books.items(), key=lambda kv: (kv[0][0] == "stock options", spikes.exchange(kv[0][0]), kv[0])):
+        rows.append({"book": f"{und} {flag}", "exchange": "MCX" if spikes.exchange(und) == "MCX" else "NSE/BSE", "files": a["files"],
+                     "contract-minutes": a["minutes"], "spikes": a["spikes"], "share": sh(a, ""),
+                     "share early": sh(a, "early_"), "share late": sh(a, "late_")})
+        R[f"spikes_{und}_{flag}".replace(" ", "_")] = rows[-1]
+    missing = sorted(e["file"] for e in cat if spikes.book(e["file"]) and e["file"] not in per)
+    if not rows:
+        md.append("No spike counts yet (run `make_catalog.py --annotate LAKE_DIR` or pass LAKE_DIR).\n")
+        return f"{SPIKE_SUMMARY}): not computed yet."
+    table(rows, list(rows[0]))
+    if missing:
+        md.append(f"Not counted (file not available): {', '.join(missing)}.\n")
+    stk = sorted(((m["share"] or 0, f) for f, m in per.items() if f.startswith("stkopt_")), reverse=True)[:5]
+    if stk:
+        md.append("Stock options with the highest spike share: " + ", ".join(
+            f"{f[7:-14]} {100 * v:.3f}%" for v, f in stk) + " (per file in VALIDATION.json `spikes_per_file`).\n")
+    mcx = [r for r in rows if r["exchange"] == "MCX"]
+    md.append("### Known issues\n")
+    md.append("- Bad-tick share per book (spikes / contract-minutes): " + ", ".join(f"{r['book']} {r['share']}" for r in rows)
+              + ". Books where the early window has the lower share: "
+              + f"{sum(a['early_spikes'] * a['late_minutes'] < a['late_spikes'] * a['early_minutes'] for a in books.values())} of {len(rows)}"
+              + ". Drop or cap flagged minutes "
+              "(`spikes.spike_flags`) before using minute extremes, e.g. for stop-loss or high/low studies.")
+    why = {}
+    for e in cat:
+        if e.get("same_contract_as") and e["file"] < e["same_contract_as"]:
+            why.setdefault(e.get("same_contract_reason", ""), []).append(f"{e['file']} = {e['same_contract_as']}")
+    for r, ps in why.items():
+        md.append(f"- Same contract in two byte-identical files (`same_contract_as` in CATALOG.json; each is counted in "
+                  f"its own book above): {'; '.join(ps)}. Why: {r}")
+    md.append("")
+    return (f"{SPIKE_SUMMARY}, section 6): " + ", ".join(f"{r['book'].split()[0]} {r['share']}" for r in mcx)
+            + " of contract-minutes in MCX option books; index books "
+            + ", ".join(f"{r['book']} {r['share']}" for r in rows if r["exchange"] != "MCX" and r["book"] != "stock options MONTH")
+            + (f"; stock options {next(r['share'] for r in rows if r['book'] == 'stock options MONTH')}"
+               if any(r["book"] == "stock options MONTH" for r in rows) else "") + ".")
+
+
+def spikes_only():
+    """Replace section 6 and its summary line in the existing VALIDATION.md / VALIDATION.json."""
+    global R
+    old = open(OUT).read()
+    R = json.load(open(OUT.replace(".md", ".json")))
+    R = {k: v for k, v in R.items() if not k.startswith("spikes_")}
+    md.clear()
+    line = check_spikes()
+    sec = "\n".join(md) + "\n"
+    i = old.find(f"\n## {SPIKE_H}")
+    old = old[:i].rstrip("\n") + "\n" if i >= 0 else old
+    lines = [l for l in old.split("\n") if not l.startswith(SPIKE_SUMMARY)]
+    j = next(k for k, l in enumerate(lines) if l.startswith("- No prices were invented"))
+    lines.insert(j, line)
+    open(OUT, "w").write("\n".join(lines) + sec)
+    json.dump(R, open(OUT.replace(".md", ".json"), "w"), indent=1, default=str)
+    print("wrote section 6 of", OUT)
+
+
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "--spikes":
+    LAKE = sys.argv[2] if len(sys.argv) > 2 else None
+    spikes_only()
+elif __name__ == "__main__":
+    LAKE, BHAV = sys.argv[1:3]
+    YAH = os.path.join(BHAV, "yahoo")
+    OUT = sys.argv[3] if len(sys.argv) > 3 else OUT
     md.append("# Data lake validation\n")
     md.append(f"Generated by `research/data/validate.py` on {pd.Timestamp.now(tz='Asia/Kolkata'):%Y-%m-%d %H:%M} IST. "
               "All timestamps in the lake are IST (Asia/Kolkata); minute bars are stamped at the bar's start "
@@ -337,6 +441,7 @@ if __name__ == "__main__":
     check_options(bh)
     check_futures(bh)
     check_qa()
+    spike_line = check_spikes()
     g = lambda k, f: R.get(k, {}).get(f, "n/a")
     summ = ["\n## Summary\n",
             f"- Index daily closes: NIFTY {g('index_daily_yahoo_NIFTY', 'match <=0.05%')}, BANKNIFTY "
@@ -358,6 +463,7 @@ if __name__ == "__main__":
             f"- Stock options ({R.get('stkopt_median', {}).get('underlying', 'n/a')}): high/low match "
             f"{R.get('stkopt_median', {}).get('high match', 'n/a')}/{R.get('stkopt_median', {}).get('low match', 'n/a')} — "
             "clearly weaker than index options; see section 3. Coverage is partial (README, STOCK_OPTIONS_COVERAGE.json).",
+            spike_line,
             "- No prices were invented: gaps stay gaps; dropped rows are counted per file in section 5 and CATALOG.json.\n"]
     md[head:head] = summ
     open(OUT, "w").write("\n".join(md) + "\n")
