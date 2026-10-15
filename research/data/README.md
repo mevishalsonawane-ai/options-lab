@@ -8,7 +8,7 @@ is optional), **not** in git. This folder holds only code and metadata:
 |---|---|
 | `CATALOG.json` | every data file: rows, first/last timestamp, bytes, sha256, source endpoint, columns |
 | `STOCK_OPTIONS_COVERAGE.json` | fraction of stock-option chunks fetched, per stock and ATM offset |
-| `VALIDATION.md` / `VALIDATION.json` | checks against NSE bhavcopy, NSE index closes and Yahoo; gaps, duplicates, bad prices |
+| `VALIDATION.md` / `VALIDATION.json` | checks against NSE bhavcopy, NSE index closes and Yahoo; gaps, duplicates, bad prices, bad-tick spikes per option book |
 | `fetch_release.py` | download assets of the release and verify sha256 (`--list`, `--match opt_NIFTY_WEEK`) |
 | `publish_release.py` | create the release and upload the files (run where release creation is allowed) |
 | `publish_gdrive.py` | upload the built files to Google Drive with rclone, per dataset, then `rclone check` |
@@ -16,7 +16,8 @@ is optional), **not** in git. This folder holds only code and metadata:
 | `lake_fetch.py` | resumable raw download (one small Parquet per request chunk, `.empty`/`.err` markers); `--only-missing LAKE_DIR` turns published files back into raw chunks so only real gaps are requested; `--before`/`--since DATE` |
 | `lake_build.py` | raw chunks → release files, with cleaning rules below and per-file QA |
 | `bhav_fetch.py` | sample of NSE F&O bhavcopies, NSE all-index closes and Yahoo index history for validation |
-| `validate.py`, `make_catalog.py` | write `VALIDATION.md` and `CATALOG.json` (`make_catalog.py --restore-qa LAKE_DIR` rebuilds `_qa/` for files downloaded from Drive) |
+| `validate.py`, `make_catalog.py` | write `VALIDATION.md` and `CATALOG.json` (`make_catalog.py --restore-qa LAKE_DIR` rebuilds `_qa/` for files downloaded from Drive; `make_catalog.py --annotate LAKE_DIR` adds spike counts and same-contract notes file by file; `validate.py --spikes` rewrites only the bad-tick section) |
+| `spikes.py` | bad-tick metric for option files (one-minute spikes that revert) and byte-identical WEEK/MONTH detection; tests in `test_spikes.py` |
 | `stkopt_coverage.py` | write `STOCK_OPTIONS_COVERAGE.json` from the raw stock-option chunks |
 
 ## Where the data lives: Google Drive `gdrive:IraAlgo-data-lake`
@@ -87,6 +88,16 @@ expiry after expiry. `spot` is the underlying value at that minute, `oi` is open
 weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices follows the nearest available
 (monthly) expiry.
 
+**Same contract in two files: never count both.** Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY
+(BSE: only SENSEX), so for BANKNIFTY, FINNIFTY and MIDCPNIFTY the `WEEK` and `MONTH` files hold the same contracts.
+MIDCPNIFTY had only monthly options in 2022, so its 2022 `WEEK` file is the monthly contract too. Where the two
+files are byte-identical, `CATALOG.json` marks each with `same_contract_as` (the other file) and
+`same_contract_reason`; this is found by sha256 when the catalog is written, not hard-coded. Today that is
+BANKNIFTY 2025, FINNIFTY 2025 and 2026, MIDCPNIFTY 2022, 2025 and 2026. Not byte-identical but the same contracts
+on every shared minute: BANKNIFTY 2026 (the `WEEK` file just has one more day, 14 Oct) and, from the day after each
+index's last weekly expiry (BANKNIFTY 13 Nov, MIDCPNIFTY 18 Nov, FINNIFTY 19 Nov 2024), the rest of the 2024 files.
+A study that pools books must use one of each pair (use `MONTH`).
+
 ## Known gaps in this download (updated 2026-10-15)
 
 * **Index data, appended on 14/15 Oct.** Index daily (incl. INDIAVIX), index 1-minute (7 indices), continuous futures
@@ -120,6 +131,16 @@ weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices fo
 * VALIDATION.md's Yahoo comparison of index daily closes dipped slightly (NIFTY 100% → 99.98%) because the saved Yahoo
   history in `nse_bhavcopy/yahoo/` was taken during market hours on 13 Oct, so its 13 Oct "close" is an intraday
   price (NIFTY 22,488 vs the real close 22,721.95). The lake's value is correct.
+* **Bad ticks (one-minute spikes) are rare: well under 0.2% of contract-minutes in every option book.** A spike is
+  a close more than 50% away from both neighbouring closes of the same contract on the same day, with the neighbours
+  within 50% of each other (defined in `spikes.py`; per book, early 09:15/09:00–10:44 vs later, in VALIDATION.md
+  section 6; per file in `CATALOG.json` `qa.spikes`). GOLD, GOLDM, SILVER, SILVERM and CRUDEOIL options: 0.006%;
+  NATURALGAS 0.035%; index options 0.011% (BANKNIFTY MONTH) to 0.148% (FINNIFTY WEEK); stock options 0.087%. In every
+  book the early window has fewer spikes than later in the day. An outside report put the share at 4–7% for the
+  GOLD/GOLDM/SILVER/SILVERM option files; on contracts that is wrong by about 1000×. Something close to it appears if
+  one counts every >50% close-to-close move along an ATM-offset series, which mixes strikes whenever the ATM strike
+  changes: 3.4–4.7% in the 2025 files and 0.3% in 2026 (a one-off check, not part of the code). That is
+  strike rolling, not bad prices; identify contracts by `strike` + `side` + date.
 * Every other dataset was fetched with no failed chunks left (the gaps of the 12 Oct download, in HINDUNILVR equity
   minutes, FINNIFTY options and live stock futures, are filled).
 

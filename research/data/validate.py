@@ -365,7 +365,7 @@ def check_spikes():
     sh = lambda a, p: f"{100 * a[f'{p}spikes'] / a[f'{p}minutes']:.3f}%" if a[f"{p}minutes"] else "n/a"
     rows = []
     for (und, flag), a in sorted(books.items(), key=lambda kv: (kv[0][0] == "stock options", spikes.exchange(kv[0][0]), kv[0])):
-        rows.append({"book": f"{und} {flag}", "exchange": spikes.exchange(und), "files": a["files"],
+        rows.append({"book": f"{und} {flag}", "exchange": "MCX" if spikes.exchange(und) == "MCX" else "NSE/BSE", "files": a["files"],
                      "contract-minutes": a["minutes"], "spikes": a["spikes"], "share": sh(a, ""),
                      "share early": sh(a, "early_"), "share late": sh(a, "late_")})
         R[f"spikes_{und}_{flag}".replace(" ", "_")] = rows[-1]
@@ -380,14 +380,24 @@ def check_spikes():
     if stk:
         md.append("Stock options with the highest spike share: " + ", ".join(
             f"{f[7:-14]} {100 * v:.3f}%" for v, f in stk) + " (per file in VALIDATION.json `spikes_per_file`).\n")
-    pairs = sorted({tuple(sorted((f, m["same_contract_as"]))) for f, m in per.items() if m["same_contract_as"]})
-    if pairs:
-        md.append("Byte-identical WEEK/MONTH files (`same_contract_as` in CATALOG.json; each is counted in its own book "
-                  "above): " + "; ".join(f"{a} = {b}" for a, b in pairs) + ". Studies must never count both.\n")
     mcx = [r for r in rows if r["exchange"] == "MCX"]
+    md.append("### Known issues\n")
+    md.append("- Bad-tick share per book (spikes / contract-minutes): " + ", ".join(f"{r['book']} {r['share']}" for r in rows)
+              + ". Books where the early window has the lower share: "
+              + f"{sum(a['early_spikes'] * a['late_minutes'] < a['late_spikes'] * a['early_minutes'] for a in books.values())} of {len(rows)}"
+              + ". Drop or cap flagged minutes "
+              "(`spikes.spike_flags`) before using minute extremes, e.g. for stop-loss or high/low studies.")
+    why = {}
+    for e in cat:
+        if e.get("same_contract_as") and e["file"] < e["same_contract_as"]:
+            why.setdefault(e.get("same_contract_reason", ""), []).append(f"{e['file']} = {e['same_contract_as']}")
+    for r, ps in why.items():
+        md.append(f"- Same contract in two byte-identical files (`same_contract_as` in CATALOG.json; each is counted in "
+                  f"its own book above): {'; '.join(ps)}. Why: {r}")
+    md.append("")
     return (f"{SPIKE_SUMMARY}, section 6): " + ", ".join(f"{r['book'].split()[0]} {r['share']}" for r in mcx)
             + " of contract-minutes in MCX option books; index books "
-            + ", ".join(f"{r['book']} {r['share']}" for r in rows if r["exchange"] == "NSE" and r["book"] != "stock options MONTH")
+            + ", ".join(f"{r['book']} {r['share']}" for r in rows if r["exchange"] != "MCX" and r["book"] != "stock options MONTH")
             + (f"; stock options {next(r['share'] for r in rows if r['book'] == 'stock options MONTH')}"
                if any(r["book"] == "stock options MONTH" for r in rows) else "") + ".")
 

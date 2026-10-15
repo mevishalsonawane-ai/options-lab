@@ -12,6 +12,7 @@ NSE F&O bhavcopies used: 261 trading days sampled about weekly from 2021-10-01 t
 - Expired options vs NSE bhavcopy (contract-day high/low): NIFTY weekly 93.17%/92.81%, BANKNIFTY weekly 97.99%/96.77%. Last price within 2% of NSE's last trade (Jul 2024 onward): NIFTY weekly 93.02%. Dhan's last-minute OI is a median 1.047× NSE's end-of-day OI (cause unknown), so treat it as an intraday OI series, not the official end-of-day figure.
 - Continuous futures (near month) close vs NSE: NIFTY 98.05%, BANKNIFTY 98.05%, MIDCPNIFTY 85.97% (MIDCPNIFTY's early 2022 history has zero prices, which were dropped).
 - Stock options (59 stocks (median of per-stock rates)): high/low match 67.66%/70.00% — clearly weaker than index options; see section 3. Coverage is partial (README, STOCK_OPTIONS_COVERAGE.json).
+- Bad ticks (one-minute spikes, section 6): CRUDEOIL 0.006%, GOLD 0.006%, GOLDM 0.006%, NATURALGAS 0.035%, SILVER 0.006%, SILVERM 0.006% of contract-minutes in MCX option books; index books BANKNIFTY MONTH 0.011%, BANKNIFTY WEEK 0.027%, FINNIFTY MONTH 0.078%, FINNIFTY WEEK 0.148%, MIDCPNIFTY MONTH 0.040%, MIDCPNIFTY WEEK 0.090%, NIFTY MONTH 0.015%, NIFTY WEEK 0.071%, SENSEX MONTH 0.033%, SENSEX WEEK 0.053%; stock options 0.087%.
 - No prices were invented: gaps stay gaps; dropped rows are counted per file in section 5 and CATALOG.json.
 
 
@@ -309,4 +310,38 @@ Dhan's `/charts/historical` returns the identical near-month series for expiryCo
 | stkopt_UNIONBANK_MONTH.parquet | 1007432 | 2024-11-29 09:22 | 2026-10-14 15:29 | {'conflicting_removed': 0, 'identical': 0} | 5706 | 0 | 0 | 0 | 0 | 2588 | 8913 |
 | stkopt_YESBANK_MONTH.parquet | 1004909 | 2024-11-29 09:15 | 2026-10-14 15:29 | {'conflicting_removed': 0, 'identical': 0} | 5718 | 0 | 0 | 0 | 0 | 2732 | 36021 |
 | stock_fut_daily_continuous.parquet | 170320 | 2011-10-03 00:00 | 2026-10-13 00:00 | {'identical': 52, 'conflicting_removed': 240} | 0 | 0 | 0 | 146 | 0 | 661 |  |
+
+## 6. Bad ticks: one-minute price spikes in option files
+
+A *spike* is a contract-minute whose close is more than 50% above both neighbouring closes, or below both by more than a factor 1.5, while the two neighbours are within 50% of each other (the price reverts). Neighbours are the previous and next bar of the same strike and side on the same day (no-trade minutes are skipped); a sustained jump, or a spike lasting two minutes, is not counted. Rows are de-duplicated on (ts, strike, side); zero/missing prices are left out. Share = spikes / contract-minutes. *Early* = 09:15-10:44 IST for NSE/BSE, 09:00-10:44 (the first 105 minutes) for MCX; *late* = 10:45 onward. Exact definition and tests: `spikes.py`, `test_spikes.py`.
+
+| book | exchange | files | contract-minutes | spikes | share | share early | share late |
+|---|---|---|---|---|---|---|---|
+| CRUDEOIL MONTH | MCX | 2 | 3614806 | 223 | 0.006% | 0.000% | 0.007% |
+| GOLD MONTH | MCX | 2 | 1684244 | 103 | 0.006% | 0.000% | 0.007% |
+| GOLDM MONTH | MCX | 2 | 2960018 | 179 | 0.006% | 0.002% | 0.007% |
+| NATURALGAS MONTH | MCX | 2 | 3616637 | 1264 | 0.035% | 0.008% | 0.039% |
+| SILVER MONTH | MCX | 2 | 1575803 | 98 | 0.006% | 0.000% | 0.007% |
+| SILVERM MONTH | MCX | 2 | 2497881 | 159 | 0.006% | 0.001% | 0.007% |
+| BANKNIFTY MONTH | NSE/BSE | 6 | 19944818 | 2156 | 0.011% | 0.002% | 0.014% |
+| BANKNIFTY WEEK | NSE/BSE | 6 | 20143225 | 5534 | 0.027% | 0.000% | 0.036% |
+| FINNIFTY MONTH | NSE/BSE | 6 | 11013975 | 8636 | 0.078% | 0.044% | 0.088% |
+| FINNIFTY WEEK | NSE/BSE | 6 | 16565267 | 24592 | 0.148% | 0.087% | 0.166% |
+| MIDCPNIFTY MONTH | NSE/BSE | 5 | 9619979 | 3841 | 0.040% | 0.011% | 0.049% |
+| MIDCPNIFTY WEEK | NSE/BSE | 5 | 12720445 | 11403 | 0.090% | 0.015% | 0.113% |
+| NIFTY MONTH | NSE/BSE | 6 | 20211458 | 3021 | 0.015% | 0.001% | 0.019% |
+| NIFTY WEEK | NSE/BSE | 6 | 20243517 | 14419 | 0.071% | 0.001% | 0.094% |
+| SENSEX MONTH | NSE/BSE | 4 | 8001840 | 2646 | 0.033% | 0.016% | 0.038% |
+| SENSEX WEEK | NSE/BSE | 4 | 12767007 | 6805 | 0.053% | 0.010% | 0.067% |
+| stock options MONTH | NSE/BSE | 59 | 161947745 | 140620 | 0.087% | 0.071% | 0.092% |
+
+Stock options with the highest spike share: NTPC 0.210%, PNB 0.171%, IDFCFIRSTB 0.166%, SBILIFE 0.151%, ONGC 0.147% (per file in VALIDATION.json `spikes_per_file`).
+
+### Known issues
+
+- Bad-tick share per book (spikes / contract-minutes): CRUDEOIL MONTH 0.006%, GOLD MONTH 0.006%, GOLDM MONTH 0.006%, NATURALGAS MONTH 0.035%, SILVER MONTH 0.006%, SILVERM MONTH 0.006%, BANKNIFTY MONTH 0.011%, BANKNIFTY WEEK 0.027%, FINNIFTY MONTH 0.078%, FINNIFTY WEEK 0.148%, MIDCPNIFTY MONTH 0.040%, MIDCPNIFTY WEEK 0.090%, NIFTY MONTH 0.015%, NIFTY WEEK 0.071%, SENSEX MONTH 0.033%, SENSEX WEEK 0.053%, stock options MONTH 0.087%. Books where the early window has the lower share: 17 of 17. Drop or cap flagged minutes (`spikes.spike_flags`) before using minute extremes, e.g. for stop-loss or high/low studies.
+- Same contract in two byte-identical files (`same_contract_as` in CATALOG.json; each is counted in its own book above): opt_BANKNIFTY_MONTH_2025.parquet = opt_BANKNIFTY_WEEK_2025.parquet. Why: Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of BANKNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files.
+- Same contract in two byte-identical files (`same_contract_as` in CATALOG.json; each is counted in its own book above): opt_FINNIFTY_MONTH_2025.parquet = opt_FINNIFTY_WEEK_2025.parquet; opt_FINNIFTY_MONTH_2026.parquet = opt_FINNIFTY_WEEK_2026.parquet. Why: Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of FINNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files.
+- Same contract in two byte-identical files (`same_contract_as` in CATALOG.json; each is counted in its own book above): opt_MIDCPNIFTY_MONTH_2022.parquet = opt_MIDCPNIFTY_WEEK_2022.parquet. Why: MIDCPNIFTY had only monthly options in 2022, so Dhan's WEEK series is the monthly contract. Studies must never count both files.
+- Same contract in two byte-identical files (`same_contract_as` in CATALOG.json; each is counted in its own book above): opt_MIDCPNIFTY_MONTH_2025.parquet = opt_MIDCPNIFTY_WEEK_2025.parquet; opt_MIDCPNIFTY_MONTH_2026.parquet = opt_MIDCPNIFTY_WEEK_2026.parquet. Why: Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of MIDCPNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files.
 

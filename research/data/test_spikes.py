@@ -151,7 +151,7 @@ def test_validate_spikes_section_is_rewritten_in_place(tmp_path, monkeypatch):
     assert out.read_text() == first  # idempotent: section and summary line replaced, not added again
     assert first.count("## 6. Bad ticks") == 1 and first.count("- Bad ticks (one-minute spikes") == 1
     assert "| GOLD MONTH | MCX | 2 | 2000 | 2 | 0.100% | 0.200% | 0.000% |" in first
-    assert "opt_FINNIFTY_MONTH_2026.parquet = opt_FINNIFTY_WEEK_2026.parquet" in first
+    assert "opt_FINNIFTY_MONTH_2026.parquet = opt_FINNIFTY_WEEK_2026.parquet" in first and "### Known issues" in first
     assert first.index("- Bad ticks") < first.index("- No prices were invented") < first.index("## 5. QA")
     r = json.loads((tmp_path / "VALIDATION.json").read_text())
     assert r["keep"] == 1 and "spikes_old" not in r and r["spikes_GOLD_MONTH"]["spikes"] == 2

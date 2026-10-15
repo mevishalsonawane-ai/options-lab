@@ -2651,7 +2651,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 19183
+    "iv_null_or_zero": 19183,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1523018,
+     "spikes": 465,
+     "share": 0.00030531,
+     "early_minutes": 328501,
+     "early_spikes": 35,
+     "early_share": 0.00010654,
+     "late_minutes": 1194517,
+     "late_spikes": 430,
+     "late_share": 0.00035998
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "MONTH",
@@ -2704,7 +2716,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 36643
+    "iv_null_or_zero": 36643,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3847747,
+     "spikes": 443,
+     "share": 0.00011513,
+     "early_minutes": 919817,
+     "early_spikes": 34,
+     "early_share": 3.696e-05,
+     "late_minutes": 2927930,
+     "late_spikes": 409,
+     "late_share": 0.00013969
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "MONTH",
@@ -2757,7 +2781,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 96961
+    "iv_null_or_zero": 96961,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3835538,
+     "spikes": 323,
+     "share": 8.421e-05,
+     "early_minutes": 917939,
+     "early_spikes": 1,
+     "early_share": 1.09e-06,
+     "late_minutes": 2917599,
+     "late_spikes": 322,
+     "late_share": 0.00011036
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "MONTH",
@@ -2810,7 +2846,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 53679
+    "iv_null_or_zero": 53679,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3795098,
+     "spikes": 367,
+     "share": 9.67e-05,
+     "early_minutes": 900714,
+     "early_spikes": 4,
+     "early_share": 4.44e-06,
+     "late_minutes": 2894384,
+     "late_spikes": 363,
+     "late_share": 0.00012542
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "MONTH",
@@ -2863,13 +2911,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 59870
+    "iv_null_or_zero": 59870,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3908844,
+     "spikes": 315,
+     "share": 8.059e-05,
+     "early_minutes": 936091,
+     "early_spikes": 2,
+     "early_share": 2.14e-06,
+     "late_minutes": 2972753,
+     "late_spikes": 313,
+     "late_share": 0.00010529
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "MONTH",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2025
+   "year": 2025,
+   "same_contract_as": "opt_BANKNIFTY_WEEK_2025.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of BANKNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_BANKNIFTY_MONTH_2026.parquet",
@@ -2916,7 +2978,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 29329
+    "iv_null_or_zero": 29329,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3034573,
+     "spikes": 243,
+     "share": 8.008e-05,
+     "early_minutes": 726038,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 2308535,
+     "late_spikes": 243,
+     "late_share": 0.00010526
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "MONTH",
@@ -2969,7 +3043,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 76454
+    "iv_null_or_zero": 76454,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1543497,
+     "spikes": 487,
+     "share": 0.00031552,
+     "early_minutes": 335184,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 1208313,
+     "late_spikes": 487,
+     "late_share": 0.00040304
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "WEEK",
@@ -3022,7 +3108,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 164214
+    "iv_null_or_zero": 164214,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3890188,
+     "spikes": 1408,
+     "share": 0.00036194,
+     "early_minutes": 933602,
+     "early_spikes": 12,
+     "early_share": 1.285e-05,
+     "late_minutes": 2956586,
+     "late_spikes": 1396,
+     "late_share": 0.00047217
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "WEEK",
@@ -3075,7 +3173,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 296104
+    "iv_null_or_zero": 296104,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3858663,
+     "spikes": 1631,
+     "share": 0.00042269,
+     "early_minutes": 926013,
+     "early_spikes": 2,
+     "early_share": 2.16e-06,
+     "late_minutes": 2932650,
+     "late_spikes": 1629,
+     "late_share": 0.00055547
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "WEEK",
@@ -3128,7 +3238,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 206975
+    "iv_null_or_zero": 206975,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3894335,
+     "spikes": 1450,
+     "share": 0.00037234,
+     "early_minutes": 935404,
+     "early_spikes": 3,
+     "early_share": 3.21e-06,
+     "late_minutes": 2958931,
+     "late_spikes": 1447,
+     "late_share": 0.00048903
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "WEEK",
@@ -3181,13 +3303,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 59870
+    "iv_null_or_zero": 59870,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3908844,
+     "spikes": 315,
+     "share": 8.059e-05,
+     "early_minutes": 936091,
+     "early_spikes": 2,
+     "early_share": 2.14e-06,
+     "late_minutes": 2972753,
+     "late_spikes": 313,
+     "late_share": 0.00010529
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "WEEK",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2025
+   "year": 2025,
+   "same_contract_as": "opt_BANKNIFTY_MONTH_2025.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of BANKNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_BANKNIFTY_WEEK_2026.parquet",
@@ -3234,7 +3370,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 29329
+    "iv_null_or_zero": 29329,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3047698,
+     "spikes": 243,
+     "share": 7.973e-05,
+     "early_minutes": 729188,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 2318510,
+     "late_spikes": 243,
+     "late_share": 0.00010481
+    }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "WEEK",
@@ -3285,7 +3433,19 @@
      "weekend": 6714,
      "nonpositive_or_missing_price": 162
     },
-    "iv_null_or_zero": 7145
+    "iv_null_or_zero": 7145,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1236719,
+     "spikes": 102,
+     "share": 8.248e-05,
+     "early_minutes": 142627,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 1094092,
+     "late_spikes": 102,
+     "late_share": 9.323e-05
+    }
    },
    "underlying": "CRUDEOIL",
    "expiry_flag": "MONTH",
@@ -3336,7 +3496,19 @@
      "weekend": 6714,
      "nonpositive_or_missing_price": 162
     },
-    "iv_null_or_zero": 1352
+    "iv_null_or_zero": 1352,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 2378087,
+     "spikes": 121,
+     "share": 5.088e-05,
+     "early_minutes": 277374,
+     "early_spikes": 1,
+     "early_share": 3.61e-06,
+     "late_minutes": 2100713,
+     "late_spikes": 120,
+     "late_share": 5.712e-05
+    }
    },
    "underlying": "CRUDEOIL",
    "expiry_flag": "MONTH",
@@ -3389,7 +3561,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 15516
+    "iv_null_or_zero": 15516,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 151939,
+     "spikes": 996,
+     "share": 0.00655526,
+     "early_minutes": 20614,
+     "early_spikes": 183,
+     "early_share": 0.00887746,
+     "late_minutes": 131325,
+     "late_spikes": 813,
+     "late_share": 0.00619075
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "MONTH",
@@ -3442,7 +3626,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 87632
+    "iv_null_or_zero": 87632,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1012706,
+     "spikes": 3922,
+     "share": 0.00387279,
+     "early_minutes": 195671,
+     "early_spikes": 625,
+     "early_share": 0.00319414,
+     "late_minutes": 817035,
+     "late_spikes": 3297,
+     "late_share": 0.00403532
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "MONTH",
@@ -3495,7 +3691,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 107016
+    "iv_null_or_zero": 107016,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1949676,
+     "spikes": 1379,
+     "share": 0.0007073,
+     "early_minutes": 409229,
+     "early_spikes": 91,
+     "early_share": 0.00022237,
+     "late_minutes": 1540447,
+     "late_spikes": 1288,
+     "late_share": 0.00083612
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "MONTH",
@@ -3548,7 +3756,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 70307
+    "iv_null_or_zero": 70307,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2031372,
+     "spikes": 946,
+     "share": 0.0004657,
+     "early_minutes": 430908,
+     "early_spikes": 66,
+     "early_share": 0.00015316,
+     "late_minutes": 1600464,
+     "late_spikes": 880,
+     "late_share": 0.00054984
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "MONTH",
@@ -3601,13 +3821,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 63729
+    "iv_null_or_zero": 63729,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3528323,
+     "spikes": 925,
+     "share": 0.00026216,
+     "early_minutes": 799939,
+     "early_spikes": 64,
+     "early_share": 8.001e-05,
+     "late_minutes": 2728384,
+     "late_spikes": 861,
+     "late_share": 0.00031557
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "MONTH",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2025
+   "year": 2025,
+   "same_contract_as": "opt_FINNIFTY_WEEK_2025.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of FINNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_FINNIFTY_MONTH_2026.parquet",
@@ -3654,13 +3888,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 41512
+    "iv_null_or_zero": 41512,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2339959,
+     "spikes": 468,
+     "share": 0.0002,
+     "early_minutes": 490656,
+     "early_spikes": 12,
+     "early_share": 2.446e-05,
+     "late_minutes": 1849303,
+     "late_spikes": 456,
+     "late_share": 0.00024658
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "MONTH",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2026
+   "year": 2026,
+   "same_contract_as": "opt_FINNIFTY_WEEK_2026.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of FINNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_FINNIFTY_WEEK_2021.parquet",
@@ -3707,7 +3955,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 53599
+    "iv_null_or_zero": 53599,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 402400,
+     "spikes": 3548,
+     "share": 0.0088171,
+     "early_minutes": 60872,
+     "early_spikes": 808,
+     "early_share": 0.01327375,
+     "late_minutes": 341528,
+     "late_spikes": 2740,
+     "late_share": 0.00802277
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "WEEK",
@@ -3760,7 +4020,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 326956
+    "iv_null_or_zero": 326956,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2587292,
+     "spikes": 13534,
+     "share": 0.00523095,
+     "early_minutes": 539426,
+     "early_spikes": 2288,
+     "early_share": 0.00424155,
+     "late_minutes": 2047866,
+     "late_spikes": 11246,
+     "late_share": 0.00549157
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "WEEK",
@@ -3813,7 +4085,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 424064
+    "iv_null_or_zero": 424064,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3831418,
+     "spikes": 3495,
+     "share": 0.00091219,
+     "early_minutes": 909291,
+     "early_spikes": 13,
+     "early_share": 1.43e-05,
+     "late_minutes": 2922127,
+     "late_spikes": 3482,
+     "late_share": 0.0011916
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "WEEK",
@@ -3866,7 +4150,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 268073
+    "iv_null_or_zero": 268073,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3875875,
+     "spikes": 2622,
+     "share": 0.00067649,
+     "early_minutes": 924091,
+     "early_spikes": 51,
+     "early_share": 5.519e-05,
+     "late_minutes": 2951784,
+     "late_spikes": 2571,
+     "late_share": 0.000871
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "WEEK",
@@ -3919,13 +4215,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 63729
+    "iv_null_or_zero": 63729,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3528323,
+     "spikes": 925,
+     "share": 0.00026216,
+     "early_minutes": 799939,
+     "early_spikes": 64,
+     "early_share": 8.001e-05,
+     "late_minutes": 2728384,
+     "late_spikes": 861,
+     "late_share": 0.00031557
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "WEEK",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2025
+   "year": 2025,
+   "same_contract_as": "opt_FINNIFTY_MONTH_2025.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of FINNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_FINNIFTY_WEEK_2026.parquet",
@@ -3972,13 +4282,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 41512
+    "iv_null_or_zero": 41512,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2339959,
+     "spikes": 468,
+     "share": 0.0002,
+     "early_minutes": 490656,
+     "early_spikes": 12,
+     "early_share": 2.446e-05,
+     "late_minutes": 1849303,
+     "late_spikes": 456,
+     "late_share": 0.00024658
+    }
    },
    "underlying": "FINNIFTY",
    "expiry_flag": "WEEK",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2026
+   "year": 2026,
+   "same_contract_as": "opt_FINNIFTY_MONTH_2026.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of FINNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_GOLDM_MONTH_2025.parquet",
@@ -4023,7 +4347,19 @@
      "weekend": 1301,
      "nonpositive_or_missing_price": 79
     },
-    "iv_null_or_zero": 14450
+    "iv_null_or_zero": 14450,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1083764,
+     "spikes": 56,
+     "share": 5.167e-05,
+     "early_minutes": 120403,
+     "early_spikes": 6,
+     "early_share": 4.983e-05,
+     "late_minutes": 963361,
+     "late_spikes": 50,
+     "late_share": 5.19e-05
+    }
    },
    "underlying": "GOLDM",
    "expiry_flag": "MONTH",
@@ -4074,7 +4410,19 @@
      "weekend": 1301,
      "nonpositive_or_missing_price": 79
     },
-    "iv_null_or_zero": 2125
+    "iv_null_or_zero": 2125,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1876254,
+     "spikes": 123,
+     "share": 6.556e-05,
+     "early_minutes": 203139,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 1673115,
+     "late_spikes": 123,
+     "late_share": 7.352e-05
+    }
    },
    "underlying": "GOLDM",
    "expiry_flag": "MONTH",
@@ -4125,7 +4473,19 @@
      "weekend": 201,
      "nonpositive_or_missing_price": 23
     },
-    "iv_null_or_zero": 26649
+    "iv_null_or_zero": 26649,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 989431,
+     "spikes": 16,
+     "share": 1.617e-05,
+     "early_minutes": 113663,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 875768,
+     "late_spikes": 16,
+     "late_share": 1.827e-05
+    }
    },
    "underlying": "GOLD",
    "expiry_flag": "MONTH",
@@ -4176,7 +4536,19 @@
      "weekend": 201,
      "nonpositive_or_missing_price": 23
     },
-    "iv_null_or_zero": 2030
+    "iv_null_or_zero": 2030,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 694813,
+     "spikes": 87,
+     "share": 0.00012521,
+     "early_minutes": 60959,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 633854,
+     "late_spikes": 87,
+     "late_share": 0.00013726
+    }
    },
    "underlying": "GOLD",
    "expiry_flag": "MONTH",
@@ -4229,13 +4601,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 5105
+    "iv_null_or_zero": 5105,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 13296,
+     "spikes": 29,
+     "share": 0.00218111,
+     "early_minutes": 951,
+     "early_spikes": 2,
+     "early_share": 0.00210305,
+     "late_minutes": 12345,
+     "late_spikes": 27,
+     "late_share": 0.00218712
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "MONTH",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2022
+   "year": 2022,
+   "same_contract_as": "opt_MIDCPNIFTY_WEEK_2022.parquet",
+   "same_contract_reason": "MIDCPNIFTY had only monthly options in 2022, so Dhan's WEEK series is the monthly contract. Studies must never count both files."
   },
   {
    "file": "opt_MIDCPNIFTY_MONTH_2023.parquet",
@@ -4282,7 +4668,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 76964
+    "iv_null_or_zero": 76964,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 811697,
+     "spikes": 1674,
+     "share": 0.00206235,
+     "early_minutes": 167296,
+     "early_spikes": 85,
+     "early_share": 0.00050808,
+     "late_minutes": 644401,
+     "late_spikes": 1589,
+     "late_share": 0.00246586
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "MONTH",
@@ -4335,7 +4733,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 43604
+    "iv_null_or_zero": 43604,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1979530,
+     "spikes": 1105,
+     "share": 0.00055821,
+     "early_minutes": 427944,
+     "early_spikes": 82,
+     "early_share": 0.00019161,
+     "late_minutes": 1551586,
+     "late_spikes": 1023,
+     "late_share": 0.00065933
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "MONTH",
@@ -4388,13 +4798,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 49123
+    "iv_null_or_zero": 49123,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3887861,
+     "spikes": 565,
+     "share": 0.00014532,
+     "early_minutes": 919260,
+     "early_spikes": 21,
+     "early_share": 2.284e-05,
+     "late_minutes": 2968601,
+     "late_spikes": 544,
+     "late_share": 0.00018325
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "MONTH",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2025
+   "year": 2025,
+   "same_contract_as": "opt_MIDCPNIFTY_WEEK_2025.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of MIDCPNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_MIDCPNIFTY_MONTH_2026.parquet",
@@ -4441,13 +4865,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 31750
+    "iv_null_or_zero": 31750,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2927595,
+     "spikes": 468,
+     "share": 0.00015986,
+     "early_minutes": 680328,
+     "early_spikes": 48,
+     "early_share": 7.055e-05,
+     "late_minutes": 2247267,
+     "late_spikes": 420,
+     "late_share": 0.00018689
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "MONTH",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2026
+   "year": 2026,
+   "same_contract_as": "opt_MIDCPNIFTY_WEEK_2026.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of MIDCPNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_MIDCPNIFTY_WEEK_2022.parquet",
@@ -4494,13 +4932,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 5105
+    "iv_null_or_zero": 5105,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 13296,
+     "spikes": 29,
+     "share": 0.00218111,
+     "early_minutes": 951,
+     "early_spikes": 2,
+     "early_share": 0.00210305,
+     "late_minutes": 12345,
+     "late_spikes": 27,
+     "late_share": 0.00218712
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "WEEK",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2022
+   "year": 2022,
+   "same_contract_as": "opt_MIDCPNIFTY_MONTH_2022.parquet",
+   "same_contract_reason": "MIDCPNIFTY had only monthly options in 2022, so Dhan's WEEK series is the monthly contract. Studies must never count both files."
   },
   {
    "file": "opt_MIDCPNIFTY_WEEK_2023.parquet",
@@ -4547,7 +4999,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 244400
+    "iv_null_or_zero": 244400,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2011702,
+     "spikes": 6294,
+     "share": 0.00312869,
+     "early_minutes": 458219,
+     "early_spikes": 303,
+     "early_share": 0.00066126,
+     "late_minutes": 1553483,
+     "late_spikes": 5991,
+     "late_share": 0.0038565
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "WEEK",
@@ -4600,7 +5064,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 179380
+    "iv_null_or_zero": 179380,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3879991,
+     "spikes": 4047,
+     "share": 0.00104304,
+     "early_minutes": 928728,
+     "early_spikes": 60,
+     "early_share": 6.46e-05,
+     "late_minutes": 2951263,
+     "late_spikes": 3987,
+     "late_share": 0.00135095
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "WEEK",
@@ -4653,13 +5129,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 49123
+    "iv_null_or_zero": 49123,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3887861,
+     "spikes": 565,
+     "share": 0.00014532,
+     "early_minutes": 919260,
+     "early_spikes": 21,
+     "early_share": 2.284e-05,
+     "late_minutes": 2968601,
+     "late_spikes": 544,
+     "late_share": 0.00018325
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "WEEK",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2025
+   "year": 2025,
+   "same_contract_as": "opt_MIDCPNIFTY_MONTH_2025.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of MIDCPNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_MIDCPNIFTY_WEEK_2026.parquet",
@@ -4706,13 +5196,27 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 31750
+    "iv_null_or_zero": 31750,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2927595,
+     "spikes": 468,
+     "share": 0.00015986,
+     "early_minutes": 680328,
+     "early_spikes": 48,
+     "early_share": 7.055e-05,
+     "late_minutes": 2247267,
+     "late_spikes": 420,
+     "late_share": 0.00018689
+    }
    },
    "underlying": "MIDCPNIFTY",
    "expiry_flag": "WEEK",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2026
+   "year": 2026,
+   "same_contract_as": "opt_MIDCPNIFTY_MONTH_2026.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of MIDCPNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_NATURALGAS_MONTH_2025.parquet",
@@ -4757,7 +5261,19 @@
      "weekend": 6512,
      "nonpositive_or_missing_price": 192
     },
-    "iv_null_or_zero": 12437
+    "iv_null_or_zero": 12437,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1235905,
+     "spikes": 433,
+     "share": 0.00035035,
+     "early_minutes": 141856,
+     "early_spikes": 9,
+     "early_share": 6.344e-05,
+     "late_minutes": 1094049,
+     "late_spikes": 424,
+     "late_share": 0.00038755
+    }
    },
    "underlying": "NATURALGAS",
    "expiry_flag": "MONTH",
@@ -4808,7 +5324,19 @@
      "weekend": 6512,
      "nonpositive_or_missing_price": 192
     },
-    "iv_null_or_zero": 20280
+    "iv_null_or_zero": 20280,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 2380732,
+     "spikes": 831,
+     "share": 0.00034905,
+     "early_minutes": 279455,
+     "early_spikes": 24,
+     "early_share": 8.588e-05,
+     "late_minutes": 2101277,
+     "late_spikes": 807,
+     "late_share": 0.00038405
+    }
    },
    "underlying": "NATURALGAS",
    "expiry_flag": "MONTH",
@@ -4861,7 +5389,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 104245
+    "iv_null_or_zero": 104245,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1636647,
+     "spikes": 244,
+     "share": 0.00014909,
+     "early_minutes": 391928,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 1244719,
+     "late_spikes": 244,
+     "late_share": 0.00019603
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "MONTH",
@@ -4914,7 +5454,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 87146
+    "iv_null_or_zero": 87146,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3886906,
+     "spikes": 659,
+     "share": 0.00016954,
+     "early_minutes": 930651,
+     "early_spikes": 5,
+     "early_share": 5.37e-06,
+     "late_minutes": 2956255,
+     "late_spikes": 654,
+     "late_share": 0.00022123
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "MONTH",
@@ -4967,7 +5519,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 217466
+    "iv_null_or_zero": 217466,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3854411,
+     "spikes": 644,
+     "share": 0.00016708,
+     "early_minutes": 921895,
+     "early_spikes": 1,
+     "early_share": 1.08e-06,
+     "late_minutes": 2932516,
+     "late_spikes": 643,
+     "late_share": 0.00021927
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "MONTH",
@@ -5020,7 +5584,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 87664
+    "iv_null_or_zero": 87664,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3887423,
+     "spikes": 561,
+     "share": 0.00014431,
+     "early_minutes": 931232,
+     "early_spikes": 16,
+     "early_share": 1.718e-05,
+     "late_minutes": 2956191,
+     "late_spikes": 545,
+     "late_share": 0.00018436
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "MONTH",
@@ -5073,7 +5649,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 82736
+    "iv_null_or_zero": 82736,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3899574,
+     "spikes": 521,
+     "share": 0.0001336,
+     "early_minutes": 932017,
+     "early_spikes": 14,
+     "early_share": 1.502e-05,
+     "late_minutes": 2967557,
+     "late_spikes": 507,
+     "late_share": 0.00017085
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "MONTH",
@@ -5126,7 +5714,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 65756
+    "iv_null_or_zero": 65756,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3046497,
+     "spikes": 392,
+     "share": 0.00012867,
+     "early_minutes": 728289,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 2318208,
+     "late_spikes": 392,
+     "late_share": 0.0001691
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "MONTH",
@@ -5179,7 +5779,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 174796
+    "iv_null_or_zero": 174796,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1636969,
+     "spikes": 885,
+     "share": 0.00054063,
+     "early_minutes": 392110,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 1244859,
+     "late_spikes": 885,
+     "late_share": 0.00071092
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "WEEK",
@@ -5232,7 +5844,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 311477
+    "iv_null_or_zero": 311477,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3889779,
+     "spikes": 2803,
+     "share": 0.00072061,
+     "early_minutes": 933193,
+     "early_spikes": 4,
+     "early_share": 4.29e-06,
+     "late_minutes": 2956586,
+     "late_spikes": 2799,
+     "late_share": 0.0009467
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "WEEK",
@@ -5285,7 +5909,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 466534
+    "iv_null_or_zero": 466534,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3857901,
+     "spikes": 3344,
+     "share": 0.00086679,
+     "early_minutes": 925253,
+     "early_spikes": 9,
+     "early_share": 9.73e-06,
+     "late_minutes": 2932648,
+     "late_spikes": 3335,
+     "late_share": 0.0011372
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "WEEK",
@@ -5338,7 +5974,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 330475
+    "iv_null_or_zero": 330475,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3893623,
+     "spikes": 2697,
+     "share": 0.00069267,
+     "early_minutes": 935080,
+     "early_spikes": 5,
+     "early_share": 5.35e-06,
+     "late_minutes": 2958543,
+     "late_spikes": 2692,
+     "late_share": 0.00090991
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "WEEK",
@@ -5391,7 +6039,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 315986
+    "iv_null_or_zero": 315986,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3910207,
+     "spikes": 2801,
+     "share": 0.00071633,
+     "early_minutes": 937238,
+     "early_spikes": 4,
+     "early_share": 4.27e-06,
+     "late_minutes": 2972969,
+     "late_spikes": 2797,
+     "late_share": 0.00094081
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "WEEK",
@@ -5444,7 +6104,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 0,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 215538
+    "iv_null_or_zero": 215538,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3055038,
+     "spikes": 1889,
+     "share": 0.00061832,
+     "early_minutes": 732974,
+     "early_spikes": 3,
+     "early_share": 4.09e-06,
+     "late_minutes": 2322064,
+     "late_spikes": 1886,
+     "late_share": 0.00081221
+    }
    },
    "underlying": "NIFTY",
    "expiry_flag": "WEEK",
@@ -5497,7 +6169,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 13737,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 44423
+    "iv_null_or_zero": 44423,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1082031,
+     "spikes": 727,
+     "share": 0.00067188,
+     "early_minutes": 214735,
+     "early_spikes": 82,
+     "early_share": 0.00038187,
+     "late_minutes": 867296,
+     "late_spikes": 645,
+     "late_share": 0.00074369
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "MONTH",
@@ -5550,7 +6234,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 13737,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 34517
+    "iv_null_or_zero": 34517,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1626963,
+     "spikes": 676,
+     "share": 0.0004155,
+     "early_minutes": 343857,
+     "early_spikes": 29,
+     "early_share": 8.434e-05,
+     "late_minutes": 1283106,
+     "late_spikes": 647,
+     "late_share": 0.00050425
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "MONTH",
@@ -5603,7 +6299,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 13737,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 36700
+    "iv_null_or_zero": 36700,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3102139,
+     "spikes": 937,
+     "share": 0.00030205,
+     "early_minutes": 672075,
+     "early_spikes": 149,
+     "early_share": 0.0002217,
+     "late_minutes": 2430064,
+     "late_spikes": 788,
+     "late_share": 0.00032427
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "MONTH",
@@ -5656,7 +6364,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 13737,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 23649
+    "iv_null_or_zero": 23649,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2190707,
+     "spikes": 306,
+     "share": 0.00013968,
+     "early_minutes": 481191,
+     "early_spikes": 6,
+     "early_share": 1.247e-05,
+     "late_minutes": 1709516,
+     "late_spikes": 300,
+     "late_share": 0.00017549
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "MONTH",
@@ -5709,7 +6429,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15749,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 172103
+    "iv_null_or_zero": 172103,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2132740,
+     "spikes": 2204,
+     "share": 0.00103341,
+     "early_minutes": 485382,
+     "early_spikes": 170,
+     "early_share": 0.00035024,
+     "late_minutes": 1647358,
+     "late_spikes": 2034,
+     "late_share": 0.0012347
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "WEEK",
@@ -5762,7 +6494,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15749,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 143438
+    "iv_null_or_zero": 143438,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3703085,
+     "spikes": 1932,
+     "share": 0.00052173,
+     "early_minutes": 887768,
+     "early_spikes": 99,
+     "early_share": 0.00011152,
+     "late_minutes": 2815317,
+     "late_spikes": 1833,
+     "late_share": 0.00065108
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "WEEK",
@@ -5815,7 +6559,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15749,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 163577
+    "iv_null_or_zero": 163577,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3893399,
+     "spikes": 1305,
+     "share": 0.00033518,
+     "early_minutes": 935793,
+     "early_spikes": 27,
+     "early_share": 2.885e-05,
+     "late_minutes": 2957606,
+     "late_spikes": 1278,
+     "late_share": 0.00043211
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "WEEK",
@@ -5868,7 +6624,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 15749,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 97758
+    "iv_null_or_zero": 97758,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3037783,
+     "spikes": 1364,
+     "share": 0.00044901,
+     "early_minutes": 728591,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 2309192,
+     "late_spikes": 1364,
+     "late_share": 0.00059068
+    }
    },
    "underlying": "SENSEX",
    "expiry_flag": "WEEK",
@@ -5919,7 +6687,19 @@
      "weekend": 73,
      "nonpositive_or_missing_price": 80
     },
-    "iv_null_or_zero": 14958
+    "iv_null_or_zero": 14958,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1069117,
+     "spikes": 71,
+     "share": 6.641e-05,
+     "early_minutes": 119513,
+     "early_spikes": 3,
+     "early_share": 2.51e-05,
+     "late_minutes": 949604,
+     "late_spikes": 68,
+     "late_share": 7.161e-05
+    }
    },
    "underlying": "SILVERM",
    "expiry_flag": "MONTH",
@@ -5970,7 +6750,19 @@
      "weekend": 73,
      "nonpositive_or_missing_price": 80
     },
-    "iv_null_or_zero": 1467
+    "iv_null_or_zero": 1467,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1428764,
+     "spikes": 88,
+     "share": 6.159e-05,
+     "early_minutes": 149544,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 1279220,
+     "late_spikes": 88,
+     "late_share": 6.879e-05
+    }
    },
    "underlying": "SILVERM",
    "expiry_flag": "MONTH",
@@ -6021,7 +6813,19 @@
      "weekend": 117,
      "nonpositive_or_missing_price": 25
     },
-    "iv_null_or_zero": 15880
+    "iv_null_or_zero": 15880,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1006574,
+     "spikes": 33,
+     "share": 3.278e-05,
+     "early_minutes": 114395,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 892179,
+     "late_spikes": 33,
+     "late_share": 3.699e-05
+    }
    },
    "underlying": "SILVER",
    "expiry_flag": "MONTH",
@@ -6072,7 +6876,19 @@
      "weekend": 117,
      "nonpositive_or_missing_price": 25
     },
-    "iv_null_or_zero": 1972
+    "iv_null_or_zero": 1972,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 569229,
+     "spikes": 65,
+     "share": 0.00011419,
+     "early_minutes": 50054,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 519175,
+     "late_spikes": 65,
+     "late_share": 0.0001252
+    }
    },
    "underlying": "SILVER",
    "expiry_flag": "MONTH",
@@ -6125,7 +6941,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3343,
      "outside_session": 6772
     },
-    "iv_null_or_zero": 49160
+    "iv_null_or_zero": 49160,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4479839,
+     "spikes": 2612,
+     "share": 0.00058306,
+     "early_minutes": 1056979,
+     "early_spikes": 420,
+     "early_share": 0.00039736,
+     "late_minutes": 3422860,
+     "late_spikes": 2192,
+     "late_share": 0.0006404
+    }
    },
    "underlying": "ADANIENT",
    "expiry_flag": "MONTH",
@@ -6177,7 +7005,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3734,
      "outside_session": 7670
     },
-    "iv_null_or_zero": 69945
+    "iv_null_or_zero": 69945,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4722762,
+     "spikes": 3649,
+     "share": 0.00077264,
+     "early_minutes": 1119454,
+     "early_spikes": 569,
+     "early_share": 0.00050828,
+     "late_minutes": 3603308,
+     "late_spikes": 3080,
+     "late_share": 0.00085477
+    }
    },
    "underlying": "ADANIPORTS",
    "expiry_flag": "MONTH",
@@ -6229,7 +7069,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3746,
      "outside_session": 6819
     },
-    "iv_null_or_zero": 57368
+    "iv_null_or_zero": 57368,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4592481,
+     "spikes": 4613,
+     "share": 0.00100447,
+     "early_minutes": 1065332,
+     "early_spikes": 944,
+     "early_share": 0.00088611,
+     "late_minutes": 3527149,
+     "late_spikes": 3669,
+     "late_share": 0.00104022
+    }
    },
    "underlying": "APOLLOHOSP",
    "expiry_flag": "MONTH",
@@ -6281,7 +7133,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3723,
      "outside_session": 7224
     },
-    "iv_null_or_zero": 55448
+    "iv_null_or_zero": 55448,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4585014,
+     "spikes": 3396,
+     "share": 0.00074067,
+     "early_minutes": 1080899,
+     "early_spikes": 621,
+     "early_share": 0.00057452,
+     "late_minutes": 3504115,
+     "late_spikes": 2775,
+     "late_share": 0.00079193
+    }
    },
    "underlying": "ASIANPAINT",
    "expiry_flag": "MONTH",
@@ -6333,7 +7197,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3743,
      "outside_session": 6672
     },
-    "iv_null_or_zero": 135187
+    "iv_null_or_zero": 135187,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3792902,
+     "spikes": 4415,
+     "share": 0.00116402,
+     "early_minutes": 875940,
+     "early_spikes": 815,
+     "early_share": 0.00093043,
+     "late_minutes": 2916962,
+     "late_spikes": 3600,
+     "late_share": 0.00123416
+    }
    },
    "underlying": "AUBANK",
    "expiry_flag": "MONTH",
@@ -6385,7 +7261,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3741,
      "outside_session": 8389
     },
-    "iv_null_or_zero": 70462
+    "iv_null_or_zero": 70462,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4724789,
+     "spikes": 3433,
+     "share": 0.00072659,
+     "early_minutes": 1129449,
+     "early_spikes": 632,
+     "early_share": 0.00055956,
+     "late_minutes": 3595340,
+     "late_spikes": 2801,
+     "late_share": 0.00077906
+    }
    },
    "underlying": "AXISBANK",
    "expiry_flag": "MONTH",
@@ -6437,7 +7325,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3742,
      "outside_session": 6936
     },
-    "iv_null_or_zero": 75924
+    "iv_null_or_zero": 75924,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4384607,
+     "spikes": 4161,
+     "share": 0.000949,
+     "early_minutes": 1007281,
+     "early_spikes": 794,
+     "early_share": 0.00078826,
+     "late_minutes": 3377326,
+     "late_spikes": 3367,
+     "late_share": 0.00099694
+    }
    },
    "underlying": "BAJAJ-AUTO",
    "expiry_flag": "MONTH",
@@ -6489,7 +7389,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3734,
      "outside_session": 6451
     },
-    "iv_null_or_zero": 201400
+    "iv_null_or_zero": 201400,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3770585,
+     "spikes": 3437,
+     "share": 0.00091153,
+     "early_minutes": 872519,
+     "early_spikes": 587,
+     "early_share": 0.00067276,
+     "late_minutes": 2898066,
+     "late_spikes": 2850,
+     "late_share": 0.00098341
+    }
    },
    "underlying": "BAJAJFINSV",
    "expiry_flag": "MONTH",
@@ -6541,7 +7453,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3729,
      "outside_session": 5807
     },
-    "iv_null_or_zero": 540542
+    "iv_null_or_zero": 540542,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1741981,
+     "spikes": 348,
+     "share": 0.00019977,
+     "early_minutes": 372517,
+     "early_spikes": 65,
+     "early_share": 0.00017449,
+     "late_minutes": 1369464,
+     "late_spikes": 283,
+     "late_share": 0.00020665
+    }
    },
    "underlying": "BAJFINANCE",
    "expiry_flag": "MONTH",
@@ -6593,7 +7517,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3576,
      "outside_session": 7126
     },
-    "iv_null_or_zero": 112448
+    "iv_null_or_zero": 112448,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4477833,
+     "spikes": 5961,
+     "share": 0.00133122,
+     "early_minutes": 1044300,
+     "early_spikes": 1495,
+     "early_share": 0.00143158,
+     "late_minutes": 3433533,
+     "late_spikes": 4466,
+     "late_share": 0.0013007
+    }
    },
    "underlying": "BANKBARODA",
    "expiry_flag": "MONTH",
@@ -6645,7 +7581,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3739,
      "outside_session": 6544
     },
-    "iv_null_or_zero": 205281
+    "iv_null_or_zero": 205281,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3815682,
+     "spikes": 3523,
+     "share": 0.00092329,
+     "early_minutes": 885741,
+     "early_spikes": 753,
+     "early_share": 0.00085014,
+     "late_minutes": 2929941,
+     "late_spikes": 2770,
+     "late_share": 0.00094541
+    }
    },
    "underlying": "BEL",
    "expiry_flag": "MONTH",
@@ -6697,7 +7645,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3749,
      "outside_session": 7656
     },
-    "iv_null_or_zero": 121501
+    "iv_null_or_zero": 121501,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 4619595,
+     "spikes": 4387,
+     "share": 0.00094965,
+     "early_minutes": 1098310,
+     "early_spikes": 914,
+     "early_share": 0.00083219,
+     "late_minutes": 3521285,
+     "late_spikes": 3473,
+     "late_share": 0.00098629
+    }
    },
    "underlying": "BHARTIARTL",
    "expiry_flag": "MONTH",
@@ -6749,7 +7709,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3745,
      "outside_session": 5700
     },
-    "iv_null_or_zero": 91418
+    "iv_null_or_zero": 91418,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1348330,
+     "spikes": 397,
+     "share": 0.00029444,
+     "early_minutes": 316622,
+     "early_spikes": 44,
+     "early_share": 0.00013897,
+     "late_minutes": 1031708,
+     "late_spikes": 353,
+     "late_share": 0.00034215
+    }
    },
    "underlying": "BSE",
    "expiry_flag": "MONTH",
@@ -6801,7 +7773,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 3720,
      "outside_session": 5843
     },
-    "iv_null_or_zero": 403430
+    "iv_null_or_zero": 403430,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2454548,
+     "spikes": 1201,
+     "share": 0.0004893,
+     "early_minutes": 539487,
+     "early_spikes": 288,
+     "early_share": 0.00053384,
+     "late_minutes": 1915061,
+     "late_spikes": 913,
+     "late_share": 0.00047675
+    }
    },
    "underlying": "CANBK",
    "expiry_flag": "MONTH",
@@ -6853,7 +7837,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2240,
      "outside_session": 4699
     },
-    "iv_null_or_zero": 36634
+    "iv_null_or_zero": 36634,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 3035677,
+     "spikes": 2808,
+     "share": 0.000925,
+     "early_minutes": 716803,
+     "early_spikes": 503,
+     "early_share": 0.00070173,
+     "late_minutes": 2318874,
+     "late_spikes": 2305,
+     "late_share": 0.00099402
+    }
    },
    "underlying": "CIPLA",
    "expiry_flag": "MONTH",
@@ -6905,7 +7901,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 4823
     },
-    "iv_null_or_zero": 50163
+    "iv_null_or_zero": 50163,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2801704,
+     "spikes": 3486,
+     "share": 0.00124424,
+     "early_minutes": 664375,
+     "early_spikes": 693,
+     "early_share": 0.00104309,
+     "late_minutes": 2137329,
+     "late_spikes": 2793,
+     "late_share": 0.00130677
+    }
    },
    "underlying": "COALINDIA",
    "expiry_flag": "MONTH",
@@ -6957,7 +7965,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 3594
     },
-    "iv_null_or_zero": 254984
+    "iv_null_or_zero": 254984,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1283446,
+     "spikes": 481,
+     "share": 0.00037477,
+     "early_minutes": 282461,
+     "early_spikes": 96,
+     "early_share": 0.00033987,
+     "late_minutes": 1000985,
+     "late_spikes": 385,
+     "late_share": 0.00038462
+    }
    },
    "underlying": "DRREDDY",
    "expiry_flag": "MONTH",
@@ -7009,7 +8029,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2246,
      "outside_session": 4248
     },
-    "iv_null_or_zero": 19917
+    "iv_null_or_zero": 19917,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2637948,
+     "spikes": 2243,
+     "share": 0.00085028,
+     "early_minutes": 607548,
+     "early_spikes": 407,
+     "early_share": 0.00066991,
+     "late_minutes": 2030400,
+     "late_spikes": 1836,
+     "late_share": 0.00090426
+    }
    },
    "underlying": "EICHERMOT",
    "expiry_flag": "MONTH",
@@ -7061,7 +8093,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2243,
      "outside_session": 3460
     },
-    "iv_null_or_zero": 9279
+    "iv_null_or_zero": 9279,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 824851,
+     "spikes": 242,
+     "share": 0.00029339,
+     "early_minutes": 197005,
+     "early_spikes": 68,
+     "early_share": 0.00034517,
+     "late_minutes": 627846,
+     "late_spikes": 174,
+     "late_share": 0.00027714
+    }
    },
    "underlying": "ETERNAL",
    "expiry_flag": "MONTH",
@@ -7113,7 +8157,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2245,
      "outside_session": 4298
     },
-    "iv_null_or_zero": 23377
+    "iv_null_or_zero": 23377,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2755884,
+     "spikes": 2808,
+     "share": 0.00101891,
+     "early_minutes": 647016,
+     "early_spikes": 548,
+     "early_share": 0.00084697,
+     "late_minutes": 2108868,
+     "late_spikes": 2260,
+     "late_share": 0.00107166
+    }
    },
    "underlying": "FEDERALBNK",
    "expiry_flag": "MONTH",
@@ -7165,7 +8221,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2222,
      "outside_session": 4054
     },
-    "iv_null_or_zero": 17323
+    "iv_null_or_zero": 17323,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2749879,
+     "spikes": 3093,
+     "share": 0.00112478,
+     "early_minutes": 629844,
+     "early_spikes": 638,
+     "early_share": 0.00101295,
+     "late_minutes": 2120035,
+     "late_spikes": 2455,
+     "late_share": 0.001158
+    }
    },
    "underlying": "GRASIM",
    "expiry_flag": "MONTH",
@@ -7217,7 +8285,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2241,
      "outside_session": 4711
     },
-    "iv_null_or_zero": 29646
+    "iv_null_or_zero": 29646,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2835442,
+     "spikes": 2382,
+     "share": 0.00084008,
+     "early_minutes": 675764,
+     "early_spikes": 485,
+     "early_share": 0.00071771,
+     "late_minutes": 2159678,
+     "late_spikes": 1897,
+     "late_share": 0.00087837
+    }
    },
    "underlying": "HCLTECH",
    "expiry_flag": "MONTH",
@@ -7269,7 +8349,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 5356
     },
-    "iv_null_or_zero": 26544
+    "iv_null_or_zero": 26544,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2842966,
+     "spikes": 1390,
+     "share": 0.00048893,
+     "early_minutes": 681512,
+     "early_spikes": 130,
+     "early_share": 0.00019075,
+     "late_minutes": 2161454,
+     "late_spikes": 1260,
+     "late_share": 0.00058294
+    }
    },
    "underlying": "HDFCBANK",
    "expiry_flag": "MONTH",
@@ -7321,7 +8413,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2247,
      "outside_session": 4280
     },
-    "iv_null_or_zero": 23900
+    "iv_null_or_zero": 23900,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2803920,
+     "spikes": 2830,
+     "share": 0.0010093,
+     "early_minutes": 659927,
+     "early_spikes": 555,
+     "early_share": 0.000841,
+     "late_minutes": 2143993,
+     "late_spikes": 2275,
+     "late_share": 0.0010611
+    }
    },
    "underlying": "HDFCLIFE",
    "expiry_flag": "MONTH",
@@ -7373,7 +8477,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2236,
      "outside_session": 4868
     },
-    "iv_null_or_zero": 29632
+    "iv_null_or_zero": 29632,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2846118,
+     "spikes": 2281,
+     "share": 0.00080144,
+     "early_minutes": 680706,
+     "early_spikes": 475,
+     "early_share": 0.0006978,
+     "late_minutes": 2165412,
+     "late_spikes": 1806,
+     "late_share": 0.00083402
+    }
    },
    "underlying": "HINDALCO",
    "expiry_flag": "MONTH",
@@ -7425,7 +8541,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 4797
     },
-    "iv_null_or_zero": 25558
+    "iv_null_or_zero": 25558,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2839979,
+     "spikes": 2482,
+     "share": 0.00087395,
+     "early_minutes": 676041,
+     "early_spikes": 440,
+     "early_share": 0.00065085,
+     "late_minutes": 2163938,
+     "late_spikes": 2042,
+     "late_share": 0.00094365
+    }
    },
    "underlying": "HINDUNILVR",
    "expiry_flag": "MONTH",
@@ -7477,7 +8605,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 5299
     },
-    "iv_null_or_zero": 21267
+    "iv_null_or_zero": 21267,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2851173,
+     "spikes": 1347,
+     "share": 0.00047244,
+     "early_minutes": 683508,
+     "early_spikes": 167,
+     "early_share": 0.00024433,
+     "late_minutes": 2167665,
+     "late_spikes": 1180,
+     "late_share": 0.00054436
+    }
    },
    "underlying": "ICICIBANK",
    "expiry_flag": "MONTH",
@@ -7529,7 +8669,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2243,
      "outside_session": 4508
     },
-    "iv_null_or_zero": 34620
+    "iv_null_or_zero": 34620,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2813269,
+     "spikes": 4661,
+     "share": 0.00165679,
+     "early_minutes": 663073,
+     "early_spikes": 1058,
+     "early_share": 0.0015956,
+     "late_minutes": 2150196,
+     "late_spikes": 3603,
+     "late_share": 0.00167566
+    }
    },
    "underlying": "IDFCFIRSTB",
    "expiry_flag": "MONTH",
@@ -7581,7 +8733,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2244,
      "outside_session": 4169
     },
-    "iv_null_or_zero": 19639
+    "iv_null_or_zero": 19639,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2742345,
+     "spikes": 2420,
+     "share": 0.00088246,
+     "early_minutes": 635057,
+     "early_spikes": 457,
+     "early_share": 0.00071962,
+     "late_minutes": 2107288,
+     "late_spikes": 1963,
+     "late_share": 0.00093153
+    }
    },
    "underlying": "INDIGO",
    "expiry_flag": "MONTH",
@@ -7633,7 +8797,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2244,
      "outside_session": 4993
     },
-    "iv_null_or_zero": 23590
+    "iv_null_or_zero": 23590,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2841909,
+     "spikes": 2058,
+     "share": 0.00072416,
+     "early_minutes": 677098,
+     "early_spikes": 327,
+     "early_share": 0.00048294,
+     "late_minutes": 2164811,
+     "late_spikes": 1731,
+     "late_share": 0.00079961
+    }
    },
    "underlying": "INDUSINDBK",
    "expiry_flag": "MONTH",
@@ -7685,7 +8861,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 5274
     },
-    "iv_null_or_zero": 40128
+    "iv_null_or_zero": 40128,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2851235,
+     "spikes": 1739,
+     "share": 0.00060991,
+     "early_minutes": 683530,
+     "early_spikes": 257,
+     "early_share": 0.00037599,
+     "late_minutes": 2167705,
+     "late_spikes": 1482,
+     "late_share": 0.00068367
+    }
    },
    "underlying": "INFY",
    "expiry_flag": "MONTH",
@@ -7737,7 +8925,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 5001
     },
-    "iv_null_or_zero": 44455
+    "iv_null_or_zero": 44455,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2827766,
+     "spikes": 2871,
+     "share": 0.00101529,
+     "early_minutes": 673337,
+     "early_spikes": 542,
+     "early_share": 0.00080495,
+     "late_minutes": 2154429,
+     "late_spikes": 2329,
+     "late_share": 0.00108103
+    }
    },
    "underlying": "ITC",
    "expiry_flag": "MONTH",
@@ -7789,7 +8989,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2249,
      "outside_session": 3460
     },
-    "iv_null_or_zero": 9976
+    "iv_null_or_zero": 9976,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1025288,
+     "spikes": 397,
+     "share": 0.00038721,
+     "early_minutes": 243973,
+     "early_spikes": 73,
+     "early_share": 0.00029921,
+     "late_minutes": 781315,
+     "late_spikes": 324,
+     "late_share": 0.00041469
+    }
    },
    "underlying": "JIOFIN",
    "expiry_flag": "MONTH",
@@ -7841,7 +9053,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2237,
      "outside_session": 4477
     },
-    "iv_null_or_zero": 20958
+    "iv_null_or_zero": 20958,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2838792,
+     "spikes": 2057,
+     "share": 0.0007246,
+     "early_minutes": 675246,
+     "early_spikes": 443,
+     "early_share": 0.00065606,
+     "late_minutes": 2163546,
+     "late_spikes": 1614,
+     "late_share": 0.000746
+    }
    },
    "underlying": "JSWSTEEL",
    "expiry_flag": "MONTH",
@@ -7893,7 +9117,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2248,
      "outside_session": 4979
     },
-    "iv_null_or_zero": 21170
+    "iv_null_or_zero": 21170,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2847352,
+     "spikes": 1692,
+     "share": 0.00059424,
+     "early_minutes": 680318,
+     "early_spikes": 206,
+     "early_share": 0.0003028,
+     "late_minutes": 2167034,
+     "late_spikes": 1486,
+     "late_share": 0.00068573
+    }
    },
    "underlying": "KOTAKBANK",
    "expiry_flag": "MONTH",
@@ -7945,7 +9181,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2247,
      "outside_session": 4866
     },
-    "iv_null_or_zero": 21844
+    "iv_null_or_zero": 21844,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2747010,
+     "spikes": 2205,
+     "share": 0.00080269,
+     "early_minutes": 653489,
+     "early_spikes": 318,
+     "early_share": 0.00048662,
+     "late_minutes": 2093521,
+     "late_spikes": 1887,
+     "late_share": 0.00090135
+    }
    },
    "underlying": "LT",
    "expiry_flag": "MONTH",
@@ -7997,7 +9245,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 1874,
      "outside_session": 4526
     },
-    "iv_null_or_zero": 29149
+    "iv_null_or_zero": 29149,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2791036,
+     "spikes": 2439,
+     "share": 0.00087387,
+     "early_minutes": 664583,
+     "early_spikes": 444,
+     "early_share": 0.00066809,
+     "late_minutes": 2126453,
+     "late_spikes": 1995,
+     "late_share": 0.00093818
+    }
    },
    "underlying": "M&M",
    "expiry_flag": "MONTH",
@@ -8049,7 +9309,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2246,
      "outside_session": 4915
     },
-    "iv_null_or_zero": 30062
+    "iv_null_or_zero": 30062,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2845435,
+     "spikes": 1555,
+     "share": 0.00054649,
+     "early_minutes": 680914,
+     "early_spikes": 167,
+     "early_share": 0.00024526,
+     "late_minutes": 2164521,
+     "late_spikes": 1388,
+     "late_share": 0.00064125
+    }
    },
    "underlying": "MARUTI",
    "expiry_flag": "MONTH",
@@ -8101,7 +9373,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2245,
      "outside_session": 3450
     },
-    "iv_null_or_zero": 10630
+    "iv_null_or_zero": 10630,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1002748,
+     "spikes": 396,
+     "share": 0.00039491,
+     "early_minutes": 232171,
+     "early_spikes": 107,
+     "early_share": 0.00046087,
+     "late_minutes": 770577,
+     "late_spikes": 289,
+     "late_share": 0.00037504
+    }
    },
    "underlying": "MAXHEALTH",
    "expiry_flag": "MONTH",
@@ -8153,7 +9437,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2230,
      "outside_session": 3434
     },
-    "iv_null_or_zero": 317198
+    "iv_null_or_zero": 317198,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 959229,
+     "spikes": 107,
+     "share": 0.00011155,
+     "early_minutes": 194308,
+     "early_spikes": 31,
+     "early_share": 0.00015954,
+     "late_minutes": 764921,
+     "late_spikes": 76,
+     "late_share": 9.936e-05
+    }
    },
    "underlying": "NESTLEIND",
    "expiry_flag": "MONTH",
@@ -8205,7 +9501,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2247,
      "outside_session": 4060
     },
-    "iv_null_or_zero": 289771
+    "iv_null_or_zero": 289771,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2301694,
+     "spikes": 4830,
+     "share": 0.00209845,
+     "early_minutes": 530257,
+     "early_spikes": 909,
+     "early_share": 0.00171426,
+     "late_minutes": 1771437,
+     "late_spikes": 3921,
+     "late_share": 0.00221346
+    }
    },
    "underlying": "NTPC",
    "expiry_flag": "MONTH",
@@ -8257,7 +9565,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2245,
      "outside_session": 4693
     },
-    "iv_null_or_zero": 63958
+    "iv_null_or_zero": 63958,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2736673,
+     "spikes": 4032,
+     "share": 0.00147332,
+     "early_minutes": 646679,
+     "early_spikes": 876,
+     "early_share": 0.00135461,
+     "late_minutes": 2089994,
+     "late_spikes": 3156,
+     "late_share": 0.00151005
+    }
    },
    "underlying": "ONGC",
    "expiry_flag": "MONTH",
@@ -8309,7 +9629,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2243,
      "outside_session": 4322
     },
-    "iv_null_or_zero": 30917
+    "iv_null_or_zero": 30917,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2715737,
+     "spikes": 4632,
+     "share": 0.00170561,
+     "early_minutes": 627230,
+     "early_spikes": 1073,
+     "early_share": 0.0017107,
+     "late_minutes": 2088507,
+     "late_spikes": 3559,
+     "late_share": 0.00170409
+    }
    },
    "underlying": "PNB",
    "expiry_flag": "MONTH",
@@ -8361,7 +9693,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2243,
      "outside_session": 3797
     },
-    "iv_null_or_zero": 234258
+    "iv_null_or_zero": 234258,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1892894,
+     "spikes": 1490,
+     "share": 0.00078715,
+     "early_minutes": 427005,
+     "early_spikes": 334,
+     "early_share": 0.00078219,
+     "late_minutes": 1465889,
+     "late_spikes": 1156,
+     "late_share": 0.0007886
+    }
    },
    "underlying": "POWERGRID",
    "expiry_flag": "MONTH",
@@ -8413,7 +9757,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2249,
      "outside_session": 3858
     },
-    "iv_null_or_zero": 344990
+    "iv_null_or_zero": 344990,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1409123,
+     "spikes": 553,
+     "share": 0.00039244,
+     "early_minutes": 312816,
+     "early_spikes": 84,
+     "early_share": 0.00026853,
+     "late_minutes": 1096307,
+     "late_spikes": 469,
+     "late_share": 0.0004278
+    }
    },
    "underlying": "RELIANCE",
    "expiry_flag": "MONTH",
@@ -8465,7 +9821,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2246,
      "outside_session": 4093
     },
-    "iv_null_or_zero": 32520
+    "iv_null_or_zero": 32520,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2754619,
+     "spikes": 4147,
+     "share": 0.00150547,
+     "early_minutes": 633386,
+     "early_spikes": 887,
+     "early_share": 0.00140041,
+     "late_minutes": 2121233,
+     "late_spikes": 3260,
+     "late_share": 0.00153684
+    }
    },
    "underlying": "SBILIFE",
    "expiry_flag": "MONTH",
@@ -8517,7 +9885,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 5441
     },
-    "iv_null_or_zero": 20713
+    "iv_null_or_zero": 20713,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2852106,
+     "spikes": 1291,
+     "share": 0.00045265,
+     "early_minutes": 683745,
+     "early_spikes": 133,
+     "early_share": 0.00019452,
+     "late_minutes": 2168361,
+     "late_spikes": 1158,
+     "late_share": 0.00053404
+    }
    },
    "underlying": "SBIN",
    "expiry_flag": "MONTH",
@@ -8569,7 +9949,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2239,
      "outside_session": 3487
     },
-    "iv_null_or_zero": 191950
+    "iv_null_or_zero": 191950,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1152103,
+     "spikes": 377,
+     "share": 0.00032723,
+     "early_minutes": 254282,
+     "early_spikes": 61,
+     "early_share": 0.00023989,
+     "late_minutes": 897821,
+     "late_spikes": 316,
+     "late_share": 0.00035196
+    }
    },
    "underlying": "SHRIRAMFIN",
    "expiry_flag": "MONTH",
@@ -8621,7 +10013,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2250,
      "outside_session": 4935
     },
-    "iv_null_or_zero": 38382
+    "iv_null_or_zero": 38382,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2835559,
+     "spikes": 2926,
+     "share": 0.0010319,
+     "early_minutes": 675130,
+     "early_spikes": 477,
+     "early_share": 0.00070653,
+     "late_minutes": 2160429,
+     "late_spikes": 2449,
+     "late_share": 0.00113357
+    }
    },
    "underlying": "SUNPHARMA",
    "expiry_flag": "MONTH",
@@ -8673,7 +10077,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2245,
      "outside_session": 4133
     },
-    "iv_null_or_zero": 18913
+    "iv_null_or_zero": 18913,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2701263,
+     "spikes": 2814,
+     "share": 0.00104173,
+     "early_minutes": 627496,
+     "early_spikes": 568,
+     "early_share": 0.00090519,
+     "late_minutes": 2073767,
+     "late_spikes": 2246,
+     "late_share": 0.00108305
+    }
    },
    "underlying": "TATACONSUM",
    "expiry_flag": "MONTH",
@@ -8725,7 +10141,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2249,
      "outside_session": 4383
     },
-    "iv_null_or_zero": 145600
+    "iv_null_or_zero": 145600,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2334276,
+     "spikes": 2290,
+     "share": 0.00098103,
+     "early_minutes": 549253,
+     "early_spikes": 483,
+     "early_share": 0.00087938,
+     "late_minutes": 1785023,
+     "late_spikes": 1807,
+     "late_share": 0.00101231
+    }
    },
    "underlying": "TATASTEEL",
    "expiry_flag": "MONTH",
@@ -8777,7 +10205,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2249,
      "outside_session": 5030
     },
-    "iv_null_or_zero": 17208
+    "iv_null_or_zero": 17208,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2729065,
+     "spikes": 1279,
+     "share": 0.00046866,
+     "early_minutes": 647151,
+     "early_spikes": 148,
+     "early_share": 0.00022869,
+     "late_minutes": 2081914,
+     "late_spikes": 1131,
+     "late_share": 0.00054325
+    }
    },
    "underlying": "TCS",
    "expiry_flag": "MONTH",
@@ -8829,7 +10269,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2241,
      "outside_session": 4517
     },
-    "iv_null_or_zero": 23942
+    "iv_null_or_zero": 23942,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2824320,
+     "spikes": 2101,
+     "share": 0.0007439,
+     "early_minutes": 671230,
+     "early_spikes": 402,
+     "early_share": 0.0005989,
+     "late_minutes": 2153090,
+     "late_spikes": 1699,
+     "late_share": 0.0007891
+    }
    },
    "underlying": "TECHM",
    "expiry_flag": "MONTH",
@@ -8881,7 +10333,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2247,
      "outside_session": 4645
     },
-    "iv_null_or_zero": 17603
+    "iv_null_or_zero": 17603,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2715885,
+     "spikes": 1804,
+     "share": 0.00066424,
+     "early_minutes": 639795,
+     "early_spikes": 316,
+     "early_share": 0.00049391,
+     "late_minutes": 2076090,
+     "late_spikes": 1488,
+     "late_share": 0.00071673
+    }
    },
    "underlying": "TITAN",
    "expiry_flag": "MONTH",
@@ -8933,7 +10397,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2286,
      "outside_session": 5237
     },
-    "iv_null_or_zero": 24407
+    "iv_null_or_zero": 24407,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2793924,
+     "spikes": 1483,
+     "share": 0.00053079,
+     "early_minutes": 669392,
+     "early_spikes": 165,
+     "early_share": 0.00024649,
+     "late_minutes": 2124532,
+     "late_spikes": 1318,
+     "late_share": 0.00062037
+    }
    },
    "underlying": "TMPV",
    "expiry_flag": "MONTH",
@@ -8985,7 +10461,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2244,
      "outside_session": 3807
     },
-    "iv_null_or_zero": 22138
+    "iv_null_or_zero": 22138,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2630649,
+     "spikes": 2782,
+     "share": 0.00105753,
+     "early_minutes": 587817,
+     "early_spikes": 483,
+     "early_share": 0.00082168,
+     "late_minutes": 2042832,
+     "late_spikes": 2299,
+     "late_share": 0.0011254
+    }
    },
    "underlying": "TRENT",
    "expiry_flag": "MONTH",
@@ -9037,7 +10525,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2247,
      "outside_session": 4245
     },
-    "iv_null_or_zero": 23695
+    "iv_null_or_zero": 23695,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 2811175,
+     "spikes": 2521,
+     "share": 0.00089678,
+     "early_minutes": 662138,
+     "early_spikes": 485,
+     "early_share": 0.00073248,
+     "late_minutes": 2149037,
+     "late_spikes": 2036,
+     "late_share": 0.0009474
+    }
    },
    "underlying": "ULTRACEMCO",
    "expiry_flag": "MONTH",
@@ -9089,7 +10589,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2243,
      "outside_session": 3462
     },
-    "iv_null_or_zero": 8913
+    "iv_null_or_zero": 8913,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 999587,
+     "spikes": 549,
+     "share": 0.00054923,
+     "early_minutes": 232709,
+     "early_spikes": 153,
+     "early_share": 0.00065747,
+     "late_minutes": 766878,
+     "late_spikes": 396,
+     "late_share": 0.00051638
+    }
    },
    "underlying": "UNIONBANK",
    "expiry_flag": "MONTH",
@@ -9141,7 +10653,19 @@
      "date_not_a_trading_day_or_after_last_daily_close": 2238,
      "outside_session": 3480
     },
-    "iv_null_or_zero": 36021
+    "iv_null_or_zero": 36021,
+    "spikes": {
+     "early_window": "09:15-10:44",
+     "minutes": 1003744,
+     "spikes": 716,
+     "share": 0.00071333,
+     "early_minutes": 236299,
+     "early_spikes": 268,
+     "early_share": 0.00113416,
+     "late_minutes": 767445,
+     "late_spikes": 448,
+     "late_share": 0.00058376
+    }
    },
    "underlying": "YESBANK",
    "expiry_flag": "MONTH",
