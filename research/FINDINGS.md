@@ -1078,3 +1078,27 @@ of every rule: the underlying (MCX near future, US future + USD/INR, XAUUSD, BTC
   (expiryCode 1/2 = same as 0). Data APIs are capped at 100,000 requests/day; the stock-option download hit it, so
   stock options are partial (51 of 59 stocks, ATM 78%, ±1..5 ~23%; see data/README.md) and match NSE only ~69% at
   contract-day high/low (index options 87-98%). Use stock-option minutes with care.
+
+## Solo 2.0: a trained Solo that picks its own paper trades (R57, 15 Oct 2026) - 1 default pass (A2), paper candidate only
+Full study: `HUNT_R57_SOLO_2.md` (pre-registered `hunt/r57/PREREG.md`, commit a2278995; NIFTY, BANKNIFTY, FINNIFTY,
+MIDCPNIFTY; design 21 Nov 2024 - 31 Mar 2026 purged walk-forward with monthly refits; final 1 Apr - 14 Oct 2026 read
+once; one held contract, R17 fills, dated charges; 10 variants, one BH family).
+- **A2 passes.** It is a logistic "meta-labeller": take or skip the day's candidates from four index rules (S1 SoloMidday,
+  S2 R51 Donchian-20-RT, S3 R52 H37-10, S4 15-min ORB), at most one trade a day.
+  - Final: 128 trades, 59% won, +Rs 99,172 (+775 a trade), max DD Rs 18,056, 6/7 months green, top-5 40%, 2x costs
+    +Rs 80,849.
+  - Twin p 0.002, q 0.01. Design walk-forward +Rs 55,910 on 166 trades.
+  - Plain SoloMidday on the same final period: 36 trades, -Rs 21,589.
+  - Caveats: 72% of the final profit is MIDCPNIFTY (design walk-forward there: -Rs 153 on 90 trades), and 92 of the 128
+    trades are S3, whose exit R52 chose and read on this same window. Without MIDCPNIFTY: +Rs 27,586 on 46 trades.
+  - A3 (boosted Huber) also passes: +Rs 39,756, p 0.004.
+  - A4 (with R47 C4, an option-chain signal, so NON-DEFAULT) also passes: +Rs 59,706, p 0.002.
+  - A1 (boosted trees) fails: its top 5 trades exceed its net.
+- **The direction model fails in all 6 versions** (next 30 / 60 minutes at 09:45, 10:30, 12:00, 13:30): final -Rs 19k to
+  -51k. Out-of-sample AUC is 0.47-0.53; a leaky random split shows 0.52-0.61.
+- Model skill is small everywhere: AUC 0.52-0.54 on held-contract labels. The gain comes from skipping the worst
+  setups and days, not from reading direction.
+- On-device: `results/models/A2.json` (3 KB), `r57eval.py` (pure-Python reference scorer), golden vectors (parity
+  1e-16). `r57retrain.py` is a monthly retrain that replaces the model only if the latest 6 months pass the gates.
+- Verdict: A2 is a paper candidate for the coordinator's app build, to run next to plain SoloMidday with a forward bar.
+  Paper only, forever: Jarvis's own trades never go live.
