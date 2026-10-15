@@ -805,7 +805,9 @@ charges in force on each date incl. STT 0.15% from 1 Apr 2026, liq fills). Signa
 - R3's 16 versions (unchanged) all lose pooled in design; R23's two R22-range finalists, the only rules positive in
   design (+Rs 28,121 / +Rs 14,517), lost -Rs 57,452 / -Rs 61,789 in the final test. A 32-rule re-tune (range 15 / 30 / 50
   minutes x stop / target 0.5 / 1 / 1.5) is negative pooled in design and final for every point.
-- 0 of 336 tests pass (56 rules x pooled + 5 indices; BH over 336). Near-misses only on FINNIFTY: ORB 1-ITM design +Rs
-  24,846 (310 trades), final +Rs 26,002 (116), p 0.12, q 0.55, its 5 best trades 126% of the net; R3 saw the same and
-  called it noise.
+- 0 of 336 tests pass (56 rules x pooled + 5 indices; BH over 336; lowest q 0.061). Every rule that clears net, p and q
+  in the final test lost on the same index in design: closest, ORB Sweep with a 30-minute range and half stops on
+  FINNIFTY (final +Rs 20,997, 193 trades, p 0.002, q 0.061; design -Rs 39,857); several Sweep / Fade versions on
+  MIDCPNIFTY likewise. FINNIFTY ORB 1-ITM was positive in both periods (+Rs 24,846 / 310 trades, +Rs 26,002 / 116) but
+  fails p 0.12, q 0.55 and the top-5 rule (126%); R3 saw the same and called it noise.
 - App: nothing changes; ORB, ORB Fresh, ORB Sweep and Range Fade stay paused on every index; nothing goes on paper.

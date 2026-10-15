@@ -54,7 +54,10 @@ tables: `results/report.md`; numbers: `results/design.json`, `results/final.json
        under the gates.
    - **ORB Sweep on FINNIFTY / MIDCPNIFTY in the final test**: several versions are positive with twin p 0.002-0.006 and
      q 0.06-0.09, but every one lost Rs 39,857-1,07,410 on the same index in design, and most of them also hang on a few trades
-     (Range Fade C on MIDCPNIFTY is the same story: final +Rs 5,598, p 0.002, design Rs -76,469).
+     (Range Fade C on MIDCPNIFTY is the same story: final +Rs 5,598, p 0.002, design Rs -76,469; and Range Fade with
+     a 15-minute range on MIDCPNIFTY: final +Rs 5,184, q 0.09, design Rs -65,338). The closest miss of all is ORB Sweep
+     with a 30-minute range and half stops on FINNIFTY (`g-orb-sweep-m30-k0.5`): final +Rs 20,997 on 193 trades, p
+     0.002, q 0.061, top 5 = 88% of the net, so it meets 5 of 6 gates; it lost Rs 39,857 on FINNIFTY in design.
      A final-test-only result after a design loss is exactly what the walk-forward gate exists to stop.
 7. **What changes in the app: nothing.** The four arms stay paused with their code and settings kept. Nothing goes on
    paper. Bringing anything back is Boss's decision; R49 recommends against it.
@@ -95,7 +98,9 @@ price chart.
   entries at the next minute's open after the signal bar closes.
 - **Expiry days**: R3's rule, plus a session whose own 15:15 ATM time value is under 0.15% of spot. That adds FINNIFTY
   30 Mar and 25 Aug 2026 (the next day had no 15:15 prices) and NIFTY 13 Oct 2026 (the lake's last day). Expiry days
-  square off at 15:05.
+  square off at 15:05. One expiry is still missed: SENSEX Thu 25 Sep 2025 (no stored prices from 15:00). All 34 rule
+  trades that day had exited on a lock before 15:05, so no P&L changes; only the Range Fade F / C expiry skip did not
+  apply on one design day of an index where both lose heavily.
 
 **How fresh is the final test?** Not pristine, and that was said before the read. R3 ran these exact four arms and its
 16 versions on every index to 12 Oct 2026; R12 / R14 / H19 / H20 ran them on BANKNIFTY to 6 Oct 2026; R24 read 27 Apr - 12
@@ -257,8 +262,8 @@ Of the old rules, only ORB in 2025Q2 had a green quarter. R23's R22-range finali
 - **Sweep and Fade** bet that the break fails. They win big when it does (average win Rs 1,353 / 767) but win only
   29-34% of the time, and the higher STT since 1 Apr 2026 makes every one of their many trades dearer.
 - **Re-tuning** does not find a hidden good setting: no (range, stop) pair is positive pooled in design for any arm. For
-  ORB and ORB Fresh a shorter range trades more and loses more (as R20 / R23 found); for Sweep and Fade a shorter range
-  loses less, but still loses. Smaller stops mostly lose less only because each loss is smaller.
+  ORB and ORB Fresh a shorter range trades more and loses more (as R20 / R23 found); for Sweep a shorter range loses
+  less at every stop size, and for Fade the 15- and 30-minute ranges lose less than the app's 50; all still lose. Smaller stops mostly lose less only because each loss is smaller.
 - **FINNIFTY** is the one index where the ORB is near break-even or better in both periods, but always through a few
   large days (April 2026), which the top-5 gate is there to catch.
 
