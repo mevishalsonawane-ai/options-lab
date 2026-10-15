@@ -63,8 +63,8 @@ def section(key, d, fin, old, pre=None):
 
 
 def main():
-    d = json.loads((K.RESULTS / "design.json").read_text())
-    fp = K.RESULTS / "final.json"
+    d = json.loads((K.OUT / "design.json").read_text())
+    fp = K.OUT / "final.json"
     fin = json.loads(fp.read_text()) if fp.exists() else {}
     old = json.loads((K.RESULTS / "old_verdicts.json").read_text())
     pp = K.RESULTS / "rules_prereg.json"

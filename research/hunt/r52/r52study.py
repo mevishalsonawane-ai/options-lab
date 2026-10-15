@@ -22,8 +22,9 @@ import r52cfg as K
 import r52lab as L
 import r52rules as RR
 
-DESIGN = K.RESULTS / "design.json"
-FINAL = K.RESULTS / "final.json"
+# Working copies outside git while batches run; `publish` copies them into results/ (committed).
+DESIGN = K.OUT / "design.json"
+FINAL = K.OUT / "final.json"
 
 
 def _load(p):
@@ -31,7 +32,7 @@ def _load(p):
 
 
 def _dump(p, d):
-    K.RESULTS.mkdir(parents=True, exist_ok=True)
+    p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(d, indent=1, default=str, sort_keys=True))
 
 
@@ -122,6 +123,11 @@ if __name__ == "__main__":
         final()
     elif cmd == "prereg":
         prereg(sys.argv[2:] or None)
+    elif cmd == "publish":
+        for p in (DESIGN, FINAL):
+            if p.exists():
+                (K.RESULTS / p.name).write_text(p.read_text())
+        print("published to", K.RESULTS)
     elif cmd == "report":
         import r52report
         r52report.main()
