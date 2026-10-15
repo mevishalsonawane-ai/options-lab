@@ -1,0 +1,1235 @@
+{
+ "rows": {
+  "idx": 7056,
+  "mcx": 712
+ },
+ "variants": {
+  "I1": {
+   "span": "2024-11-20 - 2026-03-31",
+   "design": {
+    "trades": 57,
+    "win": 0.544,
+    "net": 21656,
+    "per_trade": 380,
+    "net_2x": 16714,
+    "max_dd": 15815,
+    "worst_day": -5074,
+    "months_green": "10/17",
+    "top5_share": 2.148,
+    "ex_top5": -24853,
+    "capital_median": 13002,
+    "capital_max": 25418,
+    "per_market": {
+     "SENSEX": {
+      "trades": 57,
+      "net": 21656
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 57,
+      "net": 21656
+     }
+    },
+    "by_month": {
+     "2024-11": 2601,
+     "2024-12": 548,
+     "2025-01": -3559,
+     "2025-02": 10035,
+     "2025-03": -4854,
+     "2025-04": 5903,
+     "2025-05": 12638,
+     "2025-06": 8015,
+     "2025-07": -2965,
+     "2025-08": 1321,
+     "2025-09": -6979,
+     "2025-10": -7193,
+     "2025-11": 2687,
+     "2025-12": 1649,
+     "2026-01": -158,
+     "2026-02": 3061,
+     "2026-03": -1096
+    },
+    "sessions": 337,
+    "trades_per_day": 0.169
+   }
+  },
+  "I2": {
+   "span": "2024-11-20 - 2026-03-31",
+   "design": {
+    "trades": 83,
+    "win": 0.542,
+    "net": 78627,
+    "per_trade": 947,
+    "net_2x": 65003,
+    "max_dd": 23160,
+    "worst_day": -6412,
+    "months_green": "9/16",
+    "top5_share": 0.836,
+    "ex_top5": 12932,
+    "capital_median": 32879,
+    "capital_max": 52718,
+    "per_market": {
+     "MIDCPNIFTY": {
+      "trades": 83,
+      "net": 78627
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 83,
+      "net": 78627
+     }
+    },
+    "by_month": {
+     "2024-12": 1532,
+     "2025-01": -6597,
+     "2025-02": 12875,
+     "2025-03": -8327,
+     "2025-04": -625,
+     "2025-05": 4605,
+     "2025-06": 8252,
+     "2025-07": -60,
+     "2025-08": 3062,
+     "2025-09": 23547,
+     "2025-10": -6388,
+     "2025-11": -6415,
+     "2025-12": 23084,
+     "2026-01": 19017,
+     "2026-02": 15941,
+     "2026-03": -4877
+    },
+    "sessions": 337,
+    "trades_per_day": 0.246
+   }
+  },
+  "I3": {
+   "span": "2024-11-20 - 2026-03-31",
+   "design": {
+    "trades": 161,
+    "win": 0.516,
+    "net": 82054,
+    "per_trade": 510,
+    "net_2x": 60114,
+    "max_dd": 19339,
+    "worst_day": -6412,
+    "months_green": "9/17",
+    "top5_share": 0.811,
+    "ex_top5": 15477,
+    "capital_median": 25777,
+    "capital_max": 52718,
+    "per_market": {
+     "BANKNIFTY": {
+      "trades": 33,
+      "net": 11940
+     },
+     "FINNIFTY": {
+      "trades": 38,
+      "net": -8381
+     },
+     "MIDCPNIFTY": {
+      "trades": 57,
+      "net": 57031
+     },
+     "NIFTY": {
+      "trades": 12,
+      "net": 23668
+     },
+     "SENSEX": {
+      "trades": 21,
+      "net": -2204
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 161,
+      "net": 82054
+     }
+    },
+    "by_month": {
+     "2024-11": 7334,
+     "2024-12": -2250,
+     "2025-01": -776,
+     "2025-02": 3600,
+     "2025-03": 3176,
+     "2025-04": 2748,
+     "2025-05": 18988,
+     "2025-06": -3810,
+     "2025-07": -3148,
+     "2025-08": -3735,
+     "2025-09": 15293,
+     "2025-10": -9053,
+     "2025-11": -3380,
+     "2025-12": 22542,
+     "2026-01": 15954,
+     "2026-02": 25388,
+     "2026-03": -6816
+    },
+    "sessions": 337,
+    "trades_per_day": 0.478
+   }
+  },
+  "I4": {
+   "span": "2025-07-01 - 2026-03-31",
+   "design": {
+    "trades": 174,
+    "win": 0.563,
+    "net": 78449,
+    "per_trade": 451,
+    "net_2x": 56550,
+    "max_dd": 21859,
+    "worst_day": -7890,
+    "months_green": "7/9",
+    "top5_share": 0.455,
+    "ex_top5": 42783,
+    "capital_median": 22128,
+    "capital_max": 46019,
+    "per_market": {
+     "BANKNIFTY": {
+      "trades": 27,
+      "net": 13394
+     },
+     "FINNIFTY": {
+      "trades": 49,
+      "net": 26767
+     },
+     "MIDCPNIFTY": {
+      "trades": 87,
+      "net": 41786
+     },
+     "NIFTY": {
+      "trades": 4,
+      "net": -5714
+     },
+     "SENSEX": {
+      "trades": 7,
+      "net": 2216
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 5,
+      "net": 813
+     },
+     "S2": {
+      "trades": 57,
+      "net": 19338
+     },
+     "S3": {
+      "trades": 111,
+      "net": 57796
+     },
+     "S4": {
+      "trades": 1,
+      "net": 503
+     }
+    },
+    "by_month": {
+     "2025-07": 7539,
+     "2025-08": 12640,
+     "2025-09": 18334,
+     "2025-10": 5645,
+     "2025-11": 23608,
+     "2025-12": -7215,
+     "2026-01": 9744,
+     "2026-02": -729,
+     "2026-03": 8883
+    },
+    "sessions": 186,
+    "trades_per_day": 0.935
+   },
+   "auc": 0.5225,
+   "rows": 7056,
+   "tested": 3871
+  },
+  "I5": {
+   "span": "2025-07-01 - 2026-03-31",
+   "design": {
+    "trades": 60,
+    "win": 0.517,
+    "net": 212,
+    "per_trade": 4,
+    "net_2x": -4306,
+    "max_dd": 15523,
+    "worst_day": -5074,
+    "months_green": "4/9",
+    "top5_share": 89.624,
+    "ex_top5": -18800,
+    "capital_median": 8737,
+    "capital_max": 19175,
+    "per_market": {
+     "SENSEX": {
+      "trades": 60,
+      "net": 212
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 10,
+      "net": -6171
+     },
+     "S2": {
+      "trades": 12,
+      "net": 226
+     },
+     "S3": {
+      "trades": 38,
+      "net": 6157
+     }
+    },
+    "by_month": {
+     "2025-07": -5063,
+     "2025-08": 5643,
+     "2025-09": -1446,
+     "2025-10": -8202,
+     "2025-11": -292,
+     "2025-12": -1700,
+     "2026-01": 2842,
+     "2026-02": 5564,
+     "2026-03": 2866
+    },
+    "sessions": 186,
+    "trades_per_day": 0.323
+   },
+   "auc": 0.5225,
+   "rows": 7056,
+   "tested": 3871
+  },
+  "X1": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 3,
+    "win": 0.667,
+    "net": -44351,
+    "per_trade": -14784,
+    "net_2x": -56902,
+    "max_dd": 68192,
+    "worst_day": -68192,
+    "months_green": "1/2",
+    "top5_share": null,
+    "ex_top5": 0,
+    "capital_median": 211050,
+    "capital_max": 524000,
+    "per_market": {
+     "GOLD": {
+      "trades": 3,
+      "net": -44351
+     }
+    },
+    "per_setup": {
+     "SN": {
+      "trades": 3,
+      "net": -44351
+     }
+    },
+    "by_month": {
+     "2025-09": 3998,
+     "2026-01": -48349
+    },
+    "sessions": 166,
+    "trades_per_day": 0.018
+   }
+  },
+  "X2": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 7,
+    "win": 0.714,
+    "net": 44603,
+    "per_trade": 6372,
+    "net_2x": 37307,
+    "max_dd": 20318,
+    "worst_day": -20318,
+    "months_green": "4/5",
+    "top5_share": 1.612,
+    "ex_top5": -27311,
+    "capital_median": 146000,
+    "capital_max": 246900,
+    "per_market": {
+     "GOLD": {
+      "trades": 7,
+      "net": 44603
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 7,
+      "net": 44603
+     }
+    },
+    "by_month": {
+     "2025-08": 14193,
+     "2025-09": 2310,
+     "2025-10": -20318,
+     "2025-11": 9946,
+     "2025-12": 38473
+    },
+    "sessions": 166,
+    "trades_per_day": 0.042
+   }
+  },
+  "X3": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 7,
+    "win": 0.143,
+    "net": -12315,
+    "per_trade": -1759,
+    "net_2x": -16655,
+    "max_dd": 12902,
+    "worst_day": -7959,
+    "months_green": "1/6",
+    "top5_share": null,
+    "ex_top5": -9766,
+    "capital_median": 42120,
+    "capital_max": 112230,
+    "per_market": {
+     "GOLDM": {
+      "trades": 7,
+      "net": -12315
+     }
+    },
+    "per_setup": {
+     "SN": {
+      "trades": 7,
+      "net": -12315
+     }
+    },
+    "by_month": {
+     "2025-09": -1721,
+     "2025-11": -361,
+     "2025-12": -404,
+     "2026-01": -8609,
+     "2026-02": -1807,
+     "2026-03": 587
+    },
+    "sessions": 167,
+    "trades_per_day": 0.042
+   }
+  },
+  "X4": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 14,
+    "win": 0.429,
+    "net": -17897,
+    "per_trade": -1278,
+    "net_2x": -22755,
+    "max_dd": 21315,
+    "worst_day": -10871,
+    "months_green": "3/7",
+    "top5_share": null,
+    "ex_top5": -27337,
+    "capital_median": 25338,
+    "capital_max": 139745,
+    "per_market": {
+     "GOLDM": {
+      "trades": 14,
+      "net": -17897
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 14,
+      "net": -17897
+     }
+    },
+    "by_month": {
+     "2025-09": 2658,
+     "2025-10": -869,
+     "2025-11": 737,
+     "2025-12": -2240,
+     "2026-01": 365,
+     "2026-02": -8725,
+     "2026-03": -9824
+    },
+    "sessions": 167,
+    "trades_per_day": 0.084
+   }
+  },
+  "X5": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 4,
+    "win": 0.25,
+    "net": -33959,
+    "per_trade": -8490,
+    "net_2x": -43978,
+    "max_dd": 33959,
+    "worst_day": -28325,
+    "months_green": "1/4",
+    "top5_share": null,
+    "ex_top5": 0,
+    "capital_median": 153240,
+    "capital_max": 462000,
+    "per_market": {
+     "SILVER": {
+      "trades": 4,
+      "net": -33959
+     }
+    },
+    "per_setup": {
+     "SN": {
+      "trades": 4,
+      "net": -33959
+     }
+    },
+    "by_month": {
+     "2025-10": -3185,
+     "2025-11": 2653,
+     "2025-12": -5102,
+     "2026-01": -28325
+    },
+    "sessions": 167,
+    "trades_per_day": 0.024
+   }
+  },
+  "X6": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 6,
+    "win": 0.333,
+    "net": -29238,
+    "per_trade": -4873,
+    "net_2x": -37416,
+    "max_dd": 29238,
+    "worst_day": -17867,
+    "months_green": "1/4",
+    "top5_share": null,
+    "ex_top5": -17867,
+    "capital_median": 171600,
+    "capital_max": 519000,
+    "per_market": {
+     "SILVER": {
+      "trades": 6,
+      "net": -29238
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 6,
+      "net": -29238
+     }
+    },
+    "by_month": {
+     "2025-09": -14811,
+     "2025-10": -13318,
+     "2025-12": 16758,
+     "2026-01": -17867
+    },
+    "sessions": 167,
+    "trades_per_day": 0.036
+   }
+  },
+  "X7": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 11,
+    "win": 0.182,
+    "net": -20771,
+    "per_trade": -1888,
+    "net_2x": -30110,
+    "max_dd": 20771,
+    "worst_day": -8085,
+    "months_green": "0/5",
+    "top5_share": null,
+    "ex_top5": -20632,
+    "capital_median": 46522,
+    "capital_max": 217395,
+    "per_market": {
+     "SILVERM": {
+      "trades": 11,
+      "net": -20771
+     }
+    },
+    "per_setup": {
+     "SN": {
+      "trades": 11,
+      "net": -20771
+     }
+    },
+    "by_month": {
+     "2025-10": -3521,
+     "2025-11": -1697,
+     "2025-12": -2670,
+     "2026-01": -11534,
+     "2026-03": -1350
+    },
+    "sessions": 167,
+    "trades_per_day": 0.066
+   }
+  },
+  "X8": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 13,
+    "win": 0.538,
+    "net": -3546,
+    "per_trade": -273,
+    "net_2x": -9395,
+    "max_dd": 8606,
+    "worst_day": -5672,
+    "months_green": "2/5",
+    "top5_share": null,
+    "ex_top5": -14164,
+    "capital_median": 32652,
+    "capital_max": 243002,
+    "per_market": {
+     "SILVERM": {
+      "trades": 13,
+      "net": -3546
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 13,
+      "net": -3546
+     }
+    },
+    "by_month": {
+     "2025-09": -1300,
+     "2025-10": 1698,
+     "2025-11": -581,
+     "2025-12": 2628,
+     "2026-01": -5991
+    },
+    "sessions": 167,
+    "trades_per_day": 0.078
+   }
+  },
+  "X9": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 2,
+    "win": 1.0,
+    "net": 2920,
+    "per_trade": 1460,
+    "net_2x": 2070,
+    "max_dd": 0,
+    "worst_day": 376,
+    "months_green": "1/1",
+    "top5_share": 1.0,
+    "ex_top5": 0,
+    "capital_median": 49250,
+    "capital_max": 53690,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 2,
+      "net": 2920
+     }
+    },
+    "per_setup": {
+     "SN": {
+      "trades": 2,
+      "net": 2920
+     }
+    },
+    "by_month": {
+     "2026-03": 2920
+    },
+    "sessions": 167,
+    "trades_per_day": 0.012
+   }
+  },
+  "X10": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 28,
+    "win": 0.429,
+    "net": -8094,
+    "per_trade": -289,
+    "net_2x": -12899,
+    "max_dd": 12353,
+    "worst_day": -6219,
+    "months_green": "2/8",
+    "top5_share": null,
+    "ex_top5": -26701,
+    "capital_median": 21070,
+    "capital_max": 91240,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 28,
+      "net": -8094
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 28,
+      "net": -8094
+     }
+    },
+    "by_month": {
+     "2025-08": -2463,
+     "2025-09": -1085,
+     "2025-10": 493,
+     "2025-11": -95,
+     "2025-12": -1310,
+     "2026-01": 3126,
+     "2026-02": -1313,
+     "2026-03": -5447
+    },
+    "sessions": 167,
+    "trades_per_day": 0.168
+   }
+  },
+  "X11": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 5,
+    "win": 0.8,
+    "net": 26074,
+    "per_trade": 5215,
+    "net_2x": 24022,
+    "max_dd": 467,
+    "worst_day": -467,
+    "months_green": "3/3",
+    "top5_share": 1.0,
+    "ex_top5": 0,
+    "capital_median": 29062,
+    "capital_max": 43750,
+    "per_market": {
+     "NATURALGAS": {
+      "trades": 5,
+      "net": 26074
+     }
+    },
+    "per_setup": {
+     "SN": {
+      "trades": 5,
+      "net": 26074
+     }
+    },
+    "by_month": {
+     "2025-11": 3371,
+     "2026-01": 22634,
+     "2026-02": 70
+    },
+    "sessions": 167,
+    "trades_per_day": 0.03
+   }
+  },
+  "X12": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 19,
+    "win": 0.526,
+    "net": 23768,
+    "per_trade": 1251,
+    "net_2x": 19411,
+    "max_dd": 8314,
+    "worst_day": -5048,
+    "months_green": "3/7",
+    "top5_share": 1.507,
+    "ex_top5": -12053,
+    "capital_median": 26375,
+    "capital_max": 44875,
+    "per_market": {
+     "NATURALGAS": {
+      "trades": 19,
+      "net": 23768
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 19,
+      "net": 23768
+     }
+    },
+    "by_month": {
+     "2025-09": -4707,
+     "2025-10": -3607,
+     "2025-11": 12108,
+     "2025-12": -891,
+     "2026-01": 18271,
+     "2026-02": 3305,
+     "2026-03": -712
+    },
+    "sessions": 167,
+    "trades_per_day": 0.114
+   }
+  },
+  "X13": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 23,
+    "win": 0.435,
+    "net": -55416,
+    "per_trade": -2409,
+    "net_2x": -81025,
+    "max_dd": 74318,
+    "worst_day": -68192,
+    "months_green": "3/7",
+    "top5_share": null,
+    "ex_top5": -88868,
+    "capital_median": 43750,
+    "capital_max": 524000,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 2,
+      "net": 2920
+     },
+     "GOLD": {
+      "trades": 3,
+      "net": -44351
+     },
+     "GOLDM": {
+      "trades": 5,
+      "net": -3996
+     },
+     "NATURALGAS": {
+      "trades": 4,
+      "net": 6670
+     },
+     "SILVERM": {
+      "trades": 9,
+      "net": -16660
+     }
+    },
+    "per_setup": {
+     "SN": {
+      "trades": 23,
+      "net": -55416
+     }
+    },
+    "by_month": {
+     "2025-09": 2276,
+     "2025-10": -3521,
+     "2025-11": 1673,
+     "2025-12": -3074,
+     "2026-01": -53191,
+     "2026-02": -1738,
+     "2026-03": 2157
+    },
+    "sessions": 167,
+    "trades_per_day": 0.138
+   }
+  },
+  "X14": {
+   "span": "2025-08-05 - 2026-03-31",
+   "design": {
+    "trades": 57,
+    "win": 0.491,
+    "net": 21135,
+    "per_trade": 371,
+    "net_2x": -3466,
+    "max_dd": 42869,
+    "worst_day": -20318,
+    "months_green": "4/8",
+    "top5_share": 3.61,
+    "ex_top5": -55157,
+    "capital_median": 30375,
+    "capital_max": 246900,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 24,
+      "net": -8501
+     },
+     "GOLD": {
+      "trades": 6,
+      "net": 34658
+     },
+     "GOLDM": {
+      "trades": 8,
+      "net": -16742
+     },
+     "NATURALGAS": {
+      "trades": 8,
+      "net": 22969
+     },
+     "SILVER": {
+      "trades": 3,
+      "net": -13656
+     },
+     "SILVERM": {
+      "trades": 8,
+      "net": 2408
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 57,
+      "net": 21135
+     }
+    },
+    "by_month": {
+     "2025-08": 11730,
+     "2025-09": -11987,
+     "2025-10": -30686,
+     "2025-11": 9301,
+     "2025-12": 50987,
+     "2026-01": 21124,
+     "2026-02": -10038,
+     "2026-03": -19295
+    },
+    "sessions": 167,
+    "trades_per_day": 0.341
+   }
+  },
+  "M1": {
+   "span": "2025-11-01 - 2026-03-31",
+   "design": {
+    "trades": 82,
+    "win": 0.463,
+    "net": -5885,
+    "per_trade": -72,
+    "net_2x": -25239,
+    "max_dd": 35401,
+    "worst_day": -10871,
+    "months_green": "3/5",
+    "top5_share": null,
+    "ex_top5": -45457,
+    "capital_median": 26338,
+    "capital_max": 127195,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 9,
+      "net": -5597
+     },
+     "GOLDM": {
+      "trades": 17,
+      "net": -17737
+     },
+     "NATURALGAS": {
+      "trades": 43,
+      "net": 23048
+     },
+     "SILVERM": {
+      "trades": 13,
+      "net": -5599
+     }
+    },
+    "per_setup": {
+     "EV": {
+      "trades": 57,
+      "net": -6973
+     },
+     "SE": {
+      "trades": 24,
+      "net": 1019
+     },
+     "SN": {
+      "trades": 1,
+      "net": 70
+     }
+    },
+    "by_month": {
+     "2025-11": 9468,
+     "2025-12": 2831,
+     "2026-01": 17148,
+     "2026-02": -7830,
+     "2026-03": -27502
+    },
+    "sessions": 105,
+    "trades_per_day": 0.781
+   },
+   "auc": 0.5181,
+   "rows": 712,
+   "tested": 448
+  },
+  "M2": {
+   "span": "2025-11-01 - 2026-03-31",
+   "design": {
+    "trades": 17,
+    "win": 0.412,
+    "net": 5192,
+    "per_trade": 305,
+    "net_2x": -3028,
+    "max_dd": 10697,
+    "worst_day": -6219,
+    "months_green": "1/3",
+    "top5_share": 5.26,
+    "ex_top5": -22120,
+    "capital_median": 33550,
+    "capital_max": 211050,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 8,
+      "net": -5234
+     },
+     "GOLD": {
+      "trades": 1,
+      "net": 19843
+     },
+     "GOLDM": {
+      "trades": 3,
+      "net": -827
+     },
+     "NATURALGAS": {
+      "trades": 4,
+      "net": -2919
+     },
+     "SILVERM": {
+      "trades": 1,
+      "net": -5672
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 14,
+      "net": -14071
+     },
+     "SN": {
+      "trades": 3,
+      "net": 19263
+     }
+    },
+    "by_month": {
+     "2026-01": 15820,
+     "2026-02": -2468,
+     "2026-03": -8160
+    },
+    "sessions": 105,
+    "trades_per_day": 0.162
+   },
+   "auc": 0.504,
+   "rows": 119,
+   "tested": 50
+  }
+ },
+ "setups_unfiltered": {
+  "EV:CRUDEOIL": {
+   "trades": 145,
+   "net": -34101
+  },
+  "EV:GOLD": {
+   "trades": 47,
+   "net": -435864
+  },
+  "EV:GOLDM": {
+   "trades": 90,
+   "net": -57477
+  },
+  "EV:NATURALGAS": {
+   "trades": 141,
+   "net": 17489
+  },
+  "EV:SILVER": {
+   "trades": 69,
+   "net": -412210
+  },
+  "EV:SILVERM": {
+   "trades": 101,
+   "net": -72204
+  },
+  "S1:MIDCPNIFTY": {
+   "trades": 83,
+   "net": 78627
+  },
+  "S1:SENSEX": {
+   "trades": 57,
+   "net": 21656
+  },
+  "S2:MIDCPNIFTY": {
+   "trades": 981,
+   "net": -37365
+  },
+  "S2:SENSEX": {
+   "trades": 827,
+   "net": -30973
+  },
+  "S3:MIDCPNIFTY": {
+   "trades": 162,
+   "net": 17311
+  },
+  "S3:SENSEX": {
+   "trades": 131,
+   "net": -3157
+  },
+  "S4:MIDCPNIFTY": {
+   "trades": 305,
+   "net": -6293
+  },
+  "S4:SENSEX": {
+   "trades": 261,
+   "net": -77880
+  },
+  "SE:CRUDEOIL": {
+   "trades": 28,
+   "net": -8094
+  },
+  "SE:GOLD": {
+   "trades": 7,
+   "net": 44603
+  },
+  "SE:GOLDM": {
+   "trades": 14,
+   "net": -17897
+  },
+  "SE:NATURALGAS": {
+   "trades": 19,
+   "net": 23768
+  },
+  "SE:SILVER": {
+   "trades": 6,
+   "net": -29238
+  },
+  "SE:SILVERM": {
+   "trades": 13,
+   "net": -3546
+  },
+  "SN:CRUDEOIL": {
+   "trades": 2,
+   "net": 2920
+  },
+  "SN:GOLD": {
+   "trades": 3,
+   "net": -44351
+  },
+  "SN:GOLDM": {
+   "trades": 7,
+   "net": -12315
+  },
+  "SN:NATURALGAS": {
+   "trades": 5,
+   "net": 26074
+  },
+  "SN:SILVER": {
+   "trades": 4,
+   "net": -33959
+  },
+  "SN:SILVERM": {
+   "trades": 11,
+   "net": -20771
+  }
+ },
+ "mcx_cleaning": {
+  "CRUDEOIL": {
+   "rows": 3614806,
+   "foreign": 0,
+   "f1": 370,
+   "spikes": 214,
+   "spikes_not_f1": 103
+  },
+  "GOLD": {
+   "rows": 1684244,
+   "foreign": 0,
+   "f1": 149,
+   "spikes": 125,
+   "spikes_not_f1": 69
+  },
+  "GOLDM": {
+   "rows": 2960018,
+   "foreign": 0,
+   "f1": 333,
+   "spikes": 295,
+   "spikes_not_f1": 191
+  },
+  "NATURALGAS": {
+   "rows": 3616637,
+   "foreign": 0,
+   "f1": 1620,
+   "spikes": 1412,
+   "spikes_not_f1": 637
+  },
+  "SILVER": {
+   "rows": 1575803,
+   "foreign": 0,
+   "f1": 261,
+   "spikes": 115,
+   "spikes_not_f1": 64
+  },
+  "SILVERM": {
+   "rows": 2497881,
+   "foreign": 0,
+   "f1": 379,
+   "spikes": 226,
+   "spikes_not_f1": 131
+  }
+ },
+ "mcx_expiries": {
+  "CRUDEOIL": [
+   "2025-08-14",
+   "2025-09-17",
+   "2025-10-16",
+   "2025-11-17",
+   "2025-12-16",
+   "2026-01-14",
+   "2026-02-17",
+   "2026-03-17",
+   "2026-04-16",
+   "2026-05-14",
+   "2026-06-16",
+   "2026-07-16",
+   "2026-08-17",
+   "2026-09-17"
+  ],
+  "GOLD": [
+   "2025-10-31",
+   "2025-11-26",
+   "2025-12-31",
+   "2026-01-27",
+   "2026-02-27",
+   "2026-03-24",
+   "2026-04-30",
+   "2026-05-27",
+   "2026-06-30",
+   "2026-07-29",
+   "2026-08-31",
+   "2026-09-25"
+  ],
+  "GOLDM": [
+   "2025-08-27",
+   "2025-09-23",
+   "2025-10-29",
+   "2025-11-28",
+   "2025-12-29",
+   "2026-01-29",
+   "2026-02-26",
+   "2026-03-26",
+   "2026-04-28",
+   "2026-05-29",
+   "2026-06-26",
+   "2026-07-29",
+   "2026-08-28",
+   "2026-09-25"
+  ],
+  "NATURALGAS": [
+   "2025-08-22",
+   "2025-09-23",
+   "2025-10-24",
+   "2025-11-20",
+   "2025-12-23",
+   "2026-01-22",
+   "2026-02-20",
+   "2026-03-24",
+   "2026-04-23",
+   "2026-05-22",
+   "2026-06-23",
+   "2026-07-24",
+   "2026-08-24",
+   "2026-09-23"
+  ],
+  "SILVER": [
+   "2025-08-27",
+   "2025-09-25",
+   "2025-10-28",
+   "2025-11-26",
+   "2025-12-24",
+   "2026-01-27",
+   "2026-02-24",
+   "2026-03-26",
+   "2026-04-24",
+   "2026-05-26",
+   "2026-06-24",
+   "2026-07-28",
+   "2026-08-28",
+   "2026-09-24"
+  ],
+  "SILVERM": [
+   "2025-08-20",
+   "2025-09-25",
+   "2025-10-28",
+   "2025-11-19",
+   "2025-12-24",
+   "2026-01-27",
+   "2026-02-18",
+   "2026-03-26",
+   "2026-04-21",
+   "2026-05-26",
+   "2026-06-19",
+   "2026-07-28",
+   "2026-08-24",
+   "2026-09-24"
+  ]
+ }
+}

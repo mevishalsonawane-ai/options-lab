@@ -1,0 +1,39 @@
+id: r60-m1
+title: 'R60 Solo on all markets M1: MCX A2-style meta-labeller (SN, SE, EV, MO candidates on six commodities, logistic, 1
+  a day)'
+family: ml
+date: '2026-10-15'
+doc: research/HUNT_R60_SOLO_ALL_MARKETS.md
+hypothesis: 'Solo''s rule makes money after real costs on a market it does not trade yet (gates: final net > 0, random-entry
+  twin p < 0.05, BH q <= 0.10 over 21 variants, 40+ trades, top-5 < net, design positive).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m MCX MONTH files (ATM-3..+3, 5 Aug 2025 - 13 Oct 2026;
+  R47 foreign rows, R42 F1 and spikes.py bad prints removed), near-future proxy = median option spot'
+period:
+  design: 5 Aug 2025 - 31 Mar 2026 (purged walk-forward, monthly refits)
+  holdout: '1 Apr - 13 Oct 2026 final test, read once (not pristine: R47-R59 saw parts of it)'
+instruments:
+- MCX
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- 'signal source: the commodity''s near future (median option spot); option IV / OI context only in M1/M2'
+- proxy returns 15/60 min and since the open, range / ATR14, edge distance, 30-min realised vol, ATR %, minute, US-session
+  flag, sessions to expiry, ATM IV, PCR OI, commodity / setup one-hots, side
+model_or_rule: MCX A2-style meta-labeller (SN, SE, EV, MO candidates on six commodities, logistic, 1 a day)
+settings: research/hunt/r60/PREREG.md section 3; research/hunt/r60/r60study.py
+prereg: research/hunt/r60/PREREG.md
+variants_tried: 21
+results:
+  summary: 'Design: 82 trades, net Rs -5,885, win 46%. Final test (1 Apr - 13 Oct 2026, read once): 125 trades, win 46%, net
+    Rs -34,569 (Rs -277/trade), at 2x costs Rs -63,582, max DD Rs 41,797, worst day Rs -13,087, months green 2/7, top-5 share
+    None, capital per lot (median) Rs 24,250, trades per day 0.906; twin p 0.1737, BH q 0.7544 (21 variants). Verdict: FAIL:
+    final net <= 0; p >= 0.05; q > 0.10; top-5 >= net; design <= 0.'
+  costs: Zerodha MCX option charges (CTT 0.05% sell), per-commodity half-spread doubled before 17:00 and on a thin side, next-minute
+    fills, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: 'Paper only. Amendment 1 (after the final read): a sessions-to-expiry bug made the dte input constant, left out every
+  MO candidate and let EV hold to 23:15 on expiry eves. Corrected M1c, read once as a post-lock correction (cannot pass):
+  123 trades, -Rs 7,783, p 0.32. Signal on the underlying; no rule reads an option''s own chart.'
