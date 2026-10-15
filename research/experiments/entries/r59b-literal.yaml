@@ -11,7 +11,7 @@ data_version: 'Drive lake gdrive:IraAlgo-data-lake: stock_options_rolling_1m stk
 period:
   design: 4 Nov 2024 - 14 Oct 2026 (their span; a check of their claim only)
 instruments:
-- F&O stocks (stock options)
+- F&O stocks
 features:
 - 'signal source: the OPTION''s own price chart (NON-DEFAULT, labelled)'
 - rolling ATM 15-minute closes (offset 0, last close in the bin), Bollinger(20, 2)

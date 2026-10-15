@@ -14,7 +14,7 @@ period:
   design: 20 Nov 2024 - 31 Mar 2026
   holdout: 'final test: 1 Apr - 12 Oct 2026, read once (not pristine: other studies saw it)'
 instruments:
-- F&O stocks (stock options)
+- F&O stocks
 features:
 - 'signal source: the STOCK (equity_1m 15-minute closes; default-compatible)'
 - ATM option of the side bought; stops and locks on the option premium

@@ -13,7 +13,7 @@ period:
   design: 20 Nov 2024 - 31 Mar 2026
   holdout: 'final test: 1 Apr - 12 Oct 2026, read once (not pristine: other studies saw it)'
 instruments:
-- F&O stocks (stock options)
+- F&O stocks
 features:
 - 'signal source: the OPTION''s own price chart (NON-DEFAULT under CLAUDE.md, labelled)'
 - 'Bollinger(20, 2) over the held contract''s own 20 most recent 15-minute closes (no other contract in the window; fewer
