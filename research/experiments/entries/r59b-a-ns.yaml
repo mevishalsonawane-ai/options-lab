@@ -1,0 +1,69 @@
+id: r59b-a-ns
+title: 'R59b A: their Bollinger(20, 2) band on the HELD contract, no stop (their exit, comparison only)'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R59B_STOCK_BOLLINGER_AUDIT.md
+hypothesis: After a 15-minute close beyond the Bollinger(20, 2) band (their Bollinger(20, 2) band on the HELD contract), the
+  ATM stock option bought at the next minute and held 60 minutes on the same contract makes money after real costs and beats
+  random entries in the same session, per stock and side.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: stock_options_rolling_1m stkopt_<SYM>_MONTH (rolling ATM-1..ATM+1, nearest
+  monthly expiry, 1-minute, rebuilt per held contract), equity_1m 2024-2026, nse_bhavcopy weekly UDiFF files (expiries, lots);
+  options to 14 Oct 2026, equity to 12 Oct 2026'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: 'final test: 1 Apr - 12 Oct 2026, read once (not pristine: other studies saw it)'
+instruments:
+- F&O stocks (stock options)
+features:
+- 'signal source: the OPTION''s own price chart (NON-DEFAULT under CLAUDE.md, labelled)'
+- 'Bollinger(20, 2) over the held contract''s own 20 most recent 15-minute closes (no other contract in the window; fewer
+  than 20 bars: no signal)'
+model_or_rule: at a 15-minute bar close (bars 2-24), the ATM contract closes at or under the lower band of its own last 20
+  bars and >= Rs 5 (last trade in the bar's last 5 minutes); buy it at the next 1-minute open (within 5 min); exit 60 min
+  later or 15:25 on the same contract; no stop (their exit, comparison only); no overlap per stock and side; no trade on the
+  expiry session or the 2 sessions before it, or within 5 sessions of a corporate action
+settings: research/hunt/r59b/r59bcfg.py, research/hunt/r59b/r59bsim.py, research/hunt/r59/r59sim.py
+prereg: research/hunt/r59b/PREREG.md
+variants_tried: 21
+results:
+  summary: 'their Bollinger(20, 2) band on the HELD contract, no stop (their exit, comparison only); 1 lot; 10 stocks x CE
+    / PE + pooled. 0 of 21 cells pass (BH over all 126 R59b cells). Pooled gross before costs: design Rs -13 a trade (t -0.52),
+    final Rs +29 (t 0.7) against a median cost of Rs +180 a trade: a tuning round is not worth it. A-NS-RELIANCE-CE: design
+    158 trades, net Rs -39,729; final 82 trades, win 36.6%, Rs -273 a trade (gross -115), net Rs -22,391 (2x costs -34,254),
+    p 0.048, q 0.11: fail; A-NS-RELIANCE-PE: design 159 trades, net Rs -9,978; final 57 trades, win 35.1%, Rs -351 a trade
+    (gross -195), net Rs -19,984 (2x costs -28,183), p 0.295, q 0.32: fail; A-NS-HDFCBANK-CE: design 147 trades, net Rs -56,604;
+    final 62 trades, win 37.1%, Rs -160 a trade (gross -12), net Rs -9,900 (2x costs -18,416), p 0.066, q 0.13: fail; A-NS-HDFCBANK-PE:
+    design 135 trades, net Rs -4,268; final 57 trades, win 36.8%, Rs -80 a trade (gross +76), net Rs -4,549 (2x costs -12,865),
+    p 0.062, q 0.13: fail; A-NS-ICICIBANK-CE: design 151 trades, net Rs -25,743; final 63 trades, win 38.1%, Rs -298 a trade
+    (gross -85), net Rs -18,760 (2x costs -31,084), p 0.072, q 0.14: fail; A-NS-ICICIBANK-PE: design 136 trades, net Rs -40,374;
+    final 62 trades, win 38.7%, Rs -386 a trade (gross -181), net Rs -23,913 (2x costs -35,657), p 0.331, q 0.35: fail; A-NS-INFY-CE:
+    design 148 trades, net Rs -10,424; final 59 trades, win 40.7%, Rs -245 a trade (gross -97), net Rs -14,456 (2x costs -22,554),
+    p 0.425, q 0.43: fail; A-NS-INFY-PE: design 145 trades, net Rs -48,382; final 48 trades, win 56.2%, Rs +83 a trade (gross
+    +244), net Rs +3,977 (2x costs -3,189), p 0.002, q 0.01: fail; A-NS-TCS-CE: design 172 trades, net Rs -33,201; final 59
+    trades, win 40.7%, Rs -291 a trade (gross -150), net Rs -17,140 (2x costs -24,836), p 0.311, q 0.34: fail; A-NS-TCS-PE:
+    design 145 trades, net Rs -27,473; final 54 trades, win 51.9%, Rs -110 a trade (gross +35), net Rs -5,929 (2x costs -13,229),
+    p 0.116, q 0.19: fail; A-NS-SBIN-CE: design 156 trades, net Rs -18,995; final 69 trades, win 30.4%, Rs -287 a trade (gross
+    -88), net Rs -19,790 (2x costs -32,390), p 0.028, q 0.07: fail; A-NS-SBIN-PE: design 142 trades, net Rs -34,335; final
+    49 trades, win 46.9%, Rs -123 a trade (gross +79), net Rs -6,045 (2x costs -15,276), p 0.006, q 0.02: fail; A-NS-AXISBANK-CE:
+    design 166 trades, net Rs -20,788; final 58 trades, win 51.7%, Rs +303 a trade (gross +523), net Rs +17,574 (2x costs
+    +5,828), p 0.004, q 0.02: fail; A-NS-AXISBANK-PE: design 135 trades, net Rs -17,008; final 54 trades, win 48.1%, Rs -29
+    a trade (gross +179), net Rs -1,540 (2x costs -12,002), p 0.038, q 0.09: fail; A-NS-KOTAKBANK-CE: design 141 trades, net
+    Rs -15,475; final 51 trades, win 47.1%, Rs +187 a trade (gross +592), net Rs +9,528 (2x costs -10,697), p 0.002, q 0.01:
+    fail; A-NS-KOTAKBANK-PE: design 136 trades, net Rs -32,197; final 48 trades, win 43.8%, Rs -400 a trade (gross +15), net
+    Rs -19,182 (2x costs -39,018), p 0.110, q 0.18: fail; A-NS-ITC-CE: design 126 trades, net Rs -43,771; final 25 trades,
+    win 24.0%, Rs -373 a trade (gross -90), net Rs -9,334 (2x costs -16,416), p 0.247, q 0.31: fail; A-NS-ITC-PE: design 59
+    trades, net Rs -30,672; final 7 trades, win 28.6%, Rs -186 a trade (gross +138), net Rs -1,302 (2x costs -3,567), p 0.068,
+    q 0.13: fail; A-NS-TMPV-CE: design 148 trades, net Rs +105; final 47 trades, win 31.9%, Rs -333 a trade (gross -77), net
+    Rs -15,644 (2x costs -27,220), p 0.224, q 0.30: fail; A-NS-TMPV-PE: design 125 trades, net Rs -24,941; final 41 trades,
+    win 41.5%, Rs -251 a trade (gross +18), net Rs -10,295 (2x costs -21,017), p 0.054, q 0.11: fail; A-NS-ALL: design 2830
+    trades, net Rs -534,252; final 1052 trades, win 40.9%, Rs -180 a trade (gross +29), net Rs -189,075 (2x costs -396,042),
+    p 0.002, q 0.01: fail.'
+  costs: 1 lot in force (bhavcopy NewBrdLotQty per stock, expiry and date); next-minute fills at the open + 5 bps + the larger
+    of R17 liq 1/2/4 ticks and the stock's R59 design Roll half-spread (0.26-0.50%); stops and locks pay double; R47 stray-print
+    guard and foreign-rows filter; spikes.py flags dropped; Costs('dated') NSE charges; 2x costs (spread part and charges
+    doubled) reported; gross before costs (raw prices) reported
+holdout_read: true
+verdict: rejected
+notes: 'Random twins: 500 sets, each trade re-entered at a random bar close of its session (same stock, side, rules). NON-DEFAULT
+  signal source (option chart): could only go to paper with Boss''s explicit yes; nothing passed. Stocks: RELIANCE, HDFCBANK,
+  ICICIBANK, INFY, TCS, SBIN, AXISBANK, KOTAKBANK, ITC, TMPV (Tata Motors).'
