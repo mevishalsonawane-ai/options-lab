@@ -16,6 +16,7 @@ option contracts start at r51cfg.START.
 """
 from __future__ import annotations
 
+import json
 import pickle
 import sys
 from dataclasses import dataclass, field
@@ -25,6 +26,9 @@ import numpy as np
 import pandas as pd
 
 import r51cfg as K
+
+sys.path.insert(0, str(K.HERE.parent))
+import lakeclean  # noqa: E402
 
 EXPIRY_TV_MAX, EXPIRY_TV_JUMP = 0.6, 2.0          # R25 / R29 / R44 straddle rule
 TV_ROW = K.row(15, 15)
@@ -85,9 +89,13 @@ def expiry_days(tv: pd.Series) -> set:
     return {d for d, v in ok.items() if v}
 
 
-def add_options(und: str, days: dict, series: str = "WEEK"):
+def add_options(und: str, days: dict, series: str = "WEEK", clean: bool = False):
+    """Fill each Day's atm / con / expiry. clean (Amendment A): drop foreign rows and stray prints first (the ATM label
+    from the rows after the foreign step only); returns the log of every dropped or capped row (None when not clean)."""
     step = K.STEP[und]
     tv = {}
+    logs, total = [], 0
+    closes = {d: D.idx[3] for d, D in days.items()} if clean else None
     for y in _years():
         p = K.LAKE / f"opt_{und}_{series}_{y}.parquet"
         if not p.exists():
@@ -96,11 +104,22 @@ def add_options(und: str, days: dict, series: str = "WEEK"):
         o = o[(o.day >= K.START) & (o.day <= K.END)]
         o["side"] = o.side.astype(str).str[0].str.upper()
         o = o[(o.strike - o.spot).abs() <= 12 * step]                    # mislabelled rows (R25)
+        o = o[o.day.isin(days.keys())]
+        lab = o
+        if clean:
+            total += len(o)
+            o, lab, log = lakeclean.clean(o, closes)
+            logs.append(log)
+        labs = dict(tuple(lab[lab.offset == 0].groupby("day", sort=True)))
+        # clean: the expiry test reads its 15:15 straddle from the same rows as the ATM label (a dropped stray-open row
+        # must not hide an expiry day; that would change which days a rule skips, not just its prices)
+        tvc = (lab.drop_duplicates(["day", "side", "strike", "r"]).set_index(["day", "side", "strike", "r"]).close
+               if clean else None)
         for d, g in o.groupby("day", sort=True):
             if d not in days:
                 continue
             D = days[d]
-            a0 = g[g.offset == 0].drop_duplicates("r")
+            a0 = labs.get(d, g.iloc[:0]).drop_duplicates("r")
             atm = np.full(K.NROWS, np.nan)
             atm[a0.r.values] = a0.strike.values
             D.atm = atm
@@ -115,24 +134,39 @@ def add_options(und: str, days: dict, series: str = "WEEK"):
             if len(a):
                 last = a.iloc[a.r.values.argmax()]
                 k = float(last.strike)
-                ce, pe = D.con.get(("C", k)), D.con.get(("P", k))
                 rr = int(last.r)
-                if ce is not None and pe is not None and np.isfinite(ce[3, rr]) and np.isfinite(pe[3, rr]):
+                if clean:
+                    cc, pc = tvc.get((d, "C", k, rr), np.nan), tvc.get((d, "P", k, rr), np.nan)
+                else:
+                    ce, pe = D.con.get(("C", k)), D.con.get(("P", k))
+                    cc = ce[3, rr] if ce is not None else np.nan
+                    pc = pe[3, rr] if pe is not None else np.nan
+                if np.isfinite(cc) and np.isfinite(pc):
                     spot = float(last.spot)
-                    tv[d] = (ce[3, rr] + pe[3, rr] - abs(spot - k)) / spot * 100
+                    tv[d] = (cc + pc - abs(spot - k)) / spot * 100
     for d in expiry_days(pd.Series(tv)):
         days[d].expiry = True
+    if not clean:
+        return None
+    log = pd.concat(logs, ignore_index=True) if logs else pd.DataFrame(columns=["day", "r", "side", "strike", "why"])
+    log.attrs["rows"] = total
+    return log
 
 
 def build(und: str) -> dict:
     days = index_days(und)
-    add_options(und, days)
+    log = add_options(und, days, clean=K.CLEAN)
     K.OUT.mkdir(parents=True, exist_ok=True)
     with open(K.OUT / f"day_{und}.pkl", "wb") as f:
         pickle.dump(days, f, protocol=pickle.HIGHEST_PROTOCOL)
     tradable = [d for d, D in days.items() if d >= K.START and D.atm is not None]
-    return dict(und=und, days=len(days), option_days=len(tradable), first=str(min(tradable)), last=str(max(tradable)),
-                expiry_days=sum(D.expiry for D in days.values()))
+    out = dict(und=und, days=len(days), option_days=len(tradable), first=str(min(tradable)), last=str(max(tradable)),
+               expiry_days=sum(D.expiry for D in days.values()))
+    if log is not None:                     # Amendment A: what the cleaning removed (outside git, with the stores)
+        out["clean"] = lakeclean.counts(log, log.attrs["rows"])
+        log.to_parquet(K.OUT / f"clean_log_{und}.parquet", index=False)
+        (K.OUT / f"clean_counts_{und}.json").write_text(json.dumps(out["clean"]))
+    return out
 
 
 _CACHE: dict = {}

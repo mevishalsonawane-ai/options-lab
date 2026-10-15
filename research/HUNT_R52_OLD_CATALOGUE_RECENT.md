@@ -33,6 +33,56 @@ Code, tests and results are in `hunt/r52/`. Pre-registration: `hunt/r52/PREREG.m
 and grid committed in `results/rules_prereg.json` before its design run, and Amendment 1 on the twins. Experiment
 entries: `experiments/entries/r52-*.yaml` (114).
 
+## Amendment 2: foreign-rows and stray-print re-pricing (15 Oct 2026): H37-10:g17 still passes, unchanged
+
+**Verdict: cleaning does not move the passing rule's final test by a rupee. H37-10:g17 still passes every gate:
+294 trades, +Rs 48,772, twin p 0.001, BH q 0.027 (coin-flip p 0.014).** No share of its profit came from foreign or
+stray rows. Its caveats stand as before: MIDCPNIFTY still carries +Rs 46,329 of it, and the top 5 trades are 82% of the net.
+
+Why it was re-priced: R47 found rows of another underlying in the lake's rolling option files (their own spot more than
+3% from the index) and added a stray-print guard; R52 applied neither. Amendment 2 (PREREG.md, committed before any
+cleaned number) re-prices the frozen g17 setting (H37-10:orig as information) on cleaned data: same rule, spans and
+gates, same twins, BH over the same 188 final reads with only these p replaced. The final test is re-priced, not
+re-selected. Code: `research/hunt/lakeclean.py` (shared with R51), `hunt/r52/lake2obuy.py --clean`,
+`hunt/r52/r52amend.py`; results `hunt/r52/results/amend_clean.json` and `.md`.
+
+- **Reproduction first:** on the current lake (re-uploaded on 15 Oct after R52's design runs, before its final read), the
+  original code reproduces the committed final test exactly (g17: 294 trades, +Rs 48,772; orig: 294, -Rs 1,912).
+- **What cleaning removed** (all option rows 2024 - 13 Oct 2026, WEEK and MONTH files):
+
+| Index / series | option rows | foreign dropped | stray opens dropped | highs capped |
+|---|---:|---:|---:|---:|
+| NIFTY WEEK | 10,858,958 | 0 | 51,219 | 113,765 |
+| NIFTY MONTH | 10,841,490 | 600 (0.01%) | 17,733 | 24,458 |
+| BANKNIFTY WEEK | 10,851,131 | 440 (0.00%) | 38,327 | 47,721 |
+| BANKNIFTY MONTH | 10,805,837 | 39,588 (0.37%) | 19,524 | 20,919 |
+| FINNIFTY WEEK | 10,006,449 | 131,934 (1.32%) | 48,986 | 56,935 |
+| FINNIFTY MONTH | 8,418,155 | 191,081 (2.27%) | 74,559 | 22,997 |
+| MIDCPNIFTY WEEK | 10,707,375 | 1,722 (0.02%) | 37,051 | 65,186 |
+| MIDCPNIFTY MONTH | 9,066,828 | 47,945 (0.53%) | 49,917 | 26,372 |
+| SENSEX WEEK | 10,641,918 | 1,921 (0.02%) | 87,773 | 116,315 |
+| SENSEX MONTH | 7,228,511 | 63,109 (0.87%) | 54,177 | 24,859 |
+
+- **Results:**
+
+| Setting | ORIGINAL final: trades, net, p, q | CLEANED final: trades, net, p, q | cleaned design (walk-forward) | verdict |
+|---|---|---|---|---|
+| H37-10:g17 (the pass) | 294, +Rs 48,772, 0.001, 0.027 | 294, +Rs 48,772, 0.001, 0.027 | 714 trades +Rs 295,305 (WF +Rs 275,024; was +272,367) | PASS |
+| H37-10:orig (information) | 294, -Rs 1,912, 0.003, 0.056 | 294, -Rs 1,912, 0.003, 0.056 | 714 trades -Rs 37,807 (WF -Rs 10,205) | FAIL |
+
+- **Why nothing moved in the final test:** g17 buys at a minute's open and sells 60 minutes later at an open, so only
+  the entry and exit rows price it. 5 of its 294 original final trades had a removed or capped row of their contract
+  between entry and exit (1 stray open, 4 capped highs; FINNIFTY 4, MIDCPNIFTY 1). None was at a fill, and none touched
+  a foreign row. In design, 16 of 714 trades were touched (9 stray opens, 9 capped highs, 0 foreign), and the design net
+  moved +Rs 2,657.
+- **By index (cleaned final):** MIDCPNIFTY +Rs 46,329, BANKNIFTY +Rs 6,794, SENSEX +Rs 4,775, FINNIFTY -Rs 4,647,
+  NIFTY -Rs 4,479.
+- **Twice the spread and slippage** (cleaned): final 294 trades +Rs 41,086 (p 0.002, coin-flip p 0.015; MIDCPNIFTY
+  +Rs 43,520), design +Rs 277,608.
+- **Expiry labels held fixed:** obuy finds expiry days from the chain's last prices, and the stray step alone changed
+  36 of 3,452 index-day flags. As pre-registered in the note to Amendment 2, the cleaned run pins the flags from a
+  foreign-only layout (identical to the original's on every index-day), so cleaning cannot change which days are skipped.
+
 ## What was done
 
 1. **Catalogue (`hunt/r52/CATALOGUE.md`).**

@@ -27,6 +27,11 @@ for p in (ROOT, ROOT / "research", HERE):
 CACHE_ROOT = Path(os.environ.get("IRAALGO_CACHE", Path.home() / ".cache" / "iraalgo")).expanduser()
 LAKE = Path(os.environ.get("IRAALGO_LAKE", CACHE_ROOT / "lake")).expanduser()
 OUT = Path(os.environ.get("R51_OUT", CACHE_ROOT / "r51")).expanduser()
+# Amendment A (15 Oct 2026): R51_CLEAN=1 builds and reads the stores with foreign rows and stray prints removed
+# (research/hunt/lakeclean.py), in their own folder so the original stores and trade caches are never mixed with them.
+CLEAN = os.environ.get("R51_CLEAN", "0") == "1"
+if CLEAN:
+    OUT = OUT / "clean"
 RESULTS = HERE / "results"
 FINAL_FLAG = RESULTS / "FINAL_READ"
 

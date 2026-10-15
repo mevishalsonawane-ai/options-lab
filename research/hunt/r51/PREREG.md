@@ -123,3 +123,65 @@ sessions of the period), average win / loss, worst day, max drawdown, p, q, pass
 `research/experiments/entries/r51-*.yaml`; a FINDINGS.md section; the end of the write-up lists which strategies (exact
 settings) would come back on PAPER under the Nov-2024+ view and which stay off. A pass would be a candidate for paper
 only (Boss decides; paper changes never carry over to live by themselves).
+
+## Amendment A (15 Oct 2026, after the one final read): foreign-rows and stray-print re-pricing
+
+Foreign-rows and stray-print re-pricing of the passing rule and the near-misses; same rules, same spans, same gates;
+the final test is re-priced, not re-selected.
+
+Why: R47 (branch integ-1014c, `research/hunt/r47/r47data.py foreign_rows`) found that the lake's rolling option files
+carry rows of ANOTHER underlying (their own `spot` is far from the index at that minute), and added a stray-print guard
+(`r47price.py`). R51 applied neither. Written before any cleaned number exists.
+
+- **Cleaning** (`research/hunt/lakeclean.py`, the same code for R51 and R52):
+  1. *Foreign rows* (R47's rule): an option row is dropped when its own `spot` is more than 3% from the index close at
+     that minute (the session's last earlier close if that minute has none; dropped if the session has neither).
+  2. *Stray prints* (R47's thresholds), per contract (side, strike) and session, on the rows left after step 1: ref = the
+     median of the closes of the row before, the row and the row after (its own close at the ends). A row whose open is
+     more than 2 ticks AND more than 20% away from ref is dropped. A high more than 20% above ref is capped at ref x 1.2.
+     Lows are left alone (a stray low can only hurt a buyer). Difference from R47: R47 fills at the worse of the open
+     and ref; here the row goes, so the engine's existing next-minute rule fills at the next traded minute.
+  3. The ATM strike of each minute comes from the rows after step 1 and before step 2 (a stray price does not change a
+     strike's label).
+- **What is re-priced:** the passing rule R44-donchian20-RT, and every gated variant that failed with a final q <= 0.20
+  on index options (26 variants, listed by `amend.py targets`). M4-SILVERM (q 0.141) is an MCX contract with no index to
+  check against and keeps its original numbers.
+- **Same rules and spans:** design 20 Nov 2024 - 31 Mar 2026, final test 1 Apr - 13 Oct 2026; index warm-up as before.
+  Only lake files for 2024 onwards are copied; no option row before 20 Nov 2024 is used.
+- **Design:** each re-priced variant is re-run on the cleaned design data (re-tunes: the whole grid, so the walk-forward
+  gate is re-computed the same way). **Final:** the ORIGINAL frozen config of each variant (`final.json` config), never
+  re-picked; if the cleaned design would pick another grid point, that is only reported.
+- **Twins and BH:** the same random-entry twins (500, seed 51). BH over the same 125 gated variants, with the re-priced p
+  for the re-priced variants and the original final p for the rest. Gates unchanged.
+- **Also reported (information, no gate):** drop counts per index; how many of the passing rule's ORIGINAL trades
+  touched a dropped or capped row (entry, exit or any minute between, or a contract that existed only in foreign rows);
+  the passing rule at twice the spread and slippage (bps and tick half-spreads doubled, charges unchanged).
+- **Read once:** `amend.py run` writes `results/amend_clean.json` and refuses if it exists or if this amendment is not
+  committed unchanged.
+
+**Note to Amendment A (15 Oct 2026, before the cleaned read).** The Drive lake's option files were re-fetched from Dhan
+and re-uploaded at 04:25-04:47 UTC on 15 Oct, after R51's final read (04:06 UTC). On the current lake the ORIGINAL code
+reproduces R44-donchian20-RT's design exactly (4,517 trades, +Rs 33,681) but not its final test (now 1,787 trades,
++Rs 66,047, against the committed 1,775 and +Rs 48,689; same 133 sessions). So the write-up reports three numbers: the
+committed result, the original rules on the current lake (raw), and on the current lake cleaned. The share of profit due
+to foreign or stray rows is measured as raw-now minus cleaned-now (same lake version). Gates are judged on cleaned-now,
+as registered. (R52 reproduces exactly on the current lake: H37-10:g17 294 trades, +Rs 48,772.)
+
+**Second note (15 Oct 2026, before the cleaned read).** The first cleaned build showed that dropping stray-open rows
+hid 15:15 straddle prices and so un-flagged expiry days (NIFTY 99 -> 71), which would change which days a rule skips: a
+re-selection, not a re-pricing. The expiry test now reads its 15:15 straddle from the same rows as the ATM label (after
+the foreign step, before the stray step), as point 3 already does for the ATM strike. Result: the cleaned stores carry
+exactly the original expiry days for every index; the ATM label changes on 22 FINNIFTY days (foreign rows) only.
+
+**Third note (15 Oct 2026, before any number of these variants was seen).** The 10 near-misses of the F1, R41 and B2
+families (F1-C1, F1-C1-RT, F1-S7, F1-S7-RT, R41-R1, R41-R2, R41-R2-RT, R41-R5, R41-R5-RT, B2-G60-RT) read the brain
+feature store, which R51 built from the lake from June 2023 and which is itself computed from the uncleaned option
+chain. It is not in this session, and rebuilding it needs option data before this amendment's window. They are not
+re-priced and keep their original p in the BH. The re-priced set is the passing rule and 16 near-misses (the R44 and R29
+families). R29 reads index bars from 2023 for warm-up only (as in R51); on the current lake its design reproduces
+exactly (R29-R3: 200 trades, -Rs 5,826; R29-R8: 987, -Rs 188,223).
+
+**Fourth note (15 Oct 2026).** Boss: the study uses Nov 2024 onwards only. R29 needs 2023 index bars for its warm-up,
+so the 10 R29 near-misses are taken out of the re-pricing (decided before any of their cleaned numbers was looked at;
+the 2023 files were deleted). They keep their original p. The re-priced set is the passing rule and the 6 R44
+near-misses; the BH replaces only those 7 p-values.

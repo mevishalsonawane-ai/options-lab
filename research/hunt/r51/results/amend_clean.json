@@ -1,0 +1,648 @@
+{
+ "read": "2026-10-15T09:49:32.741026+00:00",
+ "targets": [
+  "R44-donchian20-RT",
+  "R44-ema821_adx15-RT",
+  "R44-ema821_adx15_plock-RT",
+  "R44-ema921_adx20",
+  "R44-ema821_adx15",
+  "R44-ema821_adx15_plock",
+  "R44-ema926_adx20"
+ ],
+ "drops": {
+  "NIFTY": {
+   "rows": 7390477,
+   "foreign": 0,
+   "stray_open": 33702,
+   "high_capped": 71841
+  },
+  "BANKNIFTY": {
+   "rows": 7384644,
+   "foreign": 440,
+   "stray_open": 11582,
+   "high_capped": 14004
+  },
+  "FINNIFTY": {
+   "rows": 6522558,
+   "foreign": 115698,
+   "stray_open": 23971,
+   "high_capped": 13528
+  },
+  "MIDCPNIFTY": {
+   "rows": 7244519,
+   "foreign": 0,
+   "stray_open": 12781,
+   "high_capped": 16004
+  },
+  "SENSEX": {
+   "rows": 7371834,
+   "foreign": 0,
+   "stray_open": 58276,
+   "high_capped": 62186
+  }
+ },
+ "variants": {
+  "R44-donchian20-RT": {
+   "kind": "retune",
+   "config": "donchian20|B|m1",
+   "wf_net": 169661.0,
+   "wf_picks": [
+    "donchian20|B|m1",
+    "donchian20|B|m1",
+    "donchian20|B|m1",
+    "donchian20|B|m1"
+   ],
+   "clean_pick": "donchian20|B|m1",
+   "design": {
+    "trades": 4518,
+    "win": 0.4471,
+    "net": 8281.0,
+    "per_day": 24.6,
+    "avg_win": 1694.0,
+    "avg_loss": -1366.0,
+    "worst_day": -56647.0,
+    "max_dd": 218701.0,
+    "ex_top5": -43092.0,
+    "top5_share": 6.204,
+    "days": 337,
+    "why": {
+     "time": 3155,
+     "stop": 832,
+     "target": 336,
+     "squareoff": 179,
+     "missing": 16
+    }
+   },
+   "final": {
+    "trades": 1787,
+    "win": 0.4426,
+    "net": 55439.0,
+    "per_day": 416.8,
+    "avg_win": 1566.0,
+    "avg_loss": -1188.0,
+    "worst_day": -23012.0,
+    "max_dd": 92452.0,
+    "ex_top5": 13436.0,
+    "top5_share": 0.758,
+    "days": 133,
+    "why": {
+     "time": 1382,
+     "stop": 240,
+     "target": 94,
+     "squareoff": 71
+    },
+    "p": 0.002,
+    "twin_mean": -129258.0,
+    "by_und": {
+     "BANKNIFTY": 13504.0,
+     "FINNIFTY": 41263.0,
+     "MIDCPNIFTY": 5461.0,
+     "NIFTY": -18955.0,
+     "SENSEX": 14166.0
+    },
+    "q": 0.025
+   },
+   "orig": {
+    "final_net": 48689.0,
+    "final_trades": 1775,
+    "p": 0.002,
+    "q": 0.025,
+    "verdict": "PASS",
+    "wf_net": 181820.0
+   },
+   "pass": true,
+   "verdict": "PASS",
+   "passing_info": {
+    "raw_now": {
+     "trades": 1787,
+     "win": 0.4432,
+     "net": 66047.0,
+     "per_day": 496.6,
+     "avg_win": 1575.0,
+     "avg_loss": -1187.0,
+     "worst_day": -23012.0,
+     "max_dd": 92452.0,
+     "ex_top5": 23204.0,
+     "top5_share": 0.649,
+     "days": 133,
+     "why": {
+      "time": 1380,
+      "stop": 240,
+      "target": 96,
+      "squareoff": 71
+     },
+     "p": 0.002,
+     "twin_mean": -127570.0,
+     "by_und": {
+      "BANKNIFTY": 13504.0,
+      "FINNIFTY": 51255.0,
+      "MIDCPNIFTY": 5461.0,
+      "NIFTY": -18955.0,
+      "SENSEX": 14784.0
+     }
+    },
+    "touched_design": {
+     "trades": 4517,
+     "net": 33681.0,
+     "foreign": {
+      "trades": 0,
+      "net": 0.0
+     },
+     "foreign_contract": {
+      "trades": 0,
+      "net": 0.0
+     },
+     "stray_open": {
+      "trades": 20,
+      "net": -11305.0
+     },
+     "high_capped": {
+      "trades": 9,
+      "net": -10691.0
+     },
+     "any": {
+      "trades": 29,
+      "net": -21996.0
+     }
+    },
+    "touched_final": {
+     "trades": 1787,
+     "net": 66047.0,
+     "foreign": {
+      "trades": 0,
+      "net": 0.0
+     },
+     "foreign_contract": {
+      "trades": 0,
+      "net": 0.0
+     },
+     "stray_open": {
+      "trades": 5,
+      "net": 13494.0
+     },
+     "high_capped": {
+      "trades": 1,
+      "net": 5320.0
+     },
+     "any": {
+      "trades": 6,
+      "net": 18814.0
+     }
+    },
+    "slip2": {
+     "design": {
+      "trades": 4518,
+      "win": 0.4416,
+      "net": -111255.0,
+      "per_day": -330.1,
+      "avg_win": 1690.0,
+      "avg_loss": -1380.0,
+      "worst_day": -57420.0,
+      "max_dd": 251167.0,
+      "ex_top5": -162457.0,
+      "top5_share": null,
+      "days": 337,
+      "why": {
+       "time": 3155,
+       "stop": 832,
+       "target": 336,
+       "squareoff": 179,
+       "missing": 16
+      }
+     },
+     "final": {
+      "trades": 1787,
+      "win": 0.4376,
+      "net": 5757.0,
+      "per_day": 43.3,
+      "avg_win": 1556.0,
+      "avg_loss": -1205.0,
+      "worst_day": -23377.0,
+      "max_dd": 108175.0,
+      "ex_top5": -36081.0,
+      "top5_share": 7.267,
+      "days": 133,
+      "why": {
+       "time": 1382,
+       "stop": 240,
+       "target": 94,
+       "squareoff": 71
+      },
+      "p": 0.002,
+      "twin_mean": -179147.0
+     },
+     "by_und": {
+      "BANKNIFTY": 3127.0,
+      "FINNIFTY": 28450.0,
+      "MIDCPNIFTY": -10975.0,
+      "NIFTY": -25023.0,
+      "SENSEX": 10178.0
+     }
+    }
+   }
+  },
+  "R44-ema821_adx15-RT": {
+   "kind": "retune",
+   "config": "ema821_adx15|B|m1",
+   "wf_net": -43858.0,
+   "wf_picks": [
+    "ema821_adx15|B|m1",
+    "ema821_adx15|B|m1",
+    "ema821_adx15|B|m1",
+    "ema821_adx15|B|m1"
+   ],
+   "clean_pick": "ema821_adx15|B|m1",
+   "design": {
+    "trades": 3129,
+    "win": 0.4327,
+    "net": -76507.0,
+    "per_day": -227.0,
+    "avg_win": 1593.0,
+    "avg_loss": -1258.0,
+    "worst_day": -26517.0,
+    "max_dd": 99824.0,
+    "ex_top5": -127756.0,
+    "top5_share": null,
+    "days": 334,
+    "why": {
+     "time": 2134,
+     "stop": 543,
+     "squareoff": 223,
+     "target": 222,
+     "missing": 7
+    }
+   },
+   "final": {
+    "trades": 1270,
+    "win": 0.4472,
+    "net": -24854.0,
+    "per_day": -186.9,
+    "avg_win": 1432.0,
+    "avg_loss": -1194.0,
+    "worst_day": -22019.0,
+    "max_dd": 93574.0,
+    "ex_top5": -59040.0,
+    "top5_share": null,
+    "days": 131,
+    "why": {
+     "time": 930,
+     "stop": 182,
+     "squareoff": 102,
+     "target": 56
+    },
+    "p": 0.006,
+    "twin_mean": -163731.0,
+    "by_und": {
+     "BANKNIFTY": 338.0,
+     "FINNIFTY": -4564.0,
+     "MIDCPNIFTY": -3157.0,
+     "NIFTY": -16849.0,
+     "SENSEX": -622.0
+    },
+    "q": 0.0536
+   },
+   "orig": {
+    "final_net": -34495.0,
+    "final_trades": 1262,
+    "p": 0.014,
+    "q": 0.1029,
+    "verdict": "final net <= 0; q > 0.10; top-5 trades >= net; design walk-forward <= 0",
+    "wf_net": -41279.0
+   },
+   "pass": false,
+   "verdict": "final net <= 0; top-5 trades >= net; design walk-forward <= 0"
+  },
+  "R44-ema821_adx15_plock-RT": {
+   "kind": "retune",
+   "config": "ema821_adx15_plock|B|m1",
+   "wf_net": -42272.0,
+   "wf_picks": [
+    "ema821_adx15_plock|B|m1",
+    "ema821_adx15_plock|B|m1",
+    "ema821_adx15_plock|B|m1",
+    "ema821_adx15_plock|B|m1"
+   ],
+   "clean_pick": "ema821_adx15_plock|B|m1",
+   "design": {
+    "trades": 3129,
+    "win": 0.4305,
+    "net": -76147.0,
+    "per_day": -226.0,
+    "avg_win": 1596.0,
+    "avg_loss": -1249.0,
+    "worst_day": -25438.0,
+    "max_dd": 97487.0,
+    "ex_top5": -127396.0,
+    "top5_share": null,
+    "days": 334,
+    "why": {
+     "time": 2123,
+     "stop": 538,
+     "target": 221,
+     "squareoff": 221,
+     "lock": 19,
+     "missing": 7
+    }
+   },
+   "final": {
+    "trades": 1270,
+    "win": 0.4457,
+    "net": -23109.0,
+    "per_day": -173.7,
+    "avg_win": 1437.0,
+    "avg_loss": -1188.0,
+    "worst_day": -22019.0,
+    "max_dd": 92362.0,
+    "ex_top5": -57295.0,
+    "top5_share": null,
+    "days": 131,
+    "why": {
+     "time": 925,
+     "stop": 182,
+     "squareoff": 102,
+     "target": 56,
+     "lock": 5
+    },
+    "p": 0.006,
+    "twin_mean": -163657.0,
+    "by_und": {
+     "BANKNIFTY": 1144.0,
+     "FINNIFTY": -3913.0,
+     "MIDCPNIFTY": -3512.0,
+     "NIFTY": -15932.0,
+     "SENSEX": -895.0
+    },
+    "q": 0.0536
+   },
+   "orig": {
+    "final_net": -32749.0,
+    "final_trades": 1262,
+    "p": 0.014,
+    "q": 0.1029,
+    "verdict": "final net <= 0; q > 0.10; top-5 trades >= net; design walk-forward <= 0",
+    "wf_net": -38882.0
+   },
+   "pass": false,
+   "verdict": "final net <= 0; top-5 trades >= net; design walk-forward <= 0"
+  },
+  "R44-ema921_adx20": {
+   "kind": "orig",
+   "config": "ema921_adx20|A|m0",
+   "design": {
+    "trades": 1824,
+    "win": 0.4309,
+    "net": -86460.0,
+    "per_day": -256.6,
+    "avg_win": 2099.0,
+    "avg_loss": -1673.0,
+    "worst_day": -35420.0,
+    "max_dd": 157501.0,
+    "ex_top5": -159053.0,
+    "top5_share": null,
+    "days": 317,
+    "why": {
+     "time": 1224,
+     "squareoff": 270,
+     "stop": 233,
+     "target": 95,
+     "missing": 2
+    }
+   },
+   "wf_net": -86460.0,
+   "final": {
+    "trades": 781,
+    "win": 0.4174,
+    "net": 89213.0,
+    "per_day": 670.8,
+    "avg_win": 2220.0,
+    "avg_loss": -1394.0,
+    "worst_day": -20212.0,
+    "max_dd": 75946.0,
+    "ex_top5": 29152.0,
+    "top5_share": 0.673,
+    "days": 126,
+    "why": {
+     "time": 551,
+     "squareoff": 118,
+     "stop": 74,
+     "target": 38
+    },
+    "p": 0.008,
+    "twin_mean": -45476.0,
+    "by_und": {
+     "BANKNIFTY": 35703.0,
+     "FINNIFTY": 13089.0,
+     "MIDCPNIFTY": 28328.0,
+     "NIFTY": 7039.0,
+     "SENSEX": 5053.0
+    },
+    "q": 0.0667
+   },
+   "orig": {
+    "final_net": 75769.0,
+    "final_trades": 774,
+    "p": 0.018,
+    "q": 0.1125,
+    "verdict": "q > 0.10; design walk-forward <= 0",
+    "wf_net": -98038.0
+   },
+   "pass": false,
+   "verdict": "design walk-forward <= 0"
+  },
+  "R44-ema821_adx15": {
+   "kind": "orig",
+   "config": "ema821_adx15|A|m0",
+   "design": {
+    "trades": 3066,
+    "win": 0.4234,
+    "net": -168932.0,
+    "per_day": -501.3,
+    "avg_win": 1956.0,
+    "avg_loss": -1532.0,
+    "worst_day": -38421.0,
+    "max_dd": 196714.0,
+    "ex_top5": -241525.0,
+    "top5_share": null,
+    "days": 334,
+    "why": {
+     "time": 2101,
+     "squareoff": 461,
+     "stop": 349,
+     "target": 150,
+     "missing": 5
+    }
+   },
+   "wf_net": -168932.0,
+   "final": {
+    "trades": 1239,
+    "win": 0.4229,
+    "net": 38867.0,
+    "per_day": 292.2,
+    "avg_win": 2087.0,
+    "avg_loss": -1475.0,
+    "worst_day": -28823.0,
+    "max_dd": 99057.0,
+    "ex_top5": -23227.0,
+    "top5_share": 1.598,
+    "days": 131,
+    "why": {
+     "time": 854,
+     "squareoff": 205,
+     "stop": 124,
+     "target": 56
+    },
+    "p": 0.016,
+    "twin_mean": -114761.0,
+    "by_und": {
+     "BANKNIFTY": 17652.0,
+     "FINNIFTY": 9314.0,
+     "MIDCPNIFTY": 16050.0,
+     "NIFTY": -11609.0,
+     "SENSEX": 7460.0
+    },
+    "q": 0.1023
+   },
+   "orig": {
+    "final_net": 19511.0,
+    "final_trades": 1231,
+    "p": 0.0319,
+    "q": 0.1595,
+    "verdict": "q > 0.10; top-5 trades >= net; design walk-forward <= 0",
+    "wf_net": -220400.0
+   },
+   "pass": false,
+   "verdict": "q > 0.10; top-5 trades >= net; design walk-forward <= 0"
+  },
+  "R44-ema821_adx15_plock": {
+   "kind": "orig",
+   "config": "ema821_adx15_plock|A|m0",
+   "design": {
+    "trades": 3066,
+    "win": 0.4067,
+    "net": -207077.0,
+    "per_day": -614.5,
+    "avg_win": 1981.0,
+    "avg_loss": -1472.0,
+    "worst_day": -37065.0,
+    "max_dd": 220902.0,
+    "ex_top5": -279670.0,
+    "top5_share": null,
+    "days": 334,
+    "why": {
+     "time": 2017,
+     "squareoff": 457,
+     "stop": 340,
+     "target": 145,
+     "lock": 102,
+     "missing": 5
+    }
+   },
+   "wf_net": -207077.0,
+   "final": {
+    "trades": 1239,
+    "win": 0.4189,
+    "net": 40837.0,
+    "per_day": 307.0,
+    "avg_win": 2100.0,
+    "avg_loss": -1457.0,
+    "worst_day": -28823.0,
+    "max_dd": 95851.0,
+    "ex_top5": -21258.0,
+    "top5_share": 1.521,
+    "days": 131,
+    "why": {
+     "time": 842,
+     "squareoff": 205,
+     "stop": 123,
+     "target": 56,
+     "lock": 13
+    },
+    "p": 0.018,
+    "twin_mean": -114826.0,
+    "by_und": {
+     "BANKNIFTY": 19758.0,
+     "FINNIFTY": 9314.0,
+     "MIDCPNIFTY": 14866.0,
+     "NIFTY": -9354.0,
+     "SENSEX": 6252.0
+    },
+    "q": 0.1023
+   },
+   "orig": {
+    "final_net": 21480.0,
+    "final_trades": 1231,
+    "p": 0.0319,
+    "q": 0.1595,
+    "verdict": "q > 0.10; top-5 trades >= net; design walk-forward <= 0",
+    "wf_net": -255364.0
+   },
+   "pass": false,
+   "verdict": "q > 0.10; top-5 trades >= net; design walk-forward <= 0"
+  },
+  "R44-ema926_adx20": {
+   "kind": "orig",
+   "config": "ema926_adx20|A|m0",
+   "design": {
+    "trades": 1574,
+    "win": 0.425,
+    "net": -126448.0,
+    "per_day": -375.2,
+    "avg_win": 2130.0,
+    "avg_loss": -1714.0,
+    "worst_day": -30564.0,
+    "max_dd": 155185.0,
+    "ex_top5": -199041.0,
+    "top5_share": null,
+    "days": 306,
+    "why": {
+     "time": 1046,
+     "squareoff": 232,
+     "stop": 206,
+     "target": 86,
+     "missing": 4
+    }
+   },
+   "wf_net": -126448.0,
+   "final": {
+    "trades": 660,
+    "win": 0.4242,
+    "net": 92013.0,
+    "per_day": 691.8,
+    "avg_win": 2372.0,
+    "avg_loss": -1506.0,
+    "worst_day": -21169.0,
+    "max_dd": 64426.0,
+    "ex_top5": 34860.0,
+    "top5_share": 0.621,
+    "days": 125,
+    "why": {
+     "time": 471,
+     "squareoff": 89,
+     "stop": 65,
+     "target": 35
+    },
+    "p": 0.0299,
+    "twin_mean": -13544.0,
+    "by_und": {
+     "BANKNIFTY": 52067.0,
+     "FINNIFTY": 20688.0,
+     "MIDCPNIFTY": 13228.0,
+     "NIFTY": 6040.0,
+     "SENSEX": -10.0
+    },
+    "q": 0.1437
+   },
+   "orig": {
+    "final_net": 78014.0,
+    "final_trades": 653,
+    "p": 0.0399,
+    "q": 0.1781,
+    "verdict": "q > 0.10; design walk-forward <= 0",
+    "wf_net": -138489.0
+   },
+   "pass": false,
+   "verdict": "q > 0.10; design walk-forward <= 0"
+  }
+ },
+ "not_repriced_r29": "Boss, 15 Oct: Nov 2024 onwards only; R29 needs 2023 index warm-up, so it keeps its original p"
+}

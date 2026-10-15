@@ -1,0 +1,412 @@
+{
+ "read": "2026-10-15 09:37:09",
+ "drops": {
+  "NIFTY_WEEK": {
+   "rows": 10858958,
+   "foreign": 0,
+   "stray_open": 51219,
+   "high_capped": 113765
+  },
+  "NIFTY_MONTH": {
+   "rows": 10841490,
+   "foreign": 600,
+   "stray_open": 17733,
+   "high_capped": 24458
+  },
+  "BANKNIFTY_WEEK": {
+   "rows": 10851131,
+   "foreign": 440,
+   "stray_open": 38327,
+   "high_capped": 47721
+  },
+  "BANKNIFTY_MONTH": {
+   "rows": 10805837,
+   "foreign": 39588,
+   "stray_open": 19524,
+   "high_capped": 20919
+  },
+  "FINNIFTY_WEEK": {
+   "rows": 10006449,
+   "foreign": 131934,
+   "stray_open": 48986,
+   "high_capped": 56935
+  },
+  "FINNIFTY_MONTH": {
+   "rows": 8418155,
+   "foreign": 191081,
+   "stray_open": 74559,
+   "high_capped": 22997
+  },
+  "MIDCPNIFTY_WEEK": {
+   "rows": 10707375,
+   "foreign": 1722,
+   "stray_open": 37051,
+   "high_capped": 65186
+  },
+  "MIDCPNIFTY_MONTH": {
+   "rows": 9066828,
+   "foreign": 47945,
+   "stray_open": 49917,
+   "high_capped": 26372
+  },
+  "SENSEX_WEEK": {
+   "rows": 10641918,
+   "foreign": 1921,
+   "stray_open": 87773,
+   "high_capped": 116315
+  },
+  "SENSEX_MONTH": {
+   "rows": 7228511,
+   "foreign": 63109,
+   "stray_open": 54177,
+   "high_capped": 24859
+  }
+ },
+ "settings": {
+  "orig": {
+   "design": {
+    "trades": 714,
+    "days": 337,
+    "win_rate": 0.43137254901960786,
+    "net": -37807.38000000002,
+    "per_trade": -52.95151260504204,
+    "per_day": -112.18807121661727,
+    "avg_win": 897.9768506493506,
+    "avg_loss": -774.3454433497537,
+    "worst_day": -8935.279999999995,
+    "max_dd": -69633.42000000003,
+    "top5_share": NaN,
+    "p": 0.020989505247376312,
+    "twin_mean": -120.86678360644254,
+    "twins_used": 714,
+    "p_flip": 0.0014992503748125937,
+    "twin_flip_mean": -150.79575474089629,
+    "by_und": {
+     "BANKNIFTY": -12907.979999999958,
+     "FINNIFTY": 6766.840000000002,
+     "MIDCPNIFTY": 1343.339999999941,
+     "NIFTY": -23054.66000000001,
+     "SENSEX": -9954.919999999998
+    },
+    "by_fold": [
+     -20235.629999999994,
+     -13400.060000000005,
+     4868.229999999993,
+     18562.680000000008
+    ],
+    "exits": {
+     "stop": 406,
+     "target": 308
+    }
+   },
+   "wf_design": -10204.780000000002,
+   "final": {
+    "trades": 294,
+    "days": 133,
+    "win_rate": 0.445578231292517,
+    "net": -1911.8999999999687,
+    "per_trade": -6.50306122448969,
+    "per_day": -14.375187969924577,
+    "avg_win": 980.0252671755725,
+    "avg_loss": -799.357116564417,
+    "worst_day": -6230.179999999995,
+    "max_dd": -16929.609999999993,
+    "top5_share": NaN,
+    "p": 0.0029985007496251873,
+    "twin_mean": -183.43151571428567,
+    "twins_used": 294,
+    "p_flip": 0.009995002498750625,
+    "twin_flip_mean": -145.16412797619043,
+    "by_und": {
+     "BANKNIFTY": -2590.439999999983,
+     "FINNIFTY": -3942.8199999999842,
+     "MIDCPNIFTY": 12308.249999999989,
+     "NIFTY": -1767.9199999999955,
+     "SENSEX": -5918.969999999994
+    },
+    "by_fold": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "exits": {
+     "stop": 161,
+     "target": 131,
+     "square_off": 2
+    },
+    "q": 0.05637181409295352
+   },
+   "orig": {
+    "trades": 294,
+    "net": -1911.8999999999687,
+    "p": 0.0029985007496251873,
+    "q": 0.05637181409295352,
+    "by_und": {
+     "BANKNIFTY": -2590.439999999983,
+     "FINNIFTY": -3942.8199999999842,
+     "MIDCPNIFTY": 12308.249999999989,
+     "NIFTY": -1767.9199999999955,
+     "SENSEX": -5918.969999999994
+    },
+    "wf_design": -1481.1699999999983,
+    "verdict": "FAIL",
+    "design_net": -29083.77000000002
+   },
+   "gates": {
+    "final_net": false,
+    "p": true,
+    "q": true,
+    "trades": true,
+    "top5": false,
+    "design_wf": false,
+    "pass": false,
+    "verdict": "FAIL"
+   }
+  },
+  "g17": {
+   "design": {
+    "trades": 714,
+    "days": 337,
+    "win_rate": 0.5406162464985994,
+    "net": 295305.1600000001,
+    "per_trade": 413.5926610644259,
+    "per_day": 876.2764391691397,
+    "avg_win": 2587.2105958549223,
+    "avg_loss": -2144.3845426829266,
+    "worst_day": -21272.530000000002,
+    "max_dd": -85665.92000000001,
+    "top5_share": 0.21885889159539232,
+    "p": 0.0004997501249375312,
+    "twin_mean": -33.168849859943904,
+    "twins_used": 714,
+    "p_flip": 0.0004997501249375312,
+    "twin_flip_mean": -142.74845058823524,
+    "by_und": {
+     "BANKNIFTY": 106951.26000000004,
+     "FINNIFTY": 146968.37000000002,
+     "MIDCPNIFTY": 19142.489999999994,
+     "NIFTY": 23079.870000000006,
+     "SENSEX": -836.8300000000008
+    },
+    "by_fold": [
+     18973.490000000005,
+     77059.31000000001,
+     36924.58999999999,
+     142066.19000000006
+    ],
+    "exits": {
+     "time_stop": 714
+    }
+   },
+   "wf_design": 275023.5800000001,
+   "final": {
+    "trades": 294,
+    "days": 133,
+    "win_rate": 0.4965986394557823,
+    "net": 48771.740000000056,
+    "per_trade": 165.89027210884373,
+    "per_day": 366.70481203007563,
+    "avg_win": 2244.4208904109596,
+    "avg_loss": -1884.5520945945943,
+    "worst_day": -15837.17,
+    "max_dd": -46362.79999999999,
+    "top5_share": 0.8150160318249863,
+    "p": 0.0009995002498750624,
+    "twin_mean": -254.09102389455776,
+    "twins_used": 294,
+    "p_flip": 0.013993003498250875,
+    "twin_flip_mean": -140.45149537414957,
+    "by_und": {
+     "BANKNIFTY": 6794.110000000018,
+     "FINNIFTY": -4647.1099999999815,
+     "MIDCPNIFTY": 46328.830000000016,
+     "NIFTY": -4478.98,
+     "SENSEX": 4774.890000000006
+    },
+    "by_fold": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "exits": {
+     "time_stop": 294
+    },
+    "q": 0.026843720996644532
+   },
+   "orig": {
+    "trades": 294,
+    "net": 48771.740000000056,
+    "p": 0.0009995002498750624,
+    "q": 0.026843720996644532,
+    "by_und": {
+     "BANKNIFTY": 6794.110000000018,
+     "FINNIFTY": -4647.1099999999815,
+     "MIDCPNIFTY": 46328.830000000016,
+     "NIFTY": -4478.98,
+     "SENSEX": 4774.890000000006
+    },
+    "wf_design": 272366.64,
+    "verdict": "PASS",
+    "design_net": 292648.22000000003
+   },
+   "gates": {
+    "final_net": true,
+    "p": true,
+    "q": true,
+    "trades": true,
+    "top5": true,
+    "design_wf": true,
+    "pass": true,
+    "verdict": "PASS"
+   },
+   "passing_info": {
+    "touched_design": {
+     "trades": 714,
+     "net": 292648.0,
+     "foreign": {
+      "trades": 0,
+      "net": 0.0,
+      "by_und": {}
+     },
+     "stray_open": {
+      "trades": 9,
+      "net": -12434.0,
+      "by_und": {
+       "FINNIFTY": 3,
+       "MIDCPNIFTY": 2,
+       "NIFTY": 2,
+       "SENSEX": 2
+      }
+     },
+     "high_capped": {
+      "trades": 9,
+      "net": -8543.0,
+      "by_und": {
+       "BANKNIFTY": 3,
+       "FINNIFTY": 2,
+       "SENSEX": 2,
+       "MIDCPNIFTY": 1,
+       "NIFTY": 1
+      }
+     },
+     "any": {
+      "trades": 16,
+      "net": -28887.0,
+      "by_und": {
+       "FINNIFTY": 4,
+       "SENSEX": 4,
+       "BANKNIFTY": 3,
+       "MIDCPNIFTY": 3,
+       "NIFTY": 2
+      }
+     }
+    },
+    "touched_final": {
+     "trades": 294,
+     "net": 48772.0,
+     "foreign": {
+      "trades": 0,
+      "net": 0.0,
+      "by_und": {}
+     },
+     "stray_open": {
+      "trades": 1,
+      "net": 3800.0,
+      "by_und": {
+       "FINNIFTY": 1
+      }
+     },
+     "high_capped": {
+      "trades": 4,
+      "net": -17052.0,
+      "by_und": {
+       "FINNIFTY": 3,
+       "MIDCPNIFTY": 1
+      }
+     },
+     "any": {
+      "trades": 5,
+      "net": -13252.0,
+      "by_und": {
+       "FINNIFTY": 4,
+       "MIDCPNIFTY": 1
+      }
+     }
+    },
+    "slip2": {
+     "design": {
+      "trades": 714,
+      "days": 337,
+      "win_rate": 0.5392156862745098,
+      "net": 277607.66,
+      "per_trade": 388.8062464985994,
+      "per_day": 823.7616023738872,
+      "avg_win": 2568.125766233766,
+      "avg_loss": -2161.4612765957445,
+      "worst_day": -21451.760000000002,
+      "max_dd": -86611.97999999998,
+      "top5_share": 0.2320224160961553,
+      "p": 0.0004997501249375312,
+      "twin_mean": -38.38441546918768,
+      "twins_used": 714,
+      "p_flip": 0.0004997501249375312,
+      "twin_flip_mean": -164.7948003291317,
+      "by_und": {
+       "BANKNIFTY": 103571.54999999996,
+       "FINNIFTY": 142857.0,
+       "MIDCPNIFTY": 12826.539999999986,
+       "NIFTY": 20672.660000000014,
+       "SENSEX": -2320.0899999999865
+      },
+      "by_fold": [
+       15452.789999999995,
+       73980.41,
+       33433.11999999997,
+       137757.22999999998
+      ],
+      "exits": {
+       "time_stop": 714
+      }
+     },
+     "final": {
+      "trades": 294,
+      "days": 133,
+      "win_rate": 0.4931972789115646,
+      "net": 41086.39,
+      "per_trade": 139.74962585034012,
+      "per_day": 308.92022556390975,
+      "avg_win": 2231.567586206897,
+      "avg_loss": -1895.912147651007,
+      "worst_day": -15971.089999999998,
+      "max_dd": -47289.03999999999,
+      "top5_share": 0.9620407146989552,
+      "p": 0.001999000499750125,
+      "twin_mean": -243.44809234693878,
+      "twins_used": 294,
+      "p_flip": 0.015492253873063468,
+      "twin_flip_mean": -181.96082221088437,
+      "by_und": {
+       "BANKNIFTY": 5180.949999999999,
+       "FINNIFTY": -6040.989999999992,
+       "MIDCPNIFTY": 43519.569999999985,
+       "NIFTY": -5609.169999999992,
+       "SENSEX": 4036.0300000000007
+      },
+      "by_fold": [
+       0.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "exits": {
+       "time_stop": 294
+      }
+     }
+    }
+   }
+  }
+ },
+ "expiry_flags_pinned": 36
+}
