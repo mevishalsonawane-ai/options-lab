@@ -1,0 +1,37 @@
+id: r57-b3
+title: 'R57 Solo 2.0 B3: direction model, logistic, next 30 min, 1-ITM'
+family: ml
+date: '2026-10-15'
+doc: research/HUNT_R57_SOLO_2.md
+hypothesis: 'A model trained on held-contract labels picks Solo''s paper trades (at most one a day, NIFTY / BANKNIFTY / FINNIFTY
+  / MIDCPNIFTY) so that they make money after real costs on unseen data (gates: final net > 0, random-entry twin p < 0.05,
+  BH q <= 0.10 over 10 variants, 40+ trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK files with OI/IV; foreign
+  rows and one-minute bad ticks removed), 21 Nov 2024 - 14 Oct 2026
+period:
+  design: 21 Nov 2024 - 31 Mar 2026 (purged walk-forward, monthly refits, 1-session embargo, test months Jul 2025 - Mar 2026)
+  holdout: '1 Apr - 14 Oct 2026 final test, read once (monthly refits continued; not pristine: R47-R55 saw parts of it)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the underlying index (setups S1-S4 / the index direction model); C4 option-chain OI only in A4 (non-default)'
+- brain index features (12), ATR14, minute, days to expiry, India VIX and its change, PCR / ATM IV / IV skew as context only
+model_or_rule: direction model, logistic, next 30 min, 1-ITM
+settings: research/hunt/r57/PREREG.md section 5; research/hunt/r57/r57study.py VARIANTS
+prereg: research/hunt/r57/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design walk-forward: 176 trades, win 41%, net Rs -50,403 (Rs -286/trade), max DD Rs 65,164, worst day Rs -5,127,
+    months green 2/9, top-5 share None, at 2x costs Rs -70,421. Final test: 117 trades, win 38%, net Rs -50,784 (Rs -434/trade),
+    max DD Rs 51,770, worst day Rs -5,805, months green 0/7, top-5 share None, at 2x costs Rs -65,601; twin p 0.9441, BH q
+    0.9441. AUC {''auc_index_wf'': 0.4923, ''auc_held_wf'': 0.4952, ''auc_index_random'': 0.5189, ''auc_index_test'': 0.5149,
+    ''auc_held_test'': 0.5157}. Verdict: FAIL: final net <= 0; p >= 0.05; q > 0.10; top-5 >= net; design walk-forward <= 0.
+    Plain SoloMidday on the same final period: 36 trades, net Rs -21,589.'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: the index; option-chain data as context only.'
