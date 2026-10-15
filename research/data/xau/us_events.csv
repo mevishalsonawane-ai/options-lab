@@ -1,0 +1,36 @@
+date,time_et,event,detail,source
+2025-09-17,14:00,FOMC,statement + SEP (meeting 16-17 Sep; before the data window),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2025-10-24,08:30,CPI,September 2025 CPI (delayed by the 2025 federal funding lapse),https://www.bls.gov/bls/news-release/cpi.htm
+2025-10-29,14:00,FOMC,statement (meeting 28-29 Oct),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2025-11-20,08:30,NFP,September 2025 Employment Situation (delayed by the funding lapse),https://www.bls.gov/bls/news-release/empsit.htm
+2025-12-10,14:00,FOMC,statement + SEP (meeting 9-10 Dec),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2025-12-16,08:30,NFP,November 2025 Employment Situation (October 2025 not published),https://www.bls.gov/bls/news-release/empsit.htm
+2025-12-18,08:30,CPI,November 2025 CPI (October 2025 not published),https://www.bls.gov/bls/news-release/cpi.htm
+2026-01-09,08:30,NFP,December 2025 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-01-13,08:30,CPI,December 2025 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-01-28,14:00,FOMC,statement (meeting 27-28 Jan),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2026-02-11,08:30,NFP,January 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-02-13,08:30,CPI,January 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-03-06,08:30,NFP,February 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-03-11,08:30,CPI,February 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-03-18,14:00,FOMC,statement + SEP (meeting 17-18 Mar),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2026-04-03,08:30,NFP,March 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-04-10,08:30,CPI,March 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-04-29,14:00,FOMC,statement (meeting 28-29 Apr),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2026-05-08,08:30,NFP,April 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-05-12,08:30,CPI,April 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-06-05,08:30,NFP,May 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-06-10,08:30,CPI,May 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-06-17,14:00,FOMC,statement + SEP (meeting 16-17 Jun),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2026-07-02,08:30,NFP,June 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-07-14,08:30,CPI,June 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-07-29,14:00,FOMC,statement (meeting 28-29 Jul),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2026-08-07,08:30,NFP,July 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-08-12,08:30,CPI,July 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-09-04,08:30,NFP,August 2026 Employment Situation,https://www.bls.gov/bls/news-release/empsit.htm
+2026-09-11,08:30,CPI,August 2026 CPI,https://www.bls.gov/bls/news-release/cpi.htm
+2026-09-16,14:00,FOMC,statement + SEP (meeting 15-16 Sep),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2026-10-02,08:30,NFP,September 2026 Employment Situation,https://www.bls.gov/schedule/2026/10_sched.htm
+2026-10-14,08:30,CPI,September 2026 CPI,https://www.bls.gov/schedule/2026/10_sched.htm
+2026-10-28,14:00,FOMC,statement (meeting 27-28 Oct; after the data window),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+2026-11-10,08:30,CPI,October 2026 CPI (after the data window),https://www.bls.gov/schedule/news_release/cpi.htm
