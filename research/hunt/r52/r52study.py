@@ -64,6 +64,20 @@ def design(keys=None):
     _dump(DESIGN, out)
 
 
+def prereg(keys=None):
+    """Write results/rules_prereg.json: every rule's original setting and grid, committed BEFORE its design run."""
+    p = K.RESULTS / "rules_prereg.json"
+    out = _load(p)
+    for key in RR.RULES:
+        if keys and key not in keys:
+            continue
+        vs = RR.variants(key)
+        out[key] = dict(orig=RR.describe(key), grid=[dict(vid=r.vid, params=r.params, rule=r.rule.label(),
+                                                          exits=r.exits.label()) for r in vs[1:]])
+    _dump(p, out)
+    print(f"{len(out)} rules pre-registered")
+
+
 def final():
     if K.FINAL_FLAG.exists():
         raise SystemExit("refused: the final test was already read once (results/FINAL_READ)")
@@ -104,6 +118,8 @@ if __name__ == "__main__":
         design(sys.argv[2:] or None)
     elif cmd == "final":
         final()
+    elif cmd == "prereg":
+        prereg(sys.argv[2:] or None)
     elif cmd == "report":
         import r52report
         r52report.main()
