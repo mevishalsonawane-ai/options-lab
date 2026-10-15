@@ -1,0 +1,7187 @@
+{
+ "results": {
+  "IDX/poc-x-x-2r": {
+   "x1": {
+    "trades": 172,
+    "win": 0.308,
+    "net": -194088,
+    "per_trade": -1128,
+    "avg_win": 3013,
+    "avg_loss": -2973,
+    "r_mult": -0.172,
+    "r_mult_median": -0.188,
+    "worst_day": -17417,
+    "max_dd": 194088,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -107151,
+     "2026Q3": -75714,
+     "2026Q4": -11223
+    },
+    "inst": {
+     "BANKNIFTY": [
+      49,
+      -49297
+     ],
+     "FINNIFTY": [
+      26,
+      -39793
+     ],
+     "MIDCPNIFTY": [
+      31,
+      2660
+     ],
+     "NIFTY": [
+      30,
+      -64622
+     ],
+     "SENSEX": [
+      36,
+      -43036
+     ]
+    },
+    "why": {
+     "squareoff": 112,
+     "stop": 52,
+     "target": 8
+    },
+    "longs": 91,
+    "shorts": 81
+   },
+   "x2": {
+    "net": -212894,
+    "win": 0.308
+   },
+   "risk1": {
+    "zero_lot_share": 0.994,
+    "median_lots": 0.0,
+    "net_risk1": -2536
+   },
+   "p": 0.998,
+   "twin_mean": -95473,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/poc-x-x-st": {
+   "x1": {
+    "trades": 183,
+    "win": 0.497,
+    "net": -87638,
+    "per_trade": -479,
+    "avg_win": 1726,
+    "avg_loss": -2660,
+    "r_mult": -0.089,
+    "r_mult_median": 0.062,
+    "worst_day": -17417,
+    "max_dd": 93485,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -43048,
+     "2026Q3": -40875,
+     "2026Q4": -3715
+    },
+    "inst": {
+     "BANKNIFTY": [
+      53,
+      -28455
+     ],
+     "FINNIFTY": [
+      28,
+      -33015
+     ],
+     "MIDCPNIFTY": [
+      32,
+      10198
+     ],
+     "NIFTY": [
+      33,
+      -26479
+     ],
+     "SENSEX": [
+      37,
+      -9887
+     ]
+    },
+    "why": {
+     "target": 92,
+     "squareoff": 51,
+     "stop": 40
+    },
+    "longs": 100,
+    "shorts": 83
+   },
+   "x2": {
+    "net": -107894,
+    "win": 0.47
+   },
+   "risk1": {
+    "zero_lot_share": 0.995,
+    "median_lots": 0.0,
+    "net_risk1": -2536
+   },
+   "p": 0.9142,
+   "twin_mean": -47374,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/poc-x-h-2r": {
+   "x1": {
+    "trades": 113,
+    "win": 0.274,
+    "net": -169484,
+    "per_trade": -1500,
+    "avg_win": 3032,
+    "avg_loss": -3213,
+    "r_mult": -0.254,
+    "r_mult_median": -0.258,
+    "worst_day": -17417,
+    "max_dd": 169484,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -98513,
+     "2026Q3": -49356,
+     "2026Q4": -21615
+    },
+    "inst": {
+     "BANKNIFTY": [
+      29,
+      -40413
+     ],
+     "FINNIFTY": [
+      20,
+      -28171
+     ],
+     "MIDCPNIFTY": [
+      16,
+      -12721
+     ],
+     "NIFTY": [
+      22,
+      -56623
+     ],
+     "SENSEX": [
+      26,
+      -31556
+     ]
+    },
+    "why": {
+     "squareoff": 78,
+     "stop": 33,
+     "target": 2
+    },
+    "longs": 67,
+    "shorts": 46
+   },
+   "x2": {
+    "net": -181424,
+    "win": 0.274
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -86774,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/poc-x-h-st": {
+   "x1": {
+    "trades": 120,
+    "win": 0.483,
+    "net": -82192,
+    "per_trade": -685,
+    "avg_win": 1571,
+    "avg_loss": -2795,
+    "r_mult": -0.134,
+    "r_mult_median": 0.063,
+    "worst_day": -17417,
+    "max_dd": 82192,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -52782,
+     "2026Q3": -19707,
+     "2026Q4": -9702
+    },
+    "inst": {
+     "BANKNIFTY": [
+      32,
+      -11487
+     ],
+     "FINNIFTY": [
+      21,
+      -24538
+     ],
+     "MIDCPNIFTY": [
+      16,
+      -6953
+     ],
+     "NIFTY": [
+      24,
+      -27405
+     ],
+     "SENSEX": [
+      27,
+      -11809
+     ]
+    },
+    "why": {
+     "target": 62,
+     "squareoff": 35,
+     "stop": 23
+    },
+    "longs": 74,
+    "shorts": 46
+   },
+   "x2": {
+    "net": -95154,
+    "win": 0.458
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.9421,
+   "twin_mean": -42952,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/poc-c-x-2r": {
+   "x1": {
+    "trades": 67,
+    "win": 0.358,
+    "net": -50866,
+    "per_trade": -759,
+    "avg_win": 3629,
+    "avg_loss": -3209,
+    "r_mult": -0.19,
+    "r_mult_median": -0.206,
+    "worst_day": -12505,
+    "max_dd": 53838,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -32456,
+     "2026Q3": -19473,
+     "2026Q4": 1063
+    },
+    "inst": {
+     "BANKNIFTY": [
+      17,
+      -19006
+     ],
+     "FINNIFTY": [
+      11,
+      -10825
+     ],
+     "MIDCPNIFTY": [
+      12,
+      17666
+     ],
+     "NIFTY": [
+      16,
+      -36842
+     ],
+     "SENSEX": [
+      11,
+      -1860
+     ]
+    },
+    "why": {
+     "squareoff": 38,
+     "stop": 26,
+     "target": 3
+    },
+    "longs": 39,
+    "shorts": 28
+   },
+   "x2": {
+    "net": -58138,
+    "win": 0.358
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.6687,
+   "twin_mean": -42443,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/poc-c-x-st": {
+   "x1": {
+    "trades": 69,
+    "win": 0.478,
+    "net": -38990,
+    "per_trade": -565,
+    "avg_win": 2288,
+    "avg_loss": -3180,
+    "r_mult": -0.118,
+    "r_mult_median": 0.049,
+    "worst_day": -12276,
+    "max_dd": 42388,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -20781,
+     "2026Q3": -20235,
+     "2026Q4": 2025
+    },
+    "inst": {
+     "BANKNIFTY": [
+      18,
+      -15807
+     ],
+     "FINNIFTY": [
+      12,
+      -1438
+     ],
+     "MIDCPNIFTY": [
+      12,
+      7112
+     ],
+     "NIFTY": [
+      16,
+      -25741
+     ],
+     "SENSEX": [
+      11,
+      -3117
+     ]
+    },
+    "why": {
+     "target": 31,
+     "stop": 21,
+     "squareoff": 17
+    },
+    "longs": 40,
+    "shorts": 29
+   },
+   "x2": {
+    "net": -46576,
+    "win": 0.478
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.6766,
+   "twin_mean": -30738,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/poc-c-h-2r": {
+   "x1": {
+    "trades": 45,
+    "win": 0.356,
+    "net": -34553,
+    "per_trade": -768,
+    "avg_win": 3686,
+    "avg_loss": -3225,
+    "r_mult": -0.224,
+    "r_mult_median": -0.186,
+    "worst_day": -12505,
+    "max_dd": 34553,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -29060,
+     "2026Q3": -1923,
+     "2026Q4": -3570
+    },
+    "inst": {
+     "BANKNIFTY": [
+      9,
+      351
+     ],
+     "FINNIFTY": [
+      8,
+      -1445
+     ],
+     "MIDCPNIFTY": [
+      7,
+      7480
+     ],
+     "NIFTY": [
+      12,
+      -37866
+     ],
+     "SENSEX": [
+      9,
+      -3073
+     ]
+    },
+    "why": {
+     "squareoff": 27,
+     "stop": 17,
+     "target": 1
+    },
+    "longs": 31,
+    "shorts": 14
+   },
+   "x2": {
+    "net": -39336,
+    "win": 0.356
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.7525,
+   "twin_mean": -26078,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/poc-c-h-st": {
+   "x1": {
+    "trades": 46,
+    "win": 0.5,
+    "net": -34875,
+    "per_trade": -758,
+    "avg_win": 1824,
+    "avg_loss": -3340,
+    "r_mult": -0.163,
+    "r_mult_median": 0.068,
+    "worst_day": -12276,
+    "max_dd": 34875,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -29509,
+     "2026Q3": -2684,
+     "2026Q4": -2682
+    },
+    "inst": {
+     "BANKNIFTY": [
+      9,
+      3374
+     ],
+     "FINNIFTY": [
+      9,
+      2490
+     ],
+     "MIDCPNIFTY": [
+      7,
+      -5114
+     ],
+     "NIFTY": [
+      12,
+      -30131
+     ],
+     "SENSEX": [
+      9,
+      -5495
+     ]
+    },
+    "why": {
+     "target": 22,
+     "stop": 13,
+     "squareoff": 11
+    },
+    "longs": 32,
+    "shorts": 14
+   },
+   "x2": {
+    "net": -39786,
+    "win": 0.5
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.8244,
+   "twin_mean": -21861,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-x-x-2r": {
+   "x1": {
+    "trades": 222,
+    "win": 0.365,
+    "net": -228183,
+    "per_trade": -1028,
+    "avg_win": 2798,
+    "avg_loss": -3226,
+    "r_mult": -0.083,
+    "r_mult_median": -0.076,
+    "worst_day": -35242,
+    "max_dd": 236752,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -139678,
+     "2026Q3": -72090,
+     "2026Q4": -16416
+    },
+    "inst": {
+     "BANKNIFTY": [
+      52,
+      -61420
+     ],
+     "FINNIFTY": [
+      38,
+      -37312
+     ],
+     "MIDCPNIFTY": [
+      47,
+      -70671
+     ],
+     "NIFTY": [
+      41,
+      -50132
+     ],
+     "SENSEX": [
+      44,
+      -8648
+     ]
+    },
+    "why": {
+     "squareoff": 176,
+     "stop": 41,
+     "target": 5
+    },
+    "longs": 125,
+    "shorts": 97
+   },
+   "x2": {
+    "net": -252411,
+    "win": 0.338
+   },
+   "risk1": {
+    "zero_lot_share": 0.991,
+    "median_lots": 0.0,
+    "net_risk1": -424
+   },
+   "p": 1.0,
+   "twin_mean": -71836,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-x-x-st": {
+   "x1": {
+    "trades": 241,
+    "win": 0.548,
+    "net": -42906,
+    "per_trade": -178,
+    "avg_win": 1560,
+    "avg_loss": -2283,
+    "r_mult": -0.005,
+    "r_mult_median": 0.089,
+    "worst_day": -21749,
+    "max_dd": 61497,
+    "months_green": "4/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -12972,
+     "2026Q3": -32373,
+     "2026Q4": 2439
+    },
+    "inst": {
+     "BANKNIFTY": [
+      57,
+      -19980
+     ],
+     "FINNIFTY": [
+      41,
+      -9523
+     ],
+     "MIDCPNIFTY": [
+      51,
+      23170
+     ],
+     "NIFTY": [
+      43,
+      -36601
+     ],
+     "SENSEX": [
+      49,
+      27
+     ]
+    },
+    "why": {
+     "target": 147,
+     "squareoff": 65,
+     "stop": 29
+    },
+    "longs": 137,
+    "shorts": 104
+   },
+   "x2": {
+    "net": -69917,
+    "win": 0.531
+   },
+   "risk1": {
+    "zero_lot_share": 0.988,
+    "median_lots": 0.0,
+    "net_risk1": -922
+   },
+   "p": 0.2874,
+   "twin_mean": -62013,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-x-h-2r": {
+   "x1": {
+    "trades": 158,
+    "win": 0.38,
+    "net": -129863,
+    "per_trade": -822,
+    "avg_win": 2962,
+    "avg_loss": -3139,
+    "r_mult": -0.04,
+    "r_mult_median": -0.04,
+    "worst_day": -25940,
+    "max_dd": 139047,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -77333,
+     "2026Q3": -42772,
+     "2026Q4": -9759
+    },
+    "inst": {
+     "BANKNIFTY": [
+      34,
+      -19605
+     ],
+     "FINNIFTY": [
+      28,
+      -26475
+     ],
+     "MIDCPNIFTY": [
+      31,
+      -45229
+     ],
+     "NIFTY": [
+      30,
+      -34740
+     ],
+     "SENSEX": [
+      35,
+      -3815
+     ]
+    },
+    "why": {
+     "squareoff": 128,
+     "stop": 27,
+     "target": 3
+    },
+    "longs": 85,
+    "shorts": 73
+   },
+   "x2": {
+    "net": -146956,
+    "win": 0.354
+   },
+   "risk1": {
+    "zero_lot_share": 0.987,
+    "median_lots": 0.0,
+    "net_risk1": -424
+   },
+   "p": 1.0,
+   "twin_mean": -28661,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-x-h-st": {
+   "x1": {
+    "trades": 171,
+    "win": 0.544,
+    "net": -31505,
+    "per_trade": -184,
+    "avg_win": 1645,
+    "avg_loss": -2365,
+    "r_mult": 0.001,
+    "r_mult_median": 0.089,
+    "worst_day": -21749,
+    "max_dd": 43057,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -14744,
+     "2026Q3": -18846,
+     "2026Q4": 2085
+    },
+    "inst": {
+     "BANKNIFTY": [
+      38,
+      -14651
+     ],
+     "FINNIFTY": [
+      30,
+      -7232
+     ],
+     "MIDCPNIFTY": [
+      33,
+      7911
+     ],
+     "NIFTY": [
+      32,
+      -16501
+     ],
+     "SENSEX": [
+      38,
+      -1031
+     ]
+    },
+    "why": {
+     "target": 103,
+     "squareoff": 47,
+     "stop": 21
+    },
+    "longs": 94,
+    "shorts": 77
+   },
+   "x2": {
+    "net": -50395,
+    "win": 0.526
+   },
+   "risk1": {
+    "zero_lot_share": 0.982,
+    "median_lots": 0.0,
+    "net_risk1": -922
+   },
+   "p": 0.1836,
+   "twin_mean": -55652,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-c-x-2r": {
+   "x1": {
+    "trades": 191,
+    "win": 0.361,
+    "net": -227886,
+    "per_trade": -1193,
+    "avg_win": 2497,
+    "avg_loss": -3280,
+    "r_mult": -0.105,
+    "r_mult_median": -0.084,
+    "worst_day": -35242,
+    "max_dd": 231012,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -139588,
+     "2026Q3": -78456,
+     "2026Q4": -9841
+    },
+    "inst": {
+     "BANKNIFTY": [
+      47,
+      -61763
+     ],
+     "FINNIFTY": [
+      31,
+      -24805
+     ],
+     "MIDCPNIFTY": [
+      43,
+      -69908
+     ],
+     "NIFTY": [
+      31,
+      -50106
+     ],
+     "SENSEX": [
+      39,
+      -21303
+     ]
+    },
+    "why": {
+     "squareoff": 152,
+     "stop": 36,
+     "target": 3
+    },
+    "longs": 112,
+    "shorts": 79
+   },
+   "x2": {
+    "net": -248959,
+    "win": 0.33
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -84075,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-c-x-st": {
+   "x1": {
+    "trades": 206,
+    "win": 0.544,
+    "net": -38641,
+    "per_trade": -188,
+    "avg_win": 1564,
+    "avg_loss": -2274,
+    "r_mult": -0.01,
+    "r_mult_median": 0.089,
+    "worst_day": -20340,
+    "max_dd": 64963,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -16651,
+     "2026Q3": -29533,
+     "2026Q4": 7543
+    },
+    "inst": {
+     "BANKNIFTY": [
+      51,
+      -16092
+     ],
+     "FINNIFTY": [
+      34,
+      -5797
+     ],
+     "MIDCPNIFTY": [
+      46,
+      15527
+     ],
+     "NIFTY": [
+      33,
+      -31620
+     ],
+     "SENSEX": [
+      42,
+      -658
+     ]
+    },
+    "why": {
+     "target": 125,
+     "squareoff": 56,
+     "stop": 25
+    },
+    "longs": 122,
+    "shorts": 84
+   },
+   "x2": {
+    "net": -62079,
+    "win": 0.524
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.2754,
+   "twin_mean": -56662,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-c-h-2r": {
+   "x1": {
+    "trades": 132,
+    "win": 0.379,
+    "net": -123411,
+    "per_trade": -935,
+    "avg_win": 2677,
+    "avg_loss": -3137,
+    "r_mult": -0.064,
+    "r_mult_median": -0.056,
+    "worst_day": -21029,
+    "max_dd": 136893,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -62174,
+     "2026Q3": -58053,
+     "2026Q4": -3184
+    },
+    "inst": {
+     "BANKNIFTY": [
+      30,
+      -20845
+     ],
+     "FINNIFTY": [
+      22,
+      -14656
+     ],
+     "MIDCPNIFTY": [
+      28,
+      -47138
+     ],
+     "NIFTY": [
+      21,
+      -25822
+     ],
+     "SENSEX": [
+      31,
+      -14949
+     ]
+    },
+    "why": {
+     "squareoff": 109,
+     "stop": 22,
+     "target": 1
+    },
+    "longs": 75,
+    "shorts": 57
+   },
+   "x2": {
+    "net": -137958,
+    "win": 0.348
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -33933,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX/lvn-c-h-st": {
+   "x1": {
+    "trades": 143,
+    "win": 0.559,
+    "net": -19702,
+    "per_trade": -138,
+    "avg_win": 1610,
+    "avg_loss": -2358,
+    "r_mult": -0.001,
+    "r_mult_median": 0.11,
+    "worst_day": -20340,
+    "max_dd": 39068,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -13524,
+     "2026Q3": -14667,
+     "2026Q4": 8490
+    },
+    "inst": {
+     "BANKNIFTY": [
+      34,
+      -12988
+     ],
+     "FINNIFTY": [
+      24,
+      -4194
+     ],
+     "MIDCPNIFTY": [
+      30,
+      8611
+     ],
+     "NIFTY": [
+      23,
+      -10445
+     ],
+     "SENSEX": [
+      32,
+      -685
+     ]
+    },
+    "why": {
+     "target": 87,
+     "squareoff": 39,
+     "stop": 17
+    },
+    "longs": 83,
+    "shorts": 60
+   },
+   "x2": {
+    "net": -35923,
+    "win": 0.538
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.1317,
+   "twin_mean": -47781,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-x-x-2r": {
+   "x1": {
+    "trades": 420,
+    "win": 0.381,
+    "net": -261248,
+    "per_trade": -622,
+    "avg_win": 3575,
+    "avg_loss": -3205,
+    "r_mult": -0.002,
+    "r_mult_median": -0.069,
+    "worst_day": -26612,
+    "max_dd": 261248,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -173274,
+     "2026Q3": -72116,
+     "2026Q4": -15858
+    },
+    "inst": {
+     "ICICIBANK": [
+      37,
+      -32224
+     ],
+     "INFY": [
+      41,
+      -4485
+     ],
+     "KOTAKBANK": [
+      48,
+      -31884
+     ],
+     "LT": [
+      36,
+      -34337
+     ],
+     "M&M": [
+      43,
+      -84562
+     ],
+     "MARUTI": [
+      45,
+      -47062
+     ],
+     "RELIANCE": [
+      42,
+      1655
+     ],
+     "SBIN": [
+      45,
+      41057
+     ],
+     "TATASTEEL": [
+      44,
+      -31221
+     ],
+     "TRENT": [
+      39,
+      -38185
+     ]
+    },
+    "why": {
+     "squareoff": 283,
+     "stop": 104,
+     "target": 33
+    },
+    "longs": 186,
+    "shorts": 234
+   },
+   "x2": {
+    "net": -455929,
+    "win": 0.35
+   },
+   "risk1": {
+    "net_risk1": -64189,
+    "median_shares": 96.0,
+    "median_risk_pct": 0.725
+   },
+   "p": 0.978,
+   "twin_mean": -145885,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-x-x-st": {
+   "x1": {
+    "trades": 440,
+    "win": 0.432,
+    "net": -284732,
+    "per_trade": -647,
+    "avg_win": 2179,
+    "avg_loss": -2795,
+    "r_mult": -0.013,
+    "r_mult_median": 0.012,
+    "worst_day": -23271,
+    "max_dd": 294237,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -184141,
+     "2026Q3": -107571,
+     "2026Q4": 6981
+    },
+    "inst": {
+     "ICICIBANK": [
+      38,
+      -40602
+     ],
+     "INFY": [
+      41,
+      -4209
+     ],
+     "KOTAKBANK": [
+      50,
+      -24633
+     ],
+     "LT": [
+      37,
+      -23301
+     ],
+     "M&M": [
+      45,
+      -73213
+     ],
+     "MARUTI": [
+      48,
+      -36682
+     ],
+     "RELIANCE": [
+      46,
+      -17574
+     ],
+     "SBIN": [
+      46,
+      -7952
+     ],
+     "TATASTEEL": [
+      46,
+      -32147
+     ],
+     "TRENT": [
+      43,
+      -24419
+     ]
+    },
+    "why": {
+     "target": 180,
+     "squareoff": 166,
+     "stop": 94
+    },
+    "longs": 197,
+    "shorts": 243
+   },
+   "x2": {
+    "net": -487308,
+    "win": 0.382
+   },
+   "risk1": {
+    "net_risk1": -71987,
+    "median_shares": 94.5,
+    "median_risk_pct": 0.721
+   },
+   "p": 1.0,
+   "twin_mean": -132162,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-x-h-2r": {
+   "x1": {
+    "trades": 259,
+    "win": 0.386,
+    "net": -144001,
+    "per_trade": -556,
+    "avg_win": 3578,
+    "avg_loss": -3156,
+    "r_mult": -0.008,
+    "r_mult_median": -0.031,
+    "worst_day": -20874,
+    "max_dd": 166208,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -89896,
+     "2026Q3": -58501,
+     "2026Q4": 4396
+    },
+    "inst": {
+     "ICICIBANK": [
+      23,
+      -20012
+     ],
+     "INFY": [
+      22,
+      -240
+     ],
+     "KOTAKBANK": [
+      33,
+      -31634
+     ],
+     "LT": [
+      20,
+      -29072
+     ],
+     "M&M": [
+      30,
+      -49961
+     ],
+     "MARUTI": [
+      29,
+      -29165
+     ],
+     "RELIANCE": [
+      24,
+      -7801
+     ],
+     "SBIN": [
+      24,
+      39710
+     ],
+     "TATASTEEL": [
+      27,
+      -15374
+     ],
+     "TRENT": [
+      27,
+      -453
+     ]
+    },
+    "why": {
+     "squareoff": 178,
+     "stop": 65,
+     "target": 16
+    },
+    "longs": 111,
+    "shorts": 148
+   },
+   "x2": {
+    "net": -264585,
+    "win": 0.355
+   },
+   "risk1": {
+    "net_risk1": -38794,
+    "median_shares": 84.0,
+    "median_risk_pct": 0.75
+   },
+   "p": 0.9521,
+   "twin_mean": -72684,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-x-h-st": {
+   "x1": {
+    "trades": 265,
+    "win": 0.449,
+    "net": -137576,
+    "per_trade": -519,
+    "avg_win": 2164,
+    "avg_loss": -2706,
+    "r_mult": 0.002,
+    "r_mult_median": 0.029,
+    "worst_day": -14807,
+    "max_dd": 143665,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -64246,
+     "2026Q3": -76413,
+     "2026Q4": 3083
+    },
+    "inst": {
+     "ICICIBANK": [
+      24,
+      -21458
+     ],
+     "INFY": [
+      22,
+      10767
+     ],
+     "KOTAKBANK": [
+      33,
+      -25729
+     ],
+     "LT": [
+      20,
+      -26045
+     ],
+     "M&M": [
+      30,
+      -31255
+     ],
+     "MARUTI": [
+      30,
+      -16114
+     ],
+     "RELIANCE": [
+      25,
+      -17278
+     ],
+     "SBIN": [
+      24,
+      3305
+     ],
+     "TATASTEEL": [
+      28,
+      -19501
+     ],
+     "TRENT": [
+      29,
+      5730
+     ]
+    },
+    "why": {
+     "target": 111,
+     "squareoff": 100,
+     "stop": 54
+    },
+    "longs": 114,
+    "shorts": 151
+   },
+   "x2": {
+    "net": -259959,
+    "win": 0.385
+   },
+   "risk1": {
+    "net_risk1": -37654,
+    "median_shares": 84.0,
+    "median_risk_pct": 0.749
+   },
+   "p": 0.9681,
+   "twin_mean": -63035,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-c-x-2r": {
+   "x1": {
+    "trades": 204,
+    "win": 0.397,
+    "net": -93501,
+    "per_trade": -458,
+    "avg_win": 3592,
+    "avg_loss": -3126,
+    "r_mult": -0.018,
+    "r_mult_median": -0.087,
+    "worst_day": -21693,
+    "max_dd": 123114,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -87834,
+     "2026Q3": -18223,
+     "2026Q4": 12556
+    },
+    "inst": {
+     "ICICIBANK": [
+      10,
+      4586
+     ],
+     "INFY": [
+      22,
+      2167
+     ],
+     "KOTAKBANK": [
+      25,
+      -21822
+     ],
+     "LT": [
+      15,
+      -15329
+     ],
+     "M&M": [
+      28,
+      -44541
+     ],
+     "MARUTI": [
+      22,
+      -12536
+     ],
+     "RELIANCE": [
+      16,
+      -20036
+     ],
+     "SBIN": [
+      23,
+      19180
+     ],
+     "TATASTEEL": [
+      25,
+      -3662
+     ],
+     "TRENT": [
+      18,
+      -1507
+     ]
+    },
+    "why": {
+     "squareoff": 130,
+     "stop": 59,
+     "target": 15
+    },
+    "longs": 92,
+    "shorts": 112
+   },
+   "x2": {
+    "net": -187282,
+    "win": 0.387
+   },
+   "risk1": {
+    "net_risk1": -35912,
+    "median_shares": 107.0,
+    "median_risk_pct": 0.666
+   },
+   "p": 0.98,
+   "twin_mean": -23855,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-c-x-st": {
+   "x1": {
+    "trades": 210,
+    "win": 0.429,
+    "net": -142132,
+    "per_trade": -677,
+    "avg_win": 2260,
+    "avg_loss": -2879,
+    "r_mult": -0.043,
+    "r_mult_median": 0.013,
+    "worst_day": -21693,
+    "max_dd": 157388,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -96941,
+     "2026Q3": -59798,
+     "2026Q4": 14606
+    },
+    "inst": {
+     "ICICIBANK": [
+      10,
+      -10677
+     ],
+     "INFY": [
+      22,
+      -9416
+     ],
+     "KOTAKBANK": [
+      25,
+      -19727
+     ],
+     "LT": [
+      15,
+      -16169
+     ],
+     "M&M": [
+      30,
+      -23270
+     ],
+     "MARUTI": [
+      22,
+      -20252
+     ],
+     "RELIANCE": [
+      18,
+      -16324
+     ],
+     "SBIN": [
+      24,
+      -10978
+     ],
+     "TATASTEEL": [
+      25,
+      -8272
+     ],
+     "TRENT": [
+      19,
+      -7048
+     ]
+    },
+    "why": {
+     "squareoff": 77,
+     "target": 77,
+     "stop": 56
+    },
+    "longs": 96,
+    "shorts": 114
+   },
+   "x2": {
+    "net": -238084,
+    "win": 0.39
+   },
+   "risk1": {
+    "net_risk1": -42039,
+    "median_shares": 106.5,
+    "median_risk_pct": 0.657
+   },
+   "p": 1.0,
+   "twin_mean": -38559,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-c-h-2r": {
+   "x1": {
+    "trades": 128,
+    "win": 0.383,
+    "net": -72185,
+    "per_trade": -564,
+    "avg_win": 3653,
+    "avg_loss": -3179,
+    "r_mult": -0.026,
+    "r_mult_median": -0.069,
+    "worst_day": -13527,
+    "max_dd": 100296,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -65484,
+     "2026Q3": -19546,
+     "2026Q4": 12844
+    },
+    "inst": {
+     "ICICIBANK": [
+      7,
+      -988
+     ],
+     "INFY": [
+      10,
+      5157
+     ],
+     "KOTAKBANK": [
+      17,
+      -17980
+     ],
+     "LT": [
+      8,
+      -9315
+     ],
+     "M&M": [
+      21,
+      -28720
+     ],
+     "MARUTI": [
+      14,
+      -10915
+     ],
+     "RELIANCE": [
+      11,
+      -13269
+     ],
+     "SBIN": [
+      12,
+      965
+     ],
+     "TATASTEEL": [
+      15,
+      1676
+     ],
+     "TRENT": [
+      13,
+      1204
+     ]
+    },
+    "why": {
+     "squareoff": 82,
+     "stop": 37,
+     "target": 9
+    },
+    "longs": 57,
+    "shorts": 71
+   },
+   "x2": {
+    "net": -131466,
+    "win": 0.383
+   },
+   "risk1": {
+    "net_risk1": -22400,
+    "median_shares": 99.5,
+    "median_risk_pct": 0.691
+   },
+   "p": 0.98,
+   "twin_mean": -11149,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/poc-c-h-st": {
+   "x1": {
+    "trades": 128,
+    "win": 0.438,
+    "net": -79300,
+    "per_trade": -620,
+    "avg_win": 2263,
+    "avg_loss": -2861,
+    "r_mult": -0.02,
+    "r_mult_median": 0.022,
+    "worst_day": -13527,
+    "max_dd": 93015,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -42088,
+     "2026Q3": -46709,
+     "2026Q4": 9496
+    },
+    "inst": {
+     "ICICIBANK": [
+      7,
+      -8620
+     ],
+     "INFY": [
+      10,
+      -1472
+     ],
+     "KOTAKBANK": [
+      17,
+      -18683
+     ],
+     "LT": [
+      8,
+      -8632
+     ],
+     "M&M": [
+      21,
+      -5153
+     ],
+     "MARUTI": [
+      14,
+      -15666
+     ],
+     "RELIANCE": [
+      11,
+      -10218
+     ],
+     "SBIN": [
+      12,
+      -11333
+     ],
+     "TATASTEEL": [
+      15,
+      1763
+     ],
+     "TRENT": [
+      13,
+      -1285
+     ]
+    },
+    "why": {
+     "target": 49,
+     "squareoff": 47,
+     "stop": 32
+    },
+    "longs": 57,
+    "shorts": 71
+   },
+   "x2": {
+    "net": -138184,
+    "win": 0.398
+   },
+   "risk1": {
+    "net_risk1": -21584,
+    "median_shares": 99.5,
+    "median_risk_pct": 0.691
+   },
+   "p": 0.998,
+   "twin_mean": -10871,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-x-x-2r": {
+   "x1": {
+    "trades": 340,
+    "win": 0.45,
+    "net": -271581,
+    "per_trade": -799,
+    "avg_win": 3094,
+    "avg_loss": -3984,
+    "r_mult": -0.015,
+    "r_mult_median": -0.026,
+    "worst_day": -38218,
+    "max_dd": 277436,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -194782,
+     "2026Q3": -76978,
+     "2026Q4": 179
+    },
+    "inst": {
+     "ICICIBANK": [
+      31,
+      -29576
+     ],
+     "INFY": [
+      41,
+      -20810
+     ],
+     "KOTAKBANK": [
+      36,
+      -71096
+     ],
+     "LT": [
+      44,
+      -41593
+     ],
+     "M&M": [
+      31,
+      -22492
+     ],
+     "MARUTI": [
+      31,
+      -18348
+     ],
+     "RELIANCE": [
+      30,
+      22976
+     ],
+     "SBIN": [
+      23,
+      -24714
+     ],
+     "TATASTEEL": [
+      43,
+      -51543
+     ],
+     "TRENT": [
+      30,
+      -14384
+     ]
+    },
+    "why": {
+     "squareoff": 287,
+     "stop": 48,
+     "target": 5
+    },
+    "longs": 162,
+    "shorts": 178
+   },
+   "x2": {
+    "net": -425343,
+    "win": 0.403
+   },
+   "risk1": {
+    "net_risk1": -41548,
+    "median_shares": 54.0,
+    "median_risk_pct": 1.294
+   },
+   "p": 1.0,
+   "twin_mean": 46522,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-x-x-st": {
+   "x1": {
+    "trades": 383,
+    "win": 0.525,
+    "net": -254988,
+    "per_trade": -666,
+    "avg_win": 1442,
+    "avg_loss": -2994,
+    "r_mult": -0.006,
+    "r_mult_median": 0.056,
+    "worst_day": -38218,
+    "max_dd": 256070,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -141054,
+     "2026Q3": -101448,
+     "2026Q4": -12485
+    },
+    "inst": {
+     "ICICIBANK": [
+      35,
+      -44332
+     ],
+     "INFY": [
+      49,
+      -24826
+     ],
+     "KOTAKBANK": [
+      37,
+      -46442
+     ],
+     "LT": [
+      56,
+      -48487
+     ],
+     "M&M": [
+      34,
+      -18251
+     ],
+     "MARUTI": [
+      34,
+      -9551
+     ],
+     "RELIANCE": [
+      35,
+      21767
+     ],
+     "SBIN": [
+      24,
+      -21570
+     ],
+     "TATASTEEL": [
+      45,
+      -57638
+     ],
+     "TRENT": [
+      34,
+      -5657
+     ]
+    },
+    "why": {
+     "target": 234,
+     "squareoff": 109,
+     "stop": 40
+    },
+    "longs": 179,
+    "shorts": 204
+   },
+   "x2": {
+    "net": -425970,
+    "win": 0.413
+   },
+   "risk1": {
+    "net_risk1": -44768,
+    "median_shares": 54.0,
+    "median_risk_pct": 1.267
+   },
+   "p": 0.998,
+   "twin_mean": -141629,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-x-h-2r": {
+   "x1": {
+    "trades": 241,
+    "win": 0.448,
+    "net": -233562,
+    "per_trade": -969,
+    "avg_win": 2892,
+    "avg_loss": -4105,
+    "r_mult": -0.01,
+    "r_mult_median": -0.023,
+    "worst_day": -38218,
+    "max_dd": 237189,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -168821,
+     "2026Q3": -47641,
+     "2026Q4": -17100
+    },
+    "inst": {
+     "ICICIBANK": [
+      22,
+      -17244
+     ],
+     "INFY": [
+      27,
+      -13933
+     ],
+     "KOTAKBANK": [
+      27,
+      -47990
+     ],
+     "LT": [
+      31,
+      -55404
+     ],
+     "M&M": [
+      24,
+      -15077
+     ],
+     "MARUTI": [
+      20,
+      -29434
+     ],
+     "RELIANCE": [
+      23,
+      9724
+     ],
+     "SBIN": [
+      14,
+      -9785
+     ],
+     "TATASTEEL": [
+      34,
+      -37875
+     ],
+     "TRENT": [
+      19,
+      -16544
+     ]
+    },
+    "why": {
+     "squareoff": 209,
+     "stop": 29,
+     "target": 3
+    },
+    "longs": 109,
+    "shorts": 132
+   },
+   "x2": {
+    "net": -343158,
+    "win": 0.39
+   },
+   "risk1": {
+    "net_risk1": -27250,
+    "median_shares": 50.0,
+    "median_risk_pct": 1.373
+   },
+   "p": 1.0,
+   "twin_mean": -10587,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-x-h-st": {
+   "x1": {
+    "trades": 268,
+    "win": 0.534,
+    "net": -196955,
+    "per_trade": -735,
+    "avg_win": 1496,
+    "avg_loss": -3287,
+    "r_mult": 0.006,
+    "r_mult_median": 0.062,
+    "worst_day": -38218,
+    "max_dd": 197973,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -102338,
+     "2026Q3": -79689,
+     "2026Q4": -14928
+    },
+    "inst": {
+     "ICICIBANK": [
+      25,
+      -15437
+     ],
+     "INFY": [
+      33,
+      -12991
+     ],
+     "KOTAKBANK": [
+      27,
+      -24206
+     ],
+     "LT": [
+      38,
+      -53406
+     ],
+     "M&M": [
+      27,
+      -18134
+     ],
+     "MARUTI": [
+      20,
+      -9039
+     ],
+     "RELIANCE": [
+      27,
+      19926
+     ],
+     "SBIN": [
+      15,
+      -25133
+     ],
+     "TATASTEEL": [
+      35,
+      -46077
+     ],
+     "TRENT": [
+      21,
+      -12459
+     ]
+    },
+    "why": {
+     "target": 162,
+     "squareoff": 82,
+     "stop": 24
+    },
+    "longs": 119,
+    "shorts": 149
+   },
+   "x2": {
+    "net": -317257,
+    "win": 0.437
+   },
+   "risk1": {
+    "net_risk1": -27419,
+    "median_shares": 51.5,
+    "median_risk_pct": 1.333
+   },
+   "p": 0.9721,
+   "twin_mean": -125338,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-c-x-2r": {
+   "x1": {
+    "trades": 279,
+    "win": 0.459,
+    "net": -191013,
+    "per_trade": -685,
+    "avg_win": 3109,
+    "avg_loss": -3900,
+    "r_mult": -0.018,
+    "r_mult_median": -0.003,
+    "worst_day": -38218,
+    "max_dd": 206986,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -146417,
+     "2026Q3": -53804,
+     "2026Q4": 9208
+    },
+    "inst": {
+     "ICICIBANK": [
+      27,
+      -25318
+     ],
+     "INFY": [
+      35,
+      -23322
+     ],
+     "KOTAKBANK": [
+      26,
+      -36525
+     ],
+     "LT": [
+      41,
+      -39749
+     ],
+     "M&M": [
+      24,
+      -15315
+     ],
+     "MARUTI": [
+      26,
+      3916
+     ],
+     "RELIANCE": [
+      26,
+      26067
+     ],
+     "SBIN": [
+      17,
+      -2535
+     ],
+     "TATASTEEL": [
+      36,
+      -57389
+     ],
+     "TRENT": [
+      21,
+      -20843
+     ]
+    },
+    "why": {
+     "squareoff": 241,
+     "stop": 36,
+     "target": 2
+    },
+    "longs": 132,
+    "shorts": 147
+   },
+   "x2": {
+    "net": -316636,
+    "win": 0.405
+   },
+   "risk1": {
+    "net_risk1": -32221,
+    "median_shares": 49.0,
+    "median_risk_pct": 1.335
+   },
+   "p": 1.0,
+   "twin_mean": 53951,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-c-x-st": {
+   "x1": {
+    "trades": 307,
+    "win": 0.547,
+    "net": -178802,
+    "per_trade": -582,
+    "avg_win": 1495,
+    "avg_loss": -3093,
+    "r_mult": -0.008,
+    "r_mult_median": 0.066,
+    "worst_day": -38218,
+    "max_dd": 180155,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -101397,
+     "2026Q3": -73249,
+     "2026Q4": -4156
+    },
+    "inst": {
+     "ICICIBANK": [
+      30,
+      -39391
+     ],
+     "INFY": [
+      38,
+      -23136
+     ],
+     "KOTAKBANK": [
+      27,
+      -15560
+     ],
+     "LT": [
+      51,
+      -42149
+     ],
+     "M&M": [
+      25,
+      -7573
+     ],
+     "MARUTI": [
+      29,
+      6615
+     ],
+     "RELIANCE": [
+      30,
+      20063
+     ],
+     "SBIN": [
+      18,
+      -8513
+     ],
+     "TATASTEEL": [
+      37,
+      -61499
+     ],
+     "TRENT": [
+      22,
+      -7660
+     ]
+    },
+    "why": {
+     "target": 185,
+     "squareoff": 93,
+     "stop": 29
+    },
+    "longs": 147,
+    "shorts": 160
+   },
+   "x2": {
+    "net": -315994,
+    "win": 0.433
+   },
+   "risk1": {
+    "net_risk1": -33087,
+    "median_shares": 50.0,
+    "median_risk_pct": 1.325
+   },
+   "p": 0.986,
+   "twin_mean": -95910,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-c-h-2r": {
+   "x1": {
+    "trades": 203,
+    "win": 0.463,
+    "net": -174065,
+    "per_trade": -857,
+    "avg_win": 2871,
+    "avg_loss": -4072,
+    "r_mult": -0.016,
+    "r_mult_median": -0.003,
+    "worst_day": -38218,
+    "max_dd": 177691,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -133525,
+     "2026Q3": -31498,
+     "2026Q4": -9042
+    },
+    "inst": {
+     "ICICIBANK": [
+      19,
+      -14566
+     ],
+     "INFY": [
+      25,
+      -16844
+     ],
+     "KOTAKBANK": [
+      20,
+      -28321
+     ],
+     "LT": [
+      29,
+      -47137
+     ],
+     "M&M": [
+      21,
+      -8855
+     ],
+     "MARUTI": [
+      17,
+      -12067
+     ],
+     "RELIANCE": [
+      20,
+      17849
+     ],
+     "SBIN": [
+      12,
+      -875
+     ],
+     "TATASTEEL": [
+      28,
+      -42465
+     ],
+     "TRENT": [
+      12,
+      -20785
+     ]
+    },
+    "why": {
+     "squareoff": 180,
+     "stop": 22,
+     "target": 1
+    },
+    "longs": 89,
+    "shorts": 114
+   },
+   "x2": {
+    "net": -265550,
+    "win": 0.394
+   },
+   "risk1": {
+    "net_risk1": -21611,
+    "median_shares": 46.0,
+    "median_risk_pct": 1.461
+   },
+   "p": 1.0,
+   "twin_mean": 3196,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK/lvn-c-h-st": {
+   "x1": {
+    "trades": 220,
+    "win": 0.555,
+    "net": -142606,
+    "per_trade": -648,
+    "avg_win": 1517,
+    "avg_loss": -3343,
+    "r_mult": -0.006,
+    "r_mult_median": 0.064,
+    "worst_day": -38218,
+    "max_dd": 146176,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -77651,
+     "2026Q3": -58084,
+     "2026Q4": -6871
+    },
+    "inst": {
+     "ICICIBANK": [
+      21,
+      -12076
+     ],
+     "INFY": [
+      27,
+      -14894
+     ],
+     "KOTAKBANK": [
+      20,
+      -8224
+     ],
+     "LT": [
+      35,
+      -47520
+     ],
+     "M&M": [
+      22,
+      -8313
+     ],
+     "MARUTI": [
+      17,
+      2229
+     ],
+     "RELIANCE": [
+      23,
+      18306
+     ],
+     "SBIN": [
+      13,
+      -12999
+     ],
+     "TATASTEEL": [
+      29,
+      -46877
+     ],
+     "TRENT": [
+      13,
+      -12238
+     ]
+    },
+    "why": {
+     "target": 131,
+     "squareoff": 72,
+     "stop": 17
+    },
+    "longs": 98,
+    "shorts": 122
+   },
+   "x2": {
+    "net": -241092,
+    "win": 0.455
+   },
+   "risk1": {
+    "net_risk1": -21807,
+    "median_shares": 47.5,
+    "median_risk_pct": 1.441
+   },
+   "p": 0.9321,
+   "twin_mean": -92863,
+   "q": 1.0,
+   "verdict": "FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/poc-x-x-2r": {
+   "x1": {
+    "trades": 62,
+    "win": 0.306,
+    "net": -96556,
+    "per_trade": -1557,
+    "avg_win": 1898,
+    "avg_loss": -3084,
+    "r_mult": -0.27,
+    "r_mult_median": -0.335,
+    "worst_day": -10921,
+    "max_dd": 100970,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -58910,
+     "2026Q3": -37964,
+     "2026Q4": 318
+    },
+    "inst": {
+     "BANKNIFTY": [
+      37,
+      -50320
+     ],
+     "NIFTY": [
+      25,
+      -46236
+     ]
+    },
+    "why": {
+     "squareoff": 33,
+     "stop": 25,
+     "target": 4
+    },
+    "longs": 28,
+    "shorts": 34
+   },
+   "x2": {
+    "net": -103230,
+    "win": 0.306
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -46801,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/poc-x-x-st": {
+   "x1": {
+    "trades": 65,
+    "win": 0.462,
+    "net": -51862,
+    "per_trade": -798,
+    "avg_win": 1424,
+    "avg_loss": -2702,
+    "r_mult": -0.153,
+    "r_mult_median": -0.06,
+    "worst_day": -7156,
+    "max_dd": 54742,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -19366,
+     "2026Q3": -28336,
+     "2026Q4": -4161
+    },
+    "inst": {
+     "BANKNIFTY": [
+      38,
+      -25998
+     ],
+     "NIFTY": [
+      27,
+      -25865
+     ]
+    },
+    "why": {
+     "target": 25,
+     "squareoff": 21,
+     "stop": 19
+    },
+    "longs": 31,
+    "shorts": 34
+   },
+   "x2": {
+    "net": -58972,
+    "win": 0.462
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.994,
+   "twin_mean": -14174,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/poc-x-h-2r": {
+   "x1": {
+    "trades": 40,
+    "win": 0.225,
+    "net": -84642,
+    "per_trade": -2116,
+    "avg_win": 1844,
+    "avg_loss": -3266,
+    "r_mult": -0.387,
+    "r_mult_median": -0.4,
+    "worst_day": -10921,
+    "max_dd": 84642,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -55772,
+     "2026Q3": -23430,
+     "2026Q4": -5440
+    },
+    "inst": {
+     "BANKNIFTY": [
+      22,
+      -47269
+     ],
+     "NIFTY": [
+      18,
+      -37373
+     ]
+    },
+    "why": {
+     "squareoff": 24,
+     "stop": 15,
+     "target": 1
+    },
+    "longs": 20,
+    "shorts": 20
+   },
+   "x2": {
+    "net": -88876,
+    "win": 0.225
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.998,
+   "twin_mean": -43202,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/poc-x-h-st": {
+   "x1": {
+    "trades": 42,
+    "win": 0.429,
+    "net": -39937,
+    "per_trade": -951,
+    "avg_win": 1356,
+    "avg_loss": -2681,
+    "r_mult": -0.211,
+    "r_mult_median": -0.123,
+    "worst_day": -7156,
+    "max_dd": 39937,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -20513,
+     "2026Q3": -13983,
+     "2026Q4": -5440
+    },
+    "inst": {
+     "BANKNIFTY": [
+      23,
+      -23158
+     ],
+     "NIFTY": [
+      19,
+      -16779
+     ]
+    },
+    "why": {
+     "target": 17,
+     "squareoff": 15,
+     "stop": 10
+    },
+    "longs": 22,
+    "shorts": 20
+   },
+   "x2": {
+    "net": -44516,
+    "win": 0.429
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.9022,
+   "twin_mean": -20792,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/poc-c-x-2r": {
+   "x1": {
+    "trades": 27,
+    "win": 0.259,
+    "net": -54918,
+    "per_trade": -2034,
+    "avg_win": 874,
+    "avg_loss": -3052,
+    "r_mult": -0.611,
+    "r_mult_median": -0.919,
+    "worst_day": -8601,
+    "max_dd": 54918,
+    "months_green": "0/6",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -33764,
+     "2026Q3": -21154
+    },
+    "inst": {
+     "BANKNIFTY": [
+      13,
+      -26505
+     ],
+     "NIFTY": [
+      14,
+      -28413
+     ]
+    },
+    "why": {
+     "stop": 15,
+     "squareoff": 12
+    },
+    "longs": 14,
+    "shorts": 13
+   },
+   "x2": {
+    "net": -57559,
+    "win": 0.259
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.996,
+   "twin_mean": -33867,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, < 40 trades, top 5 >= net"
+  },
+  "IDX-b/poc-c-x-st": {
+   "x1": {
+    "trades": 27,
+    "win": 0.37,
+    "net": -37838,
+    "per_trade": -1401,
+    "avg_win": 1227,
+    "avg_loss": -2948,
+    "r_mult": -0.411,
+    "r_mult_median": -0.463,
+    "worst_day": -5012,
+    "max_dd": 37838,
+    "months_green": "0/6",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -17762,
+     "2026Q3": -20076
+    },
+    "inst": {
+     "BANKNIFTY": [
+      13,
+      -16191
+     ],
+     "NIFTY": [
+      14,
+      -21647
+     ]
+    },
+    "why": {
+     "stop": 12,
+     "squareoff": 8,
+     "target": 7
+    },
+    "longs": 14,
+    "shorts": 13
+   },
+   "x2": {
+    "net": -40520,
+    "win": 0.37
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.996,
+   "twin_mean": -14765,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, < 40 trades, top 5 >= net, design gate"
+  },
+  "IDX-b/poc-c-h-2r": {
+   "x1": {
+    "trades": 15,
+    "win": 0.2,
+    "net": -39479,
+    "per_trade": -2632,
+    "avg_win": 443,
+    "avg_loss": -3401,
+    "r_mult": -0.726,
+    "r_mult_median": -0.936,
+    "worst_day": -8601,
+    "max_dd": 39479,
+    "months_green": "0/6",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -27753,
+     "2026Q3": -11726
+    },
+    "inst": {
+     "BANKNIFTY": [
+      6,
+      -17066
+     ],
+     "NIFTY": [
+      9,
+      -22414
+     ]
+    },
+    "why": {
+     "stop": 9,
+     "squareoff": 6
+    },
+    "longs": 9,
+    "shorts": 6
+   },
+   "x2": {
+    "net": -40897,
+    "win": 0.2
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.988,
+   "twin_mean": -26926,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, < 40 trades, top 5 >= net"
+  },
+  "IDX-b/poc-c-h-st": {
+   "x1": {
+    "trades": 15,
+    "win": 0.333,
+    "net": -26303,
+    "per_trade": -1754,
+    "avg_win": 1181,
+    "avg_loss": -3221,
+    "r_mult": -0.51,
+    "r_mult_median": -0.525,
+    "worst_day": -5012,
+    "max_dd": 26303,
+    "months_green": "0/6",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -15384,
+     "2026Q3": -10919
+    },
+    "inst": {
+     "BANKNIFTY": [
+      6,
+      -10221
+     ],
+     "NIFTY": [
+      9,
+      -16082
+     ]
+    },
+    "why": {
+     "stop": 7,
+     "squareoff": 4,
+     "target": 4
+    },
+    "longs": 9,
+    "shorts": 6
+   },
+   "x2": {
+    "net": -27753,
+    "win": 0.333
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.9301,
+   "twin_mean": -13942,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, < 40 trades, top 5 >= net"
+  },
+  "IDX-b/lvn-x-x-2r": {
+   "x1": {
+    "trades": 67,
+    "win": 0.343,
+    "net": -89209,
+    "per_trade": -1331,
+    "avg_win": 3002,
+    "avg_loss": -3597,
+    "r_mult": -0.116,
+    "r_mult_median": -0.135,
+    "worst_day": -13793,
+    "max_dd": 89209,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -56690,
+     "2026Q3": -30558,
+     "2026Q4": -1961
+    },
+    "inst": {
+     "BANKNIFTY": [
+      36,
+      -80722
+     ],
+     "NIFTY": [
+      31,
+      -8488
+     ]
+    },
+    "why": {
+     "squareoff": 56,
+     "stop": 9,
+     "target": 2
+    },
+    "longs": 43,
+    "shorts": 24
+   },
+   "x2": {
+    "net": -96384,
+    "win": 0.328
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -19019,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/lvn-x-x-st": {
+   "x1": {
+    "trades": 74,
+    "win": 0.554,
+    "net": -40760,
+    "per_trade": -551,
+    "avg_win": 1230,
+    "avg_loss": -2763,
+    "r_mult": -0.014,
+    "r_mult_median": 0.079,
+    "worst_day": -13154,
+    "max_dd": 43186,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -16798,
+     "2026Q3": -25524,
+     "2026Q4": 1561
+    },
+    "inst": {
+     "BANKNIFTY": [
+      42,
+      -42232
+     ],
+     "NIFTY": [
+      32,
+      1472
+     ]
+    },
+    "why": {
+     "target": 46,
+     "squareoff": 23,
+     "stop": 5
+    },
+    "longs": 47,
+    "shorts": 27
+   },
+   "x2": {
+    "net": -48937,
+    "win": 0.541
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.8743,
+   "twin_mean": -17469,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/lvn-x-h-2r": {
+   "x1": {
+    "trades": 49,
+    "win": 0.388,
+    "net": -38011,
+    "per_trade": -776,
+    "avg_win": 3127,
+    "avg_loss": -3248,
+    "r_mult": -0.048,
+    "r_mult_median": -0.103,
+    "worst_day": -13154,
+    "max_dd": 42441,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -33480,
+     "2026Q3": -8020,
+     "2026Q4": 3489
+    },
+    "inst": {
+     "BANKNIFTY": [
+      25,
+      -37664
+     ],
+     "NIFTY": [
+      24,
+      -346
+     ]
+    },
+    "why": {
+     "squareoff": 41,
+     "stop": 6,
+     "target": 2
+    },
+    "longs": 26,
+    "shorts": 23
+   },
+   "x2": {
+    "net": -43051,
+    "win": 0.367
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.984,
+   "twin_mean": 482,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/lvn-x-h-st": {
+   "x1": {
+    "trades": 55,
+    "win": 0.564,
+    "net": -24811,
+    "per_trade": -451,
+    "avg_win": 1255,
+    "avg_loss": -2655,
+    "r_mult": -0.0,
+    "r_mult_median": 0.08,
+    "worst_day": -13154,
+    "max_dd": 26734,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -14208,
+     "2026Q3": -11662,
+     "2026Q4": 1058
+    },
+    "inst": {
+     "BANKNIFTY": [
+      30,
+      -33355
+     ],
+     "NIFTY": [
+      25,
+      8544
+     ]
+    },
+    "why": {
+     "target": 35,
+     "squareoff": 16,
+     "stop": 4
+    },
+    "longs": 30,
+    "shorts": 25
+   },
+   "x2": {
+    "net": -30648,
+    "win": 0.545
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.8323,
+   "twin_mean": -10938,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/lvn-c-x-2r": {
+   "x1": {
+    "trades": 56,
+    "win": 0.321,
+    "net": -86480,
+    "per_trade": -1544,
+    "avg_win": 2650,
+    "avg_loss": -3531,
+    "r_mult": -0.136,
+    "r_mult_median": -0.119,
+    "worst_day": -14642,
+    "max_dd": 86480,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -69365,
+     "2026Q3": -13639,
+     "2026Q4": -3477
+    },
+    "inst": {
+     "BANKNIFTY": [
+      33,
+      -73160
+     ],
+     "NIFTY": [
+      23,
+      -13321
+     ]
+    },
+    "why": {
+     "squareoff": 48,
+     "stop": 7,
+     "target": 1
+    },
+    "longs": 35,
+    "shorts": 21
+   },
+   "x2": {
+    "net": -92652,
+    "win": 0.304
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -28472,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/lvn-c-x-st": {
+   "x1": {
+    "trades": 62,
+    "win": 0.565,
+    "net": -31485,
+    "per_trade": -508,
+    "avg_win": 1164,
+    "avg_loss": -2675,
+    "r_mult": -0.022,
+    "r_mult_median": 0.085,
+    "worst_day": -13154,
+    "max_dd": 34394,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -16522,
+     "2026Q3": -15510,
+     "2026Q4": 547
+    },
+    "inst": {
+     "BANKNIFTY": [
+      38,
+      -30571
+     ],
+     "NIFTY": [
+      24,
+      -914
+     ]
+    },
+    "why": {
+     "target": 39,
+     "squareoff": 19,
+     "stop": 4
+    },
+    "longs": 39,
+    "shorts": 23
+   },
+   "x2": {
+    "net": -38550,
+    "win": 0.548
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.8483,
+   "twin_mean": -13513,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-b/lvn-c-h-2r": {
+   "x1": {
+    "trades": 39,
+    "win": 0.385,
+    "net": -27828,
+    "per_trade": -714,
+    "avg_win": 3131,
+    "avg_loss": -3116,
+    "r_mult": -0.06,
+    "r_mult_median": -0.078,
+    "worst_day": -13154,
+    "max_dd": 35296,
+    "months_green": "4/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -30377,
+     "2026Q3": 577,
+     "2026Q4": 1973
+    },
+    "inst": {
+     "BANKNIFTY": [
+      22,
+      -30103
+     ],
+     "NIFTY": [
+      17,
+      2275
+     ]
+    },
+    "why": {
+     "squareoff": 34,
+     "stop": 4,
+     "target": 1
+    },
+    "longs": 21,
+    "shorts": 18
+   },
+   "x2": {
+    "net": -32028,
+    "win": 0.359
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.9641,
+   "twin_mean": 2557,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, < 40 trades, top 5 >= net, design gate"
+  },
+  "IDX-b/lvn-c-h-st": {
+   "x1": {
+    "trades": 45,
+    "win": 0.578,
+    "net": -20861,
+    "per_trade": -464,
+    "avg_win": 1155,
+    "avg_loss": -2679,
+    "r_mult": -0.013,
+    "r_mult_median": 0.089,
+    "worst_day": -13154,
+    "max_dd": 22600,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -15294,
+     "2026Q3": -5610,
+     "2026Q4": 44
+    },
+    "inst": {
+     "BANKNIFTY": [
+      27,
+      -24011
+     ],
+     "NIFTY": [
+      18,
+      3150
+     ]
+    },
+    "why": {
+     "target": 28,
+     "squareoff": 14,
+     "stop": 3
+    },
+    "longs": 25,
+    "shorts": 20
+   },
+   "x2": {
+    "net": -25841,
+    "win": 0.556
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.8263,
+   "twin_mean": -7065,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/poc-x-x-2r": {
+   "x1": {
+    "trades": 170,
+    "win": 0.282,
+    "net": -236888,
+    "per_trade": -1393,
+    "avg_win": 3422,
+    "avg_loss": -3288,
+    "r_mult": -0.231,
+    "r_mult_median": -0.35,
+    "worst_day": -32387,
+    "max_dd": 236888,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -126965,
+     "2026Q3": -81191,
+     "2026Q4": -28732
+    },
+    "inst": {
+     "BANKNIFTY": [
+      45,
+      -84069
+     ],
+     "FINNIFTY": [
+      28,
+      -45163
+     ],
+     "MIDCPNIFTY": [
+      39,
+      59
+     ],
+     "NIFTY": [
+      27,
+      -59492
+     ],
+     "SENSEX": [
+      31,
+      -48223
+     ]
+    },
+    "why": {
+     "squareoff": 93,
+     "stop": 66,
+     "target": 11
+    },
+    "longs": 89,
+    "shorts": 81
+   },
+   "x2": {
+    "net": -256050,
+    "win": 0.276
+   },
+   "risk1": {
+    "zero_lot_share": 0.994,
+    "median_lots": 0.0,
+    "net_risk1": -1789
+   },
+   "p": 1.0,
+   "twin_mean": -157175,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/poc-x-x-st": {
+   "x1": {
+    "trades": 179,
+    "win": 0.425,
+    "net": -141083,
+    "per_trade": -788,
+    "avg_win": 1880,
+    "avg_loss": -2757,
+    "r_mult": -0.144,
+    "r_mult_median": 0.008,
+    "worst_day": -32387,
+    "max_dd": 141083,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -73037,
+     "2026Q3": -60525,
+     "2026Q4": -7521
+    },
+    "inst": {
+     "BANKNIFTY": [
+      46,
+      -54662
+     ],
+     "FINNIFTY": [
+      32,
+      -37200
+     ],
+     "MIDCPNIFTY": [
+      41,
+      952
+     ],
+     "NIFTY": [
+      28,
+      -29522
+     ],
+     "SENSEX": [
+      32,
+      -20651
+     ]
+    },
+    "why": {
+     "target": 81,
+     "stop": 53,
+     "squareoff": 45
+    },
+    "longs": 96,
+    "shorts": 83
+   },
+   "x2": {
+    "net": -161651,
+    "win": 0.413
+   },
+   "risk1": {
+    "zero_lot_share": 0.994,
+    "median_lots": 0.0,
+    "net_risk1": -1789
+   },
+   "p": 0.996,
+   "twin_mean": -68543,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/poc-x-h-2r": {
+   "x1": {
+    "trades": 111,
+    "win": 0.225,
+    "net": -222691,
+    "per_trade": -2006,
+    "avg_win": 2915,
+    "avg_loss": -3437,
+    "r_mult": -0.351,
+    "r_mult_median": -0.511,
+    "worst_day": -18193,
+    "max_dd": 222691,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -125554,
+     "2026Q3": -63209,
+     "2026Q4": -33928
+    },
+    "inst": {
+     "BANKNIFTY": [
+      26,
+      -59109
+     ],
+     "FINNIFTY": [
+      22,
+      -31187
+     ],
+     "MIDCPNIFTY": [
+      23,
+      -46004
+     ],
+     "NIFTY": [
+      20,
+      -55923
+     ],
+     "SENSEX": [
+      20,
+      -30467
+     ]
+    },
+    "why": {
+     "squareoff": 64,
+     "stop": 44,
+     "target": 3
+    },
+    "longs": 66,
+    "shorts": 45
+   },
+   "x2": {
+    "net": -234972,
+    "win": 0.216
+   },
+   "risk1": {
+    "zero_lot_share": 0.991,
+    "median_lots": 0.0,
+    "net_risk1": 1235
+   },
+   "p": 1.0,
+   "twin_mean": -116610,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/poc-x-h-st": {
+   "x1": {
+    "trades": 116,
+    "win": 0.379,
+    "net": -137864,
+    "per_trade": -1188,
+    "avg_win": 1529,
+    "avg_loss": -2849,
+    "r_mult": -0.205,
+    "r_mult_median": -0.022,
+    "worst_day": -18193,
+    "max_dd": 137864,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -83967,
+     "2026Q3": -39698,
+     "2026Q4": -14200
+    },
+    "inst": {
+     "BANKNIFTY": [
+      26,
+      -26980
+     ],
+     "FINNIFTY": [
+      25,
+      -24578
+     ],
+     "MIDCPNIFTY": [
+      23,
+      -36554
+     ],
+     "NIFTY": [
+      21,
+      -29653
+     ],
+     "SENSEX": [
+      21,
+      -20099
+     ]
+    },
+    "why": {
+     "target": 50,
+     "stop": 34,
+     "squareoff": 32
+    },
+    "longs": 71,
+    "shorts": 45
+   },
+   "x2": {
+    "net": -150958,
+    "win": 0.379
+   },
+   "risk1": {
+    "zero_lot_share": 0.991,
+    "median_lots": 0.0,
+    "net_risk1": 2579
+   },
+   "p": 1.0,
+   "twin_mean": -53653,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/poc-c-x-2r": {
+   "x1": {
+    "trades": 78,
+    "win": 0.295,
+    "net": -90381,
+    "per_trade": -1159,
+    "avg_win": 3941,
+    "avg_loss": -3291,
+    "r_mult": -0.226,
+    "r_mult_median": -0.539,
+    "worst_day": -18193,
+    "max_dd": 90381,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -61279,
+     "2026Q3": -28374,
+     "2026Q4": -729
+    },
+    "inst": {
+     "BANKNIFTY": [
+      17,
+      -27489
+     ],
+     "FINNIFTY": [
+      14,
+      -24590
+     ],
+     "MIDCPNIFTY": [
+      20,
+      10134
+     ],
+     "NIFTY": [
+      16,
+      -40051
+     ],
+     "SENSEX": [
+      11,
+      -8385
+     ]
+    },
+    "why": {
+     "squareoff": 38,
+     "stop": 34,
+     "target": 6
+    },
+    "longs": 41,
+    "shorts": 37
+   },
+   "x2": {
+    "net": -99257,
+    "win": 0.295
+   },
+   "risk1": {
+    "zero_lot_share": 0.987,
+    "median_lots": 0.0,
+    "net_risk1": -1789
+   },
+   "p": 0.6627,
+   "twin_mean": -83711,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net"
+  },
+  "IDX-c/poc-c-x-st": {
+   "x1": {
+    "trades": 82,
+    "win": 0.402,
+    "net": -62691,
+    "per_trade": -765,
+    "avg_win": 2351,
+    "avg_loss": -2863,
+    "r_mult": -0.187,
+    "r_mult_median": -0.085,
+    "worst_day": -18193,
+    "max_dd": 74045,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -47638,
+     "2026Q3": -24511,
+     "2026Q4": 9457
+    },
+    "inst": {
+     "BANKNIFTY": [
+      18,
+      -18878
+     ],
+     "FINNIFTY": [
+      17,
+      -7684
+     ],
+     "MIDCPNIFTY": [
+      20,
+      1411
+     ],
+     "NIFTY": [
+      16,
+      -32182
+     ],
+     "SENSEX": [
+      11,
+      -5357
+     ]
+    },
+    "why": {
+     "target": 32,
+     "stop": 30,
+     "squareoff": 20
+    },
+    "longs": 44,
+    "shorts": 38
+   },
+   "x2": {
+    "net": -72191,
+    "win": 0.402
+   },
+   "risk1": {
+    "zero_lot_share": 0.988,
+    "median_lots": 0.0,
+    "net_risk1": -1789
+   },
+   "p": 0.9022,
+   "twin_mean": -33920,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/poc-c-h-2r": {
+   "x1": {
+    "trades": 50,
+    "win": 0.24,
+    "net": -85206,
+    "per_trade": -1704,
+    "avg_win": 3860,
+    "avg_loss": -3461,
+    "r_mult": -0.378,
+    "r_mult_median": -0.802,
+    "worst_day": -18193,
+    "max_dd": 85206,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -55499,
+     "2026Q3": -19905,
+     "2026Q4": -9802
+    },
+    "inst": {
+     "BANKNIFTY": [
+      9,
+      -16302
+     ],
+     "FINNIFTY": [
+      11,
+      -12888
+     ],
+     "MIDCPNIFTY": [
+      11,
+      -9913
+     ],
+     "NIFTY": [
+      11,
+      -37168
+     ],
+     "SENSEX": [
+      8,
+      -8936
+     ]
+    },
+    "why": {
+     "squareoff": 25,
+     "stop": 24,
+     "target": 1
+    },
+    "longs": 31,
+    "shorts": 19
+   },
+   "x2": {
+    "net": -90793,
+    "win": 0.24
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.994,
+   "twin_mean": -56132,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/poc-c-h-st": {
+   "x1": {
+    "trades": 52,
+    "win": 0.385,
+    "net": -66491,
+    "per_trade": -1279,
+    "avg_win": 1733,
+    "avg_loss": -3161,
+    "r_mult": -0.309,
+    "r_mult_median": -0.299,
+    "worst_day": -18193,
+    "max_dd": 68804,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -48350,
+     "2026Q3": -17042,
+     "2026Q4": -1099
+    },
+    "inst": {
+     "BANKNIFTY": [
+      9,
+      -8137
+     ],
+     "FINNIFTY": [
+      13,
+      -3071
+     ],
+     "MIDCPNIFTY": [
+      11,
+      -15798
+     ],
+     "NIFTY": [
+      11,
+      -32168
+     ],
+     "SENSEX": [
+      8,
+      -7316
+     ]
+    },
+    "why": {
+     "stop": 20,
+     "target": 19,
+     "squareoff": 13
+    },
+    "longs": 33,
+    "shorts": 19
+   },
+   "x2": {
+    "net": -72397,
+    "win": 0.385
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.99,
+   "twin_mean": -26643,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net"
+  },
+  "IDX-c/lvn-x-x-2r": {
+   "x1": {
+    "trades": 177,
+    "win": 0.333,
+    "net": -200188,
+    "per_trade": -1131,
+    "avg_win": 2821,
+    "avg_loss": -3107,
+    "r_mult": -0.075,
+    "r_mult_median": -0.078,
+    "worst_day": -27490,
+    "max_dd": 202972,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -117118,
+     "2026Q3": -64330,
+     "2026Q4": -18741
+    },
+    "inst": {
+     "BANKNIFTY": [
+      37,
+      -72935
+     ],
+     "FINNIFTY": [
+      36,
+      -39265
+     ],
+     "MIDCPNIFTY": [
+      28,
+      -48580
+     ],
+     "NIFTY": [
+      36,
+      -1647
+     ],
+     "SENSEX": [
+      40,
+      -37760
+     ]
+    },
+    "why": {
+     "squareoff": 153,
+     "stop": 21,
+     "target": 3
+    },
+    "longs": 99,
+    "shorts": 78
+   },
+   "x2": {
+    "net": -219527,
+    "win": 0.316
+   },
+   "risk1": {
+    "zero_lot_share": 0.994,
+    "median_lots": 0.0,
+    "net_risk1": -974
+   },
+   "p": 1.0,
+   "twin_mean": -72450,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/lvn-x-x-st": {
+   "x1": {
+    "trades": 193,
+    "win": 0.591,
+    "net": -41602,
+    "per_trade": -216,
+    "avg_win": 1297,
+    "avg_loss": -2398,
+    "r_mult": 0.005,
+    "r_mult_median": 0.078,
+    "worst_day": -27490,
+    "max_dd": 62697,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -20550,
+     "2026Q3": -28859,
+     "2026Q4": 7807
+    },
+    "inst": {
+     "BANKNIFTY": [
+      44,
+      -27841
+     ],
+     "FINNIFTY": [
+      37,
+      -14197
+     ],
+     "MIDCPNIFTY": [
+      31,
+      11300
+     ],
+     "NIFTY": [
+      39,
+      106
+     ],
+     "SENSEX": [
+      42,
+      -10969
+     ]
+    },
+    "why": {
+     "target": 129,
+     "squareoff": 52,
+     "stop": 12
+    },
+    "longs": 109,
+    "shorts": 84
+   },
+   "x2": {
+    "net": -63340,
+    "win": 0.554
+   },
+   "risk1": {
+    "zero_lot_share": 0.99,
+    "median_lots": 0.0,
+    "net_risk1": -1472
+   },
+   "p": 0.1417,
+   "twin_mean": -70224,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/lvn-x-h-2r": {
+   "x1": {
+    "trades": 131,
+    "win": 0.359,
+    "net": -125470,
+    "per_trade": -958,
+    "avg_win": 2879,
+    "avg_loss": -3105,
+    "r_mult": -0.05,
+    "r_mult_median": -0.078,
+    "worst_day": -27490,
+    "max_dd": 125470,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -73631,
+     "2026Q3": -37924,
+     "2026Q4": -13916
+    },
+    "inst": {
+     "BANKNIFTY": [
+      23,
+      -34931
+     ],
+     "FINNIFTY": [
+      26,
+      -36845
+     ],
+     "MIDCPNIFTY": [
+      19,
+      -36049
+     ],
+     "NIFTY": [
+      30,
+      2982
+     ],
+     "SENSEX": [
+      33,
+      -20628
+     ]
+    },
+    "why": {
+     "squareoff": 115,
+     "stop": 14,
+     "target": 2
+    },
+    "longs": 70,
+    "shorts": 61
+   },
+   "x2": {
+    "net": -139599,
+    "win": 0.344
+   },
+   "risk1": {
+    "zero_lot_share": 0.992,
+    "median_lots": 0.0,
+    "net_risk1": -974
+   },
+   "p": 1.0,
+   "twin_mean": -39521,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/lvn-x-h-st": {
+   "x1": {
+    "trades": 144,
+    "win": 0.604,
+    "net": -35250,
+    "per_trade": -245,
+    "avg_win": 1215,
+    "avg_loss": -2472,
+    "r_mult": 0.011,
+    "r_mult_median": 0.067,
+    "worst_day": -27490,
+    "max_dd": 47503,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -24322,
+     "2026Q3": -17394,
+     "2026Q4": 6466
+    },
+    "inst": {
+     "BANKNIFTY": [
+      29,
+      -25265
+     ],
+     "FINNIFTY": [
+      27,
+      -13318
+     ],
+     "MIDCPNIFTY": [
+      21,
+      -5165
+     ],
+     "NIFTY": [
+      33,
+      11486
+     ],
+     "SENSEX": [
+      34,
+      -2987
+     ]
+    },
+    "why": {
+     "target": 98,
+     "squareoff": 38,
+     "stop": 8
+    },
+    "longs": 78,
+    "shorts": 66
+   },
+   "x2": {
+    "net": -51266,
+    "win": 0.569
+   },
+   "risk1": {
+    "zero_lot_share": 0.986,
+    "median_lots": 0.0,
+    "net_risk1": -1472
+   },
+   "p": 0.2076,
+   "twin_mean": -54426,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/lvn-c-x-2r": {
+   "x1": {
+    "trades": 143,
+    "win": 0.308,
+    "net": -199555,
+    "per_trade": -1395,
+    "avg_win": 2616,
+    "avg_loss": -3179,
+    "r_mult": -0.095,
+    "r_mult_median": -0.135,
+    "worst_day": -27490,
+    "max_dd": 199555,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -114144,
+     "2026Q3": -61802,
+     "2026Q4": -23608
+    },
+    "inst": {
+     "BANKNIFTY": [
+      34,
+      -69320
+     ],
+     "FINNIFTY": [
+      27,
+      -33394
+     ],
+     "MIDCPNIFTY": [
+      25,
+      -44282
+     ],
+     "NIFTY": [
+      24,
+      -15927
+     ],
+     "SENSEX": [
+      33,
+      -36633
+     ]
+    },
+    "why": {
+     "squareoff": 128,
+     "stop": 14,
+     "target": 1
+    },
+    "longs": 81,
+    "shorts": 62
+   },
+   "x2": {
+    "net": -215429,
+    "win": 0.287
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -88396,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/lvn-c-x-st": {
+   "x1": {
+    "trades": 156,
+    "win": 0.596,
+    "net": -49027,
+    "per_trade": -314,
+    "avg_win": 1286,
+    "avg_loss": -2676,
+    "r_mult": 0.002,
+    "r_mult_median": 0.081,
+    "worst_day": -27490,
+    "max_dd": 67269,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -22111,
+     "2026Q3": -31700,
+     "2026Q4": 4783
+    },
+    "inst": {
+     "BANKNIFTY": [
+      40,
+      -22051
+     ],
+     "FINNIFTY": [
+      28,
+      -16365
+     ],
+     "MIDCPNIFTY": [
+      28,
+      8129
+     ],
+     "NIFTY": [
+      26,
+      -4639
+     ],
+     "SENSEX": [
+      34,
+      -14102
+     ]
+    },
+    "why": {
+     "target": 102,
+     "squareoff": 47,
+     "stop": 7
+    },
+    "longs": 90,
+    "shorts": 66
+   },
+   "x2": {
+    "net": -66993,
+    "win": 0.558
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.2036,
+   "twin_mean": -71269,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/lvn-c-h-2r": {
+   "x1": {
+    "trades": 101,
+    "win": 0.327,
+    "net": -122473,
+    "per_trade": -1213,
+    "avg_win": 2815,
+    "avg_loss": -3167,
+    "r_mult": -0.086,
+    "r_mult_median": -0.152,
+    "worst_day": -27490,
+    "max_dd": 122473,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -57770,
+     "2026Q3": -45920,
+     "2026Q4": -18783
+    },
+    "inst": {
+     "BANKNIFTY": [
+      21,
+      -34206
+     ],
+     "FINNIFTY": [
+      19,
+      -33173
+     ],
+     "MIDCPNIFTY": [
+      16,
+      -31750
+     ],
+     "NIFTY": [
+      19,
+      -3844
+     ],
+     "SENSEX": [
+      26,
+      -19500
+     ]
+    },
+    "why": {
+     "squareoff": 93,
+     "stop": 8
+    },
+    "longs": 56,
+    "shorts": 45
+   },
+   "x2": {
+    "net": -133590,
+    "win": 0.307
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 1.0,
+   "twin_mean": -49032,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "IDX-c/lvn-c-h-st": {
+   "x1": {
+    "trades": 112,
+    "win": 0.607,
+    "net": -49898,
+    "per_trade": -446,
+    "avg_win": 1160,
+    "avg_loss": -2926,
+    "r_mult": -0.004,
+    "r_mult_median": 0.074,
+    "worst_day": -27490,
+    "max_dd": 53574,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -28212,
+     "2026Q3": -25128,
+     "2026Q4": 3442
+    },
+    "inst": {
+     "BANKNIFTY": [
+      27,
+      -22758
+     ],
+     "FINNIFTY": [
+      20,
+      -16416
+     ],
+     "MIDCPNIFTY": [
+      18,
+      -8336
+     ],
+     "NIFTY": [
+      21,
+      3733
+     ],
+     "SENSEX": [
+      26,
+      -6120
+     ]
+    },
+    "why": {
+     "target": 73,
+     "squareoff": 35,
+     "stop": 4
+    },
+    "longs": 63,
+    "shorts": 49
+   },
+   "x2": {
+    "net": -62693,
+    "win": 0.571
+   },
+   "risk1": {
+    "zero_lot_share": 1.0,
+    "median_lots": 0.0,
+    "net_risk1": 0
+   },
+   "p": 0.4012,
+   "twin_mean": -55636,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-x-x-2r": {
+   "x1": {
+    "trades": 438,
+    "win": 0.418,
+    "net": -261716,
+    "per_trade": -598,
+    "avg_win": 3094,
+    "avg_loss": -3247,
+    "r_mult": 0.009,
+    "r_mult_median": -0.037,
+    "worst_day": -27972,
+    "max_dd": 280227,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -234753,
+     "2026Q3": -36101,
+     "2026Q4": 9138
+    },
+    "inst": {
+     "ICICIBANK": [
+      44,
+      -23312
+     ],
+     "INFY": [
+      43,
+      -33215
+     ],
+     "KOTAKBANK": [
+      48,
+      2414
+     ],
+     "LT": [
+      38,
+      -47681
+     ],
+     "M&M": [
+      37,
+      -71822
+     ],
+     "MARUTI": [
+      47,
+      -37951
+     ],
+     "RELIANCE": [
+      43,
+      -4180
+     ],
+     "SBIN": [
+      53,
+      43702
+     ],
+     "TATASTEEL": [
+      46,
+      -30766
+     ],
+     "TRENT": [
+      39,
+      -58906
+     ]
+    },
+    "why": {
+     "squareoff": 299,
+     "stop": 107,
+     "target": 32
+    },
+    "longs": 215,
+    "shorts": 223
+   },
+   "x2": {
+    "net": -465471,
+    "win": 0.37
+   },
+   "risk1": {
+    "net_risk1": -64784,
+    "median_shares": 100.0,
+    "median_risk_pct": 0.75
+   },
+   "p": 0.998,
+   "twin_mean": -89651,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-x-x-st": {
+   "x1": {
+    "trades": 458,
+    "win": 0.463,
+    "net": -255131,
+    "per_trade": -557,
+    "avg_win": 1942,
+    "avg_loss": -2711,
+    "r_mult": -0.019,
+    "r_mult_median": 0.052,
+    "worst_day": -27972,
+    "max_dd": 258624,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -172324,
+     "2026Q3": -84452,
+     "2026Q4": 1644
+    },
+    "inst": {
+     "ICICIBANK": [
+      46,
+      -13368
+     ],
+     "INFY": [
+      47,
+      -24615
+     ],
+     "KOTAKBANK": [
+      50,
+      -7430
+     ],
+     "LT": [
+      39,
+      -40884
+     ],
+     "M&M": [
+      39,
+      -62901
+     ],
+     "MARUTI": [
+      48,
+      -28532
+     ],
+     "RELIANCE": [
+      45,
+      -6159
+     ],
+     "SBIN": [
+      56,
+      -5270
+     ],
+     "TATASTEEL": [
+      49,
+      -45338
+     ],
+     "TRENT": [
+      39,
+      -20635
+     ]
+    },
+    "why": {
+     "target": 206,
+     "squareoff": 156,
+     "stop": 96
+    },
+    "longs": 223,
+    "shorts": 235
+   },
+   "x2": {
+    "net": -466688,
+    "win": 0.395
+   },
+   "risk1": {
+    "net_risk1": -80183,
+    "median_shares": 102.5,
+    "median_risk_pct": 0.738
+   },
+   "p": 0.998,
+   "twin_mean": -124359,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-x-h-2r": {
+   "x1": {
+    "trades": 260,
+    "win": 0.435,
+    "net": -168223,
+    "per_trade": -647,
+    "avg_win": 2923,
+    "avg_loss": -3391,
+    "r_mult": 0.024,
+    "r_mult_median": -0.002,
+    "worst_day": -20415,
+    "max_dd": 172536,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -136670,
+     "2026Q3": -18088,
+     "2026Q4": -13465
+    },
+    "inst": {
+     "ICICIBANK": [
+      32,
+      -20423
+     ],
+     "INFY": [
+      21,
+      -19716
+     ],
+     "KOTAKBANK": [
+      25,
+      -8153
+     ],
+     "LT": [
+      19,
+      -33372
+     ],
+     "M&M": [
+      28,
+      -41149
+     ],
+     "MARUTI": [
+      29,
+      -31432
+     ],
+     "RELIANCE": [
+      26,
+      -6634
+     ],
+     "SBIN": [
+      27,
+      42131
+     ],
+     "TATASTEEL": [
+      26,
+      -4022
+     ],
+     "TRENT": [
+      27,
+      -45452
+     ]
+    },
+    "why": {
+     "squareoff": 180,
+     "stop": 62,
+     "target": 18
+    },
+    "longs": 120,
+    "shorts": 140
+   },
+   "x2": {
+    "net": -289803,
+    "win": 0.381
+   },
+   "risk1": {
+    "net_risk1": -31098,
+    "median_shares": 81.0,
+    "median_risk_pct": 0.762
+   },
+   "p": 0.998,
+   "twin_mean": -48759,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-x-h-st": {
+   "x1": {
+    "trades": 267,
+    "win": 0.498,
+    "net": -105578,
+    "per_trade": -395,
+    "avg_win": 1893,
+    "avg_loss": -2667,
+    "r_mult": 0.015,
+    "r_mult_median": 0.074,
+    "worst_day": -15154,
+    "max_dd": 107284,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -54957,
+     "2026Q3": -38364,
+     "2026Q4": -12257
+    },
+    "inst": {
+     "ICICIBANK": [
+      34,
+      2893
+     ],
+     "INFY": [
+      24,
+      -3776
+     ],
+     "KOTAKBANK": [
+      26,
+      -3852
+     ],
+     "LT": [
+      19,
+      -39308
+     ],
+     "M&M": [
+      28,
+      -25754
+     ],
+     "MARUTI": [
+      29,
+      -15991
+     ],
+     "RELIANCE": [
+      27,
+      -7300
+     ],
+     "SBIN": [
+      28,
+      6339
+     ],
+     "TATASTEEL": [
+      26,
+      -10237
+     ],
+     "TRENT": [
+      26,
+      -8591
+     ]
+    },
+    "why": {
+     "target": 129,
+     "squareoff": 87,
+     "stop": 51
+    },
+    "longs": 122,
+    "shorts": 145
+   },
+   "x2": {
+    "net": -229220,
+    "win": 0.412
+   },
+   "risk1": {
+    "net_risk1": -34768,
+    "median_shares": 91.0,
+    "median_risk_pct": 0.756
+   },
+   "p": 0.8882,
+   "twin_mean": -56412,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-c-x-2r": {
+   "x1": {
+    "trades": 239,
+    "win": 0.418,
+    "net": -121376,
+    "per_trade": -508,
+    "avg_win": 3193,
+    "avg_loss": -3170,
+    "r_mult": -0.005,
+    "r_mult_median": -0.067,
+    "worst_day": -21693,
+    "max_dd": 152810,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -143395,
+     "2026Q3": -609,
+     "2026Q4": 22628
+    },
+    "inst": {
+     "ICICIBANK": [
+      18,
+      -1001
+     ],
+     "INFY": [
+      25,
+      -10116
+     ],
+     "KOTAKBANK": [
+      25,
+      -15689
+     ],
+     "LT": [
+      19,
+      -16675
+     ],
+     "M&M": [
+      26,
+      -52909
+     ],
+     "MARUTI": [
+      27,
+      -6381
+     ],
+     "RELIANCE": [
+      21,
+      -12538
+     ],
+     "SBIN": [
+      32,
+      13400
+     ],
+     "TATASTEEL": [
+      26,
+      -9110
+     ],
+     "TRENT": [
+      20,
+      -10356
+     ]
+    },
+    "why": {
+     "squareoff": 154,
+     "stop": 66,
+     "target": 19
+    },
+    "longs": 120,
+    "shorts": 119
+   },
+   "x2": {
+    "net": -232118,
+    "win": 0.385
+   },
+   "risk1": {
+    "net_risk1": -37962,
+    "median_shares": 101.0,
+    "median_risk_pct": 0.69
+   },
+   "p": 0.9461,
+   "twin_mean": -64848,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-c-x-st": {
+   "x1": {
+    "trades": 243,
+    "win": 0.453,
+    "net": -147909,
+    "per_trade": -609,
+    "avg_win": 2047,
+    "avg_loss": -2805,
+    "r_mult": -0.051,
+    "r_mult_median": 0.038,
+    "worst_day": -21693,
+    "max_dd": 168742,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -115855,
+     "2026Q3": -52886,
+     "2026Q4": 20833
+    },
+    "inst": {
+     "ICICIBANK": [
+      18,
+      -3463
+     ],
+     "INFY": [
+      26,
+      -13887
+     ],
+     "KOTAKBANK": [
+      25,
+      -20711
+     ],
+     "LT": [
+      19,
+      -11692
+     ],
+     "M&M": [
+      27,
+      -24458
+     ],
+     "MARUTI": [
+      27,
+      -16379
+     ],
+     "RELIANCE": [
+      22,
+      -13458
+     ],
+     "SBIN": [
+      33,
+      -16572
+     ],
+     "TATASTEEL": [
+      26,
+      -14661
+     ],
+     "TRENT": [
+      20,
+      -12628
+     ]
+    },
+    "why": {
+     "target": 102,
+     "squareoff": 82,
+     "stop": 59
+    },
+    "longs": 121,
+    "shorts": 122
+   },
+   "x2": {
+    "net": -259502,
+    "win": 0.399
+   },
+   "risk1": {
+    "net_risk1": -49420,
+    "median_shares": 101.0,
+    "median_risk_pct": 0.685
+   },
+   "p": 0.984,
+   "twin_mean": -70043,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-c-h-2r": {
+   "x1": {
+    "trades": 143,
+    "win": 0.462,
+    "net": -81386,
+    "per_trade": -569,
+    "avg_win": 2894,
+    "avg_loss": -3537,
+    "r_mult": 0.032,
+    "r_mult_median": -0.031,
+    "worst_day": -15496,
+    "max_dd": 100194,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -86019,
+     "2026Q3": -4593,
+     "2026Q4": 9226
+    },
+    "inst": {
+     "ICICIBANK": [
+      15,
+      -6575
+     ],
+     "INFY": [
+      11,
+      -5287
+     ],
+     "KOTAKBANK": [
+      13,
+      -13172
+     ],
+     "LT": [
+      8,
+      -8959
+     ],
+     "M&M": [
+      19,
+      -33330
+     ],
+     "MARUTI": [
+      16,
+      1448
+     ],
+     "RELIANCE": [
+      15,
+      -1826
+     ],
+     "SBIN": [
+      17,
+      -6566
+     ],
+     "TATASTEEL": [
+      15,
+      -5248
+     ],
+     "TRENT": [
+      14,
+      -1872
+     ]
+    },
+    "why": {
+     "squareoff": 92,
+     "stop": 39,
+     "target": 12
+    },
+    "longs": 67,
+    "shorts": 76
+   },
+   "x2": {
+    "net": -148593,
+    "win": 0.42
+   },
+   "risk1": {
+    "net_risk1": -16785,
+    "median_shares": 91.0,
+    "median_risk_pct": 0.685
+   },
+   "p": 0.9701,
+   "twin_mean": -24238,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/poc-c-h-st": {
+   "x1": {
+    "trades": 143,
+    "win": 0.49,
+    "net": -79780,
+    "per_trade": -558,
+    "avg_win": 1925,
+    "avg_loss": -2939,
+    "r_mult": -0.028,
+    "r_mult_median": 0.09,
+    "worst_day": -15496,
+    "max_dd": 85904,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -55725,
+     "2026Q3": -30179,
+     "2026Q4": 6123
+    },
+    "inst": {
+     "ICICIBANK": [
+      15,
+      -1406
+     ],
+     "INFY": [
+      12,
+      -4104
+     ],
+     "KOTAKBANK": [
+      13,
+      -12873
+     ],
+     "LT": [
+      8,
+      -12568
+     ],
+     "M&M": [
+      19,
+      -6573
+     ],
+     "MARUTI": [
+      16,
+      -5085
+     ],
+     "RELIANCE": [
+      15,
+      -8384
+     ],
+     "SBIN": [
+      17,
+      -20064
+     ],
+     "TATASTEEL": [
+      15,
+      -2390
+     ],
+     "TRENT": [
+      13,
+      -6333
+     ]
+    },
+    "why": {
+     "target": 65,
+     "squareoff": 45,
+     "stop": 33
+    },
+    "longs": 66,
+    "shorts": 77
+   },
+   "x2": {
+    "net": -146265,
+    "win": 0.413
+   },
+   "risk1": {
+    "net_risk1": -24982,
+    "median_shares": 94.0,
+    "median_risk_pct": 0.685
+   },
+   "p": 0.9621,
+   "twin_mean": -28710,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-x-x-2r": {
+   "x1": {
+    "trades": 315,
+    "win": 0.451,
+    "net": -251559,
+    "per_trade": -799,
+    "avg_win": 3209,
+    "avg_loss": -4088,
+    "r_mult": -0.025,
+    "r_mult_median": -0.026,
+    "worst_day": -48876,
+    "max_dd": 256788,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -182475,
+     "2026Q3": -72774,
+     "2026Q4": 3689
+    },
+    "inst": {
+     "ICICIBANK": [
+      37,
+      -21113
+     ],
+     "INFY": [
+      30,
+      -23608
+     ],
+     "KOTAKBANK": [
+      35,
+      -64854
+     ],
+     "LT": [
+      46,
+      -79220
+     ],
+     "M&M": [
+      32,
+      -3847
+     ],
+     "MARUTI": [
+      29,
+      9898
+     ],
+     "RELIANCE": [
+      28,
+      30561
+     ],
+     "SBIN": [
+      21,
+      -38019
+     ],
+     "TATASTEEL": [
+      33,
+      -45787
+     ],
+     "TRENT": [
+      24,
+      -15570
+     ]
+    },
+    "why": {
+     "squareoff": 270,
+     "stop": 41,
+     "target": 4
+    },
+    "longs": 137,
+    "shorts": 178
+   },
+   "x2": {
+    "net": -395726,
+    "win": 0.387
+   },
+   "risk1": {
+    "net_risk1": -38596,
+    "median_shares": 50.0,
+    "median_risk_pct": 1.325
+   },
+   "p": 1.0,
+   "twin_mean": 66539,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-x-x-st": {
+   "x1": {
+    "trades": 346,
+    "win": 0.514,
+    "net": -253071,
+    "per_trade": -731,
+    "avg_win": 1363,
+    "avg_loss": -2951,
+    "r_mult": -0.037,
+    "r_mult_median": 0.048,
+    "worst_day": -48876,
+    "max_dd": 254659,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -140897,
+     "2026Q3": -104044,
+     "2026Q4": -8131
+    },
+    "inst": {
+     "ICICIBANK": [
+      42,
+      -41334
+     ],
+     "INFY": [
+      35,
+      -36610
+     ],
+     "KOTAKBANK": [
+      37,
+      -18431
+     ],
+     "LT": [
+      52,
+      -50548
+     ],
+     "M&M": [
+      35,
+      -13953
+     ],
+     "MARUTI": [
+      30,
+      11831
+     ],
+     "RELIANCE": [
+      31,
+      3682
+     ],
+     "SBIN": [
+      22,
+      -35362
+     ],
+     "TATASTEEL": [
+      34,
+      -45686
+     ],
+     "TRENT": [
+      28,
+      -26661
+     ]
+    },
+    "why": {
+     "target": 226,
+     "squareoff": 88,
+     "stop": 32
+    },
+    "longs": 151,
+    "shorts": 195
+   },
+   "x2": {
+    "net": -409858,
+    "win": 0.393
+   },
+   "risk1": {
+    "net_risk1": -46510,
+    "median_shares": 50.0,
+    "median_risk_pct": 1.315
+   },
+   "p": 0.996,
+   "twin_mean": -143090,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-x-h-2r": {
+   "x1": {
+    "trades": 221,
+    "win": 0.466,
+    "net": -167612,
+    "per_trade": -758,
+    "avg_win": 3038,
+    "avg_loss": -4072,
+    "r_mult": -0.004,
+    "r_mult_median": -0.003,
+    "worst_day": -48876,
+    "max_dd": 172779,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -120630,
+     "2026Q3": -34945,
+     "2026Q4": -12037
+    },
+    "inst": {
+     "ICICIBANK": [
+      27,
+      -8731
+     ],
+     "INFY": [
+      22,
+      -23430
+     ],
+     "KOTAKBANK": [
+      24,
+      -23447
+     ],
+     "LT": [
+      32,
+      -81287
+     ],
+     "M&M": [
+      25,
+      2805
+     ],
+     "MARUTI": [
+      19,
+      3896
+     ],
+     "RELIANCE": [
+      20,
+      20353
+     ],
+     "SBIN": [
+      13,
+      -17994
+     ],
+     "TATASTEEL": [
+      23,
+      -30258
+     ],
+     "TRENT": [
+      16,
+      -9518
+     ]
+    },
+    "why": {
+     "squareoff": 193,
+     "stop": 26,
+     "target": 2
+    },
+    "longs": 92,
+    "shorts": 129
+   },
+   "x2": {
+    "net": -268525,
+    "win": 0.398
+   },
+   "risk1": {
+    "net_risk1": -21390,
+    "median_shares": 46.0,
+    "median_risk_pct": 1.418
+   },
+   "p": 1.0,
+   "twin_mean": 50896,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-x-h-st": {
+   "x1": {
+    "trades": 239,
+    "win": 0.54,
+    "net": -157073,
+    "per_trade": -657,
+    "avg_win": 1411,
+    "avg_loss": -3083,
+    "r_mult": -0.013,
+    "r_mult_median": 0.056,
+    "worst_day": -48876,
+    "max_dd": 158932,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -83588,
+     "2026Q3": -61954,
+     "2026Q4": -11531
+    },
+    "inst": {
+     "ICICIBANK": [
+      31,
+      -14698
+     ],
+     "INFY": [
+      26,
+      -34236
+     ],
+     "KOTAKBANK": [
+      26,
+      11077
+     ],
+     "LT": [
+      35,
+      -47109
+     ],
+     "M&M": [
+      26,
+      -7594
+     ],
+     "MARUTI": [
+      19,
+      6149
+     ],
+     "RELIANCE": [
+      22,
+      7932
+     ],
+     "SBIN": [
+      13,
+      -29376
+     ],
+     "TATASTEEL": [
+      23,
+      -33801
+     ],
+     "TRENT": [
+      18,
+      -15416
+     ]
+    },
+    "why": {
+     "target": 157,
+     "squareoff": 63,
+     "stop": 19
+    },
+    "longs": 98,
+    "shorts": 141
+   },
+   "x2": {
+    "net": -265214,
+    "win": 0.418
+   },
+   "risk1": {
+    "net_risk1": -25318,
+    "median_shares": 46.0,
+    "median_risk_pct": 1.392
+   },
+   "p": 0.98,
+   "twin_mean": -85171,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-c-x-2r": {
+   "x1": {
+    "trades": 258,
+    "win": 0.461,
+    "net": -179352,
+    "per_trade": -695,
+    "avg_win": 3218,
+    "avg_loss": -4045,
+    "r_mult": -0.01,
+    "r_mult_median": -0.01,
+    "worst_day": -48876,
+    "max_dd": 198317,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -122654,
+     "2026Q3": -68912,
+     "2026Q4": 12214
+    },
+    "inst": {
+     "ICICIBANK": [
+      30,
+      -1723
+     ],
+     "INFY": [
+      26,
+      -21863
+     ],
+     "KOTAKBANK": [
+      29,
+      -37612
+     ],
+     "LT": [
+      39,
+      -61158
+     ],
+     "M&M": [
+      27,
+      4484
+     ],
+     "MARUTI": [
+      26,
+      10526
+     ],
+     "RELIANCE": [
+      23,
+      32978
+     ],
+     "SBIN": [
+      14,
+      -38484
+     ],
+     "TATASTEEL": [
+      25,
+      -44919
+     ],
+     "TRENT": [
+      19,
+      -21582
+     ]
+    },
+    "why": {
+     "squareoff": 229,
+     "stop": 27,
+     "target": 2
+    },
+    "longs": 121,
+    "shorts": 137
+   },
+   "x2": {
+    "net": -296046,
+    "win": 0.399
+   },
+   "risk1": {
+    "net_risk1": -26160,
+    "median_shares": 47.0,
+    "median_risk_pct": 1.369
+   },
+   "p": 1.0,
+   "twin_mean": 74357,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-c-x-st": {
+   "x1": {
+    "trades": 270,
+    "win": 0.537,
+    "net": -189565,
+    "per_trade": -702,
+    "avg_win": 1428,
+    "avg_loss": -3173,
+    "r_mult": -0.03,
+    "r_mult_median": 0.056,
+    "worst_day": -48876,
+    "max_dd": 195336,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -103552,
+     "2026Q3": -88835,
+     "2026Q4": 2822
+    },
+    "inst": {
+     "ICICIBANK": [
+      32,
+      -24478
+     ],
+     "INFY": [
+      28,
+      -33775
+     ],
+     "KOTAKBANK": [
+      30,
+      3049
+     ],
+     "LT": [
+      41,
+      -36184
+     ],
+     "M&M": [
+      29,
+      -7224
+     ],
+     "MARUTI": [
+      26,
+      11576
+     ],
+     "RELIANCE": [
+      26,
+      -601
+     ],
+     "SBIN": [
+      14,
+      -35978
+     ],
+     "TATASTEEL": [
+      25,
+      -41785
+     ],
+     "TRENT": [
+      19,
+      -24166
+     ]
+    },
+    "why": {
+     "target": 172,
+     "squareoff": 77,
+     "stop": 21
+    },
+    "longs": 128,
+    "shorts": 142
+   },
+   "x2": {
+    "net": -310862,
+    "win": 0.411
+   },
+   "risk1": {
+    "net_risk1": -33143,
+    "median_shares": 47.0,
+    "median_risk_pct": 1.369
+   },
+   "p": 0.996,
+   "twin_mean": -105437,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-c-h-2r": {
+   "x1": {
+    "trades": 183,
+    "win": 0.492,
+    "net": -120657,
+    "per_trade": -659,
+    "avg_win": 3006,
+    "avg_loss": -4207,
+    "r_mult": 0.009,
+    "r_mult_median": 0.015,
+    "worst_day": -48876,
+    "max_dd": 144046,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -92204,
+     "2026Q3": -28882,
+     "2026Q4": 429
+    },
+    "inst": {
+     "ICICIBANK": [
+      22,
+      5470
+     ],
+     "INFY": [
+      21,
+      -21762
+     ],
+     "KOTAKBANK": [
+      20,
+      -7294
+     ],
+     "LT": [
+      26,
+      -61093
+     ],
+     "M&M": [
+      23,
+      5162
+     ],
+     "MARUTI": [
+      16,
+      8258
+     ],
+     "RELIANCE": [
+      17,
+      24023
+     ],
+     "SBIN": [
+      10,
+      -25813
+     ],
+     "TATASTEEL": [
+      16,
+      -32380
+     ],
+     "TRENT": [
+      12,
+      -15227
+     ]
+    },
+    "why": {
+     "squareoff": 165,
+     "stop": 17,
+     "target": 1
+    },
+    "longs": 82,
+    "shorts": 101
+   },
+   "x2": {
+    "net": -202881,
+    "win": 0.421
+   },
+   "risk1": {
+    "net_risk1": -14033,
+    "median_shares": 42.0,
+    "median_risk_pct": 1.539
+   },
+   "p": 1.0,
+   "twin_mean": 62070,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-c/lvn-c-h-st": {
+   "x1": {
+    "trades": 191,
+    "win": 0.565,
+    "net": -123865,
+    "per_trade": -649,
+    "avg_win": 1442,
+    "avg_loss": -3369,
+    "r_mult": -0.01,
+    "r_mult_median": 0.065,
+    "worst_day": -48876,
+    "max_dd": 129310,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -73817,
+     "2026Q3": -50783,
+     "2026Q4": 735
+    },
+    "inst": {
+     "ICICIBANK": [
+      23,
+      -3031
+     ],
+     "INFY": [
+      23,
+      -34672
+     ],
+     "KOTAKBANK": [
+      21,
+      21468
+     ],
+     "LT": [
+      27,
+      -33415
+     ],
+     "M&M": [
+      24,
+      -5237
+     ],
+     "MARUTI": [
+      16,
+      6661
+     ],
+     "RELIANCE": [
+      19,
+      4802
+     ],
+     "SBIN": [
+      10,
+      -30428
+     ],
+     "TATASTEEL": [
+      16,
+      -31968
+     ],
+     "TRENT": [
+      12,
+      -18044
+     ]
+    },
+    "why": {
+     "target": 124,
+     "squareoff": 55,
+     "stop": 12
+    },
+    "longs": 85,
+    "shorts": 106
+   },
+   "x2": {
+    "net": -208989,
+    "win": 0.44
+   },
+   "risk1": {
+    "net_risk1": -18045,
+    "median_shares": 42.0,
+    "median_risk_pct": 1.529
+   },
+   "p": 0.9541,
+   "twin_mean": -68552,
+   "q_own": 1.0,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-x-x-2r": {
+   "x1": {
+    "trades": 170,
+    "win": 0.324,
+    "net": -504597,
+    "per_trade": -2968,
+    "avg_win": 8106,
+    "avg_loss": -8265,
+    "r_mult": -0.124,
+    "r_mult_median": -1.0,
+    "worst_day": -70494,
+    "max_dd": 536746,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -219352,
+     "2026Q3": -261239,
+     "2026Q4": -24006
+    },
+    "inst": {
+     "ICICIBANK": [
+      16,
+      -2638
+     ],
+     "INFY": [
+      16,
+      -52390
+     ],
+     "KOTAKBANK": [
+      21,
+      -27348
+     ],
+     "LT": [
+      17,
+      -113220
+     ],
+     "M&M": [
+      17,
+      -100293
+     ],
+     "MARUTI": [
+      20,
+      -76107
+     ],
+     "RELIANCE": [
+      18,
+      -9940
+     ],
+     "SBIN": [
+      20,
+      -53472
+     ],
+     "TATASTEEL": [
+      12,
+      -18703
+     ],
+     "TRENT": [
+      13,
+      -50486
+     ]
+    },
+    "why": {
+     "stop": 106,
+     "target": 44,
+     "squareoff": 20
+    },
+    "longs": 170,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -801266,
+    "win": 0.282
+   },
+   "risk1": {
+    "net_risk1": -97545,
+    "median_shares": 88.0,
+    "median_risk_pct": 0.705
+   },
+   "p": 0.9002,
+   "twin_mean": -441008,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-x-x-st": {
+   "x1": {
+    "trades": 200,
+    "win": 0.39,
+    "net": -400503,
+    "per_trade": -2003,
+    "avg_win": 2588,
+    "avg_loss": -4937,
+    "r_mult": -0.031,
+    "r_mult_median": 0.066,
+    "worst_day": -43186,
+    "max_dd": 408105,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -229749,
+     "2026Q3": -171322,
+     "2026Q4": 568
+    },
+    "inst": {
+     "ICICIBANK": [
+      20,
+      -58437
+     ],
+     "INFY": [
+      17,
+      -2675
+     ],
+     "KOTAKBANK": [
+      26,
+      -53718
+     ],
+     "LT": [
+      18,
+      -62059
+     ],
+     "M&M": [
+      17,
+      -48137
+     ],
+     "MARUTI": [
+      21,
+      -47356
+     ],
+     "RELIANCE": [
+      24,
+      -57673
+     ],
+     "SBIN": [
+      23,
+      -45251
+     ],
+     "TATASTEEL": [
+      15,
+      -27125
+     ],
+     "TRENT": [
+      19,
+      1927
+     ]
+    },
+    "why": {
+     "target": 115,
+     "stop": 84,
+     "squareoff": 1
+    },
+    "longs": 200,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -749992,
+    "win": 0.215
+   },
+   "risk1": {
+    "net_risk1": -97210,
+    "median_shares": 96.5,
+    "median_risk_pct": 0.677
+   },
+   "p": 0.9261,
+   "twin_mean": -332909,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-x-h-2r": {
+   "x1": {
+    "trades": 93,
+    "win": 0.323,
+    "net": -293444,
+    "per_trade": -3155,
+    "avg_win": 9894,
+    "avg_loss": -9369,
+    "r_mult": -0.203,
+    "r_mult_median": -1.0,
+    "worst_day": -61465,
+    "max_dd": 329695,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -120879,
+     "2026Q3": -176666,
+     "2026Q4": 4101
+    },
+    "inst": {
+     "ICICIBANK": [
+      10,
+      -29009
+     ],
+     "INFY": [
+      7,
+      -42200
+     ],
+     "KOTAKBANK": [
+      15,
+      -17200
+     ],
+     "LT": [
+      8,
+      -35201
+     ],
+     "M&M": [
+      10,
+      -64763
+     ],
+     "MARUTI": [
+      12,
+      -54668
+     ],
+     "RELIANCE": [
+      7,
+      3839
+     ],
+     "SBIN": [
+      9,
+      -11121
+     ],
+     "TATASTEEL": [
+      7,
+      -4204
+     ],
+     "TRENT": [
+      8,
+      -38918
+     ]
+    },
+    "why": {
+     "stop": 57,
+     "target": 21,
+     "squareoff": 15
+    },
+    "longs": 93,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -459655,
+    "win": 0.301
+   },
+   "risk1": {
+    "net_risk1": -54144,
+    "median_shares": 69.0,
+    "median_risk_pct": 0.837
+   },
+   "p": 0.976,
+   "twin_mean": -209835,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-x-h-st": {
+   "x1": {
+    "trades": 112,
+    "win": 0.446,
+    "net": -209353,
+    "per_trade": -1869,
+    "avg_win": 2317,
+    "avg_loss": -5245,
+    "r_mult": -0.021,
+    "r_mult_median": 0.126,
+    "worst_day": -39618,
+    "max_dd": 226513,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -138934,
+     "2026Q3": -80546,
+     "2026Q4": 10126
+    },
+    "inst": {
+     "ICICIBANK": [
+      11,
+      -40250
+     ],
+     "INFY": [
+      8,
+      -3008
+     ],
+     "KOTAKBANK": [
+      18,
+      -37624
+     ],
+     "LT": [
+      9,
+      -36360
+     ],
+     "M&M": [
+      10,
+      -24609
+     ],
+     "MARUTI": [
+      12,
+      -26829
+     ],
+     "RELIANCE": [
+      10,
+      -19001
+     ],
+     "SBIN": [
+      12,
+      -13586
+     ],
+     "TATASTEEL": [
+      9,
+      -12963
+     ],
+     "TRENT": [
+      13,
+      4876
+     ]
+    },
+    "why": {
+     "target": 71,
+     "stop": 40,
+     "squareoff": 1
+    },
+    "longs": 112,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -407774,
+    "win": 0.223
+   },
+   "risk1": {
+    "net_risk1": -47996,
+    "median_shares": 80.0,
+    "median_risk_pct": 0.8
+   },
+   "p": 0.9281,
+   "twin_mean": -153699,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-c-x-2r": {
+   "x1": {
+    "trades": 90,
+    "win": 0.322,
+    "net": -252532,
+    "per_trade": -2806,
+    "avg_win": 5744,
+    "avg_loss": -6871,
+    "r_mult": -0.13,
+    "r_mult_median": -1.0,
+    "worst_day": -35140,
+    "max_dd": 254027,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -121597,
+     "2026Q3": -118939,
+     "2026Q4": -11996
+    },
+    "inst": {
+     "ICICIBANK": [
+      5,
+      -20422
+     ],
+     "INFY": [
+      9,
+      -40958
+     ],
+     "KOTAKBANK": [
+      11,
+      -15836
+     ],
+     "LT": [
+      9,
+      -47710
+     ],
+     "M&M": [
+      12,
+      -36989
+     ],
+     "MARUTI": [
+      11,
+      -28900
+     ],
+     "RELIANCE": [
+      8,
+      -10413
+     ],
+     "SBIN": [
+      11,
+      -35140
+     ],
+     "TATASTEEL": [
+      7,
+      688
+     ],
+     "TRENT": [
+      7,
+      -16852
+     ]
+    },
+    "why": {
+     "stop": 57,
+     "target": 23,
+     "squareoff": 10
+    },
+    "longs": 90,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -406562,
+    "win": 0.311
+   },
+   "risk1": {
+    "net_risk1": -55578,
+    "median_shares": 105.5,
+    "median_risk_pct": 0.557
+   },
+   "p": 0.6507,
+   "twin_mean": -238049,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-c-x-st": {
+   "x1": {
+    "trades": 98,
+    "win": 0.408,
+    "net": -167868,
+    "per_trade": -1713,
+    "avg_win": 2761,
+    "avg_loss": -4798,
+    "r_mult": -0.004,
+    "r_mult_median": 0.096,
+    "worst_day": -24987,
+    "max_dd": 181880,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -101047,
+     "2026Q3": -74997,
+     "2026Q4": 8176
+    },
+    "inst": {
+     "ICICIBANK": [
+      5,
+      -28252
+     ],
+     "INFY": [
+      9,
+      23466
+     ],
+     "KOTAKBANK": [
+      13,
+      -39592
+     ],
+     "LT": [
+      9,
+      -40758
+     ],
+     "M&M": [
+      12,
+      -10853
+     ],
+     "MARUTI": [
+      11,
+      -19796
+     ],
+     "RELIANCE": [
+      10,
+      -22391
+     ],
+     "SBIN": [
+      13,
+      -21573
+     ],
+     "TATASTEEL": [
+      8,
+      -13071
+     ],
+     "TRENT": [
+      8,
+      4952
+     ]
+    },
+    "why": {
+     "target": 54,
+     "stop": 44
+    },
+    "longs": 98,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -335143,
+    "win": 0.214
+   },
+   "risk1": {
+    "net_risk1": -49466,
+    "median_shares": 111.0,
+    "median_risk_pct": 0.549
+   },
+   "p": 0.8782,
+   "twin_mean": -132078,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-c-h-2r": {
+   "x1": {
+    "trades": 52,
+    "win": 0.308,
+    "net": -203944,
+    "per_trade": -3922,
+    "avg_win": 5427,
+    "avg_loss": -8077,
+    "r_mult": -0.303,
+    "r_mult_median": -1.0,
+    "worst_day": -35140,
+    "max_dd": 213653,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -109200,
+     "2026Q3": -98511,
+     "2026Q4": 3767
+    },
+    "inst": {
+     "ICICIBANK": [
+      3,
+      -22700
+     ],
+     "INFY": [
+      3,
+      -46319
+     ],
+     "KOTAKBANK": [
+      8,
+      -29508
+     ],
+     "LT": [
+      4,
+      -17109
+     ],
+     "M&M": [
+      8,
+      -33376
+     ],
+     "MARUTI": [
+      7,
+      -19904
+     ],
+     "RELIANCE": [
+      3,
+      8735
+     ],
+     "SBIN": [
+      6,
+      -24637
+     ],
+     "TATASTEEL": [
+      5,
+      -5869
+     ],
+     "TRENT": [
+      5,
+      -13256
+     ]
+    },
+    "why": {
+     "stop": 34,
+     "target": 11,
+     "squareoff": 7
+    },
+    "longs": 52,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -295617,
+    "win": 0.288
+   },
+   "risk1": {
+    "net_risk1": -39218,
+    "median_shares": 85.0,
+    "median_risk_pct": 0.638
+   },
+   "p": 0.8224,
+   "twin_mean": -175471,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/poc-c-h-st": {
+   "x1": {
+    "trades": 57,
+    "win": 0.421,
+    "net": -116246,
+    "per_trade": -2039,
+    "avg_win": 2484,
+    "avg_loss": -5329,
+    "r_mult": -0.049,
+    "r_mult_median": 0.102,
+    "worst_day": -24987,
+    "max_dd": 132095,
+    "months_green": "3/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -84700,
+     "2026Q3": -42842,
+     "2026Q4": 11296
+    },
+    "inst": {
+     "ICICIBANK": [
+      3,
+      -22700
+     ],
+     "INFY": [
+      3,
+      7582
+     ],
+     "KOTAKBANK": [
+      9,
+      -36893
+     ],
+     "LT": [
+      4,
+      -17698
+     ],
+     "M&M": [
+      8,
+      -10949
+     ],
+     "MARUTI": [
+      7,
+      -11011
+     ],
+     "RELIANCE": [
+      4,
+      -2058
+     ],
+     "SBIN": [
+      8,
+      -12026
+     ],
+     "TATASTEEL": [
+      5,
+      -8517
+     ],
+     "TRENT": [
+      6,
+      -1976
+     ]
+    },
+    "why": {
+     "target": 33,
+     "stop": 24
+    },
+    "longs": 57,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -216193,
+    "win": 0.211
+   },
+   "risk1": {
+    "net_risk1": -29641,
+    "median_shares": 100.0,
+    "median_risk_pct": 0.626
+   },
+   "p": 0.8703,
+   "twin_mean": -86845,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-x-x-2r": {
+   "x1": {
+    "trades": 133,
+    "win": 0.278,
+    "net": -408928,
+    "per_trade": -3075,
+    "avg_win": 13118,
+    "avg_loss": -9316,
+    "r_mult": -0.165,
+    "r_mult_median": -1.0,
+    "worst_day": -43787,
+    "max_dd": 504807,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -194722,
+     "2026Q3": -179764,
+     "2026Q4": -34442
+    },
+    "inst": {
+     "ICICIBANK": [
+      11,
+      -13946
+     ],
+     "INFY": [
+      16,
+      -36464
+     ],
+     "KOTAKBANK": [
+      16,
+      -57099
+     ],
+     "LT": [
+      16,
+      -102214
+     ],
+     "M&M": [
+      14,
+      -211
+     ],
+     "MARUTI": [
+      12,
+      -30101
+     ],
+     "RELIANCE": [
+      10,
+      -15885
+     ],
+     "SBIN": [
+      9,
+      -83849
+     ],
+     "TATASTEEL": [
+      14,
+      -40185
+     ],
+     "TRENT": [
+      15,
+      -28974
+     ]
+    },
+    "why": {
+     "stop": 71,
+     "squareoff": 36,
+     "target": 26
+    },
+    "longs": 133,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -635616,
+    "win": 0.278
+   },
+   "risk1": {
+    "net_risk1": -58425,
+    "median_shares": 44.0,
+    "median_risk_pct": 1.347
+   },
+   "p": 0.9022,
+   "twin_mean": -335812,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-x-x-st": {
+   "x1": {
+    "trades": 177,
+    "win": 0.384,
+    "net": -412425,
+    "per_trade": -2330,
+    "avg_win": 1945,
+    "avg_loss": -4997,
+    "r_mult": -0.066,
+    "r_mult_median": 0.092,
+    "worst_day": -64359,
+    "max_dd": 417635,
+    "months_green": "0/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -210064,
+     "2026Q3": -187992,
+     "2026Q4": -14368
+    },
+    "inst": {
+     "ICICIBANK": [
+      16,
+      -34280
+     ],
+     "INFY": [
+      19,
+      -8139
+     ],
+     "KOTAKBANK": [
+      20,
+      -69106
+     ],
+     "LT": [
+      28,
+      -36018
+     ],
+     "M&M": [
+      19,
+      -45278
+     ],
+     "MARUTI": [
+      14,
+      -22121
+     ],
+     "RELIANCE": [
+      15,
+      -7521
+     ],
+     "SBIN": [
+      11,
+      -40291
+     ],
+     "TATASTEEL": [
+      17,
+      -39224
+     ],
+     "TRENT": [
+      18,
+      -110447
+     ]
+    },
+    "why": {
+     "target": 132,
+     "stop": 45
+    },
+    "longs": 177,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -713045,
+    "win": 0.158
+   },
+   "risk1": {
+    "net_risk1": -62409,
+    "median_shares": 44.0,
+    "median_risk_pct": 1.284
+   },
+   "p": 0.9261,
+   "twin_mean": -337754,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-x-h-2r": {
+   "x1": {
+    "trades": 91,
+    "win": 0.286,
+    "net": -318951,
+    "per_trade": -3505,
+    "avg_win": 14324,
+    "avg_loss": -10637,
+    "r_mult": -0.15,
+    "r_mult_median": -0.634,
+    "worst_day": -66331,
+    "max_dd": 414830,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -124816,
+     "2026Q3": -156988,
+     "2026Q4": -37147
+    },
+    "inst": {
+     "ICICIBANK": [
+      8,
+      -8942
+     ],
+     "INFY": [
+      12,
+      -27430
+     ],
+     "KOTAKBANK": [
+      15,
+      -52401
+     ],
+     "LT": [
+      8,
+      -17136
+     ],
+     "M&M": [
+      11,
+      10937
+     ],
+     "MARUTI": [
+      6,
+      -11285
+     ],
+     "RELIANCE": [
+      8,
+      -52346
+     ],
+     "SBIN": [
+      4,
+      -42594
+     ],
+     "TATASTEEL": [
+      10,
+      -25727
+     ],
+     "TRENT": [
+      9,
+      -92028
+     ]
+    },
+    "why": {
+     "stop": 44,
+     "squareoff": 30,
+     "target": 17
+    },
+    "longs": 91,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -475161,
+    "win": 0.286
+   },
+   "risk1": {
+    "net_risk1": -36035,
+    "median_shares": 43.0,
+    "median_risk_pct": 1.544
+   },
+   "p": 0.9142,
+   "twin_mean": -246112,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-x-h-st": {
+   "x1": {
+    "trades": 117,
+    "win": 0.444,
+    "net": -302434,
+    "per_trade": -2585,
+    "avg_win": 2010,
+    "avg_loss": -6260,
+    "r_mult": -0.064,
+    "r_mult_median": 0.098,
+    "worst_day": -64359,
+    "max_dd": 307644,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -144855,
+     "2026Q3": -144066,
+     "2026Q4": -13513
+    },
+    "inst": {
+     "ICICIBANK": [
+      10,
+      -10546
+     ],
+     "INFY": [
+      13,
+      8965
+     ],
+     "KOTAKBANK": [
+      17,
+      -61039
+     ],
+     "LT": [
+      17,
+      -28492
+     ],
+     "M&M": [
+      15,
+      -48086
+     ],
+     "MARUTI": [
+      6,
+      -6309
+     ],
+     "RELIANCE": [
+      11,
+      -3592
+     ],
+     "SBIN": [
+      6,
+      -37984
+     ],
+     "TATASTEEL": [
+      12,
+      -17323
+     ],
+     "TRENT": [
+      10,
+      -98026
+     ]
+    },
+    "why": {
+     "target": 89,
+     "stop": 28
+    },
+    "longs": 117,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -502434,
+    "win": 0.179
+   },
+   "risk1": {
+    "net_risk1": -38360,
+    "median_shares": 44.0,
+    "median_risk_pct": 1.444
+   },
+   "p": 0.9022,
+   "twin_mean": -235597,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-c-x-2r": {
+   "x1": {
+    "trades": 111,
+    "win": 0.288,
+    "net": -364444,
+    "per_trade": -3283,
+    "avg_win": 13615,
+    "avg_loss": -10128,
+    "r_mult": -0.207,
+    "r_mult_median": -1.0,
+    "worst_day": -66331,
+    "max_dd": 477513,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -115752,
+     "2026Q3": -214724,
+     "2026Q4": -33969
+    },
+    "inst": {
+     "ICICIBANK": [
+      10,
+      -13298
+     ],
+     "INFY": [
+      15,
+      -30737
+     ],
+     "KOTAKBANK": [
+      13,
+      -18749
+     ],
+     "LT": [
+      14,
+      -80678
+     ],
+     "M&M": [
+      10,
+      20062
+     ],
+     "MARUTI": [
+      9,
+      -14551
+     ],
+     "RELIANCE": [
+      10,
+      -15885
+     ],
+     "SBIN": [
+      7,
+      -60791
+     ],
+     "TATASTEEL": [
+      12,
+      -50350
+     ],
+     "TRENT": [
+      11,
+      -99468
+     ]
+    },
+    "why": {
+     "stop": 56,
+     "squareoff": 34,
+     "target": 21
+    },
+    "longs": 111,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -553366,
+    "win": 0.288
+   },
+   "risk1": {
+    "net_risk1": -50481,
+    "median_shares": 44.0,
+    "median_risk_pct": 1.392
+   },
+   "p": 0.8663,
+   "twin_mean": -299575,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-c-x-st": {
+   "x1": {
+    "trades": 145,
+    "win": 0.4,
+    "net": -340227,
+    "per_trade": -2346,
+    "avg_win": 2013,
+    "avg_loss": -5252,
+    "r_mult": -0.087,
+    "r_mult_median": 0.093,
+    "worst_day": -64359,
+    "max_dd": 345324,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -165055,
+     "2026Q3": -168865,
+     "2026Q4": -6306
+    },
+    "inst": {
+     "ICICIBANK": [
+      14,
+      -35527
+     ],
+     "INFY": [
+      16,
+      -1808
+     ],
+     "KOTAKBANK": [
+      17,
+      -42802
+     ],
+     "LT": [
+      25,
+      -31650
+     ],
+     "M&M": [
+      15,
+      -45174
+     ],
+     "MARUTI": [
+      11,
+      -15106
+     ],
+     "RELIANCE": [
+      14,
+      -6696
+     ],
+     "SBIN": [
+      8,
+      -21583
+     ],
+     "TATASTEEL": [
+      14,
+      -37375
+     ],
+     "TRENT": [
+      11,
+      -102508
+     ]
+    },
+    "why": {
+     "target": 109,
+     "stop": 36
+    },
+    "longs": 145,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -587325,
+    "win": 0.166
+   },
+   "risk1": {
+    "net_risk1": -50047,
+    "median_shares": 44.0,
+    "median_risk_pct": 1.38
+   },
+   "p": 0.9601,
+   "twin_mean": -252935,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-c-h-2r": {
+   "x1": {
+    "trades": 76,
+    "win": 0.316,
+    "net": -234170,
+    "per_trade": -3081,
+    "avg_win": 14423,
+    "avg_loss": -11160,
+    "r_mult": -0.128,
+    "r_mult_median": -0.395,
+    "worst_day": -66331,
+    "max_dd": 347238,
+    "months_green": "2/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -61843,
+     "2026Q3": -135653,
+     "2026Q4": -36674
+    },
+    "inst": {
+     "ICICIBANK": [
+      7,
+      -8294
+     ],
+     "INFY": [
+      11,
+      -18457
+     ],
+     "KOTAKBANK": [
+      12,
+      -14051
+     ],
+     "LT": [
+      7,
+      -12656
+     ],
+     "M&M": [
+      9,
+      27605
+     ],
+     "MARUTI": [
+      5,
+      -2993
+     ],
+     "RELIANCE": [
+      8,
+      -52346
+     ],
+     "SBIN": [
+      3,
+      -35446
+     ],
+     "TATASTEEL": [
+      8,
+      -35891
+     ],
+     "TRENT": [
+      6,
+      -81642
+     ]
+    },
+    "why": {
+     "stop": 33,
+     "squareoff": 29,
+     "target": 14
+    },
+    "longs": 76,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -364177,
+    "win": 0.316
+   },
+   "risk1": {
+    "net_risk1": -26284,
+    "median_shares": 40.0,
+    "median_risk_pct": 1.602
+   },
+   "p": 0.8723,
+   "twin_mean": -177883,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  },
+  "STK-sw/lvn-c-h-st": {
+   "x1": {
+    "trades": 96,
+    "win": 0.458,
+    "net": -242662,
+    "per_trade": -2528,
+    "avg_win": 2162,
+    "avg_loss": -6496,
+    "r_mult": -0.091,
+    "r_mult_median": 0.104,
+    "worst_day": -64359,
+    "max_dd": 247759,
+    "months_green": "1/7",
+    "top5_share": null,
+    "quarters": {
+     "2026Q2": -107924,
+     "2026Q3": -129286,
+     "2026Q4": -5451
+    },
+    "inst": {
+     "ICICIBANK": [
+      9,
+      -11343
+     ],
+     "INFY": [
+      11,
+      9568
+     ],
+     "KOTAKBANK": [
+      14,
+      -34735
+     ],
+     "LT": [
+      15,
+      -25416
+     ],
+     "M&M": [
+      13,
+      -43243
+     ],
+     "MARUTI": [
+      5,
+      -6552
+     ],
+     "RELIANCE": [
+      10,
+      -2767
+     ],
+     "SBIN": [
+      4,
+      -21173
+     ],
+     "TATASTEEL": [
+      9,
+      -15474
+     ],
+     "TRENT": [
+      6,
+      -91526
+     ]
+    },
+    "why": {
+     "target": 74,
+     "stop": 22
+    },
+    "longs": 96,
+    "shorts": 0
+   },
+   "x2": {
+    "net": -407213,
+    "win": 0.188
+   },
+   "risk1": {
+    "net_risk1": -30488,
+    "median_shares": 40.5,
+    "median_risk_pct": 1.54
+   },
+   "p": 0.9142,
+   "twin_mean": -175190,
+   "q_own": 0.976,
+   "verdict": "context (not gated): FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate"
+  }
+ },
+ "counts": {
+  "IDX:NIFTY": {
+   "legs": 1159,
+   "profiles": 1054,
+   "poc": 1054,
+   "lvn": 1014,
+   "poc_conf": 406,
+   "lvn_conf": 727,
+   "candidates": 206
+  },
+  "IDX:BANKNIFTY": {
+   "legs": 1155,
+   "profiles": 1029,
+   "poc": 1029,
+   "lvn": 955,
+   "poc_conf": 340,
+   "lvn_conf": 671,
+   "candidates": 302
+  },
+  "IDX:FINNIFTY": {
+   "legs": 1098,
+   "profiles": 979,
+   "poc": 979,
+   "lvn": 950,
+   "poc_conf": 320,
+   "lvn_conf": 666,
+   "candidates": 207
+  },
+  "IDX:MIDCPNIFTY": {
+   "legs": 1171,
+   "profiles": 1044,
+   "poc": 1044,
+   "lvn": 1005,
+   "poc_conf": 357,
+   "lvn_conf": 764,
+   "candidates": 256
+  },
+  "IDX:SENSEX": {
+   "legs": 1145,
+   "profiles": 1028,
+   "poc": 1028,
+   "lvn": 992,
+   "poc_conf": 360,
+   "lvn_conf": 705,
+   "candidates": 226
+  },
+  "STK:RELIANCE": {
+   "legs": 1184,
+   "profiles": 1184,
+   "poc": 1184,
+   "lvn": 1144,
+   "poc_conf": 494,
+   "lvn_conf": 688,
+   "candidates": 216
+  },
+  "STK:SBIN": {
+   "legs": 1125,
+   "profiles": 1125,
+   "poc": 1125,
+   "lvn": 1092,
+   "poc_conf": 462,
+   "lvn_conf": 681,
+   "candidates": 174
+  },
+  "STK:MARUTI": {
+   "legs": 1164,
+   "profiles": 1164,
+   "poc": 1164,
+   "lvn": 1138,
+   "poc_conf": 500,
+   "lvn_conf": 701,
+   "candidates": 225
+  },
+  "STK:ICICIBANK": {
+   "legs": 1113,
+   "profiles": 1113,
+   "poc": 1113,
+   "lvn": 1088,
+   "poc_conf": 496,
+   "lvn_conf": 678,
+   "candidates": 220
+  },
+  "STK:INFY": {
+   "legs": 1160,
+   "profiles": 1160,
+   "poc": 1160,
+   "lvn": 1136,
+   "poc_conf": 527,
+   "lvn_conf": 731,
+   "candidates": 258
+  },
+  "STK:LT": {
+   "legs": 1174,
+   "profiles": 1174,
+   "poc": 1174,
+   "lvn": 1153,
+   "poc_conf": 470,
+   "lvn_conf": 732,
+   "candidates": 232
+  },
+  "STK:KOTAKBANK": {
+   "legs": 1153,
+   "profiles": 1153,
+   "poc": 1153,
+   "lvn": 1130,
+   "poc_conf": 463,
+   "lvn_conf": 684,
+   "candidates": 273
+  },
+  "STK:M&M": {
+   "legs": 1159,
+   "profiles": 1159,
+   "poc": 1159,
+   "lvn": 1138,
+   "poc_conf": 533,
+   "lvn_conf": 713,
+   "candidates": 213
+  },
+  "STK:TRENT": {
+   "legs": 1136,
+   "profiles": 1136,
+   "poc": 1136,
+   "lvn": 1102,
+   "poc_conf": 453,
+   "lvn_conf": 673,
+   "candidates": 214
+  },
+  "STK:TATASTEEL": {
+   "legs": 1196,
+   "profiles": 1196,
+   "poc": 1196,
+   "lvn": 1142,
+   "poc_conf": 497,
+   "lvn_conf": 691,
+   "candidates": 250
+  },
+  "IDX-b:NIFTY": {
+   "legs": 1159,
+   "profiles": 1145,
+   "poc": 1145,
+   "lvn": 1130,
+   "poc_conf": 536,
+   "lvn_conf": 746,
+   "candidates": 148
+  },
+  "IDX-b:BANKNIFTY": {
+   "legs": 1155,
+   "profiles": 1139,
+   "poc": 1139,
+   "lvn": 1107,
+   "poc_conf": 504,
+   "lvn_conf": 737,
+   "candidates": 236
+  },
+  "IDX-c:NIFTY": {
+   "legs": 1159,
+   "profiles": 1159,
+   "poc": 1159,
+   "lvn": 1149,
+   "poc_conf": 565,
+   "lvn_conf": 744,
+   "candidates": 161
+  },
+  "IDX-c:BANKNIFTY": {
+   "legs": 1155,
+   "profiles": 1155,
+   "poc": 1155,
+   "lvn": 1134,
+   "poc_conf": 537,
+   "lvn_conf": 713,
+   "candidates": 234
+  },
+  "IDX-c:FINNIFTY": {
+   "legs": 1098,
+   "profiles": 1098,
+   "poc": 1098,
+   "lvn": 1076,
+   "poc_conf": 504,
+   "lvn_conf": 726,
+   "candidates": 215
+  },
+  "IDX-c:MIDCPNIFTY": {
+   "legs": 1171,
+   "profiles": 1171,
+   "poc": 1171,
+   "lvn": 1158,
+   "poc_conf": 577,
+   "lvn_conf": 819,
+   "candidates": 201
+  },
+  "IDX-c:SENSEX": {
+   "legs": 1145,
+   "profiles": 1145,
+   "poc": 1145,
+   "lvn": 1133,
+   "poc_conf": 528,
+   "lvn_conf": 746,
+   "candidates": 193
+  },
+  "STK-c:RELIANCE": {
+   "legs": 1184,
+   "profiles": 1184,
+   "poc": 1184,
+   "lvn": 1171,
+   "poc_conf": 568,
+   "lvn_conf": 670,
+   "candidates": 194
+  },
+  "STK-c:SBIN": {
+   "legs": 1125,
+   "profiles": 1125,
+   "poc": 1125,
+   "lvn": 1120,
+   "poc_conf": 565,
+   "lvn_conf": 633,
+   "candidates": 179
+  },
+  "STK-c:MARUTI": {
+   "legs": 1164,
+   "profiles": 1164,
+   "poc": 1164,
+   "lvn": 1158,
+   "poc_conf": 585,
+   "lvn_conf": 670,
+   "candidates": 238
+  },
+  "STK-c:ICICIBANK": {
+   "legs": 1113,
+   "profiles": 1113,
+   "poc": 1113,
+   "lvn": 1104,
+   "poc_conf": 530,
+   "lvn_conf": 642,
+   "candidates": 293
+  },
+  "STK-c:INFY": {
+   "legs": 1160,
+   "profiles": 1160,
+   "poc": 1160,
+   "lvn": 1151,
+   "poc_conf": 570,
+   "lvn_conf": 696,
+   "candidates": 238
+  },
+  "STK-c:LT": {
+   "legs": 1174,
+   "profiles": 1174,
+   "poc": 1174,
+   "lvn": 1169,
+   "poc_conf": 541,
+   "lvn_conf": 693,
+   "candidates": 242
+  },
+  "STK-c:KOTAKBANK": {
+   "legs": 1153,
+   "profiles": 1153,
+   "poc": 1153,
+   "lvn": 1145,
+   "poc_conf": 523,
+   "lvn_conf": 647,
+   "candidates": 260
+  },
+  "STK-c:M&M": {
+   "legs": 1159,
+   "profiles": 1159,
+   "poc": 1159,
+   "lvn": 1156,
+   "poc_conf": 575,
+   "lvn_conf": 694,
+   "candidates": 209
+  },
+  "STK-c:TRENT": {
+   "legs": 1136,
+   "profiles": 1136,
+   "poc": 1136,
+   "lvn": 1132,
+   "poc_conf": 565,
+   "lvn_conf": 658,
+   "candidates": 211
+  },
+  "STK-c:TATASTEEL": {
+   "legs": 1196,
+   "profiles": 1196,
+   "poc": 1196,
+   "lvn": 1189,
+   "poc_conf": 583,
+   "lvn_conf": 682,
+   "candidates": 187
+  },
+  "STK-sw:RELIANCE": {
+   "legs": 1184,
+   "profiles": 1184,
+   "poc": 1184,
+   "lvn": 1144,
+   "poc_conf": 494,
+   "lvn_conf": 688,
+   "candidates": 216
+  },
+  "STK-sw:SBIN": {
+   "legs": 1125,
+   "profiles": 1125,
+   "poc": 1125,
+   "lvn": 1092,
+   "poc_conf": 462,
+   "lvn_conf": 681,
+   "candidates": 174
+  },
+  "STK-sw:MARUTI": {
+   "legs": 1164,
+   "profiles": 1164,
+   "poc": 1164,
+   "lvn": 1138,
+   "poc_conf": 500,
+   "lvn_conf": 701,
+   "candidates": 225
+  },
+  "STK-sw:ICICIBANK": {
+   "legs": 1113,
+   "profiles": 1113,
+   "poc": 1113,
+   "lvn": 1088,
+   "poc_conf": 496,
+   "lvn_conf": 678,
+   "candidates": 220
+  },
+  "STK-sw:INFY": {
+   "legs": 1160,
+   "profiles": 1160,
+   "poc": 1160,
+   "lvn": 1136,
+   "poc_conf": 527,
+   "lvn_conf": 731,
+   "candidates": 258
+  },
+  "STK-sw:LT": {
+   "legs": 1174,
+   "profiles": 1174,
+   "poc": 1174,
+   "lvn": 1153,
+   "poc_conf": 470,
+   "lvn_conf": 732,
+   "candidates": 232
+  },
+  "STK-sw:KOTAKBANK": {
+   "legs": 1153,
+   "profiles": 1153,
+   "poc": 1153,
+   "lvn": 1130,
+   "poc_conf": 463,
+   "lvn_conf": 684,
+   "candidates": 273
+  },
+  "STK-sw:M&M": {
+   "legs": 1159,
+   "profiles": 1159,
+   "poc": 1159,
+   "lvn": 1138,
+   "poc_conf": 533,
+   "lvn_conf": 713,
+   "candidates": 213
+  },
+  "STK-sw:TRENT": {
+   "legs": 1136,
+   "profiles": 1136,
+   "poc": 1136,
+   "lvn": 1102,
+   "poc_conf": 453,
+   "lvn_conf": 673,
+   "candidates": 214
+  },
+  "STK-sw:TATASTEEL": {
+   "legs": 1196,
+   "profiles": 1196,
+   "poc": 1196,
+   "lvn": 1142,
+   "poc_conf": 497,
+   "lvn_conf": 691,
+   "candidates": 250
+  }
+ }
+}

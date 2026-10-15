@@ -1,0 +1,37 @@
+id: r62-stk-sw-context
+title: 'R62 STK-sw: the 16 variants with the stock''s volume (secondary, not gated)'
+family: stocks
+date: '2026-10-15'
+doc: research/HUNT_R62_VOLUME_PROFILE_SMC.md
+hypothesis: 'Context for R62''s primary books: the same 16 rules with another volume source or holding period.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 15 Oct 2026: index_1m and options_rolling_1m opt_<U>_WEEK (R51
+  clean store + spikes.py rule, one held contract per trade), equity_1m (stocks and index constituents); read by research/hunt/r62/r62data.py'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward by quarter)
+  holdout: final test 1 Apr - 14 Oct 2026 (indices) / 12 Oct 2026 (stocks), read once 15 Oct 2026
+instruments:
+- F&O stocks
+features:
+- 15-min fractal swings, BOS / ChoCH
+- anchored 50-row volume profile (the stock's volume)
+- 5-min FVG / Order Block
+- 1-hour structure
+model_or_rule: 'the 16 R62 variants; signal source: the underlying; traded: the stock in delivery, long only, held 1-5 sessions'
+settings: research/hunt/r62/PREREG.md section 6
+prereg: research/hunt/r62/PREREG.md
+variants_tried: 16
+results:
+  summary: 'poc-x-x-2r: design 460 / Rs -887,919, final 170 / Rs -504,597; poc-x-x-st: design 545 / Rs -1,001,798, final 200
+    / Rs -400,503; poc-x-h-2r: design 293 / Rs -829,890, final 93 / Rs -293,444; poc-x-h-st: design 351 / Rs -683,932, final
+    112 / Rs -209,353; poc-c-x-2r: design 215 / Rs -269,352, final 90 / Rs -252,532; poc-c-x-st: design 227 / Rs -399,667,
+    final 98 / Rs -167,868; poc-c-h-2r: design 136 / Rs -165,269, final 52 / Rs -203,944; poc-c-h-st: design 145 / Rs -274,477,
+    final 57 / Rs -116,246; lvn-x-x-2r: design 377 / Rs -797,216, final 133 / Rs -408,928; lvn-x-x-st: design 465 / Rs -910,025,
+    final 177 / Rs -412,425; lvn-x-h-2r: design 272 / Rs -850,713, final 91 / Rs -318,951; lvn-x-h-st: design 328 / Rs -725,857,
+    final 117 / Rs -302,434; lvn-c-x-2r: design 316 / Rs -723,467, final 111 / Rs -364,444; lvn-c-x-st: design 371 / Rs -679,831,
+    final 145 / Rs -340,227; lvn-c-h-2r: design 230 / Rs -735,173, final 76 / Rs -234,170; lvn-c-h-st: design 267 / Rs -569,827,
+    final 96 / Rs -242,662. Context only: never eligible to pass.'
+  costs: R58 cash charges (MIS intraday / delivery swing) + slippage max(Rs 0.05, 1 bp) a side, stops x2; 1 F&O lot of shares
+    (latest lot, split-adjusted scale); 2x = double both
+holdout_read: true
+verdict: rejected
+notes: Secondary book (PREREG section 2 / 6); its own BH over 16 is in results/final.json as q_own.

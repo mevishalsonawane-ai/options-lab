@@ -1,0 +1,1170 @@
+{
+ "poc-x-x-2r": {
+  "trades": 907,
+  "win": 0.376,
+  "net": -305797,
+  "per_trade": -337,
+  "avg_win": 1871,
+  "avg_loss": -1667,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -14031,
+  "max_dd": 357884,
+  "months_green": "2/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": 5141,
+   "2025Q2": -94131,
+   "2025Q3": -96023,
+   "2025Q4": -67588,
+   "2026Q1": -53196
+  },
+  "inst": {
+   "ICICIBANK": [
+    83,
+    -53950
+   ],
+   "INFY": [
+    80,
+    -33480
+   ],
+   "KOTAKBANK": [
+    97,
+    -44715
+   ],
+   "LT": [
+    91,
+    3545
+   ],
+   "M&M": [
+    92,
+    -23663
+   ],
+   "MARUTI": [
+    98,
+    -2411
+   ],
+   "RELIANCE": [
+    93,
+    -27215
+   ],
+   "SBIN": [
+    91,
+    -24875
+   ],
+   "TATASTEEL": [
+    93,
+    -88691
+   ],
+   "TRENT": [
+    89,
+    -10343
+   ]
+  },
+  "why": {
+   "sq": 465,
+   "ustop": 233,
+   "band": 155,
+   "utgt": 54
+  },
+  "longs": 440,
+  "shorts": 467,
+  "net_2x": -556308,
+  "stale_model_exits": 12
+ },
+ "poc-x-x-st": {
+  "trades": 946,
+  "win": 0.448,
+  "net": -316783,
+  "per_trade": -335,
+  "avg_win": 991,
+  "avg_loss": -1412,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -11353,
+  "max_dd": 330504,
+  "months_green": "3/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -35001,
+   "2025Q2": -76706,
+   "2025Q3": -66498,
+   "2025Q4": -75108,
+   "2026Q1": -63470
+  },
+  "inst": {
+   "ICICIBANK": [
+    89,
+    -44988
+   ],
+   "INFY": [
+    84,
+    -24150
+   ],
+   "KOTAKBANK": [
+    99,
+    -46689
+   ],
+   "LT": [
+    92,
+    -10126
+   ],
+   "M&M": [
+    98,
+    -34292
+   ],
+   "MARUTI": [
+    104,
+    10156
+   ],
+   "RELIANCE": [
+    98,
+    -27024
+   ],
+   "SBIN": [
+    93,
+    -42597
+   ],
+   "TATASTEEL": [
+    99,
+    -56734
+   ],
+   "TRENT": [
+    90,
+    -40338
+   ]
+  },
+  "why": {
+   "utgt": 409,
+   "sq": 259,
+   "ustop": 210,
+   "band": 68
+  },
+  "longs": 461,
+  "shorts": 485,
+  "net_2x": -577726,
+  "stale_model_exits": 7
+ },
+ "poc-x-h-2r": {
+  "trades": 573,
+  "win": 0.361,
+  "net": -227719,
+  "per_trade": -397,
+  "avg_win": 1911,
+  "avg_loss": -1703,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -11762,
+  "max_dd": 265386,
+  "months_green": "3/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -2041,
+   "2025Q2": -73059,
+   "2025Q3": -79390,
+   "2025Q4": -27982,
+   "2026Q1": -45247
+  },
+  "inst": {
+   "ICICIBANK": [
+    51,
+    -51819
+   ],
+   "INFY": [
+    53,
+    -21225
+   ],
+   "KOTAKBANK": [
+    60,
+    -7399
+   ],
+   "LT": [
+    59,
+    12471
+   ],
+   "M&M": [
+    53,
+    -24194
+   ],
+   "MARUTI": [
+    64,
+    -10875
+   ],
+   "RELIANCE": [
+    57,
+    -36158
+   ],
+   "SBIN": [
+    60,
+    -19395
+   ],
+   "TATASTEEL": [
+    59,
+    -41779
+   ],
+   "TRENT": [
+    57,
+    -27346
+   ]
+  },
+  "why": {
+   "sq": 306,
+   "ustop": 129,
+   "band": 107,
+   "utgt": 31
+  },
+  "longs": 285,
+  "shorts": 288,
+  "net_2x": -384567,
+  "stale_model_exits": 10
+ },
+ "poc-x-h-st": {
+  "trades": 600,
+  "win": 0.428,
+  "net": -238509,
+  "per_trade": -398,
+  "avg_win": 1020,
+  "avg_loss": -1460,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -10280,
+  "max_dd": 248106,
+  "months_green": "3/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -23489,
+   "2025Q2": -60283,
+   "2025Q3": -57934,
+   "2025Q4": -48739,
+   "2026Q1": -48065
+  },
+  "inst": {
+   "ICICIBANK": [
+    55,
+    -46575
+   ],
+   "INFY": [
+    55,
+    -13843
+   ],
+   "KOTAKBANK": [
+    62,
+    -13352
+   ],
+   "LT": [
+    60,
+    -649
+   ],
+   "M&M": [
+    56,
+    -31537
+   ],
+   "MARUTI": [
+    70,
+    3311
+   ],
+   "RELIANCE": [
+    60,
+    -32753
+   ],
+   "SBIN": [
+    61,
+    -32956
+   ],
+   "TATASTEEL": [
+    64,
+    -37338
+   ],
+   "TRENT": [
+    57,
+    -32817
+   ]
+  },
+  "why": {
+   "utgt": 247,
+   "sq": 182,
+   "ustop": 118,
+   "band": 53
+  },
+  "longs": 300,
+  "shorts": 300,
+  "net_2x": -402992,
+  "stale_model_exits": 5
+ },
+ "poc-c-x-2r": {
+  "trades": 389,
+  "win": 0.36,
+  "net": -167894,
+  "per_trade": -432,
+  "avg_win": 1888,
+  "avg_loss": -1736,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -8186,
+  "max_dd": 195923,
+  "months_green": "4/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -24191,
+   "2025Q2": -25723,
+   "2025Q3": -45445,
+   "2025Q4": -33545,
+   "2026Q1": -38990
+  },
+  "inst": {
+   "ICICIBANK": [
+    39,
+    -40718
+   ],
+   "INFY": [
+    40,
+    -16348
+   ],
+   "KOTAKBANK": [
+    42,
+    -29447
+   ],
+   "LT": [
+    39,
+    -2320
+   ],
+   "M&M": [
+    43,
+    -9872
+   ],
+   "MARUTI": [
+    41,
+    -348
+   ],
+   "RELIANCE": [
+    34,
+    -15020
+   ],
+   "SBIN": [
+    39,
+    -1063
+   ],
+   "TATASTEEL": [
+    36,
+    -52322
+   ],
+   "TRENT": [
+    36,
+    -436
+   ]
+  },
+  "why": {
+   "sq": 177,
+   "ustop": 120,
+   "band": 64,
+   "utgt": 28
+  },
+  "longs": 181,
+  "shorts": 208,
+  "net_2x": -272456,
+  "stale_model_exits": 5
+ },
+ "poc-c-x-st": {
+  "trades": 391,
+  "win": 0.412,
+  "net": -173042,
+  "per_trade": -443,
+  "avg_win": 1115,
+  "avg_loss": -1533,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -7569,
+  "max_dd": 181986,
+  "months_green": "1/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -38024,
+   "2025Q2": -31747,
+   "2025Q3": -28902,
+   "2025Q4": -36098,
+   "2026Q1": -38271
+  },
+  "inst": {
+   "ICICIBANK": [
+    41,
+    -35792
+   ],
+   "INFY": [
+    40,
+    -7408
+   ],
+   "KOTAKBANK": [
+    42,
+    -37910
+   ],
+   "LT": [
+    38,
+    -5547
+   ],
+   "M&M": [
+    43,
+    -20395
+   ],
+   "MARUTI": [
+    41,
+    3182
+   ],
+   "RELIANCE": [
+    34,
+    -8534
+   ],
+   "SBIN": [
+    39,
+    -15246
+   ],
+   "TATASTEEL": [
+    36,
+    -29260
+   ],
+   "TRENT": [
+    37,
+    -16131
+   ]
+  },
+  "why": {
+   "utgt": 143,
+   "sq": 107,
+   "ustop": 106,
+   "band": 35
+  },
+  "longs": 183,
+  "shorts": 208,
+  "net_2x": -277920,
+  "stale_model_exits": 3
+ },
+ "poc-c-h-2r": {
+  "trades": 241,
+  "win": 0.353,
+  "net": -113766,
+  "per_trade": -472,
+  "avg_win": 1937,
+  "avg_loss": -1785,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -8014,
+  "max_dd": 133716,
+  "months_green": "5/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -18055,
+   "2025Q2": -20072,
+   "2025Q3": -43096,
+   "2025Q4": -10858,
+   "2026Q1": -21685
+  },
+  "inst": {
+   "ICICIBANK": [
+    26,
+    -34413
+   ],
+   "INFY": [
+    22,
+    -7030
+   ],
+   "KOTAKBANK": [
+    23,
+    -7415
+   ],
+   "LT": [
+    27,
+    5574
+   ],
+   "M&M": [
+    28,
+    -2474
+   ],
+   "MARUTI": [
+    24,
+    -10077
+   ],
+   "RELIANCE": [
+    22,
+    -11485
+   ],
+   "SBIN": [
+    24,
+    3647
+   ],
+   "TATASTEEL": [
+    22,
+    -32342
+   ],
+   "TRENT": [
+    23,
+    -17751
+   ]
+  },
+  "why": {
+   "sq": 113,
+   "ustop": 69,
+   "band": 41,
+   "utgt": 18
+  },
+  "longs": 120,
+  "shorts": 121,
+  "net_2x": -177377,
+  "stale_model_exits": 5
+ },
+ "poc-c-h-st": {
+  "trades": 241,
+  "win": 0.398,
+  "net": -111908,
+  "per_trade": -464,
+  "avg_win": 1237,
+  "avg_loss": -1590,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -7354,
+  "max_dd": 118458,
+  "months_green": "2/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -31442,
+   "2025Q2": -20622,
+   "2025Q3": -22870,
+   "2025Q4": -15027,
+   "2026Q1": -21946
+  },
+  "inst": {
+   "ICICIBANK": [
+    27,
+    -33110
+   ],
+   "INFY": [
+    22,
+    -4427
+   ],
+   "KOTAKBANK": [
+    23,
+    -15900
+   ],
+   "LT": [
+    26,
+    2121
+   ],
+   "M&M": [
+    28,
+    -15333
+   ],
+   "MARUTI": [
+    24,
+    65
+   ],
+   "RELIANCE": [
+    22,
+    -6538
+   ],
+   "SBIN": [
+    24,
+    -7148
+   ],
+   "TATASTEEL": [
+    22,
+    -16039
+   ],
+   "TRENT": [
+    23,
+    -15599
+   ]
+  },
+  "why": {
+   "utgt": 86,
+   "sq": 71,
+   "ustop": 61,
+   "band": 23
+  },
+  "longs": 120,
+  "shorts": 121,
+  "net_2x": -175222,
+  "stale_model_exits": 3
+ },
+ "lvn-x-x-2r": {
+  "trades": 759,
+  "win": 0.374,
+  "net": -319800,
+  "per_trade": -421,
+  "avg_win": 1781,
+  "avg_loss": -1738,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -10816,
+  "max_dd": 319800,
+  "months_green": "2/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -62747,
+   "2025Q2": -46340,
+   "2025Q3": -91419,
+   "2025Q4": -58238,
+   "2026Q1": -61056
+  },
+  "inst": {
+   "ICICIBANK": [
+    70,
+    -33676
+   ],
+   "INFY": [
+    70,
+    -45223
+   ],
+   "KOTAKBANK": [
+    74,
+    -41138
+   ],
+   "LT": [
+    81,
+    -3019
+   ],
+   "M&M": [
+    82,
+    -43371
+   ],
+   "MARUTI": [
+    81,
+    361
+   ],
+   "RELIANCE": [
+    83,
+    -9836
+   ],
+   "SBIN": [
+    81,
+    -36272
+   ],
+   "TATASTEEL": [
+    69,
+    -97569
+   ],
+   "TRENT": [
+    68,
+    -10055
+   ]
+  },
+  "why": {
+   "sq": 501,
+   "band": 153,
+   "ustop": 93,
+   "utgt": 12
+  },
+  "longs": 370,
+  "shorts": 389,
+  "net_2x": -519973,
+  "stale_model_exits": 22
+ },
+ "lvn-x-x-st": {
+  "trades": 796,
+  "win": 0.482,
+  "net": -256356,
+  "per_trade": -322,
+  "avg_win": 812,
+  "avg_loss": -1379,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -9731,
+  "max_dd": 258408,
+  "months_green": "0/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -56903,
+   "2025Q2": -39069,
+   "2025Q3": -52229,
+   "2025Q4": -50598,
+   "2026Q1": -57557
+  },
+  "inst": {
+   "ICICIBANK": [
+    76,
+    -7217
+   ],
+   "INFY": [
+    73,
+    -37166
+   ],
+   "KOTAKBANK": [
+    75,
+    -19668
+   ],
+   "LT": [
+    89,
+    -6959
+   ],
+   "M&M": [
+    86,
+    -27477
+   ],
+   "MARUTI": [
+    84,
+    -13295
+   ],
+   "RELIANCE": [
+    88,
+    -16721
+   ],
+   "SBIN": [
+    81,
+    -44073
+   ],
+   "TATASTEEL": [
+    72,
+    -62642
+   ],
+   "TRENT": [
+    72,
+    -21138
+   ]
+  },
+  "why": {
+   "utgt": 442,
+   "sq": 242,
+   "ustop": 61,
+   "band": 51
+  },
+  "longs": 391,
+  "shorts": 405,
+  "net_2x": -465240,
+  "stale_model_exits": 12
+ },
+ "lvn-x-h-2r": {
+  "trades": 541,
+  "win": 0.366,
+  "net": -241764,
+  "per_trade": -447,
+  "avg_win": 1821,
+  "avg_loss": -1756,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -11968,
+  "max_dd": 248326,
+  "months_green": "3/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -38620,
+   "2025Q2": -42221,
+   "2025Q3": -65342,
+   "2025Q4": -45729,
+   "2026Q1": -49853
+  },
+  "inst": {
+   "ICICIBANK": [
+    49,
+    -25846
+   ],
+   "INFY": [
+    50,
+    -22754
+   ],
+   "KOTAKBANK": [
+    54,
+    -33636
+   ],
+   "LT": [
+    61,
+    1935
+   ],
+   "M&M": [
+    59,
+    -30472
+   ],
+   "MARUTI": [
+    55,
+    2563
+   ],
+   "RELIANCE": [
+    64,
+    -20909
+   ],
+   "SBIN": [
+    56,
+    -33819
+   ],
+   "TATASTEEL": [
+    49,
+    -63061
+   ],
+   "TRENT": [
+    44,
+    -15764
+   ]
+  },
+  "why": {
+   "sq": 372,
+   "band": 107,
+   "ustop": 57,
+   "utgt": 5
+  },
+  "longs": 266,
+  "shorts": 275,
+  "net_2x": -384022,
+  "stale_model_exits": 16
+ },
+ "lvn-x-h-st": {
+  "trades": 563,
+  "win": 0.467,
+  "net": -215665,
+  "per_trade": -383,
+  "avg_win": 801,
+  "avg_loss": -1421,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -9731,
+  "max_dd": 217450,
+  "months_green": "1/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -47155,
+   "2025Q2": -39750,
+   "2025Q3": -42109,
+   "2025Q4": -40013,
+   "2026Q1": -46639
+  },
+  "inst": {
+   "ICICIBANK": [
+    51,
+    -7663
+   ],
+   "INFY": [
+    51,
+    -27876
+   ],
+   "KOTAKBANK": [
+    55,
+    -19272
+   ],
+   "LT": [
+    66,
+    -5597
+   ],
+   "M&M": [
+    63,
+    -27311
+   ],
+   "MARUTI": [
+    58,
+    -15507
+   ],
+   "RELIANCE": [
+    66,
+    -18324
+   ],
+   "SBIN": [
+    56,
+    -38059
+   ],
+   "TATASTEEL": [
+    50,
+    -39580
+   ],
+   "TRENT": [
+    47,
+    -16478
+   ]
+  },
+  "why": {
+   "utgt": 294,
+   "sq": 187,
+   "band": 43,
+   "ustop": 39
+  },
+  "longs": 279,
+  "shorts": 284,
+  "net_2x": -361805,
+  "stale_model_exits": 9
+ },
+ "lvn-c-x-2r": {
+  "trades": 599,
+  "win": 0.389,
+  "net": -207730,
+  "per_trade": -347,
+  "avg_win": 1842,
+  "avg_loss": -1740,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -9520,
+  "max_dd": 225877,
+  "months_green": "4/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -13526,
+   "2025Q2": -35430,
+   "2025Q3": -54495,
+   "2025Q4": -31825,
+   "2026Q1": -72455
+  },
+  "inst": {
+   "ICICIBANK": [
+    56,
+    -25883
+   ],
+   "INFY": [
+    60,
+    -41752
+   ],
+   "KOTAKBANK": [
+    57,
+    -22182
+   ],
+   "LT": [
+    67,
+    -9918
+   ],
+   "M&M": [
+    64,
+    -29401
+   ],
+   "MARUTI": [
+    63,
+    -2132
+   ],
+   "RELIANCE": [
+    65,
+    -11388
+   ],
+   "SBIN": [
+    63,
+    -14974
+   ],
+   "TATASTEEL": [
+    51,
+    -48382
+   ],
+   "TRENT": [
+    53,
+    -1718
+   ]
+  },
+  "why": {
+   "sq": 400,
+   "band": 121,
+   "ustop": 67,
+   "utgt": 11
+  },
+  "longs": 296,
+  "shorts": 303,
+  "net_2x": -362598,
+  "stale_model_exits": 16
+ },
+ "lvn-c-x-st": {
+  "trades": 619,
+  "win": 0.498,
+  "net": -189170,
+  "per_trade": -306,
+  "avg_win": 875,
+  "avg_loss": -1475,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -8718,
+  "max_dd": 196071,
+  "months_green": "2/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -34359,
+   "2025Q2": -33166,
+   "2025Q3": -33280,
+   "2025Q4": -36564,
+   "2026Q1": -51801
+  },
+  "inst": {
+   "ICICIBANK": [
+    59,
+    -4677
+   ],
+   "INFY": [
+    61,
+    -37474
+   ],
+   "KOTAKBANK": [
+    58,
+    -16736
+   ],
+   "LT": [
+    71,
+    -5479
+   ],
+   "M&M": [
+    68,
+    -19501
+   ],
+   "MARUTI": [
+    66,
+    -11885
+   ],
+   "RELIANCE": [
+    68,
+    -14184
+   ],
+   "SBIN": [
+    63,
+    -33086
+   ],
+   "TATASTEEL": [
+    52,
+    -38945
+   ],
+   "TRENT": [
+    53,
+    -7203
+   ]
+  },
+  "why": {
+   "utgt": 332,
+   "sq": 195,
+   "ustop": 49,
+   "band": 43
+  },
+  "longs": 309,
+  "shorts": 310,
+  "net_2x": -348322,
+  "stale_model_exits": 9
+ },
+ "lvn-c-h-2r": {
+  "trades": 434,
+  "win": 0.366,
+  "net": -188849,
+  "per_trade": -435,
+  "avg_win": 1884,
+  "avg_loss": -1776,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -10165,
+  "max_dd": 197485,
+  "months_green": "3/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -19229,
+   "2025Q2": -30326,
+   "2025Q3": -44914,
+   "2025Q4": -32169,
+   "2026Q1": -62211
+  },
+  "inst": {
+   "ICICIBANK": [
+    38,
+    -12856
+   ],
+   "INFY": [
+    45,
+    -22363
+   ],
+   "KOTAKBANK": [
+    42,
+    -21457
+   ],
+   "LT": [
+    51,
+    -6281
+   ],
+   "M&M": [
+    48,
+    -27410
+   ],
+   "MARUTI": [
+    43,
+    -5348
+   ],
+   "RELIANCE": [
+    48,
+    -18912
+   ],
+   "SBIN": [
+    43,
+    -15308
+   ],
+   "TATASTEEL": [
+    39,
+    -42703
+   ],
+   "TRENT": [
+    37,
+    -16211
+   ]
+  },
+  "why": {
+   "sq": 300,
+   "band": 87,
+   "ustop": 42,
+   "utgt": 5
+  },
+  "longs": 216,
+  "shorts": 218,
+  "net_2x": -301639,
+  "stale_model_exits": 11
+ },
+ "lvn-c-h-st": {
+  "trades": 448,
+  "win": 0.464,
+  "net": -184702,
+  "per_trade": -412,
+  "avg_win": 867,
+  "avg_loss": -1521,
+  "r_mult": NaN,
+  "r_mult_median": NaN,
+  "worst_day": -8820,
+  "max_dd": 184702,
+  "months_green": "1/17",
+  "top5_share": null,
+  "quarters": {
+   "2025Q1": -30237,
+   "2025Q2": -35927,
+   "2025Q3": -36915,
+   "2025Q4": -35001,
+   "2026Q1": -46622
+  },
+  "inst": {
+   "ICICIBANK": [
+    40,
+    -2044
+   ],
+   "INFY": [
+    45,
+    -26674
+   ],
+   "KOTAKBANK": [
+    43,
+    -18419
+   ],
+   "LT": [
+    53,
+    -5202
+   ],
+   "M&M": [
+    52,
+    -23448
+   ],
+   "MARUTI": [
+    46,
+    -14262
+   ],
+   "RELIANCE": [
+    49,
+    -15720
+   ],
+   "SBIN": [
+    43,
+    -29205
+   ],
+   "TATASTEEL": [
+    40,
+    -36184
+   ],
+   "TRENT": [
+    37,
+    -13542
+   ]
+  },
+  "why": {
+   "utgt": 220,
+   "sq": 160,
+   "band": 37,
+   "ustop": 31
+  },
+  "longs": 225,
+  "shorts": 223,
+  "net_2x": -300750,
+  "stale_model_exits": 6
+ }
+}

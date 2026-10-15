@@ -1,0 +1,41 @@
+id: r62-idx-lvn-x-x-st
+title: 'R62 IDX lvn-x-x-st: anchored volume profile + SMC entry ((a) option-chain volume)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R62_VOLUME_PROFILE_SMC.md
+hypothesis: 'Boss''s video strategy (15 Oct): an anchored swing-low-to-swing-high volume profile''s POC / LVN, retested in
+  the trend''s direction with SMC confluence, makes money after real costs (final net > 0, twin p < 0.05, BH q <= 0.10 over
+  32, 40+ trades, top-5 < net, design gate).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 15 Oct 2026: index_1m and options_rolling_1m opt_<U>_WEEK (R51
+  clean store + spikes.py rule, one held contract per trade), equity_1m (stocks and index constituents); read by research/hunt/r62/r62data.py'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward by quarter)
+  holdout: final test 1 Apr - 14 Oct 2026 (indices) / 12 Oct 2026 (stocks), read once 15 Oct 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 15-min fractal swings, BOS / ChoCH
+- anchored 50-row volume profile ((a) option-chain volume)
+- 5-min FVG / Order Block
+- 1-hour structure
+model_or_rule: 'lvn-x-x-st: pullback into the anchored leg''s low-volume node; no confluence (LVN overlaps a 5-min FVG); no
+  HTF filter; target the structural high / low; stop beyond the leg''s swing extreme; signal source: the underlying (index
+  spot); traded: the 1-ITM nearest-expiry index option bought (held contract); 5-min touch + next-bar confirmation, fills
+  next minute'
+settings: research/hunt/r62/PREREG.md sections 3-6; research/hunt/r62/r62smc.py
+prereg: research/hunt/r62/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 581 trades, win 55%, net Rs -83,073, avg win / loss Rs +1,545 / -2,184, mean R -0.02, worst day Rs -18,887,
+    max DD Rs -146,778, months green 7/17; 2x Rs -142,998; design gate no. Final: 241 trades, win 55%, net Rs -42,906, avg
+    win / loss Rs +1,560 / -2,283, mean R -0.01, worst day Rs -21,749, max DD Rs -61,497, months green 4/7; 2x Rs -69,917;
+    twin p 0.287, BH q 1.00: FAIL: net <= 0, p >= 0.05, q > 0.10, top 5 >= net, design gate.'
+  costs: 'R51 engine: R17 ''liq'' fills (5 bps + 1/2/4 ticks), obuy Costs(''dated'') charges (STT 0.1% / 0.15% from 1 Apr
+    2026), 1 lot in force; 2x = double bps/ticks and charges'
+holdout_read: true
+verdict: rejected
+notes: One of 32 R62 primary tests in one BH family (research/hunt/r62/results/report.md).
