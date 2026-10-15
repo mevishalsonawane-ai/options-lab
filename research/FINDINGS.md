@@ -794,3 +794,29 @@ Bollinger(20, 2) lower band). That is not the default; it is reported separately
   shows -106 and -127 (122 and 130 trades). On the fixed contract the signal is no better than random entries (q 0.62).
 - BANKNIFTY: +Rs 237 on the rolling series, -Rs 124 a trade on one contract at real lots (1,405 trades).
 - Rule for every lake study: never trade the rolling ATM series as one instrument; hold the strike that was bought.
+
+## Every cancelled hero rule on the Nov 2024+ market (R50, 15 Oct 2026) - 0 of 28 pass; the final-test profits are one SENSEX call
+Full study: `HUNT_R50_HERO_RECENT.md` (pre-registered `hunt/r50/PREREG.md`, commit 97d5c922). Window: expiry days 20 Nov 2024
+- 13 Oct 2026 only (NIFTY / SENSEX weekly, BANKNIFTY / FINNIFTY / MIDCPNIFTY monthly; 266 index-days). Design 20 Nov 2024 -
+31 Mar 2026 (193, walk-forward by quarter); final test 1 Apr - 13 Oct 2026 (73), read once. The final test is not pristine
+(R43-R45 saw 2025-26). Every trade is on one held contract, with dated charges, next-minute fills, a volume-based spread
+(2x stress) and dated lots.
+- Tested 20 originals in 8 families, plus one small re-tune per family (34 cells):
+  - the app's Hero arm and V4;
+  - Rs 1-5 lottery baskets and the 12:30 Rs 5-30 basket;
+  - R26 OI-wall short covering and Boss's 13:45-14:30 window;
+  - R36 GEX;
+  - R43's 6 sweep signals;
+  - R35 Supertrend;
+  - R34 K1 and R25 T1.
+- Design: 17 of 20 lost; together they lost Rs 8.85 lakh on 2,209 trades. The 3 positives are the OI-wall rules, with 4
+  trades each.
+- Final test: the EMA8/9 x 21/26 + ADX and RSI-momentum rules made +Rs 95k to +Rs 1.39 lakh, and the no-signal 12:30
+  basket +Rs 1.27 lakh (146 trades, q 0.056). All of them ride one trade: the SENSEX 72,500 CE on 2 Apr 2026 (Rs 22-25 ->
+  26-37x, +Rs 1.2-1.75 lakh, the same trade R43 found). Each is negative without its top 5 (-Rs 46k to -Rs 1.59 lakh), and
+  each lost in design. The EMA rules also have too few trades (23-36).
+- The Rs 1-5 baskets still lose about half of what they stake (13:30: -Rs 525 per Rs 1,000 in the final test, 121 tickets).
+  Boss's 25% trail cuts most hero losses by half or more, but nothing turns positive beyond its top trades.
+- The app's Hero arm: 12 design trades -Rs 26,417, 2 final -Rs 3,776; no trade on 13 Oct 2026. The OI-wall rules fire
+  about once a quarter now (too few to judge).
+- Nothing comes back on paper; every hero rule stays off. Across R21-R50, 0 of 198 hero rules pass.

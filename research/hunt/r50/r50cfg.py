@@ -20,8 +20,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 HUNT = HERE.parent
 for p in (ROOT, ROOT / "research", HUNT / "r25", HUNT / "r26", HUNT / "r34", HUNT / "r43", HERE):
-    if str(p) not in sys.path:
-        sys.path.insert(0, str(p))
+    if str(p) in sys.path:
+        sys.path.remove(str(p))
+    sys.path.insert(0, str(p))          # R50's own folder ends up first (other studies have report.py / study.py too)
 # R35 / R36 are imported by path in r50lib (their folders hold modules with common names)
 
 import r25cfg as K25  # noqa: E402

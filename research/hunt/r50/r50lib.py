@@ -46,7 +46,7 @@ def _by_path(name: str, path):
 
 R21 = RU.R21
 R21.atm = R.atm                     # R21's port only knew the NIFTY / BANKNIFTY steps; R25's reads every index's step
-L26.THETA.setdefault("MIDCPNIFTY", 0.25)      # PREREG.md: 25% as BANKNIFTY / FINNIFTY (monthly-only indices)
+THETA_EXTRA = {"MIDCPNIFTY": 0.25}           # PREREG.md: 25% as BANKNIFTY / FINNIFTY (monthly-only indices)
 
 
 def r35():
@@ -320,16 +320,22 @@ def _r26_signals(day, rs) -> list[Sig]:
     to succeed for the minute to count (its `signal`), and so does this."""
     rule = _r26_rule(rs)
     ch = L26.chain(day)
-    for t in range(L26.FIRST, L26.LAST + 1):
-        for sgn in (1, -1):
-            cd = L26.conditions(day, rule, sgn, t, ch)
-            if not L26.fires(cd, rule):
-                continue
-            pk = PICKERS[rs.pick](day, sgn, t)
-            if pk is None:
-                continue
-            return [Sig(t, sgn, pk[0], pk[1])]
-    return []
+    added = {k: v for k, v in THETA_EXTRA.items() if k not in L26.THETA}
+    L26.THETA.update(added)                     # only while R50 reads it (R26's own table and tests stay as they are)
+    try:
+        for t in range(L26.FIRST, L26.LAST + 1):
+            for sgn in (1, -1):
+                cd = L26.conditions(day, rule, sgn, t, ch)
+                if not L26.fires(cd, rule):
+                    continue
+                pk = PICKERS[rs.pick](day, sgn, t)
+                if pk is None:
+                    continue
+                return [Sig(t, sgn, pk[0], pk[1])]
+        return []
+    finally:
+        for k in added:
+            L26.THETA.pop(k, None)
 
 
 GEX_FLAGS: dict = {}         # (und, date) -> {"ok", "x1", "x2"} (filled by gex_flags())
