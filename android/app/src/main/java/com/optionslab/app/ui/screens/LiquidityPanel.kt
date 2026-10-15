@@ -210,9 +210,13 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
     var behind by remember(underlying) { mutableStateOf<Behind?>(null) }
     var model by remember(underlying, tf) { mutableStateOf<LiquidityOverlay.Model?>(null) }
 
+    // Both effects run on the main thread and leave it only for the reads and the build (15 Oct). The composition's own
+    // dispatcher is unconfined under the Compose test rule: the code after withContext(IO / Default) ran on that worker,
+    // and the state written there (input, trades, model) recomposed and measured the layer off the main thread
+    // ("multithreaded SnapshotStateObserver" in LiquidityPanelTest on CI). Same as 05aa5cc's screens; the phone ran here already.
     LaunchedEffect(underlying, visible) {
         if (!visible) return@LaunchedEffect
-        while (true) {
+        withContext(Dispatchers.Main.immediate) { while (true) {
             val now = source.now()
             withContext(Dispatchers.IO) { runCatching { bars(now) } }
                 .onSuccess { got ->
@@ -232,14 +236,17 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
                 ?: now.toLocalDate().atTime(if (now.toLocalTime().isBefore(LocalTime.of(9, 20))) LocalTime.MIDNIGHT else LocalTime.of(15, 30))
             if (closed != closedAt) closedAt = closed
             delay(30_000)
-        }
+        } }
     }
     LaunchedEffect(input, trades, tf, closedAt) {
         val b = input ?: return@LaunchedEffect
         if (closedAt == null) return@LaunchedEffect
         val now = source.now()
-        val m = withContext(Dispatchers.Default) { LiquidityOverlay.build(b, tf, underlying, now, trades) }
-        if (m != model) model = m
+        val t = trades
+        withContext(Dispatchers.Main.immediate) {
+            val m = withContext(Dispatchers.Default) { LiquidityOverlay.build(b, tf, underlying, now, t) }
+            if (m != model) model = m
+        }
     }
     LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier, behind?.let(::behindText),
         levelAlarms = levelAlarms, lastPrice = lastPrice, today = source.now().toLocalDate(),
@@ -340,8 +347,11 @@ internal fun LiquidityChart(
     // A level's last price: the chart's own when it answers, else the last closed bar's close.
     LaunchedEffect(level) {
         val l = level ?: return@LaunchedEffect
-        val got = withContext(Dispatchers.IO) { runCatching { lastPrice() }.getOrNull() }
-        levelLast = got ?: l.lastClose
+        // Set on the main thread (15 Oct; see LiquidityPanel's effects).
+        withContext(Dispatchers.Main.immediate) {
+            val got = withContext(Dispatchers.IO) { runCatching { lastPrice() }.getOrNull() }
+            levelLast = got ?: l.lastClose
+        }
     }
     LaunchedEffect(resolving) {
         val mk = resolving ?: return@LaunchedEffect

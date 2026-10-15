@@ -178,16 +178,20 @@ internal fun ChartPane(
     var recentsRead by remember { mutableStateOf(false) }
     LaunchedEffect(current, symbolPicker) {
         if (!symbolPicker) return@LaunchedEffect
-        if (!recentsRead) {
-            recents = withContext(Dispatchers.IO) {
-                runCatching { ChartSymbols.decode(com.optionslab.app.security.SecurePrefs.getString(ChartSymbols.RECENT_KEY)) }.getOrDefault(emptyList())
+        // Set on the main thread (15 Oct): under the test rule's unconfined dispatcher the code after withContext(IO)
+        // ran on the IO worker and wrote [recents] there.
+        withContext(Dispatchers.Main.immediate) {
+            if (!recentsRead) {
+                recents = withContext(Dispatchers.IO) {
+                    runCatching { ChartSymbols.decode(com.optionslab.app.security.SecurePrefs.getString(ChartSymbols.RECENT_KEY)) }.getOrDefault(emptyList())
+                }
+                recentsRead = true
             }
-            recentsRead = true
+            val now = current
+            recents = ChartSymbols.pushRecent(recents, now)
+            val kept = mapOf(ChartSymbols.RECENT_KEY to ChartSymbols.encode(recents), ChartSymbols.LAST_KEY to ChartSymbols.encode(listOf(now)))
+            withContext(Dispatchers.IO) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(kept) } }
         }
-        val now = current
-        recents = ChartSymbols.pushRecent(recents, now)
-        val kept = mapOf(ChartSymbols.RECENT_KEY to ChartSymbols.encode(recents), ChartSymbols.LAST_KEY to ChartSymbols.encode(listOf(now)))
-        withContext(Dispatchers.IO) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(kept) } }
     }
     // A hidden chart (another tab in front) never keeps its picker open over that tab.
     LaunchedEffect(visible) { if (!visible) picking = false }
