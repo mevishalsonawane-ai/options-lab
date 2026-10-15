@@ -8,7 +8,7 @@ volume 0 where nothing traded. Only volume > 0 minutes count as a real trade for
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
