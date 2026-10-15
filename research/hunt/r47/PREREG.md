@@ -170,3 +170,25 @@ at the earliest (`r47sig.sessions_from`), with a test. The design search and the
 (C9, which never read the wrapped value; its walk-forward pick moved with a 3-session later warm-up) is replaced by the
 NIFTY O1 premium ORB (option-chart, non-default). That rule is NOT sent to the holdout, which has already been read once.
 The official holdout result stays that of the 10 frozen candidates.
+
+## Amendment 4 (15 Oct 2026, Boss's "Nov 2024+ view"; written after the holdout read, labelled, reads nothing to choose a candidate)
+
+Boss: "don't test any data before 20 Nov 2024." `r47nov.py` re-runs, with no trade, selection or model training before
+20 Nov 2024 (rows from 1 Jun 2024 only as indicator warm-up):
+
+- the 10 frozen candidates;
+- the NIFTY O1 rule from amendment 3;
+- the 17 per-family best variants of `design_v3.json`.
+
+Spans:
+
+- design: 20 Nov 2024 - 31 Mar 2026, as blocks N1 (to 30 Jun 2025) and N2;
+- final test: 1 Apr - 13 Oct 2026.
+
+It also runs a Nov-2024-only walk-forward re-selection inside each of their 27 (family, index, kind) groups: pick on N1
+-> trade N2, and pick on the design -> trade the final test. The pick rule is unchanged.
+
+Measurement is unchanged: amendments 1-2 apply, with 500 twins per span and BH across the rules.
+
+The final test overlaps the already-read holdout, and the fixed rules were chosen on data through Oct 2025. So this view
+is a re-cut, reported beside the official holdout result, which it does not replace.

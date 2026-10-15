@@ -817,3 +817,10 @@ relaxed: one fixed contract per leg, R17 fills, dated charges, gap fills, no loo
   whose `spot` is more than 3% off the index at that minute (`hunt/r47/r47data.foreign_rows`). Thin contracts also
   carry stray prints (a 09:15 open of 500 on a Rs 60 option): never let a fill profit from a price more than 20% off
   the contract's surrounding closes (`hunt/r47/r47price.open_for_sell`). R47's selection was unchanged by both fixes.
+- **Nov 2024+ view (amendment 4, Boss's primary view, 15 Oct): still nothing passes.**
+  - Spans: design 20 Nov 2024 - 31 Mar 2026; final test 1 Apr - 13 Oct 2026, which overlaps the already-read holdout.
+  - C9, C10 and C1 look good in design (p 0.012-0.018, q 0.098-0.10), and all three lose in the final test.
+  - C4 (BANKNIFTY PCR follow) is the only candidate positive in both: 146 trades at +Rs 322, then 55 at +Rs 1,125
+    (p 0.07, q 0.76).
+  - Re-selecting inside Nov 2024+ only (101,136 variants in 27 groups) gives no pick with 40+ final-test trades and
+    p < 0.05.

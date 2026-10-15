@@ -7,6 +7,9 @@ made money, but **none beat random entries after correcting for 10 tries** (best
 lost money. **There is no paper proposal.** The closest was the BANKNIFTY "high PCR -> buy ITM calls" rule (C4): +Rs 865 a
 trade on 91 holdout trades, p = 0.0499, but q = 0.50, and its design profit had already faded to zero in 2025.
 
+**Boss's primary view since 15 Oct, Nov 2024+ (amendment 4, below): still nothing passes.** C4 is the only candidate
+positive in both its design (146 trades, +Rs 322) and final test (55 trades, +Rs 1,125, p 0.07, q 0.76).
+
 Pre-registered in `hunt/r47/PREREG.md` (commit 2f27c32d, pushed before any P&L), and three written amendments (see "Data and
 code problems found"):
 - Amendment 1, a stray-print guard, came before the candidates were frozen.
@@ -202,6 +205,109 @@ Notes:
 - **Data:** the lake's option files mix in rows of other underlyings (table above) and carry stray prints in thin
   contracts. Both can create large fake profits.
 
+## Amendment 4 (15 Oct 2026, labelled): the Nov 2024+ view - Boss's PRIMARY view
+
+Boss (15 Oct): "don't test any data before 20 Nov 2024." This amendment re-runs R47's rules on that span only. It is
+**the view to read first**; the full-span results above stay beside it, unchanged.
+
+**Verdict: still nothing passes.** No candidate, no family best and no re-selected rule clears the gates on the Nov 2024+
+data. The full-span verdict stands.
+
+What was run (`hunt/r47/r47nov.py`, tests in `hunt/r47/test_r47nov.py`, numbers in `hunt/r47/results/nov24.json` and
+`nov24_report.md`):
+
+- **Spans.**
+  - Design: 20 Nov 2024 - 31 Mar 2026, in two walk-forward blocks: N1 to 30 Jun 2025, N2 from 1 Jul 2025.
+  - Final test: 1 Apr - 13 Oct 2026.
+  - No trade, selection or model training uses anything before 20 Nov 2024. Rows from 1 Jun 2024 are read only as
+    indicator warm-up (previous closes, 10-55-session channels, 60-session PCR ranks, VIX).
+- **Rules (28 fixed rules):**
+  - the 10 frozen candidates C1-C10;
+  - the NIFTY O1 option-chart rule that would have been rank 10 after the look-ahead fix (non-default: option-chart
+    signal);
+  - the 17 per-family best variants from the exploration table.
+- **Re-selection inside Nov 2024+ only.** This is the honest walk-forward. For each of their 27 (family, index, kind)
+  groups:
+  - all 101,136 variants were priced again;
+  - the best variant of N1 was traded in N2;
+  - the best of N1+N2 was traded in the final test.
+  - The pick rule is R47's: 40+ training trades, positive training net, highest t.
+- **Measurement unchanged:**
+  - one contract per leg from entry to exit;
+  - R17 'liq' fills and dated charges;
+  - the stray-print guard (amendment 1) and the foreign-rows filter (amendment 2).
+- **Statistics:** 500 random-entry twins inside the same span; BH across the 28 fixed rules (also across the 11
+  candidates alone), and across the 27 re-selected rules.
+
+**Honest limits.**
+
+- The final test (Apr - Oct 2026) lies inside R47's holdout, which was already read once.
+- The fixed rules were chosen on design data up to 31 Oct 2025, which covers 11 of this view's 16 design months.
+- So, for the fixed rules, this view is a re-cut of data they have seen, not a new test. Only the re-selection's final
+  test is out of sample for its choice, and even that span was seen by R47.
+
+### The 10 candidates and O1, Nov 2024+ view vs R47's full span
+
+Rs per trade after dated charges and fills (Rs 20,000 premium budget). q = BH across the 28 fixed rules.
+
+| id | rule (signal source) | Nov24+ design: trades, Rs/trade, p, q | Nov24+ final test: trades, Rs/trade, p, q | R47 full span: design Rs/trade (n); holdout Rs/trade (n), p, q |
+|---|---|---|---|---|
+| C1 | BANKNIFTY late-day follow, overnight (U) | 128, +569, 0.018, 0.10 | 57, **-746**, 0.39, 0.77 | +1,200 (311); -1,031 (90), 0.50, 0.56 |
+| C2 | NIFTY 10-day breakout spread (U) | 64, -438, 0.51, 0.53 | 22, +2,421, 0.21, 0.77 | +2,207 (163); +745 (43), 0.39, 0.56 |
+| C3 | FINNIFTY late-day spread (U) | 80, -420, 0.014, 0.10 | 22, **-9,845**, 0.90, 0.93 | +1,245 (156); -5,418 (49), 0.48, 0.56 |
+| C4 | BANKNIFTY PCR follow (C) | 146, +322, 0.078, 0.20 | 55, **+1,125**, 0.072, 0.76 | +1,093 (440); +865 (91), 0.0499, 0.50 |
+| C5 | SENSEX ORB spread, expiry day (U) | 60, +1,442, 0.028, 0.11 | 27, -652, 0.62, 0.87 | +2,740 (103); -674 (47), 0.65, 0.65 |
+| C6 | NIFTY OI shift spread, expiry day (C) | 33, +158, 0.40, 0.50 | 17, +1,154, 0.18, 0.77 | +2,232 (110); +18 (24), 0.46, 0.56 |
+| C7 | NIFTY PCR follow (C) | 149, +646, 0.11, 0.25 | 62, +355, 0.40, 0.77 | +843 (429); +733 (102), 0.21, 0.56 |
+| C8 | SENSEX EMA, Wednesdays (U) | 99, -258, 0.41, 0.50 | 41, -431, 0.55, 0.86 | +839 (187); -425 (67), 0.51, 0.56 |
+| C9 | BANKNIFTY big bar, Mondays (U) | 59, +1,092, 0.014, 0.098 | 22, -256, 0.49, 0.80 | +1,226 (188); +271 (41), 0.27, 0.56 |
+| C10 | SENSEX premium ORB, Fridays (O, non-default) | 68, +1,459, 0.012, 0.098 | 21, -778, 0.69, 0.88 | +2,009 (100); +322 (41), 0.39, 0.56 |
+| O1 | NIFTY premium ORB, month-end (O, non-default; never sent) | 46, -175, 0.37, 0.50 | 19, +223, 0.36, 0.77 | +1,777 (140); not sent |
+
+What this shows:
+
+- On the Nov 2024+ design, 5 candidates have p < 0.05 (C1, C3, C5, C9, C10: p 0.012-0.028). Only C9 and C10 reach
+  q <= 0.10 (0.098). C3's p is low only because its twins lost even more.
+- All of these turn negative in the final test.
+- Only C4 stays positive in both: +322 a trade on 146 design trades and +1,125 on 55 final-test trades. Its final-test
+  p is 0.072 and q 0.76, which is not significant. Its full-span holdout was +865 on 91 trades (p 0.0499, q 0.50).
+  It is the same "close, not proven" note as before, not a proposal.
+- Most final-test samples are small: 7 of the 11 have under 40 trades. That alone fails the trade-count gate.
+
+### Family bests (Nov 2024+)
+
+Of the 17 per-family bests:
+
+- 13 lost money in the final test or had under 40 trades there. The 4 that made money on 40+ trades (NIFTY U6 EMA,
+  BANKNIFTY M1 trees, SENSEX C1 PCR spread, SENSEX U2 gap) all have final-test p of 0.35-0.41.
+- SENSEX C1_pcr (PCR spread) was the strongest in design: 141 trades, +2,964 a trade, p 0.002, q 0.056. In the final
+  test it fell to +499 on 61 trades (p 0.41).
+- SENSEX U8 previous-day breakout: design +1,632 on 272 trades (p 0.022), final -1,195 on 112 trades.
+- NIFTY U6 EMA ATM: design +441 on 435 trades, final +318 on 151 trades (p 0.38).
+- FINNIFTY U1 ORB OTM2 lost in every span (-930 and -993 a trade).
+
+Every table is in `hunt/r47/results/nov24_report.md`.
+
+### Re-selection inside Nov 2024+ (walk-forward)
+
+- **N1 -> N2.** 21 of the 27 groups found a variant with 40+ N1 trades and a positive N1 net.
+  - Their N2 results were mixed and mostly near zero or negative, for example SENSEX U6 +202 on 176 trades.
+  - Two big-looking numbers come from 2-5 trades (NIFTY C1_pcr +6,447 on 3; SENSEX C3 +3,728 on 2).
+- **Design -> final.** The rule picked on all of Nov 2024 - Mar 2026 was traded in the final test.
+  - The best was FINNIFTY U7 big-bar, ATM, Thursdays (k 2.0, follow): +2,667 a trade, p 0.002, q 0.048. But that is on
+    **21 trades** (gate: 40), and the variant was the best of 5,600 in its group.
+  - The others with p < 0.05 (NIFTY C1_pcr OTM5 +2,147 on 23 trades, NIFTY U4 spread +11,307 on 12, BANKNIFTY U3 ITM3
+    +1,553 on 30, SENSEX U4 ITM1 +3,275 on 25) all have q 0.23 and under 40 trades.
+- **Nothing passes** the 40-trade, p and q gates together. Several picks lost heavily: FINNIFTY U3 spread -14,634 a
+  trade on 26, NIFTY U3 -3,758 on 11.
+
+**Verdict for Boss (Nov 2024+ view):**
+
+- No R47 rule is a paper candidate.
+- The pattern matches the full span: rules look good in the months they were picked on, then fade or flip.
+- C4 (BANKNIFTY PCR follow) is the only rule that stayed positive everywhere. It is still not significant after the
+  multiple-testing correction.
+
 ## Reproduce
 
 ```bash
@@ -212,7 +318,8 @@ python3 research/hunt/r47/r47data.py build              # design stores (no row 
 python3 research/hunt/r47/r47search.py                  # 387,392 variants -> <cache>/r47/search_*.parquet
 python3 research/hunt/r47/r47select.py --tag v3         # walk-forward + candidates (results/design_v3.json)
 python3 research/hunt/r47/r47holdout.py --recheck       # the frozen candidates on cleaned holdout rows
-python -m pytest research/hunt/r47 -q                   # 74 tests
+python3 research/hunt/r47/r47nov.py && python3 research/hunt/r47/r47nov.py --report   # amendment 4 (Nov 2024+ view)
+python -m pytest research/hunt/r47 -q                   # 82 tests
 ```
 
 `r47holdout.py` without `--recheck` refuses to run again (`results/holdout.json` exists: the one read).

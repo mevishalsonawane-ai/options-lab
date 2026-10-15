@@ -1,0 +1,37 @@
+id: r47-nov24-view
+title: 'R47 amendment 4: the Nov 2024+ view (Boss) - 10 candidates, O1, 17 family bests and a Nov-2024-only re-selection'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R47_RELAXED_OPTION_BUYING.md
+hypothesis: On data from 20 Nov 2024 only, some R47 candidate, family best or Nov-2024-only walk-forward pick makes money in
+  the design span and the final test and beats random entries after BH.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m opt_{NIFTY,SENSEX}_{WEEK,MONTH} and opt_{BANKNIFTY,FINNIFTY}_WEEK
+  2024-2026, index_1m 2024-2026, index_daily; foreign-underlying rows dropped (amendment 2); rows from 1 Jun 2024 as warm-up only'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (N1 to 30 Jun 2025, N2 from 1 Jul 2025)
+  holdout: 1 Apr - 13 Oct 2026 final test (overlaps R47's already-read holdout; fixed rules were chosen on data through Oct 2025)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- R47 families U1-U10, C1-C3, O1-O2, E2-E3, M1 (signal source per rule in results/nov24.json)
+model_or_rule: 'Fixed: C1-C10, O1 NIFTY (v3 rank 10), 17 per-family bests; re-selection: R47''s pick rule (40+ training trades,
+  positive net, highest t) inside each of 27 (family, index, kind) groups, N1 -> N2 and design -> final'
+settings: research/hunt/r47/r47nov.py
+prereg: research/hunt/r47/PREREG.md
+variants_tried: 101164
+results:
+  summary: 'No rule passes. Candidates, final test (trades, Rs/trade, p, q over 28): C1 57 -746 0.39 0.77; C2 22 +2,421 0.21
+    0.77; C3 22 -9,845 0.90 0.93; C4 55 +1,125 0.072 0.76; C5 27 -652 0.62; C6 17 +1,154 0.18; C7 62 +355 0.40; C8 41 -431
+    0.55; C9 22 -256 0.49; C10 21 -778 0.69; O1 NIFTY 19 +223 0.36. Design (Nov 2024 - Mar 2026): C9 59 +1,092 p 0.014 q 0.098,
+    C10 68 +1,459 p 0.012 q 0.098, C1 128 +569 p 0.018 q 0.10 - all negative in the final test. C4 is the only candidate
+    positive in both (146 +322; 55 +1,125). Re-selection: best final pick FINNIFTY U7 ATM Thursdays +2,667 on 21 trades,
+    p 0.002, q 0.048 (under 40 trades; best of 5,600); no pick with 40+ trades has p < 0.05.'
+  costs: research/obuy Costs('dated') on every order of every leg + R17 'liq' fills, stray-print guard; one fixed contract per
+    leg; Rs 20,000 premium budget
+holdout_read: true
+verdict: rejected
+notes: 'Labelled amendment for Boss''s primary view; it does not replace the official holdout read. Signal sources mixed:
+  U underlying (default), C option chain, O option-chart (non-default, labelled), E calendar, M trees.'
