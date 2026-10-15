@@ -19,6 +19,6 @@ variants_tried: 1
 results:
   summary: 'USD per standard lot. orig: design 251 trades net 25,538, walk-forward 22,063; final 87 trades, win 47%, net 11,599,
     p 0.082, q 0.327 -> fail'
-  costs: ask = bid + 0.30, $7/lot, $40/lot/night swap where held
+  costs: 'ask = bid + 0.30, $7/lot; $40/lot/night swap only where the study charged it (GB13); others: not charged'
 holdout_read: true
 verdict: rejected

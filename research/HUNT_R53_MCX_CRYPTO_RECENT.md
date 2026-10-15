@@ -44,8 +44,8 @@ The full list is in `hunt/r53/CATALOGUE.md`: every rejected rule, its source, it
 source, and why it was or was not re-tested.
 
 - **Re-tested: 31 rules.**
-  - 10 MCX rule families, run as 16 books. The four app arms are included: NG evening (MA1), US-night silver (MA2),
-    12-month trend (MA10), and the M4 morning call, which is R51's and is skipped here.
+  - 10 MCX rule families, run as 16 books. Three of the four app arms are included: NG evening (MA1), US-night silver
+    (MA2) and 12-month trend (MA10). The fourth, the M4 SILVERM morning call, is R51's and is skipped here.
   - 13 gold rules (15 books).
   - 8 crypto rules.
 - **Left, each with its reason:**
@@ -124,6 +124,8 @@ premium only for the stop, lock and P&L.
 - **MCX:**
   - Futures fill at minute closes, because the lake's near-future series has closes only.
   - MA2's 3% stop is checked on closes.
+  - An MCX option target that gaps over its level fills at the open (the better price), not the level. Only MA6 has an
+    option target, and none of its target exits gapped, so no number changes.
   - **MA5 ran by mistake with one signal a day.** It is kept and labelled. The pre-registered uncapped rule (MA5u) was
     read after the lock, as a labelled correction.
   - SILVERMIC, GOLDTEN, NATGASMINI and CRUDEOILM are priced from their big brothers' near future, scaled.
@@ -131,6 +133,9 @@ premium only for the stop, lock and P&L.
 - **Gold:**
   - GB2 used M5, the old study's only positive buys-only cell.
   - Two studies filled stops at the level on a gap; R53 fills them at the open.
+  - Overnight swap ($40 a lot a night) was charged only where the old study charged it (GB13, the trend rule). For the
+    other rules that hold overnight it is not in the net. On the final test that flatters them by $40 to $3,560 a lot
+    (GB9 $280, GB5-1h $1,880, GB3 $2,440). No verdict changes; each rule's would-be swap is in `gold_final.json`.
   - One GB9 final entry sat in the daily break at a stale close. At the next real price the final net is +$25,490, not
     +$26,813.
 - **Crypto:**
@@ -146,7 +151,8 @@ Money: MCX in Rs per lot. Gold in USD per standard XAUUSD lot (100 oz; 1 GOLDM l
 Table columns:
 - "design" is the Nov 2024+ design (MCX intraday: Aug 2025+).
 - "WF net" is the design walk-forward: the original's out-of-sample folds, or the re-tune's.
-- Net per day is per trading day of the final period: 137 MCX, 138 gold, 195 crypto calendar days.
+- Net per day is per trading day of the final period: 137 MCX (138 for MA10's daily series), 138 gold, 195 crypto
+  calendar days.
 - Win %, averages, worst day and drawdown are on the final test (crypto: after tax, Delta).
 
 ### OLD verdict vs NOW

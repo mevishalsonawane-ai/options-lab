@@ -20,6 +20,6 @@ results:
   summary: 'USD per standard lot. orig: design 26 trades net 144,135, walk-forward 139,999; final 9 trades, win 33%, net -876,
     p 0.325, q 0.551 -> too few trades to judge; rt_giveback5: design 26 trades net 245,310, walk-forward 224,053; final 9
     trades, win 22%, net -1,782, p 0.297, q 0.523 -> too few trades to judge'
-  costs: ask = bid + 0.30, $7/lot, $40/lot/night swap where held
+  costs: 'ask = bid + 0.30, $7/lot; $40/lot/night swap only where the study charged it (GB13); others: not charged'
 holdout_read: true
 verdict: inconclusive

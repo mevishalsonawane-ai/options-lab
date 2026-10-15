@@ -813,7 +813,7 @@ of every rule: the underlying (MCX near future, US future + USD/INR, XAUUSD, BTC
   trade, the GOLDM morning break from +Rs 110 to -Rs 315.
 - Gold (XAUUSD, per standard lot): every study re-run trade for trade with its own code. Most made +$80k to +$245k in
   design, then lost or shrank in 2026's final test. Best: Liquidity 1h confirmation 20, +$25.5k but only 23 trades.
-  Boss's two session strategies, TAS 15m and AI's Opinion all fail.
+  Boss's two session strategies, TAS 15m and AI's Opinion all fail or are too few to judge (GB1 34 trades, -$18.3k).
 - Crypto (stop + profit lock on every trade; Delta and CoinSwitch costs; 31.2% tax per winner): all 8 rules lose after
   tax in design and final. Nearest: RC2 R8 day-high/low break on Delta options, +Rs 16.9k before tax, -Rs 28.9k after
   (313 trades). Buy-and-hold made +Rs 13-15k per Rs 1 lakh after tax over the same final window.

@@ -135,7 +135,7 @@ def entry(rid: str, rows: list[dict]) -> dict:
         "variants_tried": _n_variants(book, rid),
         "results": {"summary": f"{money}. " + "; ".join(parts),
                     "costs": {"mcx": "Zerodha MCX charges + half spread per side (x2 before 17:00 for options)",
-                              "gold": "ask = bid + 0.30, $7/lot, $40/lot/night swap where held",
+                              "gold": "ask = bid + 0.30, $7/lot; $40/lot/night swap only where the study charged it (GB13); others: not charged",
                               "crypto": "Delta India fees + 18% GST, RC2 spread model, fills 1 min later; CoinSwitch PRO "
                                         "with/without GST; 31.2% tax per winning trade, TDS as cash flow"}[book]},
         "holdout_read": True,
