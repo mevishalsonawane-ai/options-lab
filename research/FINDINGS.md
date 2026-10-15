@@ -1078,3 +1078,48 @@ of every rule: the underlying (MCX near future, US future + USD/INR, XAUUSD, BTC
 - Crypto (stop + profit lock on every trade; Delta and CoinSwitch costs; 31.2% tax per winner): all 8 rules lose after
   tax in design and final. Nearest: RC2 R8 day-high/low break on Delta options, +Rs 16.9k before tax, -Rs 28.9k after
   (313 trades). Buy-and-hold made +Rs 13-15k per Rs 1 lakh after tax over the same final window.
+
+## Buying stock options on the top 10 stocks (R58, 15 Oct 2026) - 0 of 38 pass; the same signals in the stock lose too
+Full study: `HUNT_R58_STOCK_OPTIONS_TOP10.md`. Pre-registered in `hunt/r58/PREREG.md` (commit ce45ea9, before any P&L;
+amendment 1 before the final read).
+
+**Universe and window.**
+- The 10 NIFTY 50 names with the most stock-option traded value (design bhavcopies) whose lake has ATM CE + PE on
+  >= 95% of design sessions: RELIANCE, SBIN, MARUTI, ICICIBANK, INFY, LT, KOTAKBANK, M&M, TRENT, TATASTEEL.
+- HDFCBANK, BSE, BAJFINANCE, TCS, BHARTIARTL, AXISBANK, BEL and ADANIENT failed coverage: lake holes.
+- Design 20 Nov 2024 - 31 Mar 2026; final test 1 Apr - 12 Oct 2026, read once.
+
+**How it was traded.** Signal source: the stock (NIFTY too for relative strength).
+- 1 lot of the nearest-monthly ATM option, priced on one held contract.
+- The real lot by date (bhavcopy / traded volumes).
+- Out by 15:15 three trading days before expiry (physical settlement).
+- Dated charges plus a per-stock fitted spread (0.38-0.80% of premium a side).
+
+**Result.**
+- 38 rules in 6 families (opening range, relative strength, gaps, volume / VWAP, daily Donchian / momentum, R51's
+  Donchian-20 and R52's H37-10 on stocks).
+- **0 pass.** The four design passers all lost in the final test, e.g. `gap-go-1` design +Rs 15,166 (140 trades) ->
+  final -Rs 46,398 (103).
+- The only two rules positive in the final test (`rs-d-l3-h3` +Rs 9,014 on 75 trades, `rs-d-l3-h1` +Rs 5,421 on 82)
+  had lost in design, have p 0.13-0.20, and come from KOTAKBANK alone. BH q = 1.00 for all 38.
+
+**Why.**
+- Before costs the signals are about break-even on the option's own prints: -Rs 15 a trade in design, -Rs 78 in the
+  final test.
+- A round trip costs about Rs 280 a lot (about Rs 200 spread and slippage + Rs 80 charges), about 2% of the median
+  Rs 14,184 premium. All 38 rules together lost Rs 76.4 lakh on 21,519 final trades.
+
+**The stock in cash** (the same minutes, lot-many shares) also lost: -Rs 1.01 crore on 21,061 final trades.
+- So the signals, not the instrument, are the problem.
+- Per trade the option loses fewer rupees (it moves about half as much as the stock).
+- But it needs about Rs 14k of capital against about Rs 1.3 lakh MIS margin, so it loses about 2.5% of its capital a
+  trade against 0.4% for the stock.
+
+**Context.**
+- Holding swing options beyond the data's ±1-strike band (modelled) made them worse.
+- Trading into the last 2 days before expiry lost more.
+
+**Not tested:** post-results drift. No results calendar exists in the lake or the repo; `brain/calendar_data/events.csv`
+has budget and RBI dates only.
+
+**App:** nothing changes; nothing goes on paper.
