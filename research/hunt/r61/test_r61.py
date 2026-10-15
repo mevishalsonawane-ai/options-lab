@@ -11,11 +11,12 @@ rule, scorer parity with exported models, and edge cases: holidays, expiry day, 
 from __future__ import annotations
 
 import ast
+import re
 import copy
 import json
 import math
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -561,3 +562,60 @@ def test_concept_results_cover_every_concept_and_flag_noise():
     assert "no measurable help" in res["gex"]
     final["ablation"]["add"]["gamma_1pct"]["d_auc"] = 0.02
     assert "0.01 AUC or more" in RP.concept_results(design, final)["gamma"]
+
+
+# ------------------------------------------------------------------------------------------------ R61-N news
+def _kotlin_map(src: str, name: str) -> dict:
+    body = re.search(rf"private val {name} = mapOf\(([\s\S]*?)\n    \)", src).group(1)
+    return {k: float(v) for k, v in re.findall(r'"([^"]+)" to ([0-9.]+)', body)}
+
+
+def test_news_port_matches_the_phone_word_lists():
+    import r61news as NW
+    src = (K.HERE.parents[2] / "android/ira-core/src/main/kotlin/com/optionslab/ira/News.kt").read_text()
+    assert _kotlin_map(src, "GOOD") == NW.GOOD and list(_kotlin_map(src, "GOOD")) == list(NW.GOOD)
+    assert _kotlin_map(src, "BAD") == NW.BAD and list(_kotlin_map(src, "BAD")) == list(NW.BAD)
+    neg = re.search(r"NEGATORS = setOf\(([^)]*)\)", src).group(1)
+    assert set(re.findall(r'"([^"]+)"', neg)) == NW.NEGATORS
+    tags = re.search(r"private val TAGS[\s\S]*?listOf\(([\s\S]*?)\n    \)", src).group(1)
+    ks = [re.findall(r'"([^"]+)"', m) for m in re.findall(r"listOf\(([^)]*)\) to", tags)]
+    assert ks == [k for k, _ in NW.TAGS]
+
+
+def test_news_tone_cases_from_the_kotlin_tests():
+    import r61news as NW
+    assert NW.tone("Markets are not weak, say analysts") > 0                 # negation flips
+    assert NW.tone("Nifty falls as war fears grow") < 0
+    assert NW.tone("Sensex hits record high") == pytest.approx(0.5)           # phrase first: "record high" 1.0 / 2
+    assert NW.tone("market sell off deepens") == 0.0                           # the phone's own rule (hyphen needed)
+    assert NW.tone("market sell off deepens", slug=True) == pytest.approx(-0.45)   # slug adaptation
+    assert "BANKNIFTY" in NW.tag("HDFC Bank results") and "FINNIFTY" in NW.tag("Insurers rally")
+    assert NW.counts_for("MIDCPNIFTY", ["NIFTY", "SENSEX"]) and not NW.counts_for("MIDCPNIFTY", ["BANKNIFTY"])
+
+
+def test_news_sitemap_parse_slug_and_time():
+    import r61news as NW
+    xml = ("<urlset><url><loc>https://www.moneycontrol.com/news/business/markets/sensex-falls-500-points-13208284.html"
+           "</loc><lastmod>2025-06-30T09:58:22+05:30</lastmod></url><url><loc>https://www.moneycontrol.com/entertainment/"
+           "x-article-1.html</loc><lastmod>2025-06-30T09:00:00+05:30</lastmod></url><url><loc>https://www.moneycontrol."
+           "com/news/business/y-2.html</loc><lastmod>2025-06-30T04:00:00Z</lastmod></url></urlset>")
+    rows = NW.parse_sitemap(xml)
+    assert rows[0] == (datetime(2025, 6, 30, 9, 58, 22), "sensex falls 500 points")
+    assert len(rows) == 2 and rows[1][0] == datetime(2025, 6, 30, 9, 30)     # UTC converted to IST; entertainment out
+
+
+def test_news_window_is_point_in_time_and_signed():
+    import r61news as NW
+    d, prev = date(2025, 7, 8), date(2025, 7, 4)                               # a holiday / weekend gap before d
+    heads = [(datetime(2025, 7, 4, 15, 29), "x", 1.0, ["NIFTY"]),             # before the previous close: out
+             (datetime(2025, 7, 4, 16, 0), "x", -0.5, ["NIFTY"]),
+             (datetime(2025, 7, 8, 9, 0), "x", 1.0, ["BANKNIFTY"]),            # not for FINNIFTY
+             (datetime(2025, 7, 8, 9, 20), "x", 1.0, ["NIFTY"]),               # exactly at entry (09:15 + 5): out
+             (datetime(2025, 7, 8, 12, 0), "x", 1.0, ["NIFTY"])]               # after entry: out
+    W = NW.Windows(heads)
+    f = NW.features(W, "FINNIFTY", d, 5, "C", [prev, d])
+    assert f["news_tone"] == pytest.approx(-0.5) and f["news_count"] == pytest.approx(math.log(2))
+    assert NW.features(W, "FINNIFTY", d, 5, "P", [prev, d])["news_tone"] == pytest.approx(0.5)
+    b = NW.features(W, "BANKNIFTY", d, 5, "C", [prev, d])
+    assert b["news_tone"] == pytest.approx(0.25) and b["news_count"] == pytest.approx(math.log(3))
+    assert NW.features(NW.Windows([]), "NIFTY", d, 5, "C", [prev, d]) == dict(news_tone=0.0, news_count=0.0)
