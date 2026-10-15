@@ -109,3 +109,27 @@ already knows the day's direction. The R1-2 NIFTY twins averaged +Rs 1,868 a tra
 - **Flagging:** a rule that fails only the same-side p but passes every other gate with p_flip < 0.05 is flagged in the
   write-up as "fails only the same-side twin test". It does not pass.
 - **Rerun:** every design run so far is rerun with both pools.
+
+## Amendment 2 (15 Oct 2026, after the one final read): foreign-rows and stray-print re-pricing
+
+Foreign-rows and stray-print re-pricing of the passing rule and the near-misses; same rules, same spans, same gates;
+the final test is re-priced, not re-selected.
+
+Why: R47 (branch integ-1014c, `research/hunt/r47/r47data.py foreign_rows`) found rows of ANOTHER underlying in the
+lake's rolling option files and added a stray-print guard; R52 applied neither. Written before any cleaned number exists.
+
+- **Cleaning:** `research/hunt/lakeclean.py`, the same code and thresholds as R51 Amendment A (foreign rows: own spot
+  more than 3% from the index close at that minute, dropped; stray prints: per contract and session, an open more than 2
+  ticks and 20% from the median of the neighbouring closes drops the row, a high more than 20% above it is capped).
+  Applied when the lake is laid out for obuy (`lake2obuy.py --clean`) to every option file, WEEK and MONTH.
+- **What is re-priced:** the passing setting H37-10:g17. R52 had no near-miss list in its brief; H37-10:orig (same
+  signal, original exits) is re-priced as information only.
+- **Same rules and spans:** design 20 Nov 2024 - 31 Mar 2026, final 1 Apr - 13 Oct 2026, the frozen g17 setting (never
+  re-picked). Same twins (obuy pool, 20 alternatives, 2000 draws, seed 52; p_flip as Amendment 1).
+- **BH:** over the same 188 final reads, the re-priced p for H37-10:g17 (and :orig) and the original p for the rest.
+  Gates unchanged; the walk-forward gate uses g17's re-priced design folds.
+- **Also reported (information, no gate):** drop counts per index; how many of g17's ORIGINAL final trades touched a
+  dropped or capped row; the per-index split (the original's +Rs 46k of +Rs 49k came from MIDCPNIFTY); g17 at twice
+  the spread and slippage.
+- **Read once:** `r52amend.py run` writes `results/amend_clean.json` and refuses if it exists or if this amendment is
+  not committed unchanged.

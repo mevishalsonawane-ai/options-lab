@@ -123,3 +123,38 @@ sessions of the period), average win / loss, worst day, max drawdown, p, q, pass
 `research/experiments/entries/r51-*.yaml`; a FINDINGS.md section; the end of the write-up lists which strategies (exact
 settings) would come back on PAPER under the Nov-2024+ view and which stay off. A pass would be a candidate for paper
 only (Boss decides; paper changes never carry over to live by themselves).
+
+## Amendment A (15 Oct 2026, after the one final read): foreign-rows and stray-print re-pricing
+
+Foreign-rows and stray-print re-pricing of the passing rule and the near-misses; same rules, same spans, same gates;
+the final test is re-priced, not re-selected.
+
+Why: R47 (branch integ-1014c, `research/hunt/r47/r47data.py foreign_rows`) found that the lake's rolling option files
+carry rows of ANOTHER underlying (their own `spot` is far from the index at that minute), and added a stray-print guard
+(`r47price.py`). R51 applied neither. Written before any cleaned number exists.
+
+- **Cleaning** (`research/hunt/lakeclean.py`, the same code for R51 and R52):
+  1. *Foreign rows* (R47's rule): an option row is dropped when its own `spot` is more than 3% from the index close at
+     that minute (the session's last earlier close if that minute has none; dropped if the session has neither).
+  2. *Stray prints* (R47's thresholds), per contract (side, strike) and session, on the rows left after step 1: ref = the
+     median of the closes of the row before, the row and the row after (its own close at the ends). A row whose open is
+     more than 2 ticks AND more than 20% away from ref is dropped. A high more than 20% above ref is capped at ref x 1.2.
+     Lows are left alone (a stray low can only hurt a buyer). Difference from R47: R47 fills at the worse of the open
+     and ref; here the row goes, so the engine's existing next-minute rule fills at the next traded minute.
+  3. The ATM strike of each minute comes from the rows after step 1 and before step 2 (a stray price does not change a
+     strike's label).
+- **What is re-priced:** the passing rule R44-donchian20-RT, and every gated variant that failed with a final q <= 0.20
+  on index options (26 variants, listed by `amend.py targets`). M4-SILVERM (q 0.141) is an MCX contract with no index to
+  check against and keeps its original numbers.
+- **Same rules and spans:** design 20 Nov 2024 - 31 Mar 2026, final test 1 Apr - 13 Oct 2026; index warm-up as before.
+  Only lake files for 2024 onwards are copied; no option row before 20 Nov 2024 is used.
+- **Design:** each re-priced variant is re-run on the cleaned design data (re-tunes: the whole grid, so the walk-forward
+  gate is re-computed the same way). **Final:** the ORIGINAL frozen config of each variant (`final.json` config), never
+  re-picked; if the cleaned design would pick another grid point, that is only reported.
+- **Twins and BH:** the same random-entry twins (500, seed 51). BH over the same 125 gated variants, with the re-priced p
+  for the re-priced variants and the original final p for the rest. Gates unchanged.
+- **Also reported (information, no gate):** drop counts per index; how many of the passing rule's ORIGINAL trades
+  touched a dropped or capped row (entry, exit or any minute between, or a contract that existed only in foreign rows);
+  the passing rule at twice the spread and slippage (bps and tick half-spreads doubled, charges unchanged).
+- **Read once:** `amend.py run` writes `results/amend_clean.json` and refuses if it exists or if this amendment is not
+  committed unchanged.
