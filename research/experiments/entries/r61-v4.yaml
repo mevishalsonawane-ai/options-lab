@@ -1,0 +1,36 @@
+id: r61-v4
+title: 'R61 Solo 3.0 V4: meta-labeller over S1-S4, logistic C 0.1, A2 + option-chain block only; take score >= training 70th
+  percentile, 1 a day'
+family: ml
+date: '2026-10-15'
+doc: research/HUNT_R61_SOLO_3.md
+hypothesis: 'An expanded, pre-listed feature set that knows OI, PCR, max pain, OI walls, IV / IV rank / skew / term, VIX rank,
+  Greeks, GEX / gamma flip, basis, value area, events and FII positioning picks Solo''s paper trades (S1-S4, at most one a
+  day, NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY) better out of sample than A2''s 29 features (gates: final net > 0, twin
+  p < 0.05, BH q <= 0.10 over 7, 40+ trades, top-5 < net, design WF > 0; replaces Solo 2.0 only if it also beats V1 on net,
+  AUC, paired-day bootstrap p < 0.10 and net without MIDCPNIFTY).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK files with OI/IV/volume,
+  NIFTY MONTH for term structure, NSE participant OI), 20 Nov 2024 onwards; not yet downloaded
+period:
+  design: 21 Nov 2024 - 31 Mar 2026 (purged walk-forward, monthly refits, 1-session embargo, test months Jul 2025 - Mar 2026)
+  holdout: '1 Apr 2026 - the lake''s last session, read once (NOT fresh: R57 read it for A2 with the same setups)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the underlying index (setups S1-S4); option-chain data as context / filters only'
+- A2's 29 + CH
+model_or_rule: logistic C 0.1, A2 + option-chain block only
+settings: research/hunt/r61/PREREG.md section 5; research/hunt/r61/r61cfg.py VARIANTS
+prereg: research/hunt/r61/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Not run yet (15 Oct 2026): the data-lake download was not approved in this session, so no model score, P&L or
+    holdout number exists. Logged before any result, as the experiment log requires.'
+  costs: 'to be: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, one held contract, 1 lot in
+    force'
+holdout_read: false
+verdict: inconclusive
+notes: Pre-registered family of 7 variants (BH over 7). Update this entry with the results when the study runs.

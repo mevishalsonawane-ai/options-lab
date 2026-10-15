@@ -184,3 +184,21 @@ disk or the network: the JSON is loaded once at start-up.
 
 Window, split, setups, labels, the feature list and definitions, the calendars, the 7 variants and their settings,
 the take rule, twins, gates and the replace rule. A bug fix after results is written up as an amendment with its effect.
+
+## 11. Implementation details fixed in the code before any data was read (15 Oct 2026, still no R61 data or result)
+
+Written after section 1-10 were committed (701b8c18) and before the lake was read; they make the definitions above
+exact, they do not change them:
+- Signed ratio and rank features are centred before the side sign is applied, so "neutral" is 0 for both sides:
+  `pcr_vol` - 1, `pcr_rank5` - 0.5, `pcr_rank20` - 0.5.
+- `theta_pct_day` is theta per SESSION (1/252 year, the same convention as T), not per calendar day.
+- V7's L1 logistic is scikit-learn's elastic net with l1_ratio 1 (identical to pure L1, and the same in scikit-learn
+  1.5 and 1.9).
+- The chain snapshot carries each (side, offset) slot forward whole (strike with its OI, IV and close); volume is never
+  carried forward. The "first chain minute" is the first minute with call + put OI at the 11 near strikes.
+- Ties: max pain takes the lowest strike; an OI wall takes the strike nearest the index.
+- Same-minute ranks use only sessions from 20 Nov 2024 and strictly before the day.
+- Participant OI: the latest NSE file dated before the session (OF1's loader and checks); missing files leave the two
+  features missing.
+- Code: `r61cfg.py`, `r61chain.py`, `r61data.py`, `r61feat.py`, `r61study.py`, `r61eval.py`, `r61events.py`; tests
+  `test_r61.py` (synthetic data only).
