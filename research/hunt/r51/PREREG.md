@@ -180,3 +180,8 @@ chain. It is not in this session, and rebuilding it needs option data before thi
 re-priced and keep their original p in the BH. The re-priced set is the passing rule and 16 near-misses (the R44 and R29
 families). R29 reads index bars from 2023 for warm-up only (as in R51); on the current lake its design reproduces
 exactly (R29-R3: 200 trades, -Rs 5,826; R29-R8: 987, -Rs 188,223).
+
+**Fourth note (15 Oct 2026).** Boss: the study uses Nov 2024 onwards only. R29 needs 2023 index bars for its warm-up,
+so the 10 R29 near-misses are taken out of the re-pricing (decided before any of their cleaned numbers was looked at;
+the 2023 files were deleted). They keep their original p. The re-priced set is the passing rule and the 6 R44
+near-misses; the BH replaces only those 7 p-values.

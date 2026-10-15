@@ -161,9 +161,9 @@ def _fd():
     final = {"PASS": dict(q=0.02, p=0.001, pass_=True), "NEAR": dict(q=0.20, p=0.01), "FAR": dict(q=0.21, p=0.02),
              "REF": dict(q=None, p=0.5), "MCX": dict(q=0.1, p=0.01), "NOP": dict(q=None, p=None)}
     final["PASS"]["pass"] = True
-    design = {"PASS": dict(kind="retune", module="r44"), "NEAR": dict(kind="orig", module="r29"),
-              "FAR": dict(kind="orig", module="r29"), "REF": dict(kind="ref", module="liq"),
-              "MCX": dict(kind="orig", module="m4"), "NOP": dict(kind="orig", module="r29")}
+    design = {"PASS": dict(kind="retune", module="r44"), "NEAR": dict(kind="orig", module="r44"),
+              "FAR": dict(kind="orig", module="r44"), "REF": dict(kind="ref", module="liq"),
+              "MCX": dict(kind="orig", module="m4"), "NOP": dict(kind="orig", module="r44")}
     return final, design
 
 
@@ -189,8 +189,8 @@ def test_requalify_reproduces_the_committed_q():
     assert len(q) == 125
     assert all(abs(q[n] - fin[n]["q"]) < 1e-4 for n in q)
     t = A.targets(fin, des)
-    assert len(t) == 17 and t[0] == A.PASSING
-    assert not any(n.startswith(("F1-", "R41-", "B2-", "M4-")) for n in t)
+    assert len(t) == 7 and t[0] == A.PASSING
+    assert all(n.startswith("R44-") for n in t)
 
 
 def test_check_key_refusals(tmp_path, monkeypatch):

@@ -32,6 +32,8 @@ NON_INDEX = {"m4"}                      # MCX: no index to check a row's spot ag
 # Third note to Amendment A: these families read the brain feature store, built from the lake from Jun 2023 (outside
 # this amendment's data window) and itself computed from the uncleaned chain; they keep their original numbers.
 NEEDS_BRAIN = {"f1", "r41", "b2"}
+# Fourth note: R29 needs 2023 index bars for its warm-up; Boss (15 Oct): Nov 2024 onwards only. Keeps its original p.
+NEEDS_2023 = {"r29"}
 OUT_JSON = K.RESULTS / "amend_clean.json"
 OUT_MD = K.RESULTS / "amend_clean.md"
 PREREG = K.HERE / "PREREG.md"
@@ -47,7 +49,7 @@ def targets(final: dict, design: dict) -> list[str]:
     out = []
     for n, f in final.items():
         if (design[n]["kind"] == "ref" or f.get("q") is None
-                or design[n].get("module") in NON_INDEX | NEEDS_BRAIN):
+                or design[n].get("module") in NON_INDEX | NEEDS_BRAIN | NEEDS_2023):
             continue
         if f.get("pass") or f["q"] <= NEAR_Q:
             out.append(n)

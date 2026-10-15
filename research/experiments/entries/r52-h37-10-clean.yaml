@@ -1,0 +1,40 @@
+id: r52-h37-10-clean
+title: 'R52 Amendment 2: H37-10:g17 re-priced on lake data with foreign rows and stray prints removed'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The passing R52 setting H37-10:g17 (Market Profile open outside value and go, 1-ITM, 60-minute exit; signal on
+  the index) still passes every gate when the lake rows of another underlying (spot > 3% from the index) and stray prints
+  are removed (R47''s two data fixes). Same rule, spans and gates; the final test re-priced, not re-selected.'
+data_version: Drive lake gdrive:IraAlgo-data-lake as re-uploaded 15 Oct 2026 (reproduces R52's committed final exactly),
+  options_rolling_1m WEEK and MONTH 2024-2026 cleaned by research/hunt/lakeclean.py (lake2obuy.py --clean); expiry-day flags
+  pinned from a foreign-only layout
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: 'final test 1 Apr - 13 Oct 2026, read once in R52; re-priced once on cleaned data (Amendment 2)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: 'H37-10:g17 MP_OOV, 5-min TPO, 70% value area | ITM1/near | exits time_stop=60 | expiry skip (unchanged)'
+settings: research/hunt/r52/r52amend.py (results/amend_clean.json)
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Cleaned final 294 trades, net Rs +48,772 (unchanged to the rupee), twin p 0.001, coin-flip p 0.014, BH q 0.027 over
+    the same 188 reads -> PASS. Cleaned design 714 trades Rs +295,305 (was +292,648), walk-forward Rs +275,024. 5 of 294
+    original final trades had a removed or capped row between entry and exit (1 stray open, 4 capped highs, 0 foreign), none
+    at a fill. By index: MIDCPNIFTY +46,329, BANKNIFTY +6,794, SENSEX +4,775, FINNIFTY -4,647, NIFTY -4,479. Twice the spread
+    and slippage: final Rs +41,086 (294 trades, p 0.002). H37-10:orig (information): final -1,912 (294), unchanged. Foreign
+    rows removed: FINNIFTY WEEK 131,934 of 10.0M (1.3%), MONTH 191,081 (2.3%), SENSEX MONTH 63,109, MIDCPNIFTY MONTH 47,945,
+    BANKNIFTY MONTH 39,588; WEEK files of the other indices under 0.03%.'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills (and a 2x run), next-minute fills, one held contract, lots
+    in force
+holdout_read: true
+verdict: paper-only
+notes: 'Profit share from foreign or stray rows: 0% (final unchanged). The MIDCPNIFTY concentration and top-5 share (82% of the
+  net) caveats stand.'
