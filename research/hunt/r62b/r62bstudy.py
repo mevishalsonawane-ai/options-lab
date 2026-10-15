@@ -238,6 +238,19 @@ def final():
     (K.RESULTS / "final.json").write_text(json.dumps(dict(results=res, counts=counts("final")), indent=1, default=str))
 
 
+# ------------------------------------------------------------------------------------------------ extras
+def extras():
+    """Per-index statistics at 2x costs, from the trade dumps the design and final runs wrote (no re-run, no new read):
+    results/extras.json."""
+    out = {}
+    for part in ("design", "final"):
+        for v in K.VARIANTS:
+            p = K.OUT / "trades" / f"{part}_{v}.pkl"
+            tr = pd.read_pickle(p).to_dict("records") if p.exists() else []
+            out[f"{part}/{v}"] = stats(tr, "net2").get("inst", {}) if tr else {}
+    (K.RESULTS / "extras.json").write_text(json.dumps(out, indent=1))
+
+
 # ------------------------------------------------------------------------------------------------ report
 def _row(name, s, s2=None):
     if not s.get("trades"):
@@ -281,6 +294,15 @@ def report():
             cells = [f"{per[i]['trades']} / {per[i]['win']:.0%} / {per[i]['net']:+,}" if i in per else "0" for i in K.IDX]
             L.append(f"| {v} | " + " | ".join(cells) + " |")
         L.append("")
+        ext = json.loads((K.RESULTS / "extras.json").read_text()) if (K.RESULTS / "extras.json").exists() else {}
+        tag = "design" if R is des else "final"
+        if ext:
+            L += [f"### {part}: per index at 2x costs (fib 0.273): net Rs", "",
+                  "| variant | " + " | ".join(K.IDX) + " |", "|---|" + "---|" * len(K.IDX)]
+            for v in K.VARIANTS:
+                per = ext.get(f"{tag}/{v}", {})
+                L.append(f"| {v} | " + " | ".join(f"{per[i]['net']:+,}" if i in per else "0" for i in K.IDX) + " |")
+            L.append("")
         for fib in K.FIB_SENS:
             L += [f"### {part}: sensitivity fib {fib} (information only, not gated)", "", HEAD]
             for v in K.VARIANTS:
@@ -296,6 +318,7 @@ if __name__ == "__main__":
     elif cmd == "final":
         final()
     elif cmd == "report":
+        extras()
         report()
     else:
         raise SystemExit(__doc__)
