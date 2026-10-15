@@ -550,7 +550,16 @@ def _ohlc(n, seed):
     return o, h, lo, c
 
 
-@pytest.mark.parametrize("n", [0, 5, 12, 15, 300, 20000])
+def test_ports_on_short_and_empty_input():
+    for n in (0, 3):
+        o, h, lo, c = (np.full(n, 100.0) for _ in range(4))
+        for f in F.CDL.values():
+            assert len(f(o, h, lo, c)) == n and not f(o, h, lo, c).any()
+        for f in F.MA_FN.values():
+            assert len(f(c, 5)) == n and np.isnan(f(c, 5)).all()
+
+
+@pytest.mark.parametrize("n", [5, 12, 15, 300, 20000])
 def test_talib_parity(n):
     talib = pytest.importorskip("talib")
     o, h, lo, c = _ohlc(n, n + 1)

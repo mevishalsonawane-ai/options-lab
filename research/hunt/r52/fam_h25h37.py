@@ -54,6 +54,7 @@ LEFT
 from __future__ import annotations
 
 import importlib.util
+import math
 import sys
 from pathlib import Path
 
@@ -111,7 +112,9 @@ def ta_sma(x, n):
 
 
 def ta_ema(x, n):
-    """TA_EMA (classic compatibility): seed = SMA of the first n, then prev = (x - prev) * k + prev, k = 2/(n+1)."""
+    """TA_EMA (classic compatibility): seed = SMA of the first n, then prev = (x - prev) * k + prev, k = 2/(n+1),
+    evaluated as one fused multiply-add as the TA-Lib 0.8.1 wheel does (bit-identical; a plain multiply-then-add
+    differs by 1 ulp on ~0.1 % of bars)."""
     x = np.asarray(x, float)
     out = np.full(len(x), np.nan)
     if len(x) < n:
@@ -123,7 +126,7 @@ def ta_ema(x, n):
     prev = tot / n
     out[n - 1] = prev
     for i in range(n, len(x)):
-        prev = (x[i] - prev) * k + prev
+        prev = math.fma(x[i] - prev, k, prev)    # the wheel's C build contracts (x - prev) * k + prev to an FMA
         out[i] = prev
     return out
 
