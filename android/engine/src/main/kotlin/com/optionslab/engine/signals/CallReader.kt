@@ -60,11 +60,16 @@ object CallReader {
      * The open call a status message [f] (sent at [at]) is about (15 Oct, Boss): the call it replies to ([replyTo], a Telegram
      * message id) first; else the call it names (the same strike and CE / PE, and the index when it says one) of the same day,
      * the one whose text is most like [text] (then the latest); else, when it names none, the channel's latest open call of the
-     * last [LINK_DAYS] days. Null: an unknown call (the message is ignored, never a trade).
+     * last [LINK_DAYS] days. Null: an unknown call (the message is ignored, never a trade) - also a reply to a message the tester
+     * holds ([knownIds]) that is not an open call.
      */
-    fun link(f: Reading.FollowUp, at: LocalDateTime, open: List<Open>, replyTo: Long? = null, text: String? = null): String? {
+    fun link(f: Reading.FollowUp, at: LocalDateTime, open: List<Open>, replyTo: Long? = null, text: String? = null, knownIds: Set<Long> = emptySet()): String? {
         val earlier = open.filter { !it.at.isAfter(at) }.sortedBy { it.at }
-        if (replyTo != null) earlier.lastOrNull { it.msgId == replyTo }?.let { return it.id }
+        if (replyTo != null) {
+            earlier.lastOrNull { it.msgId == replyTo }?.let { return it.id }
+            // A reply to another message the tester holds (a finished call, chatter): about that one, not the latest call.
+            if (replyTo in knownIds) return null
+        }
         val ref = f.ref
         if (ref?.strike != null) {
             return earlier.filter { it.at.toLocalDate() == at.toLocalDate() && sameContract(ref, it.draft) }
@@ -109,6 +114,21 @@ object CallReader {
             else -> Reading.FollowUp(Follow.REPOST, ref = ref)
         }
         return Status(o.id, f)
+    }
+
+    /**
+     * A message read as a new call that ticks ([CallParser.ticked]) a level its first post did not, on a contract the channel
+     * called in the last [LINK_DAYS] days ([calls], finished ones too) - yet is not that call's re-post ([repost]: another day,
+     * or a trailed stop "SL 290 ✅"): most likely a status, so never a call by itself - it waits for Boss's review (15 Oct, Boss:
+     * status updates never create a trade).
+     */
+    fun suspectRepost(readings: List<Reading>, text: String, at: LocalDateTime, calls: List<Open>): Boolean {
+        val ticks = CallParser.ticked(text)
+        if (ticks.isEmpty()) return false
+        return readings.filterIsInstance<Reading.NewCall>().any { c ->
+            calls.any { o -> !o.at.isAfter(at) && !o.at.toLocalDate().isBefore(at.toLocalDate().minusDays(LINK_DAYS)) && sameContract(c.draft, o.draft) &&
+                (ticks - CallParser.ticked(o.text.orEmpty())).isNotEmpty() }
+        }
     }
 
     /**

@@ -535,8 +535,7 @@ internal fun TelegramRow(tv: TelegramCapture.View, v: SignalTesterHost.View, a: 
 }
 
 /** The capture windows offered (IST). */
-internal val TG_WINDOWS: List<Pair<LocalTime, LocalTime>> = listOf(LocalTime.of(9, 0) to LocalTime.of(15, 35), LocalTime.of(8, 30) to LocalTime.of(15, 40),
-    LocalTime.of(9, 0) to LocalTime.of(23, 30))
+internal val TG_WINDOWS: List<Pair<LocalTime, LocalTime>> = listOf(LocalTime.of(9, 0) to LocalTime.of(15, 35), LocalTime.of(8, 30) to LocalTime.of(15, 40))
 
 /**
  * Every Telegram step in one dialog with a single OK: the api keys (once), the login (phone, code, 2-step password), the channels
@@ -604,6 +603,7 @@ internal fun TelegramDialog(tv: TelegramCapture.View, v: SignalTesterHost.View, 
         val seen = tv.channels.map { c -> v.seen.firstOrNull { SignalTesterHost.norm(it.title) == SignalTesterHost.norm(c.title) && it.stats != null }
             ?: SignalTesterHost.Seen(c.title, null, SignalTesterHost.TELEGRAM) }
         ChatPickerDialog(seen, selected.values.toList(), onCheck = { title -> tv.channels.firstOrNull { it.title == title }?.let { a.check(it.id) } },
-            onOk = { chosen -> picking = false; a.select(tv.channels.filter { it.title in chosen }.associate { it.id to it.title }) }) { picking = false }
+            // OK before the list has come in changes nothing (it would otherwise clear the selection).
+            onOk = { chosen -> picking = false; if (tv.channels.isNotEmpty()) a.select(tv.channels.filter { it.title in chosen }.associate { it.id to it.title }) }) { picking = false }
     }
 }

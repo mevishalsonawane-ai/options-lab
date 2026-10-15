@@ -183,4 +183,22 @@ class CallStatusTest {
         assertEquals(101L, m[0].id); assertNull(m[0].replyTo)
         assertEquals(102L, m[1].id); assertEquals(101L, m[1].replyTo)
     }
+
+    @Test fun aTickedNewCallOnAContractCalledBeforeIsSuspectNeverACall() {
+        val a = open("a", "#sensex 73100 CE\nAbove 280\nTarget 310-345-400+++\nSL 260")
+        fun sus(text: String, at: LocalDateTime) = CallReader.suspectRepost(CallParser.read(text, at.toLocalDate()), text, at, listOf(a))
+        // A trailed stop ticked the same day (not the call's levels, so not its re-post) and yesterday's call re-posted today.
+        val trailed = "#sensex 73100 CE\nAbove 280\nTarget 310✅-345-400+++\nSL 290 ✅"
+        assertNull(CallReader.repost(CallParser.read(trailed, on), trailed, t0.plusMinutes(30), listOf(a)))
+        assertTrue(sus(trailed, t0.plusMinutes(30)))
+        assertTrue(sus("#sensex 73100 CE\nAbove 280✅\nTarget 310✅-345-400+++\nSL 260", t0.plusDays(1)))
+        // No ticks, another contract, more than 3 days on, or before the call: a new call.
+        assertTrue(!sus("#sensex 73100 CE\nAbove 300\nTarget 330", t0.plusMinutes(30)))
+        assertTrue(!sus("#sensex 73200 CE\nAbove 280✅", t0.plusMinutes(30)))
+        assertTrue(!sus("#sensex 73100 CE\nAbove 280✅", t0.plusDays(4)))
+        assertTrue(!sus("#sensex 73100 CE\nAbove 280✅", t0.minusMinutes(1)))
+        // A reply to a message the tester holds that is no open call: not the latest call's news.
+        assertNull(CallReader.link(Reading.FollowUp(Follow.TARGET), t0.plusMinutes(40), listOf(a), replyTo = 55, knownIds = setOf(55)))
+        assertEquals("a", CallReader.link(Reading.FollowUp(Follow.TARGET), t0.plusMinutes(40), listOf(a), replyTo = 56, knownIds = setOf(55)))
+    }
 }

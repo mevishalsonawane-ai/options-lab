@@ -375,10 +375,9 @@ object SignalTesterHost {
         val rules = CallParser.read(body, at.toLocalDate())
         // 15 Oct (Boss): the same call posted again (ticks on the levels reached, "T1 done" under it) is news about that call -
         // never a new call, never a trade.
-        // Finished calls too: a call re-posted with its stop ticked after "SL hit" is still that call, never a new one.
-        val status = CallReader.repost(rules, body, at, openCalls(l, ch, finished = true), replyTo)
+        val status = statusOf(l, base, rules)
         val out = when {
-            status != null -> listOf(base.copy(kind = FOLLOW, follow = status.follow, link = status.callId, confidence = 0.9))
+            status != null -> listOf(status)
             CallReader.needsModel(rules) -> listOf(base)
             else -> finish(l, base, CallReader.understand(body, at.toLocalDate()))
         }
@@ -407,7 +406,8 @@ object SignalTesterHost {
         when (val x = m.reading) {
             is Reading.NewCall -> r.copy(kind = if (m.sure) CALL else REVIEW, draft = x.draft)
             is Reading.FollowUp -> {
-                val link = CallReader.link(x, base.at, openCalls(l, base.channel), base.replyTo, base.text)
+                val known = l.recs.filter { it.channel == base.channel && it.id != base.id }.mapNotNull { it.msgId }.toSet()
+                val link = CallReader.link(x, base.at, openCalls(l, base.channel), base.replyTo, base.text, known)
                 // A status for a call the tester does not hold: ignored (15 Oct, Boss: "unknown call"); its text is not kept.
                 if (link == null) r.copy(kind = NOT, text = null, reason = UNKNOWN_CALL)
                 else r.copy(kind = if (m.sure) FOLLOW else REVIEW, follow = x, link = link)
@@ -417,6 +417,24 @@ object SignalTesterHost {
     }
 
     const val UNKNOWN_CALL = "a status update for an unknown call (ignored)"
+    const val SUSPECT_REPOST = "it ticks levels of an earlier call on this contract: most likely a status update, not a new call - confirm only if it is new"
+
+    /**
+     * [readings] of [base] as a status of an earlier call, or null (15 Oct, Boss: a status never creates or changes a trade): the
+     * call re-posted (ticks, words, a reply; finished calls too - a call re-posted with its stop ticked after "SL hit" is still
+     * that call) - a FOLLOW on it; or a "new call" that ticks an earlier call's levels without being its re-post (another day, a
+     * trailed stop) - to review, never a call by itself.
+     */
+    private fun statusOf(l: Log, base: Rec, readings: List<Reading>): Rec? {
+        val text = base.text ?: return null
+        val calls = openCalls(l, base.channel, finished = true).filter { it.id != base.id }
+        CallReader.repost(readings, text, base.at, calls, base.replyTo)?.let {
+            return base.copy(kind = FOLLOW, follow = it.follow, link = it.callId, confidence = 0.9, unsure = emptyList(), draft = null)
+        }
+        if (CallReader.suspectRepost(readings, text, base.at, calls))
+            return base.copy(kind = REVIEW, unsure = listOf(SUSPECT_REPOST), draft = readings.filterIsInstance<Reading.NewCall>().firstOrNull()?.draft)
+        return null
+    }
 
     /**
      * [ch]'s calls still open, for linking a status message: a call is finished once the channel said its stop was hit, it exited,
@@ -484,7 +502,8 @@ object SignalTesterHost {
                 val l = log()
                 val i = l.recs.indexOfFirst { it.id == r.id && it.kind == PENDING }
                 if (i >= 0) {
-                    val made = finish(l, r, merged)
+                    // The model's reading checked as a status too: a re-post it read as a "new call" is never one.
+                    val made = statusOf(l, r, merged.map { it.reading })?.let { listOf(it) } ?: finish(l, r, merged)
                     l.recs.removeAt(i); l.recs.addAll(i, made)
                     save(l)
                     n++
@@ -642,11 +661,19 @@ object SignalTesterHost {
      */
     fun telegram(id: Long, m: TelegramExport.Msg, history: Boolean): List<Rec> {
         val title = tgTitle(id) ?: return emptyList()
+        // Seen before (a poll): an edit since then is flagged (its first text stays the one scored).
+        val mid = m.id; val e = m.editedAt
+        if (mid != null && e != null && synchronized(lock) { log().recs.any { it.msgId == mid && norm(it.channel) == norm(title) } }) {
+            edited(id, mid, e); return emptyList()
+        }
         return ingest(title, m.text, m.at, if (history) IMPORTED else TELEGRAM, edited = m.edited, msgId = m.id, replyTo = m.replyTo)
     }
 
     /** A history fetch's pages, held in memory until the last (they come newest first), then read oldest first in one go. */
     private val pages = HashMap<Long, MutableList<TelegramExport.Msg>>()
+
+    /** A history fetch given up (Telegram closed, memory pressure): its pages so far let go. */
+    fun dropHistory() { synchronized(pages) { pages.clear() } }
 
     /** One page of the selected channel [id]'s history; [done]: the last page - then all of it is read in, oldest first. */
     fun telegramHistory(id: Long, msgs: List<TelegramExport.Msg>, done: Boolean): Int {
@@ -674,7 +701,9 @@ object SignalTesterHost {
             var changed = false
             for (i in l.recs.indices) {
                 val r = l.recs[i]
-                if (r.msgId == msgId && norm(r.channel) == norm(title) && r.editedAt == null) { l.recs[i] = r.copy(editedAt = at.withNano(0)); changed = true }
+                if (r.msgId == msgId && norm(r.channel) == norm(title) && r.editedAt == null && !r.edited && at.isAfter(r.at)) {
+                    l.recs[i] = r.copy(editedAt = at.withNano(0)); changed = true
+                }
             }
             if (changed) save(l)
         }
@@ -870,6 +899,9 @@ object SignalTesterHost {
             synchronized(pages) { pages.clear() }
         }
     }
+
+    /** TEST ONLY: the round a new call starts at once is not running. */
+    internal fun pricingIdleForTest(): Boolean = !pricing.get()
 
     /** TEST ONLY: wait until the model's background pass is idle. */
     internal fun modelIdleForTest(): Boolean = !modelBusy.get()

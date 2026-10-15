@@ -25,14 +25,14 @@ import java.time.LocalDateTime
  * the phone number, the login code and the 2-step password go straight to TDLib and are never kept. TDLib's own log is switched
  * off ([start]) so it writes nothing to the phone's log.
  */
-class TdSession(private val send: (String) -> Unit) {
+class TdSession(private val clientId: Int? = null, private val send: (String) -> Unit) {
     /** What TDLib needs to start: Boss's own api_id and api_hash (my.telegram.org), its folders, the database's key (base64). */
     data class Params(val apiId: Int, val apiHash: String, val dbDir: String, val filesDir: String, val dbKeyB64: String)
 
     enum class Auth(val words: String) {
         OFF("not started"), STARTING("starting"), NEED_KEYS("needs your api_id and api_hash"), NEED_PHONE("waiting for your phone number"),
         NEED_CODE("waiting for the login code Telegram sent you"), NEED_PASSWORD("waiting for your 2-step verification password"),
-        READY("logged in (read-only)"), LOGGING_OUT("logging out"), CLOSED("closed"),
+        READY("logged in (read-only)"), LOGGING_OUT("logging out"), CLOSING("closing"), CLOSED("closed"),
         UNSUPPORTED("this login step needs the Telegram app (sign up or e-mail) - finish it there, then try again"),
     }
 
@@ -46,8 +46,8 @@ class TdSession(private val send: (String) -> Unit) {
         data class Edited(val chat: Channel, val msgId: Long, val at: LocalDateTime) : Event()
         /** A page of a selected (or checked) chat's history, oldest first; [next]: the message id to page on from, null when done. */
         data class History(val chat: Channel, val msgs: List<TelegramExport.Msg>, val next: Long?, val check: Boolean, val poll: Boolean = false) : Event()
-        /** TDLib refused a request: [retryAfter] seconds when it asks to slow down (FLOOD_WAIT / 429). */
-        data class Error(val code: Int, val message: String, val retryAfter: Int?) : Event()
+        /** TDLib refused a request ([extra]: the request's tag, e.g. a history page's): [retryAfter] seconds when it asks to slow down. */
+        data class Error(val code: Int, val message: String, val retryAfter: Int?, val extra: String? = null) : Event()
         data class AuthChanged(val auth: Auth) : Event()
     }
 
@@ -126,7 +126,7 @@ class TdSession(private val send: (String) -> Unit) {
         require(check || id in selected) { "history only of a selected channel" }
         require(synchronized(chats) { id in chats }) { "not a listed channel" }
         request("getChatHistory", "\"chat_id\":$id,\"from_message_id\":$fromId,\"offset\":0,\"limit\":$PAGE,\"only_local\":false",
-            extra = (if (check) "c:" else "h:") + id)
+            extra = (if (check) "c:" else "h:") + id + ":" + fromId)
     }
 
     /**
@@ -145,11 +145,14 @@ class TdSession(private val send: (String) -> Unit) {
     /** One of TDLib's answers or updates read: what it means for the tester (often nothing). */
     fun onUpdate(json: String): List<Event> {
         val o = obj(runCatching { MiniJson.parse(json) }.getOrNull()) ?: return emptyList()
+        // TDLib's receive is shared by every client of the process: another (an earlier, closing) client's answer is not ours.
+        if (clientId != null) (o["@client_id"] as? Double)?.toInt()?.let { if (it != clientId) return emptyList() }
         val out = ArrayList<Event>()
         when (o["@type"]) {
             "updateAuthorizationState" -> authState(obj(o["authorization_state"]), out)
             "authorizationStateWaitTdlibParameters", "authorizationStateWaitPhoneNumber", "authorizationStateWaitCode",
-            "authorizationStateWaitPassword", "authorizationStateReady", "authorizationStateClosed", "authorizationStateLoggingOut" -> authState(o, out)
+            "authorizationStateWaitPassword", "authorizationStateReady", "authorizationStateClosed", "authorizationStateClosing",
+            "authorizationStateLoggingOut" -> authState(o, out)
             "updateNewChat" -> obj(o["chat"])?.let { c ->
                 val type = obj(c["type"])
                 // Channels only: a private chat, a group, a bot or a secret chat is not listed, not even its title.
@@ -178,13 +181,15 @@ class TdSession(private val send: (String) -> Unit) {
                 val extra = o["@extra"] as? String ?: return emptyList()
                 val check = extra.startsWith("c:")
                 val poll = extra.startsWith("p:")
-                val id = extra.substringAfter(':').toLongOrNull() ?: return emptyList()
+                val id = extra.substringAfter(':').substringBefore(':').toLongOrNull() ?: return emptyList()
+                val from = extra.substringAfter(':').substringAfter(':', "").toLongOrNull() ?: 0L
                 if (!check && id !in selected) return emptyList()
                 val ch = channel(id) ?: return emptyList()
                 val list = (o["messages"] as? List<*>).orEmpty().mapNotNull { obj(it) }
                 // TDLib gives the newest first; a page reaching back before the first day is the last.
                 val msgs = list.mapNotNull { message(it) }.filter { !it.at.toLocalDate().isBefore(HISTORY_FROM) }.sortedBy { it.at }
-                val oldest = list.mapNotNull { long(it["id"]) }.minOrNull()
+                // A page that gives back only where it started from (or nothing older) is the last.
+                val oldest = list.mapNotNull { long(it["id"]) }.minOrNull()?.takeIf { from == 0L || it < from }
                 val reachedStart = list.any { m -> long(m["date"])?.let { time(it).toLocalDate().isBefore(HISTORY_FROM) } == true }
                 out += Event.History(ch, msgs, if (check || poll || list.isEmpty() || reachedStart || oldest == null) null else oldest, check, poll)
             }
@@ -192,7 +197,7 @@ class TdSession(private val send: (String) -> Unit) {
                 val code = (o["code"] as? Double)?.toInt() ?: 0
                 val msg = (o["message"] as? String).orEmpty().take(200)
                 val retry = Regex("(?:retry after|FLOOD_WAIT_)\\s*(\\d+)", RegexOption.IGNORE_CASE).find(msg)?.groupValues?.get(1)?.toIntOrNull()
-                out += Event.Error(code, msg, retry)
+                out += Event.Error(code, msg, retry, o["@extra"] as? String)
             }
         }
         return out
@@ -209,7 +214,8 @@ class TdSession(private val send: (String) -> Unit) {
         if (text.isEmpty()) return null
         val at = long(m["date"])?.let { time(it) } ?: return null
         val reply = obj(m["reply_to"])?.takeIf { it["@type"] == "messageReplyToMessage" }?.let { long(it["message_id"]) }
-        return TelegramExport.Msg(at, text.take(4000), (long(m["edit_date"]) ?: 0) > 0, long(m["id"]), reply)
+        val edit = long(m["edit_date"])?.takeIf { it > 0 }?.let { time(it) }
+        return TelegramExport.Msg(at, text.take(4000), edit != null, long(m["id"]), reply, edit)
     }
 
     private fun authState(s: Map<String, Any?>?, out: MutableList<Event>) {
@@ -236,7 +242,9 @@ class TdSession(private val send: (String) -> Unit) {
             "authorizationStateWaitPassword" -> { hint = (s["password_hint"] as? String)?.take(60)?.ifEmpty { null }; setAuth(Auth.NEED_PASSWORD, out) }
             "authorizationStateReady" -> { hint = null; setAuth(Auth.READY, out) }
             "authorizationStateLoggingOut" -> setAuth(Auth.LOGGING_OUT, out)
-            "authorizationStateClosing", "authorizationStateClosed" -> { synchronized(chats) { chats.clear() }; setAuth(Auth.CLOSED, out) }
+            // Closing is not closed: the client's files are still in use until TDLib says it is closed.
+            "authorizationStateClosing" -> setAuth(Auth.CLOSING, out)
+            "authorizationStateClosed" -> { synchronized(chats) { chats.clear() }; setAuth(Auth.CLOSED, out) }
             null -> Unit
             else -> setAuth(Auth.UNSUPPORTED, out)
         }

@@ -132,7 +132,7 @@ class TdSessionTest {
     @Test fun historyIsPagedBackToTheTwentiethOfNovember() {
         login(); s.onUpdate(chat(-1001, "Sensex Kings", channelType)); s.selected = setOf(-1001)
         s.history(-1001)
-        assertTrue(sent.last().contains("\"from_message_id\":0") && sent.last().contains("\"@extra\":\"h:-1001\""))
+        assertTrue(sent.last().contains("\"from_message_id\":0") && sent.last().contains("\"@extra\":\"h:-1001:0\""))
         val page = """{"@type":"messages","total_count":2,"messages":[${msg(-1001, 300, "T1 done", t0.plusMinutes(5), reply = 200)},${msg(-1001, 200, "#sensex 73100 CE above 280", t0)}],"@extra":"h:-1001"}"""
         val h = assertIs<TdSession.Event.History>(s.onUpdate(page).single())
         assertEquals(listOf(200L, 300L), h.msgs.map { it.id }); assertEquals(200L, h.next); assertEquals(200L, h.msgs[1].replyTo)
@@ -146,6 +146,10 @@ class TdSessionTest {
         assertTrue((s.onUpdate(page.replace("h:-1001", "p:-1001")).single() as TdSession.Event.History).let { it.poll && it.next == null })
         s.selected = emptySet()
         assertEquals(emptyList(), s.onUpdate(page))
+        // A page that gives back only the message it started from: the last (never asked again for ever).
+        s.selected = setOf(-1001)
+        val same = """{"@type":"messages","total_count":1,"messages":[${msg(-1001, 200, "x", t0)}],"@extra":"h:-1001:200"}"""
+        assertNull((s.onUpdate(same).single() as TdSession.Event.History).next)
         // "Check this chat": one page, flagged.
         assertTrue((s.onUpdate(page.replace("h:-1001", "c:-1001")).single() as TdSession.Event.History).let { it.check && it.next == null })
     }
@@ -156,5 +160,27 @@ class TdSessionTest {
         assertEquals(12, (s.onUpdate("""{"@type":"error","code":420,"message":"FLOOD_WAIT_12"}""").single() as TdSession.Event.Error).retryAfter)
         assertNull((s.onUpdate("""{"@type":"error","code":400,"message":"PHONE_CODE_INVALID"}""").single() as TdSession.Event.Error).retryAfter)
         assertEquals("\"a\\u0001\\n\"", TdSession.q("a\u0001\n"))
+        // A refused history page names itself (its tag), so it can be asked again after the wait.
+        assertEquals("h:-1001:300", (s.onUpdate("""{"@type":"error","code":429,"message":"retry after 3","@extra":"h:-1001:300"}""").single() as TdSession.Event.Error).extra)
+    }
+
+    @Test fun anotherClientsAnswersAreNotOursAndClosingIsNotClosed() {
+        val mine = TdSession(7) { sent += it }
+        mine.start(params)
+        assertEquals(emptyList(), mine.onUpdate("""{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateClosed"},"@client_id":6}"""))
+        assertEquals(TdSession.Auth.STARTING, mine.auth)
+        mine.onUpdate("""{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateReady"},"@client_id":7}""")
+        assertEquals(TdSession.Auth.READY, mine.auth)
+        mine.onUpdate("""{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateClosing"},"@client_id":7}""")
+        assertEquals(TdSession.Auth.CLOSING, mine.auth)
+        mine.onUpdate("""{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateClosed"},"@client_id":7}""")
+        assertEquals(TdSession.Auth.CLOSED, mine.auth)
+    }
+
+    @Test fun aMessagesEditTimeIsKept() {
+        login(); s.onUpdate(chat(-1001, "Sensex Kings", channelType)); s.selected = setOf(-1001)
+        val page = """{"@type":"messages","total_count":1,"messages":[${msg(-1001, 9, "x", t0, edit = unix(t0.plusMinutes(4)))}],"@extra":"p:-1001"}"""
+        val m = (s.onUpdate(page).single() as TdSession.Event.History).msgs.single()
+        assertTrue(m.edited); assertEquals(t0.plusMinutes(4), m.editedAt)
     }
 }

@@ -58,6 +58,8 @@ object TelegramCapture {
         fun send(json: String)
         /** The next answer or update, or null after [timeoutSec]. One thread only (TDLib's rule). */
         fun receive(timeoutSec: Double): String?
+        /** TDLib's id of this client (its answers carry it); null: the stand-in's. */
+        val clientId: Int? get() = null
     }
 
     /** TEST SEAM: a stand-in for TDLib (null in the app: the real library when present). */
@@ -107,7 +109,13 @@ object TelegramCapture {
     }
 
     private class Native : Transport {
+        // TDLib's own log off before the first client exists, so it never writes to the phone's log.
+        init {
+            JsonClient.execute("{\"@type\":\"setLogStream\",\"log_stream\":{\"@type\":\"logStreamEmpty\"}}")
+            JsonClient.execute("{\"@type\":\"setLogVerbosityLevel\",\"new_verbosity_level\":0}")
+        }
         private val id = JsonClient.createClientId()
+        override val clientId: Int get() = id
         override fun send(json: String) = JsonClient.send(id, json)
         override fun receive(timeoutSec: Double): String? = JsonClient.receive(timeoutSec)
     }
@@ -175,7 +183,7 @@ object TelegramCapture {
         if (loop?.isAlive == true) return false
         if (!available()) return false
         val t = testTransport?.invoke() ?: runCatching { Native() }.getOrNull() ?: return false
-        val s = TdSession { json -> t.send(json) }
+        val s = TdSession(t.clientId) { json -> t.send(json) }
         s.selected = SignalTesterHost.telegramSelected().keys
         transport = t; session = s; running = true
         s.start(params())
@@ -191,7 +199,10 @@ object TelegramCapture {
             val json = runCatching { t.receive(1.0) }.getOrNull()
             if (json != null) runCatching { handle(s, s.onUpdate(json)) }
             val alive = running && session === s
-            if (alive && capturing && s.auth == TdSession.Auth.READY && System.currentTimeMillis() - lastPoll >= POLL_MS) {
+            val now = System.currentTimeMillis()
+            // A job Boss started is over and capture is not wanted now: closed (whether or not the words lane runs).
+            if (alive && !capturing && !loggingOut && now > jobUntil) close()
+            if (alive && capturing && s.auth == TdSession.Auth.READY && now - lastPoll >= POLL_MS && now >= pausedUntil) {
                 lastPoll = System.currentTimeMillis()
                 for (id in s.selected) runCatching { s.poll(id) }
             }
@@ -221,6 +232,16 @@ object TelegramCapture {
             is TdSession.Event.History -> history(s, e)
             is TdSession.Event.Error -> {
                 e.retryAfter?.let { w -> pausedUntil = System.currentTimeMillis() + w * 1_000L }
+                // A history page refused (a flood wait): asked again once Telegram allows, a few times at most.
+                val x = e.extra
+                if (x != null && x.startsWith("h:")) {
+                    val id = x.substringAfter(':').substringBefore(':').toLongOrNull()
+                    val from = x.substringAfter(':').substringAfter(':', "").toLongOrNull()
+                    if (id != null && from != null && retries++ < 5) scope.launch {
+                        delay(maxOf(PACE_MS * 4, pausedUntil - System.currentTimeMillis()))
+                        if (running && session === s) runCatching { s.history(id, from) }
+                    } else { SignalTesterHost.dropHistory(); upd { it.copy(fetching = null) } }
+                }
                 // TDLib's words only (never a message's text): a wrong code, a flood wait.
                 upd { it.copy(said = "Telegram: ${e.message}") }
             }
@@ -228,6 +249,8 @@ object TelegramCapture {
     }
 
     @Volatile private var pausedUntil = 0L
+    @Volatile private var retries = 0
+    @Volatile private var loggingOut = false
 
     private fun history(s: TdSession, e: TdSession.Event.History) {
         when {
@@ -239,6 +262,7 @@ object TelegramCapture {
                 if (next == null) {
                     upd { it.copy(fetching = null, said = "History of ${e.chat.title} read back to ${TdSession.HISTORY_FROM}.") }
                 } else {
+                    retries = 0
                     upd { it.copy(fetching = "history to ${e.msgs.firstOrNull()?.at?.toLocalDate() ?: "…"}") }
                     jobUntil = System.currentTimeMillis() + JOB_MS
                     // Paced: one page at a time, longer when Telegram asked to wait.
@@ -256,6 +280,9 @@ object TelegramCapture {
         if (!running) return
         running = false
         runCatching { session?.close() }
+        // A history fetch cut short: its pages so far are let go.
+        SignalTesterHost.dropHistory()
+        upd { it.copy(fetching = null) }
     }
 
     /** Memory pressure: closed before anything that watches positions; the next round starts it again after the pressure. */
@@ -307,19 +334,33 @@ object TelegramCapture {
      * the api keys and the login flag. What the tester recorded stays (its scorecards).
      */
     suspend fun logOut(): String {
-        val s = session
-        if (s != null && s.auth == TdSession.Auth.READY) {
-            runCatching { s.logOut() }
+        // No round may start it again meanwhile; the login flag goes first.
+        loggingOut = true
+        try {
+            SecurePrefs.put(K_LOGGED_IN, false)
+            upd { it.copy(loggedIn = false) }
+            // Logged out at Telegram itself (so the session leaves Boss's Active Sessions), started for it when not running.
+            if (params() != null && (session == null || !running)) {
+                var waited = 0
+                while (loop?.isAlive == true && waited < 16_000) { delay(250); waited += 250 }
+                openForJob()
+            }
             var waited = 0
-            while (session === s && s.auth != TdSession.Auth.CLOSED && waited < 15_000) { delay(250); waited += 250 }
-        }
-        close()
-        var waited = 0
-        while (loop != null && waited < 16_000) { delay(250); waited += 250 }
-        app?.let { c -> runCatching { File(c.noBackupFilesDir, "tdlib").deleteRecursively() } }
-        SecurePrefs.putAll(listOf(K_API_ID, K_API_HASH, K_DB_KEY, K_LOGGED_IN).associateWith { null })
-        upd { View(available = it.available, capture = it.capture, from = it.from, to = it.to) }
-        return "Logged out of Telegram; its session, keys and database are wiped from this phone."
+            while (session?.auth.let { it == TdSession.Auth.STARTING || it == TdSession.Auth.OFF } && waited < 20_000) { delay(250); waited += 250 }
+            val s = session
+            if (s != null && s.auth == TdSession.Auth.READY) {
+                runCatching { s.logOut() }
+                waited = 0
+                while (session === s && s.auth != TdSession.Auth.CLOSED && waited < 15_000) { delay(250); waited += 250 }
+            }
+            close()
+            waited = 0
+            while (loop != null && waited < 16_000) { delay(250); waited += 250 }
+            app?.let { c -> runCatching { File(c.noBackupFilesDir, "tdlib").deleteRecursively() } }
+            SecurePrefs.putAll(listOf(K_API_ID, K_API_HASH, K_DB_KEY, K_LOGGED_IN).associateWith { null })
+            upd { View(available = it.available, capture = it.capture, from = it.from, to = it.to) }
+            return "Logged out of Telegram; its session, keys and database are wiped from this phone."
+        } finally { loggingOut = false }
     }
 
     // ---- the round ---------------------------------------------------------------------------------------------------------
@@ -336,11 +377,11 @@ object TelegramCapture {
         if (com.optionslab.app.BuildConfig.GOLD) return
         val v = if (_view.value.available) _view.value else refresh()
         val trading = runCatching { Market.isTradingDay(now.toLocalDate()) }.getOrDefault(true)
-        val want = wanted(now, v, runCatching { MemoryTrim.underPressure() }.getOrDefault(false), trading)
+        val want = wanted(now, v, runCatching { MemoryTrim.underPressure() }.getOrDefault(false), trading) && !loggingOut
         val job = System.currentTimeMillis() < jobUntil
+        capturing = want
         if (want && !running) open()
         if (!want && !job && running) close()
-        capturing = want
     }
 
     /** Inside the capture window now (set by [ensure]): the reader thread then also looks at the newest posts ([POLL_MS]). */
@@ -359,6 +400,7 @@ object TelegramCapture {
         runCatching { close() }
         loop?.join(2_000)
         session = null; transport = null; loop = null; running = false; jobUntil = 0L; lastPoll = 0L; pausedUntil = 0L; capturing = false
+        retries = 0; loggingOut = false
         loaded = null; testTransport = null; _view.value = View()
     }
 }

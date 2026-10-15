@@ -181,9 +181,14 @@ class SignalTesterHostTest : RobolectricTest() {
     @Test fun aFailedPriceReadIsTriedAgainNeverNoData() {
         on("Sensex Kings")
         SignalTesterHost.ingest("Sensex Kings", sample, at(9, 28, 4), SignalTesterHost.PASTED)
+        // The round a new call starts at once (in the background) has finished first.
+        val end = System.currentTimeMillis() + 5_000
+        while (!SignalTesterHost.pricingIdleForTest() && System.currentTimeMillis() < end) Thread.sleep(10)
+        val before = SignalTesterHost.view.value.recs.single().result
         SignalTesterHost.testBars = { _, _ -> null }
         clock(at(15, 45)); runBlocking { SignalTesterHost.round(at(15, 45)) }
-        assertNull(SignalTesterHost.view.value.recs.single().result)
+        // The read failed: nothing changed - never "no data".
+        assertEquals(before, SignalTesterHost.view.value.recs.single().result)
         SignalTesterHost.testBars = { k, d -> bars(k, d) }
         runBlocking { SignalTesterHost.round(at(15, 46)) }
         assertEquals(CallEval.Status.DONE, SignalTesterHost.view.value.recs.single().result!!.status)
@@ -263,6 +268,15 @@ class SignalTesterHostTest : RobolectricTest() {
         assertEquals(1, SignalTesterHost.view.value.recs.count { it.kind == SignalTesterHost.CALL })
         // The call finished: a later bare "done" has no open call - an unknown call, ignored.
         assertEquals(SignalTesterHost.UNKNOWN_CALL, SignalTesterHost.ingest("Sensex Kings", "done", at(9, 55), SignalTesterHost.PASTED).single().reason)
+    }
+
+    @Test fun aTickedTrailedStopIsNeverANewCall() {
+        on("Sensex Kings")
+        SignalTesterHost.ingest("Sensex Kings", "$sample\nSL 260", at(9, 28, 4), SignalTesterHost.PASTED)
+        // The channel trails its stop and ticks it: not the call's levels, yet a status - to review, never a call.
+        val r = SignalTesterHost.ingest("Sensex Kings", "#sensex 73100 CE\nAbove 280\nTarget 310✅-345-400+++\nSL 290 ✅", at(9, 50), SignalTesterHost.PASTED).single()
+        assertEquals(SignalTesterHost.REVIEW, r.kind); assertEquals(listOf(SignalTesterHost.SUSPECT_REPOST), r.unsure)
+        assertEquals(1, SignalTesterHost.view.value.recs.count { it.kind == SignalTesterHost.CALL })
     }
 
     @Test fun aTelegramExportIsImportedForItsAllowListedChatOnly() {

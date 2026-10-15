@@ -174,6 +174,13 @@ class TelegramCaptureTest : RobolectricTest() {
         inbox += """{"@type":"messages","total_count":1,"messages":[${msg(kings, 100, call, t)}],"@extra":"p:$kings"}"""
         Thread.sleep(300)
         assertEquals(4, SignalTesterHost.view.value.recs.size)
+        // A later call first seen live, then edited, its edit seen only by a poll: flagged too.
+        push(kings, 110, "#nifty 25000 PE\nAbove 90\nTarget 110", t.plusMinutes(20))
+        waitFor("the second call") { SignalTesterHost.view.value.recs.size == 5 }
+        inbox += """{"@type":"messages","total_count":1,"messages":[${msg(kings, 110, "#nifty 25000 PE\nAbove 95\nTarget 110", t.plusMinutes(20), edit = unix(t.plusMinutes(26)))}],"@extra":"p:$kings"}"""
+        waitFor("the poll's edit") { SignalTesterHost.view.value.recs.last().editedAt != null }
+        assertEquals(t.plusMinutes(26), SignalTesterHost.view.value.recs.last().editedAt)
+        assertEquals("#nifty 25000 PE\nAbove 90\nTarget 110", SignalTesterHost.view.value.recs.last().text)
     }
 
     @Test fun theHistoryIsReadOldestFirstSoItsStatusPostsFindTheirCalls() {
@@ -181,7 +188,7 @@ class TelegramCaptureTest : RobolectricTest() {
         TelegramCapture.select(mapOf(kings to "Sensex Kings"))
         val d = LocalDate.of(2025, 3, 4).atTime(10, 0)
         assertTrue(TelegramCapture.fetchHistory(kings).startsWith("Reading its history back to 2024-11-20"))
-        assertTrue(sent.last().contains("\"getChatHistory\"") && sent.last().contains("\"h:$kings\""))
+        assertTrue(sent.last().contains("\"getChatHistory\"") && sent.last().contains("\"h:$kings:0\""))
         // Telegram's pages come newest first: the "T1 done" before its call.
         inbox += """{"@type":"messages","total_count":2,"messages":[${msg(kings, 30, "T1 done", d.plusMinutes(20), reply = 20)}],"@extra":"h:$kings"}"""
         waitFor("the next page asked", 6_000) { sent.count { it.contains("\"getChatHistory\"") } == 2 }
@@ -199,7 +206,7 @@ class TelegramCaptureTest : RobolectricTest() {
     @Test fun checkThisChatCountsOneChannelOnlyAndKeepsNoText() {
         login()
         assertEquals("Checking…", TelegramCapture.check(other))
-        assertTrue(sent.last().contains("\"c:$other\""))
+        assertTrue(sent.last().contains("\"c:$other:0\""))
         val t = day.atTime(9, 30)
         val page = (1..6).joinToString(",") { msg(other, it.toLong(), "NIFTY 2500$it CE above 1$it tgt 2$it", t.plusMinutes(it.toLong())) }
         inbox += """{"@type":"messages","total_count":6,"messages":[$page],"@extra":"c:$other"}"""
@@ -236,6 +243,24 @@ class TelegramCaptureTest : RobolectricTest() {
         TelegramCapture.ensure(day.atTime(10, 1))
         Thread.sleep(200)
         assertFalse(TelegramCapture.view.value.running)
+    }
+
+    @Test fun logOutReachesTelegramEvenWhenTheReaderIsClosed() {
+        login()
+        TelegramCapture.close()
+        waitFor("closed") { !TelegramCapture.view.value.running }
+        val before = sent.count { it.contains("\"logOut\"") }
+        // The stand-in answers the restart: parameters, then the session is already authorised.
+        TelegramCapture.testTransport = { object : TelegramCapture.Transport {
+            override fun send(json: String) { sent += json
+                if (json.contains("\"getAuthorizationState\"")) inbox += state("authorizationStateWaitTdlibParameters")
+                if (json.contains("\"setTdlibParameters\"")) inbox += state("authorizationStateReady")
+                if (json.contains("\"logOut\"") || json.contains("\"close\"")) inbox += state("authorizationStateClosed") }
+            override fun receive(timeoutSec: Double): String? = inbox.poll((timeoutSec * 1000).toLong(), TimeUnit.MILLISECONDS)
+        } }
+        assertTrue(runBlocking { TelegramCapture.logOut() }.startsWith("Logged out of Telegram"))
+        assertEquals(before + 1, sent.count { it.contains("\"logOut\"") })
+        assertNull(SecurePrefs.getString(TelegramCapture.K_API_HASH))
     }
 
     @Test fun logOutWipesTheSessionAndItsKeys() {
