@@ -4660,5 +4660,708 @@
     "missing": 1
    }
   }
+ },
+ "B2-OPT": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "orig",
+  "desc": "B2 OPT: most confident 10% of a GBM, ATM, x1",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 622,
+   "win": 0.5402,
+   "net": -54260.0,
+   "per_day": -219.7,
+   "avg_win": 884.0,
+   "avg_loss": -1228.0,
+   "worst_day": -18349.0,
+   "max_dd": 78333.0,
+   "ex_top5": -73347.0,
+   "top5_share": null,
+   "days": 211,
+   "why": {
+    "lock": 302,
+    "time": 234,
+    "stop": 85,
+    "squareoff": 1
+   },
+   "p": 0.022,
+   "twin_mean": -113460.0
+  },
+  "folds": [
+   -21716.0,
+   -8390.0,
+   -4743.0,
+   -19411.0
+  ],
+  "wf_net": -54260.0
+ },
+ "B2-OPT-RT": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {90th, 95th pct} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "b2|OPT|p0.9|x1",
+   "b2|OPT|p0.9|x1",
+   "b2|OPT|p0.95|x1",
+   "b2|OPT|p0.95|x1"
+  ],
+  "wf_net": -18862.0,
+  "wf_trades": 508,
+  "final_pick": "b2|OPT|p0.95|x1",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "b2|OPT|p0.9|x1": -54260.0,
+   "b2|OPT|p0.9|x2": -110822.0,
+   "b2|OPT|p0.95|x1": -16841.0,
+   "b2|OPT|p0.95|x2": -56092.0
+  },
+  "design": {
+   "trades": 386,
+   "win": 0.557,
+   "net": -16841.0,
+   "per_day": -68.2,
+   "avg_win": 889.0,
+   "avg_loss": -1217.0,
+   "worst_day": -9509.0,
+   "max_dd": 56363.0,
+   "ex_top5": -39623.0,
+   "top5_share": null,
+   "days": 158,
+   "why": {
+    "lock": 191,
+    "time": 150,
+    "stop": 44,
+    "squareoff": 1
+   }
+  }
+ },
+ "R41-R1": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "orig",
+  "desc": "R1: direction 15 min, top 10% confidence, ATM, exit at t+h or -30% close stop",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 3531,
+   "win": 0.4225,
+   "net": -349964.0,
+   "per_day": -1416.9,
+   "avg_win": 872.0,
+   "avg_loss": -810.0,
+   "worst_day": -41648.0,
+   "max_dd": 369435.0,
+   "ex_top5": -392538.0,
+   "top5_share": null,
+   "days": 246,
+   "why": {
+    "time": 3160,
+    "squareoff": 225,
+    "close_stop": 143,
+    "missing": 3
+   },
+   "p": 0.002,
+   "twin_mean": -558120.0
+  },
+  "folds": [
+   -121519.0,
+   -84168.0,
+   -36724.0,
+   -107552.0
+  ],
+  "wf_net": -349964.0
+ },
+ "R41-R1-RT": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "retune",
+  "desc": "re-tune: confidence {top 10%, top 5%} x stop {-30% close, -15% resting}",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "r41|R15|size0|conf|close30",
+   "r41|R15|size0|conf5|stop15",
+   "r41|R15|size0|conf5|stop15",
+   "r41|R15|size0|conf5|stop15"
+  ],
+  "wf_net": -285890.0,
+  "wf_trades": 2381,
+  "final_pick": "r41|R15|size0|conf5|close30",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "r41|R15|size0|conf|close30": -349964.0,
+   "r41|R15|size0|conf|stop15": -357111.0,
+   "r41|R15|size0|conf5|close30": -186814.0,
+   "r41|R15|size0|conf5|stop15": -201191.0
+  },
+  "design": {
+   "trades": 1983,
+   "win": 0.4276,
+   "net": -186814.0,
+   "per_day": -756.3,
+   "avg_win": 905.0,
+   "avg_loss": -840.0,
+   "worst_day": -38086.0,
+   "max_dd": 202425.0,
+   "ex_top5": -228311.0,
+   "top5_share": null,
+   "days": 240,
+   "why": {
+    "time": 1756,
+    "squareoff": 132,
+    "close_stop": 92,
+    "missing": 3
+   }
+  }
+ },
+ "R41-R2": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "orig",
+  "desc": "R2: direction 30 min, top 10% confidence, ATM, exit at t+h or -30% close stop",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 2485,
+   "win": 0.4209,
+   "net": -194214.0,
+   "per_day": -786.3,
+   "avg_win": 1242.0,
+   "avg_loss": -1038.0,
+   "worst_day": -23299.0,
+   "max_dd": 251983.0,
+   "ex_top5": -257381.0,
+   "top5_share": null,
+   "days": 245,
+   "why": {
+    "time": 2136,
+    "close_stop": 205,
+    "squareoff": 141,
+    "missing": 3
+   },
+   "p": 0.002,
+   "twin_mean": -456301.0
+  },
+  "folds": [
+   -79877.0,
+   -119548.0,
+   15884.0,
+   -10674.0
+  ],
+  "wf_net": -194214.0
+ },
+ "R41-R2-RT": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "retune",
+  "desc": "re-tune: confidence {top 10%, top 5%} x stop {-30% close, -15% resting}",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "r41|R30|size0|conf|close30",
+   "r41|R30|size0|conf5|close30",
+   "r41|R30|size0|conf5|close30",
+   "r41|R30|size0|conf5|close30"
+  ],
+  "wf_net": -87690.0,
+  "wf_trades": 1633,
+  "final_pick": "r41|R30|size0|conf5|close30",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "r41|R30|size0|conf|close30": -194214.0,
+   "r41|R30|size0|conf|stop15": -242012.0,
+   "r41|R30|size0|conf5|close30": -39192.0,
+   "r41|R30|size0|conf5|stop15": -89972.0
+  },
+  "design": {
+   "trades": 1406,
+   "win": 0.431,
+   "net": -39192.0,
+   "per_day": -158.7,
+   "avg_win": 1318.0,
+   "avg_loss": -1047.0,
+   "worst_day": -16615.0,
+   "max_dd": 121962.0,
+   "ex_top5": -99205.0,
+   "top5_share": null,
+   "days": 237,
+   "why": {
+    "time": 1209,
+    "close_stop": 109,
+    "squareoff": 86,
+    "missing": 2
+   }
+  }
+ },
+ "R41-R3": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "orig",
+  "desc": "R3: direction 60 min, top 10% confidence, ATM, exit at t+h or -30% close stop",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 1596,
+   "win": 0.3778,
+   "net": -156741.0,
+   "per_day": -634.6,
+   "avg_win": 1922.0,
+   "avg_loss": -1325.0,
+   "worst_day": -30790.0,
+   "max_dd": 200449.0,
+   "ex_top5": -222862.0,
+   "top5_share": null,
+   "days": 235,
+   "why": {
+    "time": 1296,
+    "close_stop": 224,
+    "squareoff": 72,
+    "missing": 4
+   },
+   "p": 0.02,
+   "twin_mean": -353959.0
+  },
+  "folds": [
+   -110355.0,
+   -20514.0,
+   -8563.0,
+   -17309.0
+  ],
+  "wf_net": -156741.0
+ },
+ "R41-R3-RT": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "retune",
+  "desc": "re-tune: confidence {top 10%, top 5%} x stop {-30% close, -15% resting}",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "r41|R60|size0|conf|close30",
+   "r41|R60|size0|conf5|close30",
+   "r41|R60|size0|conf5|close30",
+   "r41|R60|size0|conf5|stop15"
+  ],
+  "wf_net": -188041.0,
+  "wf_trades": 1095,
+  "final_pick": "r41|R60|size0|conf5|close30",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "r41|R60|size0|conf|close30": -156741.0,
+   "r41|R60|size0|conf|stop15": -172092.0,
+   "r41|R60|size0|conf5|close30": -114126.0,
+   "r41|R60|size0|conf5|stop15": -131979.0
+  },
+  "design": {
+   "trades": 941,
+   "win": 0.3847,
+   "net": -114126.0,
+   "per_day": -462.0,
+   "avg_win": 1877.0,
+   "avg_loss": -1371.0,
+   "worst_day": -24592.0,
+   "max_dd": 116536.0,
+   "ex_top5": -177425.0,
+   "top5_share": null,
+   "days": 212,
+   "why": {
+    "time": 755,
+    "close_stop": 134,
+    "squareoff": 49,
+    "missing": 3
+   }
+  }
+ },
+ "R41-R4": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "orig",
+  "desc": "R4: direction 15 min, top 10% confidence, size forecast >= median, ATM, exit at t+h or -30% close stop",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 2204,
+   "win": 0.4356,
+   "net": -205486.0,
+   "per_day": -831.9,
+   "avg_win": 1046.0,
+   "avg_loss": -973.0,
+   "worst_day": -41648.0,
+   "max_dd": 228687.0,
+   "ex_top5": -248060.0,
+   "top5_share": null,
+   "days": 237,
+   "why": {
+    "time": 1989,
+    "squareoff": 122,
+    "close_stop": 91,
+    "missing": 2
+   },
+   "p": 0.006,
+   "twin_mean": -374481.0
+  },
+  "folds": [
+   -54986.0,
+   -12968.0,
+   -36497.0,
+   -101035.0
+  ],
+  "wf_net": -205486.0
+ },
+ "R41-R4-RT": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "retune",
+  "desc": "re-tune: confidence {top 10%, top 5%} x stop {-30% close, -15% resting}",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "r41|R15|size1|conf|close30",
+   "r41|R15|size1|conf5|stop15",
+   "r41|R15|size1|conf5|stop15",
+   "r41|R15|size1|conf5|stop15"
+  ],
+  "wf_net": -178367.0,
+  "wf_trades": 1520,
+  "final_pick": "r41|R15|size1|conf5|close30",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "r41|R15|size1|conf|close30": -205486.0,
+   "r41|R15|size1|conf|stop15": -209686.0,
+   "r41|R15|size1|conf5|close30": -119012.0,
+   "r41|R15|size1|conf5|stop15": -129117.0
+  },
+  "design": {
+   "trades": 1290,
+   "win": 0.4426,
+   "net": -119012.0,
+   "per_day": -481.8,
+   "avg_win": 1059.0,
+   "avg_loss": -1007.0,
+   "worst_day": -38086.0,
+   "max_dd": 138756.0,
+   "ex_top5": -160508.0,
+   "top5_share": null,
+   "days": 207,
+   "why": {
+    "time": 1159,
+    "squareoff": 72,
+    "close_stop": 57,
+    "missing": 2
+   }
+  }
+ },
+ "R41-R5": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "orig",
+  "desc": "R5: direction 30 min, top 10% confidence, size forecast >= median, ATM, exit at t+h or -30% close stop",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 1541,
+   "win": 0.4419,
+   "net": -58947.0,
+   "per_day": -238.7,
+   "avg_win": 1479.0,
+   "avg_loss": -1240.0,
+   "worst_day": -18661.0,
+   "max_dd": 107808.0,
+   "ex_top5": -122114.0,
+   "top5_share": null,
+   "days": 237,
+   "why": {
+    "time": 1326,
+    "close_stop": 119,
+    "squareoff": 93,
+    "missing": 3
+   },
+   "p": 0.002,
+   "twin_mean": -301040.0
+  },
+  "folds": [
+   -19931.0,
+   -51308.0,
+   16334.0,
+   -4043.0
+  ],
+  "wf_net": -58947.0
+ },
+ "R41-R5-RT": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "retune",
+  "desc": "re-tune: confidence {top 10%, top 5%} x stop {-30% close, -15% resting}",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "r41|R30|size1|conf|close30",
+   "r41|R30|size1|conf|close30",
+   "r41|R30|size1|conf5|close30",
+   "r41|R30|size1|conf5|close30"
+  ],
+  "wf_net": -26208.0,
+  "wf_trades": 1158,
+  "final_pick": "r41|R30|size1|conf5|close30",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "r41|R30|size1|conf|close30": -58947.0,
+   "r41|R30|size1|conf|stop15": -110320.0,
+   "r41|R30|size1|conf5|close30": -1670.0,
+   "r41|R30|size1|conf5|stop15": -37195.0
+  },
+  "design": {
+   "trades": 905,
+   "win": 0.4486,
+   "net": -1670.0,
+   "per_day": -6.8,
+   "avg_win": 1533.0,
+   "avg_loss": -1251.0,
+   "worst_day": -16615.0,
+   "max_dd": 62066.0,
+   "ex_top5": -61683.0,
+   "top5_share": null,
+   "days": 200,
+   "why": {
+    "time": 781,
+    "close_stop": 69,
+    "squareoff": 53,
+    "missing": 2
+   }
+  }
+ },
+ "R41-R6": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "orig",
+  "desc": "R6: direction 60 min, top 10% confidence, size forecast >= median, ATM, exit at t+h or -30% close stop",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 960,
+   "win": 0.4,
+   "net": -25364.0,
+   "per_day": -102.7,
+   "avg_win": 2394.0,
+   "avg_loss": -1640.0,
+   "worst_day": -30790.0,
+   "max_dd": 110870.0,
+   "ex_top5": -91485.0,
+   "top5_share": null,
+   "days": 212,
+   "why": {
+    "time": 785,
+    "close_stop": 128,
+    "squareoff": 43,
+    "missing": 4
+   },
+   "p": 0.018,
+   "twin_mean": -186464.0
+  },
+  "folds": [
+   -90072.0,
+   44292.0,
+   24208.0,
+   -3791.0
+  ],
+  "wf_net": -25364.0
+ },
+ "R41-R6-RT": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "retune",
+  "desc": "re-tune: confidence {top 10%, top 5%} x stop {-30% close, -15% resting}",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "r41|R60|size1|conf|close30",
+   "r41|R60|size1|conf5|stop15",
+   "r41|R60|size1|conf5|stop15",
+   "r41|R60|size1|conf5|stop15"
+  ],
+  "wf_net": -88824.0,
+  "wf_trades": 685,
+  "final_pick": "r41|R60|size1|conf|stop15",
+  "final_pick_i": 1,
+  "grid_design_net": {
+   "r41|R60|size1|conf|close30": -25364.0,
+   "r41|R60|size1|conf|stop15": -22532.0,
+   "r41|R60|size1|conf5|close30": -37444.0,
+   "r41|R60|size1|conf5|stop15": -34094.0
+  },
+  "design": {
+   "trades": 1020,
+   "win": 0.3569,
+   "net": -22532.0,
+   "per_day": -91.2,
+   "avg_win": 2484.0,
+   "avg_loss": -1413.0,
+   "worst_day": -29262.0,
+   "max_dd": 110042.0,
+   "ex_top5": -88315.0,
+   "top5_share": null,
+   "days": 212,
+   "why": {
+    "time": 621,
+    "stop": 365,
+    "squareoff": 31,
+    "missing": 3
+   }
+  }
+ },
+ "R41-R13": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "orig",
+  "desc": "R13: next-morning gap from 15:19, top 20% confidence, 1-ITM 15:20 -> next 09:16",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 0,
+   "win": null,
+   "net": 0.0,
+   "per_day": 0.0,
+   "avg_win": null,
+   "avg_loss": null,
+   "worst_day": 0.0,
+   "max_dd": 0.0,
+   "ex_top5": 0.0,
+   "top5_share": null,
+   "days": 0,
+   "p": null,
+   "twin_mean": null
+  },
+  "folds": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "wf_net": 0.0
+ },
+ "R41-R13-RT": {
+  "family": "R41 neural nets",
+  "source": "index (brain features of the underlying; MLP)",
+  "kind": "retune",
+  "desc": "re-tune: confidence {top 20%, 10%, 5%} (overnight rule has no stop to tune)",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "r41|R13|conf20",
+   "r41|R13|conf20",
+   "r41|R13|conf20",
+   "r41|R13|conf20"
+  ],
+  "wf_net": 0.0,
+  "wf_trades": 0,
+  "final_pick": "r41|R13|conf20",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "r41|R13|conf20": 0.0,
+   "r41|R13|conf": 0.0,
+   "r41|R13|conf5": 0.0
+  },
+  "design": {
+   "trades": 0,
+   "win": null,
+   "net": 0.0,
+   "per_day": 0.0,
+   "avg_win": null,
+   "avg_loss": null,
+   "worst_day": 0.0,
+   "max_dd": 0.0,
+   "ex_top5": 0.0,
+   "top5_share": null,
+   "days": 0
+  }
+ },
+ "R41-ALWAYS-CALL": {
+  "family": "R41 neural nets",
+  "source": "the clock (every non-expiry night)",
+  "kind": "orig",
+  "desc": "the 1-ITM call bought 15:20, sold next 09:16, every night",
+  "old": "",
+  "note": "",
+  "module": "r41",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 1441,
+   "win": 0.4316,
+   "net": -744207.0,
+   "per_day": -2208.3,
+   "avg_win": 2630.0,
+   "avg_loss": -2906.0,
+   "worst_day": -44859.0,
+   "max_dd": 783972.0,
+   "ex_top5": -815925.0,
+   "top5_share": null,
+   "days": 331,
+   "why": {
+    "next_0916": 1441
+   },
+   "p": 1.0,
+   "twin_mean": -701413.0
+  },
+  "folds": [
+   18300.0,
+   -141197.0,
+   -70455.0,
+   -351316.0
+  ],
+  "wf_net": -744207.0
  }
 }
