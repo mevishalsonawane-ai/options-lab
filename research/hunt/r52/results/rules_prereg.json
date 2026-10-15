@@ -1886,5 +1886,1456 @@
    "strategy": "gc_exp05_scalp1",
    "why": "the catalog's EXP-05 setting (follow last 5 min, -3.3%/+10%, 1 a day)"
   }
+ },
+ "R1-1": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "exit": "trail30",
+     "m": 1.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "trail1",
+     "m": 1.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "m": 1.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "m": 1.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "trail30",
+     "m": 1.5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "trail1",
+     "m": 1.5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "m": 1.5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "m": 1.5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_noise",
+   "kind": "family",
+   "params": {
+    "exit": {
+     "BANKNIFTY": "trail1",
+     "NIFTY": "EOD"
+    },
+    "m": {
+     "BANKNIFTY": 1.5,
+     "NIFTY": 1.0
+    },
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Noise-area intraday momentum (R1 N1)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): NIFTY m1.0 EOD, BN m1.5 trail1"
+  }
+ },
+ "R1-14": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "exit": "1330",
+     "thr": 0.003,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "thr": 0.003,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "thr": 0.003,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "1330",
+     "thr": 0.006,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "thr": 0.006,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_lunchrev",
+   "kind": "family",
+   "params": {
+    "exit": "LIQ",
+    "thr": 0.006,
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Midday reversal (R1 N14)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): both 0.6% at 12:00, LIQ"
+  }
+ },
+ "R1-2@BANKNIFTY": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "exit": "native",
+     "k": 0.25,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "k": 0.25,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "k": 0.25,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "native",
+     "k": 0.5,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "k": 0.5,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "k": 0.5,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "native",
+     "k": 0.75,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "k": 0.75,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_wvb",
+   "kind": "family",
+   "params": {
+    "exit": "LIQ",
+    "k": 0.75,
+    "unds": [
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Larry Williams volatility breakout (R1 N2, BANKNIFTY)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): BANKNIFTY k0.75 LIQ (the two indices' picks need different premium exits, so split by index)"
+  }
+ },
+ "R1-2@NIFTY": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "exit": "native",
+     "k": 0.25,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "k": 0.25,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "k": 0.25,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "native",
+     "k": 0.5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "k": 0.5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "k": 0.5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "native",
+     "k": 0.75,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "k": 0.75,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_wvb",
+   "kind": "family",
+   "params": {
+    "exit": "EOD",
+    "k": 0.75,
+    "unds": [
+     "NIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Larry Williams volatility breakout (R1 N2, NIFTY)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): NIFTY k0.75 EOD (the two indices' picks need different premium exits, so split by index)"
+  }
+ },
+ "R1-4": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "T": "1430",
+     "base": "pc",
+     "expiry_only": false,
+     "thr": 0.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "1430",
+     "base": "pc",
+     "expiry_only": false,
+     "thr": 0.005,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "1430",
+     "base": "op",
+     "expiry_only": false,
+     "thr": 0.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "1430",
+     "base": "op",
+     "expiry_only": false,
+     "thr": 0.005,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "1440",
+     "base": "pc",
+     "expiry_only": false,
+     "thr": 0.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "1440",
+     "base": "pc",
+     "expiry_only": false,
+     "thr": 0.005,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "1440",
+     "base": "op",
+     "expiry_only": false,
+     "thr": 0.0,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "1440",
+     "base": "op",
+     "expiry_only": false,
+     "thr": 0.005,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "only",
+   "fn": "fam_r1.r1_rod",
+   "kind": "family",
+   "params": {
+    "T": "1440",
+    "base": "pc",
+    "expiry_only": true,
+    "thr": 0.0,
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Rest-of-day -> last 30 min momentum (R1 N4)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): both N4_ROD|1440|pc|expiry (14:40 from prev close, thr 0, expiry days only)"
+  }
+ },
+ "R1-6@BANKNIFTY": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "T0": "0930",
+     "exit": "native",
+     "g": 0.0,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "0930",
+     "exit": "EOD",
+     "g": 0.0,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T0": "0930",
+     "exit": "LIQ",
+     "g": 0.0,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "0930",
+     "exit": "native",
+     "g": 0.0005,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "0930",
+     "exit": "EOD",
+     "g": 0.0005,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "native",
+     "g": 0.0,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "EOD",
+     "g": 0.0,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T0": "1000",
+     "exit": "LIQ",
+     "g": 0.0,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "native",
+     "g": 0.0005,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "EOD",
+     "g": 0.0005,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T0": "1000",
+     "exit": "LIQ",
+     "g": 0.0005,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_fvg",
+   "kind": "family",
+   "params": {
+    "T0": "0930",
+    "exit": "LIQ",
+    "g": 0.0005,
+    "unds": [
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "ICT first fair value gap (R1 N6, BANKNIFTY)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): BANKNIFTY 0930 g0.0005 LIQ (the two indices' picks need different premium exits, so split)"
+  }
+ },
+ "R1-6@NIFTY": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "T0": "0930",
+     "exit": "native",
+     "g": 0.0,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "0930",
+     "exit": "EOD",
+     "g": 0.0,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T0": "0930",
+     "exit": "LIQ",
+     "g": 0.0,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "0930",
+     "exit": "native",
+     "g": 0.0005,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T0": "0930",
+     "exit": "LIQ",
+     "g": 0.0005,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "native",
+     "g": 0.0,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "EOD",
+     "g": 0.0,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T0": "1000",
+     "exit": "LIQ",
+     "g": 0.0,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "native",
+     "g": 0.0005,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T0": "1000",
+     "exit": "EOD",
+     "g": 0.0005,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T0": "1000",
+     "exit": "LIQ",
+     "g": 0.0005,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_fvg",
+   "kind": "family",
+   "params": {
+    "T0": "0930",
+    "exit": "EOD",
+    "g": 0.0005,
+    "unds": [
+     "NIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "ICT first fair value gap (R1 N6, NIFTY)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): NIFTY 0930 g0.0005 EOD (the two indices' picks need different premium exits, so split)"
+  }
+ },
+ "R1-7": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "B": 5,
+     "exit": "native",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "B": 5,
+     "exit": "EOD",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "B": 5,
+     "exit": "LIQ",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "B": 15,
+     "exit": "native",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "B": 15,
+     "exit": "EOD",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "B": 15,
+     "exit": "LIQ",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_turtle",
+   "kind": "family",
+   "params": {
+    "B": 5,
+    "exit": {
+     "BANKNIFTY": "native",
+     "NIFTY": "EOD"
+    },
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Turtle soup on PDL/PDH (R1 N7)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): NIFTY B5 EOD, BN B5 native"
+  }
+ },
+ "R1-8@BANKNIFTY": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "lo": 0.2,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "lo": 0.2,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "lo": 0.1,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "60m",
+     "lo": 0.1,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "lo": 0.1,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_ibs",
+   "kind": "family",
+   "params": {
+    "exit": "60m",
+    "lo": 0.2,
+    "unds": [
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Internal bar strength (R1 N8, BANKNIFTY)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): BANKNIFTY 0.2 60m (the two indices' picks need different exits, so split)"
+  }
+ },
+ "R1-8@NIFTY": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "lo": 0.2,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "60m",
+     "lo": 0.2,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "exit": "LIQ",
+     "lo": 0.2,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "EOD",
+     "lo": 0.1,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "exit": "60m",
+     "lo": 0.1,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_ibs",
+   "kind": "family",
+   "params": {
+    "exit": "LIQ",
+    "lo": 0.1,
+    "unds": [
+     "NIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Internal bar strength (R1 N8, NIFTY)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): NIFTY 0.1 LIQ (the two indices' picks need different exits, so split)"
+  }
+ },
+ "R1-9": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "T": "0916",
+     "exit": "EOD",
+     "trig": "chg10",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T": "0916",
+     "exit": "LIQ",
+     "trig": "chg10",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "0945",
+     "exit": "EOD",
+     "trig": "chg10",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T": "0945",
+     "exit": "LIQ",
+     "trig": "chg10",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T": "0916",
+     "exit": "LIQ",
+     "trig": "chg15",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "0945",
+     "exit": "EOD",
+     "trig": "chg15",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T": "0945",
+     "exit": "LIQ",
+     "trig": "chg15",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "0916",
+     "exit": "EOD",
+     "trig": "p90",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T": "0916",
+     "exit": "LIQ",
+     "trig": "p90",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "T": "0945",
+     "exit": "EOD",
+     "trig": "p90",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "T": "0945",
+     "exit": "LIQ",
+     "trig": "p90",
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_r1.r1_vixspk",
+   "kind": "family",
+   "params": {
+    "T": "0916",
+    "exit": "EOD",
+    "trig": "chg15",
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "India VIX + index",
+   "title": "India VIX spike -> CE (R1 N9)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): both chg15 (yesterday's VIX close +15%) CE at 09:16, EOD"
+  }
  }
 }
