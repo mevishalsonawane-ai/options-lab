@@ -414,6 +414,19 @@ object AutoChange {
         "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
 
+    /** The target prefix of a Telegram chat's paper trading in the Signal tester ([Kind.PAPER_ARM_ON]): + the chat's short id. */
+    const val TELEGRAM_PAPER = "paperarm:telegram:"
+
+    /**
+     * 15 Oct (Boss's explicit choice): paper-trading the calls of the Telegram chat [id] (the Signal tester; its name stays on the
+     * phone, the log carries its short id) switched [on] by Boss - "off → on" on paper, logged as Boss's (kept), undone in one tap
+     * (paper only, no PIN either way). Not proven; never live; it never carries over to live by itself.
+     */
+    fun telegramPaperOn(id: String): Change = Change(Kind.PAPER_ARM_ON, TELEGRAM_PAPER + id, SWITCHED_OFF, ON,
+        "your choice (15 Oct): paper-trade a Telegram chat's calls (Signal tester chat $id) - not proven, paper only; its trades are " +
+            "kept in their own record beside the chat's honest shadow scorecard",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Telegram chat $id's paper trading")
+
     /** The target prefix of an arm hidden by Boss's 15 Oct cleanup ([Kind.ARM_HIDE]): "hide:" + its key. */
     const val HIDE = "hide:"
 

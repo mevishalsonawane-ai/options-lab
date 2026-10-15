@@ -352,7 +352,13 @@ internal object Autopilot {
             // arm off (or, undone twice, back on) - a PAPER arm, never Zerodha, so no PIN either way; the flip is not logged again.
             // 15 Oct (Boss's "Both"): a passed-research paper arm ("paperarm:<source>": R51, R52, Solo 2.0) - its Undo switches it
             // off (or back on after its forward bar switched it off). Paper only, never Zerodha: no PIN either way; not logged again.
-            AutoChange.Kind.PAPER_ARM_ON -> if (c.target != AutoChange.TICKET_TARGET) {
+            // 15 Oct (Boss's choice): a Telegram chat's paper trading in the Signal tester ("paperarm:telegram:<chat id>") - its
+            // Undo switches that chat's paper trading off (or back on). Paper only, never Zerodha: no PIN either way; not logged again.
+            AutoChange.Kind.PAPER_ARM_ON -> if (c.target.startsWith(AutoChange.TELEGRAM_PAPER)) {
+                val id = c.target.removePrefix(AutoChange.TELEGRAM_PAPER)
+                if (id.isEmpty() || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.SignalPaperArm.setOnId(id, c.to == AutoChange.ON, log = false) }
+            } else if (c.target != AutoChange.TICKET_TARGET) {
                 val source = c.target.removePrefix(AutoChange.PAPER_ARM)
                 if (!c.target.startsWith(AutoChange.PAPER_ARM) || source !in com.optionslab.app.data.PassedArmsHost.SOURCES ||
                     (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
@@ -827,6 +833,30 @@ internal object Autopilot {
                         ?.let { _book.value = AutoChange.undone(_book.value, it.id, today) }
                     _book.value = AutoChange.record(_book.value, AutoChange.passedArmOff(source, label, why), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "its forward-test bar", note = "paper only; switching it back on is your choice").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * Boss switched paper trading of the Telegram chat [id] (the Signal tester) from its row: off closes the newest kept entry of
+     * that chat (so its Undo can never flip it later); on records "off → on" as Boss's (kept, undone in one tap). Paper only.
+     */
+    fun telegramPaperSwitchedByBoss(id: String, on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val target = AutoChange.TELEGRAM_PAPER + id
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
+                    if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
+                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.telegramPaperOn(id), AutoChange.Status.KEPT,
+                        System.currentTimeMillis(), today, by = "your choice", note = "switched on from the Signal tester; paper only - never live").first
                     save()
                 }
             }

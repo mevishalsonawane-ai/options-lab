@@ -545,6 +545,8 @@ object Tasks {
             // 15 Oct: the Hero ₹1,000 ticket only when it needs a pass (a ticket held, or 12:25-12:33 switched on): never a round by itself.
             if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+            // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
+            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
@@ -857,6 +859,8 @@ object Tasks {
             // (only when it needs a pass: a ticket held, or 12:25-12:33 switched on).
             if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+            // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
+            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
         )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
@@ -1535,7 +1539,7 @@ class WatchService : Service() {
                 // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
                     com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
-                    com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                    com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
                 val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
@@ -1557,6 +1561,7 @@ class WatchService : Service() {
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
                             if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Hero 1000 ticket") { com.optionslab.app.data.HeroTicketArm.tick() } else null,
                             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Passed-research arms") { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+                            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Telegram calls (paper)") { com.optionslab.app.data.SignalPaperArm.tick() } else null,
                         ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
                         // Smart scheduling: the minute arms just looked at this minute; the next pass need not look again for it.
                         // (Not the ORB arms: a bar the feed has not finished yet is looked at again on the next minute, as before.)

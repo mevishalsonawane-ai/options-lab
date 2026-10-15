@@ -243,8 +243,7 @@ tasks.withType<Test>().configureEach {
 // has contributed its own - to carry any permission outside the allowlist, to
 // ask to see other installed apps (<queries>), or to bind an accessibility or
 // notification-listener service (the two ways an app can read other apps' screens
-// and notifications). One exception, by name (15 Oct 2026): the Signal tester's
-// Telegram reader, declared disabled and opt-in (CheckSandbox.withoutSignalListener).
+// and notifications).
 
 fun allowedPermissions(jarvis: Boolean = false): List<String> =
     (listOf("permissions-allowlist.txt") + if (jarvis) listOf("permissions-allowlist-jarvis.txt") else emptyList())
@@ -276,29 +275,13 @@ abstract class CheckSandbox : DefaultTask() {
             .replace(Regex("<intent>\\s*</intent>"), "").isBlank()
     } && !Regex("<queries\\b[^>]*/>").containsMatchIn(xml)
 
-    /**
-     * The ONE notification listener allowed (15 Oct 2026, Boss): the Signal tester's Telegram reader - shadow, never trades -
-     * declared disabled (enabled at run time only by Boss's switch, and useless until he grants access in Android's settings).
-     * Its opening tag is taken out before the check below; any other listener, or this one declared enabled, still fails.
-     */
-    private fun withoutSignalListener(xml: String, problems: MutableList<String>): String {
-        val tags = Regex("<service\\b[^>]*android\\.permission\\.BIND_NOTIFICATION_LISTENER_SERVICE[^>]*>").findAll(xml).toList()
-        val ok = tags.filter { t ->
-            t.value.contains("android:name=\"com.optionslab.app.data.TelegramCallListener\"") && t.value.contains("android:enabled=\"false\"")
-        }
-        if (ok.size > 1) problems += "more than one Signal tester listener declared"
-        return ok.take(1).fold(xml) { acc, t -> acc.replace(t.value, "<service>") }
-    }
-
     @TaskAction
     fun check() {
-        val raw = manifest.get().asFile.readText()
-        val early = ArrayList<String>()
-        val xml = withoutSignalListener(raw, early)
+        val xml = manifest.get().asFile.readText()
         val held = Regex("""<uses-permission(?:-sdk-23)?\b[^>]*?android:name="([^"]+)"""")
             .findAll(xml).map { it.groupValues[1] }.toSortedSet()
         val ok = allowed.get().map { it.replace("\${applicationId}", applicationId.get()) }.toSet()
-        val problems = ArrayList<String>(early)
+        val problems = ArrayList<String>()
         (held - ok).forEach { problems += "permission not on the allowlist: $it" }
         if (Regex("<queries\\b").containsMatchIn(xml) && !queriesOnlyTts(xml)) problems += "<queries> present: the app could see other installed apps"
         for (bind in listOf("BIND_ACCESSIBILITY_SERVICE", "BIND_NOTIFICATION_LISTENER_SERVICE", "BIND_DEVICE_ADMIN")) {

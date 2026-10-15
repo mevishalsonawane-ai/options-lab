@@ -325,7 +325,7 @@ object SmartWorkers {
     fun holdingAny(): Boolean = runCatching {
         com.optionslab.app.work.PositionCards.anyOpen || OrbArms.holdingHint || PineAuto.holding() || Strategies.runningHint ||
             NightArm.view.value.open.isNotEmpty() || VixDivArm.view.value.open.isNotEmpty() || McxPaperArms.view.value.open.isNotEmpty() ||
-            HeroTicketArm.view.value.open.isNotEmpty() || PassedArmsHost.view.value.open.isNotEmpty() ||
+            HeroTicketArm.view.value.open.isNotEmpty() || PassedArmsHost.view.value.open.isNotEmpty() || SignalPaperArm.view.value.open.isNotEmpty() ||
             Paper.state.positions.any { it.quantity != 0 }
     }.getOrDefault(true)
 

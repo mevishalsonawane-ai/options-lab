@@ -354,7 +354,7 @@ fun SecurityPage(model: AppModel) {
                     "Read contacts, call history or calendar",
                     "Browse your files, photos, videos or downloads",
                     "See which apps you have installed, or read any app's data",
-                    "Read other apps' notifications or screens (no accessibility service; the only notification reader is the Signal tester's - off unless you switch it on and grant access, Telegram's allow-listed channels only)",
+                    "Read other apps' notifications or screens (no accessibility or notification-listener service)",
                     "Draw over other apps, or read the clipboard in the background",
                     "Use the camera, microphone or location",
                 ).forEach { Text("✕  $it", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(vertical = 2.dp)) }

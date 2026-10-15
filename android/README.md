@@ -313,6 +313,27 @@ Prices are Upstox's public 1-minute candles, so nothing reaches Zerodha. The
 live watch keeps filling resting orders and notifies you of fills and
 settlements. The account is stored in one encrypted vault file.
 
+## Signal tester (Home → Strategies)
+
+Records the option calls of the Telegram channels Boss follows and scores each
+channel honestly in shadow (trigger, reaction delay, T1/T2/T3/as given/with a
+stop, paper slippage and charges, a p against random entries from 40 triggered
+calls). Paper-trading a channel's calls is a per-channel switch, off by default:
+Boss's choice, not proven, paper only, never live.
+
+IraAlgo reads only the channels Boss selects. Messages come from a Telegram
+Desktop export (File → Export chat history → JSON; the picker lists titles only,
+nothing is read until a channel is ticked), Share from Telegram, or the paste
+box. There is no notification reading. The reader is two-stage: fixed rules,
+then Jarvis's on-device model for what they are unsure of, then Boss's review.
+
+A Telegram login is a possible later source (`MessageSource`), not built yet:
+TDLib, Telegram's official client library, read-only, with Boss's own api_id and
+api_hash from my.telegram.org. It would give the chat list and full history
+without an export, but it needs a native build of tdlib/td (OpenSSL and zlib for
+the NDK, arm64-v8a only, a pinned tag built in CI and cached; roughly 10-15 MB
+more APK and 30-60 minutes for the first CI build) and an API key on the phone.
+
 ## Security
 
 - **No screenshots or screen recording.** The window is `FLAG_SECURE` from

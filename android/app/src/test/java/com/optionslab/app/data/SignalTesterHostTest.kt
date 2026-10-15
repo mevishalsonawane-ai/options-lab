@@ -73,28 +73,61 @@ class SignalTesterHostTest : RobolectricTest() {
         on("Sensex Kings")
         assertTrue(SignalTesterHost.ingest("Some Other Channel", sample, at(9, 28, 4), SignalTesterHost.PASTED).isEmpty())
         assertTrue(SignalTesterHost.view.value.recs.isEmpty())
-        // The gate the notification listener reads (memory only): Telegram's apps, the reading switch, the list.
-        assertEquals(false, SignalTesterHost.accepts("com.whatsapp", "Sensex Kings"))
-        assertEquals(false, SignalTesterHost.accepts("org.telegram.messenger", "Sensex Kings"))
-        SignalTesterHost.setListen(context, true)
-        assertEquals(true, SignalTesterHost.accepts("org.telegram.messenger", "Sensex Kings 🚀"))
-        assertEquals(true, SignalTesterHost.accepts("org.telegram.messenger", "Ravi @ Sensex Kings"))
-        assertEquals(false, SignalTesterHost.accepts("org.telegram.messenger", "Family"))
-        assertEquals(false, SignalTesterHost.accepts("org.telegram.messenger", null))
+        // A title with emojis is the same channel; the list refuses a duplicate and an empty name.
+        assertEquals(1, SignalTesterHost.ingest("Sensex Kings 🚀", sample, at(9, 28, 4), SignalTesterHost.PASTED).size)
         assertEquals("\"sensex kings\" is already on the list.", SignalTesterHost.allow("sensex kings"))
         assertEquals("Type the channel's name as Telegram shows it.", SignalTesterHost.allow("🚀"))
-        SignalTesterHost.setListen(context, false)
-        assertEquals(false, SignalTesterHost.accepts("org.telegram.messenger", "Sensex Kings"))
+    }
+
+    /** A source that records which chats were asked for their messages. */
+    private class Spy(val chats: Map<String, List<com.optionslab.engine.signals.TelegramExport.Msg>>) : MessageSource {
+        val asked = ArrayList<String>()
+        override val key = "spy"
+        override suspend fun titles() = chats.keys.toList()
+        override suspend fun messages(title: String) = chats[title].orEmpty().also { asked += title }
+    }
+
+    @Test fun onlyTheSelectedChannelIsEverRead() {
+        on()
+        fun m(t: String, h: Int) = com.optionslab.engine.signals.TelegramExport.Msg(day.atTime(h, 0), t, false)
+        val spy = Spy(linkedMapOf(
+            "Sensex Kings" to listOf(m(sample, 9), m("Join our VIP channel for 95% accuracy", 10), m("T1 done 🔥 +300%", 11)),
+            "Mom" to listOf(m("NIFTY 25000 CE above 120 call me", 9)),
+            "Office group" to listOf(m("BANKNIFTY 52000 PE above 300 tgt 350", 9)),
+            "BN Pro" to listOf(m("BANKNIFTY 52000 CE above 300 tgt 350", 9))))
+        // Nothing is followed until Boss picks a channel; the picker gets titles only - no chat is asked for its messages.
+        assertTrue(SignalTesterHost.view.value.allow.isEmpty())
+        val seen = runBlocking { SignalTesterHost.scan(spy) }
+        assertEquals(listOf("Sensex Kings", "Mom", "Office group", "BN Pro"), seen.map { it.title })
+        assertTrue(seen.all { it.stats == null }); assertTrue(spy.asked.isEmpty())
+        // Boss picks one channel: only it is read. Its promo and its results post are not calls; the follow-up links to its call.
+        assertTrue(runBlocking { SignalTesterHost.follow(spy, setOf("Sensex Kings")) }.startsWith("Read 3 messages from Sensex Kings: 1 look like calls"))
+        assertEquals(listOf("Sensex Kings"), spy.asked)
+        val recs = SignalTesterHost.view.value.recs
+        assertEquals(listOf("Sensex Kings"), recs.map { it.channel }.distinct())
+        assertEquals(listOf(SignalTesterHost.CALL, SignalTesterHost.NOT, SignalTesterHost.FOLLOW), recs.map { it.kind })
+        assertTrue(recs.none { (it.text ?: "").contains("call me") || (it.text ?: "").contains("52000") })
+        // A message of any other chat handed in directly (a private chat, a group) never reaches the reader or the store.
+        assertTrue(SignalTesterHost.ingest("Mom", "NIFTY 25000 CE above 120", day.atTime(12, 0), SignalTesterHost.PASTED).isEmpty())
+        assertTrue(SignalTesterHost.ingest("Office group", "BANKNIFTY 52000 PE above 300", day.atTime(12, 0), SignalTesterHost.PASTED).isEmpty())
+        assertEquals(3, SignalTesterHost.view.value.recs.size)
+        // "Check this chat": on Boss's tap, that one chat only.
+        val bn = runBlocking { SignalTesterHost.check(spy, "BN Pro") }
+        assertEquals(1, bn.stats!!.calls); assertEquals(listOf("Sensex Kings", "BN Pro"), spy.asked)
+        assertTrue(SignalTesterHost.view.value.allow == listOf("Sensex Kings"))
+        // The log file never holds another chat's messages.
+        val plain = String(com.optionslab.app.security.Vault.readFile(java.io.File(context.noBackupFilesDir, SignalTesterHost.FILE))!!, Charsets.UTF_8)
+        assertFalse(plain.contains("call me")); assertFalse(plain.contains("52000 PE"))
     }
 
     @Test fun theSampleIsReadCheckedPricedAndScoredWithNoOrder() {
         on("Sensex Kings")
-        val r = SignalTesterHost.ingest("Sensex Kings", sample, at(9, 28, 4), SignalTesterHost.NOTIFICATION).single()
+        val r = SignalTesterHost.ingest("Sensex Kings", sample, at(9, 28, 4), SignalTesterHost.PASTED).single()
         assertEquals(SignalTesterHost.CALL, r.kind)
         assertEquals("SENSEX 73100 CE above 280, stop none given, targets 310 / 345 / 400", r.draft!!.line())
         assertEquals(sample, r.text)
         // The same message again within 3 minutes (a notification re-posted): dropped.
-        assertTrue(SignalTesterHost.ingest("Sensex Kings", sample, at(9, 28, 30), SignalTesterHost.NOTIFICATION).isEmpty())
+        assertTrue(SignalTesterHost.ingest("Sensex Kings", sample, at(9, 28, 30), SignalTesterHost.PASTED).isEmpty())
         // 09:45: priced so far (T1, T2 out), still open.
         clock(at(9, 45)); runBlocking { SignalTesterHost.round(at(9, 45)) }
         val mid = SignalTesterHost.view.value.recs.single()
@@ -223,13 +256,13 @@ class SignalTesterHostTest : RobolectricTest() {
         val json = """{"name":"Sensex Kings","messages":[{"type":"message","date":"${day}T09:28:04","text":[{"type":"hashtag","text":"#sensex"}," 73100 CE\nAbove 280\nTarget 310-345-400+++"]},""" +
             """{"type":"message","date":"${day}T10:05:12","edited":"${day}T10:30:00","text":"#sensex 73300 CE\nAbove 210\nTarget 240-270\nSL 185"},""" +
             """{"type":"message","date":"${day}T11:00:00","text":"Join our VIP channel"}]}"""
-        assertTrue(SignalTesterHost.importExport(json).startsWith("Imported 3 messages from Sensex Kings: 2 look like calls"))
+        assertTrue(runBlocking { SignalTesterHost.importExport(json) }.startsWith("Read 3 messages from Sensex Kings: 2 look like calls"))
         val recs = SignalTesterHost.view.value.recs
         assertEquals(listOf(SignalTesterHost.IMPORTED), recs.map { it.source }.distinct())
         assertTrue(recs[1].edited)
         assertNull(recs[2].text)
-        assertTrue(SignalTesterHost.importExport(json.replace("Sensex Kings", "Other")).startsWith("None of the chats"))
-        assertEquals("This is not a Telegram export (result.json).", SignalTesterHost.importExport("nope"))
+        assertTrue(runBlocking { SignalTesterHost.importExport(json.replace("Sensex Kings", "Other")) }.startsWith("None of the chats"))
+        assertEquals("This is not a Telegram export (result.json).", runBlocking { SignalTesterHost.importExport("nope") })
     }
 
     @Test fun theLogIsInNeitherThePhoneBackupNorTheDiagnostics() {

@@ -1,8 +1,6 @@
 package com.optionslab.app.data
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.pm.PackageManager
 import com.optionslab.app.security.Vault
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
@@ -27,23 +25,26 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The Signal tester (15 Oct 2026, Boss: Telegram channels post option calls a few minutes before the move; "capture such calls,
- * study them"). SHADOW ONLY - "shadow — never trades": it records every call from the channels Boss allow-listed and scores
- * each channel honestly. Nothing here places, changes, skips or resizes an order, paper or live; it has no path to the order
- * book, Zerodha or the paper account at all, so the kill switch is irrelevant to it. Trading on these calls would be a later,
- * separate decision, gated by research and Boss's PIN rules.
+ * study them"). The tester itself is SHADOW - "shadow — never trades": it records every call from the chats Boss follows and
+ * scores each one honestly; nothing here places, changes, skips or resizes an order. Paper-trading a chat's calls is a separate,
+ * per-chat switch Boss turns on himself ([SignalPaperArm]: paper only, never live); this scorecard keeps running regardless.
  *
- * Capture (opt-in; off by default; nothing uploaded anywhere):
- *  - [TelegramCallListener]: Telegram's notifications only, from chats whose title is on the allow-list ([accepts], decided
- *    in memory - everything else is dropped at once and never stored), timed to the second;
+ * Capture (opt-in; off by default; nothing uploaded anywhere) through a [MessageSource]: no notification reading (Boss, 15 Oct:
+ * Telegram sends tens of thousands of notifications a day). Working now:
+ *  - a Telegram Desktop export (result.json, [ExportSource]): its chats listed by TITLE only ([scan]) - Boss ticks the channels
+ *    to follow and only their messages are read in ([follow]); "Check this chat" ([check]) counts one chat's recent calls on
+ *    Boss's tap ("looks like a trade-call channel", [ChatScan]), never by itself. Boss (15 Oct): "Telegram should only read from
+ *    the particular channel": a chat not selected is never asked for its messages, so nothing of it reaches the reader or the
+ *    store. Nothing is followed until Boss picks a channel;
  *  - [SignalShareActivity]: Boss shares a message from Telegram (time = now, "shared (time approximate)");
- *  - the card's paste box (an editable time) and the import of a Telegram Desktop export (result.json: [import]).
+ *  - the card's paste box (an editable time).
+ * A Telegram login (TDLib) as a live source is a later step behind the same [MessageSource] (android/README.md, "Signal tester").
  * Understanding ([ingest]): the rules ([CallParser]); when they are unsure, the on-device language model ([CallModel], Jarvis's
  * model, in its own background job with a timeout - never on the main thread or the tick / order path, and not while a position
  * or order is open: positions come first); when the model is not on the phone, the rules' reading waits in "Needs review". Then
@@ -64,8 +65,6 @@ object SignalTesterHost {
     const val MAX_EXAMPLES = 8
     /** Live calls priced per round at most (their option minutes read once a round each). */
     const val MAX_LIVE = 8
-    /** Telegram's apps whose notifications may be read (the official app and its known clients); no other app's ever. */
-    val TELEGRAM: Set<String> = setOf("org.telegram.messenger", "org.telegram.messenger.web", "org.thunderdog.challegram", "org.telegram.plus")
 
     const val CALL = "call"
     const val FOLLOW = "follow"
@@ -73,7 +72,6 @@ object SignalTesterHost {
     const val REVIEW = "review"
     const val PENDING = "pending"
 
-    const val NOTIFICATION = "notification"
     const val SHARED = "shared"
     const val PASTED = "pasted"
     const val IMPORTED = "imported"
@@ -104,15 +102,18 @@ object SignalTesterHost {
         val final: Boolean get() = kind != CALL || unpriced != null ||
             (result?.status in FINAL && (result?.status != CallEval.Status.DONE || twinsDone))
         val sourceWords: String get() = when (source) {
-            SHARED -> "shared (time approximate)"; PASTED -> "pasted" + if (approx) " (time approximate)" else ""; IMPORTED -> "imported"; else -> "notification"
+            SHARED -> "shared (time approximate)"; PASTED -> "pasted" + if (approx) " (time approximate)" else ""; IMPORTED -> "imported"; else -> source
         }
     }
 
     private val FINAL = setOf(CallEval.Status.DONE, CallEval.Status.NOT_TRIGGERED, CallEval.Status.NO_DATA, CallEval.Status.CLOSED)
 
-    data class View(val on: Boolean = false, val listen: Boolean = false, val allow: List<String> = emptyList(), val delaySec: Int = 30,
+    /** A chat a source has seen: its title; [stats] only once Boss tapped "Check this chat" on it - never its messages. */
+    data class Seen(val title: String, val stats: com.optionslab.engine.signals.ChatScan.Stats?, val source: String)
+
+    data class View(val on: Boolean = false, val allow: List<String> = emptyList(), val delaySec: Int = 30,
                     val validityMin: Int = 15, val cards: List<ChannelScore.Card> = emptyList(), val recs: List<Rec> = emptyList(),
-                    val review: List<Rec> = emptyList(), val pending: Int = 0) {
+                    val review: List<Rec> = emptyList(), val pending: Int = 0, val seen: List<Seen> = emptyList()) {
         fun callsOf(channel: String): List<Rec> = recs.filter { it.channel == channel }.reversed()
     }
 
@@ -120,15 +121,12 @@ object SignalTesterHost {
     val view: StateFlow<View> = _view
 
     private val lock = Any()
-    private class Log(var on: Boolean = false, var listen: Boolean = false, val allow: MutableList<String> = ArrayList(), var delaySec: Int = 30,
+    private class Log(var on: Boolean = false, val allow: MutableList<String> = ArrayList(), val seen: MutableMap<String, Seen> = LinkedHashMap(), var delaySec: Int = 30,
                       var validityMin: Int = 15, val recs: MutableList<Rec> = ArrayList(),
                       val examples: MutableMap<String, MutableList<CallModel.Example>> = LinkedHashMap(), val told: MutableSet<String> = HashSet(),
                       var seq: Long = 0)
     private var cache: Log? = null
 
-    /** What the notification listener checks in memory: the switches and the allow-list (normalised). */
-    private data class Gate(val on: Boolean, val listen: Boolean, val allow: Set<String>)
-    @Volatile private var gate: Gate? = null
 
     // ---- the log -------------------------------------------------------------------------------------------------------
 
@@ -189,7 +187,7 @@ object SignalTesterHost {
     private fun strs(a: JSONArray?): List<String> = a?.let { (0 until it.length()).map { i -> it.getString(i) } }.orEmpty()
 
     private fun recOf(o: JSONObject): Rec = Rec(
-        o.getString("id"), o.getString("ch"), LocalDateTime.parse(o.getString("at")), o.optString("src", NOTIFICATION), o.optBoolean("approx"), o.optBoolean("edited"),
+        o.getString("id"), o.getString("ch"), LocalDateTime.parse(o.getString("at")), o.optString("src", PASTED), o.optBoolean("approx"), o.optBoolean("edited"),
         o.getString("kind"), o.optString("text").ifEmpty { null }, o.optInt("h"), o.optString("reason").ifEmpty { null }, o.optString("by", "rules"),
         o.optDouble("conf", 1.0), strs(o.optJSONArray("unsure")), draftOf(o.optJSONObject("d")), followOf(o.optJSONObject("f")),
         o.optString("link").ifEmpty { null }, if (o.has("claim")) o.getBoolean("claim") else null,
@@ -204,7 +202,11 @@ object SignalTesterHost {
         val f = file
         val ok = f == null || runCatching {
             val o = JSONObject(String(Vault.readFileSteady(f) ?: return@runCatching, Charsets.UTF_8))
-            l.on = o.optBoolean("on"); l.listen = o.optBoolean("listen")
+            l.on = o.optBoolean("on")
+            o.optJSONArray("seen")?.let { a -> for (i in 0 until a.length()) a.getJSONObject(i).let { x ->
+                val st = if (x.has("n")) com.optionslab.engine.signals.ChatScan.Stats(x.optInt("n"), x.optInt("calls"), x.optInt("fu")) else null
+                l.seen[norm(x.getString("t"))] = Seen(x.getString("t"), st, x.optString("src", IMPORTED))
+            } }
             l.allow += strs(o.optJSONArray("allow"))
             l.delaySec = o.optInt("delay", 30).takeIf { it in CallEval.Settings.DELAYS } ?: 30
             l.validityMin = o.optInt("validity", 15).coerceIn(1, 120)
@@ -230,7 +232,9 @@ object SignalTesterHost {
         }
         val f = file
         if (f != null) runCatching {
-            val o = JSONObject().put("on", l.on).put("listen", l.listen).put("allow", JSONArray(l.allow)).put("delay", l.delaySec).put("validity", l.validityMin)
+            val o = JSONObject().put("on", l.on).put("allow", JSONArray(l.allow))
+                .put("seen", JSONArray(l.seen.values.map { x -> JSONObject().put("t", x.title).put("src", x.source).apply {
+                    x.stats?.let { put("n", it.messages).put("calls", it.calls).put("fu", it.followUps) } } })).put("delay", l.delaySec).put("validity", l.validityMin)
                 .put("seq", l.seq).put("recs", JSONArray(l.recs.map { recJson(it) })).put("told", JSONArray(l.told.sorted()))
                 .put("ex", JSONObject().apply { l.examples.forEach { (ch, xs) -> put(ch, JSONArray(xs.map { JSONObject().put("t", it.text).put("j", it.json) })) } })
             written.write(f, o.toString().toByteArray(Charsets.UTF_8))
@@ -239,9 +243,8 @@ object SignalTesterHost {
     }
 
     private fun publish(l: Log) {
-        gate = Gate(l.on, l.listen, l.allow.map { norm(it) }.toSet())
-        _view.value = View(l.on, l.listen, l.allow.toList(), l.delaySec, l.validityMin, cardsOf(l), l.recs.takeLast(400),
-            l.recs.filter { it.kind == REVIEW }, l.recs.count { it.kind == PENDING })
+        _view.value = View(l.on, l.allow.toList(), l.delaySec, l.validityMin, cardsOf(l), l.recs.takeLast(400),
+            l.recs.filter { it.kind == REVIEW }, l.recs.count { it.kind == PENDING }, l.seen.values.toList())
     }
 
     private fun cardsOf(l: Log): List<ChannelScore.Card> = l.allow.map { ch -> ChannelScore.card(ch, l.recs.filter { it.channel == ch }.map { item(it) }) }
@@ -265,31 +268,12 @@ object SignalTesterHost {
 
     fun on(): Boolean = synchronized(lock) { log().on }
 
-    /** The tester's switch (off by default): off, nothing more is recorded and the listener drops everything. */
+    /** The tester's switch (off by default): off, nothing more is recorded. */
     fun setOn(on: Boolean): String = synchronized(lock) {
         val l = log()
         if (l.on != on) { l.on = on; save(l) }
         if (on) "Signal tester on ($NOTE)." else "Signal tester off: nothing more is recorded."
     }
-
-    /**
-     * Reading Telegram's notifications (off by default): the listener component is enabled only while this is on (Android then
-     * lists IraAlgo under Notification access, where Boss grants it himself); off, the component is disabled.
-     */
-    fun setListen(context: Context, on: Boolean): String {
-        synchronized(lock) { val l = log(); if (l.listen != on) { l.listen = on; save(l) } }
-        runCatching {
-            context.packageManager.setComponentEnabledSetting(ComponentName(context, TelegramCallListener::class.java),
-                if (on) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-        }
-        return if (on) "Reading Telegram notifications from your allow-listed channels only. Grant IraAlgo notification access in the next screen."
-        else "Not reading Telegram notifications."
-    }
-
-    /** Notification access granted to IraAlgo in Android's settings. */
-    fun accessGranted(context: Context): Boolean = runCatching {
-        androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
-    }.getOrDefault(false)
 
     fun allow(name: String): String = synchronized(lock) {
         val n = name.trim().take(80)
@@ -339,43 +323,12 @@ object SignalTesterHost {
 
     // ---- capture ---------------------------------------------------------------------------------------------------------
 
-    /**
-     * The listener's check, in memory only (no disk, no network): a Telegram app, the tester and the reading on, a title on the
-     * allow-list. Null: not known yet (the log not read); the message then goes to the background job, which checks again.
-     */
-    fun accepts(pkg: String, title: String?): Boolean? {
-        if (pkg !in TELEGRAM || title.isNullOrBlank()) return false
-        val g = gate ?: return null
-        return g.on && g.listen && channelOf(title, g.allow) != null
-    }
-
     /** The allow-listed title [title] stands for ("Sensex Kings", or a group's "Ravi @ Sensex Kings"), normalised, or null. */
     private fun channelOf(title: String, allow: Set<String>): String? {
         val t = norm(title)
         if (t in allow) return t
         val after = norm(title.substringAfterLast(" @ ", ""))
         return after.takeIf { it.isNotEmpty() && it in allow }
-    }
-
-    private val lastSeen = java.util.concurrent.ConcurrentHashMap<String, Long>()
-
-    /**
-     * From the listener ([TelegramCallListener]): the chat's [title] and its messages (text, epoch ms). Only Telegram's apps,
-     * only allow-listed titles; each message once (a notification re-posted with older lines adds only the new ones).
-     */
-    fun fromNotification(pkg: String, title: String?, messages: List<Pair<String, Long>>) {
-        val ok = accepts(pkg, title)
-        if (ok == false || title == null) return
-        val seenKey = norm(title)
-        val fresh = messages.filter { (text, ms) -> text.isNotBlank() && ms > (lastSeen[seenKey] ?: 0L) }
-        if (fresh.isEmpty()) return
-        lastSeen[seenKey] = fresh.maxOf { it.second }
-        // One background job, the lines in order (a follow-up after its call).
-        scope.launch {
-            for ((text, ms) in fresh.sortedBy { it.second }) runCatching {
-                ingest(title, text, Instant.ofEpochMilli(ms).atZone(com.optionslab.engine.IST).toLocalDateTime().withNano(0), NOTIFICATION)
-            }
-        }
     }
 
     private fun nextId(l: Log): String { l.seq += 1; return "s${l.seq}" }
@@ -401,8 +354,18 @@ object SignalTesterHost {
         if (persist) {
             save(l)
             if (out.any { it.kind == PENDING }) kickModel()
+            // Today's call checked and its contract found at once (in the background), so a chat's paper trading can act in time.
+            if (out.any { it.kind == CALL } && runCatching { at.toLocalDate() == Market.today() }.getOrDefault(false)) priceSoon()
         }
         out
+    }
+
+    private val pricing = AtomicBoolean(false)
+
+    /** One round now, in the background (one at a time): today's new call checked against reality and priced. */
+    private fun priceSoon() {
+        if (!pricing.compareAndSet(false, true)) return
+        scope.launch { try { runCatching { round(Market.now().toLocalDateTime().withNano(0)) } } finally { pricing.set(false) } }
     }
 
     /** [base]'s understood readings as records: sure calls and follow-ups count; the rest waits for review; not-a-call keeps no text. */
@@ -537,27 +500,63 @@ object SignalTesterHost {
         }
     }
 
+    /** The chats [src] can see, remembered by TITLE only (no message is read). Off the main thread. */
+    suspend fun scan(src: MessageSource): List<Seen> {
+        val titles = src.titles()
+        return synchronized(lock) {
+            val l = log()
+            val out = titles.map { t -> l.seen[norm(t)]?.copy(title = t) ?: Seen(t, null, src.key) }
+            for (x in out) l.seen[norm(x.title)] = x
+            while (l.seen.size > 300) l.seen.remove(l.seen.keys.first())
+            save(l)
+            out
+        }
+    }
+
     /**
-     * A Telegram Desktop export (result.json): every message of each allow-listed chat in it, with its own time, recorded as
-     * "imported" (edited ones marked: their first text is unknown, so they are not scored). Chats not on the allow-list are
-     * skipped. Only the parsed calls keep their text; the raw chat is never stored. Off the main thread.
+     * "Check this chat", on Boss's tap only: the one chat [title]'s recent messages counted by the rules ([ChatScan]) - how many
+     * looked like calls - and only the counts kept. Never run by itself, never on any other chat.
      */
-    fun importExport(json: String): String {
-        val chats = try { TelegramExport.read(json) } catch (e: TelegramExport.Bad) { return e.message ?: "Not a Telegram export." }
+    suspend fun check(src: MessageSource, title: String): Seen {
+        val st = com.optionslab.engine.signals.ChatScan.scan(src.messages(title).map { it.text to it.at.toLocalDate() })
+        val x = Seen(title, st, src.key)
+        synchronized(lock) { val l = log(); l.seen[norm(title)] = x; save(l) }
+        return x
+    }
+
+    /**
+     * Boss ticked [chosen] (titles) in the picker: they join the followed chats, and [src]'s messages of THOSE chats only are read
+     * in as "imported" (edited ones marked: their first text is unknown, so they are not scored). No other chat is asked for its
+     * messages. Only calls and follow-ups keep their text; the raw chat never is. One write at the end.
+     */
+    suspend fun follow(src: MessageSource, chosen: Set<String>): String {
         if (!on()) return "Switch the Signal tester on first."
-        val allow = synchronized(lock) { log().allow.map { norm(it) }.toSet() }
-        val ok = chats.filter { norm(it.name) in allow }
-        if (ok.isEmpty()) return "None of the chats in this file is on the allow-list (" + chats.joinToString(", ") { it.name }.take(200) + "). Add it first."
+        if (chosen.isEmpty()) return "Nothing to read: tick a channel first."
+        for (t in chosen) allow(t)
         var calls = 0; var all = 0
-        for (c in ok) for (m in c.messages) {
+        for (title in chosen) for (m in src.messages(title)) {
             all++
-            calls += ingest(c.name, m.text, m.at, IMPORTED, edited = m.edited, persist = false).count { it.kind == CALL || it.kind == PENDING || it.kind == REVIEW }
+            calls += ingest(title, m.text, m.at, IMPORTED, edited = m.edited, persist = false).count { it.kind == CALL || it.kind == PENDING || it.kind == REVIEW }
         }
         // One write of the log for the whole file, then the model's queue.
         val pending = synchronized(lock) { log().let { l -> save(l); l.recs.any { it.kind == PENDING } } }
         if (pending) kickModel()
-        return "Imported $all messages from ${ok.joinToString(", ") { it.name }}: $calls look like calls. Past calls are priced only where the phone can still " +
-            "read their option's prices (expired contracts cannot be read from the free feed)."
+        return "Read $all messages from ${chosen.joinToString(", ")}: $calls look like calls. Past calls are priced only where the phone can " +
+            "still read their option's prices (expired contracts cannot be read from the free feed)."
+    }
+
+    /**
+     * A Telegram Desktop export (result.json) in one step: its chats scanned, and those already followed read in. Off the main
+     * thread. (The card scans first and lets Boss tick chats: [scan], [follow].)
+     */
+    suspend fun importExport(json: String): String {
+        val src = try { ExportSource.of(json) } catch (e: TelegramExport.Bad) { return e.message ?: "Not a Telegram export." }
+        if (!on()) return "Switch the Signal tester on first."
+        val seen = scan(src)
+        val followed = synchronized(lock) { log().allow.map { norm(it) }.toSet() }
+        val ok = seen.filter { norm(it.title) in followed }
+        if (ok.isEmpty()) return "None of the chats in this file is followed (" + seen.joinToString(", ") { it.title }.take(200) + "). Tick one in the chat list first."
+        return follow(src, ok.map { it.title }.toSet())
     }
 
     // ---- the round (Jarvis's words lane) ---------------------------------------------------------------------------------------
@@ -718,14 +717,14 @@ object SignalTesterHost {
     /** The diagnostics line: counts only - never a channel's name or a message. */
     fun diagLine(): String = synchronized(lock) {
         val l = log()
-        "Signal tester ($NOTE): ${if (l.on) "on" else "off"}, reading notifications ${if (l.listen) "on" else "off"} · ${l.allow.size} channels · " +
+        "Signal tester ($NOTE): ${if (l.on) "on" else "off"} · ${l.allow.size} chats followed, ${l.seen.size} seen · " +
             "${l.recs.count { it.kind == CALL }} calls, ${l.recs.count { it.kind == REVIEW }} to review, ${l.recs.count { it.kind == PENDING }} for the model"
     }
 
     /** TEST ONLY: forget the memory (the file stays), as a restart would; the seams back to the app's own. */
     internal fun resetForTest() {
         synchronized(lock) {
-            cache = null; gate = null; written.forget(); lastSeen.clear(); _view.value = View()
+            cache = null; written.forget(); _view.value = View()
             testModel = null; testModelMissing = false; testHolding = null; testBars = null; testContracts = null
         }
     }

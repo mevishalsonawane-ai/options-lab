@@ -26,9 +26,7 @@
         manifest carries any permission outside its short allowlist. It cannot
         read your messages, mail, contacts, files, photos or other apps' data.
         There is deliberately no <queries> element: on Android 11+ the app cannot
-        even see which other apps are installed. One opt-in exception (15 Oct 2026):
-        the Signal tester's Telegram notification reader below - off by default,
-        Telegram only, allow-listed chats only, and only after Boss grants access.
+        even see which other apps are installed.
     -->
     <!-- Messages -->
     <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
@@ -218,23 +216,8 @@
                 android:resource="@xml/export_paths" />
         </provider>
 
-        <!-- The Signal tester (shadow - never trades), 15 Oct 2026. Its notification reader is OFF by default: disabled here,
-             enabled only while Boss's "Read Telegram notifications" switch is on, and even then Android gives it nothing until
-             Boss grants notification access himself. It reads Telegram's notifications only, of allow-listed chats only;
-             everything else is dropped at once and never stored. Bound only by the system (the permission below is the one the
-             binder must hold; the app itself holds no new permission). The build's sandbox check allows this one listener only. -->
-        <service
-            android:name=".data.TelegramCallListener"
-            android:enabled="false"
-            android:exported="true"
-            android:label="@string/signal_listener_label"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
-
-        <!-- Share a Telegram message's text to the Signal tester: nothing is recorded until Boss picks the channel and taps OK. -->
+        <!-- The Signal tester (15 Oct 2026; its calls are shadow-scored, and paper-traded only for a chat Boss switches on - never
+             live): share a Telegram message's text to it. Nothing is recorded until Boss picks the chat and taps OK. -->
         <activity
             android:name=".data.SignalShareActivity"
             android:enabled="@bool/signal_tester_enabled"

@@ -223,6 +223,7 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { WatchlistHost.diagLine() }.getOrElse { "Watchlist: could not read" }).append('\n')
         // The Signal tester (15 Oct, shadow): counts only - never a channel name or a message.
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { SignalTesterHost.diagLine() }.getOrElse { "Signal tester: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { SignalPaperArm.diagLine() }.getOrElse { "Telegram calls (paper): could not read" }).append('\n')
         // The MCX paper arms (9 Oct, paper only, not proven): on or off, what each holds, its last decision (the "[mcx-arms]" lines below).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }).append('\n')
         // The approved forge ideas on paper (S2, paper only): how many hosted, each one's record (the "[forge-paper]" lines below).
