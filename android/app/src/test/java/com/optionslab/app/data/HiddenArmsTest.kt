@@ -106,7 +106,8 @@ class HiddenArmsTest : RobolectricTest() {
         assertTrue(fake(ArmsCleanup.ORB).calls.isEmpty())
         assertTrue(fake(ArmsCleanup.ORB).armed)
         assertTrue(HiddenArms.visible(ArmsCleanup.ORB))
-        assertFalse(HiddenArms.blocks(ArmsCleanup.ORB))
+        // ...but it opens nothing new while it waits (its entry paths read this; exits always go).
+        assertTrue(HiddenArms.blocks(ArmsCleanup.ORB))
         assertTrue(steps.any { it.key == ArmsCleanup.ORB && it.action == ArmsCleanup.Action.WAIT })
         assertFalse(HiddenArms.visible(ArmsCleanup.VIX_DIV))
         assertTrue(Diag.lines().any { it.contains("ORB: ${ArmsCleanup.WAITING}") })
@@ -128,6 +129,32 @@ class HiddenArmsTest : RobolectricTest() {
         pass()
         assertTrue(fake(ArmsCleanup.PINE).calls.isEmpty())
         assertTrue(HiddenArms.visible(ArmsCleanup.PINE))
+    }
+
+    @Test fun aSwitchOffThatFailsKeepsTheArmOnScreenAndIsTriedAgain() {
+        val f = fake(ArmsCleanup.VIX_DIV).apply { armed = true }
+        var fail = true
+        HiddenArms.arms = fakes.values.map { x -> if (x.key == ArmsCleanup.VIX_DIV) HiddenArms.Arm(x.key, { ArmsCleanup.Now(x.key, f.armed, false) },
+            { f.calls += "off"; if (!fail) f.armed = false; emptyList() }, { "" }) else x.arm() }
+        pass()
+        assertTrue("still on: kept on screen", HiddenArms.visible(ArmsCleanup.VIX_DIV))
+        assertTrue(ArmsCleanup.VIX_DIV in HiddenArms.state.value.waiting)
+        assertTrue("and no new entry meanwhile", HiddenArms.blocks(ArmsCleanup.VIX_DIV))
+        fail = false
+        pass()
+        assertFalse(f.armed)
+        assertFalse(HiddenArms.visible(ArmsCleanup.VIX_DIV))
+        assertEquals(listOf("off", "off"), f.calls)
+    }
+
+    @Test fun anUnreadableFileIsNeverStartedOverSoNothingIsSwitched() {
+        fake(ArmsCleanup.ORB).armed = true
+        File(context.filesDir, "hidden_arms.vault").writeText("not a vault")
+        HiddenArms.reloadForTest()
+        assertTrue(runCatching { pass() }.isFailure)
+        assertTrue(fake(ArmsCleanup.ORB).calls.isEmpty())
+        assertTrue(fake(ArmsCleanup.ORB).armed)
+        assertFalse(HiddenArms.state.value.done)
     }
 
     // ---- the timeline, the restore, a restart ---------------------------------------------------------------------------------
@@ -216,8 +243,8 @@ class HiddenArmsTest : RobolectricTest() {
         orbBook(orbOpen = true)
         val orbFamily = setOf(ArmsCleanup.ORB, ArmsCleanup.ORB_FRESH, ArmsCleanup.ORB_SWEEP, ArmsCleanup.RANGE_FADE, ArmsCleanup.HERO)
         HiddenArms.arms = HiddenArms.defaultArmsForTest().filter { it.key in orbFamily }
-        // A restart restores the open position first (the watch is started on it).
-        assertTrue(runBlocking { PositionsFirst.restore() })
+        // The book read (as the start's positions step reads it first): the open call is there.
+        assertTrue(runBlocking { OrbArms.holding() })
         pass()
         // ORB keeps its switch, its Zerodha clearance and its open call: the watch keeps it as held (full cadence), its stop rests.
         val orb = orbArm("orb")

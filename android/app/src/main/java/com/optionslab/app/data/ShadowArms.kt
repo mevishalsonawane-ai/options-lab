@@ -733,6 +733,12 @@ object ShadowArms {
             rows.associate { it.variant.id to it.losses })
     }
 
+    /** Every variant's row read under the lock (waits for a pass), or null before the book can be read (15 Oct cleanup). */
+    suspend fun rowsNow(): List<Row>? {
+        if (!::file.isInitialized) return null
+        return lock.withLock { rowsOf(book()) }
+    }
+
     /** The variants that met the bar and were never put to Boss. */
     suspend fun due(): List<Row> = rows().filter { !it.promoted && !it.asked && ShadowRules.promotionDue(it.summary) }
 

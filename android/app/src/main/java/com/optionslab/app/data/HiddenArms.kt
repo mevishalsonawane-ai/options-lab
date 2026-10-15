@@ -80,8 +80,12 @@ object HiddenArms {
     /** May [key] be switched on by its switch, a voice command or an automation? Not while hidden (restore it first). */
     fun mayArm(key: String): Boolean = ArmsCleanup.mayArm(_state.value, key)
 
-    /** A gated arm (the strategy lab's paper ideas, Jarvis's trade ideas): true when it may take no new entry or idea now. */
-    fun blocks(key: String): Boolean = !ArmsCleanup.visible(_state.value, key)
+    /**
+     * May [key] take no NEW entry (or host or offer a new idea, or start a scheduled run) now? True from the moment the cleanup
+     * takes it in - also while it still holds a position and waits for its exit: that position keeps its own stop, target,
+     * trail and square-off at full cadence, but nothing new is opened (that only lowers risk). Memory only: the entry paths read it.
+     */
+    fun blocks(key: String): Boolean = key in _state.value.hidden
 
     /** The ORB family's or the expiry Hero's key for an arms' book source, or null for any other arm (Liquidity's books among them). */
     fun keyOfSource(source: String): String? = source.takeIf { it in ORB_SOURCES }
@@ -92,8 +96,12 @@ object HiddenArms {
 
     private fun load() {
         if (loaded || !ready()) return
+        val exists = file.exists()
         val text = runCatching { Vault.readFileSteady(file)?.toString(Charsets.UTF_8) }.getOrNull()
         val o = text?.let { runCatching { JSONObject(it) }.getOrNull() }
+        // Saved but unreadable (a Keystore hiccup): never start over - that would hide again what Boss restored and lose the
+        // members to restore. Nothing is switched or hidden until it reads (arms stay as they are: no risk added).
+        if (exists && o == null) error("hidden arms' file unreadable")
         _state.value = ArmsCleanup.decode(o?.optString("state"))
         ids.clear()
         o?.optJSONObject("ids")?.let { m -> m.keys().forEach { k -> m.optJSONArray(k)?.let { a -> ids[k] = (0 until a.length()).map { a.getString(it) } } } }
@@ -140,7 +148,10 @@ object HiddenArms {
     internal suspend fun passNow(): List<ArmsCleanup.Step> = lock.withLock {
         load()
         val now = arms.mapNotNull { a -> runCatching { a.now() }.getOrNull() }
-        val (next, steps) = ArmsCleanup.pass(_state.value, now)
+        val before = _state.value
+        val (next, steps) = ArmsCleanup.pass(before, now)
+        // In force at once: the gated arms read it, and each switch-off is checked against it below.
+        _state.value = next
         var s = next
         for (st in steps) {
             val label = ArmsCleanup.of(st.key)?.label ?: st.key
@@ -148,13 +159,15 @@ object HiddenArms {
                 ArmsCleanup.Action.OFF -> {
                     val arm = arms.firstOrNull { it.key == st.key }
                     val off = arm?.let { runCatching { it.off() }.getOrNull() }
-                    if (off == null) {
-                        // Not switched off (a failure): not logged as done - the next start's pass tries again.
-                        s = s.copy(logged = s.logged - st.key, wasOn = if (st.first) s.wasOn - st.key else s.wasOn)
+                    if (off != null && off.isNotEmpty()) ids[st.key] = (ids[st.key].orEmpty() + off).distinct()
+                    // Read again: still on (a failure, or only part of a family switched off) - kept on screen and waiting, not
+                    // logged as done, and tried again on the next pass ([WAIT_MS]).
+                    val after = arm?.let { runCatching { it.now() }.getOrNull() }
+                    if (off == null || after == null || after.armed) {
+                        s = s.copy(waiting = s.waiting + st.key, logged = s.logged - st.key)
                         runCatching { Diag.record("arms", "$label: the cleanup could not switch it off now; it tries again") }
                         continue
                     }
-                    if (off.isNotEmpty()) ids[st.key] = (ids[st.key].orEmpty() + off).distinct()
                     runCatching { Diag.record("arms", "$label: ${ArmsCleanup.HIDDEN_WORDS}" + if (st.first) "" else " (it had been switched on again)") }
                     if (st.first) runCatching { com.optionslab.app.ira.Autopilot.logArmHidden(st.key, label, wasOn = true) }
                 }
@@ -165,8 +178,9 @@ object HiddenArms {
                 ArmsCleanup.Action.WAIT -> runCatching { Diag.record("arms", "$label: ${ArmsCleanup.WAITING}") }
             }
         }
+        val changed = s != before
         _state.value = s
-        if (steps.isNotEmpty() || !next.done) save() else if (s != next) save()
+        if (changed || steps.isNotEmpty()) save()
         steps
     }
 
@@ -219,16 +233,17 @@ object HiddenArms {
     private fun defaultArms(): List<Arm> = listOf(ArmsCleanup.ORB, ArmsCleanup.ORB_FRESH, ArmsCleanup.ORB_SWEEP, ArmsCleanup.RANGE_FADE, ArmsCleanup.HERO)
         .map { orbArm(it) } + listOf(
         Arm(ArmsCleanup.NIGHT,
-            now = { NightArm.refresh().let { v -> ArmsCleanup.Now(ArmsCleanup.NIGHT, v.armed, v.open.isNotEmpty()) } },
+            now = { if (!NightArm.readyForCleanup()) null else NightArm.refresh().let { v -> ArmsCleanup.Now(ArmsCleanup.NIGHT, v.armed, v.open.isNotEmpty()) } },
             off = { NightArm.setArmed(false); emptyList() },
             on = { NightArm.setArmed(true) }),
         Arm(ArmsCleanup.VIX_DIV,
-            now = { VixDivArm.refresh().let { v -> ArmsCleanup.Now(ArmsCleanup.VIX_DIV, v.armed, v.open.isNotEmpty()) } },
+            now = { if (!VixDivArm.readyForCleanup()) null else VixDivArm.refresh().let { v -> ArmsCleanup.Now(ArmsCleanup.VIX_DIV, v.armed, v.open.isNotEmpty()) } },
             off = { VixDivArm.setArmed(false); emptyList() },
             on = { VixDivArm.setArmed(true) }),
         // The strategy lab's paper ideas: no switch of their own - a gate ([blocks]) stops new entries and new ideas being hosted.
         Arm(ArmsCleanup.FORGE,
-            now = { GrammarArm.refresh().let { v -> ArmsCleanup.Now(ArmsCleanup.FORGE, !blocks(ArmsCleanup.FORGE) && v.active.isNotEmpty(), v.ideas.any { it.open != null }) } },
+            now = { if (!GrammarArm.readyForCleanup()) null else GrammarArm.refresh().let { v ->
+                ArmsCleanup.Now(ArmsCleanup.FORGE, !blocks(ArmsCleanup.FORGE) && v.active.isNotEmpty(), v.ideas.any { it.open != null }) } },
             off = { emptyList() },
             on = { "its paper ideas trade again" }),
         // Pine scripts that place orders (alerts-only scripts never trade and are left as they are).
@@ -248,8 +263,7 @@ object HiddenArms {
         // Research shadows Boss re-armed on paper (the shadows themselves keep recording: no orders).
         Arm(ArmsCleanup.SHADOW,
             now = {
-                val rows = ShadowArms.rows()
-                ArmsCleanup.Now(ArmsCleanup.SHADOW, rows.any { it.armed }, rows.any { r -> r.trades.any { it.open && it.paper } })
+                ShadowArms.rowsNow()?.let { rows -> ArmsCleanup.Now(ArmsCleanup.SHADOW, rows.any { it.armed }, rows.any { r -> r.trades.any { it.open && it.paper } }) }
             },
             off = { ShadowArms.rows().filter { it.armed }.map { r -> ShadowArms.disarm(r.variant.id); r.variant.id } },
             on = { ids -> ids.map { ShadowArms.promote(it) }.lastOrNull() ?: "nothing to re-arm" }),
@@ -257,13 +271,17 @@ object HiddenArms {
         Arm(ArmsCleanup.BASKETS,
             now = { Strategies.all().let { l -> ArmsCleanup.Now(ArmsCleanup.BASKETS, l.any { it.def.scheduler?.enabled == true }, l.any { it.running }) } },
             off = {
+                val auto = Strategies.automatic()
                 Strategies.all().filter { it.def.scheduler?.enabled == true }.mapNotNull { e ->
                     val mode = e.def.scheduler?.defaultMode ?: com.optionslab.engine.strategy.RunMode.SANDBOX
-                    e.def.id.toString().takeIf { Strategies.setArmed(e.def.id, false, mode) == null }
+                    // "id:auto" or "id:approve": a restore brings it back with the same choice.
+                    "${e.def.id}:${if (auto[e.def.id] ?: (mode != com.optionslab.engine.strategy.RunMode.LIVE)) "auto" else "approve"}"
+                        .takeIf { Strategies.setArmed(e.def.id, false, mode) == null }
                 }
             },
             // Back on paper only, whatever they were armed for (a live schedule is armed again by Boss with the PIN).
-            on = { ids -> ids.mapNotNull { it.toLongOrNull() }.mapNotNull { Strategies.setArmed(it, true, com.optionslab.engine.strategy.RunMode.SANDBOX) }
+            on = { ids -> ids.mapNotNull { m -> m.substringBefore(':').toLongOrNull()?.let { it to (m.substringAfter(':', "auto") != "approve") } }
+                .mapNotNull { (id, automatic) -> Strategies.setArmed(id, true, com.optionslab.engine.strategy.RunMode.SANDBOX, automatic) }
                 .firstOrNull() ?: "its strategies start on their schedules again, on paper" }),
         // Jarvis's own news and pattern trade ideas (asked, or taken on paper by himself): a gate ([blocks]); the news is still told.
         Arm(ArmsCleanup.JARVIS,

@@ -763,6 +763,9 @@ object OrbArms {
         (b.armed[source] == true) to b.positions.any { it.arm == source && it.open }
     }
 
+    /** What an arm hidden by Boss's 15 Oct cleanup says instead of entering. */
+    const val HIDDEN_NO_ENTRY = "hidden (your 15 Oct cleanup): no new entry; an open position keeps its own exits"
+
     /** [source]'s automatic / approve choice as the book keeps it (a restore puts it back with it). */
     suspend fun autoOf(source: String): Boolean = lock.withLock { book().auto[source] != false }
 
@@ -1800,6 +1803,8 @@ object OrbArms {
 
     /** [live] is decided once by the caller, so the account cannot change between the check and the order. */
     private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, live: Boolean): String {
+        // 15 Oct (Boss's cleanup): a hidden arm opens nothing new, even while its last position runs to its exit (memory only).
+        HiddenArms.keyOfSource(arm.source)?.let { k -> if (HiddenArms.blocks(k)) return HIDDEN_NO_ENTRY }
         // Order speed: the arm decided here (timing only; nothing about the decision changes).
         runCatching { OrderTiming.decided() }
         // The live recording's market snapshot at the signal (a queue add; nothing about the decision changes).
@@ -2128,6 +2133,8 @@ object OrbArms {
      */
     private suspend fun heroCycle(b: Book, t: LocalDateTime): String {
         val src = HeroRules.ARM.source
+        // 15 Oct (Boss's cleanup): hidden, the expiry Hero takes no new ticket (memory only; its open one keeps its exits).
+        if (HiddenArms.blocks(ArmsCleanup.HERO)) return HIDDEN_NO_ENTRY
         val day = t.toLocalDate()
         val spent = b.decided.getOrPut("$src|$day") { HashSet() }
         if (HERO_STOOD_DOWN in spent) return HERO_STOOD_DOWN

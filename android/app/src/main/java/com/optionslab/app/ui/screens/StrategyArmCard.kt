@@ -146,8 +146,8 @@ internal fun StrategyArmContent(
 ) {
     val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
-    val list = if (basketsVisible) all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) } else emptyList()
-    val replaced = all.size - list.size
+    val list = all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) && (basketsVisible || it.running || pending.containsKey(it.def.id)) }
+    val replaced = all.count { com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) }
     var importing by remember { mutableStateOf(false) }
     // Arming asks how orders should go out; a live choice is then confirmed with the PIN or fingerprint.
     var choosing by remember { mutableStateOf<com.optionslab.engine.strategy.StrategyDef?>(null) }

@@ -79,6 +79,9 @@ object VixDivArm {
 
     private fun ready() = ::file.isInitialized
 
+    /** Its book can be read now (15 Oct cleanup: a read before that counts as "holding", so nothing is switched off on it). */
+    fun readyForCleanup(): Boolean = ready()
+
     private fun book(): Book {
         cache?.let { return it }
         val b = Book()
@@ -241,6 +244,8 @@ object VixDivArm {
 
     /** The check's decision for [u] at [now]. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): Decision {
+        // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds still closes by its own exits (memory only).
+        if (HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)) return Decision(false, "hidden (your 15 Oct cleanup): no new entry")
         val minute = minuteOf(now)
         if (minute < VixDivRules.CHECKS.first()) return Decision(false, "waiting for the 10:30 check")
         val today = now.toLocalDate()

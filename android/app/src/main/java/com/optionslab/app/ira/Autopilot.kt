@@ -369,9 +369,9 @@ internal object Autopilot {
                 val key = c.target.removePrefix(AutoChange.HIDE)
                 if (!c.target.startsWith(AutoChange.HIDE) || !com.optionslab.engine.orb.ArmsCleanup.covers(key)) return null
                 when (c.to) {
-                    AutoChange.HIDDEN -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.hideAgain(key) }
+                    AutoChange.HIDDEN -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.hideAgain(key) }.takeIf { it.contains("hidden again") }
                     AutoChange.ON, AutoChange.SWITCHED_OFF, AutoChange.RESTORED ->
-                        kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.restore(key, log = false) }.takeIf { !it.contains("not hidden") }
+                        kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.restore(key, log = false) }.takeIf { it.contains("is back on its row") }
                     else -> null
                 }
             }

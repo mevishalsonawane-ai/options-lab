@@ -73,6 +73,9 @@ object NightArm {
 
     private fun ready() = ::file.isInitialized
 
+    /** Its book can be read now (15 Oct cleanup: a read before that counts as "holding", so nothing is switched off on it). */
+    fun readyForCleanup(): Boolean = ready()
+
     private fun book(): Book {
         cache?.let { return it }
         val b = Book()
@@ -259,6 +262,8 @@ object NightArm {
 
     /** 15:20's decision for [u]: what it did, in a few words. Records the day's build-up once. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): String {
+        // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds is still sold at 09:16 (memory only).
+        if (HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.NIGHT)) return "hidden (your 15 Oct cleanup): no new entry"
         val today = now.toLocalDate()
         // The index's minutes to 15:19, and the previous session's close.
         val key = Upstox.INDEX_KEYS[u] ?: return "night_no_index_data"

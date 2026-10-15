@@ -81,6 +81,8 @@ internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Uni
             ExplainedName(HeroTicketRules.LABEL, heroTicketExplanation(v), extra = { HeroTicketControls(v, onTarget, onStart) })
             Text(if (v.armed) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
+            // An open ticket, at a glance (its symbol, entry and mark are in the dialog).
+            if (v.open.isNotEmpty()) RowBadge("HOLDING ${v.open.size} · PAPER", p.verdigris, Modifier.padding(top = 2.dp))
             Text(keepNumbersWhole(heroTicketPnlLine(v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
         }
         Switch(

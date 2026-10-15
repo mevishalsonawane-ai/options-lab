@@ -99,6 +99,9 @@ object GrammarArm {
 
     private fun ready() = ::file.isInitialized
 
+    /** Its book can be read now (15 Oct cleanup: a read before that counts as "holding", so nothing is switched off on it). */
+    fun readyForCleanup(): Boolean = ready()
+
     /** The lab's switch (the strategy lab's builds only; never in IraGoldAlgo). */
     fun enabled(): Boolean = VariantRunner.enabled()
 
