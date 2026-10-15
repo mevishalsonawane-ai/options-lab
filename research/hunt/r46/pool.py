@@ -99,6 +99,7 @@ def option_pool_day(day: D.OptDay, spot_open: pd.Series, typ: str, exits: dict[s
             out.append(pd.DataFrame(dict(
                 entry=R.entry, expiry=day.E, side=typ, mode=mode, exit=name, ok=m, strike=R.strike,
                 fill_ts=day.grid[np.clip(fi, 0, G - 1)], exit_ts=exit_ts, mid=mid, buy=buy, sell=sell, spot=s_fill,
+                spot_out=s_out,                     # amendment 1 (15 Oct): lets the costs be re-done per broker
                 reason=why, peak=peak, gross=gross, fees=fees, net=net, tax=tax, net_after=net - tax,
                 tds=K.TDS * sell * q)))
     return pd.concat(out, ignore_index=True)
