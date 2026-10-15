@@ -1,0 +1,43 @@
+id: r61-v6
+title: 'R61 Solo 3.0 V6: meta-labeller over S1-S4, boosted trees depth 3, A2 + Greeks + context (no option-chain block); take
+  score >= training 70th percentile, 1 a day'
+family: ml
+date: '2026-10-15'
+doc: research/HUNT_R61_SOLO_3.md
+hypothesis: 'An expanded, pre-listed feature set that knows OI, PCR, max pain, OI walls, IV / IV rank / skew / term, VIX rank,
+  Greeks, GEX / gamma flip, basis, value area, events and FII positioning picks Solo''s paper trades (S1-S4, at most one a
+  day, NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY) better out of sample than A2''s 29 features (gates: final net > 0, twin
+  p < 0.05, BH q <= 0.10 over 7, 40+ trades, top-5 < net, design WF > 0; replaces Solo 2.0 only if it also beats V1 on net,
+  AUC, paired-day bootstrap p < 0.10 and net without MIDCPNIFTY).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK files with OI/IV/volume,
+  NIFTY MONTH for term structure, NSE participant OI), 20 Nov 2024 onwards; copied 15 Oct 2026 (last session 14 Oct NIFTY
+  / BANKNIFTY, 13 Oct FINNIFTY / MIDCPNIFTY)
+period:
+  design: 21 Nov 2024 - 31 Mar 2026 (purged walk-forward, monthly refits, 1-session embargo, test months Jul 2025 - Mar 2026)
+  holdout: '1 Apr 2026 - the lake''s last session, read once (NOT fresh: R57 read it for A2 with the same setups)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the underlying index (setups S1-S4); option-chain data as context / filters only'
+- A2's 29 + GK + CX
+model_or_rule: boosted trees depth 3, A2 + Greeks + context (no option-chain block)
+settings: research/hunt/r61/PREREG.md section 5; research/hunt/r61/r61cfg.py VARIANTS
+prereg: research/hunt/r61/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design walk-forward (Jul 2025 - Mar 2026): 152 trades, win 57%, net Rs +28,069, max DD Rs 19,661; AUC walk-forward
+    0.5181 vs random split 0.5836 (leaky). Final test (1 Apr - 14 Oct 2026, read once, not fresh): 120 trades, win 57%, net
+    Rs +50,878 (Rs +424/trade), at 2x costs Rs +35,660, max DD Rs 18,824, worst day Rs -5,194, months green 5/7, top-5 share
+    0.628, AUC 0.5301; twin p 0.002, BH q 0.0028 (7 variants), selection-twin p 0.01; net without MIDCPNIFTY Rs +34,658. Per
+    index: BANKNIFTY 24 / Rs +19,481, FINNIFTY 26 / Rs +14,119, MIDCPNIFTY 34 / Rs +16,220, NIFTY 36 / Rs +1,058. Gates: PASS.
+    Did not replace Solo 2.0: the pre-registered candidate was V3 (best design net); vs V1 on the same final days its net
+    and AUC were lower and the paired-day bootstrap p was 0.9717.'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills doubled on stops, next-minute fills, one held contract,
+    1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Passed the R47-R60 gates but did not beat Solo 2.0 (V1) out of sample, so it is not adopted (PREREG section 8). Signal
+  source: the underlying index (S1-S4); every R61 input is context only.'
