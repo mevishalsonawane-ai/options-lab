@@ -440,6 +440,8 @@ Later (when profitable):
   Jan 2024 to now, DVOL; branch claude/crypto-options-lake, merged). One session refreshes the crypto brain on the full
   crypto lake, then runs the crypto part of the factory (branch claude/f1-crypto-factory). Still filling: Dhan stock options
   (paced under Dhan's rate limit) and 13-14 Oct index data, on the renewed token (claude/data-lake-gdrive).
+- W2 (15 Oct) Dhan lake fill paused: the Dhan token expired mid-fetch. Index data to 13/14 Oct, stock options to
+  14 Oct (ATM 99.4%, ATM±2 23%, ATM±3..5 0%). Resume with lake_fetch --only-missing once Boss sets a fresh token.
 
 ## C. Crypto Data Brain (owner, 2026-10-13: "the same model ... for crypto")
 Built 13 Oct: `research/brain/crypto` (README there), study `research/CRYPTO_C1_PREDICTABILITY.md`. Research only;
