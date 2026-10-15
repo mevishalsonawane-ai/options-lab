@@ -98,9 +98,11 @@ object SignalTesterHost {
         val follow: Reading.FollowUp? = null, val link: String? = null, val claim: Boolean? = null,
         val expiry: LocalDate? = null, val symbol: String? = null, val key: String? = null, val lot: Int? = null,
         val checked: Boolean = false, val result: CallEval.Result? = null, val twins: List<Double> = emptyList(), val unpriced: String? = null,
+        val twinsDone: Boolean = false,
     ) {
-        /** Nothing more to price: not a call, a call that could not be priced, or its result is final. */
-        val final: Boolean get() = kind != CALL || unpriced != null || result?.status in FINAL
+        /** Nothing more to price: not a call, a call that could not be priced, or its result is final (a finished trade's twins in). */
+        val final: Boolean get() = kind != CALL || unpriced != null ||
+            (result?.status in FINAL && (result?.status != CallEval.Status.DONE || twinsDone))
         val sourceWords: String get() = when (source) {
             SHARED -> "shared (time approximate)"; PASTED -> "pasted" + if (approx) " (time approximate)" else ""; IMPORTED -> "imported"; else -> "notification"
         }
@@ -181,6 +183,7 @@ object SignalTesterHost {
             r.draft?.let { put("d", draftJson(it)) }; r.follow?.let { put("f", followJson(it)) }; r.link?.let { put("link", it) }; r.claim?.let { put("claim", it) }
             r.expiry?.let { put("exp", it.toString()) }; r.symbol?.let { put("sym", it) }; r.key?.let { put("key", it) }; r.lot?.let { put("lot", it) }
             r.result?.let { put("res", resultJson(it)) }; if (r.twins.isNotEmpty()) put("tw", JSONArray(r.twins)); r.unpriced?.let { put("unpriced", it) }
+            if (r.twinsDone) put("twd", true)
         }
 
     private fun strs(a: JSONArray?): List<String> = a?.let { (0 until it.length()).map { i -> it.getString(i) } }.orEmpty()
@@ -192,7 +195,8 @@ object SignalTesterHost {
         o.optString("link").ifEmpty { null }, if (o.has("claim")) o.getBoolean("claim") else null,
         o.optString("exp").ifEmpty { null }?.let { LocalDate.parse(it) }, o.optString("sym").ifEmpty { null }, o.optString("key").ifEmpty { null },
         if (o.has("lot")) o.getInt("lot") else null, o.optBoolean("checked"), resultOf(o.optJSONObject("res")),
-        o.optJSONArray("tw")?.let { a -> (0 until a.length()).map { a.getDouble(it) } }.orEmpty(), o.optString("unpriced").ifEmpty { null })
+        o.optJSONArray("tw")?.let { a -> (0 until a.length()).map { a.getDouble(it) } }.orEmpty(), o.optString("unpriced").ifEmpty { null },
+        o.optBoolean("twd"))
 
     private fun log(): Log {
         cache?.let { return it }
@@ -219,7 +223,11 @@ object SignalTesterHost {
     }
 
     private fun save(l: Log) {
-        while (l.recs.size > KEEP) l.recs.removeAt(0)
+        if (l.recs.size > KEEP) {
+            // The oldest by their own time go first (an import of last year never pushes out this week's live calls).
+            val drop = l.recs.sortedBy { it.at }.take(l.recs.size - KEEP).map { it.id }.toSet()
+            l.recs.removeAll { it.id in drop }
+        }
         val f = file
         if (f != null) runCatching {
             val o = JSONObject().put("on", l.on).put("listen", l.listen).put("allow", JSONArray(l.allow)).put("delay", l.delaySec).put("validity", l.validityMin)
@@ -316,11 +324,16 @@ object SignalTesterHost {
         }
     }
 
-    /** A new reaction delay or window: every priced call is priced again by the next round. */
+    /**
+     * A new reaction delay or window: the calls whose option can still be read (its expiry not past) are priced again by the
+     * next rounds; an expired one keeps the result it was priced with (its prices cannot be read again from the free feed).
+     */
     private fun reprice(l: Log) {
+        val today = runCatching { Market.today() }.getOrDefault(LocalDate.now())
         for (i in l.recs.indices) {
             val r = l.recs[i]
-            if (r.kind == CALL && r.result != null) l.recs[i] = r.copy(result = null, twins = emptyList())
+            val readable = r.expiry == null || !r.expiry.isBefore(today)
+            if (r.kind == CALL && r.result != null && readable) l.recs[i] = r.copy(result = null, twins = emptyList(), twinsDone = false)
         }
     }
 
@@ -371,7 +384,8 @@ object SignalTesterHost {
      * One message into the log (tests call it directly). Dropped unless the tester is on and [title] is allow-listed; a repeat of
      * the same text from the same channel within 3 minutes is dropped. Returns the records made.
      */
-    internal fun ingest(title: String, text: String, at: LocalDateTime, source: String, approx: Boolean = false, edited: Boolean = false): List<Rec> = synchronized(lock) {
+    internal fun ingest(title: String, text: String, at: LocalDateTime, source: String, approx: Boolean = false, edited: Boolean = false,
+                        persist: Boolean = true): List<Rec> = synchronized(lock) {
         val l = log()
         if (!l.on) return emptyList()
         val key = channelOf(title, l.allow.map { norm(it) }.toSet()) ?: return emptyList()
@@ -384,8 +398,10 @@ object SignalTesterHost {
         val out = if (CallReader.needsModel(rules)) listOf(base)
         else finish(l, base, CallReader.understand(body, at.toLocalDate()))
         l.recs += out
-        save(l)
-        if (out.any { it.kind == PENDING }) kickModel()
+        if (persist) {
+            save(l)
+            if (out.any { it.kind == PENDING }) kickModel()
+        }
         out
     }
 
@@ -437,9 +453,10 @@ object SignalTesterHost {
         val todo = synchronized(lock) { log().recs.filter { it.kind == PENDING } }
         if (todo.isEmpty()) return 0
         val m = model()
-        if (m != null && holding()) return 0
         var n = 0
         for (r in todo) {
+            // Positions first: a position or order opening mid-pass stops it at once (the rest wait for the next pass).
+            if (m != null && holding()) break
             val text = r.text ?: continue
             val ex = synchronized(lock) { log().examples[r.channel].orEmpty().toList() }
             val reply = if (m == null) null else withTimeoutOrNull(CallModel.TIMEOUT_MS + 2_000) { runCatching { m(CallModel.prompt(text, ex)) }.getOrNull() }
@@ -477,7 +494,8 @@ object SignalTesterHost {
             while (xs.size > MAX_EXAMPLES) xs.removeAt(0)
         }
         l.recs[i] = if (d == null) r.copy(kind = NOT, text = null, reason = "not a call (you said so)", by = "you", unsure = emptyList(), draft = null)
-        else r.copy(kind = CALL, draft = d, by = "you", confidence = 1.0, unsure = emptyList(), follow = null, checked = false, result = null)
+        // Boss's reading counts as he confirmed it: it is not sent back by the reality check.
+        else r.copy(kind = CALL, draft = d, by = "you", confidence = 1.0, unsure = emptyList(), follow = null, checked = true, result = null, twins = emptyList(), twinsDone = false)
         save(l)
         if (d == null) "Marked as not a call." else "Confirmed: ${d.line()}. It is tested from the next round ($NOTE)."
     }
@@ -533,8 +551,11 @@ object SignalTesterHost {
         var calls = 0; var all = 0
         for (c in ok) for (m in c.messages) {
             all++
-            calls += ingest(c.name, m.text, m.at, IMPORTED, edited = m.edited).count { it.kind == CALL || it.kind == PENDING || it.kind == REVIEW }
+            calls += ingest(c.name, m.text, m.at, IMPORTED, edited = m.edited, persist = false).count { it.kind == CALL || it.kind == PENDING || it.kind == REVIEW }
         }
+        // One write of the log for the whole file, then the model's queue.
+        val pending = synchronized(lock) { log().let { l -> save(l); l.recs.any { it.kind == PENDING } } }
+        if (pending) kickModel()
         return "Imported $all messages from ${ok.joinToString(", ") { it.name }}: $calls look like calls. Past calls are priced only where the phone can still " +
             "read their option's prices (expired contracts cannot be read from the free feed)."
     }
@@ -542,7 +563,7 @@ object SignalTesterHost {
     // ---- the round (Jarvis's words lane) ---------------------------------------------------------------------------------------
 
     /** TEST SEAM: a day's 1-minute bars of an instrument key (an index as "INDEX:<name>"). */
-    @Volatile internal var testBars: ((String, LocalDate) -> List<Bar>)? = null
+    @Volatile internal var testBars: ((String, LocalDate) -> List<Bar>?)? = null
     /** TEST SEAM: the contracts the phone holds. */
     @Volatile internal var testContracts: List<Upstox.Contract>? = null
 
@@ -557,12 +578,19 @@ object SignalTesterHost {
     /** One round at [now] (tests call it directly): the model's queue, each live call priced, follow-up claims, verdicts. */
     internal suspend fun round(now: LocalDateTime) {
         if (synchronized(lock) { log().recs.any { it.kind == PENDING } }) kickModel()
-        val todo = synchronized(lock) { log().recs.filter { !it.final } }.sortedByDescending { it.at }.take(MAX_LIVE)
+        val todo = synchronized(lock) { log().recs.filter { !it.final && !waitingForTheClose(it, now) } }.sortedByDescending { it.at }.take(MAX_LIVE)
         val bars = HashMap<String, List<Bar>>()
         for (r in todo) runCatching { price(r, now, bars) }
-        claims(now, bars)
+        runCatching { claims(now, bars) }
         verdicts()
     }
+
+    /** [r]'s day is over by [now] (F&O closed, or a later day): its prices are final. */
+    private fun dayOver(r: Rec, now: LocalDateTime): Boolean =
+        r.at.toLocalDate().isBefore(now.toLocalDate()) || !now.toLocalTime().isBefore(com.optionslab.engine.NseHours.foCloseTime(r.at.toLocalDate()))
+
+    /** A finished shadow trade waits for the close: its random-entry twins need the whole day's prices. */
+    private fun waitingForTheClose(r: Rec, now: LocalDateTime): Boolean = r.result?.status == CallEval.Status.DONE && !r.twinsDone && !dayOver(r, now)
 
     private fun contracts(u: String): List<Upstox.Contract>? = testContracts?.filter { it.underlying == u } ?: runCatching {
         val saved = if (u == Paper.BFO_UNDERLYING) Market.cachedBfoContracts() else Market.cachedContracts()
@@ -588,9 +616,9 @@ object SignalTesterHost {
         val day = r.at.toLocalDate()
         val today = day == now.toLocalDate()
         if (r.key == null) {
-            val list = contracts(u)
-            if (list == null && today) return     // the list is not read yet: the next round
-            if (list.isNullOrEmpty()) { update(r) { it.copy(unpriced = "the phone has no contract list for $u") }; return }
+            // The list not read yet (a restart, offline): the next round. An empty one: the phone has none for it.
+            val list = contracts(u) ?: return
+            if (list.isEmpty()) { update(r) { it.copy(unpriced = "the phone has no contract list for $u") }; return }
             val exp = d.expiry ?: CallCheck.nearestExpiry(day, list.map { it.expiry })
             val c = list.firstOrNull { it.expiry == exp && it.strike == d.strike && it.right == d.right }
             if (c == null) {
@@ -602,8 +630,9 @@ object SignalTesterHost {
         }
         val key = r.key ?: return
         val at = if (today) now else day.atTime(15, 45)
-        val opt = cache.getOrPut("$key|$day") { bars(key, day, at) }
-        val idx = cache.getOrPut("INDEX:$u|$day") { indexBars(u, day, at) }
+        // A failed read is tried again next round (never "no data" for a network blip).
+        val opt = cache["$key|$day"] ?: (bars(key, day, at) ?: return).also { cache["$key|$day"] = it }
+        val idx = cache["INDEX:$u|$day"] ?: (indexBars(u, day, at) ?: return).also { cache["INDEX:$u|$day"] = it }
         if (!r.checked) {
             val spot = idx.lastOrNull { !it.start.plusMinutes(1).isAfter(r.at) }?.close ?: idx.firstOrNull()?.open
             if (spot == null && today && now.isBefore(r.at.plusMinutes(5))) return
@@ -615,11 +644,14 @@ object SignalTesterHost {
         val setup = CallEval.Setup(r.at, u, d.right ?: Right.CE, d.trig, d.trigger, d.triggerHigh, d.stopLevel, d.targets, r.lot ?: 1, r.expiry == day, trading)
         val set = synchronized(lock) { log().let { CallEval.Settings(it.delaySec, it.validityMin) } }
         val res = CallEval.evaluate(setup, opt, idx, at, set)
-        val twins = if (res.status == CallEval.Status.DONE) CallEval.twins(setup, res, opt, r.id + r.channel) else emptyList()
-        update(r0) { it.copy(checked = true, result = res, twins = twins) }
+        // The twins once the day is over (a random minute after now has no price yet).
+        val twinsNow = res.status == CallEval.Status.DONE && dayOver(r, now)
+        val twins = if (twinsNow) CallEval.twins(setup, res, opt, r.id + r.channel) else emptyList()
+        update(r0) { it.copy(checked = true, result = res, twins = twins, twinsDone = twinsNow) }
     }
 
-    private suspend fun bars(key: String, day: LocalDate, at: LocalDateTime): List<Bar> {
+    /** [key]'s finished minutes of [day] by [at], or null when the read failed (tried again next round). */
+    private suspend fun bars(key: String, day: LocalDate, at: LocalDateTime): List<Bar>? {
         testBars?.let { return it(key, day) }
         val nowSec = at.atZone(com.optionslab.engine.IST).toEpochSecond()
         val raw = runCatching {
@@ -627,30 +659,38 @@ object SignalTesterHost {
                 val feed = Net.intradayQuick(key).filter { it.istDate == day && it.epochSecond + 60 <= nowSec }
                 runCatching { LocalCandles.overlay(key, feed, nowSec) }.getOrDefault(feed)
             } else Net.history(key, day, day, tries = 2)
-        }.getOrDefault(emptyList())
+        }.getOrNull() ?: return null
         return raw.filter { it.istDate == day && it.epochSecond + 60 <= nowSec }
             .map { Bar(it.istDate.atTime(it.istMinute / 60, it.istMinute % 60), it.open, it.high, it.low, it.close) }.sortedBy { it.start }.distinctBy { it.start }
     }
 
-    private suspend fun indexBars(u: String, day: LocalDate, at: LocalDateTime): List<Bar> {
+    private suspend fun indexBars(u: String, day: LocalDate, at: LocalDateTime): List<Bar>? {
         testBars?.let { return it("INDEX:$u", day) }
-        if (day == Market.today()) return runCatching { PassedArmsHost.indexBars(u, at) }.getOrDefault(emptyList())
+        if (day == Market.today()) return runCatching { PassedArmsHost.indexBars(u, at) }.getOrNull()
         val key = runCatching { ChartFeed.instrumentKey(u) }.getOrNull() ?: return emptyList()
         return bars(key, day, at)
     }
 
-    /** Each target or stop follow-up checked once against its call's prices: was it true? */
-    private fun claims(now: LocalDateTime, cache: Map<String, List<Bar>>) {
+    /** Each target or stop follow-up checked once against its call's prices: was it true? A few option reads a round at most. */
+    private suspend fun claims(now: LocalDateTime, cache: MutableMap<String, List<Bar>>) {
         val todo = synchronized(lock) {
             val l = log()
             l.recs.filter { it.kind == FOLLOW && it.claim == null && it.link != null && it.follow?.kind in setOf(Follow.TARGET, Follow.STOP) }
                 .mapNotNull { f -> l.recs.firstOrNull { it.id == f.link }?.let { c -> f to c } }
         }
+        var reads = 0
         for ((f, c) in todo) {
             val d = c.draft ?: continue
             val fillAt = c.result?.fillAt ?: continue
-            val bars = cache["${c.key}|${c.at.toLocalDate()}"] ?: continue
-            val ok = CallReader.claimTrue(f.follow!!, d, bars, fillAt, f.at) ?: continue
+            val key = c.key ?: continue
+            val day = c.at.toLocalDate()
+            val k = "$key|$day"
+            val bs = cache[k] ?: run {
+                if (reads >= 4) return@run null
+                reads++
+                bars(key, day, if (day == now.toLocalDate()) now else day.atTime(15, 45))?.also { cache[k] = it }
+            } ?: continue
+            val ok = CallReader.claimTrue(f.follow!!, d, bs, fillAt, f.at) ?: continue
             update(f) { it.copy(claim = ok) }
         }
     }

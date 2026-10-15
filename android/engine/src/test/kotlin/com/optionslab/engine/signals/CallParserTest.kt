@@ -136,6 +136,14 @@ class CallParserTest {
         assertEquals(Trig.ZONE, Trig.of("near")); assertEquals(Trig.ABOVE, Trig.of(null))
     }
 
+    @Test fun commasGroupAStrikeButSeparateAList() {
+        val d = call("NIFTY 25000 CE above 280 SL 250 Tgt 310,345,400").draft
+        assertEquals(listOf(310.0, 345.0, 400.0), d.targets)
+        assertEquals(listOf(310.0, 345.0), call("NIFTY 25000 CE above 280 Tgt 310, 345").draft.targets)
+        assertEquals(73100.0, call("SENSEX 73,100CE above 280").draft.strike)
+        assertEquals(102500.0, call("SENSEX 1,02,500 PE above 280").draft.strike)
+    }
+
     @Test fun aSellOnlyWithoutABuy() {
         assertIs<Reading.NotACall>(one("short NIFTY 25000 PE at 80"))
         // "Sell" inside a buy call (sell at the target) does not make it a sell call.

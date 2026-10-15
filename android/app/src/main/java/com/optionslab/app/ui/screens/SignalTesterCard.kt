@@ -66,7 +66,7 @@ internal fun SignalTesterCard() {
     val importer = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) io {
             val bytes = ctx.contentResolver.openInputStream(uri)?.use { s -> readAtMost(s, MAX_IMPORT + 1) } ?: return@io "That file could not be read."
-            if (bytes.size > MAX_IMPORT) "That file is over 40 MB: export one chat only (JSON, no media)."
+            if (bytes.size > MAX_IMPORT) "That file is over 10 MB: export one chat only (JSON, no media), or a shorter period."
             else SignalTesterHost.importExport(String(bytes, Charsets.UTF_8))
         }
     }
@@ -86,7 +86,7 @@ internal fun SignalTesterCard() {
     ))
 }
 
-private const val MAX_IMPORT = 40 * 1024 * 1024
+private const val MAX_IMPORT = 10 * 1024 * 1024
 
 /** Up to [max] bytes of [s] (a longer file stops there: the caller refuses it). */
 internal fun readAtMost(s: java.io.InputStream, max: Int): ByteArray {

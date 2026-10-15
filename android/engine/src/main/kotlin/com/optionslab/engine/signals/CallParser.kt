@@ -100,13 +100,15 @@ object CallParser {
         rx("\\bcost\\s+to\\s+cost\\b") to "ctc", rx("\\bsq(?:uare)?\\s?-?\\s?off\\b") to "exit",
     )
 
+    private val GROUPED_STRIKE = rx("\\b\\d{1,3}(?:,\\d{2})*,\\d{3}(?=\\s?(?:ce|pe|calls?|puts?)(?![a-z]))")
+
     /** [raw] lower-cased, Hindi and emojis read, numbers joined ("73,100" -> 73100), times and stray symbols dropped. */
     internal fun normalize(raw: String): String {
         var s = raw
         for ((a, b) in WORDS) s = s.replace(a, b)
         s = s.lowercase(Locale.ROOT)
-        // Indian and Western digit grouping: 73,100 and 1,00,000.
-        repeat(3) { s = s.replace(rx("(\\d),(\\d{2,3})(?!\\d)"), "$1$2") }
+        // Digit grouping only in a strike ("73,100 CE", "1,02,500 PE"): elsewhere a comma separates numbers ("tgt 310,345,400").
+        s = s.replace(GROUPED_STRIKE) { m -> m.value.replace(",", "") }
         // A clock time is never a price; ordinals lose their suffix ("1st target", "16th oct").
         s = s.replace(rx("\\b\\d{1,2}[:.]\\d{2}(?::\\d{2})?\\s?(?:am|pm)\\b"), " ").replace(rx("\\b\\d{1,2}:\\d{2}(?::\\d{2})?\\b"), " ")
         s = s.replace(rx("\\b(\\d+)(?:st|nd|rd|th)\\b"), "$1")

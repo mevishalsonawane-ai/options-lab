@@ -101,6 +101,10 @@ class SignalTesterHostTest : RobolectricTest() {
         assertEquals("SENSEX-SIG-CE", mid.symbol); assertEquals(20, mid.lot); assertTrue(mid.checked)
         assertEquals(CallEval.Status.OPEN, mid.result!!.status)
         assertEquals(at(9, 29), mid.result!!.fillAt)
+        // 10:00: every variant out (400 reached at 09:49), but the twins wait for the close (they need the whole day).
+        clock(at(10, 0)); runBlocking { SignalTesterHost.round(at(10, 0)) }
+        val out = SignalTesterHost.view.value.recs.single()
+        assertEquals(CallEval.Status.DONE, out.result!!.status); assertTrue(out.twins.isEmpty()); assertFalse(out.final)
         // A restart mid-call: the log is read back and the round goes on from the bars.
         SignalTesterHost.resetForTest()
         SignalTesterHost.testBars = { k, d -> bars(k, d) }
@@ -129,12 +133,28 @@ class SignalTesterHostTest : RobolectricTest() {
         clock(at(9, 40)); runBlocking { SignalTesterHost.round(at(9, 40)) }
         val r = SignalTesterHost.view.value.review.single()
         assertTrue(r.unsure.single().contains("not on SENSEX's grid"))
+        // Boss confirms it as written: it counts, and the next round does not send it back.
+        SignalTesterHost.confirm(r.id, r.draft)
+        runBlocking { SignalTesterHost.round(at(9, 41)) }
+        assertEquals(SignalTesterHost.CALL, SignalTesterHost.view.value.recs.single { it.id == r.id }.kind)
         val n = SignalTesterHost.ingest("BN Pro", "Good morning traders, big day today", at(9, 41), SignalTesterHost.PASTED).single()
         assertEquals(SignalTesterHost.NOT, n.kind); assertNull(n.text); assertTrue(n.reason!!.startsWith("chatter"))
         // A contract the phone has no list for: not priced, said why.
         SignalTesterHost.ingest("BN Pro", "BANKEX 62000 CE above 300 tgt 350", at(9, 42), SignalTesterHost.PASTED)
         runBlocking { SignalTesterHost.round(at(9, 43)) }
         assertEquals("the phone has no contract list for BANKEX", SignalTesterHost.view.value.recs.last { it.draft?.underlying == "BANKEX" }.unpriced)
+    }
+
+    @Test fun aFailedPriceReadIsTriedAgainNeverNoData() {
+        on("Sensex Kings")
+        SignalTesterHost.ingest("Sensex Kings", sample, at(9, 28, 4), SignalTesterHost.PASTED)
+        SignalTesterHost.testBars = { _, _ -> null }
+        clock(at(15, 45)); runBlocking { SignalTesterHost.round(at(15, 45)) }
+        assertNull(SignalTesterHost.view.value.recs.single().result)
+        SignalTesterHost.testBars = { k, d -> bars(k, d) }
+        runBlocking { SignalTesterHost.round(at(15, 46)) }
+        assertEquals(CallEval.Status.DONE, SignalTesterHost.view.value.recs.single().result!!.status)
+        assertTrue(SignalTesterHost.view.value.recs.single().final)
     }
 
     @Test fun theModelReadsWhatTheRulesAreUnsureOfButNeverWhileAPositionIsOpen() {
