@@ -11,17 +11,9 @@ data_version: 'Drive lake gdrive:IraAlgo-data-lake: stock_options_rolling_1m stk
 period:
   design: 4 Nov 2024 - 14 Oct 2026 (their span; an audit, no split)
 instruments:
-- RELIANCE
-- HDFCBANK
-- ICICIBANK
-- INFY
-- TCS
-- SBIN
-- AXISBANK
-- KOTAKBANK
-- ITC
-- TMPV
+- F&O stocks
 features:
+- 'stocks: RELIANCE, HDFCBANK, ICICIBANK, INFY, TCS, SBIN, AXISBANK, KOTAKBANK, ITC, TMPV'
 - 'signal source: the OPTION''s own price chart (NON-DEFAULT, labelled)'
 - rolling ATM 15-minute closes (offset 0, last close in the bin)
 model_or_rule: 'their code: pct_change of the rolling 15-minute ATM close <= -20% and close >= 5, CE and PE separately; entry

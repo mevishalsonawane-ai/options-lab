@@ -13,17 +13,9 @@ period:
   design: 20 Nov 2024 - 31 Mar 2026
   holdout: 'final test: 1 Apr - 12 Oct 2026, read once (not pristine: other studies saw it)'
 instruments:
-- RELIANCE
-- HDFCBANK
-- ICICIBANK
-- INFY
-- TCS
-- SBIN
-- AXISBANK
-- KOTAKBANK
-- ITC
-- TMPV
+- F&O stocks
 features:
+- 'stocks: RELIANCE, HDFCBANK, ICICIBANK, INFY, TCS, SBIN, AXISBANK, KOTAKBANK, ITC, TMPV'
 - 'signal source: the OPTION''s own price chart (NON-DEFAULT under CLAUDE.md, labelled)'
 - 15-minute closes of the held ATM contract (same strike + expiry at t-1 and t, same session)
 model_or_rule: at a 15-minute bar close (bar 2+), the ATM contract whose OWN close fell 20%+ from the previous bar of the
