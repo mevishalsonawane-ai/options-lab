@@ -28,7 +28,7 @@ OBUY = {
     "OBUY_GC-15": ("gc_pos02_trend", "s0|r0|x0", "in-sample best signal (Supertrend, Varsity strike, hold 5); exit not named: none", "index"),
 }
 
-FAMILIES = ["fam_r1", "fam_h42h28", "fam_r4", "fam_h25h37", "fam_misc", "fam_swingvol", "fam_liq"]          # fam_* module names, appended as they are written
+FAMILIES = ["fam_r1", "fam_h42h28", "fam_r4", "fam_h25h37", "fam_misc", "fam_swingvol", "fam_liq", "fam_ctx"]          # fam_* module names, appended as they are written
 TITLES = {}
 
 

@@ -4106,6 +4106,170 @@
    "why": "original = the two h28 variants the catalogue row names, traded together (each its own book): (moy_01, NIFTY, 10:15, E6_close, mom) and (tom_first3, BANKNIFTY, 14:00, E6_close, mom). Grid: the other 5 exits and the other 'mom' entry times of each leg (prior side not computable, see LEFT)."
   }
  },
+ "H29-3": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "dirn": "mom30",
+     "q": 0.1
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15",
+    "params": {
+     "dirn": "mom30",
+     "q": 0.1
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.3,time_stop=30,time_gain=None",
+    "params": {
+     "dirn": "mom30",
+     "q": 0.1
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "dirn": "day",
+     "q": 0.1
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,time_stop=20",
+    "params": {
+     "dirn": "day",
+     "q": 0.1
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15",
+    "params": {
+     "dirn": "day",
+     "q": 0.1
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.3,time_stop=30,time_gain=None",
+    "params": {
+     "dirn": "day",
+     "q": 0.1
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "dirn": "mom30",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,time_stop=20",
+    "params": {
+     "dirn": "mom30",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15",
+    "params": {
+     "dirn": "mom30",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.3,time_stop=30,time_gain=None",
+    "params": {
+     "dirn": "mom30",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "dirn": "day",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,time_stop=20",
+    "params": {
+     "dirn": "day",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15",
+    "params": {
+     "dirn": "day",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.3,time_stop=30,time_gain=None",
+    "params": {
+     "dirn": "day",
+     "q": 0.2
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,tgt_pct=0.3,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_ctx.h29_cheap",
+   "kind": "family",
+   "params": {
+    "dirn": "mom30",
+    "q": 0.1
+   },
+   "pos": {
+    "max_per_day": 3,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index + option-chain context (ATM straddle IV)",
+   "title": "h29: buy only when IV is cheap (IV/HAR rank lowest 10%), side from the last 30 min",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY",
+    "FINNIFTY",
+    "SENSEX",
+    "MIDCPNIFTY"
+   ],
+   "why": "the write-up's best test-2a variant (HUNT_H29.md: q 10%, last-30-min move, E2); hunt/h29/rules.py sig_t2"
+  }
+ },
  "H31-4": {
   "grid": [
    {
@@ -4682,6 +4846,368 @@
     "SENSEX"
    ],
    "why": "original = R16 (CE on the night after a scheduled FOMC decision; dates gc_common._FED), set up as H31-4's original (all 5 indices, 1-ITM nearest, F0, out 10:15). R15 (FOMC or US-CPI) is LEFT: no dated US-CPI list in the original code. About 8 nights a year per index. Grid: h31's exits / filters / monthly."
+  }
+ },
+ "H33-1": {
+  "grid": [
+   {
+    "exits": "time_stop=30,time_gain=None",
+    "params": {
+     "N": 1,
+     "VB": 1,
+     "W": 1,
+     "Z": 5,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None",
+    "params": {
+     "N": 5,
+     "VB": 1,
+     "W": 1,
+     "Z": 5,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None",
+    "params": {
+     "N": 3,
+     "VB": 0,
+     "W": 1,
+     "Z": 5,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None",
+    "params": {
+     "N": 3,
+     "VB": 1,
+     "W": 1,
+     "Z": 8,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None",
+    "params": {
+     "N": 3,
+     "VB": 1,
+     "W": 3,
+     "Z": 5,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None",
+    "params": {
+     "N": 3,
+     "VB": 1,
+     "W": 1,
+     "Z": 5,
+     "orient": "fade",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None",
+    "params": {
+     "N": 3,
+     "VB": 1,
+     "W": 1,
+     "Z": 5,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=30.0,time_stop=30,time_gain=None",
+    "params": {
+     "N": 3,
+     "VB": 1,
+     "W": 1,
+     "Z": 5,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "N": 3,
+     "VB": 1,
+     "W": 1,
+     "Z": 5,
+     "orient": "follow",
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=30.0,time_stop=30,time_gain=None",
+    "params": {
+     "N": 1,
+     "VB": 1,
+     "W": 3,
+     "Z": 5,
+     "orient": "follow",
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=30.0,time_stop=30,time_gain=None",
+    "params": {
+     "N": 1,
+     "VB": 0,
+     "W": 3,
+     "Z": 5,
+     "orient": "follow",
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   }
+  ],
+  "orig": {
+   "exits": "time_stop=30,time_gain=None",
+   "expiry": "allow",
+   "fn": "fam_ctx.h33_shock",
+   "kind": "family",
+   "params": {
+    "N": 3,
+    "VB": 1,
+    "W": 1,
+    "Z": 5,
+    "orient": "follow",
+    "und": "FINNIFTY"
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index + option-chain context (option volume)",
+   "title": "h33 price-shock follow (FINNIFTY 1-min z>=5 + option-volume burst, +3 min, T30)",
+   "unds": [
+    "FINNIFTY"
+   ],
+   "why": "HUNT_H33.md best price-shock variant (FIN W1 Z5 VB N3 follow T30); H33-2 (NIFTY W3 Z5 N1 P30) in the grid"
+  }
+ },
+ "H35-1": {
+  "grid": [
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "rt"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "bo"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=10.0,tgt_pts=15.0,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=20.0,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=20.0,tgt_pts=25.0,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=20.0,tgt_pts=30.0,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "pivD",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "pivW",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "brain",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "struct",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "maxoi",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "maxpain",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "round",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "vix",
+     "mode": "brk"
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "fam": "round",
+     "mode": "rt"
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   }
+  ],
+  "orig": {
+   "exits": "time_stop=60,time_gain=None,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_ctx.h35_levels",
+   "kind": "family",
+   "params": {
+    "fam": "pivD",
+    "mode": "brk"
+   },
+   "pos": {
+    "max_per_day": 3,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index (grid rows maxoi / maxpain: levels from chain OI)",
+   "title": "h35: the app's S/R levels - daily pivots break-and-hold",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY",
+    "FINNIFTY",
+    "SENSEX",
+    "MIDCPNIFTY"
+   ],
+   "why": "HUNT_H35.md pivD break (7,525 trades, best gross exit = time 60); the other families / modes are in the grid"
   }
  },
  "H37-10": {
@@ -8513,6 +9039,167 @@
     "FINNIFTY"
    ],
    "why": "original = part D's 'enhanced' pe pick: FINNIFTY 1-ITM, from 13:30, ADX 20-30, 5-min, filter vix_high, S30EOD, 4/day. Grid = one-step neighbours in partD's grid."
+  }
+ },
+ "H45-1": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.03,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.03,time_stop=15,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.03,time_stop=30,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.03,time_stop=60,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.05,tgt_pct=0.05,time_stop=15,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.05,tgt_pct=0.05,time_stop=30,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.05,tgt_pct=0.05,time_stop=60,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.07,tgt_pct=0.07,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.07,tgt_pct=0.07,time_stop=15,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.07,tgt_pct=0.07,time_stop=30,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.07,tgt_pct=0.07,time_stop=60,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.1,tgt_pct=0.1,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.1,tgt_pct=0.1,time_stop=15,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.1,tgt_pct=0.1,time_stop=30,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.1,tgt_pct=0.1,time_stop=60,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.05,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.05,time_stop=15,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.05,time_stop=30,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pct=0.03,tgt_pct=0.05,time_stop=60,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pct=0.05,tgt_pct=0.1,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pct=0.05,tgt_pct=0.1,time_stop=15,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pct=0.05,tgt_pct=0.1,time_stop=30,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g22"
+   },
+   {
+    "exits": "stop_pct=0.05,tgt_pct=0.1,time_stop=60,time_gain=None,sig_levels=False",
+    "params": {},
+    "rule": "ITM1/near",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.05,tgt_pct=0.05,time_gain=None,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_ctx.h45_liq",
+   "kind": "family",
+   "params": {},
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "h45: Liquidity 15+5 entries with a symmetric +5% / -5% premium bracket",
+   "unds": [
+    "BANKNIFTY",
+    "FINNIFTY",
+    "MIDCPNIFTY"
+   ],
+   "why": "h45 PREREG headline variant (+5% / -5%, 15:10, 1-ITM) on its Liquidity entry set"
   }
  },
  "H46-2": {
@@ -14391,6 +15078,338 @@
    "why": "the catalog's EXP-05 setting (follow last 5 min, -3.3%/+10%, 1 a day)"
   }
  },
+ "OBUY_SEARCH-2": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.5,time_stop=120,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.5,time_stop=120,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.25,tgt_pct=0.5,time_stop=120,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.3,time_stop=120,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=1.0,time_stop=120,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.35,time_stop=120,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.5,time_stop=30,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.5,time_stop=60,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.5,time_gain=None",
+    "params": {
+     "atoms": [
+      "vwap_far_with",
+      "ema5_with",
+      "expiry_day"
+     ],
+     "side": 1,
+     "und": "FINNIFTY",
+     "window": "1200-1430"
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.35,tgt_pct=0.5,time_stop=120,time_gain=None",
+   "expiry": "allow",
+   "fn": "fam_ctx.obs_rule",
+   "kind": "family",
+   "params": {
+    "atoms": [
+     "vwap_far_with",
+     "ema5_with",
+     "expiry_day"
+    ],
+    "side": 1,
+    "und": "FINNIFTY",
+    "window": "1200-1430"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "obuy_search #3: FINNIFTY expiry-day afternoon CE (TWAP + 5-min EMA with)",
+   "unds": [
+    "FINNIFTY"
+   ],
+   "why": "OBUY_SEARCH.md rule #3 as listed (in-sample t 3.81, 41 trades)"
+  }
+ },
+ "OBUY_SEARCH-4": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.3,time_stop=30,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,time_stop=30,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.25,tgt_pct=0.3,time_stop=30,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.5,time_stop=30,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=1.0,time_stop=30,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.35,time_stop=30,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.3,time_stop=60,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.3,time_stop=120,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.35,tgt_pct=0.3,time_gain=None",
+    "params": {
+     "atoms": [
+      "rsi_mid",
+      "vix_high",
+      "pcr_with"
+     ],
+     "side": 1,
+     "und": "NIFTY",
+     "window": "0920-1015"
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.35,tgt_pct=0.3,time_stop=30,time_gain=None",
+   "expiry": "skip",
+   "fn": "fam_ctx.obs_rule",
+   "kind": "family",
+   "params": {
+    "atoms": [
+     "rsi_mid",
+     "vix_high",
+     "pcr_with"
+    ],
+    "side": 1,
+    "und": "NIFTY",
+    "window": "0920-1015"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (PCR of OI) + VIX",
+   "title": "obuy_search #7: NIFTY morning CE (RSI mid + VIX > 18 + PCR with)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "OBUY_SEARCH.md rule #7 as listed (the only holdout winner)"
+  }
+ },
  "R1-1": {
   "grid": [
    {
@@ -16133,6 +17152,293 @@
    "why": "original = r20brk-lowvix15 (trades.py RULES): PIV, 15-min, N 2, by 14:00, previous VIX close < 13, 1-ITM, Liquidity exits. No own grid (see R20C-3)."
   }
  },
+ "R24-2": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "pattern": "p2"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=80.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=80.0",
+    "params": {
+     "pattern": "p2"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_ctx.r24_pattern",
+   "kind": "family",
+   "params": {
+    "pattern": "p2"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (ATM IV, own-side OI build-up)",
+   "title": "R24 p2: 2+ levels near + ATM IV high + own-side OI building",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "R24's frozen final rule p2 (hunt/r24/results/step3_design.json), exit family 'liq' as chosen on R24 design"
+  }
+ },
+ "R24-3": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "pattern": "p3"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=80.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=80.0",
+    "params": {
+     "pattern": "p3"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_ctx.r24_pattern",
+   "kind": "family",
+   "params": {
+    "pattern": "p3"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (ATM IV)",
+   "title": "R24 p3: ATM IV high + opening gap against the option",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "R24's frozen final rule p3 (hunt/r24/results/step3_design.json), exit family 'liq' as chosen on R24 design"
+  }
+ },
+ "R24-4": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "pattern": "p4"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=80.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=80.0",
+    "params": {
+     "pattern": "p4"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_ctx.r24_pattern",
+   "kind": "family",
+   "params": {
+    "pattern": "p4"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "R24 p4: 2+ levels near on expiry day, buy CE",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "R24's frozen final rule p4 (hunt/r24/results/step3_design.json), exit family 'liq' as chosen on R24 design"
+  }
+ },
+ "R24-5": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "pattern": "p5"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=80.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=80.0",
+    "params": {
+     "pattern": "p5"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_ctx.r24_pattern",
+   "kind": "family",
+   "params": {
+    "pattern": "p5"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "R24 p5: opening gap against the option, 1-2 DTE",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "R24's frozen final rule p5 (hunt/r24/results/step3_design.json), exit family 'liq' as chosen on R24 design"
+  }
+ },
+ "R24-6": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "pattern": "p6"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=80.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=80.0",
+    "params": {
+     "pattern": "p6"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_ctx.r24_pattern",
+   "kind": "family",
+   "params": {
+    "pattern": "p6"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (other-side OI build-up)",
+   "title": "R24 p6: other-side OI building + high realised vol",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "R24's frozen final rule p6 (hunt/r24/results/step3_design.json), exit family 'liq' as chosen on R24 design"
+  }
+ },
+ "R24-7": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "pattern": "p7"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=80.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=80.0",
+    "params": {
+     "pattern": "p7"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_ctx.r24_pattern",
+   "kind": "family",
+   "params": {
+    "pattern": "p7"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (ATM IV)",
+   "title": "R24 p7: some room to the next level ahead + ATM IV high",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "R24's frozen final rule p7 (hunt/r24/results/step3_design.json), exit family 'liq' as chosen on R24 design"
+  }
+ },
+ "R24-8": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "pattern": "p8"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=80.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=80.0",
+    "params": {
+     "pattern": "p8"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "allow",
+   "fn": "fam_ctx.r24_pattern",
+   "kind": "family",
+   "params": {
+    "pattern": "p8"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (IV rank)",
+   "title": "R24 p8: far from the level behind + IV rank high",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "R24's frozen final rule p8 (hunt/r24/results/step3_design.json), exit family 'liq' as chosen on R24 design"
+  }
+ },
  "R4-1": {
   "grid": [
    {
@@ -17813,6 +19119,70 @@
    "why": "original = the script as uploaded (AS_WRITTEN), 15m, script default pivot 10 / minSwing 1.0 / cooldown 15, NAT exit = R5's PRIMARY setting (research/hunt/r5/PREREG.md, design.py DEFAULT); grid = the other 17 primary runs"
   }
  },
+ "R9-4": {
+  "grid": [
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "horizon": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "horizon": 30
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "horizon": 60
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "horizon": 30
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "horizon": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   }
+  ],
+  "orig": {
+   "exits": "sq_off=915",
+   "expiry": "allow",
+   "fn": "fam_ctx.r9_absorption",
+   "kind": "family",
+   "params": {
+    "horizon": 60
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (option volume)",
+   "title": "R9 absorption proxy: heavy option volume, narrow 5-min bar after a move -> reversal",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY"
+   ],
+   "why": "HUNT_R9_VOLUME_GAMMA.md D2 (NIFTY best at 60 min, +4.7 bp); option wrapper ATM, exit at the horizon"
+  }
+ },
  "REVERSAL_SETUP-1": {
   "grid": [
    {
@@ -17892,6 +19262,218 @@
     "BANKNIFTY"
    ],
    "why": "original = the close row: BANKNIFTY next-expiry, capital Rs 20k, move 0.3%, +10% target, no stop, 15:10 (REVERSAL_SETUP.md). Grid = the study's other exits and the 0.5% move / Rs 5k capital."
+  }
+ },
+ "SCALP17-2": {
+  "grid": [
+   {
+    "exits": "stop_pts=30.0,tgt_pts=10.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=30.0,tgt_pts=10.0,time_stop=30,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=30.0,tgt_pts=10.0,time_stop=60,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=25.0,tgt_pts=10.0,time_stop=30,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=25.0,tgt_pts=10.0,time_stop=60,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=25.0,tgt_pts=15.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=30.0,tgt_pts=15.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=20.0,tgt_pts=10.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pts=25.0,tgt_pts=17.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=20.0,tgt_pts=15.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "BANKNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=25.0,tgt_pts=10.0,time_stop=15,time_gain=None",
+   "expiry": "allow",
+   "fn": "fam_ctx.scalp17_streak",
+   "kind": "family",
+   "params": {
+    "side": -1,
+    "und": "BANKNIFTY"
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "SCALP17: BANKNIFTY PE fade after 3 green 5-min bars (range Q4)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "SCALP17.md best 5-minute rule (+10 / -25 / 15 min)"
+  }
+ },
+ "SCALP17-3": {
+  "grid": [
+   {
+    "exits": "stop_pts=15.0,tgt_pts=25.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=20.0,time_stop=15,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=25.0,time_stop=60,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=20.0,time_stop=30,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=15.0,time_stop=60,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=20.0,tgt_pts=20.0,time_stop=60,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=15.0,tgt_pts=17.0,time_stop=60,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=20.0,tgt_pts=25.0,time_stop=60,time_gain=None",
+    "params": {
+     "side": -1,
+     "und": "NIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=15.0,tgt_pts=20.0,time_stop=60,time_gain=None",
+   "expiry": "allow",
+   "fn": "fam_ctx.scalp17_r15dfav",
+   "kind": "family",
+   "params": {
+    "side": -1,
+    "und": "NIFTY"
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "SCALP17: NIFTY PE on a 15-min fall, not far off the day low",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "SCALP17.md best 1-minute rule (+20 / -15 / 60 min)"
   }
  },
  "ST-1": {
