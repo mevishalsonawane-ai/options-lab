@@ -25,7 +25,7 @@ variants_tried: 1920
 results:
   summary: 'Design only. 1920 variants (params x instrument x exit x 14 filters); 1920 with 100+ trades, of which 76 net positive;
     median Rs -353.3/trade. best single variant with 100+ trades (selection-biased): FINNIFTY otm2 exit [0.0, 0.0, ''sq'',
-    None], 771 trades, Rs +709/trade, 3/4 blocks green. Walk-forward qualifying families: SENSEX spread (WF 120 OOS trades,
+    None], a 771-trade sample, Rs +709/trade, 3/4 blocks green. Walk-forward qualifying families: SENSEX spread (WF 120 OOS trades,
     Rs +677/trade). Sent to the holdout: C5.'
   costs: research/obuy Costs('dated') on every order of every leg + R17 'liq' fills (5 bps + 1/2/4 ticks by traded lots; stops
     10 bps, 2x ticks), stray-print guard; one fixed contract per leg; Rs 20,000 premium budget
