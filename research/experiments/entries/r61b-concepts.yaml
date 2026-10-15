@@ -1,0 +1,29 @@
+id: r61b-concepts
+title: 'R61b concepts: fake breakouts, traps, stop-hunts / sweeps, absorption, delta / CVD, OFI, depth imbalance, volume profile,
+  order blocks, FVG, BOS / ChoCH added to Solo''s concept list'
+family: market-facts
+date: '2026-10-15'
+doc: research/HUNT_R61B_TRAPS_ORDERFLOW.md
+hypothesis: Write down what each concept is, how it is computed, how traders use it, its pitfalls and what our studies found,
+  so Solo / Jarvis can explain it.
+data_version: repository research write-ups (R1, R3, R7, R8, R9, R10, R11, R49, R52, H18, LEVEL_MAP, MATRIX_V22, ADVANCED,
+  OF1)
+period:
+  design: see doc
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- none (a literature and own-research summary)
+model_or_rule: none
+settings: research/hunt/r61/r61concepts.py; research/hunt/r61b/r61breport.py
+prereg: null
+variants_tried: null
+results:
+  summary: 11 concepts added to research/hunt/r61/CONCEPTS.md and concepts.json (37 in all); each with its own-research table
+    and, where R61b measured it, its R61b result.
+  costs: none
+holdout_read: null
+verdict: not-a-test

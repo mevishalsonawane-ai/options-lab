@@ -1,0 +1,38 @@
+id: r62-idx-b-context
+title: 'R62 IDX-b: the 16 variants with (b) constituents'' traded value (secondary, not gated)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R62_VOLUME_PROFILE_SMC.md
+hypothesis: 'Context for R62''s primary books: the same 16 rules with another volume source or holding period.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 15 Oct 2026: index_1m and options_rolling_1m opt_<U>_WEEK (R51
+  clean store + spikes.py rule, one held contract per trade), equity_1m (stocks and index constituents); read by research/hunt/r62/r62data.py'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward by quarter)
+  holdout: final test 1 Apr - 14 Oct 2026 (indices) / 12 Oct 2026 (stocks), read once 15 Oct 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 15-min fractal swings, BOS / ChoCH
+- anchored 50-row volume profile ((b) constituents' traded value)
+- 5-min FVG / Order Block
+- 1-hour structure
+model_or_rule: 'the 16 R62 variants; signal source: the underlying; traded: the 1-ITM index option'
+settings: research/hunt/r62/PREREG.md section 6
+prereg: research/hunt/r62/PREREG.md
+variants_tried: 16
+results:
+  summary: 'poc-x-x-2r: design 199 / Rs -82,810, final 62 / Rs -96,556; poc-x-x-st: design 207 / Rs -34,822, final 65 / Rs
+    -51,862; poc-x-h-2r: design 131 / Rs -56,476, final 40 / Rs -84,642; poc-x-h-st: design 136 / Rs -8,680, final 42 / Rs
+    -39,937; poc-c-x-2r: design 98 / Rs +1,400, final 27 / Rs -54,918; poc-c-x-st: design 99 / Rs -4,816, final 27 / Rs -37,838;
+    poc-c-h-2r: design 70 / Rs +195, final 15 / Rs -39,479; poc-c-h-st: design 70 / Rs +6,250, final 15 / Rs -26,303; lvn-x-x-2r:
+    design 184 / Rs -171,290, final 67 / Rs -89,209; lvn-x-x-st: design 199 / Rs -39,737, final 74 / Rs -40,760; lvn-x-h-2r:
+    design 141 / Rs -158,883, final 49 / Rs -38,011; lvn-x-h-st: design 153 / Rs -28,941, final 55 / Rs -24,811; lvn-c-x-2r:
+    design 150 / Rs -160,218, final 56 / Rs -86,480; lvn-c-x-st: design 160 / Rs -24,388, final 62 / Rs -31,485; lvn-c-h-2r:
+    design 116 / Rs -138,435, final 39 / Rs -27,828; lvn-c-h-st: design 125 / Rs -13,628, final 45 / Rs -20,861. Context only:
+    never eligible to pass.'
+  costs: 'R51 engine: R17 ''liq'' fills (5 bps + 1/2/4 ticks), obuy Costs(''dated'') charges (STT 0.1% / 0.15% from 1 Apr
+    2026), 1 lot in force; 2x = double bps/ticks and charges'
+holdout_read: true
+verdict: rejected
+notes: Secondary book (PREREG section 2 / 6); its own BH over 16 is in results/final.json as q_own.
