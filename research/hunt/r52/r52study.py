@@ -52,7 +52,9 @@ def design(keys=None):
         pick = max(ok, key=lambda v: sc[v]["net"]) if ok else None
         out[key] = dict(spec=RR.describe(key), scores=sc, wf_orig=wf_orig, wf_retune=wf_all,
                         wf_each={v: L.walk_forward({v: trades[v]})["net"] for v in sc}, pick=pick,
-                        n_variants=len(variants), secs=round(time.time() - t0))
+                        n_variants=len(variants), secs=round(time.time() - t0),
+                        pick_label=(lambda r: f"{r.params} · {r.rule.label()} · exits {r.exits.label()}")(
+                            next(r for r in variants if r.vid == pick)) if pick else None)
         print(f"{key}: orig {sc['orig']['trades']} tr net {sc['orig']['net']:+,.0f} p {sc['orig']['p']:.3f} "
               f"wf {wf_orig['net']:+,.0f} | pick {pick} | {len(variants)} settings, {time.time() - t0:.0f}s", flush=True)
         _dump(DESIGN, out)
