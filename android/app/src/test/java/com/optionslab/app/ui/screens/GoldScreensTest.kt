@@ -99,7 +99,7 @@ class GoldScreensTest {
         // COMPACT (15 Oct): the switch's explanation is in its own small dialog (its ⓘ), OK closes it.
         assertFalse(compose.has("24x5: Monday 05:30 IST to Saturday 02:30 IST", substring = true))
         compose.onAllNodesWithContentDescription("About Armed")[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
-        assertTrue(compose.has("24x5: Monday 05:30 IST to Saturday 02:30 IST", substring = true))
+        assertTrue(compose.has(keepNumbersWhole("24x5: Monday 05:30 IST to Saturday 02:30 IST"), substring = true))
         compose.onNodeWithText("OK").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         assertTrue(compose.has("Last signal")); assertTrue(compose.has("none yet"))
         shot("home-light")
