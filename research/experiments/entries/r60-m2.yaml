@@ -11,7 +11,6 @@ period:
   design: 5 Aug 2025 - 31 Mar 2026 (purged walk-forward, monthly refits)
   holdout: '1 Apr - 13 Oct 2026 final test, read once (not pristine: R47-R59 saw parts of it)'
 instruments:
-- MCX
 - GOLD
 - SILVER
 - CRUDE
