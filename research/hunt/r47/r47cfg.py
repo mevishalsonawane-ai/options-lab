@@ -79,6 +79,7 @@ BUDGET = 20_000.0                                # premium budget per position (
 LOT_CAP = 20                                     # never more than 20 lots
 VOL_CAP = 0.10                                   # nor more than 10% of the contract's lots traded in the 5 minutes before
 TICK = 0.05
+FOREIGN_TOL = 0.03                               # amendment 2: an option row whose spot is > 3% off the index is dropped
 BAD_PRINT = 0.20                                 # amendment 1: stray-print guard on fills (r47price)
 
 # ------------------------------------------------------------------------------------------------ instruments

@@ -794,3 +794,26 @@ Bollinger(20, 2) lower band). That is not the default; it is reported separately
   shows -106 and -127 (122 and 130 trades). On the fixed contract the signal is no better than random entries (q 0.62).
 - BANKNIFTY: +Rs 237 on the rolling series, -Rs 124 a trade on one contract at real lots (1,405 trades).
 - Rule for every lake study: never trade the rolling ATM series as one instrument; hold the strike that was bought.
+
+## Index-option buying with relaxed design rules (R47, 15 Oct 2026) - 387,392 variants, 10 to the holdout, none passes
+Full study: `HUNT_R47_RELAXED_OPTION_BUYING.md` (pre-registered `hunt/r47/PREREG.md`, commit 2f27c32d; candidates
+frozen in 4f012404; holdout 10 Nov 2025 - 13 Oct 2026 read once). Boss (15 Oct) allowed relaxing the DESIGN rules for
+option buying. Relaxed: the signal source (index, option chain, the option's own chart - labelled non-default),
+overnight and 1-5 session holds, any strike, month expiry, debit spreads, straddles, no trade cap, budget sizing, a wide
+search with no BH during exploration, and VIX / weekday / expiry / month-end / event filters. Measurement was NOT
+relaxed: one fixed contract per leg, R17 fills, dated charges, gap fills, no look-ahead.
+- Design (Aug 2021 - Oct 2025, NIFTY, BANKNIFTY, FINNIFTY, SENSEX): 16 of the 17 signal families with enough trades lose
+  in the median variant (Rs 34-2,446 a trade on a Rs 20,000 budget). Only multi-day breakouts (U4) are slightly
+  positive. 18 of 132 families pass the walk-forward. The strongest were overnight late-day momentum (BANKNIFTY,
+  FINNIFTY) and NIFTY 10-day breakout spreads.
+- Holdout, 10 candidates, 500 random twins each: 6 make money, 4 lose, and none beats random entries after BH (best q
+  0.50). Closest: BANKNIFTY "PCR extreme at 10:15 -> buy ITM3 in its direction" (+Rs 865 a trade, 91 trades, p 0.0499,
+  q 0.50; its design profit had faded to +Rs 9 a trade in 2025). The best design idea, overnight late-day momentum,
+  lost Rs 1,031 a trade on the BANKNIFTY holdout (90 trades). Nothing goes to paper.
+- **Lake data defect (affects other studies):** some rolling option files contain rows of ANOTHER underlying, i.e.
+  rows whose `spot` and `strike` sit at another index's level. Affected: FINNIFTY WEEK/MONTH (118k rows in 2025 at
+  MIDCPNIFTY's level), BANKNIFTY MONTH 2022-24 (77k rows at NIFTY's level), SENSEX MONTH/WEEK (73k rows at BANKEX's
+  level), MIDCPNIFTY (93k rows), and a few NIFTY MONTH / BANKNIFTY WEEK rows. NIFTY WEEK is clean. Drop any option row
+  whose `spot` is more than 3% off the index at that minute (`hunt/r47/r47data.foreign_rows`). Thin contracts also
+  carry stray prints (a 09:15 open of 500 on a Rs 60 option): never let a fill profit from a price more than 20% off
+  the contract's surrounding closes (`hunt/r47/r47price.open_for_sell`). R47's selection was unchanged by both fixes.

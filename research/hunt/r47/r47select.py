@@ -1,7 +1,8 @@
 """R47 selection (PREREG "Selection rule"): anchored walk-forward per family on design summaries, the family's
 candidate, and the at-most-10 candidates frozen for the holdout.
 
-    python3 research/hunt/r47/r47select.py      # -> results/design.json, results/candidates.json
+    python3 research/hunt/r47/r47select.py               # -> results/design.json, results/candidates.json
+    python3 research/hunt/r47/r47select.py --tag v2      # amendment 2 rerun -> results/design_v2.json, candidates_v2.json
 
 Family = (signal family, underlying, instrument kind). Variant = (params, instrument, exit, filter).
 """
@@ -96,6 +97,7 @@ def summary_stats(df: pd.DataFrame) -> dict:
 
 
 def main(argv):
+    tag = argv[argv.index("--tag") + 1] if "--tag" in argv else ""
     df = load_all()
     fams = []
     for key, g in df.groupby(FKEY, sort=True):
@@ -123,8 +125,9 @@ def main(argv):
                   families=len(fams), qualifying=int(sum(f["qualifies"] for f in fams)),
                   qualifying_with_candidate=len(ranked), by_signal_family=summary_stats(df),
                   families_detail=sorted(fams, key=lambda f: -f["wf"]["oos_t"]))
-    (K.RESULTS / "design.json").write_text(json.dumps(design, indent=1, default=str))
-    K.CANDIDATES.write_text(json.dumps(dict(prereg="research/hunt/r47/PREREG.md", design_end=str(K.DESIGN_END),
+    (K.RESULTS / f"design{'_' + tag if tag else ''}.json").write_text(json.dumps(design, indent=1, default=str))
+    out = K.RESULTS / f"candidates_{tag}.json" if tag else K.CANDIDATES
+    out.write_text(json.dumps(dict(prereg="research/hunt/r47/PREREG.md", design_end=str(K.DESIGN_END),
                                             holdout_start=str(K.HOLDOUT_START), candidates=cands), indent=1))
     print(f"{len(df)} variant rows, {len(fams)} families, {design['qualifying']} qualify on walk-forward, "
           f"{len(ranked)} with a candidate; {len(cands)} sent")

@@ -499,3 +499,18 @@ def test_bh_q_values():
     import r47holdout as H
     q = H.bh([0.01, 0.04, 0.03, 0.5])
     assert q == pytest.approx([0.04, 0.16 / 3, 0.16 / 3, 0.5])         # 0.03 x 4/2 = 0.06 > 0.04 x 4/3
+
+
+def test_foreign_rows_are_dropped():
+    # amendment 2: rows whose own spot is another underlying's level (FINNIFTY file, MIDCPNIFTY-level spot)
+    C = np.full((2, N), 25000.0)
+    C[1, 5] = np.nan                                     # a missing index minute: the session's last close is used
+    spot = np.array([25100.0, 12500.0, 25000.0 * 1.031, 24990.0, np.nan])
+    got = D.foreign_rows(spot, np.array([0, 0, 0, 1, 0]), np.array([3, 4, 5, 5, 6]), C)
+    assert got.tolist() == [False, True, True, False, True]
+
+
+def test_sessions_never_start_where_a_previous_session_would_wrap():
+    u = make_und(10)
+    u.days = u.days + 0                                   # the index starts after FIRST_DAY (BANKNIFTY: 4 Aug 2021)
+    assert S.sessions_from(u, date(2000, 1, 1)).start == 3

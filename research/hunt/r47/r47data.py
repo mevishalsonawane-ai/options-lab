@@ -58,6 +58,21 @@ def holdout_key(check_git: bool = True):
     return _KEY
 
 
+def recheck_key():
+    """Amendment 2: re-price the SAME frozen candidates on cleaned holdout rows. Allowed only after the one read
+    (holdout.json exists) and only when the clean-data selection rerun froze the identical candidates."""
+    global _KEY
+    if not K.HOLDOUT_JSON.exists():
+        raise RuntimeError("refused: a recheck is only for candidates already read once")
+    a = json.loads(K.CANDIDATES.read_text())["candidates"]
+    b = json.loads((K.RESULTS / "candidates_v2.json").read_text())["candidates"]
+    strip = lambda c: {k: v for k, v in c.items() if k not in ("wf", "fb", "t")}  # noqa: E731
+    if [strip(x) for x in a] != [strip(x) for x in b]:
+        raise RuntimeError("refused: the clean-data rerun chose different candidates (no second holdout read)")
+    _KEY = _Key()
+    return _KEY
+
+
 def phase_end(phase: str, key=None) -> date:
     if phase == "design":
         return K.DESIGN_END
@@ -239,7 +254,21 @@ class Store:
     iv_atm: np.ndarray       # float32 [nd, 375] mean of the ATM call and put IV (NaN none)
 
 
-def build_store(und: str, series: str, days: np.ndarray, end: date) -> Store:
+def foreign_rows(spot, di, m, C, tol: float = K.FOREIGN_TOL) -> np.ndarray:
+    """Amendment 2: True for option rows whose own `spot` is more than `tol` away from the underlying's index close at
+    that minute (or, if the index has no close then, from its last close that session). The lake's rolling files carry
+    rows of ANOTHER underlying (FINNIFTY files hold rows at MIDCPNIFTY's level, BANKNIFTY MONTH rows at NIFTY's ...)."""
+    ref = C[di, m]
+    miss = ~np.isfinite(ref)
+    if miss.any():
+        filled = pd.DataFrame(C).ffill(axis=1).to_numpy()
+        ref = np.where(miss, filled[di, m], ref)
+    with np.errstate(all="ignore"):
+        r = np.asarray(spot, dtype=np.float64) / ref
+    return ~(np.isfinite(r) & (np.abs(r - 1.0) <= tol))
+
+
+def build_store(und: str, series: str, days: np.ndarray, end: date, C=None) -> Store:
     parts = []
     for p in sorted(K.LAKE.glob(f"opt_{und}_{series}_*.parquet")):
         if int(p.stem[-4:]) > end.year:
@@ -254,6 +283,9 @@ def build_store(und: str, series: str, days: np.ndarray, end: date) -> Store:
     df["side"] = df.side.astype(str).str[0]
     df = df.drop_duplicates(["d", "m", "side", "offset"])
     nd = len(days)
+    if C is not None:
+        bad = foreign_rows(df.spot.to_numpy(), np.searchsorted(days, df.d.to_numpy()), df.m.to_numpy(), C)
+        df = df[~bad]
     di = np.searchsorted(days, df.d.to_numpy())
     # expiries
     tv = _time_value(df, days)
@@ -336,12 +368,12 @@ def _vix_on(days, end):
 
 def load(und: str, phase: str = "design", key=None, cache: bool = True) -> Und:
     end = phase_end(phase, key)
-    path = K.OUT / f"r47_{und}_{phase}.pkl"
+    path = K.OUT / f"r47_{und}_{phase}_v2.pkl"          # v2: foreign rows dropped (amendment 2)
     if cache and path.exists():
         u = pickle.loads(path.read_bytes())
     else:
         days, (O, H, L, C) = index_panel(und, end)
-        stores = {s: build_store(und, s, days, end) for s in K.SERIES[und]}
+        stores = {s: build_store(und, s, days, end, C) for s in K.SERIES[und]}
         vixC = _vix_on(days, end)
         u = Und(und, phase, days, O, H, L, C, daily_close(days, C), vixC, daily_close(days, vixC), stores, len(days) - 1)
         if cache:

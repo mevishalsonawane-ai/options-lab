@@ -141,3 +141,32 @@ above that median cannot hit a target or arm a lock. Stops still trigger on any 
 open_for_buy / confirmed_high`, `r47cfg.BAD_PRINT`, tests in `test_r47.py`.) The fix can only lower results. The
 whole design search and the unchanged selection rule were run again; the first run's output is kept as
 `results/design_v0_unamended.json` and `results/candidates_v0_unamended.json` (never sent to the holdout).
+
+## Amendment 2 (15 Oct 2026, written AFTER the one holdout read; it changes no candidate and reads nothing twice)
+
+While checking an impossible-looking design number for the write-up (FINNIFTY trees +Rs 4,807 a trade), we found that the
+lake's rolling option files contain rows of ANOTHER underlying. One example is FINNIFTY 2025 rows with spot and strike
+near 12,500 (MIDCPNIFTY's level) while FINNIFTY traded near 25,700. Other files are affected too (see the write-up's
+table). Fix (measurement): an option row whose own `spot` is more than 3% off the underlying's index close at that
+minute is dropped (`r47data.foreign_rows`, `r47cfg.FOREIGN_TOL`).
+
+To find out whether this touched the result, without a second look at the holdout for selection:
+
+1. The design stores were rebuilt with the filter. The full search and the UNCHANGED selection rule were rerun on design
+   data only (`r47select.py --tag v2` -> `results/design_v2.json`, `results/candidates_v2.json`).
+2. Only if that rerun froze exactly the same candidates, the same frozen candidates are re-priced on the cleaned holdout
+   rows (`r47holdout.py --recheck`, refused otherwise by `r47data.recheck_key`) -> `results/holdout_amended.json`.
+   `results/holdout.json` (the one read) is kept unchanged.
+
+Outcome: the rerun chose the identical 10 candidates with identical design numbers. The re-pricing gave identical
+holdout trades for all ten; only C3's random twins moved (p 0.40 -> 0.48). No verdict changed.
+
+## Amendment 3 (15 Oct 2026, self-review after the holdout read; no candidate changed, nothing read twice)
+
+A look-ahead bug: for underlyings whose index minutes start on 4 Aug 2021 (BANKNIFTY, FINNIFTY, SENSEX), the first
+session had index 0, so "the previous session" wrapped round to the last design session. Signals now start at session 3
+at the earliest (`r47sig.sessions_from`), with a test. The design search and the unchanged selection rule were rerun
+(`results/design_v3.json`, `results/candidates_v3.json`). Nine candidates are identical. In slot 10, BANKNIFTY big-bar
+(C9, which never read the wrapped value; its walk-forward pick moved with a 3-session later warm-up) is replaced by the
+NIFTY O1 premium ORB (option-chart, non-default). That rule is NOT sent to the holdout, which has already been read once.
+The official holdout result stays that of the 10 frozen candidates.

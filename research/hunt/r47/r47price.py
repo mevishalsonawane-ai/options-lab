@@ -40,7 +40,7 @@ REASONS = {1: "stop", 2: "target", 3: "lock", 4: "time", 5: "expiry_sq", 6: "edg
 # ------------------------------------------------------------------------------------------------ fills (R17 'liq')
 @njit(cache=True)
 def _round2(x):
-    return np.floor(x * 100.0 + 0.5) / 100.0
+    return np.floor(float(x) * 100.0 + 0.5) / 100.0         # float64 also on the pure-Python path (float32 rows)
 
 
 @njit(cache=True)
@@ -55,12 +55,14 @@ def _ticks(lots5):
 @njit(cache=True)
 def buy_fill(p, lots5):
     """Fills('liq').buy: +5 bps, rounded to the paisa, plus 1/2/4 ticks by the 5-minute traded lots."""
+    p = float(p)
     return _round2(_round2(p * 1.0005) + _ticks(lots5) * K.TICK)
 
 
 @njit(cache=True)
 def sell_fill(p, lots5, stop):
     """Fills('liq').sell: -5 bps (stops -10 bps), minus 1/2/4 ticks (stops twice), never below 0."""
+    p = float(p)
     x = _round2(p * (0.999 if stop else 0.9995)) - _ticks(lots5) * (2.0 if stop else 1.0) * K.TICK
     return max(_round2(x), 0.0)
 

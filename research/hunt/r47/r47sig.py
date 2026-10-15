@@ -115,7 +115,8 @@ def prev_rank(x: np.ndarray, look: int = 60, min_n: int = 40) -> np.ndarray:
 def sessions_from(u, first=None):
     """Session indices tradable in the study (from FIRST_DAY; the earlier ones are warm-up)."""
     first = K.FIRST_DAY if first is None else first
-    return range(int(np.searchsorted(u.days, first.toordinal())), len(u.days))
+    # never before session 3: signals read up to 3 previous sessions, and index -1 would wrap to the LAST session
+    return range(max(int(np.searchsorted(u.days, first.toordinal())), 3), len(u.days))
 
 
 def last_close_before(arr, m):

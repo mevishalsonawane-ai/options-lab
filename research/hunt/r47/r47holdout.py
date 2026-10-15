@@ -3,6 +3,7 @@ random-entry twins each, Benjamini-Hochberg across the candidates sent, and the 
 
     python3 research/hunt/r47/r47holdout.py      # refuses unless results/candidates.json is committed unchanged and
                                                  # results/holdout.json does not exist
+    python3 research/hunt/r47/r47holdout.py --recheck    # amendment 2: the same frozen candidates on cleaned rows
 """
 from __future__ import annotations
 
@@ -94,7 +95,9 @@ def stats(x: pd.DataFrame) -> dict:
 
 
 def main(argv):
-    key = D.holdout_key()
+    recheck = "--recheck" in argv
+    key = D.recheck_key() if recheck else D.holdout_key()
+    out_path = K.RESULTS / "holdout_amended.json" if recheck else K.HOLDOUT_JSON
     cands = json.loads(K.CANDIDATES.read_text())["candidates"]
     rng = np.random.default_rng(K.SEED)
     out, cache = [], {}
@@ -132,7 +135,7 @@ def main(argv):
     res = dict(read_at=datetime.now(timezone.utc).isoformat(timespec="seconds"), holdout_start=str(K.HOLDOUT_START),
                last_session=str(date.fromordinal(int(max(c[0].days[-1] for c in cache.values())))) if cache else None,
                candidates=out, any_pass=any(o["passes"] for o in out))
-    K.HOLDOUT_JSON.write_text(json.dumps(res, indent=1))
+    out_path.write_text(json.dumps(res, indent=1))
     print("any candidate passes every gate:", res["any_pass"])
     return 0
 
