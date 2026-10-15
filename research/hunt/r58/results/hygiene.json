@@ -1,0 +1,239 @@
+{
+ "RELIANCE": {
+  "rows_raw": 1039423,
+  "rows_off_grid": 630,
+  "stray_rows": 24,
+  "spike_rows": 362,
+  "duplicate_contract_minutes": 53,
+  "rows_used": 1038354,
+  "lot_source_contract_days": {
+   "volume": 3638,
+   "bhav": 1027
+  },
+  "exdates": [],
+  "bad_days": [],
+  "contracts": 708,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "10.0": 173153
+  }
+ },
+ "SBIN": {
+  "rows_raw": 1039283,
+  "rows_off_grid": 630,
+  "stray_rows": 30,
+  "spike_rows": 400,
+  "duplicate_contract_minutes": 125,
+  "rows_used": 1038098,
+  "lot_source_contract_days": {
+   "volume": 3645,
+   "bhav": 968
+  },
+  "exdates": [],
+  "bad_days": [],
+  "contracts": 785,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "5.0": 52035,
+   "10.0": 121122
+  }
+ },
+ "MARUTI": {
+  "rows_raw": 1038314,
+  "rows_off_grid": 630,
+  "stray_rows": 222,
+  "spike_rows": 399,
+  "duplicate_contract_minutes": 241,
+  "rows_used": 1036822,
+  "lot_source_contract_days": {
+   "volume": 3740,
+   "bhav": 1088
+  },
+  "exdates": [],
+  "bad_days": [],
+  "contracts": 759,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "100.0": 173093
+  }
+ },
+ "ICICIBANK": {
+  "rows_raw": 1039104,
+  "rows_off_grid": 630,
+  "stray_rows": 250,
+  "spike_rows": 397,
+  "duplicate_contract_minutes": 333,
+  "rows_used": 1037494,
+  "lot_source_contract_days": {
+   "volume": 3530,
+   "bhav": 863
+  },
+  "exdates": [],
+  "bad_days": [],
+  "contracts": 650,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "10.0": 173124
+  }
+ },
+ "INFY": {
+  "rows_raw": 1038992,
+  "rows_off_grid": 630,
+  "stray_rows": 292,
+  "spike_rows": 435,
+  "duplicate_contract_minutes": 280,
+  "rows_used": 1037355,
+  "lot_source_contract_days": {
+   "volume": 3417,
+   "bhav": 890
+  },
+  "exdates": [],
+  "bad_days": [],
+  "contracts": 669,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "5.0": 16423,
+   "10.0": 17624,
+   "15.0": 2727,
+   "20.0": 136341
+  }
+ },
+ "LT": {
+  "rows_raw": 992471,
+  "rows_off_grid": 630,
+  "stray_rows": 1184,
+  "spike_rows": 361,
+  "duplicate_contract_minutes": 6933,
+  "rows_used": 983363,
+  "lot_source_contract_days": {
+   "volume": 3513,
+   "bhav": 1229
+  },
+  "exdates": [],
+  "bad_days": [
+   "2025-07-09"
+  ],
+  "contracts": 876,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "10.0": 15023,
+   "20.0": 83208,
+   "30.0": 2787,
+   "50.0": 63531
+  }
+ },
+ "KOTAKBANK": {
+  "rows_raw": 1036777,
+  "rows_off_grid": 630,
+  "stray_rows": 2962,
+  "spike_rows": 315,
+  "duplicate_contract_minutes": 558,
+  "rows_used": 1032312,
+  "lot_source_contract_days": {
+   "volume": 3369,
+   "bhav": 1187
+  },
+  "exdates": [
+   "2026-01-14"
+  ],
+  "bad_days": [],
+  "contracts": 697,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "0.5": 3804,
+   "1.0": 2134,
+   "2.0": 1731,
+   "2.5": 39291,
+   "5.0": 19522,
+   "20.0": 104218
+  }
+ },
+ "M&M": {
+  "rows_raw": 1036772,
+  "rows_off_grid": 630,
+  "stray_rows": 320,
+  "spike_rows": 308,
+  "duplicate_contract_minutes": 194,
+  "rows_used": 1035320,
+  "lot_source_contract_days": {
+   "volume": 3370,
+   "bhav": 920
+  },
+  "exdates": [],
+  "bad_days": [],
+  "contracts": 571,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "10.0": 5813,
+   "20.0": 24084,
+   "50.0": 143141
+  }
+ },
+ "TRENT": {
+  "rows_raw": 1028137,
+  "rows_off_grid": 630,
+  "stray_rows": 326,
+  "spike_rows": 332,
+  "duplicate_contract_minutes": 280,
+  "rows_used": 1026569,
+  "lot_source_contract_days": {
+   "volume": 3314,
+   "bhav": 1034
+  },
+  "exdates": [
+   "2026-06-04"
+  ],
+  "bad_days": [],
+  "contracts": 714,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "6.65": 3514,
+   "13.35": 3162,
+   "20.0": 5890,
+   "50.0": 58026,
+   "100.0": 100794
+  }
+ },
+ "TATASTEEL": {
+  "rows_raw": 995447,
+  "rows_off_grid": 630,
+  "stray_rows": 3550,
+  "spike_rows": 647,
+  "duplicate_contract_minutes": 3275,
+  "rows_used": 987345,
+  "lot_source_contract_days": {
+   "volume": 3240,
+   "bhav": 1316
+  },
+  "exdates": [],
+  "bad_days": [],
+  "contracts": 725,
+  "sessions": 522,
+  "first": "2024-09-02",
+  "last": "2026-10-12",
+  "steps": {
+   "0.5": 3801,
+   "1.0": 55701,
+   "2.5": 79438,
+   "5.0": 24269
+  }
+ }
+}

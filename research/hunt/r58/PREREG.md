@@ -296,3 +296,26 @@ from the same day's move would be look-ahead.
 
 Nothing directly. A PASS is at most a paper candidate for Boss, labelled with its signal source, never live without
 unseen paper first.
+
+## Amendment 1 (15 Oct 2026, before the final read; committed with the design results)
+
+Written after the books were built and the design was run, BEFORE the final test was read. None of these choices was
+compared on final data.
+1. **Spread fit** (made before any P&L was computed):
+   - One-minute changes above 20% are left out of the Roll estimate. This is R47's stray-print rule; a handful of such
+     prints made the raw estimate 12% to 500% of the price.
+   - The three volume buckets are made monotone (thin >= liquid, none >= thin), so a thinner market never costs less.
+   - Result (`results/spread_fit.json`): fitted liquid half-spreads 0.38% - 0.80% of the premium.
+2. **Strike step:**
+   - The step is read per minute: the gap between the ATM strike and the nearest other strike with a print that
+     minute.
+   - NSE re-gridded strikes in this window, and KOTAKBANK split, so one step per stock would be wrong.
+   - The band exit and 1-ITM use this step.
+3. **Expiry after the data:**
+   - A session whose contract expires after the last session in the data (the 27 Oct 2026 expiry, from 30 Sep 2026)
+     has no cut-off inside the data.
+   - The first engine refused such entries. That was a bug found by the tests. It touches only the final test's last
+     2 weeks; design results are identical before and after the fix.
+4. **Twins:**
+   - When a random draw cannot trade (no fill, no strike), up to 5 draws are tried, as in R49.
+   - A twin that never fills adds 0.
