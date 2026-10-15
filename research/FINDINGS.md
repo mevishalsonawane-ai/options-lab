@@ -811,6 +811,9 @@ at the worse price. The ORB family (R49) and zero-to-hero rules (R50) are not in
   - Design walk-forward: +Rs 1.82 lakh out of fold.
   - It is thin. At 2x spread and slippage it is about zero (-Rs 670 final, -Rs 85,770 design). It lost on NIFTY and
     MIDCPNIFTY in both periods, and its puts lost in both periods.
+  - The whole final profit came from FINNIFTY (+Rs 49,040); without FINNIFTY it is -Rs 351.
+  - A separate review after the read found two small issues (13 Oct expiry not flagged; time-stop spread volume).
+    Together they change the final net to +Rs 47,563, and it still passes.
   - A paper forward test at most, if Boss wants it. R51 changes nothing in the app.
 - Near misses (stay off):
   - M4 SILVERM: final +Rs 1.0 lakh on 93 trades, p 0.026, q 0.14; design no better than random, p 0.66.

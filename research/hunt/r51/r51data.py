@@ -76,7 +76,9 @@ def index_days(und: str) -> dict:
 
 
 def expiry_days(tv: pd.Series) -> set:
-    """ATM straddle time value (% of spot) at 15:15 below 0.6% and the next session's above 2x it."""
+    """ATM straddle time value (% of spot) at 15:15 below 0.6% and the next session's above 2x it.
+    Known limit (review, 15 Oct): the lake's last session has no next session, so it is never flagged (13 Oct 2026 was a
+    NIFTY weekly expiry: 2 trades of R44-donchian20-RT, +Rs 1,126; see HUNT_R51_CANCELLED_RECENT.md)."""
     tv = tv.sort_index()
     nxt = tv.shift(-1)
     ok = (tv < EXPIRY_TV_MAX) & (nxt > EXPIRY_TV_JUMP * tv.clip(lower=1e-6)) & nxt.notna()

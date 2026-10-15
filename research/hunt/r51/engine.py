@@ -136,6 +136,8 @@ def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tma
         if cstop >= 0 and c[m] <= E * (1.0 - cstop):
             pend_cstop = True
         if m == tend:
+            # Known bias (review, 15 Oct): _vol5(v, m, ...) below includes the exit minute's own volume; with m - 1 the
+            # passing rule's final net moves +Rs 81 (design -Rs 60). Kept so the committed results reproduce.
             if need < 0 or c[m] < E * (1.0 + need):
                 real_x = max(_r2(c[m] * 0.9995) - _ticks(_vol5(v, m, qty)) * tick, 0.0)
                 return E, float(c[m]), real_e, real_x, ef, m, 4

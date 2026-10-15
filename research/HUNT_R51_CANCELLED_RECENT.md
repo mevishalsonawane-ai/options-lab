@@ -45,7 +45,7 @@ else. Pre-registered in `research/hunt/r51/PREREG.md` (commit 11fbca1d, before a
 
 | strategy | decision | exact settings |
 |---|---|---|
-| **R44 Donchian 20, re-tuned** | **May go on paper as a forward test (Boss decides; it passed the gates, but it is thin and cost-sensitive).** Logged, labelled "R51 Donchian 20 re-tune", 1 lot, paper only; never carries over to live by itself. | Signal on the INDEX's 5-minute bars (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX): a close above the highest high of the previous 20 bars buys the call, a close below the lowest low of the previous 20 bars buys the put. Buy the **1-ITM** option of the nearest expiry at the next bar's open, entries 09:20-15:10. Exits: stop -15%, target +30%, out after 30 minutes, square-off 15:15. One position a side, at most 2 entries a day a side; no trades on expiry days. Suggested review: after 40 paper trades, stop it if net < 0 or below the cost of twice the spread. |
+| **R44 Donchian 20, re-tuned** | **May go on paper as a forward test (Boss decides; it passed the gates, but it is thin and cost-sensitive).** Logged, labelled "R51 Donchian 20 re-tune", 1 lot, paper only; never carries over to live by itself. | Signal on the INDEX's 5-minute bars (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX): a close above the highest high of the previous 20 bars buys the call, a close below the lowest low of the previous 20 bars buys the put. Buy the **1-ITM** option of the nearest expiry at the next bar's open, entries 09:20-15:10. Exits: stop -15%, target +30%, out after 30 minutes, square-off 15:15. One position a side, at most 2 entries a day a side; no trades on expiry days. Suggested review: after 40 paper trades, stop it if net < 0 or below the cost of twice the spread. Keep all 5 indices as tested (the FINNIFTY-only profit was found after the read; trading FINNIFTY alone would be a new, untested rule) and report FINNIFTY separately. |
 | M4 SILVERM morning call | stays off (q 0.14; design p 0.66) | - |
 | Night R3 holds V1-V8 + re-tune | stay off; keep the 09:16 sale | - |
 | Liquidity FINNIFTY 30+5 | stays parked | - |
@@ -60,6 +60,25 @@ else. Pre-registered in `research/hunt/r51/PREREG.md` (commit 11fbca1d, before a
 Under CLAUDE.md's PAPER rule an idea that has passed the gates may act on paper arms straight away. Every such change is
 logged in the Autopilot change timeline, undoable in one tap, and shown to Boss. R51 makes **no** app change; adding the
 Donchian forward test is a separate, Boss-approved step.
+
+## Review after the final read (separate reviewer, 15 Oct)
+
+A separate reviewer read the whole diff, and three things came up. The final test was not re-read (it is read once),
+so each was measured on the cached trades of the passing rule:
+- **Expiry flag on the last session.** The expiry rule needs the next session, so 13 Oct 2026, the lake's last
+  session and a NIFTY weekly expiry, was not flagged. The rule took 2 NIFTY trades that day (+Rs 1,126 net). Without
+  them the final net is +Rs 47,563 and the net without its top 5 trades is +Rs 4,719, so it still passes.
+- **Spread at the time stop.** The time-stop exit sized its half-spread from the volume of the 5 minutes up to and
+  including its own minute, not the minutes before it. With the earlier minutes the final net changes by +Rs 81 and
+  the design net by -Rs 60.
+- **One index carries it.** The pass depends on FINNIFTY (above). 30 of its 356 FINNIFTY final trades had no rolling
+  ATM strike at the signal minute (the strike was taken from the index close), a sign of thin contracts.
+- The reviewer found no look-ahead, no final-test leakage and no engine or statistics error that could create the
+  profit; every number in this write-up matched the result files.
+- LIQ-FIN-RT picked the original setting, so its p enters the BH family twice. That is conservative.
+
+The code is left exactly as it produced these results. Both issues are noted where they sit (`r51data.expiry_days`,
+`engine.simulate`).
 
 ## Method (as pre-registered)
 
