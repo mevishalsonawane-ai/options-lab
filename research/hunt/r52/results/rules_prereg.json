@@ -1,4 +1,215 @@
 {
+ "CH-1": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "mode": "flip",
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 2,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 3,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": "flip",
+     "tf": 30
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 1,
+     "tf": 30
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 2,
+     "tf": 30
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 3,
+     "tf": 30
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": "flip",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 1,
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 2,
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 3,
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": "flip",
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 1,
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 2,
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "mode": 3,
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "skip",
+   "fn": "fam_misc.chandelier",
+   "kind": "family",
+   "params": {
+    "mode": 1,
+    "tf": 60
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Chandelier Exit flips (Boss's ATR 7 x 2), BN",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the close row: 60-min, SL 1 ATR / TP 1R on the index, opposite signal, 09:20-14:30, 15:10, ATR 7 x 2 (Boss's settings; research/chandelier_exit.py). Grid = its 4 charts x 4 exits."
+  }
+ },
+ "H18-1": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,time_stop=20",
+    "params": {
+     "levels": "ALL"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "levels": "R60"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "levels": "ALL"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,tgt_pct=0.3,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_misc.h18_break",
+   "kind": "family",
+   "params": {
+    "levels": "R60"
+   },
+   "pos": {
+    "max_per_day": 3,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Rolling 60-min high/low break (h18)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY",
+    "FINNIFTY",
+    "SENSEX",
+    "MIDCPNIFTY"
+   ],
+   "why": "original = h18's best pre-holdout variant R60 / gamma none / arm + 30% target (hunt/h18/rule.py EXITS[1], 1-ITM, skip expiry, <= 3/day, 09:45-14:30). Grid = levels ALL x exits arm / arm+30% (gamma variants need another session's GEX panel)."
+  }
+ },
  "H25-10": {
   "grid": [
    {
@@ -6430,6 +6641,1185 @@
    "why": "original = answers.csv #3 = Q0125 (gap down > 0.5% -> CE at 09:16, 1-ITM near) with its best exit 'liq', the +314/tr on 34-35 trades the catalogue quotes; its own horizon (out after 15 min) is in the grid."
   }
  },
+ "H43-2": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=15,time_gain=None,sq_off=915",
+    "params": {
+     "strat": "bb",
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=15,time_gain=None,sq_off=915",
+    "params": {
+     "strat": "bb",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915",
+    "params": {
+     "strat": "bb",
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=45,time_gain=None,sq_off=915",
+    "params": {
+     "strat": "bb",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=15,time_gain=None,sq_off=915",
+   "expiry": "skip",
+   "fn": "fam_misc.h43_bakeoff",
+   "kind": "family",
+   "params": {
+    "strat": "bb",
+    "tf": 1
+   },
+   "pos": {
+    "max_per_day": 2,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Bake-off Bollinger(20,2) state entries, BN",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the report's headline bb 1-min, -30/+60%, 15-min time stop, 2/day (hunt/h43/sigs.py STRATS, partA.EXITS T15). Grid = bb at 5 / 15 min with T15 and the parameter document's T30 / T45."
+  }
+ },
+ "H43-3": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915",
+    "params": {
+     "strat": "pe",
+     "tf": 1
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915",
+    "params": {
+     "strat": "pe",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=45,time_gain=None,sq_off=915",
+    "params": {
+     "strat": "pe",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915",
+   "expiry": "skip",
+   "fn": "fam_misc.h43_bakeoff",
+   "kind": "family",
+   "params": {
+    "strat": "pe",
+    "tf": 5
+   },
+   "pos": {
+    "max_per_day": 2,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Bake-off afternoon PE (ADX 15-25 after 14:00), BN",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the report's pe 5-min, -30/+60%, 30-min time stop, 2/day (sigs.py STRATS, partA T30). Grid = pe at 1 / 15 min (T30) and the document's 15-min T45."
+  }
+ },
+ "H43-5": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.0,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 1.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 14,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 30,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 1,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 5,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "none",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=15,time_gain=None,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=60,time_gain=None,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "OTM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "fam": "bb",
+     "filt": "oi",
+     "k": 2.5,
+     "n": 20,
+     "tf": 3,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+   "expiry": "skip",
+   "fn": "fam_misc.h43_enhanced",
+   "kind": "family",
+   "params": {
+    "fam": "bb",
+    "filt": "oi",
+    "k": 2.5,
+    "n": 20,
+    "tf": 3,
+    "und": "MIDCPNIFTY"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index + option-chain context (OI)",
+   "title": "Enhanced Bollinger, MIDCP (OI build-up filter)",
+   "unds": [
+    "MIDCPNIFTY"
+   ],
+   "why": "original = part D's 'enhanced' bb pick (HUNT_H43.md table): MIDCP ATM (monthly = the lake's near series), BB(20, 2.5) 3-min, filter oi, S30EOD, 1/day. Grid = one-step neighbours in partD's own grid."
+  }
+ },
+ "H43-6": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 0,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 20,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 25,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 13,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 8,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 9,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 3,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 10,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "none",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=60,time_gain=None,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.25,tgt_pct=0.5,ladder=((1, 1), (2, 2), (3, 3), (4, 4)),ladder_ref_pct=0.25,time_stop=60,time_gain=None,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.3,trail_pct=0.15,trail_arm=0.1,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "f": 5,
+     "fam": "ema",
+     "filt": "wide",
+     "s": 21,
+     "tf": 5,
+     "thr": 15,
+     "und": "MIDCPNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+   "expiry": "skip",
+   "fn": "fam_misc.h43_enhanced",
+   "kind": "family",
+   "params": {
+    "f": 5,
+    "fam": "ema",
+    "filt": "wide",
+    "s": 21,
+    "tf": 5,
+    "thr": 15,
+    "und": "MIDCPNIFTY"
+   },
+   "pos": {
+    "max_per_day": 1,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Enhanced EMA5/21 + ADX>15, MIDCP ('wide day')",
+   "unds": [
+    "MIDCPNIFTY"
+   ],
+   "why": "original = part D's 'enhanced' ema pick: MIDCP 1-ITM, EMA 5/21 + ADX > 15, 5-min, filter wide, S30EOD, 1/day. Grid = one-step neighbours in partD's grid."
+  }
+ },
+ "H43-7": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 780,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 840,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      15,
+      25
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      10,
+      20
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": null,
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 3,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 10,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "none",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=30,time_gain=None,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,time_stop=60,time_gain=None,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.3,trail_pct=0.15,trail_arm=0.1,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+    "params": {
+     "band": [
+      20,
+      30
+     ],
+     "fam": "pe",
+     "filt": "vix_high",
+     "start": 810,
+     "tf": 5,
+     "und": "FINNIFTY"
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.3,tgt_pct=0.6,sq_off=915",
+   "expiry": "skip",
+   "fn": "fam_misc.h43_enhanced",
+   "kind": "family",
+   "params": {
+    "band": [
+     20,
+     30
+    ],
+    "fam": "pe",
+    "filt": "vix_high",
+    "start": 810,
+    "tf": 5,
+    "und": "FINNIFTY"
+   },
+   "pos": {
+    "max_per_day": 4,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index + VIX",
+   "title": "Enhanced afternoon PE, FINNIFTY (VIX high)",
+   "unds": [
+    "FINNIFTY"
+   ],
+   "why": "original = part D's 'enhanced' pe pick: FINNIFTY 1-ITM, from 13:30, ADX 20-30, 5-min, filter vix_high, S30EOD, 4/day. Grid = one-step neighbours in partD's grid."
+  }
+ },
+ "H46-2": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "rej": "R1",
+     "tf": 15,
+     "und": "MIDCPNIFTY",
+     "xm": "TOUCH"
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "rej": "R2",
+     "tf": 15,
+     "und": "MIDCPNIFTY",
+     "xm": "CLOSE"
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "rej": "R1",
+     "tf": 15,
+     "und": "MIDCPNIFTY",
+     "xm": "CLOSE"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "rej": "R1",
+     "tf": 15,
+     "und": "MIDCPNIFTY",
+     "xm": "CLOSE"
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "rej": "R1",
+     "tf": 15,
+     "und": "MIDCPNIFTY",
+     "xm": "CLOSE"
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "rej": "R1",
+     "tf": 15,
+     "und": "MIDCPNIFTY",
+     "xm": "CLOSE"
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "rej": "R1",
+     "tf": 5,
+     "und": "MIDCPNIFTY",
+     "xm": "CLOSE"
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "skip",
+   "fn": "fam_misc.h46_vwap_reject",
+   "kind": "family",
+   "params": {
+    "rej": "R1",
+    "tf": 15,
+    "und": "MIDCPNIFTY",
+    "xm": "CLOSE"
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "VWAP reject, MIDCP 15-min (TWAP, close exit)",
+   "unds": [
+    "MIDCPNIFTY"
+   ],
+   "why": "original = the h46 lead: MIDCP 15-min, TWAP, R1, CLOSE exit, ATM, unlimited a day, skip expiry (the primary's settings, hunt/h46/PREREG.md). Grid = h46's own axes: TOUCH, R2, 1-ITM, max 3 / 5, expiry allowed, 5-min."
+  }
+ },
+ "MP-1": {
+  "grid": [
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "dead": true
+    },
+    "rule": "ITM2/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "dead": false
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "sq_off=915",
+   "expiry": "skip",
+   "fn": "fam_misc.matrix_premium",
+   "kind": "family",
+   "params": {
+    "dead": true
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Boss's Matrix Premium v2.2 Pine, BN",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = Boss's script as written: 5-min EMA 20 cross, index SL 2.7 x ATR14, TP 2.5R, dead zone 11:00-13:15, ATM, 1 lot, 15:15 (research/matrix_pine.py). Grid = 2-ITM, no dead zone (the 2-lot TP1 partial rows are left)."
+  }
+ },
+ "MV-1": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "mode": "lock",
+     "tf": 15,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "choch_only": true,
+     "mode": "lock",
+     "tf": 15,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "choch_only": true,
+     "mode": "lock",
+     "tf": 5,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "mode": "fixed",
+     "tf": 5,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "mode": "ribbon",
+     "tf": 5,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "mode": "fixed",
+     "tf": 15,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "mode": "ribbon",
+     "tf": 15,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 1.5,
+     "mode": "lock",
+     "tf": 5,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.5,
+     "mode": "lock",
+     "tf": 5,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 1.5,
+     "mode": "lock",
+     "tf": 15,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.5,
+     "mode": "lock",
+     "tf": 15,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "mode": "lock",
+     "tf": 5,
+     "tp1": 1.5
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 2.0,
+     "mode": "lock",
+     "tf": 15,
+     "tp1": 1.5
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 0.5,
+     "mode": "lock",
+     "tf": 5,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "buf": 0.5,
+     "mode": "lock",
+     "tf": 15,
+     "tp1": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "skip",
+   "fn": "fam_misc.matrix_v22",
+   "kind": "family",
+   "params": {
+    "buf": 2.0,
+    "mode": "lock",
+    "tf": 5,
+    "tp1": 1.0
+   },
+   "pos": {
+    "one_at_a_time": false
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Matrix v2.2 risk engine, structure-break entries, BN",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the study's default: 5-min, SL pivot 2 x ATR, TP1 1R half + breakeven, lock, 2 lots (research/matrix_v22.py). Two 1-lot rows per entry (half A / B). Grid = its 15-min chart, CHoCH only, fixed / ribbon, buffer 1.5 / 2.5, TP1 1.5R, the tight 0.5 ATR row."
+  }
+ },
  "OBUY_GA-1": {
   "grid": [
    {
@@ -9769,6 +11159,178 @@
    "why": "original = R1's frozen holdout pick per index (HUNT_R1_INTERNET.md results table; hunt/r1/design.py frozen.json): both chg15 (yesterday's VIX close +15%) CE at 09:16, EOD"
   }
  },
+ "R20C-1": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+    "params": {
+     "last_entry": [
+      14,
+      0
+     ],
+     "n": 1,
+     "tf": 5,
+     "types": [
+      "PIV"
+     ],
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=40.0,tgt_pts=40.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40.0",
+   "expiry": "skip",
+   "fn": "fam_misc.r20c_break",
+   "kind": "family",
+   "params": {
+    "last_entry": [
+     14,
+     0
+    ],
+    "n": 2,
+    "tf": 5,
+    "types": [
+     "PIV"
+    ],
+    "unds": [
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Pivot R1/S1 break, 2 closing 5-min candles (BANKNIFTY half)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = R20c's pre-registered r20brk-piv5n2 (hunt/r20c/trades.py RULES; ARM BANKNIFTY 40/40 + LADDER, 15:10). NIFTY half is R20C-1N (per-index premium points). Grid = the study's other 5-min rule piv5n1 (= R20C-2)."
+  }
+ },
+ "R20C-1N": {
+  "grid": [
+   {
+    "exits": "stop_pts=20.0,tgt_pts=20.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=20.0",
+    "params": {
+     "last_entry": [
+      14,
+      0
+     ],
+     "n": 1,
+     "tf": 5,
+     "types": [
+      "PIV"
+     ],
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=20.0,tgt_pts=20.0,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=20.0",
+   "expiry": "skip",
+   "fn": "fam_misc.r20c_break",
+   "kind": "family",
+   "params": {
+    "last_entry": [
+     14,
+     0
+    ],
+    "n": 2,
+    "tf": 5,
+    "types": [
+     "PIV"
+    ],
+    "unds": [
+     "NIFTY"
+    ]
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Pivot R1/S1 break, 2 closing 5-min candles (NIFTY half of R20C-1)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "R20C-1's NIFTY half: r20brk-piv5n2 with ARM NIFTY 20/20 + LADDER (trades.py ARM). Grid piv5n1."
+  }
+ },
+ "R20C-3": {
+  "grid": [],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_misc.r20c_break",
+   "kind": "family",
+   "params": {
+    "last_entry": [
+     10,
+     30
+    ],
+    "liq_exit": true,
+    "n": 2,
+    "tf": 15,
+    "types": [
+     "PIV",
+     "PDHL"
+    ]
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Early 15-min R1/S1/PDH/PDL break (2 closes, by 10:30)",
+   "unds": [
+    "BANKNIFTY",
+    "NIFTY"
+   ],
+   "why": "original = r20brk-early15 (trades.py RULES): PIV + PDHL, 15-min, N 2, by 10:30, 1-ITM, Liquidity exits (sim_liq). The study's 4-rule grid is the separate keys R20C-1/3/4: no own grid."
+  }
+ },
+ "R20C-4": {
+  "grid": [],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_misc.r20c_break",
+   "kind": "family",
+   "params": {
+    "last_entry": [
+     14,
+     0
+    ],
+    "liq_exit": true,
+    "n": 2,
+    "tf": 15,
+    "types": [
+     "PIV"
+    ],
+    "vix_max": 13.0
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index + VIX",
+   "title": "Low-VIX 15-min pivot break (prev VIX < 13)",
+   "unds": [
+    "BANKNIFTY",
+    "NIFTY"
+   ],
+   "why": "original = r20brk-lowvix15 (trades.py RULES): PIV, 15-min, N 2, by 14:00, previous VIX close < 13, 1-ITM, Liquidity exits. No own grid (see R20C-3)."
+  }
+ },
  "R4-1": {
   "grid": [
    {
@@ -11447,6 +13009,514 @@
     "BANKNIFTY"
    ],
    "why": "original = the script as uploaded (AS_WRITTEN), 15m, script default pivot 10 / minSwing 1.0 / cooldown 15, NAT exit = R5's PRIMARY setting (research/hunt/r5/PREREG.md, design.py DEFAULT); grid = the other 17 primary runs"
+  }
+ },
+ "REVERSAL_SETUP-1": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.03333333333333333,tgt_pct=0.1",
+    "params": {
+     "drop": 0.003
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.33,tgt_pct=0.1",
+    "params": {
+     "drop": 0.003
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.06666666666666667,tgt_pct=0.2",
+    "params": {
+     "drop": 0.003
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "drop": 0.003
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "tgt_pct=0.1",
+    "params": {
+     "drop": 0.005
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "tgt_pct=0.1",
+    "params": {
+     "capital": [
+      [
+       "BANKNIFTY",
+       5000.0
+      ],
+      [
+       "NIFTY",
+       5000.0
+      ]
+     ],
+     "drop": 0.003
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   }
+  ],
+  "orig": {
+   "exits": "tgt_pct=0.1",
+   "expiry": "skip",
+   "fn": "fam_misc.reversal",
+   "kind": "family",
+   "params": {
+    "drop": 0.003
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Boss's 29 Sep reversal after a stalled move",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the close row: BANKNIFTY next-expiry, capital Rs 20k, move 0.3%, +10% target, no stop, 15:10 (REVERSAL_SETUP.md). Grid = the study's other exits and the 0.5% move / Rs 5k capital."
+  }
+ },
+ "ST-1": {
+  "grid": [
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "tf": 3
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "tf": 5
+    },
+    "rule": "ITM2/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "tf": 3
+    },
+    "rule": "ITM2/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "sq_off=915",
+    "params": {
+     "tf": 15
+    },
+    "rule": "ITM2/near",
+    "vid": "g05"
+   }
+  ],
+  "orig": {
+   "exits": "sq_off=915",
+   "expiry": "skip",
+   "fn": "fam_misc.st_ema",
+   "kind": "family",
+   "params": {
+    "tf": 5
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Boss's Pine Supertrend(10,3) + EMA50, BN",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = Boss's script as written: 5-min, ST(10, 3) + EMA 50, reverse on the opposite signal, no stop / target, ATM, 15:15 (research/st_ema_pine.py). Grid = its 3 / 15-min charts and 2-ITM strike."
+  }
+ },
+ "TAS_OPTIONS-1": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 15,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 60,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 240,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": null,
+     "tf": 30,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      1.5
+     ],
+     "tf": 30,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      2.0
+     ],
+     "tf": 30,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      4.0
+     ],
+     "tf": 30,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      2.0,
+      3.0
+     ],
+     "tf": 30,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 3,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 30,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 5,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 30,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 5,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 15,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 30,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "confirm": 0,
+     "lock": [
+      1.0,
+      3.0
+     ],
+     "tf": 30,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "skip",
+   "fn": "fam_misc.tas",
+   "kind": "family",
+   "params": {
+    "confirm": 0,
+    "lock": [
+     1.0,
+     3.0
+    ],
+    "tf": 30,
+    "unds": [
+     "NIFTY"
+    ]
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "TAS tracker on the index, buy ATM",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "original = NIFTY 30-min, lock 1 / 3 ATR, tracker stop, out on a turn, 15:10 (tas_options.py run); the close row's 1.5/2.5/3.5 R thirds cannot be one held contract, so the study's no-target row with the same lock is used (+51.5k vs +54.1k). Grid = charts, locks, wait 3 / 5 (TAS_CONFIRM), other indices."
+  }
+ },
+ "TREND_FILTER-1": {
+  "grid": [
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0",
+    "params": {
+     "chop": true,
+     "exit_rule": "fixed",
+     "n": 2
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0",
+    "params": {
+     "chop": false,
+     "exit_rule": "fixed",
+     "n": 3
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=40.0,tgt_pts=40.0",
+    "params": {
+     "chop": false,
+     "exit_rule": "fixed",
+     "n": 2
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=60.0",
+    "params": {
+     "chop": true,
+     "exit_rule": "trend",
+     "n": 3
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=60.0",
+    "params": {
+     "chop": true,
+     "exit_rule": "trend",
+     "n": 2
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=60.0",
+    "params": {
+     "chop": false,
+     "exit_rule": "trend",
+     "n": 3
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=60.0",
+    "params": {
+     "chop": false,
+     "exit_rule": "trend",
+     "n": 2
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=40.0,tgt_pts=40.0",
+   "expiry": "skip",
+   "fn": "fam_misc.trend_hh",
+   "kind": "family",
+   "params": {
+    "chop": true,
+    "exit_rule": "fixed",
+    "n": 3
+   },
+   "pos": {
+    "max_per_day": 2,
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "BN 5-min EMA9/TWAP + higher highs/lows trend",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the study's best row: 3 HH/HL, sideways filter on, -40/+40 premium pts, <= 2/day, ATM (research/trend_filter.py trades). Grid = its own n 2/3 x filter on/off x exit fixed/trend (-60 stop)."
   }
  }
 }

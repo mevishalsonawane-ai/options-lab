@@ -216,10 +216,12 @@ def r24_fires_from(feats: dict, pattern: tuple, cuts: dict) -> pd.DataFrame:
     frames = []
     for u, F in feats.items():
         F = F.copy()
+        if not len(F):
+            continue
         for c in I.FEATURES + ["minute_of_day"]:
-            if c not in F:
-                F[c] = np.nan
+            F[c] = F[c].astype(float) if c in F else np.nan
         frames.append(DA.frame_from(F, u))
+    frames = [f for f in frames if len(f)]
     if not frames:
         return pd.DataFrame(columns=["und", "d", "entry_row", "side", "offset", "dte"])
     mf = pd.concat(frames, ignore_index=True)
