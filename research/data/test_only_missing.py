@@ -144,3 +144,17 @@ def test_seed_index_minutes_and_live_futures(tmp_path):
     assert lf.seed(raw, lake, "fut_1m", jf) == {"seeded": 1, "missing": 2}   # its last day (1 Sep) is in window 2
     ch = pd.read_parquet(jf[0].path + ".parquet")
     assert list(ch.open_interest) == [9] and "symbol" not in ch
+
+
+def test_stand_in_for_the_newest_window_until_it_is_fetched(tmp_path, monkeypatch):
+    raw, lake = str(tmp_path / "raw"), str(tmp_path / "lake")
+    published(lake)
+    J = jobs(raw)
+    lf.seed(raw, lake, "stkopt", J)
+    st = lf.seed(raw, lake, "stkopt", J, upto_last=True)
+    assert st == {"seeded": 0, "missing": 7, "stand_in": 1}   # only ATM call has a row on 3 Oct (third window)
+    third = [j for j in J if j.path.endswith("+00C/2021-09-30")][0]
+    assert os.path.exists(third.path + ".seed.parquet") and not third.done() and third in lf.todo(J)
+    monkeypatch.setattr(lf.dh, "post", lambda ep, body: (200, {"timestamp": [1], "open": [1.0]}, ""))
+    third.run()   # fetching it later replaces the stand-in
+    assert third.done() and not os.path.exists(third.path + ".seed.parquet")

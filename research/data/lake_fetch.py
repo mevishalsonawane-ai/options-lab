@@ -77,8 +77,9 @@ class Job:
             df.to_parquet(self.path + ".parquet.tmp", compression="zstd")
             os.replace(self.path + ".parquet.tmp", self.path + ".parquet")
             res = "ok", len(df)
-        if os.path.exists(self.path + ".err"):  # an earlier failed try of this chunk
-            os.remove(self.path + ".err")
+        for ext in (".err", ".seed.parquet"):  # an earlier failed try / a stand-in from seed(upto_last=True)
+            if os.path.exists(self.path + ext):
+                os.remove(self.path + ext)
         return res
 
 
@@ -295,21 +296,24 @@ def published(lake, group, sid):
             ("rows_dropped_series_total", "duplicates_dropped_series_total"))
 
 
-def seed(raw, lake, group, J=None):
+def seed(raw, lake, group, J=None, upto_last=False):
     """Write raw chunks for jobs whose window is covered by the published files in LAKE (lake_build.py output).
 
     Works for option groups, idx_1m and fut_1m. A chunk is seeded when the published file has rows of its series
     (for options: offset and side) inside its window and the window ends before the last published day. Windows
     with no published rows stay unfetched (they may have been empty or never fetched). The published files' QA
     counts of dropped rows are kept next to the raw series (seed_qa.json), so lake_build.py can still report
-    them. Returns {"seeded": n, "missing": m} (m = jobs still to fetch)."""
+    them. With upto_last=True (before a build when the newest windows could not be fetched again) a window that
+    reaches the last published day gets its published rows as a stand-in, RAW/.../<from>.seed.parquet: the build
+    reads it, the chunk still counts as not done, and fetching it later replaces it. Returns {"seeded": n,
+    "missing": m} (m = jobs still to fetch), plus "stand_in" with upto_last."""
     J = jobs_for(group, raw) if J is None else J
     opt = not group.endswith("_1m")
     series = {}
     for j in J:
         sid = os.path.dirname(j.path)
         series.setdefault(os.path.dirname(sid) if opt else sid, []).append(j)
-    st = {"seeded": 0, "missing": 0}
+    st = {"seeded": 0, "missing": 0, **({"stand_in": 0} if upto_last else {})}
     for sid, jobs in series.items():
         fs, df, keys, qfile, qkeys = published(lake, group, sid)
         grp, last = {}, None
@@ -335,17 +339,19 @@ def seed(raw, lake, group, J=None):
             tag = os.path.basename(os.path.dirname(j.path))
             a, b = window(j)
             g = grp.get((int(tag[:-1]), tag[-1]) if opt else ())
-            rows = None
-            if g is not None and b < last:  # rows from 00:00 IST on day a to the end of day b
+            rows, ext = None, ".parquet"
+            if g is not None and (b < last or upto_last):  # rows from 00:00 IST on day a to the end of day b
                 lo, hi = (int(pd.Timestamp(d, tz=IST).timestamp()) for d in (a, b + dt.timedelta(days=1)))
                 rows = g[0].iloc[np.searchsorted(g[1], lo):np.searchsorted(g[1], hi)]
-            if rows is None or not len(rows):
+                ext = ".parquet" if b < last else ".seed.parquet"
+            if rows is None or not len(rows) or ext == ".seed.parquet":
                 st["missing"] += 1
+            if rows is None or not len(rows):
                 continue
             os.makedirs(os.path.dirname(j.path), exist_ok=True)
-            rows.reset_index(drop=True).to_parquet(j.path + ".parquet.tmp", compression="zstd")
-            os.replace(j.path + ".parquet.tmp", j.path + ".parquet")
-            st["seeded"] += 1
+            rows.reset_index(drop=True).to_parquet(j.path + ext + ".tmp", compression="zstd")
+            os.replace(j.path + ext + ".tmp", j.path + ext)
+            st["seeded" if ext == ".parquet" else "stand_in"] += 1
     return st
 
 
