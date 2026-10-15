@@ -10,7 +10,8 @@ hypothesis: 'An expanded, pre-listed feature set that knows OI, PCR, max pain, O
   p < 0.05, BH q <= 0.10 over 7, 40+ trades, top-5 < net, design WF > 0; replaces Solo 2.0 only if it also beats V1 on net,
   AUC, paired-day bootstrap p < 0.10 and net without MIDCPNIFTY).'
 data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK files with OI/IV/volume,
-  NIFTY MONTH for term structure, NSE participant OI), 20 Nov 2024 onwards; not yet downloaded
+  NIFTY MONTH for term structure, NSE participant OI), 20 Nov 2024 onwards; copied 15 Oct 2026 (last session 14 Oct NIFTY
+  / BANKNIFTY, 13 Oct FINNIFTY / MIDCPNIFTY)
 period:
   design: 21 Nov 2024 - 31 Mar 2026 (purged walk-forward, monthly refits, 1-session embargo, test months Jul 2025 - Mar 2026)
   holdout: '1 Apr 2026 - the lake''s last session, read once (NOT fresh: R57 read it for A2 with the same setups)'
@@ -27,10 +28,16 @@ settings: research/hunt/r61/PREREG.md section 5; research/hunt/r61/r61cfg.py VAR
 prereg: research/hunt/r61/PREREG.md
 variants_tried: 1
 results:
-  summary: 'Not run yet (15 Oct 2026): the data-lake download was not approved in this session, so no model score, P&L or
-    holdout number exists. Logged before any result, as the experiment log requires.'
-  costs: 'to be: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, one held contract, 1 lot in
-    force'
-holdout_read: false
-verdict: inconclusive
-notes: Pre-registered family of 7 variants (BH over 7). Update this entry with the results when the study runs.
+  summary: 'Design walk-forward (Jul 2025 - Mar 2026): 169 trades, win 54%, net Rs +66,676, max DD Rs 23,324; AUC walk-forward
+    0.5137 vs random split 0.56 (leaky). Final test (1 Apr - 14 Oct 2026, read once, not fresh): 127 trades, win 54%, net
+    Rs +58,169 (Rs +458/trade), at 2x costs Rs +40,629, max DD Rs 25,891, worst day Rs -6,120, months green 4/7, top-5 share
+    0.68, AUC 0.5247; twin p 0.002, BH q 0.0028 (7 variants), selection-twin p 0.008; net without MIDCPNIFTY Rs +21,772. Per
+    index: BANKNIFTY 18 / Rs +9,231, FINNIFTY 22 / Rs +12,121, MIDCPNIFTY 75 / Rs +36,398, NIFTY 12 / Rs +420. Gates: PASS.
+    Did not replace Solo 2.0: the pre-registered candidate was V3 (best design net); vs V1 on the same final days its net
+    and AUC were lower and the paired-day bootstrap p was 0.9717.'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills doubled on stops, next-minute fills, one held contract,
+    1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Passed the R47-R60 gates but did not beat Solo 2.0 (V1) out of sample, so it is not adopted (PREREG section 8). Signal
+  source: the underlying index (S1-S4); every R61 input is context only.'

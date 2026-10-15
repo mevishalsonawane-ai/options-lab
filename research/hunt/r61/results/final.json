@@ -1,0 +1,867 @@
+{
+ "variants": {
+  "V1": {
+   "kind": "logit",
+   "blocks": [],
+   "test": {
+    "trades": 128,
+    "win": 0.594,
+    "net": 99172,
+    "per_trade": 775,
+    "max_dd": 18056,
+    "worst_day": -6120,
+    "months_green": "6/7",
+    "top5_share": 0.399,
+    "ex_top5": 59591,
+    "net_2x": 80849,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 12,
+      "net": 1912
+     },
+     "FINNIFTY": {
+      "trades": 26,
+      "net": 15701
+     },
+     "MIDCPNIFTY": {
+      "trades": 82,
+      "net": 71586
+     },
+     "NIFTY": {
+      "trades": 8,
+      "net": 9973
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 3,
+      "net": 7523
+     },
+     "S2": {
+      "trades": 31,
+      "net": 26255
+     },
+     "S3": {
+      "trades": 92,
+      "net": 63937
+     },
+     "S4": {
+      "trades": 2,
+      "net": 1457
+     }
+    }
+   },
+   "auc_test": 0.5382,
+   "p": 0.002,
+   "twin_mean": -22414,
+   "p_selection": 0.002,
+   "ex_midcp": 27586,
+   "q": 0.0028,
+   "verdict": "PASS"
+  },
+  "V2": {
+   "kind": "logit",
+   "blocks": [
+    "CH",
+    "GK",
+    "CX"
+   ],
+   "test": {
+    "trades": 118,
+    "win": 0.568,
+    "net": 60399,
+    "per_trade": 512,
+    "max_dd": 25362,
+    "worst_day": -6120,
+    "months_green": "4/7",
+    "top5_share": 0.609,
+    "ex_top5": 23623,
+    "net_2x": 43867,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 16,
+      "net": 14543
+     },
+     "FINNIFTY": {
+      "trades": 21,
+      "net": 10417
+     },
+     "MIDCPNIFTY": {
+      "trades": 71,
+      "net": 32002
+     },
+     "NIFTY": {
+      "trades": 10,
+      "net": 3437
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 2,
+      "net": -2344
+     },
+     "S2": {
+      "trades": 25,
+      "net": 15399
+     },
+     "S3": {
+      "trades": 89,
+      "net": 48367
+     },
+     "S4": {
+      "trades": 2,
+      "net": -1024
+     }
+    }
+   },
+   "auc_test": 0.5238,
+   "p": 0.002,
+   "twin_mean": -26934,
+   "p_selection": 0.008,
+   "ex_midcp": 28396,
+   "q": 0.0028,
+   "verdict": "PASS"
+  },
+  "V3": {
+   "kind": "logit",
+   "blocks": [
+    "GK",
+    "CX"
+   ],
+   "test": {
+    "trades": 119,
+    "win": 0.571,
+    "net": 65219,
+    "per_trade": 548,
+    "max_dd": 17631,
+    "worst_day": -6120,
+    "months_green": "5/7",
+    "top5_share": 0.564,
+    "ex_top5": 28443,
+    "net_2x": 48214,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 11,
+      "net": 10853
+     },
+     "FINNIFTY": {
+      "trades": 22,
+      "net": 22370
+     },
+     "MIDCPNIFTY": {
+      "trades": 75,
+      "net": 29974
+     },
+     "NIFTY": {
+      "trades": 11,
+      "net": 2022
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 3,
+      "net": -1229
+     },
+     "S2": {
+      "trades": 24,
+      "net": 13437
+     },
+     "S3": {
+      "trades": 91,
+      "net": 52242
+     },
+     "S4": {
+      "trades": 1,
+      "net": 769
+     }
+    }
+   },
+   "auc_test": 0.5367,
+   "p": 0.004,
+   "twin_mean": -23444,
+   "p_selection": 0.002,
+   "ex_midcp": 35245,
+   "q": 0.004,
+   "verdict": "PASS"
+  },
+  "V4": {
+   "kind": "logit",
+   "blocks": [
+    "CH"
+   ],
+   "test": {
+    "trades": 127,
+    "win": 0.543,
+    "net": 58169,
+    "per_trade": 458,
+    "max_dd": 25891,
+    "worst_day": -6120,
+    "months_green": "4/7",
+    "top5_share": 0.68,
+    "ex_top5": 18589,
+    "net_2x": 40629,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 18,
+      "net": 9231
+     },
+     "FINNIFTY": {
+      "trades": 22,
+      "net": 12121
+     },
+     "MIDCPNIFTY": {
+      "trades": 75,
+      "net": 36398
+     },
+     "NIFTY": {
+      "trades": 12,
+      "net": 420
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 1,
+      "net": -2869
+     },
+     "S2": {
+      "trades": 30,
+      "net": 20256
+     },
+     "S3": {
+      "trades": 94,
+      "net": 43915
+     },
+     "S4": {
+      "trades": 2,
+      "net": -3132
+     }
+    }
+   },
+   "auc_test": 0.5247,
+   "p": 0.002,
+   "twin_mean": -24813,
+   "p_selection": 0.008,
+   "ex_midcp": 21772,
+   "q": 0.0028,
+   "verdict": "PASS"
+  },
+  "V5": {
+   "kind": "gbc",
+   "blocks": [
+    "CH",
+    "GK",
+    "CX"
+   ],
+   "test": {
+    "trades": 122,
+    "win": 0.59,
+    "net": 71787,
+    "per_trade": 588,
+    "max_dd": 15202,
+    "worst_day": -5749,
+    "months_green": "5/7",
+    "top5_share": 0.497,
+    "ex_top5": 36092,
+    "net_2x": 56170,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 35,
+      "net": 28777
+     },
+     "FINNIFTY": {
+      "trades": 20,
+      "net": 29343
+     },
+     "MIDCPNIFTY": {
+      "trades": 33,
+      "net": 23107
+     },
+     "NIFTY": {
+      "trades": 34,
+      "net": -9440
+     }
+    },
+    "per_setup": {
+     "S2": {
+      "trades": 108,
+      "net": 74945
+     },
+     "S3": {
+      "trades": 13,
+      "net": 2591
+     },
+     "S4": {
+      "trades": 1,
+      "net": -5749
+     }
+    }
+   },
+   "auc_test": 0.5265,
+   "p": 0.002,
+   "twin_mean": -21742,
+   "p_selection": 0.002,
+   "ex_midcp": 48680,
+   "q": 0.0028,
+   "verdict": "PASS"
+  },
+  "V6": {
+   "kind": "gbc",
+   "blocks": [
+    "GK",
+    "CX"
+   ],
+   "test": {
+    "trades": 120,
+    "win": 0.567,
+    "net": 50878,
+    "per_trade": 424,
+    "max_dd": 18824,
+    "worst_day": -5194,
+    "months_green": "5/7",
+    "top5_share": 0.628,
+    "ex_top5": 18936,
+    "net_2x": 35660,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 24,
+      "net": 19481
+     },
+     "FINNIFTY": {
+      "trades": 26,
+      "net": 14119
+     },
+     "MIDCPNIFTY": {
+      "trades": 34,
+      "net": 16220
+     },
+     "NIFTY": {
+      "trades": 36,
+      "net": 1058
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 1,
+      "net": -5194
+     },
+     "S2": {
+      "trades": 107,
+      "net": 66123
+     },
+     "S3": {
+      "trades": 12,
+      "net": -10051
+     }
+    }
+   },
+   "auc_test": 0.5301,
+   "p": 0.002,
+   "twin_mean": -19024,
+   "p_selection": 0.01,
+   "ex_midcp": 34658,
+   "q": 0.0028,
+   "verdict": "PASS"
+  },
+  "V7": {
+   "kind": "l1",
+   "blocks": [
+    "CH",
+    "GK",
+    "CX"
+   ],
+   "test": {
+    "trades": 117,
+    "win": 0.547,
+    "net": 59941,
+    "per_trade": 512,
+    "max_dd": 20560,
+    "worst_day": -6120,
+    "months_green": "5/7",
+    "top5_share": 0.614,
+    "ex_top5": 23165,
+    "net_2x": 43543,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 17,
+      "net": 13372
+     },
+     "FINNIFTY": {
+      "trades": 30,
+      "net": 11543
+     },
+     "MIDCPNIFTY": {
+      "trades": 58,
+      "net": 37168
+     },
+     "NIFTY": {
+      "trades": 12,
+      "net": -2142
+     }
+    },
+    "per_setup": {
+     "S1": {
+      "trades": 3,
+      "net": -9126
+     },
+     "S2": {
+      "trades": 19,
+      "net": 8824
+     },
+     "S3": {
+      "trades": 95,
+      "net": 60243
+     }
+    }
+   },
+   "auc_test": 0.5245,
+   "p": 0.004,
+   "twin_mean": -23179,
+   "p_selection": 0.004,
+   "ex_midcp": 22772,
+   "q": 0.004,
+   "verdict": "PASS"
+  }
+ },
+ "replace": {
+  "candidate": "V3",
+  "replaces": false,
+  "checks": {
+   "net": false,
+   "auc": false,
+   "boot_p": 0.9717,
+   "ex_midcp": true,
+   "boot": false
+  }
+ },
+ "reference": {
+  "plain_solo": {
+   "trades": 36,
+   "win": 0.417,
+   "net": -21589,
+   "per_trade": -600,
+   "max_dd": 28815,
+   "worst_day": -6235,
+   "months_green": "4/7",
+   "top5_share": null,
+   "ex_top5": -42430,
+   "net_2x": -26635,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 11,
+     "net": -7975
+    },
+    "FINNIFTY": {
+     "trades": 14,
+     "net": 2705
+    },
+    "NIFTY": {
+     "trades": 11,
+     "net": -16319
+    }
+   },
+   "per_setup": {
+    "S1": {
+     "trades": 36,
+     "net": -21589
+    }
+   }
+  },
+  "S1_all": {
+   "trades": 89,
+   "win": 0.517,
+   "net": 1329,
+   "per_trade": 15,
+   "max_dd": 43134,
+   "worst_day": -15580,
+   "months_green": "3/7",
+   "top5_share": 31.328,
+   "ex_top5": -40311,
+   "net_2x": -11802,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 21,
+     "net": 2634
+    },
+    "FINNIFTY": {
+     "trades": 20,
+     "net": 4206
+    },
+    "MIDCPNIFTY": {
+     "trades": 27,
+     "net": 4916
+    },
+    "NIFTY": {
+     "trades": 21,
+     "net": -10428
+    }
+   },
+   "per_setup": {
+    "S1": {
+     "trades": 89,
+     "net": 1329
+    }
+   }
+  },
+  "S2_all": {
+   "trades": 1468,
+   "win": 0.443,
+   "net": 49733,
+   "per_trade": 34,
+   "max_dd": 79256,
+   "worst_day": -23012,
+   "months_green": "6/7",
+   "top5_share": 0.861,
+   "ex_top5": 6890,
+   "net_2x": -138763,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 381,
+     "net": 13500
+    },
+    "FINNIFTY": {
+     "trades": 359,
+     "net": 51255
+    },
+    "MIDCPNIFTY": {
+     "trades": 396,
+     "net": 6284
+    },
+    "NIFTY": {
+     "trades": 332,
+     "net": -21305
+    }
+   },
+   "per_setup": {
+    "S2": {
+     "trades": 1468,
+     "net": 49733
+    }
+   }
+  },
+  "S3_all": {
+   "trades": 232,
+   "win": 0.504,
+   "net": 49360,
+   "per_trade": 213,
+   "max_dd": 36994,
+   "worst_day": -14796,
+   "months_green": "5/7",
+   "top5_share": 0.802,
+   "ex_top5": 9780,
+   "net_2x": 20154,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 59,
+     "net": 6139
+    },
+    "FINNIFTY": {
+     "trades": 43,
+     "net": 629
+    },
+    "MIDCPNIFTY": {
+     "trades": 66,
+     "net": 45466
+    },
+    "NIFTY": {
+     "trades": 64,
+     "net": -2874
+    }
+   },
+   "per_setup": {
+    "S3": {
+     "trades": 232,
+     "net": 49360
+    }
+   }
+  },
+  "S4_all": {
+   "trades": 459,
+   "win": 0.464,
+   "net": -114070,
+   "per_trade": -249,
+   "max_dd": 123689,
+   "worst_day": -20536,
+   "months_green": "2/7",
+   "top5_share": null,
+   "ex_top5": -145123,
+   "net_2x": -172872,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 121,
+     "net": -12698
+    },
+    "FINNIFTY": {
+     "trades": 110,
+     "net": -24967
+    },
+    "MIDCPNIFTY": {
+     "trades": 125,
+     "net": -42444
+    },
+    "NIFTY": {
+     "trades": 103,
+     "net": -33961
+    }
+   },
+   "per_setup": {
+    "S4": {
+     "trades": 459,
+     "net": -114070
+    }
+   }
+  }
+ },
+ "ablation": {
+  "V2": {
+   "auc": 0.5238,
+   "net": 60399
+  },
+  "drop": {
+   "oi_level_change": {
+    "auc": 0.5249,
+    "d_auc": 0.0011,
+    "net": 61624,
+    "d_net": 1225
+   },
+   "buildup": {
+    "auc": 0.5241,
+    "d_auc": 0.0003,
+    "net": 65050,
+    "d_net": 4651
+   },
+   "pcr": {
+    "auc": 0.5245,
+    "d_auc": 0.0007,
+    "net": 60340,
+    "d_net": -59
+   },
+   "max_pain": {
+    "auc": 0.5247,
+    "d_auc": 0.0009,
+    "net": 54141,
+    "d_net": -6258
+   },
+   "oi_walls": {
+    "auc": 0.5252,
+    "d_auc": 0.0014,
+    "net": 44930,
+    "d_net": -15469
+   },
+   "iv_level_rank": {
+    "auc": 0.5262,
+    "d_auc": 0.0024,
+    "net": 54589,
+    "d_net": -5810
+   },
+   "skew_smile_term": {
+    "auc": 0.5255,
+    "d_auc": 0.0017,
+    "net": 54970,
+    "d_net": -5429
+   },
+   "gex_flip": {
+    "auc": 0.5246,
+    "d_auc": 0.0008,
+    "net": 59591,
+    "d_net": -808
+   },
+   "basis": {
+    "auc": 0.5213,
+    "d_auc": -0.0025,
+    "net": 73597,
+    "d_net": 13198
+   },
+   "greeks": {
+    "auc": 0.5247,
+    "d_auc": 0.0009,
+    "net": 78932,
+    "d_net": 18533
+   },
+   "vix_rank": {
+    "auc": 0.5247,
+    "d_auc": 0.0009,
+    "net": 51874,
+    "d_net": -8525
+   },
+   "value_area": {
+    "auc": 0.5236,
+    "d_auc": -0.0002,
+    "net": 56960,
+    "d_net": -3439
+   },
+   "events": {
+    "auc": 0.5241,
+    "d_auc": 0.0003,
+    "net": 60395,
+    "d_net": -4
+   },
+   "other_expiry": {
+    "auc": 0.5227,
+    "d_auc": -0.0011,
+    "net": 58178,
+    "d_net": -2221
+   },
+   "participants": {
+    "auc": 0.5221,
+    "d_auc": -0.0017,
+    "net": 66787,
+    "d_net": 6388
+   }
+  },
+  "add": {
+   "oi_near_log": {
+    "auc": 0.537,
+    "d_auc": -0.0012
+   },
+   "oi_near_chg_pct": {
+    "auc": 0.5384,
+    "d_auc": 0.0002
+   },
+   "writer_tilt30": {
+    "auc": 0.5374,
+    "d_auc": -0.0008
+   },
+   "buildup": {
+    "auc": 0.5389,
+    "d_auc": 0.0007
+   },
+   "pcr_oi_chg30": {
+    "auc": 0.5375,
+    "d_auc": -0.0007
+   },
+   "pcr_vol": {
+    "auc": 0.5392,
+    "d_auc": 0.001
+   },
+   "pcr_rank5": {
+    "auc": 0.5368,
+    "d_auc": -0.0014
+   },
+   "pcr_rank20": {
+    "auc": 0.5363,
+    "d_auc": -0.0019
+   },
+   "maxpain_dist_pct": {
+    "auc": 0.5325,
+    "d_auc": -0.0057
+   },
+   "wall_ahead_pct": {
+    "auc": 0.5385,
+    "d_auc": 0.0003
+   },
+   "wall_behind_pct": {
+    "auc": 0.5375,
+    "d_auc": -0.0007
+   },
+   "iv_rank60": {
+    "auc": 0.5382,
+    "d_auc": 0.0
+   },
+   "iv_chg_day": {
+    "auc": 0.538,
+    "d_auc": -0.0002
+   },
+   "smile_curv": {
+    "auc": 0.5339,
+    "d_auc": -0.0043
+   },
+   "term_slope": {
+    "auc": 0.5397,
+    "d_auc": 0.0015
+   },
+   "gex_norm": {
+    "auc": 0.5347,
+    "d_auc": -0.0035
+   },
+   "gex_sign": {
+    "auc": 0.5352,
+    "d_auc": -0.003
+   },
+   "flip_dist_pct": {
+    "auc": 0.5375,
+    "d_auc": -0.0007
+   },
+   "synth_basis_bps": {
+    "auc": 0.5387,
+    "d_auc": 0.0005
+   },
+   "delta_abs": {
+    "auc": 0.5384,
+    "d_auc": 0.0002
+   },
+   "gamma_1pct": {
+    "auc": 0.5435,
+    "d_auc": 0.0053
+   },
+   "theta_pct_day": {
+    "auc": 0.5367,
+    "d_auc": -0.0015
+   },
+   "vega_pct": {
+    "auc": 0.5377,
+    "d_auc": -0.0005
+   },
+   "vix_rank60": {
+    "auc": 0.5385,
+    "d_auc": 0.0003
+   },
+   "va_pos": {
+    "auc": 0.5377,
+    "d_auc": -0.0005
+   },
+   "event_rbi_budget": {
+    "auc": 0.5352,
+    "d_auc": -0.003
+   },
+   "post_us_event": {
+    "auc": 0.5398,
+    "d_auc": 0.0016
+   },
+   "other_expiry_today": {
+    "auc": 0.5368,
+    "d_auc": -0.0014
+   },
+   "fii_fut_long_share": {
+    "auc": 0.5396,
+    "d_auc": 0.0014
+   },
+   "fii_fut_long_chg": {
+    "auc": 0.5385,
+    "d_auc": 0.0003
+   }
+  },
+  "A2_auc": 0.5382
+ },
+ "coverage_final": {
+  "oi_near_log": 0.996,
+  "oi_near_chg_pct": 0.998,
+  "writer_tilt30": 0.997,
+  "buildup": 0.998,
+  "pcr_oi_chg30": 0.998,
+  "pcr_vol": 0.999,
+  "pcr_rank5": 0.995,
+  "pcr_rank20": 0.998,
+  "maxpain_dist_pct": 1.0,
+  "wall_ahead_pct": 0.996,
+  "wall_behind_pct": 1.0,
+  "iv_rank60": 0.967,
+  "iv_chg_day": 0.984,
+  "smile_curv": 0.959,
+  "term_slope": 0.231,
+  "gex_norm": 0.944,
+  "gex_sign": 0.944,
+  "flip_dist_pct": 0.491,
+  "synth_basis_bps": 0.958,
+  "delta_abs": 0.936,
+  "gamma_1pct": 0.936,
+  "theta_pct_day": 0.936,
+  "vega_pct": 0.936,
+  "vix_rank60": 1.0,
+  "va_pos": 1.0,
+  "event_rbi_budget": 1.0,
+  "post_us_event": 1.0,
+  "other_expiry_today": 1.0,
+  "fii_fut_long_share": 1.0,
+  "fii_fut_long_chg": 1.0
+ }
+}

@@ -36,7 +36,7 @@ Also called: OI, change in OI.
 
 **Solo's inputs from it.** `oi_near_log`, `oi_near_chg_pct`, `writer_tilt30`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'oi level change' inputs from the all-inputs model changed walk-forward AUC by +0.0007 (design) / +0.0011 (final) and net by Rs +11,103 / Rs +1,225. Each input added alone to A2's 29 changed AUC (design / final): `oi_near_log` -0.0010 / -0.0012, `oi_near_chg_pct` +0.0005 / +0.0002, `writer_tilt30` +0.0000 / -0.0008. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## OI build-up types
 
@@ -67,7 +67,7 @@ Also called: long build-up, short build-up, short covering, long unwinding.
 
 **Solo's inputs from it.** `buildup`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'buildup' inputs from the all-inputs model changed walk-forward AUC by -0.0009 (design) / +0.0003 (final) and net by Rs +17,993 / Rs +4,651. Each input added alone to A2's 29 changed AUC (design / final): `buildup` +0.0017 / +0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Put-call ratio (PCR), on OI and on volume
 
@@ -100,7 +100,7 @@ Also called: PCR, PCR OI, PCR volume.
 
 **Solo's inputs from it.** `pcr_oi (A2)`, `pcr_oi_chg30`, `pcr_vol`, `pcr_rank5`, `pcr_rank20`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'pcr' inputs from the all-inputs model changed walk-forward AUC by -0.0015 (design) / +0.0007 (final) and net by Rs -22,947 / Rs -59. Each input added alone to A2's 29 changed AUC (design / final): `pcr_oi_chg30` +0.0046 / -0.0007, `pcr_vol` -0.0014 / +0.0010, `pcr_rank5` -0.0019 / -0.0014, `pcr_rank20` -0.0034 / -0.0019. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Max pain
 
@@ -131,7 +131,7 @@ Also called: option pain, max pain strike.
 
 **Solo's inputs from it.** `maxpain_dist_pct`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'max pain' inputs from the all-inputs model changed walk-forward AUC by +0.0006 (design) / +0.0009 (final) and net by Rs +6,347 / Rs -6,258. Each input added alone to A2's 29 changed AUC (design / final): `maxpain_dist_pct` +0.0001 / -0.0057. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## OI walls (support and resistance from OI)
 
@@ -162,7 +162,7 @@ Also called: call wall, put wall, max OI strike.
 
 **Solo's inputs from it.** `wall_ahead_pct`, `wall_behind_pct`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'oi walls' inputs from the all-inputs model changed walk-forward AUC by +0.0000 (design) / +0.0014 (final) and net by Rs +5,745 / Rs -15,469. Each input added alone to A2's 29 changed AUC (design / final): `wall_ahead_pct` -0.0003 / +0.0003, `wall_behind_pct` +0.0000 / -0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Implied volatility (IV), ATM IV
 
@@ -194,7 +194,7 @@ Also called: IV, ATM IV.
 
 **Solo's inputs from it.** `iv_atm (A2)`, `iv_chg_day`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'iv level rank' inputs from the all-inputs model changed walk-forward AUC by +0.0040 (design) / +0.0024 (final) and net by Rs +2,878 / Rs -5,810. Each input added alone to A2's 29 changed AUC (design / final): `iv_chg_day` -0.0023 / -0.0002. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## IV rank and IV percentile
 
@@ -225,7 +225,7 @@ Also called: IVR, IV percentile.
 
 **Solo's inputs from it.** `iv_rank60`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'iv level rank' inputs from the all-inputs model changed walk-forward AUC by +0.0040 (design) / +0.0024 (final) and net by Rs +2,878 / Rs -5,810. Each input added alone to A2's 29 changed AUC (design / final): `iv_rank60` -0.0070 / +0.0000. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## IV skew and smile
 
@@ -256,7 +256,7 @@ Also called: skew, smile, 25-delta skew, risk reversal.
 
 **Solo's inputs from it.** `iv_skew (A2)`, `smile_curv`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'skew smile term' inputs from the all-inputs model changed walk-forward AUC by +0.0027 (design) / +0.0017 (final) and net by Rs -7,434 / Rs -5,429. Each input added alone to A2's 29 changed AUC (design / final): `smile_curv` +0.0002 / -0.0043. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## IV term structure
 
@@ -286,7 +286,7 @@ Also called: term structure, calendar IV.
 
 **Solo's inputs from it.** `term_slope`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'skew smile term' inputs from the all-inputs model changed walk-forward AUC by +0.0027 (design) / +0.0017 (final) and net by Rs -7,434 / Rs -5,429. Each input added alone to A2's 29 changed AUC (design / final): `term_slope` -0.0001 / +0.0015. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## India VIX
 
@@ -318,7 +318,7 @@ Also called: VIX, fear index.
 
 **Solo's inputs from it.** `vix (A2)`, `vix_chg_pct (A2)`, `vix_rank60`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'vix rank' inputs from the all-inputs model changed walk-forward AUC by +0.0029 (design) / +0.0009 (final) and net by Rs -8,460 / Rs -8,525. Each input added alone to A2's 29 changed AUC (design / final): `vix_rank60` -0.0010 / +0.0003. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Delta
 
@@ -347,7 +347,7 @@ Also called: option delta, hedge ratio.
 
 **Solo's inputs from it.** `delta_abs`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `delta_abs` +0.0016 / +0.0002. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Gamma
 
@@ -376,7 +376,7 @@ Also called: option gamma.
 
 **Solo's inputs from it.** `gamma_1pct`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `gamma_1pct` +0.0038 / +0.0053. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Theta (time decay)
 
@@ -405,7 +405,7 @@ Also called: time decay.
 
 **Solo's inputs from it.** `theta_pct_day`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `theta_pct_day` -0.0012 / -0.0015. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Vega
 
@@ -433,7 +433,7 @@ Also called: IV sensitivity.
 
 **Solo's inputs from it.** `vega_pct`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `vega_pct` -0.0004 / -0.0005. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Gamma exposure (GEX) and the gamma-flip level
 
@@ -465,7 +465,7 @@ Also called: GEX, gamma flip, zero gamma.
 
 **Solo's inputs from it.** `gex_norm`, `gex_sign`, `flip_dist_pct`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'gex flip' inputs from the all-inputs model changed walk-forward AUC by +0.0021 (design) / +0.0008 (final) and net by Rs -13,036 / Rs -808. Each input added alone to A2's 29 changed AUC (design / final): `gex_norm` -0.0016 / -0.0035, `gex_sign` +0.0000 / -0.0030, `flip_dist_pct` -0.0004 / -0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Dealer positioning
 
@@ -493,7 +493,7 @@ Also called: who is short gamma, writer positioning.
 
 **Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** No R61 input: positioning is not observable intraday; participant OI (its proxy) is measured under 'FII / DII flows and participant-wise OI'.
 
 ## VWAP
 
@@ -523,7 +523,7 @@ Also called: volume-weighted average price.
 
 **Solo's inputs from it.** `dist_tpavg_pct (A2)`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** Not a new R61 input (A2 already has the typical-price proxy `dist_tpavg_pct`); R61 did not test it again.
 
 ## ATR (average true range)
 
@@ -552,7 +552,7 @@ Also called: ATR14.
 
 **Solo's inputs from it.** `atr14d_pct (A2)`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** Not a new R61 input (A2 already has `atr14d_pct`); R61 did not test it again.
 
 ## Opening range
 
@@ -582,7 +582,7 @@ Also called: ORB, opening range breakout.
 
 **Solo's inputs from it.** `or30_state (A2)`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** Not a new R61 input (A2 has `or30_state`; S4 is a candidate setup). In R61's final test the 15-minute ORB setup was almost never taken (0-2 trades per variant).
 
 ## Value area / market profile
 
@@ -612,7 +612,7 @@ Also called: TPO, POC, VAH, VAL, volume profile.
 
 **Solo's inputs from it.** `va_pos`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'value area' inputs from the all-inputs model changed walk-forward AUC by +0.0007 (design) / -0.0002 (final) and net by Rs -1,001 / Rs -3,439. Each input added alone to A2's 29 changed AUC (design / final): `va_pos` -0.0019 / -0.0005. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Trend vs range regimes
 
@@ -641,7 +641,7 @@ Also called: efficiency ratio, ADX, choppiness.
 
 **Solo's inputs from it.** `er_day (A2)`, `rv_30m (A2)`, `day_range_vs_adr10 (A2)`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** Not a new R61 input (A2 already has `er_day`, `rv_30m`, `day_range_vs_adr10`); not tested again.
 
 ## FII / DII flows and participant-wise OI
 
@@ -671,7 +671,7 @@ Also called: FII OI, client OI, Pro OI.
 
 **Solo's inputs from it.** `fii_fut_long_share`, `fii_fut_long_chg`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'participants' inputs from the all-inputs model changed walk-forward AUC by +0.0018 (design) / -0.0017 (final) and net by Rs +10,142 / Rs +6,388. Each input added alone to A2's 29 changed AUC (design / final): `fii_fut_long_share` -0.0010 / +0.0014, `fii_fut_long_chg` -0.0028 / +0.0003. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Futures basis / premium
 
@@ -700,7 +700,7 @@ Also called: basis, futures premium, cost of carry.
 
 **Solo's inputs from it.** `synth_basis_bps`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'basis' inputs from the all-inputs model changed walk-forward AUC by +0.0010 (design) / -0.0025 (final) and net by Rs -10,054 / Rs +13,198. Each input added alone to A2's 29 changed AUC (design / final): `synth_basis_bps` -0.0003 / +0.0005. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
 
 ## Rollover
 
@@ -726,7 +726,7 @@ Also called: rollover %, roll cost.
 
 **Role in Solo.** not a model input (not on the phone).
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** No R61 input: not available on the phone.
 
 ## Event days (RBI, Budget, CPI, Fed, expiry)
 
@@ -757,4 +757,4 @@ Also called: event risk, macro calendar.
 
 **Solo's inputs from it.** `event_rbi_budget`, `post_us_event`, `other_expiry_today`, `dte (A2)`.
 
-**R61 result.** not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)
+**R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'events' inputs from the all-inputs model changed walk-forward AUC by -0.0016 (design) / +0.0003 (final) and net by Rs -6,252 / Rs -4; removing the 'other expiry' inputs from the all-inputs model changed walk-forward AUC by -0.0015 (design) / -0.0011 (final) and net by Rs +2,406 / Rs -2,221. Each input added alone to A2's 29 changed AUC (design / final): `event_rbi_budget` +0.0007 / -0.0030, `post_us_event` +0.0007 / +0.0016, `other_expiry_today` +0.0046 / -0.0014. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).

@@ -5,7 +5,7 @@
 Each concept: what it is; how it is computed from data the app has (or "not available on the phone"); how traders use
 it; known pitfalls; what OUR OWN research found (study, sample, verdict); the signal role it may play under the house
 rule "signal on the underlying, trade the option"; and the R61 inputs built from it. `r61_result` is filled from the
-R61 study once it has run (until then: "not run yet").
+R61 study by r61report.py (concepts R61 did not measure say so).
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 VERSION = "2026-10-15"
-NOT_RUN = "not run yet (the lake download needs approval; see HUNT_R61_SOLO_3.md)"
+NOT_RUN = "not measured by R61"
 
 CTX = "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side"
 SIZE = "size/context only: our research says it predicts how much the index may move, not which way"

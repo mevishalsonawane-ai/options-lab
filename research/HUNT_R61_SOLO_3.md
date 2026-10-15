@@ -5,21 +5,47 @@ what gamma is, etc., their features, why and how they are used - so it can think
 Jarvis's own trader and stays **paper only, forever**. Research only: nothing in the app changed (no `android/**`, no
 `.github/**`, no knowledge-pack rebuild). Code: `research/hunt/r61/`.
 
-## Status: Part 1 done; Part 2 pre-registered and built, NOT run yet
+## The answer
 
-- **Part 1 (the encyclopedia) is finished:** `hunt/r61/CONCEPTS.md` (plain English) and `hunt/r61/concepts.json`
-  (for the app to turn into Jarvis's knowledge). It covers 25 concepts. Each entry gives:
-  - what the concept is;
-  - its exact formula and whether the phone can compute it;
-  - how traders use it, and its pitfalls;
-  - what OUR studies found, with the study, the sample and the verdict.
-- **Part 2 (the Solo 3.0 model) is pre-registered, coded and unit-tested, but has not been run.**
-  - Pre-registration: `hunt/r61/PREREG.md`, commit 701b8c18, written before any data was read.
-  - Downloading the data lake (`rclone` from `gdrive:IraAlgo-data-lake`) was blocked by this session's permission
-    check, so there is **no R61 model score, P&L or holdout number yet**.
-  - Nothing below should be read as a result. The 7 experiment entries (`r61-v1` .. `r61-v7`) are logged as
-    "inconclusive, not run, holdout not read".
-- **So: Solo 2.0 (A2) stays.** Nothing has shown that Solo 3.0 beats it.
+**Solo 3.0 does not beat Solo 2.0, so Solo 2.0 (A2) stays.** Solo now *knows* each concept: what it is, how it is
+computed, and what our research says about it. But knowing them did not make it pick trades better on unseen data.
+
+- **Pre-registration.** `hunt/r61/PREREG.md` (commit 701b8c18) was written before any data was read. The design
+  results were committed (814284a2) before the one final read.
+- **The comparator is exact.** V1 is A2 refitted in R61's pipeline. It reproduces R57 to the rupee: design 166 trades,
+  +Rs 55,910; final 128 trades, +Rs 99,172.
+- **All 7 variants pass the R47-R60 gates.** Final net is positive, twin p 0.002-0.004, BH q ≤ 0.004, 117-128 trades,
+  and top-5 < net. That is mostly A2's own edge: they all choose from the same S1-S4 candidates.
+- **The pre-registered Solo 3.0 candidate is V3**: A2 + Greeks + context, no option-chain block; it had the best design
+  walk-forward net, +Rs 79,505. On the same final days as V1 it lost three of the four replace checks:
+
+  | check | V3 | V1 (Solo 2.0) | result |
+  |---|---|---|---|
+  | final net | +Rs 65,219 | +Rs 99,172 | lower |
+  | final AUC | 0.537 | 0.538 | lower |
+  | paired-day bootstrap | p 0.97 | - | not significant |
+  | net without MIDCPNIFTY | +Rs 35,245 | +Rs 27,586 | better |
+
+  It does not replace Solo 2.0.
+- **No concept added measurable skill out of sample.** Removing any concept's inputs from the all-inputs model, or
+  adding any one input alone to A2's 29, moved walk-forward AUC by less than 0.01 in design and in final. The largest
+  changes were:
+  - gamma per 1% added alone: +0.005 final;
+  - max-pain distance added alone: -0.006 final;
+  - IV rank added alone: -0.007 design.
+  Net changes went both ways. Adding inputs mostly diluted A2: V2 (all 59) made +Rs 60,399 against V1's +Rs 99,172.
+- **One thing worth watching, not acting on.** The tree model with every input (V5) spread its profit better:
+  - +Rs 71,787 on 122 trades;
+  - only 33 MIDCPNIFTY trades;
+  - +Rs 48,680 without MIDCPNIFTY (V1: +Rs 27,586);
+  - max drawdown Rs 15,202 (V1: Rs 18,056).
+  V5 was not the pre-registered candidate, and it made less money than V1. It is a note for a forward test, not a
+  result.
+
+**Honest caveats.**
+1. This final window is not fresh: R57 read it for A2 with the same setups, and S3's exit was chosen on it by R52.
+2. The model skill is tiny everywhere: AUC 0.51-0.54 in walk-forward, against 0.55-0.58 on the leaky random split.
+3. Live paper from 15 Oct 2026 is the only truly unseen data.
 
 ## Part 1 in one table: what each concept is worth, by our own research
 
@@ -54,10 +80,10 @@ may move, not which way.
 What this means for Solo: every one of these is used only as **context**. It can make Solo skip a dear, crowded or
 risky trade, or prefer one index's candidate over another's. It never creates a trade and never picks the side.
 Solo can now say *why* in plain English, for example "skipped: IV is in the top fifth of its 60-day range and our IV
-studies say dear options lose". That is the "understanding" Boss asked for. Whether it also earns money is what Part 2
-tests.
+studies say dear options lose". That is the "understanding" Boss asked for. Part 2 measured whether it also earns money:
+it does not, beyond what A2 already knows. Each concept's measured R61 result is in its CONCEPTS.md entry.
 
-## Part 2: what will be tested (pre-registered; nothing run)
+## Part 2: what was tested (pre-registered)
 
 **Question.** Solo 2.0 (A2) looks at each day's candidate trades from four index setups and decides take or skip,
 using 29 inputs. Does adding 30 more inputs (one or more from each concept above) pick the trades better on unseen
@@ -134,9 +160,111 @@ more that day.
 these same setups, and R47-R55 read parts of it. R61's final test can only say whether the extra inputs add anything
 on a window where A2's result is known. Live paper from 15 Oct 2026 is the only truly unseen data.
 
+## Results
+
+**Data.** The Drive lake was copied on 15 Oct 2026; its last sessions are 14 Oct (NIFTY, BANKNIFTY) and 13 Oct
+(FINNIFTY, MIDCPNIFTY). It has 471 / 471 / 470 / 470 option sessions from 21 Nov 2024, and 5,780 design candidate
+rows. Cleaning reproduced R57's table exactly:
+
+| index | foreign rows | bad ticks | strike > 12 steps from spot |
+|---|---|---|---|
+| NIFTY | 0 | 4,905 | 2 |
+| BANKNIFTY | 440 | 590 | 5 |
+| FINNIFTY | 115,698 | 1,323 | 43,571 |
+| MIDCPNIFTY | 0 | 1,207 | 15,463 |
+
+Participant OI covered all 471 sessions (686 NSE files, none damaged). Share of candidate rows that had each input:
+- the gamma flip was found within ±3% on 60% (design) / 49% (final);
+- term slope exists only for NIFTY, 22% / 23%;
+- the 60-session IV and VIX ranks had history on 88% of design rows;
+- everything else 94-100%.
+
+**Trading results.** Net is in Rs, 1 lot, after real costs. "Design WF" is the 9 out-of-fold months,
+Jul 2025 - Mar 2026. The final test is 1 Apr - 14 Oct 2026, read once.
+
+| variant | inputs | design WF: trades, net | final: trades, win | final net (Rs/trade) | 2x costs | max DD | months green | top-5 share | AUC random / WF / final | p | q | without MIDCPNIFTY | gates |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **V1** | A2's 29 (= Solo 2.0) | 166, +55,910 | 128, 59% | **+99,172 (+775)** | +80,849 | 18,056 | 6/7 | 40% | 0.557 / 0.525 / 0.538 | 0.002 | 0.003 | +27,586 | PASS |
+| V2 | all 59, logistic | 163, +47,269 | 118, 57% | +60,399 (+512) | +43,867 | 25,362 | 4/7 | 61% | 0.562 / 0.518 / 0.524 | 0.002 | 0.003 | +28,396 | PASS |
+| **V3** (candidate) | A2 + Greeks + context, logistic | 167, +79,505 | 119, 57% | +65,219 (+548) | +48,214 | 17,631 | 5/7 | 56% | 0.562 / 0.529 / 0.537 | 0.004 | 0.004 | +35,245 | PASS |
+| V4 | A2 + chain, logistic | 169, +66,676 | 127, 54% | +58,169 (+458) | +40,629 | 25,891 | 4/7 | 68% | 0.560 / 0.514 / 0.525 | 0.002 | 0.003 | +21,772 | PASS |
+| V5 | all 59, trees | 154, +50,992 | 122, 59% | +71,787 (+588) | +56,170 | 15,202 | 5/7 | 50% | 0.577 / 0.522 / 0.527 | 0.002 | 0.003 | +48,680 | PASS |
+| V6 | A2 + Greeks + context, trees | 152, +28,069 | 120, 57% | +50,878 (+424) | +35,660 | 18,824 | 5/7 | 63% | 0.584 / 0.518 / 0.530 | 0.002 | 0.003 | +34,658 | PASS |
+| V7 | all 59, L1 logistic | 158, +50,345 | 117, 55% | +59,941 (+512) | +43,543 | 20,560 | 5/7 | 61% | 0.551 / 0.519 / 0.525 | 0.004 | 0.004 | +22,772 | PASS |
+| plain SoloMidday (reference) | - | - | 36 | -21,589 | - | - | - | - | - | - | - | - | reference |
+
+What the p means:
+- Each variant is compared with 500 random-entry twins, which on average lost Rs 19k-27k.
+- The selection-twin p (random picks from the same day's candidates) was 0.002-0.010 for every variant.
+- BH is over the 7 variants. V1's q is lower than in R57 because the family is smaller.
+
+Final test per index and per setup (trades, net Rs):
+
+| variant | NIFTY | BANKNIFTY | FINNIFTY | MIDCPNIFTY | S1 | S2 | S3 | S4 |
+|---|---|---|---|---|---|---|---|---|
+| V1 | 8, +9,973 | 12, +1,912 | 26, +15,701 | 82, +71,586 | 3, +7,523 | 31, +26,255 | 92, +63,937 | 2, +1,457 |
+| V2 | 10, +3,437 | 16, +14,543 | 21, +10,417 | 71, +32,002 | 2, -2,344 | 25, +15,399 | 89, +48,367 | 2, -1,024 |
+| V3 | 11, +2,022 | 11, +10,853 | 22, +22,370 | 75, +29,974 | 3, -1,229 | 24, +13,437 | 91, +52,242 | 1, +769 |
+| V4 | 12, +420 | 18, +9,231 | 22, +12,121 | 75, +36,398 | 1, -2,869 | 30, +20,256 | 94, +43,915 | 2, -3,132 |
+| V5 | 34, -9,440 | 35, +28,777 | 20, +29,343 | 33, +23,107 | 0 | 108, +74,945 | 13, +2,591 | 1, -5,749 |
+| V6 | 36, +1,058 | 24, +19,481 | 26, +14,119 | 34, +16,220 | 1, -5,194 | 107, +66,123 | 12, -10,051 | 0 |
+| V7 | 12, -2,142 | 17, +13,372 | 30, +11,543 | 58, +37,168 | 3, -9,126 | 19, +8,824 | 95, +60,243 | 0 |
+
+The two model families pick different trades:
+- The logistic variants lean on S3 ("open outside value and go"), as A2 does.
+- The trees lean on S2 (Donchian) and spread across indices.
+- Unfiltered, the setups made: S1 89 trades +1,329; S2 1,468 +49,733; S3 232 +49,360; S4 459 -1,14,070.
+
+**What each concept added, out of sample** (`results/design.json` and `results/final.json`, "ablation"; every
+concept's numbers are also written into its CONCEPTS.md entry):
+
+| concept (R61 inputs) | AUC change when removed from V2 (design / final) | each input added alone to A2 (design / final) |
+|---|---|---|
+| OI level / change | +0.001 / +0.001 | `oi_near_log` -0.001 / -0.001; `oi_near_chg_pct` +0.001 / +0.000; `writer_tilt30` +0.000 / -0.001 |
+| build-up | -0.001 / +0.000 | `buildup` +0.002 / +0.001 |
+| PCR (change, volume, ranks) | -0.002 / +0.001 | `pcr_oi_chg30` +0.005 / -0.001; `pcr_vol` -0.001 / +0.001; `pcr_rank5` -0.002 / -0.001; `pcr_rank20` -0.003 / -0.002 |
+| max pain | +0.001 / +0.001 | `maxpain_dist_pct` +0.000 / -0.006 |
+| OI walls | +0.000 / +0.001 | `wall_ahead_pct` -0.000 / +0.000; `wall_behind_pct` +0.000 / -0.001 |
+| IV change, IV rank | +0.004 / +0.002 | `iv_chg_day` -0.002 / -0.000; `iv_rank60` -0.007 / +0.000 |
+| smile, term structure | +0.003 / +0.002 | `smile_curv` +0.000 / -0.004; `term_slope` -0.000 / +0.002 |
+| VIX rank | +0.003 / +0.001 | `vix_rank60` -0.001 / +0.000 |
+| Greeks of the held contract | -0.003 / +0.001 | `delta_abs` +0.002 / +0.000; `gamma_1pct` +0.004 / +0.005; `theta_pct_day` -0.001 / -0.002; `vega_pct` -0.000 / -0.001 |
+| GEX, gamma flip | +0.002 / +0.001 | `gex_norm` -0.002 / -0.004; `gex_sign` +0.000 / -0.003; `flip_dist_pct` -0.000 / -0.001 |
+| synthetic basis | +0.001 / -0.003 | `synth_basis_bps` -0.000 / +0.001 |
+| value area position | +0.001 / -0.000 | `va_pos` -0.002 / -0.001 |
+| events; other index's expiry | -0.002 / +0.000; -0.002 / -0.001 | `event_rbi_budget` +0.001 / -0.003; `post_us_event` +0.001 / +0.002; `other_expiry_today` +0.005 / -0.001 |
+| FII futures positioning | +0.002 / -0.002 | `fii_fut_long_share` -0.001 / +0.001; `fii_fut_long_chg` -0.003 / +0.000 |
+
+A positive "removed" number means the model was better WITHOUT the concept. Every change is under 0.01, which is
+noise on these samples. The money effects of removing a group ranged from -Rs 23k to +Rs 18k in design and from
+-Rs 15k to +Rs 19k in final, with no group consistent across both.
+
+Block-level comparisons:
+
+| comparison | design | final | reading |
+|---|---|---|---|
+| option-chain block, logistic: V2 (with) vs V3 (without) | +47,269 vs +79,505 | +60,399 vs +65,219 | the chain block hurt or did nothing |
+| option-chain block, trees: V5 (with) vs V6 (without) | +50,992 vs +28,069 | +71,787 vs +50,878 | the chain block helped |
+
+There is no consistent effect.
+
+The L1 model (V7) kept these inputs with the largest weights:
+- theta and gamma of the held contract (+);
+- NIFTY (-);
+- the last 15 minutes in the trade's direction (+);
+- the day's range vs its 10-day average (-);
+- IV rank (-).
+Its out-of-sample AUC was still only 0.519 / 0.525.
+
+**What this means.** A2's 29 inputs already hold what the option chain can tell this meta-labeller: dear IV (A2's ATM
+IV), PCR, skew and VIX are in them. The extra concepts are real, well-defined numbers, and Solo can explain each one.
+But they add no measurable skill in picking among S1-S4 candidates after costs, which matches what R26-R47 found
+about these concepts one by one.
+
 ## Running it on the phone (only if a variant ever replaces Solo 2.0)
 
-- The model is exported as R57's small JSON, with a one-line meaning for every input. It comes with 25 golden vectors.
+- No R61 model replaces Solo 2.0, so nothing is to be ported. All 7 are exported anyway (`hunt/r61/results/models/`,
+  2.9-86 KB each, parity gap with scikit-learn at most 1.1e-16) as R57's small JSON, with a one-line meaning for every input. It comes with 25 golden vectors.
 - `hunt/r61/r61eval.py` is a pure-Python reference with no numpy, file or network. It holds:
   - the scorer;
   - every chain formula (Black-Scholes Greeks, max pain, OI walls, PCR, build-up code, GEX, gamma flip, synthetic
@@ -147,23 +275,27 @@ on a window where A2's result is known. Live paper from 15 Oct 2026 is the only 
 - Calendar note: the app's EventCalendar has the Aug 2026 RBI policy on 6 Aug, but the research list says 7 Aug.
   R61 uses the research list. One of the two is wrong and should be checked on rbi.org.in.
 
-## How to run it (once the lake download is approved)
+## How it was run (re-run)
 
 ```
-rclone copy gdrive:IraAlgo-data-lake ~/.cache/iraalgo/lake --include "index_1m_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,INDIAVIX}_*.parquet" \
-    --include "opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY}_WEEK_*.parquet" --include "opt_NIFTY_MONTH_*.parquet" --include "participants/oi/**"
+L=~/.cache/iraalgo/lake
+rclone copy gdrive:IraAlgo-data-lake/options_rolling_1m $L --include "opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY}_WEEK_202[456].parquet" \
+    --include "opt_NIFTY_MONTH_202[456].parquet"
+rclone copy gdrive:IraAlgo-data-lake/index_1m $L --include "index_1m_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,INDIAVIX}_202[456].parquet"
+rclone copy gdrive:IraAlgo-data-lake/participants/oi /tmp/pz --include "oi_202[456].zip"   # unzip -j into $L/participants/oi
 python research/hunt/r61/r61data.py build && python research/hunt/r61/r61data.py context
 python research/hunt/r61/r61study.py design      # writes results/design.json (design months only)
 python research/hunt/r61/r61study.py dryrun      # the final pipeline on the last 3 design months (crash check)
 python research/hunt/r61/r61study.py final       # the ONE final read (guard file; refuses a second)
-python research/hunt/r61/r61concepts.py results.json   # writes each concept's R61 result into CONCEPTS.md / concepts.json
+python research/hunt/r61/r61report.py              # each concept's measured result -> CONCEPTS.md / concepts.json
 ```
 
-Then update this file and the `r61-v*` experiment entries with the numbers, and delete the lake copy and cache.
+Build 21 minutes, design and final about 1.5 minutes each. The lake copy and the cache were deleted afterwards.
+`final` now refuses to run (results/FINAL_READ).
 
 ## Tests
 
-`python -m pytest research/hunt/r61/test_r61.py -q`: 30 tests on synthetic data, run under pandas 3.0.5 / sklearn 1.9
+`python -m pytest research/hunt/r61/test_r61.py -q`: 31 tests on synthetic data, run under pandas 3.0.5 / sklearn 1.9
 and under the pinned pandas 2.2.3 / sklearn 1.5.2. They cover:
 - the look-ahead guard for every chain feature (values at a minute are identical when later minutes are deleted);
 - same-minute ranks that only look back;

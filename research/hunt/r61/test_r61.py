@@ -548,3 +548,16 @@ def test_concepts_complete_and_files_current():
     js = json.loads((K.HERE / "concepts.json").read_text())
     assert [c["id"] for c in js["concepts"]] == ids
     assert all("r61_result" in c for c in js["concepts"])
+
+
+def test_concept_results_cover_every_concept_and_flag_noise():
+    import r61concepts as CC
+    import r61report as RP
+    groups = list(K.GROUPS)
+    abl = dict(drop={g: dict(d_auc=0.002, d_net=100) for g in groups}, add={n: dict(d_auc=-0.001) for n in K.NEW})
+    design, final = dict(rows=5780, ablation=abl), dict(ablation=copy.deepcopy(abl))
+    res = RP.concept_results(design, final)
+    assert set(res) == {c["id"] for c in CC.CONCEPTS}
+    assert "no measurable help" in res["gex"]
+    final["ablation"]["add"]["gamma_1pct"]["d_auc"] = 0.02
+    assert "0.01 AUC or more" in RP.concept_results(design, final)["gamma"]
