@@ -99,6 +99,18 @@ object AutoChange {
          * off by itself ([passedArmOff], lowering risk). Paper only: no PIN either way.
          */
         PAPER_ARM_ON("strategies", "a paper arm switched on by your choice"),
+        /**
+         * Boss's 15 Oct cleanup ([com.optionslab.engine.orb.ArmsCleanup], [armHidden]): an arm or automatic trader switched off
+         * and hidden (only once it holds nothing), and each restore from the Hidden arms list ([armRestored]). Logged so the
+         * change timeline shows both and one tap undoes either (a restore: back on PAPER only; its undo: hidden again). Never
+         * proposed or applied by Autopilot.
+         */
+        ARM_HIDE("strategies", "an arm hidden on your choice"),
+        /**
+         * 15 Oct (Boss's choice): Liquidity 15+5's FINNIFTY or MIDCPNIFTY books back on with its switch, ON PAPER ([liqIndexOn]),
+         * logged so the timeline shows it and one tap undoes it (the index parked again). BANKNIFTY is never one of them.
+         */
+        LIQ_INDEX_ON("strategies", "a Liquidity index switched on by your choice"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -254,6 +266,9 @@ object AutoChange {
             Kind.LIQ_TRAIL -> if (c.to == ON) Risk.LOWER else Risk.RAISE
             // A paper arm on adds paper trades (risk up, on paper); off takes them away.
             Kind.PAPER_ARM_ON -> if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // Hidden: switched off (lower); restored: it may come back on, on paper (adds risk, on paper).
+            Kind.ARM_HIDE -> if (c.to == HIDDEN) Risk.LOWER else Risk.RAISE
+            Kind.LIQ_INDEX_ON -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -283,12 +298,16 @@ object AutoChange {
     const val LIVE = "live"
     /** A switch off ([Kind.LIQ_TRAIL]'s "from" when it was switched on, its "to" when switched off). */
     const val SWITCHED_OFF = "off"
+    /** An arm switched off and hidden by Boss's 15 Oct cleanup ([Kind.ARM_HIDE]'s "to"). */
+    const val HIDDEN = "hidden"
+    /** An arm restored from the Hidden arms list ([Kind.ARM_HIDE]'s "to" on a restore). */
+    const val RESTORED = "restored"
 
     /**
      * Boss's own changes, only logged here so they show in the timeline and undo in one tap (13 Oct: the arms' park, the
      * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
      */
-    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON
+    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -394,6 +413,36 @@ object AutoChange {
     fun passedArmOff(source: String, label: String, why: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, ON, SWITCHED_OFF,
         "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** The target prefix of an arm hidden by Boss's 15 Oct cleanup ([Kind.ARM_HIDE]): "hide:" + its key. */
+    const val HIDE = "hide:"
+
+    /**
+     * Boss's 15 Oct cleanup switched [key] ([label]) off and hid it - only once it held nothing ([wasOn]: it was on, else it was
+     * off already): "on → hidden" (or "off → hidden"), lowering risk. Its Undo restores it (back on, ON PAPER ONLY, when it was on).
+     */
+    fun armHidden(key: String, label: String, wasOn: Boolean): Change = Change(Kind.ARM_HIDE, HIDE + key, if (wasOn) ON else SWITCHED_OFF, HIDDEN,
+        "your cleanup (15 Oct): $label switched off and hidden" + (if (wasOn) " once it held nothing" else "") +
+            "; its code, settings and trades are kept, and the Hidden arms list restores it in one tap",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label (hidden arms)")
+
+    /** Boss restored [key] ([label]) from the Hidden arms list: "hidden → restored" (back on paper only if it was on); its Undo hides it again. */
+    fun armRestored(key: String, label: String): Change = Change(Kind.ARM_HIDE, HIDE + key, HIDDEN, RESTORED,
+        "your choice: $label restored from the Hidden arms list - back on PAPER only if it was on (Live still takes your PIN on its row)",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "$label (hidden arms)")
+
+    /** The target prefix of a Liquidity index switched on by the 15 Oct cleanup ([Kind.LIQ_INDEX_ON]). */
+    const val LIQ_INDEX = "liqindex:"
+
+    /**
+     * 15 Oct (Boss's choice): Liquidity 15+5's [index] books back on with its switch, ON PAPER - [parked]: it was parked (9 Oct),
+     * else it was off. Never cleared for Zerodha; BANKNIFTY never. Its Undo parks the index again (books off; an open position
+     * still exits by its own rules).
+     */
+    fun liqIndexOn(index: String, parked: Boolean): Change = Change(Kind.LIQ_INDEX_ON, LIQ_INDEX + index, if (parked) PARKED else SWITCHED_OFF, ON,
+        "your choice (15 Oct): Liquidity 15+5 keeps its $index books on with its switch, on paper only - labelled \"Boss's choice\" and " +
+            "kept apart; BANKNIFTY is not touched, so its plain-rules record stays separable for 26 Oct",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Liquidity 15+5 $index (paper)")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
