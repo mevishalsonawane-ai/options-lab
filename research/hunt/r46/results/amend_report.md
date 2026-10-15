@@ -472,7 +472,7 @@ Rolling ATM switches inside the 60-minute label window:
 | dip-put-L2 | delta | design loses after tax; design p 1.0; design q 1.0; final loses after tax |
 | dip-put-L2 | cs_nogst | design loses after tax; design p 1.0; design q 1.0; final loses after tax |
 
-## Their windows (inside the final test / the whole claim period; not tests)
+## Their windows (v2: 1 Sep - 12 Oct 2026; dip: their Sep 2024 - Oct 2026 claim period cut at 20 Nov 2024; not tests)
 
 | variant | trades | win | net before tax | after tax | worst | max DD | p / q |
 |---|---|---|---|---|---|---|---|

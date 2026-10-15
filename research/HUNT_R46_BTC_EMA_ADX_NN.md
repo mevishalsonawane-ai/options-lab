@@ -319,8 +319,8 @@ interleaved. It has 2,223,282 rows for Sep 2024 - 12 Oct 2026.
   That is worse than random entries (p 0.97-1.00).
 - The spread on a $50-$100 premium costs about 10% each way.
 - CoinSwitch costs make it worse in the final test: call L1 -$93,109 after tax with GST, -$84,264 without.
-- Over their whole claim window (Sep 2024 - Oct 2026), the honest call L1 made 4,928 trades, 28.7% win, -$224,927
-  before tax.
+- Over their claim window from Boss's start (20 Nov 2024 - 12 Oct 2026), the honest call L1 made 4,928 trades,
+  28.7% win, -$224,927 before tax.
 
 ### Honest limits of the amendments
 

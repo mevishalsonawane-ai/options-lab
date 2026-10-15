@@ -96,7 +96,8 @@ def main(argv=None) -> int:
         L += ["### Amendment 3: dip buy under each cost reading", ""] + cost_table(dp) + [""]
         L += ["### Gates", "", "| variant / cost | verdict |", "|---|---|"]
         L += [f"| {k} | {v} |" for k, v in res["gates"][view].items()] + [""]
-    L += ["## Their windows (inside the final test / the whole claim period; not tests)", ""]
+    L += ["## Their windows (v2: 1 Sep - 12 Oct 2026; dip: their Sep 2024 - Oct 2026 claim period cut at 20 Nov 2024; "
+          "not tests)", ""]
     cw = {k: r["claim_window"] for k, r in {**res["v2"]["trades"], **res["v3"]["held"]}.items()
           if isinstance(r, dict) and "claim_window" in r}
     L += ["| variant | trades | win | net before tax | after tax | worst | max DD | p / q |", "|---|---|---|---|---|---|---|---|"]
