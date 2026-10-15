@@ -246,6 +246,948 @@
    "why": "original = the close row: 60-min, SL 1 ATR / TP 1R on the index, opposite signal, 09:20-14:30, 15:10, ATR 7 x 2 (Boss's settings; research/chandelier_exit.py). Grid = its 4 charts x 4 exits."
   }
  },
+ "H11-1": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/month",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/month",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       15
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/month",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/month",
+    "vid": "g22"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "NIFTY",
+       30
+      ],
+      [
+       "NIFTY",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_liq.arm_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      "NIFTY",
+      30
+     ],
+     [
+      "NIFTY",
+      5
+     ]
+    ],
+    "room": 2.0,
+    "stop_mult": 1.0
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Liquidity arm on NIFTY (30m+5m, room 2)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "original = H11's pre-registered choice for NIFTY (HUNT_H11.md: 30+5, 1x stop 15 pts, room >= 2, ITM1, weekly); hunt/h11/sig.py raw_signals; grid = the rest of H11's 24 cells"
+  }
+ },
+ "H11-2": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 2.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/month",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/month",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       15
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ATM/month",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 1.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ATM/month",
+    "vid": "g22"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "SENSEX",
+       30
+      ],
+      [
+       "SENSEX",
+       5
+      ]
+     ],
+     "room": 1.0,
+     "stop_mult": 2.0
+    },
+    "rule": "ITM1/month",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_liq.arm_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      "SENSEX",
+      15
+     ],
+     [
+      "SENSEX",
+      5
+     ]
+    ],
+    "room": 2.0,
+    "stop_mult": 1.0
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Liquidity arm on SENSEX (15m+5m, room 2)",
+   "unds": [
+    "SENSEX"
+   ],
+   "why": "original = H11's pre-registered choice for SENSEX (HUNT_H11.md: 15+5, 1x stop 50 pts, room >= 2, ITM1, weekly); hunt/h11/sig.py raw_signals; grid = the rest of H11's 24 cells"
+  }
+ },
  "H18-1": {
   "grid": [
    {
@@ -7823,6 +8765,3344 @@
     "BANKNIFTY"
    ],
    "why": "HUNT_H5.md's best train rule (11:30, OI side >= 0.3, 1-ITM, trail 0.6 ATR, 60-min no-add stop, 15:15) and its own 'same rule with 1 lot' row; grid = one step at a time over its declared grid (add step X, trail Y, time stop, decision time, expiry skip, OI >= 0.6)"
+  }
+ },
+ "H9-1": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       3
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       10
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       30
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       60
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "FINNIFTY",
+       3
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "FINNIFTY",
+       10
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "FINNIFTY",
+       15
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "FINNIFTY",
+       60
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "MIDCPNIFTY",
+       3
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "MIDCPNIFTY",
+       10
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "MIDCPNIFTY",
+       30
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "MIDCPNIFTY",
+       60
+      ]
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_liq.arm_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      "BANKNIFTY",
+      10
+     ],
+     [
+      "MIDCPNIFTY",
+      30
+     ]
+    ]
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Liquidity arm on extra books (BN 10-min + MIDCP 30-min)",
+   "unds": [
+    "BANKNIFTY",
+    "MIDCPNIFTY"
+   ],
+   "why": "original = the two books H9's pre-registered keep rule kept (HUNT_H9.md: BN10 q 0.006, MIDCP30 q 0.049); rules = the app arm via hunt/h4/comps.py (run_h9.sig_one); grid = each of H9's 12 extra books alone"
+  }
+ },
+ "LIQ-1": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       1,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_liq.break_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      3,
+      20,
+      10
+     ]
+    ],
+    "source": "either",
+    "stop": false
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity break on BN 1/3-min charts (3-min, either, no stop)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "no frozen variant (LIQUIDITY.md, all rejected): original = the catalogue's best cell, 3-min 'either' without the failed-break stop; liquidity_break.simulate; grid = the other 1/3-min cells"
+  }
+ },
+ "LIQ-12": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       30,
+       20,
+       10
+      ],
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       10,
+       10
+      ],
+      [
+       3,
+       10,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       15,
+       10
+      ],
+      [
+       3,
+       15,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       30,
+       10
+      ],
+      [
+       3,
+       30,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       5
+      ],
+      [
+       3,
+       20,
+       5
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       15
+      ],
+      [
+       3,
+       20,
+       15
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": false,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.1",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.2",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.25",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.2, 0.0),),ladder_ref_pct=1.0,be_floor=False",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.3, 0.1),),ladder_ref_pct=1.0,be_floor=False",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "trend": "vwap",
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "trend": "ema20x3",
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": null
+    },
+    "rule": "ATM/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "skip": "expday",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g22"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "SENSEX"
+     ],
+     "vol_fh": 0.8
+    },
+    "rule": "ATM/near",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15",
+   "expiry": "allow",
+   "fn": "fam_liq.break_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      15,
+      20,
+      10
+     ],
+     [
+      3,
+      20,
+      10
+     ]
+    ],
+    "source": "both",
+    "stop": true,
+    "unds": [
+     "SENSEX"
+    ],
+    "vol_fh": 0.8
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity SENSEX B-pick (15m+3m, first hour >= 0.8x median)",
+   "unds": [
+    "SENSEX"
+   ],
+   "why": "original = liquidity_sensex_plus.py's Year-B combo (LIQUIDITY_SENSEX_PLUS.md: books 15+3 + vol 0.8; the study MODELLED options, R52 prices real ones); grid = the study's VARIANTS applied to the pick"
+  }
+ },
+ "LIQ-19": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       15
+      ],
+      [
+       "BANKNIFTY",
+       5
+      ],
+      [
+       "FINNIFTY",
+       30
+      ],
+      [
+       "FINNIFTY",
+       5
+      ]
+     ],
+     "mode": "N1"
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       15
+      ],
+      [
+       "BANKNIFTY",
+       5
+      ],
+      [
+       "FINNIFTY",
+       30
+      ],
+      [
+       "FINNIFTY",
+       5
+      ]
+     ],
+     "mode": "N2"
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       15
+      ],
+      [
+       "BANKNIFTY",
+       5
+      ],
+      [
+       "FINNIFTY",
+       30
+      ],
+      [
+       "FINNIFTY",
+       5
+      ]
+     ],
+     "mode": "N12"
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "skip",
+   "fn": "fam_liq.arm_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      "BANKNIFTY",
+      15
+     ],
+     [
+      "BANKNIFTY",
+      5
+     ],
+     [
+      "FINNIFTY",
+      30
+     ],
+     [
+      "FINNIFTY",
+      5
+     ]
+    ],
+    "mode": "N3"
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Liquidity arm, no stop no target: hold to a level (N3)",
+   "unds": [
+    "BANKNIFTY",
+    "FINNIFTY"
+   ],
+   "why": "original = N3 (next level + failed break, 15:10), the variant the study named (LIQUIDITY_EXITS_3060.md post hoc, liquidity_nostop.py, 'as the app would run it'); grid = N1, N2, N12"
+  }
+ },
+ "LIQ-2": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "swing",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "pool",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       10,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       10,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       5,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       5,
+       10
+      ]
+     ],
+     "source": "either",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       5
+      ]
+     ],
+     "source": "both",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       5
+      ]
+     ],
+     "source": "either",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       10,
+       5
+      ]
+     ],
+     "source": "both",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g22"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       10,
+       5
+      ]
+     ],
+     "source": "either",
+     "stop": false
+    },
+    "rule": "ATM/near",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_liq.break_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      15,
+      20,
+      10
+     ]
+    ],
+    "source": "both",
+    "stop": false
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity break on BN 15-min, 'both', no failed-break stop",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the catalogue's CLOSE cell (LIQUIDITY.md 15-min both no stop +18k / +37k); grid = liquidity_break's other 5/15-min cells + liquidity_more's 15-min lookback / confirm cells (both, either; no stop)"
+  }
+ },
+ "LIQ-22": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       15
+      ],
+      [
+       "BANKNIFTY",
+       5
+      ]
+     ],
+     "win_to": 895
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       15
+      ],
+      [
+       "BANKNIFTY",
+       5
+      ]
+     ],
+     "win_to": 900
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "books": [
+      [
+       "BANKNIFTY",
+       15
+      ],
+      [
+       "BANKNIFTY",
+       5
+      ]
+     ],
+     "win_to": 905
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_liq.arm_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      "BANKNIFTY",
+      15
+     ],
+     [
+      "BANKNIFTY",
+      5
+     ]
+    ],
+    "win_to": 870
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "Liquidity arm BN with a later entry cut-off (14:30)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = 14:30, the first cut-off later than the adopted 14:00 (ENTRY_CUTOFF.md, entry_cutoff.run_liq; on the arm as it runs now); grid = 14:55, 15:00, 15:05"
+  }
+ },
+ "LIQ-3": {
+  "grid": [
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "swing",
+     "stop": false,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": true,
+     "source": "swing",
+     "stop": false,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "swing",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": true,
+     "source": "swing",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "pool",
+     "stop": false,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "pool",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": true,
+     "source": "pool",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "either",
+     "stop": false,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": true,
+     "source": "either",
+     "stop": false,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "either",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": true,
+     "source": "either",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "both",
+     "stop": false,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": true,
+     "source": "both",
+     "stop": false,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": false,
+     "source": "both",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "sq_off=930",
+    "params": {
+     "carry": true,
+     "source": "both",
+     "stop": true,
+     "tf": 60
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   }
+  ],
+  "orig": {
+   "exits": "sq_off=930",
+   "expiry": "allow",
+   "fn": "fam_liq.carry_signals",
+   "kind": "family",
+   "params": {
+    "carry": true,
+    "source": "pool",
+    "stop": false,
+    "tf": 60
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity break on BN 60-min, pool, no stop, held overnight",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the catalogue's best 60-min cell (LIQUIDITY.md pool / no stop / overnight +53k / -16k); liquidity_break.simulate(carry=True) replayed with obuy multiday; grid = the other 15 60-min cells"
+  }
+ },
+ "LIQ-4": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       10,
+       10
+      ],
+      [
+       5,
+       10,
+       10
+      ]
+     ],
+     "name": "lbL",
+     "source": "both",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       3,
+       20,
+       10
+      ]
+     ],
+     "name": "lbL",
+     "source": "both",
+     "stop": true
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_liq.break_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      15,
+      20,
+      10
+     ],
+     [
+      5,
+      10,
+      10
+     ]
+    ],
+    "name": "lbL",
+    "source": "both",
+    "stop": true
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity break BN two charts 15(20,10)+5(10,10)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the first non-adopted combo in liquidity_more.py (15-min lookback 20 confirm 10 + 5-min lookback 10 confirm 10, 'both', failed-break stop; +20.6k / +22.9k); grid = the study's other two combos"
+  }
+ },
+ "LIQ-5": {
+  "grid": [
+   {
+    "exits": "default",
+    "params": {
+     "how": "net",
+     "kind": "found",
+     "source": "swing",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "found",
+     "source": "swing",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "hhhl",
+     "kind": "found",
+     "source": "swing",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "net",
+     "kind": "found",
+     "source": "pool",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "found",
+     "source": "pool",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "hhhl",
+     "kind": "found",
+     "source": "pool",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "net",
+     "kind": "found",
+     "source": "either",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "found",
+     "source": "either",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "hhhl",
+     "kind": "found",
+     "source": "either",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "net",
+     "kind": "found",
+     "source": "both",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "hhhl",
+     "kind": "found",
+     "source": "both",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "net",
+     "kind": "break",
+     "source": "pool",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "break",
+     "source": "pool",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "hhhl",
+     "kind": "break",
+     "source": "pool",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "held",
+     "kind": "break",
+     "source": "pool",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "net",
+     "kind": "break",
+     "source": "both",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "break",
+     "source": "both",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "hhhl",
+     "kind": "break",
+     "source": "both",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "held",
+     "kind": "break",
+     "source": "both",
+     "tf": 15
+    },
+    "rule": "ATM/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "found",
+     "source": "both",
+     "tf": 3
+    },
+    "rule": "ATM/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "found",
+     "source": "pool",
+     "tf": 3
+    },
+    "rule": "ATM/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "found",
+     "source": "both",
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g22"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "how": "colour",
+     "kind": "found",
+     "source": "pool",
+     "tf": 5
+    },
+    "rule": "ATM/near",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "default",
+   "expiry": "allow",
+   "fn": "fam_liq.wait5_signals",
+   "kind": "family",
+   "params": {
+    "how": "colour",
+    "kind": "found",
+    "source": "both",
+    "tf": 15
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity found -> wait 5 candles -> buy (BN 15-min, found, both, colour)",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the catalogue's named cell (LIQUIDITY_WAIT5.md 15-min found / both / colour -8.8k / +25.3k); liquidity_wait5.run/signals_for/read; grid = the study's other 15-min found and break cells + 3/5-min found"
+  }
+ },
+ "LIQ-6": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       15
+      ],
+      [
+       30,
+       20,
+       15
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       10,
+       10,
+       10
+      ],
+      [
+       15,
+       10,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ],
+     "vol_rng": 0.5
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       3,
+       20,
+       10
+      ],
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ],
+      [
+       30,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ],
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       10,
+       10
+      ],
+      [
+       5,
+       10,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       30,
+       10
+      ],
+      [
+       5,
+       30,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       5
+      ],
+      [
+       5,
+       20,
+       5
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       15
+      ],
+      [
+       5,
+       20,
+       15
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ],
+     "vol_rng": 0.3
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ],
+     "vol_rng": 0.5
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "trend": "vwap",
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "skip": "expday",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "default",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pct=0.1",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pct=0.2",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pct=0.25",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pct=0.15",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.3, 0.1),),ladder_ref_pct=1.0,be_floor=False",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g22"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.5, 0.0),),ladder_ref_pct=1.0,be_floor=False",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ATM/near",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15",
+   "expiry": "allow",
+   "fn": "fam_liq.break_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      15,
+      20,
+      10
+     ],
+     [
+      5,
+      20,
+      10
+     ]
+    ],
+    "source": "both",
+    "stop": true,
+    "unds": [
+     "FINNIFTY"
+    ]
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity break on FINNIFTY 15m+5m (ATM, 15% stop)",
+   "unds": [
+    "FINNIFTY"
+   ],
+   "why": "original = liquidity_finnifty_plus.py BASE (= LIQUIDITY_FINNIFTY.md's 15+5, later replaced by 30+5); grid = the study's A/B picks, single changes and option knobs (LIQ-7)"
+  }
+ },
+ "LIQ-9": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       30,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": false,
+     "trend": "vwap",
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": null
+    },
+    "rule": "ATM/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       30,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       15,
+       20,
+       10
+      ],
+      [
+       5,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       10,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       15,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       30,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       5
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       15
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pct=0.1,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.2,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pct=0.25,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": false,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "trend": "vwap",
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "trend": "ema5x50",
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pct=0.15,ladder=((0.2, 0.0),),ladder_ref_pct=1.0,be_floor=False",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "expday",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": 1.0
+    },
+    "rule": "ATM/near",
+    "vid": "g22"
+   },
+   {
+    "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+    "params": {
+     "books": [
+      [
+       10,
+       20,
+       10
+      ]
+     ],
+     "skip": "dte1",
+     "source": "both",
+     "stop": true,
+     "unds": [
+      "NIFTY"
+     ],
+     "vol_fh": null
+    },
+    "rule": "ATM/near",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,trail_pct=0.15,trail_arm=0.3",
+   "expiry": "allow",
+   "fn": "fam_liq.break_signals",
+   "kind": "family",
+   "params": {
+    "books": [
+     [
+      10,
+      20,
+      10
+     ]
+    ],
+    "skip": "dte1",
+    "source": "both",
+    "stop": true,
+    "unds": [
+     "NIFTY"
+    ],
+    "vol_fh": 1.0
+   },
+   "pos": {
+    "one_at_a_time": true
+   },
+   "rule": "ATM/near",
+   "source": "index",
+   "title": "Liquidity NIFTY A-pick (10-min, first-hour filter, lock 30/15, skip DTE<=1)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "original = liquidity_nifty_plus.py's Year-A pick (LIQUIDITY_NIFTY_PLUS.md 'exact settings'); grid = the B-pick (LIQ-10), the study's 4 robustness charts and its single-factor changes applied to the pick"
   }
  },
  "LV-2": {
