@@ -1,0 +1,36 @@
+id: r51-r44-ema821-adx15-plock-rt
+title: 'R51 R44-ema821_adx15_plock-RT: ema821_adx15_plock re-tune: exits A/B/C x ATM / 1-ITM'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this re-tune makes money after real costs on one held contract (gates:
+  final net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (5-min)'
+model_or_rule: 'ema821_adx15_plock re-tune: exits A/B/C x ATM / 1-ITM'
+settings: research/hunt/r51/fam_r44.py (ema821_adx15_plock|B|m1)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 6
+results:
+  summary: 'design 3129 trades, win 43%, net Rs -50,947 (Rs -151/day), avg win Rs 1,606 / loss Rs -1,244, worst day Rs -25,438,
+    max DD Rs 94,098, without top 5 Rs -103,125; chosen ema821_adx15_plock|B|m1; walk-forward out-of-fold Rs -38,882 on 2308
+    trades. final test (1 Apr - 13 Oct 2026, read once) 1262 trades, win 44%, net Rs -32,749 (Rs -246/day), avg win Rs 1,427
+    / loss Rs -1,185, worst day Rs -22,019, max DD Rs 90,436, without top 5 Rs -68,711; twin p 0.014, BH q 0.1029: final net
+    <= 0; q > 0.10; top-5 trades >= net; design walk-forward <= 0. OLD: R44 (2021 - Oct 2026, 5 indices + CRUDEOIL): out of
+    sample 0 of 14 strategy-side combinations positive, 0 of 112 cells pass; EMA8/21+ADX15 alone -Rs 8.3 lakh on 9,455 NSE
+    trades'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

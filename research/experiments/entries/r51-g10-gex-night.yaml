@@ -1,0 +1,31 @@
+id: r51-g10-gex-night
+title: 'R51 G10-GEX-NIGHT: Night R3 (09:16 sale) only when S1 net GEX < 0 at 15:15'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index + breadth + OI; GEX filter'
+model_or_rule: Night R3 (09:16 sale) only when S1 net GEX < 0 at 15:15
+settings: research/hunt/r51/fam_night.py (night|B0|gex)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 83 trades, win 52%, net Rs 13,665 (Rs 41/day), avg win Rs 3,094 / loss Rs -2,985, worst day Rs -15,106,
+    max DD Rs 34,821, without top 5 Rs -36,453; twin p 0.7545; folds [4579.0, 2074.0, 5291.0, -3623.0]. final test (1 Apr
+    - 13 Oct 2026, read once) 40 trades, win 62%, net Rs 74,364 (Rs 563/day), avg win Rs 5,112 / loss Rs -3,563, worst day
+    Rs -9,036, max DD Rs 29,611, without top 5 Rs 18,578; twin p 0.1277, BH q 0.3326: p >= 0.05; q > 0.10. OLD: R28: design
+    +206 -> +119 Rs/day, holdout +249 -> -18 Rs/day; rejected'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

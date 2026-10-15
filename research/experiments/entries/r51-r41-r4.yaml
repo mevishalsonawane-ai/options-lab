@@ -1,0 +1,34 @@
+id: r51-r41-r4
+title: 'R51 R41-R4: R4: direction 15 min, top 10% confidence, size forecast >= median, ATM, exit at t+h or -30% close stop'
+family: ml
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2025-04-01 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (brain features of the underlying; MLP)'
+model_or_rule: 'R4: direction 15 min, top 10% confidence, size forecast >= median, ATM, exit at t+h or -30% close stop'
+settings: research/hunt/r51/fam_r41.py (r41|R15|size1|conf|close30)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 2204 trades, win 44%, net Rs -205,486 (Rs -832/day), avg win Rs 1,046 / loss Rs -973, worst day Rs -41,648,
+    max DD Rs 228,687, without top 5 Rs -248,060; twin p 0.006; folds [-54986.0, -12968.0, -36497.0, -101035.0]. final test
+    (1 Apr - 13 Oct 2026, read once) 879 trades, win 42%, net Rs -158,267 (Rs -1,190/day), avg win Rs 957 / loss Rs -1,018,
+    worst day Rs -25,302, max DD Rs 167,734, without top 5 Rs -192,645; twin p 0.3333, BH q 0.6038: final net <= 0; p >= 0.05;
+    q > 0.10; top-5 trades >= net; design walk-forward <= 0. OLD: R41 holdout: +Rs 20/day on 172 (too few)'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected

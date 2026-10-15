@@ -1,0 +1,31 @@
+id: r51-liq-fin-rt
+title: 'R51 LIQ-FIN-RT: re-tune: books {30+5, 15+5, 30, 5} x room {1, 2} index stops'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this re-tune makes money after real costs on one held contract (gates:
+  final net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- FINNIFTY
+features:
+- 'signal source: index (bars)'
+model_or_rule: 're-tune: books {30+5, 15+5, 30, 5} x room {1, 2} index stops'
+settings: research/hunt/r51/fam_liq.py (liq|FINNIFTY|30+5|room1.0)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 8
+results:
+  summary: 'design 252 trades, win 45%, net Rs 99,350 (Rs 295/day), avg win Rs 1,948 / loss Rs -868, worst day Rs -3,766,
+    max DD Rs 10,077, without top 5 Rs 40,582; chosen liq|FINNIFTY|30+5|room1.0; walk-forward out-of-fold Rs 61,882 on 177
+    trades. final test (1 Apr - 13 Oct 2026, read once) 94 trades, win 38%, net Rs 4,861 (Rs 37/day), avg win Rs 1,462 / loss
+    Rs -824, worst day Rs -4,362, max DD Rs 12,371, without top 5 Rs -26,871; twin p 0.489, BH q 0.767: p >= 0.05; q > 0.10;
+    top-5 trades >= net. OLD: parked 9 Oct after -Rs 8,035 on 8 paper trades; research (LIQUIDITY_FINNIFTY_PLUS) +8.2 / +4.8
+    index pts a trade in two years, never gated as a pass'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: rejected
