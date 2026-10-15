@@ -78,20 +78,22 @@ def rows_gold() -> list[dict]:
     out = []
     if not fin:
         return out
-    for rid, r in fin["rules"].items():
-        d = des["rules"].get(rid, {})
-        wf = r.get("design_wf") or d.get("design_wf") or d.get("walk_forward") or {}
-        orig = r.get("original", "orig")
+    for rid, r in fin.items():
+        if rid.startswith("_"):
+            continue
+        d = des.get(rid, {})
         for var, s in r["variants"].items():
             dv = (d.get("variants") or {}).get(var, {})
+            ds = dv.get("summary") or {}
             out.append({
                 "book": "gold", "rule": rid, "variant": var, "note": r.get("name", ""),
-                "is_pick": var != orig,
-                "design": {k: dv.get(k) for k in ("trades", "net", "p", "win_rate")},
-                "wf_net": wf.get("orig_wf_net") if var == orig else wf.get("retune_wf_net"),
-                "final": {k: s.get(k) for k in ("trades", "win_rate", "net", "avg_win", "avg_loss", "worst_day",
-                                                "max_dd", "top5_share")},
-                "net_per_day": s.get("net_per_trading_day", s.get("net_per_period_day")),
+                "is_pick": var != "orig",
+                "design": {"trades": ds.get("trades"), "net": ds.get("net"), "p": dv.get("p"),
+                           "win_rate": ds.get("win_rate")},
+                "wf_net": r.get("design_orig_wf_net") if var == "orig" else r.get("design_retune_wf_net"),
+                "final": {k: s["summary"].get(k) for k in ("trades", "win_rate", "net", "avg_win", "avg_loss",
+                                                           "worst_day", "max_dd", "top5_share")},
+                "net_per_day": s.get("net_per_trading_day"),
                 "p": s.get("p"), "key_net": None, "money": "USD/lot",
             })
     return out

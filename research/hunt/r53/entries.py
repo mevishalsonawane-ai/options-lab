@@ -6,6 +6,7 @@ results/r53_gates.json and the design files. Run after aggregate.py.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -88,7 +89,8 @@ def _n_variants(book: str, rid: str) -> int | None:
     p = C.RESULTS / name
     if not p.exists():
         return None
-    r = json.loads(p.read_text())["rules"].get(rid)
+    js = json.loads(p.read_text())
+    r = (js["rules"] if "rules" in js else js).get(rid)
     return len(r["variants"]) if r else None
 
 
@@ -98,7 +100,7 @@ def _fmt(v, nd=0):
 
 def entry(rid: str, rows: list[dict]) -> dict:
     book = rows[0]["book"]
-    base = rid if rid in RULES else rid.split("_")[0]
+    base = rid if rid in RULES else re.split(r"[_-]", rid)[0]
     title, inst, rule, src = RULES.get(base, (rid, ["GOLD"], rid, "XAUUSD"))
     if base != rid and base.startswith("GB"):
         title = f"{title} [{rid}]"
@@ -137,8 +139,15 @@ def entry(rid: str, rows: list[dict]) -> dict:
                               "crypto": "Delta India fees + 18% GST, RC2 spread model, fills 1 min later; CoinSwitch PRO "
                                         "with/without GST; 31.2% tax per winning trade, TDS as cash flow"}[book]},
         "holdout_read": True,
-        "verdict": "paper-only" if passed else "rejected",
+        "verdict": "paper-only" if passed else (
+            "inconclusive" if all(x["verdict"] == "too few trades to judge" for x in rows) else "rejected"),
     }
+    if rid == "GB9":
+        e["notes"] = ("One final entry (7 Apr 2026 21:00 UTC) sat in the daily break at a stale close; at the next real "
+                      "price the final net is +25,490, not +26,813 (gold/NOTES.md). Too few trades either way.")
+    if rid == "GB9":
+        e["notes"] = ("One final entry (7 Apr 2026 21:00 UTC) sat in the daily break at a stale close; at the next real "
+                      "price the final net is +25,490, not +26,813 (gold/NOTES.md). Too few trades either way.")
     if rid == "MA5u":
         e["notes"] = "Post-lock correction: the capped MA5's final test had been seen first, so this cannot be a clean pass."
     return e
