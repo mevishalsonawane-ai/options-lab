@@ -156,3 +156,14 @@ the app.
    with no inferred expiry in between AND the index moved less than 1.5% close to close. Data fact behind it (no
    P&L): this flags 3 FINNIFTY sessions (12 Jan, 6 Jul, 2 Nov 2022) and 1 SENSEX session (8 Jan 2024); NIFTY,
    BANKNIFTY and MIDCPNIFTY have none.
+
+## Amendment 2 (15 Oct 2026, still before any P&L was looked at)
+
+While the design paths were being built (only the skip counts were printed, no P&L), SENSEX selling showed 39,098
+entries skipped as "a leg has no row at the fill minute" against 32,077 built: the far strike rules (1.5x the straddle,
+8-step hedges, DTE 3-4) put a leg outside the ATM+-10 window on many days. Those days are the HIGH-volatility days
+(a bigger straddle pushes the strikes further out), so keeping only the days that can be priced would flatter selling.
+Added to the candidate rule: a config is eligible only if its structure could be priced on at least 90% of the
+sessions it would have traded (skips for "no row" / "no chain" / "no credit" over all its sessions with that DTE and
+decision time, before filters; for direction rules both BPS and BCS count). The skip share is reported for every
+candidate.
