@@ -792,6 +792,9 @@ object Tasks {
         // The Watchlist in SHADOW (15 Oct, Boss: "Both"): research's near misses followed from 09:20, priced with the paper costs; a
         // record and one evening line, never an order or an alert.
         word("Watchlist (shadow)") { com.optionslab.app.data.WatchlistHost.watch() }
+        // The Signal tester in SHADOW (15 Oct): the allow-listed Telegram channels' calls priced from their options' minutes with
+        // the paper costs, each channel scored; never an order. Off (the default), one look at its switch.
+        word("Signal tester (shadow)") { com.optionslab.app.data.SignalTesterHost.watch() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: a sharp move within minutes - what coincided with it (headlines, VIX, the other indices), timing only.
         word("sharp move") { com.optionslab.app.ira.IraCoach.sharpMoveWatch() }

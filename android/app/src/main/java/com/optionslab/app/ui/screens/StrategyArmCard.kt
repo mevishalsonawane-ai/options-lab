@@ -91,7 +91,9 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         // failed): the NSE paper-only arms under the ORB rows.
         // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
         // Home's Automation card, each opening its section ([AutomationHomeCard]).
-        nightRow = { NightRow(); VixDivRow(); HeroTicketRow(); PassedArmRows(); WatchlistCard() },
+        nightRow = { NightRow(); VixDivRow(); HeroTicketRow(); PassedArmRows(); WatchlistCard()
+            // The Signal tester (15 Oct, shadow - never trades): the allow-listed Telegram channels scored. Not in IraGoldAlgo.
+            if (!com.optionslab.app.BuildConfig.GOLD) SignalTesterCard() },
         basketsVisible = com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.BASKETS),
         hiddenArms = { HiddenArmsEntry() },
     )

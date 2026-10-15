@@ -3372,6 +3372,20 @@ object IraHub {
         // traded; information only, not a trade signal"), from their own books. Before SoloDay ("solo 2.0" is this one's; plain
         // "solo" stays Solo's). Its paper trades are in it, so never on a locked phone; reads only - nothing is switched, bought,
         // sold or promoted. (Not in IraGoldAlgo.)
+        // 15 Oct: "how is channel Sensex Kings doing", "how are the telegram channels doing" ([com.optionslab.ira.SignalTalk],
+        // [com.optionslab.app.data.SignalTesterHost.talk]): the Signal tester's scorecards, always "shadow — never trades". The
+        // channel names and their record are Boss's, so never on a locked phone; reads only - nothing is recorded, switched,
+        // bought or sold. (Not in IraGoldAlgo.)
+        val signalAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.SignalTalk.asked(q) }.getOrNull() else null
+        if (signalAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.SignalTalk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.SignalTesterHost.talk(signalAsk) }.getOrElse { "I could not read the Signal tester just now, Boss." })
+            }
+            return true
+        }
         val passedArmsAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.PassedArmsTalk.asked(q) }.getOrNull() else null
         if (passedArmsAsk != null) {
