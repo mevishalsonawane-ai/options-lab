@@ -144,6 +144,7 @@ def load(und: str) -> dict:
 
 
 if __name__ == "__main__":
+    import r51data as _self          # pickle the Day class under its module name, not __main__
     if len(sys.argv) >= 2 and sys.argv[1] == "build":
         for u in sys.argv[2:] or K.UNDS:
-            print(build(u), flush=True)
+            print(_self.build(u), flush=True)

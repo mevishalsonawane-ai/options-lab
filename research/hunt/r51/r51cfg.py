@@ -45,13 +45,15 @@ UNDS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
 BSE = {"SENSEX"}
 STEP = {"NIFTY": 50.0, "BANKNIFTY": 100.0, "FINNIFTY": 50.0, "MIDCPNIFTY": 25.0, "SENSEX": 100.0}
 TICK = 0.05
-# Lots in force on each date (research/obuy/config.py LOT_SCHEDULE, the exchange's revisions)
+# Lots in force on each date: research/obuy/config.py LOT_SCHEDULE plus NSE's Dec 2025 revision (BANKNIFTY 30 from
+# 31 Dec 2025, as research/hunt/r27/r27cfg.py found from the app's own fills) and MIDCPNIFTY's Jun 2025 (140) and
+# Dec 2025 (120) revisions, which obuy's table misses.
 LOTS = {
     "NIFTY": [("2000-01-01", 75), ("2021-07-23", 50), ("2024-04-26", 25), ("2024-11-28", 75), ("2025-12-31", 65)],
-    "BANKNIFTY": [("2000-01-01", 25), ("2023-07-21", 15), ("2024-11-28", 30), ("2025-06-27", 35)],
+    "BANKNIFTY": [("2000-01-01", 25), ("2023-07-21", 15), ("2024-11-28", 30), ("2025-06-27", 35), ("2025-12-31", 30)],
     "FINNIFTY": [("2000-01-01", 40), ("2024-07-24", 25), ("2024-11-28", 65), ("2025-12-31", 60)],
     "SENSEX": [("2000-01-01", 10), ("2024-11-28", 20)],
-    "MIDCPNIFTY": [("2000-01-01", 75), ("2024-11-28", 120)],
+    "MIDCPNIFTY": [("2000-01-01", 75), ("2024-11-28", 120), ("2025-06-27", 140), ("2025-12-31", 120)],
 }
 
 # NSE / BSE minute grid: row r = 09:15 + r minutes, 375 rows (09:15 .. 15:29)
