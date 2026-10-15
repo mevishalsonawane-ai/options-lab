@@ -68,11 +68,14 @@ def predictions(target: str, block: str):
             trp[k] = np.array([])
             continue
         Xtr = ml.matrix(X[ok], cols, UNDS)
+        fin = np.isfinite(Xtr)
+        use = fin.any(0) & (np.nanmax(np.where(fin, Xtr, -np.inf), 0) > np.nanmin(np.where(fin, Xtr, np.inf), 0))
+        Xtr = Xtr[:, use]                    # columns all-NaN or constant on the training rows carry nothing
         m = _fit(Xtr, (yv.values[ok] > 0).astype(int))
         rng = np.random.default_rng(SEED)
         samp = Xtr[rng.choice(len(Xtr), size=min(60000, len(Xtr)), replace=False)]
         trp[k] = m.predict_proba(samp)[:, 1]
-        out[f"p{k}"] = m.predict_proba(ml.matrix(X[bm], cols, UNDS))[:, 1] if bm.any() else []
+        out[f"p{k}"] = m.predict_proba(ml.matrix(X[bm], cols, UNDS)[:, use])[:, 1] if bm.any() else []
     return out, trp
 
 

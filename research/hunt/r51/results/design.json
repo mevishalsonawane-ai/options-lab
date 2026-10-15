@@ -3190,5 +3190,1475 @@
    -29346.0
   ],
   "wf_net": -37645.0
+ },
+ "F1-S4-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S4|q0.2|x1",
+   "f1|S4|q0.2|x1",
+   "f1|S4|q0.2|x1",
+   "f1|S4|q0.2|x1"
+  ],
+  "wf_net": -13344.0,
+  "wf_trades": 221,
+  "final_pick": "f1|S4|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S4|q0.2|x1": -37645.0,
+   "f1|S4|q0.2|x2": -59780.0,
+   "f1|S4|q0.1|x1": -37645.0,
+   "f1|S4|q0.1|x2": -59780.0
+  },
+  "design": {
+   "trades": 308,
+   "win": 0.6396,
+   "net": -37645.0,
+   "per_day": -111.7,
+   "avg_win": 887.0,
+   "avg_loss": -1913.0,
+   "worst_day": -5858.0,
+   "max_dd": 41989.0,
+   "ex_top5": -51416.0,
+   "top5_share": null,
+   "days": 308,
+   "why": {
+    "lock": 183,
+    "time": 85,
+    "stop": 40
+   }
+  }
+ },
+ "F1-S5": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "donchian20_width_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 316,
+   "win": 0.6329,
+   "net": -49111.0,
+   "per_day": -145.7,
+   "avg_win": 917.0,
+   "avg_loss": -2005.0,
+   "worst_day": -5858.0,
+   "max_dd": 54732.0,
+   "ex_top5": -65538.0,
+   "top5_share": null,
+   "days": 316,
+   "why": {
+    "lock": 189,
+    "time": 88,
+    "stop": 39
+   },
+   "p": 0.493,
+   "twin_mean": -49726.0
+  },
+  "folds": [
+   5075.0,
+   -3613.0,
+   -9935.0,
+   -28982.0
+  ],
+  "wf_net": -49111.0
+ },
+ "F1-S5-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S5|q0.2|x1",
+   "f1|S5|q0.2|x1",
+   "f1|S5|q0.2|x1",
+   "f1|S5|q0.2|x1"
+  ],
+  "wf_net": -37454.0,
+  "wf_trades": 230,
+  "final_pick": "f1|S5|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S5|q0.2|x1": -49111.0,
+   "f1|S5|q0.2|x2": -63364.0,
+   "f1|S5|q0.1|x1": -49111.0,
+   "f1|S5|q0.1|x2": -63364.0
+  },
+  "design": {
+   "trades": 316,
+   "win": 0.6329,
+   "net": -49111.0,
+   "per_day": -145.7,
+   "avg_win": 917.0,
+   "avg_loss": -2005.0,
+   "worst_day": -5858.0,
+   "max_dd": 54732.0,
+   "ex_top5": -65538.0,
+   "top5_share": null,
+   "days": 316,
+   "why": {
+    "lock": 189,
+    "time": 88,
+    "stop": 39
+   }
+  }
+ },
+ "F1-S6": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "range_30m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 271,
+   "win": 0.6125,
+   "net": -48019.0,
+   "per_day": -142.5,
+   "avg_win": 819.0,
+   "avg_loss": -1752.0,
+   "worst_day": -5353.0,
+   "max_dd": 52373.0,
+   "ex_top5": -59900.0,
+   "top5_share": null,
+   "days": 271,
+   "why": {
+    "lock": 152,
+    "time": 87,
+    "stop": 32
+   },
+   "p": 0.6128,
+   "twin_mean": -41379.0
+  },
+  "folds": [
+   -16316.0,
+   -11963.0,
+   4775.0,
+   -18174.0
+  ],
+  "wf_net": -48019.0
+ },
+ "F1-S6-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S6|q0.2|x1",
+   "f1|S6|q0.2|x2",
+   "f1|S6|q0.2|x2",
+   "f1|S6|q0.2|x2"
+  ],
+  "wf_net": -28243.0,
+  "wf_trades": 191,
+  "final_pick": "f1|S6|q0.2|x2",
+  "final_pick_i": 1,
+  "grid_design_net": {
+   "f1|S6|q0.2|x1": -48019.0,
+   "f1|S6|q0.2|x2": -32159.0,
+   "f1|S6|q0.1|x1": -48019.0,
+   "f1|S6|q0.1|x2": -32159.0
+  },
+  "design": {
+   "trades": 271,
+   "win": 0.7417,
+   "net": -32159.0,
+   "per_day": -95.4,
+   "avg_win": 930.0,
+   "avg_loss": -3130.0,
+   "worst_day": -6382.0,
+   "max_dd": 49187.0,
+   "ex_top5": -49044.0,
+   "top5_share": null,
+   "days": 271,
+   "why": {
+    "lock": 202,
+    "stop": 62,
+    "squareoff": 7
+   }
+  }
+ },
+ "F1-S7": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "range_60m_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 212,
+   "win": 0.6226,
+   "net": -17481.0,
+   "per_day": -51.9,
+   "avg_win": 857.0,
+   "avg_loss": -1633.0,
+   "worst_day": -4894.0,
+   "max_dd": 31159.0,
+   "ex_top5": -36998.0,
+   "top5_share": null,
+   "days": 212,
+   "why": {
+    "lock": 120,
+    "time": 69,
+    "stop": 23
+   },
+   "p": 0.1836,
+   "twin_mean": -35752.0
+  },
+  "folds": [
+   -14068.0,
+   -9786.0,
+   15018.0,
+   -8368.0
+  ],
+  "wf_net": -17481.0
+ },
+ "F1-S7-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S7|q0.2|x1",
+   "f1|S7|q0.2|x1",
+   "f1|S7|q0.2|x1",
+   "f1|S7|q0.2|x1"
+  ],
+  "wf_net": -17204.0,
+  "wf_trades": 147,
+  "final_pick": "f1|S7|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S7|q0.2|x1": -17481.0,
+   "f1|S7|q0.2|x2": -29441.0,
+   "f1|S7|q0.1|x1": -17481.0,
+   "f1|S7|q0.1|x2": -29441.0
+  },
+  "design": {
+   "trades": 212,
+   "win": 0.6226,
+   "net": -17481.0,
+   "per_day": -51.9,
+   "avg_win": 857.0,
+   "avg_loss": -1633.0,
+   "worst_day": -4894.0,
+   "max_dd": 31159.0,
+   "ex_top5": -36998.0,
+   "top5_share": null,
+   "days": 212,
+   "why": {
+    "lock": 120,
+    "time": 69,
+    "stop": 23
+   }
+  }
+ },
+ "F1-S8": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "gex_near_share + bu_pe_long_unwinding_share top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 204,
+   "win": 0.6275,
+   "net": -53650.0,
+   "per_day": -159.2,
+   "avg_win": 843.0,
+   "avg_loss": -2126.0,
+   "worst_day": -6357.0,
+   "max_dd": 55501.0,
+   "ex_top5": -67916.0,
+   "top5_share": null,
+   "days": 204,
+   "why": {
+    "lock": 111,
+    "time": 76,
+    "stop": 17
+   },
+   "p": 0.7824,
+   "twin_mean": -38509.0
+  },
+  "folds": [
+   -7808.0,
+   -4407.0,
+   1018.0,
+   -40059.0
+  ],
+  "wf_net": -53650.0
+ },
+ "F1-S8-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S8|q0.2|x1",
+   "f1|S8|q0.2|x1",
+   "f1|S8|q0.2|x1",
+   "f1|S8|q0.2|x1"
+  ],
+  "wf_net": -51256.0,
+  "wf_trades": 144,
+  "final_pick": "f1|S8|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S8|q0.2|x1": -53650.0,
+   "f1|S8|q0.2|x2": -71512.0,
+   "f1|S8|q0.1|x1": -53650.0,
+   "f1|S8|q0.1|x2": -71512.0
+  },
+  "design": {
+   "trades": 204,
+   "win": 0.6275,
+   "net": -53650.0,
+   "per_day": -159.2,
+   "avg_win": 843.0,
+   "avg_loss": -2126.0,
+   "worst_day": -6357.0,
+   "max_dd": 55501.0,
+   "ex_top5": -67916.0,
+   "top5_share": null,
+   "days": 204,
+   "why": {
+    "lock": 111,
+    "time": 76,
+    "stop": 17
+   }
+  }
+ },
+ "F1-S9": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "gex_near_share + day_range_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 125,
+   "win": 0.616,
+   "net": -34838.0,
+   "per_day": -103.4,
+   "avg_win": 739.0,
+   "avg_loss": -1911.0,
+   "worst_day": -6357.0,
+   "max_dd": 35893.0,
+   "ex_top5": -47667.0,
+   "top5_share": null,
+   "days": 125,
+   "why": {
+    "lock": 70,
+    "time": 48,
+    "stop": 7
+   },
+   "p": 0.6846,
+   "twin_mean": -26561.0
+  },
+  "folds": [
+   -11518.0,
+   -2276.0,
+   14082.0,
+   -27143.0
+  ],
+  "wf_net": -34838.0
+ },
+ "F1-S9-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S9|q0.2|x1",
+   "f1|S9|q0.2|x1",
+   "f1|S9|q0.2|x1",
+   "f1|S9|q0.2|x1"
+  ],
+  "wf_net": -26854.0,
+  "wf_trades": 83,
+  "final_pick": "f1|S9|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S9|q0.2|x1": -34838.0,
+   "f1|S9|q0.2|x2": -44306.0,
+   "f1|S9|q0.1|x1": -34838.0,
+   "f1|S9|q0.1|x2": -44306.0
+  },
+  "design": {
+   "trades": 125,
+   "win": 0.616,
+   "net": -34838.0,
+   "per_day": -103.4,
+   "avg_win": 739.0,
+   "avg_loss": -1911.0,
+   "worst_day": -6357.0,
+   "max_dd": 35893.0,
+   "ex_top5": -47667.0,
+   "top5_share": null,
+   "days": 125,
+   "why": {
+    "lock": 70,
+    "time": 48,
+    "stop": 7
+   }
+  }
+ },
+ "F1-S10": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "bu_pe_long_unwinding_share + day_range_pct top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 131,
+   "win": 0.5878,
+   "net": -28861.0,
+   "per_day": -85.6,
+   "avg_win": 823.0,
+   "avg_loss": -1708.0,
+   "worst_day": -5372.0,
+   "max_dd": 31809.0,
+   "ex_top5": -40143.0,
+   "top5_share": null,
+   "days": 131,
+   "why": {
+    "lock": 71,
+    "time": 43,
+    "stop": 17
+   },
+   "p": 0.5908,
+   "twin_mean": -24806.0
+  },
+  "folds": [
+   -1881.0,
+   -4163.0,
+   4694.0,
+   -21646.0
+  ],
+  "wf_net": -28861.0
+ },
+ "F1-S10-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S10|q0.2|x1",
+   "f1|S10|q0.2|x2",
+   "f1|S10|q0.2|x1",
+   "f1|S10|q0.2|x1"
+  ],
+  "wf_net": -23755.0,
+  "wf_trades": 88,
+  "final_pick": "f1|S10|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S10|q0.2|x1": -28861.0,
+   "f1|S10|q0.2|x2": -31423.0,
+   "f1|S10|q0.1|x1": -28861.0,
+   "f1|S10|q0.1|x2": -31423.0
+  },
+  "design": {
+   "trades": 131,
+   "win": 0.5878,
+   "net": -28861.0,
+   "per_day": -85.6,
+   "avg_win": 823.0,
+   "avg_loss": -1708.0,
+   "worst_day": -5372.0,
+   "max_dd": 31809.0,
+   "ex_top5": -40143.0,
+   "top5_share": null,
+   "days": 131,
+   "why": {
+    "lock": 71,
+    "time": 43,
+    "stop": 17
+   }
+  }
+ },
+ "F1-S11": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "iv_skew_3 + ema20 top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 293,
+   "win": 0.5802,
+   "net": -30429.0,
+   "per_day": -90.3,
+   "avg_win": 1087.0,
+   "avg_loss": -1750.0,
+   "worst_day": -21726.0,
+   "max_dd": 73745.0,
+   "ex_top5": -51809.0,
+   "top5_share": null,
+   "days": 102,
+   "why": {
+    "lock": 168,
+    "stop": 84,
+    "time": 40,
+    "missing": 1
+   },
+   "p": 0.2415,
+   "twin_mean": -45747.0
+  },
+  "folds": [
+   6185.0,
+   -3329.0,
+   408.0,
+   2650.0
+  ],
+  "wf_net": -30429.0
+ },
+ "F1-S11-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S11|q0.2|x2",
+   "f1|S11|q0.2|x2",
+   "f1|S11|q0.2|x2",
+   "f1|S11|q0.2|x2"
+  ],
+  "wf_net": 1272.0,
+  "wf_trades": 86,
+  "final_pick": "f1|S11|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S11|q0.2|x1": -30429.0,
+   "f1|S11|q0.2|x2": -32664.0,
+   "f1|S11|q0.1|x1": -30429.0,
+   "f1|S11|q0.1|x2": -32664.0
+  },
+  "design": {
+   "trades": 293,
+   "win": 0.5802,
+   "net": -30429.0,
+   "per_day": -90.3,
+   "avg_win": 1087.0,
+   "avg_loss": -1750.0,
+   "worst_day": -21726.0,
+   "max_dd": 73745.0,
+   "ex_top5": -51809.0,
+   "top5_share": null,
+   "days": 102,
+   "why": {
+    "lock": 168,
+    "stop": 84,
+    "time": 40,
+    "missing": 1
+   }
+  }
+ },
+ "F1-S12": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "iv_skew_3 + ema50 top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 295,
+   "win": 0.5695,
+   "net": -36133.0,
+   "per_day": -107.2,
+   "avg_win": 1080.0,
+   "avg_loss": -1713.0,
+   "worst_day": -21726.0,
+   "max_dd": 74711.0,
+   "ex_top5": -57512.0,
+   "top5_share": null,
+   "days": 102,
+   "why": {
+    "lock": 167,
+    "stop": 84,
+    "time": 43,
+    "missing": 1
+   },
+   "p": 0.3533,
+   "twin_mean": -45852.0
+  },
+  "folds": [
+   5307.0,
+   -3329.0,
+   408.0,
+   2320.0
+  ],
+  "wf_net": -36133.0
+ },
+ "F1-S12-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S12|q0.2|x2",
+   "f1|S12|q0.2|x2",
+   "f1|S12|q0.2|x2",
+   "f1|S12|q0.2|x2"
+  ],
+  "wf_net": -283.0,
+  "wf_trades": 88,
+  "final_pick": "f1|S12|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S12|q0.2|x1": -36133.0,
+   "f1|S12|q0.2|x2": -36542.0,
+   "f1|S12|q0.1|x1": -36133.0,
+   "f1|S12|q0.1|x2": -36542.0
+  },
+  "design": {
+   "trades": 295,
+   "win": 0.5695,
+   "net": -36133.0,
+   "per_day": -107.2,
+   "avg_win": 1080.0,
+   "avg_loss": -1713.0,
+   "worst_day": -21726.0,
+   "max_dd": 74711.0,
+   "ex_top5": -57512.0,
+   "top5_share": null,
+   "days": 102,
+   "why": {
+    "lock": 167,
+    "stop": 84,
+    "time": 43,
+    "missing": 1
+   }
+  }
+ },
+ "F1-S13": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "greek_atmm2_delta_c top quintile (low side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 127,
+   "win": 0.5906,
+   "net": -59474.0,
+   "per_day": -176.5,
+   "avg_win": 797.0,
+   "avg_loss": -2293.0,
+   "worst_day": -5372.0,
+   "max_dd": 61016.0,
+   "ex_top5": -70272.0,
+   "top5_share": null,
+   "days": 127,
+   "why": {
+    "lock": 70,
+    "time": 44,
+    "stop": 13
+   },
+   "p": 0.986,
+   "twin_mean": -22769.0
+  },
+  "folds": [
+   -8794.0,
+   0.0,
+   0.0,
+   -34454.0
+  ],
+  "wf_net": -59474.0
+ },
+ "F1-S13-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S13|q0.2|x1",
+   "f1|S13|q0.2|x1",
+   "f1|S13|q0.2|x1",
+   "f1|S13|q0.2|x1"
+  ],
+  "wf_net": -43248.0,
+  "wf_trades": 69,
+  "final_pick": "f1|S13|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S13|q0.2|x1": -59474.0,
+   "f1|S13|q0.2|x2": -68070.0,
+   "f1|S13|q0.1|x1": -59474.0,
+   "f1|S13|q0.1|x2": -68070.0
+  },
+  "design": {
+   "trades": 127,
+   "win": 0.5906,
+   "net": -59474.0,
+   "per_day": -176.5,
+   "avg_win": 797.0,
+   "avg_loss": -2293.0,
+   "worst_day": -5372.0,
+   "max_dd": 61016.0,
+   "ex_top5": -70272.0,
+   "top5_share": null,
+   "days": 127,
+   "why": {
+    "lock": 70,
+    "time": 44,
+    "stop": 13
+   }
+  }
+ },
+ "F1-S14": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "greek_atmm2_delta_p top quintile (low side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 127,
+   "win": 0.5906,
+   "net": -59474.0,
+   "per_day": -176.5,
+   "avg_win": 797.0,
+   "avg_loss": -2293.0,
+   "worst_day": -5372.0,
+   "max_dd": 61016.0,
+   "ex_top5": -70272.0,
+   "top5_share": null,
+   "days": 127,
+   "why": {
+    "lock": 70,
+    "time": 44,
+    "stop": 13
+   },
+   "p": 0.986,
+   "twin_mean": -22769.0
+  },
+  "folds": [
+   -8794.0,
+   0.0,
+   0.0,
+   -34454.0
+  ],
+  "wf_net": -59474.0
+ },
+ "F1-S14-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S14|q0.2|x1",
+   "f1|S14|q0.2|x1",
+   "f1|S14|q0.2|x1",
+   "f1|S14|q0.2|x1"
+  ],
+  "wf_net": -43248.0,
+  "wf_trades": 69,
+  "final_pick": "f1|S14|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S14|q0.2|x1": -59474.0,
+   "f1|S14|q0.2|x2": -68070.0,
+   "f1|S14|q0.1|x1": -59474.0,
+   "f1|S14|q0.1|x2": -68070.0
+  },
+  "design": {
+   "trades": 127,
+   "win": 0.5906,
+   "net": -59474.0,
+   "per_day": -176.5,
+   "avg_win": 797.0,
+   "avg_loss": -2293.0,
+   "worst_day": -5372.0,
+   "max_dd": 61016.0,
+   "ex_top5": -70272.0,
+   "top5_share": null,
+   "days": 127,
+   "why": {
+    "lock": 70,
+    "time": 44,
+    "stop": 13
+   }
+  }
+ },
+ "F1-S15": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "lvl_near_count top quintile (low side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 178,
+   "win": 0.5955,
+   "net": -32588.0,
+   "per_day": -96.7,
+   "avg_win": 951.0,
+   "avg_loss": -1853.0,
+   "worst_day": -5372.0,
+   "max_dd": 44468.0,
+   "ex_top5": -50456.0,
+   "top5_share": null,
+   "days": 178,
+   "why": {
+    "lock": 99,
+    "time": 53,
+    "stop": 26
+   },
+   "p": 0.5649,
+   "twin_mean": -29382.0
+  },
+  "folds": [
+   -7493.0,
+   -3863.0,
+   14467.0,
+   -31905.0
+  ],
+  "wf_net": -32588.0
+ },
+ "F1-S15-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S15|q0.2|x1",
+   "f1|S15|q0.2|x1",
+   "f1|S15|q0.2|x1",
+   "f1|S15|q0.2|x2"
+  ],
+  "wf_net": -19896.0,
+  "wf_trades": 118,
+  "final_pick": "f1|S15|q0.2|x2",
+  "final_pick_i": 1,
+  "grid_design_net": {
+   "f1|S15|q0.2|x1": -32588.0,
+   "f1|S15|q0.2|x2": -22571.0,
+   "f1|S15|q0.1|x1": -32588.0,
+   "f1|S15|q0.1|x2": -22571.0
+  },
+  "design": {
+   "trades": 178,
+   "win": 0.7303,
+   "net": -22571.0,
+   "per_day": -67.0,
+   "avg_win": 1016.0,
+   "avg_loss": -3223.0,
+   "worst_day": -6403.0,
+   "max_dd": 39532.0,
+   "ex_top5": -42864.0,
+   "top5_share": null,
+   "days": 178,
+   "why": {
+    "lock": 128,
+    "stop": 45,
+    "squareoff": 5
+   }
+  }
+ },
+ "F1-S16": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "tod_logrange_60m top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 179,
+   "win": 0.6201,
+   "net": -32004.0,
+   "per_day": -95.0,
+   "avg_win": 1032.0,
+   "avg_loss": -2155.0,
+   "worst_day": -5858.0,
+   "max_dd": 36036.0,
+   "ex_top5": -48430.0,
+   "top5_share": null,
+   "days": 179,
+   "why": {
+    "lock": 107,
+    "time": 48,
+    "stop": 24
+   },
+   "p": 0.6607,
+   "twin_mean": -24565.0
+  },
+  "folds": [
+   5093.0,
+   0.0,
+   -4463.0,
+   -12158.0
+  ],
+  "wf_net": -32004.0
+ },
+ "F1-S16-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S16|q0.2|x1",
+   "f1|S16|q0.2|x1",
+   "f1|S16|q0.2|x1",
+   "f1|S16|q0.2|x1"
+  ],
+  "wf_net": -11528.0,
+  "wf_trades": 91,
+  "final_pick": "f1|S16|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S16|q0.2|x1": -32004.0,
+   "f1|S16|q0.2|x2": -57995.0,
+   "f1|S16|q0.1|x1": -32004.0,
+   "f1|S16|q0.1|x2": -57995.0
+  },
+  "design": {
+   "trades": 179,
+   "win": 0.6201,
+   "net": -32004.0,
+   "per_day": -95.0,
+   "avg_win": 1032.0,
+   "avg_loss": -2155.0,
+   "worst_day": -5858.0,
+   "max_dd": 36036.0,
+   "ex_top5": -48430.0,
+   "top5_share": null,
+   "days": 179,
+   "why": {
+    "lock": 107,
+    "time": 48,
+    "stop": 24
+   }
+  }
+ },
+ "F1-S17": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "orig",
+  "desc": "range_30m_pct top quintile (high side) -> PE (net_pe_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 271,
+   "win": 0.6162,
+   "net": 10233.0,
+   "per_day": 30.4,
+   "avg_win": 882.0,
+   "avg_loss": -1319.0,
+   "worst_day": -4020.0,
+   "max_dd": 30215.0,
+   "ex_top5": -3968.0,
+   "top5_share": 1.388,
+   "days": 271,
+   "why": {
+    "lock": 149,
+    "time": 88,
+    "stop": 34
+   },
+   "p": 0.018,
+   "twin_mean": -32044.0
+  },
+  "folds": [
+   10609.0,
+   5163.0,
+   -5857.0,
+   -9624.0
+  ],
+  "wf_net": 10233.0
+ },
+ "F1-S17-RT": {
+  "family": "F1 factory",
+  "source": "underlying features",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S17|q0.2|x2",
+   "f1|S17|q0.2|x1",
+   "f1|S17|q0.2|x1",
+   "f1|S17|q0.2|x1"
+  ],
+  "wf_net": -13607.0,
+  "wf_trades": 191,
+  "final_pick": "f1|S17|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S17|q0.2|x1": 10233.0,
+   "f1|S17|q0.2|x2": -5343.0,
+   "f1|S17|q0.1|x1": 10233.0,
+   "f1|S17|q0.1|x2": -5343.0
+  },
+  "design": {
+   "trades": 271,
+   "win": 0.6162,
+   "net": 10233.0,
+   "per_day": 30.4,
+   "avg_win": 882.0,
+   "avg_loss": -1319.0,
+   "worst_day": -4020.0,
+   "max_dd": 30215.0,
+   "ex_top5": -3968.0,
+   "top5_share": 1.388,
+   "days": 271,
+   "why": {
+    "lock": 149,
+    "time": 88,
+    "stop": 34
+   }
+  }
+ },
+ "F1-S18": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "orig",
+  "desc": "iv_pct_252 top quintile (high side) -> CE (net_ce_atm_x1, x1); 1-ITM, x1",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "design": {
+   "trades": 101,
+   "win": 0.6337,
+   "net": -30412.0,
+   "per_day": -90.2,
+   "avg_win": 885.0,
+   "avg_loss": -2352.0,
+   "worst_day": -5372.0,
+   "max_dd": 32622.0,
+   "ex_top5": -41374.0,
+   "top5_share": null,
+   "days": 101,
+   "why": {
+    "lock": 63,
+    "stop": 19,
+    "time": 19
+   },
+   "p": 0.7385,
+   "twin_mean": -20585.0
+  },
+  "folds": [
+   1882.0,
+   681.0,
+   4844.0,
+   -24020.0
+  ],
+  "wf_net": -30412.0
+ },
+ "F1-S18-RT": {
+  "family": "F1 factory",
+  "source": "underlying features + option-chain features (filters)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {quintile, decile} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "f1",
+  "design_start": "2024-11-20",
+  "sessions": 337,
+  "wf_picks": [
+   "f1|S18|q0.2|x2",
+   "f1|S18|q0.2|x1",
+   "f1|S18|q0.2|x1",
+   "f1|S18|q0.2|x1"
+  ],
+  "wf_net": -30680.0,
+  "wf_trades": 64,
+  "final_pick": "f1|S18|q0.2|x1",
+  "final_pick_i": 0,
+  "grid_design_net": {
+   "f1|S18|q0.2|x1": -30412.0,
+   "f1|S18|q0.2|x2": -33747.0,
+   "f1|S18|q0.1|x1": -30412.0,
+   "f1|S18|q0.1|x2": -33747.0
+  },
+  "design": {
+   "trades": 101,
+   "win": 0.6337,
+   "net": -30412.0,
+   "per_day": -90.2,
+   "avg_win": 885.0,
+   "avg_loss": -2352.0,
+   "worst_day": -5372.0,
+   "max_dd": 32622.0,
+   "ex_top5": -41374.0,
+   "top5_share": null,
+   "days": 101,
+   "why": {
+    "lock": 63,
+    "stop": 19,
+    "time": 19
+   }
+  }
+ },
+ "B2-G15": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "orig",
+  "desc": "B2 G15: most confident 10% of a GBM, ATM, x1",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 1125,
+   "win": 0.4738,
+   "net": -103570.0,
+   "per_day": -419.3,
+   "avg_win": 824.0,
+   "avg_loss": -917.0,
+   "worst_day": -12608.0,
+   "max_dd": 142843.0,
+   "ex_top5": -127621.0,
+   "top5_share": null,
+   "days": 244,
+   "why": {
+    "lock": 428,
+    "time": 417,
+    "stop": 275,
+    "squareoff": 3,
+    "missing": 2
+   },
+   "p": 0.018,
+   "twin_mean": -184991.0
+  },
+  "folds": [
+   -45639.0,
+   -25825.0,
+   -32325.0,
+   219.0
+  ],
+  "wf_net": -103570.0
+ },
+ "B2-G15-RT": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {90th, 95th pct} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "b2|G15|p0.9|x1",
+   "b2|G15|p0.9|x1",
+   "b2|G15|p0.9|x1",
+   "b2|G15|p0.95|x1"
+  ],
+  "wf_net": -77887.0,
+  "wf_trades": 1017,
+  "final_pick": "b2|G15|p0.95|x1",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "b2|G15|p0.9|x1": -103570.0,
+   "b2|G15|p0.9|x2": -96804.0,
+   "b2|G15|p0.95|x1": -65760.0,
+   "b2|G15|p0.95|x2": -105592.0
+  },
+  "design": {
+   "trades": 729,
+   "win": 0.4746,
+   "net": -65760.0,
+   "per_day": -266.2,
+   "avg_win": 831.0,
+   "avg_loss": -923.0,
+   "worst_day": -8157.0,
+   "max_dd": 114369.0,
+   "ex_top5": -91363.0,
+   "top5_share": null,
+   "days": 228,
+   "why": {
+    "lock": 278,
+    "time": 267,
+    "stop": 177,
+    "squareoff": 6,
+    "missing": 1
+   }
+  }
+ },
+ "B2-G30": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "orig",
+  "desc": "B2 G30: most confident 10% of a GBM, ATM, x1",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 819,
+   "win": 0.4701,
+   "net": -122385.0,
+   "per_day": -495.5,
+   "avg_win": 824.0,
+   "avg_loss": -1013.0,
+   "worst_day": -14201.0,
+   "max_dd": 124301.0,
+   "ex_top5": -146325.0,
+   "top5_share": null,
+   "days": 235,
+   "why": {
+    "lock": 321,
+    "time": 286,
+    "stop": 207,
+    "squareoff": 3,
+    "missing": 2
+   },
+   "p": 0.1876,
+   "twin_mean": -154295.0
+  },
+  "folds": [
+   -72760.0,
+   -9411.0,
+   -34681.0,
+   -5534.0
+  ],
+  "wf_net": -122385.0
+ },
+ "B2-G30-RT": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {90th, 95th pct} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "b2|G30|p0.9|x1",
+   "b2|G30|p0.95|x1",
+   "b2|G30|p0.95|x1",
+   "b2|G30|p0.95|x1"
+  ],
+  "wf_net": -61378.0,
+  "wf_trades": 544,
+  "final_pick": "b2|G30|p0.95|x1",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "b2|G30|p0.9|x1": -122385.0,
+   "b2|G30|p0.9|x2": -150534.0,
+   "b2|G30|p0.95|x1": -19558.0,
+   "b2|G30|p0.95|x2": -44883.0
+  },
+  "design": {
+   "trades": 481,
+   "win": 0.5198,
+   "net": -19558.0,
+   "per_day": -79.2,
+   "avg_win": 819.0,
+   "avg_loss": -971.0,
+   "worst_day": -12352.0,
+   "max_dd": 34439.0,
+   "ex_top5": -34987.0,
+   "top5_share": null,
+   "days": 187,
+   "why": {
+    "lock": 217,
+    "time": 157,
+    "stop": 105,
+    "missing": 2
+   }
+  }
+ },
+ "B2-G60": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "orig",
+  "desc": "B2 G60: most confident 10% of a GBM, ATM, x1",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "design": {
+   "trades": 460,
+   "win": 0.5087,
+   "net": -17253.0,
+   "per_day": -69.9,
+   "avg_win": 981.0,
+   "avg_loss": -1092.0,
+   "worst_day": -16557.0,
+   "max_dd": 44941.0,
+   "ex_top5": -40153.0,
+   "top5_share": null,
+   "days": 187,
+   "why": {
+    "lock": 195,
+    "time": 159,
+    "stop": 102,
+    "squareoff": 3,
+    "missing": 1
+   },
+   "p": 0.002,
+   "twin_mean": -118372.0
+  },
+  "folds": [
+   -27631.0,
+   12763.0,
+   -18246.0,
+   15861.0
+  ],
+  "wf_net": -17253.0
+ },
+ "B2-G60-RT": {
+  "family": "B2 all-at-once",
+  "source": "underlying features (one GBM)",
+  "kind": "retune",
+  "desc": "re-tune: threshold {90th, 95th pct} x exit {x1, x2}",
+  "old": "",
+  "note": "",
+  "module": "b2",
+  "design_start": "2025-04-01",
+  "sessions": 247,
+  "wf_picks": [
+   "b2|G60|p0.9|x1",
+   "b2|G60|p0.95|x1",
+   "b2|G60|p0.95|x1",
+   "b2|G60|p0.95|x1"
+  ],
+  "wf_net": -16144.0,
+  "wf_trades": 264,
+  "final_pick": "b2|G60|p0.95|x1",
+  "final_pick_i": 2,
+  "grid_design_net": {
+   "b2|G60|p0.9|x1": -17253.0,
+   "b2|G60|p0.9|x2": -6718.0,
+   "b2|G60|p0.95|x1": 16967.0,
+   "b2|G60|p0.95|x2": 2558.0
+  },
+  "design": {
+   "trades": 228,
+   "win": 0.5263,
+   "net": 16967.0,
+   "per_day": 68.7,
+   "avg_win": 1002.0,
+   "avg_loss": -956.0,
+   "worst_day": -5288.0,
+   "max_dd": 16755.0,
+   "ex_top5": -160.0,
+   "top5_share": 1.009,
+   "days": 120,
+   "why": {
+    "lock": 96,
+    "time": 85,
+    "stop": 46,
+    "missing": 1
+   }
+  }
  }
 }
