@@ -27,7 +27,9 @@ Keys covered (original setting first; full grids in SPECS):
                 study used) and is labelled so. The entry side and minute are read from the 1-minute index bars.
   SWING_DEEP-8  NIFTY + BANKNIFTY 1-day return < -2 x 20-day SD -> long; monthly ATM 09:20 next morning, 10 sessions
                 (swing_deep.py). Merged SWING_EXITS-3 (weekly/near ATM call, app exits -30/+60 pts + ladder or
-                -30%/+60% + ladder, max 5 or 3 sessions) is in the grid.
+                -30%/+60% + ladder, max 5 or 3 sessions) is in the grid; there one position at a time blocks for the
+                full time hold (SWING_EXITS freed the book at an earlier stop / target exit, which depends on option
+                prices a signal function cannot see).
   LV-2          BANKNIFTY 09:20 ATM straddle held to 15:10, only when straddle cost / mean |15:10 close - 09:20 open| of
                 the last 10 days is in (4.44, 6.25] (cost_vs_oc10 middle tercile, long_vol.py `day_rows`, `report`).
   LV-4          BANKNIFTY ATM straddle bought 15:15, sold 09:20 next session, same contract (long_vol.py `day_rows`).
@@ -52,7 +54,8 @@ Keys covered (original setting first; full grids in SPECS):
                 0.15 x ATR14 (the 'no add in 60 min' stop), else 15:15 (hunt/h5/sim.py `features`, `sim_day`,
                 build.py OI features; ported because they read deleted caches). This is HUNT_H5's own "same rule with
                 1 lot" row. The frozen rule's expiry-day setting is not recorded (sel.pkl is gone): orig allows
-                expiry days, the grid skips them. Its exits are structural (exit_at from the index path).
+                expiry days, the grid skips them. Its exits are structural (exit_at from the index path), so the
+                random-entry twins keep the same holding time rather than their own trail.
 
 LEFT (not tested here):
   LV-6   Expiry-day afternoon buy of the EXPIRING ATM straddle (long_vol2.py calls its 2x/3x take-profit form "the
@@ -616,7 +619,7 @@ def r13_signals(mk, mode="cc", reading="wait", rule="pts", a=1000.0, b=500.0, ca
                 row.update(idx_target=float(ep + a), idx_stop=float(ep - b))
             elif rule == "pct":
                 row.update(idx_target=float(ep * (1 + a)), idx_stop=float(ep * (1 - b)))
-            if xd <= d0:
+            if xd < d0:
                 continue
             capx = _cap_exit(ix, d0, xd, xm, series)
             if capx is None:

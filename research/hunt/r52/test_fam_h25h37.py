@@ -363,7 +363,7 @@ def test_ew3_lookahead():
     assert_no_lookahead(F.h37_swing, "MIDCPNIFTY", M, days, dict(unds=("MIDCPNIFTY",), tf=5, k=2, name="EW3"))
 
 
-# ================================================================================================ H37: Gann daily cycles
+# ============================================================================================ H37: Gann daily cycles
 def gtc_market(n_fall=60):
     closes = [100.0] * 20 + [100.0 + 2 * i for i in range(1, 21)] + [140.0 - i for i in range(1, n_fall + 1)]
     bars = path_bars(closes)

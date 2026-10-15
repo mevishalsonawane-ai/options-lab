@@ -66,6 +66,7 @@ import importlib.util
 import json
 import os
 import sys
+import warnings
 from datetime import date
 
 import numpy as np
@@ -450,7 +451,7 @@ def obs_rule(mk, und="FINNIFTY", side=1, atoms=("vwap_far_with", "ema5_with", "e
     c5 = np.array([r[1][b:b + 5][-1, 3] for r in recs for b in range(0, NM, 5)])
     e5a, e5b, e5c = _obs_ema(c5, 9), _obs_ema(c5, 21), _obs_ema(c5, 50)
     r5 = _obs_rsi(c5)
-    vx = mk.vix.daily
+    vx = mk.vix.daily if "vix_high" in atoms else pd.DataFrame(dict(close=[]))
     vx = vx[vx.close > 0]
     vdays = list(vx.index)
     a, b = OBS_WINDOWS[window]
@@ -532,7 +533,8 @@ def _s17_days(mk, und):
     M = ix.mat()
     h5 = np.full((len(ix.days), 75), np.nan)
     l5 = h5.copy()
-    with np.errstate(all="ignore"):
+    with np.errstate(all="ignore"), warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
         for k in range(75):
             h5[:, k] = np.nanmax(M["h"][:, 5 * k:5 * k + 5], axis=1)
             l5[:, k] = np.nanmin(M["l"][:, 5 * k:5 * k + 5], axis=1)

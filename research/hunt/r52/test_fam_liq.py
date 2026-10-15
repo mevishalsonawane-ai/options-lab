@@ -245,7 +245,7 @@ def test_break_matches_liquidity_break_simulate(tf, src, stop):
     """Parity with research/liquidity_break.py simulate (index-points mode, no chain, no premium stop) on a
     continuous random walk (open = previous close, so the old 'open of the entry minute' = our 'breaking close')."""
     lb = _lb_module()
-    nd = 25
+    nd = 60 if tf >= 15 else 25
     rng = np.random.default_rng(tf * 7 + len(src))
     c = 20000 + np.cumsum(rng.normal(0, 5, nd * W)).reshape(nd, W)
     M = from_closes(c)
@@ -334,10 +334,10 @@ def _h11_module():
 def test_arm_matches_h11_raw_signals():
     """With the 09:20-14:00 window, room 1 and the a-priori index stop, arm_signals = hunt/h11/sig.py raw_signals."""
     sig = _h11_module()
-    nd = 14
+    nd = 30
     M = walk(nd, 11, start=23000.0, vol=3.0)
     days = sessions(nd)
-    exp = {days[4], days[9]}
+    exp = {days[4], days[9], days[20]}
     mk = mk_of(M, "NIFTY", days, exp)
     raw = sig.raw_signals(mk, unds=("NIFTY",), tfs=(5, 15))
     raw = raw[raw.dist >= 15.0]
@@ -413,7 +413,9 @@ def test_carry_no_lookahead_and_one_at_a_time():
     t0 = [(d.toordinal(), m) for d, m in zip(s.day, s.sig_min)]
     t1 = [(d.toordinal(), m) for d, m in zip(s.exit_day, s.exit_min)]
     assert all(b > a for a, b in zip(t0, t1))
-    assert all(t0[k + 1] >= t1[k] for k in range(len(s) - 1))             # the next entry after the last exit
+    # the next fill (signal minute + 1) never before the last exit (a re-entry on the exit bar's close is allowed,
+    # as in liquidity_break.simulate)
+    assert all((t0[k + 1][0], t0[k + 1][1] + 1) >= t1[k] for k in range(len(s) - 1))
     check_lookahead(F.carry_signals, params, M, "BANKNIFTY", cols=("und", "day", "sig_min", "side"), days=days)
 
 

@@ -1,4 +1,2003 @@
 {
+ "H25-10": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLLONGLEGGEDDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 1,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 3,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 15,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 60,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g22"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLDOJI",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "BANKNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g23"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h25_sig",
+   "kind": "family",
+   "params": {
+    "name": "CDLDOJI",
+    "orient": "follow",
+    "tf": 30,
+    "unds": [
+     "BANKNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H25 BANKNIFTY 30-min doji, FOLLOW, -15%/+30%",
+   "unds": [
+    "BANKNIFTY"
+   ],
+   "why": "original = the post-hoc Welch q < 0.05 variant of HUNT_H25.md (BANKNIFTY 30m CDLDOJI follow PCT); its twin (CDLLONGLEGGEDDOJI) is the first grid setting"
+  }
+ },
+ "H25-11": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 3,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 15,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 30,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLLADDERBOTTOM",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g22"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h25_sig",
+   "kind": "family",
+   "params": {
+    "name": "CDLLADDERBOTTOM",
+    "orient": "fade",
+    "tf": 1,
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY",
+     "FINNIFTY",
+     "MIDCPNIFTY",
+     "SENSEX"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H25 CDL ladder-bottom, FADE (walk-forward family)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY",
+    "FINNIFTY",
+    "MIDCPNIFTY",
+    "SENSEX"
+   ],
+   "why": "WF family CDLLADDERBOTTOM fade (HUNT_H25.md best WF family): no frozen variant: the per-year walk-forward picks were not recorded (scratch wf.csv deleted) and rebuilding them needs pre-2025 P&L; as OBUY_GA-1, the original is the study's FIRST setting in its own loop order, on every index the family's walk-forward chose from; R52's re-tune walk-forward over the grid plays the original WF's role (all 5 indices, 1-min, ARM)"
+  }
+ },
+ "H25-2": {
+  "grid": [
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 3,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 15,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 30,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "CDLSEPARATINGLINES",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g22"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pct=0.15,time_stop=20",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h25_sig",
+   "kind": "family",
+   "params": {
+    "name": "CDLSEPARATINGLINES",
+    "orient": "fade",
+    "tf": 5,
+    "unds": [
+     "SENSEX"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H25 SENSEX 5-min CDL separating lines, FADE, arm exits",
+   "unds": [
+    "SENSEX"
+   ],
+   "why": "original = the gate passer named in HUNT_H25.md (SENSEX 5m CDLSEPARATINGLINES fade ARM; holdout 76 tr +90/day); hunt/h25/evaluate.py trades_for('SENSEX', 5, 'CDLSEPARATINGLINES', 'fade', 'ARM')"
+  }
+ },
+ "H25-3": {
+  "grid": [
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 3,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 15,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 30,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "HMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g22"
+   }
+  ],
+  "orig": {
+   "exits": "time_stop=30,time_gain=None,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h25_sig",
+   "kind": "family",
+   "params": {
+    "name": "HMA_X13_34",
+    "orient": "fade",
+    "tf": 60,
+    "unds": [
+     "SENSEX"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H25 SENSEX 60-min HMA 13/34 cross, FADE, 30-min time exit",
+   "unds": [
+    "SENSEX"
+   ],
+   "why": "original = the gate passer named in HUNT_H25.md (SENSEX 60m HMA_X13_34 fade T30; holdout 83 tr +39/day; T15 is in the grid)"
+  }
+ },
+ "H25-5": {
+  "grid": [
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 1,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 3,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 5,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 15,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 30,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "EMA_X13_34",
+     "orient": "fade",
+     "tf": 60,
+     "unds": [
+      "FINNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g22"
+   }
+  ],
+  "orig": {
+   "exits": "time_stop=15,time_gain=None,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h25_sig",
+   "kind": "family",
+   "params": {
+    "name": "EMA_X13_34",
+    "orient": "fade",
+    "tf": 60,
+    "unds": [
+     "FINNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H25 FINNIFTY 60-min EMA 13/34 cross, FADE, 15-min time exit",
+   "unds": [
+    "FINNIFTY"
+   ],
+   "why": "original = #1 of HUNT_H25.md's top 20 by pre-holdout t (FINNIFTY 60m EMA_X13_34 fade T15; LAD and P25_10 are in the grid)"
+  }
+ },
+ "H25-6": {
+  "grid": [
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 1,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 3,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 15,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 30,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 60,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pct=0.15,tgt_pct=0.3,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pct=0.15,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "SMA_X50_200",
+     "orient": "follow",
+     "tf": 5,
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g22"
+   }
+  ],
+  "orig": {
+   "exits": "time_stop=30,time_gain=None,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h25_sig",
+   "kind": "family",
+   "params": {
+    "name": "SMA_X50_200",
+    "orient": "follow",
+    "tf": 5,
+    "unds": [
+     "SENSEX"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H25 SENSEX 5-min SMA 50/200 cross, FOLLOW, 30-min time exit",
+   "unds": [
+    "SENSEX"
+   ],
+   "why": "original = #5 of HUNT_H25.md's top 20 (SENSEX 5m SMA_X50_200 follow T30)"
+  }
+ },
  "H28-1": {
   "grid": [
    {
@@ -1442,6 +3441,1751 @@
     "SENSEX"
    ],
    "why": "original = R16 (CE on the night after a scheduled FOMC decision; dates gc_common._FED), set up as H31-4's original (all 5 indices, 1-ITM nearest, F0, out 10:15). R15 (FOMC or US-CPI) is LEFT: no dated US-CPI list in the original code. About 8 nights a year per index. Grid: h31's exits / filters / monthly."
+  }
+ },
+ "H37-10": {
+  "grid": [
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 15,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "name": "MP_OOV",
+     "tf": 5,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h37_mp",
+   "kind": "family",
+   "params": {
+    "name": "MP_OOV",
+    "tf": 5,
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY",
+     "FINNIFTY",
+     "MIDCPNIFTY",
+     "SENSEX"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H37 Market Profile: open outside prior value and go (TPO 30-min, 70% VA)",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY",
+    "FINNIFTY",
+    "MIDCPNIFTY",
+    "SENSEX"
+   ],
+   "why": "WF family MP_OOV (HUNT_H37.md): no frozen variant: the per-year walk-forward picks were not recorded (scratch wf.csv deleted) and rebuilding them needs pre-2025 P&L; as OBUY_GA-1, the original is the study's FIRST setting in its own loop order, on every index the family's walk-forward chose from; R52's re-tune walk-forward over the grid plays the original WF's role (all 5 indices, 5-min, P15_10)"
+  }
+ },
+ "H37-2@MIDCPNIFTY": {
+  "grid": [
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 15,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 60,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": "D",
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h37_swing",
+   "kind": "family",
+   "params": {
+    "k": 4,
+    "name": "FIB_K786",
+    "tf": 5,
+    "unds": [
+     "MIDCPNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H37 Fibonacci 78.6% break, trade the pullback (MIDCP 5-min, +20/-20)",
+   "unds": [
+    "MIDCPNIFTY"
+   ],
+   "why": "original = the variant-gate passer of HUNT_H37.md (MIDCPNIFTY 5m FIB_K786 k4 P20_20)"
+  }
+ },
+ "H37-2@NIFTY": {
+  "grid": [
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 15,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 60,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": "D",
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "FIB_K786",
+     "tf": 5,
+     "unds": [
+      "NIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h37_swing",
+   "kind": "family",
+   "params": {
+    "k": 4,
+    "name": "FIB_K786",
+    "tf": 5,
+    "unds": [
+     "NIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H37 Fibonacci 78.6% break, trade the pullback (NIFTY 5-min, -40/+40 ladder)",
+   "unds": [
+    "NIFTY"
+   ],
+   "why": "original = the variant-gate passer of HUNT_H37.md (NIFTY 5m FIB_K786 k4 LAD; holdout 199 tr +16/day); hunt/h37/evaluate.py trades_for('NIFTY', 'FIB_K786', 5, 'k4', 'LAD')"
+  }
+ },
+ "H37-3": {
+  "grid": [
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 15,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 60,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": "D",
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 2,
+     "name": "EW3",
+     "tf": 5,
+     "unds": [
+      "MIDCPNIFTY"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h37_swing",
+   "kind": "family",
+   "params": {
+    "k": 2,
+    "name": "EW3",
+    "tf": 5,
+    "unds": [
+     "MIDCPNIFTY"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H37 Elliott wave 3 (MIDCP 5-min, +15/-20)",
+   "unds": [
+    "MIDCPNIFTY"
+   ],
+   "why": "original = the variant-gate passer of HUNT_H37.md (MIDCPNIFTY 5m EW3 k2 P15_20; the T60 exit of the top-10 table is in the grid)"
+  }
+ },
+ "H37-6": {
+  "grid": [
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 4,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "k": 2,
+     "unds": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   }
+  ],
+  "orig": {
+   "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h37_gtc_d",
+   "kind": "family",
+   "params": {
+    "k": 2,
+    "unds": [
+     "NIFTY",
+     "BANKNIFTY",
+     "FINNIFTY",
+     "MIDCPNIFTY",
+     "SENSEX"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H37 Gann daily time cycles (30..360 calendar days from a daily pivot), reversal",
+   "unds": [
+    "NIFTY",
+    "BANKNIFTY",
+    "FINNIFTY",
+    "MIDCPNIFTY",
+    "SENSEX"
+   ],
+   "why": "WF family GTC_D (HUNT_H37.md): no frozen variant: the per-year walk-forward picks were not recorded (scratch wf.csv deleted) and rebuilding them needs pre-2025 P&L; as OBUY_GA-1, the original is the study's FIRST setting in its own loop order, on every index the family's walk-forward chose from; R52's re-tune walk-forward over the grid plays the original WF's role (all 5 indices, k2, P15_10)"
+  }
+ },
+ "H37-9": {
+  "grid": [
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "box": "b0.2pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g01"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "box": "b0.3pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g02"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "box": "b0.5atr",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g03"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "box": "b1.0atr",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g04"
+   },
+   {
+    "exits": "time_stop=60,time_gain=None,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_TT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g05"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=15,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g06"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=15,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g07"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=15,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g08"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=20,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g09"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=20,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g10"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=20,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g11"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=25,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g12"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=25,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g13"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=25,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g14"
+   },
+   {
+    "exits": "stop_pts=10,tgt_pts=30,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g15"
+   },
+   {
+    "exits": "stop_pts=15,tgt_pts=30,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g16"
+   },
+   {
+    "exits": "stop_pts=20,tgt_pts=30,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g17"
+   },
+   {
+    "exits": "stop_pct=0.15,time_stop=20,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g18"
+   },
+   {
+    "exits": "stop_pts=40,tgt_pts=40,ladder=((0.25, 0.0), (0.5, 0.25), (0.75, 0.5)),ladder_ref_pts=40,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g19"
+   },
+   {
+    "exits": "time_stop=15,time_gain=None,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g20"
+   },
+   {
+    "exits": "time_stop=30,time_gain=None,sig_levels=False",
+    "params": {
+     "box": "b0.1pct",
+     "name": "PF_DT",
+     "unds": [
+      "SENSEX"
+     ]
+    },
+    "rule": "ITM1/near",
+    "vid": "g21"
+   }
+  ],
+  "orig": {
+   "exits": "time_stop=60,time_gain=None,sig_levels=False",
+   "expiry": "skip",
+   "fn": "fam_h25h37.h37_pf",
+   "kind": "family",
+   "params": {
+    "box": "b0.1pct",
+    "name": "PF_DT",
+    "unds": [
+     "SENSEX"
+    ]
+   },
+   "pos": {
+    "max_per_day": 5,
+    "one_at_a_time": true
+   },
+   "rule": "ITM1/near",
+   "source": "index",
+   "title": "H37 Point & Figure double-top / bottom breakout, 3-box reversal (SENSEX 1-min, 60-min exit)",
+   "unds": [
+    "SENSEX"
+   ],
+   "why": "SENSEX 1-min PF_DT with the T60 exit (HUNT_H37.md top 10 by t); its box size is not named in the write-up: the original uses the study's first box (0.1 % of the previous close, as OBUY_GA-1), the other four boxes are the first grid settings"
   }
  },
  "H42-3": {

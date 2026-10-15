@@ -376,7 +376,7 @@ class DayInfo:
                                for r in range(n)])
         self.o, self.c, self.h, self.l = M["o"], c, h, l
         # 5-minute 50 EMA, continuous (liquidity_nifty_plus.load_days: closes I["close"][4::5], ewm span 50)
-        c5 = pd.Series(c[:, 4::5].reshape(-1)).ffill().bfill()
+        c5 = pd.Series(c[:, 4::5].reshape(-1)).ffill()
         self.ema5 = c5.ewm(span=50, adjust=False).mean().values.reshape(n, -1) if n else np.zeros((0, 75))
         self.exp = np.array([bool(ix.d[d]["exp"]) for d in self.days])
         exps = [d for d, e in zip(self.days, self.exp) if e]

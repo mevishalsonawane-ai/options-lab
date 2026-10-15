@@ -14,15 +14,18 @@ How the original code is reused
         day, sig_min 09:15) and the GTC_D block inside all_events (ported line for line in `_gtc_d`, because it is not a
         function of its own), and the Renko/P&F box sizes of all_events (prev close x 0.1/0.2/0.3 %, or 0.5/1 x the
         15-minute ATR14 at the previous day's last bar).
+        One deviation, a look-ahead fix in GTC_D (H37-6): the original kept a cycle signal decided at day t-1's close
+        only if day t did not confirm a new pivot; here only pivots confirmed by day t-1's close count (see `_gtc_d`).
     H25: research/hunt/h25/sigs.py imports TA-Lib at import time (from a scratch folder that no longer exists), so it
         cannot be imported here. The pieces these rules need are ported faithfully:
           - the candle builder = sigs.bars (identical to h37 sigs.bars, which is used);
           - sigs._prev / xup / xdn / sig / hma / ma and the CDL direction rule of sigs.compute (dojis that are
             always +100 get the reversal of the last 5 bars' move);
           - TA-Lib 0.8.1's SMA, EMA, WMA and its CDLDOJI, CDLLONGLEGGEDDOJI, CDLSEPARATINGLINES and CDLLADDERBOTTOM
-            (ta-lib C sources, default candle settings), with TA-Lib's own running sums so the floating point is the
-            same. test_fam_h25h37.py checks them against TA-Lib itself when it can be imported (bit-identical on the
-            Jan 2024 - Oct 2026 lake for every index and timeframe used here, checked 15 Oct 2026).
+            (ta-lib C sources, default candle settings), with TA-Lib's own running sums (WMA's 8 x n re-anchoring,
+            EMA's fused multiply-add) so the floating point is the same. test_fam_h25h37.py checks them against
+            TA-Lib itself when it can be imported (bit-identical on the Jan 2024 - Oct 2026 lake for every index
+            and timeframe used here, and on random series; checked 15 Oct 2026).
     The original studies looked rules up in outcome tables built by the obuy engine; here the same signals go through
     obuy directly (R52's fills, charges, lots and twins). The frame of both studies is kept: 1-ITM strike of the nearest
     expiry (StrikeRule(1, 'near')), entry signals 09:15..15:00 (bar end <= 15:00), expiry days skipped, one position at
@@ -41,7 +44,8 @@ ORIGINAL settings
     (wf_picks.csv / wf.csv) were deleted with the scratch folders, and rebuilding them would need pre-2025 P&L. As for
     OBUY_GA-1 in r52rules ("no frozen variant named: the catalog's first setting"), the original is the FIRST setting
     in the study's own loop order (H25: TFS 1,3,5,..; EXITS ARM first. H37: KS 2 first; EXITS P15_10 first; box
-    0.1 % first), on every index the family's walk-forward chose from (all five; one book per index). The grid then
+    0.1 % first), on every index the family's walk-forward chose from (all five; one book per index; H37-9 only lacks
+    its box size, so it stays SENSEX 1-min PF_DT T60 with the first box). The grid then
     holds the rest of the family's own timeframe / parameter / exit axes, so R52's re-tune walk-forward plays the
     original WF's role. These four keys are flagged in their `why`.
 GRID = the original study's own axes around the original, one axis at a time (timeframes, parameters, exits; H25-10
@@ -658,14 +662,15 @@ SPECS = [
                     "original = the variant-gate passer of HUNT_H37.md (MIDCPNIFTY 5m FIB_K786 k4 P20_20)",
                     "MIDCPNIFTY", 5, 4, "FIB_K786", "P20_20"),
     _h37_swing_spec("H37-3", "H37 Elliott wave 3 (MIDCP 5-min, +15/-20)",
-                    "original = the variant-gate passer of HUNT_H37.md (MIDCPNIFTY 5m EW3 k2 P15_20; the T60 exit of the "
-                    "top-10 table is in the grid)", "MIDCPNIFTY", 5, 2, "EW3", "P15_20"),
+                    "original = the variant-gate passer of HUNT_H37.md (MIDCPNIFTY 5m EW3 k2 P15_20; the T60 exit "
+                    "of the top-10 table is in the grid)", "MIDCPNIFTY", 5, 2, "EW3", "P15_20"),
     dict(key="H37-6", title="H37 Gann daily time cycles (30..360 calendar days from a daily pivot), reversal",
          source="index",
          why="WF family GTC_D (HUNT_H37.md): " + FIRST + " (all 5 indices, k2, P15_10)",
          orig=_orig(h37_gtc_d, dict(unds=UNDS5, k=2), h37_exit("P15_10"), UNDS5),
          grid=[dict(params=dict(k=4))] + [dict(exits=h37_exit(x)) for x in H37_EXITS if x != "P15_10"]),
-    dict(key="H37-9", title="H37 Point & Figure double-top / bottom breakout, 3-box reversal (SENSEX 1-min, 60-min exit)",
+    dict(key="H37-9",
+         title="H37 Point & Figure double-top / bottom breakout, 3-box reversal (SENSEX 1-min, 60-min exit)",
          source="index",
          why="SENSEX 1-min PF_DT with the T60 exit (HUNT_H37.md top 10 by t); its box size is not named in the "
              "write-up: the original uses the study's first box (0.1 % of the previous close, as OBUY_GA-1), the "
