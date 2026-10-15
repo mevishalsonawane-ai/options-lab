@@ -885,3 +885,20 @@ Full study: `HUNT_R48_HIGH_WINRATE.md`. Pre-registered in `hunt/r48/PREREG.md` (
   lost in each following year (2023 -Rs 60k, 2024 -Rs 50k, 2025 -Rs 47k) at 66-79% winners.
 - **Lesson:** a 65%+ win rate is easy to fit (small target, no or wide stop) and says nothing about profit. Judge a
   rule by net, average win vs average loss, worst day and drawdown together. No paper change.
+
+## The ORB family on the Nov-2024+ market only (R49, 15 Oct 2026) - still loses on every index; nothing comes back
+Full study: `HUNT_R49_ORB_RECENT.md` (pre-registered `hunt/r49/PREREG.md`, commit 5448420; Dhan lake 21 Nov 2024 - 13 Oct
+2026 only; design to 31 Mar 2026, final test 1 Apr - 13 Oct 2026 read once; one held contract, lots read from the data,
+charges in force on each date incl. STT 0.15% from 1 Apr 2026, liq fills). Signal source: the index (default).
+- The old rules exactly as paused, all five indices pooled: ORB design -Rs 88,644 (1,595 trades), final -Rs 9,813 (636);
+  ORB Fresh the same; ORB Sweep -Rs 4,12,532 (2,093) and -Rs 92,211 (870); Range Fade -Rs 4,06,570 (2,363) and -Rs
+  1,14,187 (1,020). Every arm lost on every index in design. ORB's small final loss is one month: April 2026 +Rs 23,944.
+- R3's 16 versions (unchanged) all lose pooled in design; R23's two R22-range finalists, the only rules positive in
+  design (+Rs 28,121 / +Rs 14,517), lost -Rs 57,452 / -Rs 61,789 in the final test. A 32-rule re-tune (range 15 / 30 / 50
+  minutes x stop / target 0.5 / 1 / 1.5) is negative pooled in design and final for every point.
+- 0 of 336 tests pass (56 rules x pooled + 5 indices; BH over 336; lowest q 0.061). Every rule that clears net, p and q
+  in the final test lost on the same index in design: closest, ORB Sweep with a 30-minute range and half stops on
+  FINNIFTY (final +Rs 20,997, 193 trades, p 0.002, q 0.061; design -Rs 39,857); several Sweep / Fade versions on
+  MIDCPNIFTY likewise. FINNIFTY ORB 1-ITM was positive in both periods (+Rs 24,846 / 310 trades, +Rs 26,002 / 116) but
+  fails p 0.12, q 0.55 and the top-5 rule (126%); R3 saw the same and called it noise.
+- App: nothing changes; ORB, ORB Fresh, ORB Sweep and Range Fade stay paused on every index; nothing goes on paper.
