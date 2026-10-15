@@ -1,0 +1,35 @@
+date: '2026-10-15'
+doc: research/HUNT_R48_HIGH_WINRATE.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m opt_<UND>_WEEK_2021-2026 (nearest expiry, ATM+-10,
+  held contracts), index_1m, index_daily (to 13 Oct 2026)'
+period:
+  design: entries Aug 2021 - 17 Oct 2025
+  holdout: not read for this scan
+prereg: research/hunt/r48/PREREG.md
+settings: research/hunt/r48/r48cfg.py
+id: r48-fullperiod
+family: option-structure
+title: Selling (spreads / condors / flies) + narrow buying grid on Aug 2021 - Oct 2025 design (superseded by amendments 3-4
+  before any holdout read)
+hypothesis: Defined-risk selling or ITM buying wins >= 65% and makes money after costs.
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- as r48-search
+model_or_rule: as r48-search (100+ trades, positive in 75% of years)
+variants_tried: 2149992
+results:
+  summary: '2,149,992 configs; 1166 passed every design gate; 8 candidates (not read). Walk-forward of the selection: 2023:
+    510 trades, win 78.8%, net Rs -60,363; 2024: 444 trades, win 75.2%, net Rs -49,840; 2025: 242 trades, win 66.5%, net Rs
+    -46,556'
+  costs: research/obuy Costs('dated') per order per leg (STT on sold premium at the dated rate, exchange, SEBI, stamp, GST,
+    Rs 20); exercise STT on ITM longs left to expire; 5 bps + 1-4 ticks a leg by 5-minute volume, +1 far OTM, x2 on stops;
+    next-minute fills; 1 lot at the dated lot size
+holdout_read: false
+verdict: superseded
+notes: 'SIGNAL SOURCE: the index (index_1m closes / index_daily), the default; the ATM strike (straddle for selling) sets
+  the strike distance; stops and targets on the spread or premium value.'
