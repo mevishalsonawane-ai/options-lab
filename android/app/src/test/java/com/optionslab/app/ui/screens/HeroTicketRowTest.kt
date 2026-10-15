@@ -50,7 +50,7 @@ class HeroTicketRowTest {
 
     @Test fun itIsOnHomeStrategiesLabelledBossChoiceThatDidNotPassResearch() {
         val asked = ArrayList<Boolean>()
-        home(off.copy(armed = true)) { asked += it }
+        home(off.copy(armed = true), onArm = { asked += it })
         compose.waitForIdle()
         compose.onNodeWithText(HeroTicketRules.LABEL).assertExists()
         // The label Boss asked for, word for word, above its record and rules.
@@ -74,7 +74,7 @@ class HeroTicketRowTest {
 
     @Test fun offItSaysOffAndATapAsksForOn() {
         val asked = ArrayList<Boolean>()
-        home(off) { asked += it }
+        home(off, onArm = { asked += it })
         compose.waitForIdle()
         compose.onNodeWithText("OFF").assertExists()
         compose.onNodeWithContentDescription("Paper only: switch ${HeroTicketRules.LABEL}").assertIsOff().performClick()
@@ -109,6 +109,25 @@ class HeroTicketRowTest {
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} exit: trail only").performClick()
         compose.waitForIdle()
         assertEquals(listOf(HeroTicketRules.Target.X2, HeroTicketRules.Target.X3), picked)
+    }
+
+    @Test fun theTrailStartsAfter2xByDefaultPendingBossAndATapPicksAnother() {
+        val picked = ArrayList<HeroTicketRules.TrailStart>()
+        compose.setContent {
+            IraAlgoTheme("light") {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    HeroTicketRowContent(off.copy(armed = true), onArm = {}, onTarget = {}, onStart = { picked += it })
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 2×").assertIsSelected()
+        compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.TRAIL_START_NOTE + ".")).assertExists()
+        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail from the fill (R50)").assertIsNotSelected().performClick()
+        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 3×").performClick()
+        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 2×").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(HeroTicketRules.TrailStart.AT_FILL, HeroTicketRules.TrailStart.AFTER_3X), picked)
     }
 
     @Test fun aChosenTargetShowsAsSelected() {

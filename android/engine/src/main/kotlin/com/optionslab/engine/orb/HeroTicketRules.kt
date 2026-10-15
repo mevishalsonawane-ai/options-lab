@@ -63,8 +63,16 @@ object HeroTicketRules {
     const val SIGNAL_SOURCE = "Signal: the clock only (12:30 on the index's own expiry day), no chart signal"
     /** The rules in a few words, for its row, its notices and Jarvis. */
     const val RULES = "NIFTY and SENSEX, each on its own expiry day: at 12:30 buys 1 lot of a call and 1 lot of a put priced Rs 5-30 " +
-        "whose lot costs at most Rs 1,000 (nearest the money); sells on your 25% trail (a minute closing 25% below its best close " +
-        "since the buy) or at 15:05; at most Rs 2,000 a day; paper only"
+        "whose lot costs at most Rs 1,000 (nearest the money); sells on your 25% trail (a minute closing 25% below its best close, " +
+        "from where the trail starts) or at 15:05; at most Rs 2,000 a day; paper only"
+    /**
+     * 15 Oct (research R54): R50's "tr25" trail starts at the fill, so it is also a 25% stop, and these options swing 18-25% inside
+     * a minute - it sold the 2 Apr 2026 SENSEX 72,500 CE at 2.7x (+Rs 280) where holding to 15:05 made +Rs 13,958. Boss was told
+     * the trail starts once the option has run up: so where it starts is a setting ([TrailStart]); "after 2x" is a placeholder
+     * default until Boss chooses after the follow-up comparison (research R55).
+     */
+    const val TRAIL_START_NOTE = "Where the trail starts: after 2× for now - your choice pending the follow-up comparison (R55); " +
+        "R50 measured it from the fill"
     /** Its trades are kept apart from every other record (the arms that passed, the plain-rules record for 26 Oct). */
     const val SEPARATE = "Its trades are kept in its own record, apart from the arms that passed and from the plain-rules record for 26 Oct"
 
@@ -102,6 +110,21 @@ object HeroTicketRules {
             /** The saved [key]'s target; anything unknown (or nothing saved) is the default, trail only. */
             fun of(key: String?): Target = entries.firstOrNull { it.key == key } ?: DEFAULT
             val DEFAULT = TRAIL_ONLY
+        }
+    }
+
+    /**
+     * Where Boss's 25% trail starts ([trail]): at the fill (R50's "tr25": also a 25% stop), or only once the option has closed at
+     * or above 2x / 3x its fill (no stop below that: until then it holds to 15:05, and the most it can lose is the ticket).
+     */
+    enum class TrailStart(val key: String, val mult: Double?, val words: String) {
+        AT_FILL("fill", null, "trail from the fill (R50)"), AFTER_2X("2x", 2.0, "trail after 2×"), AFTER_3X("3x", 3.0, "trail after 3×");
+
+        companion object {
+            /** The saved [key]'s start; anything unknown (or nothing saved) is the default. */
+            fun of(key: String?): TrailStart = entries.firstOrNull { it.key == key } ?: DEFAULT
+            /** A placeholder until Boss chooses after research R55 (15 Oct). */
+            val DEFAULT = AFTER_2X
         }
     }
 
@@ -169,12 +192,15 @@ object HeroTicketRules {
      * before 15:05 sells when its close is at or below 0.75 x the best close before it (the fill counting as the first). Read
      * from the bars alone, so a restart in the middle of a trade finds the same answer.
      */
-    fun trail(entry: Double, entryTime: LocalTime, closes: Map<LocalTime, Double>): Trail {
+    fun trail(entry: Double, entryTime: LocalTime, closes: Map<LocalTime, Double>, start: TrailStart = TrailStart.AT_FILL): Trail {
         val fillBar = entryTime.withSecond(0).withNano(0).plusMinutes(1)
+        // Armed from the fill (R50), or once a close has reached m x the fill (then no stop below: held to 15:05 until then).
+        val armAt = start.mult?.let { it * entry }
         var best = entry
         for ((t, c) in closes.toSortedMap()) {
             if (t.isBefore(fillBar) || c <= EPS) continue
-            if (t.isAfter(fillBar) && t.isBefore(EXIT_AT) && c <= (1 - TRAIL) * best + EPS) return Trail(best, t)
+            val armed = armAt == null || best >= armAt - EPS
+            if (armed && t.isAfter(fillBar) && t.isBefore(EXIT_AT) && c <= (1 - TRAIL) * best + EPS) return Trail(best, t)
             best = max(best, c)
         }
         return Trail(best, null)

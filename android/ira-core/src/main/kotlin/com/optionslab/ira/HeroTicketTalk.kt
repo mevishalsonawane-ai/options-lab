@@ -37,14 +37,19 @@ object HeroTicketTalk {
      * [status] each index's last word today, [closed] / [net] its own record (every closed ticket, after charges).
      */
     data class Facts(val armed: Boolean?, val target: HeroTicketRules.Target, val today: List<Ticket>, val status: Map<String, String>,
-                     val closed: Int, val net: Double)
+                     val closed: Int, val net: Double, val start: HeroTicketRules.TrailStart = HeroTicketRules.TrailStart.DEFAULT)
 
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(x))
     private fun px(x: Double) = "%.2f".format(Locale.ENGLISH, x)
 
-    private fun exitWords(target: HeroTicketRules.Target): String = when (target) {
-        HeroTicketRules.Target.TRAIL_ONLY -> "your 25% trail, else 15:05 (no fixed target)"
-        else -> "a ${target.words} or your 25% trail, whichever comes first, else 15:05"
+    private fun startWords(start: HeroTicketRules.TrailStart): String = when (start) {
+        HeroTicketRules.TrailStart.AT_FILL -> "from the fill, so it is also a 25% stop"
+        else -> "once it has closed at ${start.words.removePrefix("trail after ")} its price, no stop before that"
+    }
+
+    private fun exitWords(target: HeroTicketRules.Target, start: HeroTicketRules.TrailStart): String = when (target) {
+        HeroTicketRules.Target.TRAIL_ONLY -> "your 25% trail (${startWords(start)}), else 15:05 (no fixed target)"
+        else -> "a ${target.words} or your 25% trail (${startWords(start)}), whichever comes first, else 15:05"
     }
 
     private fun whyWords(why: String?): String = when (why) {
@@ -60,7 +65,8 @@ object HeroTicketTalk {
         append("${HeroTicketRules.LABEL}: ")
         append(when (f.armed) { true -> "on, paper only"; false -> "off"; null -> "its switch could not be read just now" })
         append(". ${HeroTicketRules.RECORD}. ")
-        append("Exit: ${exitWords(f.target)}. ")
+        append("Exit: ${exitWords(f.target, f.start)}. ")
+        if (f.start == HeroTicketRules.TrailStart.DEFAULT) append("${HeroTicketRules.TRAIL_START_NOTE}. ")
         if (f.today.isEmpty()) {
             val words = f.status.toSortedMap().entries.joinToString("; ") { (k, v) -> "$k $v" }
             append(if (words.isEmpty()) "No ticket today." else "No ticket today ($words).")

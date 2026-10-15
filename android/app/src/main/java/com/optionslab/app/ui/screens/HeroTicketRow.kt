@@ -48,7 +48,8 @@ internal fun HeroTicketRow() {
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { HeroTicketArm.refresh() } } }
     HeroTicketRowContent(v,
         onArm = { on -> scope.launch(Dispatchers.IO) { runCatching { HeroTicketArm.setArmed(on) } } },
-        onTarget = { t -> scope.launch(Dispatchers.IO) { runCatching { HeroTicketArm.setTarget(t) } } })
+        onTarget = { t -> scope.launch(Dispatchers.IO) { runCatching { HeroTicketArm.setTarget(t) } } },
+        onStart = { s -> scope.launch(Dispatchers.IO) { runCatching { HeroTicketArm.setTrailStart(s) } } })
 }
 
 private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(x))
@@ -60,7 +61,8 @@ internal fun heroTicketPnlLine(v: HeroTicketArm.View): String =
 
 /** The row from plain state ([v]) and its callbacks. */
 @Composable
-internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Unit, onTarget: (HeroTicketRules.Target) -> Unit) {
+internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Unit, onTarget: (HeroTicketRules.Target) -> Unit,
+                                  onStart: (HeroTicketRules.TrailStart) -> Unit = {}) {
     val p = LocalPalette.current
     Rule()
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -95,6 +97,21 @@ internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Uni
                             .padding(horizontal = 9.dp, vertical = 3.dp))
                 }
             }
+            // Where the 25% trail starts for new tickets: at the fill (R50, also a 25% stop), after 2× or after 3×.
+            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Trail starts:", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                HeroTicketRules.TrailStart.entries.forEach { s ->
+                    val on = v.trailStart == s
+                    val word = when (s) { HeroTicketRules.TrailStart.AT_FILL -> "At fill"; HeroTicketRules.TrailStart.AFTER_2X -> "After 2×"; HeroTicketRules.TrailStart.AFTER_3X -> "After 3×" }
+                    Text(word, style = Type.label.copy(color = if (on) p.card else p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                        modifier = Modifier
+                            .semantics { contentDescription = "${HeroTicketRules.LABEL} trail start: ${s.words}"; selected = on }
+                            .background(if (on) p.verdigris else p.ink.copy(alpha = 0.06f), RoundedCornerShape(50))
+                            .clickable(role = Role.RadioButton) { if (!on) onStart(s) }
+                            .padding(horizontal = 9.dp, vertical = 3.dp))
+                }
+            }
+            Text(keepNumbersWhole(HeroTicketRules.TRAIL_START_NOTE + "."), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
             if (v.armed) v.status.toSortedMap().forEach { (idx, s) ->
                 Text(keepNumbersWhole("$idx: $s"), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
             }

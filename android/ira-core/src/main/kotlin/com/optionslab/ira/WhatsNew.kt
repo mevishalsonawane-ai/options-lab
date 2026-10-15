@@ -59,9 +59,9 @@ object WhatsNew {
     val ENTRIES: List<Entry> = listOf(
         Entry("2026-10-15-hero-1000-ticket", OCT15, "Hero ₹1,000 ticket (paper, your choice)",
             "On your choice, a new paper bot buys a call and a put of up to ₹1,000 each at 12:30 on NIFTY's and SENSEX's own expiry days, " +
-                "and sells on your 25% trail or at 15:05. It did not pass research (R50: about −₹525 per ₹1,000 on average; jackpots are rare), " +
+                "and sells on your 25% trail (for now it starts once a ticket has doubled; your choice waits on a follow-up study) or at 15:05. It did not pass research (R50: about −₹525 per ₹1,000 on average; jackpots are rare), " +
                 "its trades are kept in their own record, it never trades on Zerodha, and one tap switches it off.",
-            "Home → Strategies → Hero ₹1,000 ticket (its switch, today's tickets and the 2× / 3× / trail-only exit); " +
+            "Home → Strategies → Hero ₹1,000 ticket (its switch, today's tickets, the 2× / 3× / trail-only exit and where the trail starts); " +
                 "the change is also in Home → Automation card → Autopilot → Change log",
             ask = "how is the hero ticket doing"),
         Entry("2026-10-14-silverm-morning-off", OCT14, "SILVERM morning call switched off (paper)",

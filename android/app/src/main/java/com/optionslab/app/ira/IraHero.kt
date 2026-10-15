@@ -35,7 +35,7 @@ internal object IraHero {
             com.optionslab.ira.HeroTicketTalk.Ticket(p.index, p.symbol, p.qty, p.entry, p.exit, p.why, p.net, if (p.open) v.marks[p.symbol] else null)
         }
         val status = v.status.filterKeys { it in com.optionslab.engine.orb.HeroTicketRules.UNDERLYINGS }
-        return com.optionslab.ira.HeroTicketTalk.answer(com.optionslab.ira.HeroTicketTalk.Facts(v.armed, v.target, today, status, v.nets.size, v.nets.sum()))
+        return com.optionslab.ira.HeroTicketTalk.answer(com.optionslab.ira.HeroTicketTalk.Facts(v.armed, v.target, today, status, v.nets.size, v.nets.sum(), v.trailStart))
     }
 
     /**

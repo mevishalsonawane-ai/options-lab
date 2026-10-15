@@ -178,6 +178,37 @@ class HeroTicketRulesTest {
         assertFalse(HeroTicketRules.trail(e, at, bars(t(12, 40) to 0.0)).hit)
     }
 
+    @Test fun whereTheTrailStartsAtTheFillAfter2xOrAfter3x() {
+        val e = 10.0
+        val at = t(12, 31).plusSeconds(20)
+        assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.DEFAULT, "the placeholder until Boss chooses (R55)")
+        assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.of(null)); assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.of("x")); assertEquals(HeroTicketRules.TrailStart.AT_FILL, HeroTicketRules.TrailStart.of("fill")); assertEquals(HeroTicketRules.TrailStart.AFTER_3X, HeroTicketRules.TrailStart.of("3x"))
+        assertTrue("R55" in HeroTicketRules.TRAIL_START_NOTE && "after 2×" in HeroTicketRules.TRAIL_START_NOTE)
+        // A ticket that never rises: the fill trail is also a 25% stop; after 2x / 3x there is no stop (held to 15:05).
+        val fall = bars(t(12, 33) to 9.0, t(12, 34) to 7.0, t(12, 40) to 2.0)
+        assertEquals(t(12, 34), HeroTicketRules.trail(e, at, fall, HeroTicketRules.TrailStart.AT_FILL).hitAt)
+        assertFalse(HeroTicketRules.trail(e, at, fall, HeroTicketRules.TrailStart.AFTER_2X).hit)
+        assertFalse(HeroTicketRules.trail(e, at, fall, HeroTicketRules.TrailStart.AFTER_3X).hit)
+        // The 2 Apr kind of day: up to 1.9x, a 25% dip, then 27x. From the fill it sells the dip; after 2x it never armed there.
+        val run = bars(t(12, 33) to 19.0, t(12, 34) to 14.0, t(13, 0) to 25.0, t(14, 0) to 270.0, t(14, 30) to 200.0)
+        assertEquals(t(12, 34), HeroTicketRules.trail(e, at, run, HeroTicketRules.TrailStart.AT_FILL).hitAt)
+        // After 2x: armed from 25 (2.5x); 200 is more than 25% under 270, so it sells there.
+        val two = HeroTicketRules.trail(e, at, run, HeroTicketRules.TrailStart.AFTER_2X)
+        assertEquals(t(14, 30), two.hitAt); assertEquals(270.0, two.peak)
+        // After 3x: armed only once a close reaches 30 (here 270), then the same fall sells it.
+        assertEquals(t(14, 30), HeroTicketRules.trail(e, at, run, HeroTicketRules.TrailStart.AFTER_3X).hitAt)
+        // Armed exactly at 2x: a close of 20.0 arms it; the next close at 15.0 (25% off 20) sells.
+        assertEquals(t(12, 34), HeroTicketRules.trail(e, at, bars(t(12, 33) to 20.0, t(12, 34) to 15.0), HeroTicketRules.TrailStart.AFTER_2X).hitAt)
+        assertFalse(HeroTicketRules.trail(e, at, bars(t(12, 33) to 19.95, t(12, 34) to 10.0), HeroTicketRules.TrailStart.AFTER_2X).hit)
+        // 2x reached but not 3x: the 3x trail never arms; the dip only sells under the 2x one.
+        val mid = bars(t(12, 33) to 25.0, t(12, 34) to 18.0)
+        assertEquals(t(12, 34), HeroTicketRules.trail(e, at, mid, HeroTicketRules.TrailStart.AFTER_2X).hitAt)
+        assertFalse(HeroTicketRules.trail(e, at, mid, HeroTicketRules.TrailStart.AFTER_3X).hit)
+        // With a 2x target beside an after-2x trail, the target is first (it sells at 2x).
+        val armedNow = HeroTicketRules.trail(e, at, bars(t(12, 33) to 20.5), HeroTicketRules.TrailStart.AFTER_2X)
+        assertEquals(ExitKind.TARGET, HeroTicketRules.exitStep(e, 20.5, armedNow, t(12, 34), Target.X2)!!.kind)
+    }
+
     @Test fun aRestartInTheMiddleOfATradeFindsTheSameTrail() {
         val e = 12.0
         val at = t(12, 30).plusSeconds(40)

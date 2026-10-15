@@ -67,6 +67,8 @@ object HeroTicketArm {
         val orderId: String?, val target: String = HeroTicketRules.Target.DEFAULT.key, val exit: Double? = null,
         val exitTime: LocalDateTime? = null, val why: String? = null, val charges: Double = 0.0, val paperFill: Double? = null,
         val targetOrderId: String? = null,
+        /** Where its 25% trail starts ([HeroTicketRules.TrailStart] key), as Boss had it set when it was bought. */
+        val trailStart: String = HeroTicketRules.TrailStart.DEFAULT.key,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -78,6 +80,7 @@ object HeroTicketArm {
     private class Book(
         var armed: Boolean = false,
         var target: HeroTicketRules.Target = HeroTicketRules.Target.DEFAULT,
+        var trailStart: HeroTicketRules.TrailStart = HeroTicketRules.TrailStart.DEFAULT,
         val positions: MutableList<Pos> = ArrayList(),
         /** "day|index" (not an expiry day, the window missed) and "day|index|CE" / "|PE" (each side's ticket decided). */
         val decided: MutableSet<String> = HashSet(),
@@ -93,7 +96,9 @@ object HeroTicketArm {
     /** What its row and Jarvis read: [today] today's tickets (open and closed), [nets] every closed ticket's rupees, oldest first. */
     data class View(val armed: Boolean, val target: HeroTicketRules.Target, val status: Map<String, String>, val open: List<Pos>,
                     val closed: List<Pos>, val today: List<Pos>, val log: List<String>, val nets: List<Double> = emptyList(),
-                    val marks: Map<String, Double> = emptyMap()) {
+                    val marks: Map<String, Double> = emptyMap(),
+                    /** Where the 25% trail starts for new tickets (after 2x by default: a placeholder until Boss chooses, R55). */
+                    val trailStart: HeroTicketRules.TrailStart = HeroTicketRules.TrailStart.DEFAULT) {
         /** Today's running P&L: closed tickets after charges, open ones at their last price before charges. */
         val todayPnl: Double get() = today.sumOf { p -> p.net ?: marks[p.symbol]?.let { (it - p.entry) * p.qty } ?: 0.0 }
     }
@@ -118,6 +123,7 @@ object HeroTicketArm {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
             b.armed = o.optBoolean("armed", false)
             b.target = HeroTicketRules.Target.of(o.optString("target").ifEmpty { null })
+            b.trailStart = HeroTicketRules.TrailStart.of(o.optString("trailStart").ifEmpty { null })
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
@@ -148,17 +154,18 @@ object HeroTicketArm {
         if (p.has("exit")) p.getDouble("exit") else null, p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
         p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), if (p.has("paperFill")) p.getDouble("paperFill") else null,
         p.optString("targetOrderId").ifEmpty { null },
+        p.optString("trailStart").ifEmpty { HeroTicketRules.TrailStart.DEFAULT.key },
     )
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("index", p.index).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty)
         .put("entry", p.entry).put("entryTime", p.entryTime.toString()).put("orderId", p.orderId ?: "").put("target", p.target).put("charges", p.charges)
-        .apply { p.exit?.let { put("exit", it) }; p.exitTime?.let { put("exitTime", it.toString()) }; p.why?.let { put("why", it) }; p.paperFill?.let { put("paperFill", it) }; p.targetOrderId?.let { put("targetOrderId", it) } }
+        .apply { p.exit?.let { put("exit", it) }; p.exitTime?.let { put("exitTime", it.toString()) }; p.why?.let { put("why", it) }; p.paperFill?.let { put("paperFill", it) }; p.targetOrderId?.let { put("targetOrderId", it) }; put("trailStart", p.trailStart) }
 
     /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again. */
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
-        val o = JSONObject().put("armed", b.armed).put("target", b.target.key)
+        val o = JSONObject().put("armed", b.armed).put("target", b.target.key).put("trailStart", b.trailStart.key)
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(60).forEach { put(it) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
@@ -174,7 +181,7 @@ object HeroTicketArm {
         val closed = b.positions.filter { !it.open }
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         _view.value = View(b.armed, b.target, b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(20),
-            b.positions.filter { it.day == today }, b.log.takeLast(30), closed.map { it.net ?: 0.0 }, b.marks.toMap())
+            b.positions.filter { it.day == today }, b.log.takeLast(30), closed.map { it.net ?: 0.0 }, b.marks.toMap(), b.trailStart)
     }
 
     private fun note(b: Book, text: String) {
@@ -229,10 +236,23 @@ object HeroTicketArm {
         }
     }
 
+    /**
+     * Where the 25% trail starts for NEW tickets (at the fill as R50 measured it, or after 2x / 3x); an open ticket keeps the one
+     * it was bought with. Kept. 15 Oct: after 2x is a placeholder default until Boss chooses (research R55).
+     */
+    suspend fun setTrailStart(s: HeroTicketRules.TrailStart): String {
+        if (!ready()) return "${HeroTicketRules.LABEL} is not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.trailStart != s) { b.trailStart = s; note(b, "trail for new tickets: ${s.words}"); save(b) }
+            "${HeroTicketRules.LABEL}: new tickets' 25% trail - ${s.words}. Paper only."
+        }
+    }
+
     /** The diagnostics line. */
     fun diagLine(): String {
         val v = _view.value
-        return "${HeroTicketRules.LABEL}: ${if (v.armed) "on (paper only)" else "off"} · ${v.target.words} · open ${v.open.size} · ${v.nets.size} closed " +
+        return "${HeroTicketRules.LABEL}: ${if (v.armed) "on (paper only)" else "off"} · ${v.target.words} · ${v.trailStart.words} · open ${v.open.size} · ${v.nets.size} closed " +
             "%,.0f after charges".format(Locale.ENGLISH, v.nets.sum()) + v.status.toSortedMap().entries.joinToString("") { (k, s) -> " · $k $s" } +
             " · ${HeroTicketRules.BOSS_CHOICE}"
     }
@@ -517,18 +537,20 @@ object HeroTicketArm {
             runCatching { Paper.place(c, "SELL", HeroTicketRules.LOTS, "LIMIT", "MIS", lv, null) }.getOrNull()?.takeIf { it.ok }?.orderId
                 ?.also { runCatching { Strategies.tagOwner("paper:$it", "${HeroTicketRules.OWNER} · target") } }
         }
-        b.positions += Pos(u, c.symbol, right.name, qty, price, now, orderId, b.target.key, charges = chargesOf(orderId), targetOrderId = targetId)
+        b.positions += Pos(u, c.symbol, right.name, qty, price, now, orderId, b.target.key, charges = chargesOf(orderId), targetOrderId = targetId,
+            trailStart = b.trailStart.key)
         b.marks[c.symbol] = price
         val exits = HeroTicketRules.targetLevel(price, b.target)?.let { "target %s (%s) or the 25%% trail, else 15:05".format(Locale.ENGLISH, px(it), b.target.words) }
             ?: "the 25% trail, else 15:05"
+        val exitsSaid = "$exits (${b.trailStart.words})"
         runCatching { Notifier.post(app, NOTICE + HeroTicketRules.UNDERLYINGS.indexOf(u) * 2 + (if (right == Right.CE) 0 else 1), Notifier.BUY,
             "${HeroTicketRules.LABEL} bought ${c.symbol} · Paper",
             // (Words with a "%" in them - "25% trail" - are never part of a format pattern.)
             "Bought %d @ %s (Rs %,.0f) at 12:30. Sells on %s. %s.".format(Locale.ENGLISH, qty, px(price), qty * price,
-                exits, HeroTicketRules.BOSS_CHOICE),
+                exitsSaid, HeroTicketRules.BOSS_CHOICE),
             "almanac") }
         b.decided += key
-        return say(b, u, "${right.name} bought ${c.symbol} $qty @ ${px(price)} · paper (sells on $exits)", final = true)
+        return say(b, u, "${right.name} bought ${c.symbol} $qty @ ${px(price)} · paper (sells on $exitsSaid)", final = true)
     }
 
     /** Each open ticket's exit, when due. True when [b] changed. */
@@ -564,7 +586,7 @@ object HeroTicketArm {
             // The stream's last price when it has one (memory only), else the minute bars just read: one read a ticket a pass.
             val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.maxByOrNull { it.key }?.value?.close
             ltp?.let { b.marks[p.symbol] = it }
-            val trail = HeroTicketRules.trail(p.entry, p.entryTime.toLocalTime(), bars.mapValues { it.value.close })
+            val trail = HeroTicketRules.trail(p.entry, p.entryTime.toLocalTime(), bars.mapValues { it.value.close }, HeroTicketRules.TrailStart.of(p.trailStart))
             // A resting target is the paper book's to fill; the pure check below covers a target that could not be placed.
             val target = if (p.targetOrderId != null) HeroTicketRules.Target.TRAIL_ONLY else HeroTicketRules.Target.of(p.target)
             val step = HeroTicketRules.exitStep(p.entry, ltp, trail, now.toLocalTime(), target, p.day.isBefore(now.toLocalDate()))

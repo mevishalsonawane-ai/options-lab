@@ -171,6 +171,8 @@ class HeroTicketArmTest : RobolectricTest() {
 
     @Test fun onNiftysExpiryDayItBuysBothTicketsAt1230OnPaperOnlyAndTheTrailSellsThem() {
         assertTrue(view().armed)
+        // R50's trail from the fill (the default is after 2x, a placeholder until Boss chooses: tested below).
+        assertTrue(runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }.contains("from the fill"))
         // Before 12:30: waiting; SENSEX is not on its expiry day.
         market(LocalTime.of(11, 0)); tick(LocalTime.of(11, 0))
         assertTrue(HeroTicketArm.view.value.open.isEmpty())
@@ -243,6 +245,7 @@ class HeroTicketArmTest : RobolectricTest() {
 
     @Test fun theTrailSellsBeforeATargetThatWasNeverReachedAndTheRestingTargetIsTakenOut() {
         runBlocking { HeroTicketArm.setTarget(HeroTicketRules.Target.X3) }
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }
         market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
         val put = HeroTicketArm.view.value.open.single { it.right == "PE" }
         val id = put.targetOrderId!!
@@ -259,6 +262,7 @@ class HeroTicketArmTest : RobolectricTest() {
 
     @Test fun theMinuteLaneOnlyManagesWhatIsHeldAndTheWatchWakesItOnlyWhenNeeded() {
         assertTrue(view().armed)
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }
         // Switched on, nothing held: no pass wanted outside 12:25-12:33 (no wake, no minute lane, no safety-net round).
         assertFalse(HeroTicketArm.wantsPass(10 * 60))
         assertTrue(HeroTicketArm.wantsPass(12 * 60 + 25)); assertTrue(HeroTicketArm.wantsPass(12 * 60 + 33))
@@ -282,6 +286,50 @@ class HeroTicketArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    @Test fun afterTwoTimesTheTrailHasNoStopBelowAndArmsOnlyOnceTheTicketHasDoubled() {
+        // The default (a placeholder until Boss chooses, R55): the trail starts after 2x. Each ticket keeps its own start.
+        assertEquals(HeroTicketRules.TrailStart.AFTER_2X, view().trailStart)
+        market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
+        val put = HeroTicketArm.view.value.open.single { it.right == "PE" }
+        assertEquals("2x", put.trailStart)
+        // The put falls 60%: no stop below 2x - held (the most it can lose is the ticket).
+        market(LocalTime.of(13, 0), put = { put.entry * 0.4 }); tick(LocalTime.of(13, 0))
+        assertEquals(2, HeroTicketArm.view.value.open.size)
+        // The call runs to 2.5x (armed), then falls 25% off its best: sold on the trail, in profit.
+        val call = HeroTicketArm.view.value.open.single { it.right == "CE" }
+        market(LocalTime.of(13, 30), call = { t -> if (t.isBefore(LocalTime.of(13, 10))) call.entry * 2.5 else call.entry * 1.8 }, put = { put.entry * 0.4 })
+        tick(LocalTime.of(13, 30))
+        val sold = HeroTicketArm.view.value.closed.single()
+        assertEquals("CE", sold.right); assertEquals("ticket_trail", sold.why); assertTrue("${sold.net}", sold.net!! > 0)
+        // A setting change later moves only new tickets: the held put keeps after 2x.
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }
+        AutomationSupport.reloadFromDisk(HeroTicketArm)
+        assertEquals(HeroTicketRules.TrailStart.AT_FILL, view().trailStart)
+        assertEquals("2x", HeroTicketArm.view.value.open.single().trailStart)
+        market(LocalTime.of(14, 0), put = { put.entry * 0.4 }); tick(LocalTime.of(14, 0))
+        assertEquals(1, HeroTicketArm.view.value.open.size)
+        // 15:05 squares it off.
+        market(LocalTime.of(15, 5), put = { put.entry * 0.4 }); tick(LocalTime.of(15, 5), seconds = 2)
+        assertEquals("ticket_1505", HeroTicketArm.view.value.closed.single { it.right == "PE" }.why)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun afterThreeTimesWaitsForThreeTimes() {
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AFTER_3X) }
+        market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
+        val call = HeroTicketArm.view.value.open.single { it.right == "CE" }
+        assertEquals("3x", call.trailStart)
+        // 2.5x then a 30% fall: not armed under 3x, held.
+        market(LocalTime.of(13, 0), call = { t -> if (t.isBefore(LocalTime.of(12, 45))) call.entry * 2.5 else call.entry * 1.7 })
+        tick(LocalTime.of(13, 0))
+        assertEquals(2, HeroTicketArm.view.value.open.size)
+        // 3.2x, then 25% off it: sold.
+        market(LocalTime.of(13, 30), call = { t -> if (t.isBefore(LocalTime.of(13, 10))) call.entry * 3.2 else call.entry * 2.3 })
+        tick(LocalTime.of(13, 30))
+        assertEquals("ticket_trail", HeroTicketArm.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
     @Test fun fifteenOhFiveSquaresOffWhatTheTrailKept() {
         market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
         assertEquals(2, HeroTicketArm.view.value.open.size)
@@ -299,6 +347,7 @@ class HeroTicketArmTest : RobolectricTest() {
     // ---- open positions first: a restart in the middle of a trade -----------------------------------------------------------
 
     @Test fun aRestartMidTradeRestoresTheTicketsFirstAndKeepsWatchingThem() {
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }
         market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
         assertEquals(2, HeroTicketArm.view.value.open.size)
         // The process is killed: nothing in memory. The start-up's first step reads this book and finds the open tickets.
