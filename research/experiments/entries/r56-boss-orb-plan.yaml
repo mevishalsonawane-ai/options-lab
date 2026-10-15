@@ -1,0 +1,43 @@
+id: r56-boss-orb-plan
+title: 'R56: Boss''s manual NIFTY ORB plan (09:15-09:29 range, first 1-minute close breaks, ATM option, +Rs 1,000 target,
+  range stop), Nov 2024+ market only'
+family: orb
+date: '2026-10-15'
+doc: research/HUNT_R56_BOSS_ORB_PLAN.md
+data_version: 'Dhan lake on Drive, fetched 15 Oct 2026: options_rolling_1m opt_NIFTY_WEEK_2024-2026 (nearest expiry on or
+  after the day, one held contract per trade) and index_1m_NIFTY_2024-2026, read by research/hunt/r56/r56data.py (R47
+  foreign-row filter and stray-print guard; research/data/spikes.py not on main, so no spike flags)'
+period:
+  design: 21 Nov 2024 - 31 Mar 2026 (337 sessions); one fixed rule, nothing tuned
+  holdout: recent part 1 Apr - 14 Oct 2026 (134 sessions), a stability split, not pristine (R49 ran ORB rules on NIFTY to
+    13 Oct 2026)
+prereg: research/hunt/r56/PREREG.md
+hypothesis: Boss's manual plan (buy the ATM call / put on the first 1-minute NIFTY close beyond the 09:15-09:29 range,
+  exit at +Rs 1,000 a lot, a close back beyond the other side of the range, or 15:15 / 15:05 on expiry) makes money
+  net of real charges and slippage, and beats random-entry twins on the same days and sides.
+instruments:
+- NIFTY
+features:
+- 1-minute index
+- opening range (15 minutes)
+model_or_rule: 'r56-boss-orb: range = NIFTY 1-minute bars 09:15-09:29; first 1-minute close above / below (09:30-14:59)
+  buys 1 lot of the ATM call / put (nearest strike to the signal close, nearest expiry) at the next minute''s open;
+  exits: option high reaches entry + Rs 1,000 / lot (sell next open), index close beyond the other side of the range
+  (sell next open), 15:15 (15:05 expiry); one trade a day. Signal source: the NIFTY index (the default); the option is
+  only the instrument; the target is on the option premium.'
+settings: research/hunt/r56/PREREG.md A3-A4; results/summary.json
+variants_tried: 4
+results:
+  summary: 'Whole span 21 Nov 2024 - 14 Oct 2026: 467 trades, win rate 69% (target 69% / range stop 22% / square-off 9%),
+    avg win Rs +983, avg loss Rs -2,754, net Rs -79,190 (Rs -170 a trade), worst day Rs -6,963, worst 5 sessions Rs -13,977,
+    max DD Rs -82,634, 7 of 24 months green; losses worse than -Rs 1,000: 128 of 144 (median loss Rs 2,606, 90th pct Rs
+    4,845); twin p 0.974 (1,000 twins). Design: 333 trades, net Rs -45,736, p 0.907. Recent: 134 trades, 67% win, net Rs
+    -33,454 (Rs -250 a trade), max DD Rs -33,797, 2 of 7 months green, p 0.946. Context only (not decisions): no target
+    Rs -156,206; Rs 1,000 hard stop instead of the range stop Rs -40,765; limit-at-target Rs -94,368.'
+  costs: charges in force on the date (STT 0.1% to 31 Mar 2026, 0.15% from 1 Apr 2026); R49 liq fills (5 bps + 1-4 ticks,
+    stop exits 10 bps + 2x ticks); 1 lot of the day's contract (lot 25 / 75 / 65 read from the data)
+holdout_read: true
+verdict: rejected
+notes: One pre-specified rule (Boss's own), so no BH; 3 context variants run and labelled as context, counted in
+  variants_tried. Closest R49 rule (r49-g-orb-m15-k1, NIFTY) also lost (design Rs -14,422 / 409 trades, final Rs -18,872 /
+  158 trades).
