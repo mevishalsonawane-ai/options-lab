@@ -93,7 +93,8 @@ class HiddenArmsTest : RobolectricTest() {
             PositionsFirst.order.done(StartOrder.Step.POSITIONS, 1L)
             job.await()
         }
-        assertTrue(fakes.values.all { it.reads == 1 })
+        // Each read once; the one switched off read again to check it went off.
+        assertTrue(fakes.values.all { it.reads == if (it.key == ArmsCleanup.NIGHT) 2 else 1 })
         assertEquals(listOf("off"), fake(ArmsCleanup.NIGHT).calls)
     }
 
