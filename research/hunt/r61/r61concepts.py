@@ -456,6 +456,31 @@ CONCEPTS = [
                     "expiry moves more (0.15% vs 0.10%, p 0.004); expiry rules R21-R37 0 of 52 pass.",
                     "size only")],
         role=SIZE, features=["event_rbi_budget", "post_us_event", "other_expiry_today", "dte (A2)"]),
+    dict(
+        id="news", name="News tone (positive / negative headlines)", aka=["news sentiment", "headline tone"],
+        what="Whether the latest business headlines read good or bad for the market: 'Sensex surges', 'Nifty falls as war "
+             "fears grow'. Scheduled events (RBI, Budget, Fed) are a separate concept.",
+        formula="The phone's own word-list reader (News.tone): good words (rally, surge, gains, rate cut...) and bad words "
+                "(crash, falls, war, tariffs...) with weights, phrases first, a 'not' one or two words back flips a word; "
+                "score / 2 clipped to -1..+1. News.tag decides which index a headline concerns. R61-N: mean tone of the "
+                "headlines out between the previous close and the signal minute, signed by the trade's side, and their "
+                "count.",
+        phone="yes: Jarvis reads the news feeds every 5 minutes (News, NewsAnalyst) and MarketRecorder logs them",
+        use="Traders avoid buying calls into a flood of bad news and chase good news; desks read overnight news to set "
+            "the day's bias.",
+        pitfalls=["Headlines usually come AFTER the price has moved (h33: 1-4 minutes late on intraday shocks).",
+                  "A word list misreads mixed headlines ('bounce back from morning losses... gains' scores 0).",
+                  "Good overnight news is usually already in the opening gap."],
+        research=[S("h33", "research/HUNT_H33.md", "3,072 variants, 59,189 timed headlines 2020-2026", "Trading intraday "
+                    "headlines or price shocks loses (walk-forward -Rs 1.02 lakh); the price moves before the headline.",
+                    "failed"),
+                  S("R61-N", "research/HUNT_R61_SOLO_3.md", "Moneycontrol business headlines Oct 2024 - Oct 2026 "
+                    "(116,570; 13,782 market-wide); 5,780 design candidate rows, 127 final trades", "Adding pre-signal "
+                    "news tone to Solo 2.0 passed the gates but did not beat it (final +Rs 85,483 vs +Rs 99,172; AUC "
+                    "0.544 vs 0.538; paired p 0.86). Descriptive: pre-open tone vs the day's open-to-close move, "
+                    "correlation -0.16 on 337 design days per index (good news tends to fade after the open).",
+                    "failed as a Solo input; fade effect descriptive only")],
+        role=CTX, features=["news_tone (R61-N)", "news_count (R61-N)"]),
 ]
 
 KEYS = ("id", "name", "aka", "what", "formula", "phone", "use", "pitfalls", "research", "role", "features")

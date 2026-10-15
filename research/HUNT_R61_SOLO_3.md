@@ -41,6 +41,8 @@ computed, and what our research says about it. But knowing them did not make it 
   - max drawdown Rs 15,202 (V1: Rs 18,056).
   V5 was not the pre-registered candidate, and it made less money than V1. It is a note for a forward test, not a
   result.
+- **News (R61-N, Boss's follow-up):** positive / negative headline tone before the signal does not help either
+  (section R61-N below).
 
 **Honest caveats.**
 1. This final window is not fresh: R57 read it for A2 with the same setups, and S3's exit was chosen on it by R52.
@@ -76,6 +78,7 @@ may move, not which way.
 | Futures basis | H38 (design pass, holdout -Rs 35/day) | failed |
 | Rollover | H40 S10 | failed / barely tested; not on the phone |
 | Event days | EVENT_SHIELD (BANKNIFTY RBI + Budget range 1.44% vs 0.98%, 15 sessions, holdout confirmed), H28 | size warning passed; no trade edge |
+| News tone (positive / negative headlines) | h33 (3,072 variants, walk-forward -Rs 1.02 lakh), R61-N below (127 final trades; does not beat Solo 2.0, paired p 0.86) | failed; good pre-open news fading after the open is descriptive only |
 
 What this means for Solo: every one of these is used only as **context**. It can make Solo skip a dear, crowded or
 risky trade, or prefer one index's candidate over another's. It never creates a trade and never picks the side.
@@ -261,6 +264,51 @@ IV), PCR, skew and VIX are in them. The extra concepts are real, well-defined nu
 But they add no measurable skill in picking among S1-S4 candidates after costs, which matches what R26-R47 found
 about these concepts one by one.
 
+## R61-N: does positive / negative news help Solo? (Boss, 15 Oct: "also check if there is any positive/negative news")
+
+**No.** Neither as a trade trigger (h33 already showed that) nor as context for Solo's take / skip.
+
+**What was already known.** h33 (`HUNT_H33.md`; 3,072 variants, 59,189 timed headlines 2020-2026) tested trading
+intraday headlines and price shocks. The walk-forward lost -Rs 1.02 lakh, because the price moves 1-4 minutes before
+the headline appears.
+
+**What R61-N added.** It was pre-registered in `hunt/r61/NEWS_PREREG.md` (commit 4a9725a0) before any news was scored.
+- Data: every Moneycontrol business headline from Oct 2024 to Oct 2026, from its public monthly sitemaps. That is
+  116,570 headlines (headline text from the URL, time = the sitemap's last-modified time, which is never early);
+  13,782 of them are market-wide.
+- Tone: scored with the phone's own reader (`News.tone` / `News.tag`, ported word for word; a test checks the word
+  lists against `News.kt`).
+- Inputs: the mean tone of the headlines out between the previous close and Solo's signal minute (signed by the trade's
+  side), and their count. Every candidate had at least one such headline.
+
+**Results.** Net in Rs, 1 lot, after costs.
+
+| variant | design WF: net, AUC | final: trades, win | final net | 2x costs | max DD | AUC | p / q | without MIDCPNIFTY | gates | beats Solo 2.0? |
+|---|---|---|---|---|---|---|---|---|---|---|
+| V1 = Solo 2.0 | +55,910, 0.525 | 128, 59% | +99,172 | +80,849 | 18,056 | 0.538 | 0.002 / - | +27,586 | PASS | - |
+| N1: + tone + count | +65,756, 0.523 | 126, 56% | +78,317 | +60,357 | 24,148 | 0.542 | 0.002 / 0.002 | +17,011 | PASS | no (paired p 0.94) |
+| N2: + tone | +71,463, 0.526 | 127, 58% | +85,483 | +67,357 | 18,235 | 0.544 | 0.002 / 0.002 | +19,461 | PASS | no (paired p 0.86) |
+
+What these numbers say:
+- News lifted the design profit, almost all of it on MIDCPNIFTY: V1 -153 → N2 +22,528.
+- News nudged AUC up by 0.002-0.006, which is noise.
+- On the final days both news versions made less than Solo 2.0, and less without MIDCPNIFTY.
+- This final window has now been used three times (R57, R61, R61-N), so it is weak evidence either way.
+
+**One descriptive finding (not a rule, not gated).** The tone of the news out before 09:15 runs AGAINST the day's
+open-to-close move. Correlation on 337 design days:
+
+| NIFTY | BANKNIFTY | FINNIFTY | MIDCPNIFTY |
+|---|---|---|---|
+| -0.16 | -0.16 | -0.16 | -0.09 |
+
+Good overnight news tends to be priced into the opening gap, and the index then gives some of it back. This fits h33
+("the price moves before the headline"). It would need its own pre-registered test before anyone traded on it. Our
+earlier gap-fade studies are the place to start.
+
+**What Solo does with news.** Jarvis keeps reading and explaining the news (the "News tone" entry in CONCEPTS.md).
+Solo's trade decisions do not use it.
+
 ## Running it on the phone (only if a variant ever replaces Solo 2.0)
 
 - No R61 model replaces Solo 2.0, so nothing is to be ported. All 7 are exported anyway (`hunt/r61/results/models/`,
@@ -295,7 +343,7 @@ Build 21 minutes, design and final about 1.5 minutes each. The lake copy and the
 
 ## Tests
 
-`python -m pytest research/hunt/r61/test_r61.py -q`: 31 tests on synthetic data, run under pandas 3.0.5 / sklearn 1.9
+`python -m pytest research/hunt/r61/test_r61.py -q`: 35 tests on synthetic data (4 of them for R61-N's news port and windows), run under pandas 3.0.5 / sklearn 1.9
 and under the pinned pandas 2.2.3 / sklearn 1.5.2. They cover:
 - the look-ahead guard for every chain feature (values at a minute are identical when later minutes are deleted);
 - same-minute ranks that only look back;

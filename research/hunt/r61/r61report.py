@@ -44,6 +44,8 @@ IN_A2 = {
     "dealers": "No R61 input: positioning is not observable intraday; participant OI (its proxy) is measured under "
                "'FII / DII flows and participant-wise OI'.",
     "rollover": "No R61 input: not available on the phone.",
+    "news": "R61-N (pre-registered in NEWS_PREREG.md): see the R61-N row under 'What our research found'. Verdict: no help "
+            "beyond Solo 2.0 out of sample.",
 }
 
 

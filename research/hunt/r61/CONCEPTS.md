@@ -758,3 +758,34 @@ Also called: event risk, macro calendar.
 **Solo's inputs from it.** `event_rbi_budget`, `post_us_event`, `other_expiry_today`, `dte (A2)`.
 
 **R61 result.** R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'events' inputs from the all-inputs model changed walk-forward AUC by -0.0016 (design) / +0.0003 (final) and net by Rs -6,252 / Rs -4; removing the 'other expiry' inputs from the all-inputs model changed walk-forward AUC by -0.0015 (design) / -0.0011 (final) and net by Rs +2,406 / Rs -2,221. Each input added alone to A2's 29 changed AUC (design / final): `event_rbi_budget` +0.0007 / -0.0030, `post_us_event` +0.0007 / +0.0016, `other_expiry_today` +0.0046 / -0.0014. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing).
+
+## News tone (positive / negative headlines)
+
+Also called: news sentiment, headline tone.
+
+**What it is.** Whether the latest business headlines read good or bad for the market: 'Sensex surges', 'Nifty falls as war fears grow'. Scheduled events (RBI, Budget, Fed) are a separate concept.
+
+**How it is computed.** The phone's own word-list reader (News.tone): good words (rally, surge, gains, rate cut...) and bad words (crash, falls, war, tariffs...) with weights, phrases first, a 'not' one or two words back flips a word; score / 2 clipped to -1..+1. News.tag decides which index a headline concerns. R61-N: mean tone of the headlines out between the previous close and the signal minute, signed by the trade's side, and their count.
+
+**On the phone.** yes: Jarvis reads the news feeds every 5 minutes (News, NewsAnalyst) and MarketRecorder logs them.
+
+**How traders use it.** Traders avoid buying calls into a flood of bad news and chase good news; desks read overnight news to set the day's bias.
+
+**Pitfalls.**
+
+- Headlines usually come AFTER the price has moved (h33: 1-4 minutes late on intraday shocks).
+- A word list misreads mixed headlines ('bounce back from morning losses... gains' scores 0).
+- Good overnight news is usually already in the opening gap.
+
+**What our research found.**
+
+| study | sample | finding | verdict |
+|---|---|---|---|
+| h33 (`research/HUNT_H33.md`) | 3,072 variants, 59,189 timed headlines 2020-2026 | Trading intraday headlines or price shocks loses (walk-forward -Rs 1.02 lakh); the price moves before the headline. | failed |
+| R61-N (`research/HUNT_R61_SOLO_3.md`) | Moneycontrol business headlines Oct 2024 - Oct 2026 (116,570; 13,782 market-wide); 5,780 design candidate rows, 127 final trades | Adding pre-signal news tone to Solo 2.0 passed the gates but did not beat it (final +Rs 85,483 vs +Rs 99,172; AUC 0.544 vs 0.538; paired p 0.86). Descriptive: pre-open tone vs the day's open-to-close move, correlation -0.16 on 337 design days per index (good news tends to fade after the open). | failed as a Solo input; fade effect descriptive only |
+
+**Role in Solo.** context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side.
+
+**Solo's inputs from it.** `news_tone (R61-N)`, `news_count (R61-N)`.
+
+**R61 result.** R61-N (pre-registered in NEWS_PREREG.md): see the R61-N row under 'What our research found'. Verdict: no help beyond Solo 2.0 out of sample.
