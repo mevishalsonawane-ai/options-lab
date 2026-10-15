@@ -1,0 +1,39 @@
+{
+ "note": "Data check only, never a signal. fut_1m_live_mcx holds only the futures listed on 14 Oct 2026 (later months back in time, at their contango), so it matches the options' underlying only once that contract is the near one: 1-13 Oct 2026. There the near-future proxy (median option spot) is compared with the closest listed live future's 1-minute close.",
+ "CRUDEOIL": {
+  "minutes": 6959,
+  "median_abs_gap_pct": 0.0,
+  "p99_abs_gap_pct": 0.0,
+  "share_exact": 0.999
+ },
+ "GOLD": {
+  "minutes": 6957,
+  "median_abs_gap_pct": 0.0,
+  "p99_abs_gap_pct": 2.2486,
+  "share_exact": 0.7486
+ },
+ "GOLDM": {
+  "minutes": 6959,
+  "median_abs_gap_pct": 0.0,
+  "p99_abs_gap_pct": 1.0494,
+  "share_exact": 0.7495
+ },
+ "NATURALGAS": {
+  "minutes": 6959,
+  "median_abs_gap_pct": 0.0,
+  "p99_abs_gap_pct": 0.0,
+  "share_exact": 0.9994
+ },
+ "SILVER": {
+  "minutes": 6959,
+  "median_abs_gap_pct": 0.0,
+  "p99_abs_gap_pct": 0.0,
+  "share_exact": 0.997
+ },
+ "SILVERM": {
+  "minutes": 6959,
+  "median_abs_gap_pct": 0.0,
+  "p99_abs_gap_pct": 0.0,
+  "share_exact": 0.9989
+ }
+}

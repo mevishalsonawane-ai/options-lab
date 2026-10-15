@@ -1,0 +1,33 @@
+id: r60-x5
+title: 'R60 Solo on all markets X5: SoloMidday translated to MCX: SILVER, 12:00 -> 14:30, 1-ITM else ATM option, future stop
+  0.3 ATR14, breakeven at 0.45 ATR14'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R60_SOLO_ALL_MARKETS.md
+hypothesis: 'Solo''s rule makes money after real costs on a market it does not trade yet (gates: final net > 0, random-entry
+  twin p < 0.05, BH q <= 0.10 over 21 variants, 40+ trades, top-5 < net, design positive).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m MCX MONTH files (ATM-3..+3, 5 Aug 2025 - 13 Oct 2026;
+  R47 foreign rows, R42 F1 and spikes.py bad prints removed), near-future proxy = median option spot'
+period:
+  design: 5 Aug 2025 - 31 Mar 2026
+  holdout: '1 Apr - 13 Oct 2026 final test, read once (not pristine: R47-R59 saw parts of it)'
+instruments:
+- MCX
+- SILVER
+features:
+- 'signal source: the commodity''s near future (median option spot); option IV / OI context only in M1/M2'
+model_or_rule: 'SoloMidday translated to MCX: SILVER, 12:00 -> 14:30, 1-ITM else ATM option, future stop 0.3 ATR14, breakeven
+  at 0.45 ATR14'
+settings: research/hunt/r60/PREREG.md section 3; research/hunt/r60/r60study.py
+prereg: research/hunt/r60/PREREG.md
+variants_tried: 21
+results:
+  summary: 'Design: 4 trades, net Rs -33,959, win 25%. Final test (1 Apr - 13 Oct 2026, read once): 4 trades, win 50%, net
+    Rs +13,058 (Rs +3,264/trade), at 2x costs Rs -150, max DD Rs 31,501, worst day Rs -21,038, months green 2/2, top-5 share
+    1.0, capital per lot (median) Rs 237,488, trades per day 0.029; twin p 0.1756, BH q 0.7544 (21 variants). Verdict: FAIL:
+    p >= 0.05; q > 0.10; fewer than 40 trades; top-5 >= net; design <= 0.'
+  costs: Zerodha MCX option charges (CTT 0.05% sell), per-commodity half-spread doubled before 17:00 and on a thin side, next-minute
+    fills, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Paper only. Signal on the underlying; no rule reads an option's own chart.

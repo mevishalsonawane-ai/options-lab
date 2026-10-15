@@ -161,4 +161,30 @@ pipeline on design months only (crash check). 5. The ONE final read. 6. Write-up
 Any deviation found later is written as a dated amendment below, never silently.
 
 ## Amendments
-(none yet)
+
+### Amendment 1 (15 Oct 2026, written AFTER the one final read): a sessions-to-expiry bug
+- **Found** while reading the final tables: there were no MO candidates at all. In `r60mcx._days`,
+  `m.exp_days.tolist()` turned the datetime64 expiry days into integers, so no session matched an expiry. `dte` was
+  NaN everywhere and the expiry-eve flag was never set. Expiry days themselves WERE skipped (R53's `Market.is_exp`).
+- **What it touched:** X1-X14 and I1-I5 never read `dte`, and the SN / SE exits (14:30 / 20:30) are before the 23:00
+  expiry-eve cap. M1 / M2: the pre-registered `dte` feature was a constant; M1 had no MO candidates; EV trades on an
+  expiry eve could run to 23:15 instead of 23:00.
+- **Done:** fixed in one line, with a regression test (`test_sessions_to_expiry_and_expiry_eve`). `r60amend.py`
+  (refuses to run before `FINAL_READ`, runs once) re-ran the candidates with the fix. SN and SE are identical trade
+  for trade on design and final, so X1-X14 stand as read. EV changed on final expiry eves; MO now has 14 design and 31
+  final candidates.
+- **The gated record stays as run.** M1 and M2 keep their as-run final numbers, p, q and verdicts, and the BH family is
+  unchanged. The corrected M1c / M2c were read once (`results/amend1.json`) and are labelled a **post-lock
+  correction**: they cannot count as a clean pass whatever they show. Both fail anyway (M1c -Rs 7,783 on 123 trades,
+  p 0.32; M2c -Rs 2,53,783 on 32 trades, p 0.91).
+- I4 passed, so its deployment model was exported after the read (`results/models/I4.json`, fitted on every labelled
+  row; scorer parity 1.1e-16), as R57 did.
+
+### Deviations found in the self-review (15 Oct 2026, after the read; no number changed)
+- **Index twins are not redrawn.** I1-I5 use R57's twin code unchanged, which scores a twin that gets no fill as 0
+  instead of redrawing it. The index twin fill rate is 97-100% (I1 100%, I2 99.0%, I4 97.1%, I5 100%). Twins lose on
+  average, so a 0 makes the twins slightly better and the rule's p slightly higher (conservative). The MCX twins are
+  redrawn as pre-registered.
+- **The pooled picks see filled candidates only.** In I3, X13 and X14 (as in R57's plain SoloMidday), "strongest first"
+  ranks the candidates that filled inside the 4-minute window. When the strongest market's option did not print by
+  then, the next strongest is taken. The app would know this by the end of that same window.

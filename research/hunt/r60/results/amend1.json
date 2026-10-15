@@ -1,0 +1,283 @@
+{
+ "note": "POST-LOCK CORRECTION, read once after the final; cannot count as a clean pass; BH family and gated verdicts stay as run",
+ "candidates": {
+  "design:SN": {
+   "as_run": 32,
+   "fixed": 32,
+   "identical": true
+  },
+  "design:SE": {
+   "as_run": 87,
+   "fixed": 87,
+   "identical": true
+  },
+  "design:EV": {
+   "as_run": 593,
+   "fixed": 593,
+   "identical": true
+  },
+  "design:MO": {
+   "as_run": 0,
+   "fixed": 14,
+   "identical": false
+  },
+  "final:SN": {
+   "as_run": 32,
+   "fixed": 32,
+   "identical": true
+  },
+  "final:SE": {
+   "as_run": 107,
+   "fixed": 107,
+   "identical": true
+  },
+  "final:EV": {
+   "as_run": 583,
+   "fixed": 583,
+   "identical": false
+  },
+  "final:MO": {
+   "as_run": 0,
+   "fixed": 31,
+   "identical": false
+  }
+ },
+ "variants": {
+  "M1c": {
+   "design": {
+    "trades": 86,
+    "win": 0.512,
+    "net": 19304,
+    "per_trade": 224,
+    "net_2x": -4706,
+    "max_dd": 17820,
+    "worst_day": -6729,
+    "months_green": "2/5",
+    "top5_share": 2.084,
+    "ex_top5": -20923,
+    "capital_median": 26338,
+    "capital_max": 127195,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 7,
+      "net": -4842
+     },
+     "GOLDM": {
+      "trades": 14,
+      "net": -1949
+     },
+     "NATURALGAS": {
+      "trades": 43,
+      "net": 35570
+     },
+     "SILVERM": {
+      "trades": 22,
+      "net": -9476
+     }
+    },
+    "per_setup": {
+     "EV": {
+      "trades": 55,
+      "net": 10850
+     },
+     "MO": {
+      "trades": 9,
+      "net": 5864
+     },
+     "SE": {
+      "trades": 21,
+      "net": 2520
+     },
+     "SN": {
+      "trades": 1,
+      "net": 70
+     }
+    },
+    "by_month": {
+     "2025-11": 12512,
+     "2025-12": -608,
+     "2026-01": 25150,
+     "2026-02": -9931,
+     "2026-03": -7819
+    }
+   },
+   "design_auc": 0.5237,
+   "test": {
+    "trades": 123,
+    "win": 0.455,
+    "net": -7783,
+    "per_trade": -63,
+    "net_2x": -43608,
+    "max_dd": 60382,
+    "worst_day": -13087,
+    "months_green": "2/7",
+    "top5_share": null,
+    "ex_top5": -61364,
+    "capital_median": 31040,
+    "capital_max": 93190,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 39,
+      "net": -11135
+     },
+     "GOLDM": {
+      "trades": 5,
+      "net": -10120
+     },
+     "NATURALGAS": {
+      "trades": 46,
+      "net": -26031
+     },
+     "SILVERM": {
+      "trades": 33,
+      "net": 39503
+     }
+    },
+    "per_setup": {
+     "EV": {
+      "trades": 52,
+      "net": -2736
+     },
+     "MO": {
+      "trades": 31,
+      "net": 38663
+     },
+     "SE": {
+      "trades": 37,
+      "net": -40742
+     },
+     "SN": {
+      "trades": 3,
+      "net": -2967
+     }
+    },
+    "by_month": {
+     "2026-04": -3757,
+     "2026-05": -9670,
+     "2026-06": 29733,
+     "2026-07": 9485,
+     "2026-08": -8492,
+     "2026-09": -20929,
+     "2026-10": -4153
+    },
+    "sessions": 138,
+    "trades_per_day": 0.891
+   },
+   "p": 0.3214,
+   "twin_mean": -25003,
+   "auc": 0.5652,
+   "verdict_if_it_had_been_pre_lock": "FAIL: final net <= 0; p >= 0.05; q > 0.10; top-5 >= net"
+  },
+  "M2c": {
+   "design": {
+    "trades": 17,
+    "win": 0.412,
+    "net": 5192,
+    "per_trade": 305,
+    "net_2x": -3028,
+    "max_dd": 10697,
+    "worst_day": -6219,
+    "months_green": "1/3",
+    "top5_share": 5.26,
+    "ex_top5": -22120,
+    "capital_median": 33550,
+    "capital_max": 211050,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 8,
+      "net": -5234
+     },
+     "GOLD": {
+      "trades": 1,
+      "net": 19843
+     },
+     "GOLDM": {
+      "trades": 3,
+      "net": -827
+     },
+     "NATURALGAS": {
+      "trades": 4,
+      "net": -2919
+     },
+     "SILVERM": {
+      "trades": 1,
+      "net": -5672
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 14,
+      "net": -14071
+     },
+     "SN": {
+      "trades": 3,
+      "net": 19263
+     }
+    },
+    "by_month": {
+     "2026-01": 15820,
+     "2026-02": -2468,
+     "2026-03": -8160
+    }
+   },
+   "design_auc": 0.5105,
+   "test": {
+    "trades": 32,
+    "win": 0.344,
+    "net": -253783,
+    "per_trade": -7931,
+    "net_2x": -295771,
+    "max_dd": 254318,
+    "worst_day": -67303,
+    "months_green": "1/7",
+    "top5_share": null,
+    "ex_top5": -328057,
+    "capital_median": 71890,
+    "capital_max": 696000,
+    "per_market": {
+     "CRUDEOIL": {
+      "trades": 15,
+      "net": -27352
+     },
+     "GOLD": {
+      "trades": 10,
+      "net": -190777
+     },
+     "NATURALGAS": {
+      "trades": 6,
+      "net": -2826
+     },
+     "SILVER": {
+      "trades": 1,
+      "net": -32829
+     }
+    },
+    "per_setup": {
+     "SE": {
+      "trades": 27,
+      "net": -208168
+     },
+     "SN": {
+      "trades": 5,
+      "net": -45615
+     }
+    },
+    "by_month": {
+     "2026-04": -7188,
+     "2026-05": -8367,
+     "2026-06": -121179,
+     "2026-07": 35506,
+     "2026-08": -34261,
+     "2026-09": -31696,
+     "2026-10": -86597
+    },
+    "sessions": 138,
+    "trades_per_day": 0.232
+   },
+   "p": 0.9082,
+   "twin_mean": -149378,
+   "auc": 0.5079,
+   "verdict_if_it_had_been_pre_lock": "FAIL: final net <= 0; p >= 0.05; q > 0.10; fewer than 40 trades; top-5 >= net"
+  }
+ }
+}
