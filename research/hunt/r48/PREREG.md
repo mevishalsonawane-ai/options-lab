@@ -143,3 +143,16 @@ bootstrap p of mean net per trade <= 0 (10,000 resamples) is shown too (not a ga
 Research only. Selling options is a new kind of trade for the app: any paper arm for a passing rule needs Boss's yes
 and app work (multi-leg orders, margin checks); live needs Boss's PIN and "AI trades go live". Nothing here changes
 the app.
+
+## Amendment 1 (15 Oct 2026, still before any P&L)
+
+1. **Legs that leave the window on the IN-the-money side** (a big move through both strikes). The rule above bounds
+   only out-of-the-money legs. Added: a short leg beyond the window on the in-the-money side is valued at its intrinsic
+   value plus the time value of the nearest window-edge strike of the same side (an upper bound, since time value
+   shrinks deeper in the money); a long leg there is valued at its intrinsic value (a lower bound) and sold at it
+   (with the far-OTM slippage). The out-of-the-money rules stay as written.
+2. **Contract-switch guard, made unbiased.** As written it would also drop real crash days (time value doubles when
+   the index gaps). It now drops a multi-day trade only when the 15:00 ATM time value more than doubles overnight
+   with no inferred expiry in between AND the index moved less than 1.5% close to close. Data fact behind it (no
+   P&L): this flags 3 FINNIFTY sessions (12 Jan, 6 Jul, 2 Nov 2022) and 1 SENSEX session (8 Jan 2024); NIFTY,
+   BANKNIFTY and MIDCPNIFTY have none.
