@@ -5,6 +5,7 @@ import com.optionslab.app.security.Vault
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.fmtG
+import com.optionslab.engine.risk.PriceWatch
 import com.optionslab.engine.sandbox.Instrument
 import com.optionslab.engine.sandbox.InstrumentMaster
 import com.optionslab.engine.sandbox.OrderChange
@@ -55,7 +56,17 @@ object Paper {
     }
 
     /** The exchange a paper symbol trades on (NFO unless it is a remembered MCX contract). */
-    private fun exchangeOf(symbol: String): String = book().contracts[symbol]?.exchange ?: "NFO"
+    private fun exchangeOf(symbol: String): String = exchangeIn(book().contracts, symbol)
+
+    /** [exchangeOf] in a given list of [contracts] (one rule for the books and the no-price failsafe, 15 Oct). */
+    internal fun exchangeIn(contracts: Map<String, Contract>, symbol: String): String = contracts[symbol]?.exchange ?: "NFO"
+
+    /**
+     * The open positions [symbols] as the no-price failsafe judges them (15 Oct, [Sweeper]): each one's price key as
+     * [quotes] keys it, its exchange and its expiry (null when its contract is not remembered).
+     */
+    internal fun failsafeHeld(symbols: Collection<String>, contracts: Map<String, Contract>): List<PriceWatch.Held> =
+        symbols.map { s -> exchangeIn(contracts, s).let { ex -> PriceWatch.Held(Sandbox.key(s, ex), ex, contracts[s]?.expiry) } }
 
     /** [why]: why the app cancelled an order (order id -> a reason key, see [cancel]); the newest [WHY_KEPT] only. */
     private data class Book(val state: SandboxState, val capital: BigDecimal, val contracts: Map<String, Contract>,
@@ -904,11 +915,15 @@ object Paper {
             if (s != b.state) save(b.copy(state = s))
         }
         noteStale(fill, events)
-        return Sweep(out, q.isNotEmpty(), held.isNotEmpty())
+        return Sweep(out, failsafeHeld(held, book().contracts), q.keys)
     }
 
-    /** What [sweepMissedStops] did: the stops it sold, whether any price was read, and whether any position is open. */
-    data class Sweep(val swept: List<Swept>, val priced: Boolean, val holding: Boolean)
+    /**
+     * What [sweepMissedStops] did: the stops it sold, the open positions ([held]: their price keys, exchanges and expiries)
+     * and the keys priced this pass ([quoted]). 15 Oct: the positions themselves, not two yes/no answers, so the no-price
+     * failsafe can judge each in its own market's hours ([Sweeper]).
+     */
+    data class Sweep(val swept: List<Swept>, val held: List<PriceWatch.Held>, val quoted: Set<String>)
 
     /**
      * Views, priced with fresh quotes where the engine uses them. [reuseQuotesMs] > 0 only for words and cards (never the

@@ -1,6 +1,11 @@
 package com.optionslab.engine.risk
 
 import com.optionslab.engine.Kite
+import com.optionslab.engine.NseHours
+import com.optionslab.engine.mcx.Mcx
+import com.optionslab.engine.mcx.McxSession
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.Locale
 
@@ -96,4 +101,74 @@ object PriceWatch {
 
     /** "Positions not protected: no prices since 14:11". */
     fun say(since: LocalTime): String = "Positions not protected: no prices since %02d:%02d".format(Locale.ENGLISH, since.hour, since.minute)
+
+    /** An open position as the failsafe sees it: its price [key], its [exchange] ("NFO", "MCX") and its option's [expiry] when known. */
+    data class Held(val key: String, val exchange: String, val expiry: LocalDate? = null)
+
+    /**
+     * 15 Oct (Boss saw "Positions not protected" before 09:15): whether a position on [exchange] is judged at [at] (IST) -
+     * only while its own market trades. MCX on its calendar ([mcx]: 09:00 to its close, its own holidays); NSE's F&O as
+     * the app's "Market open" says ([nseOpen] (day, minute of the day): a trading day on the app's holiday calendar, 09:15
+     * to its close). Before the open, after the close and on a holiday no price comes (the paper feed has no candle of the
+     * day before 09:15), so the silence is no fault; from 09:00 the MCX pass ran this check with an overnight NSE position
+     * in the paper book and warned at 09:02. An option past its [expiry] day is settled, never priced again. Only the
+     * warning is judged here: the positions' stops and the sweep itself run as before, whatever the hour.
+     */
+    fun inSession(exchange: String, at: LocalDateTime, nseOpen: (LocalDate, Int) -> Boolean, mcx: McxSession.Calendar,
+                  expiry: LocalDate? = null): Boolean {
+        val day = at.toLocalDate()
+        if (expiry != null && expiry.isBefore(day)) return false
+        if (exchange.equals(Mcx.EXCHANGE, ignoreCase = true)) return mcx.isOpen(at)
+        return nseOpen(day, at.hour * 60 + at.minute)
+    }
+
+    /** [inSession]'s NSE rule from a trading-day calendar: F&O's hours ([NseHours.foOpen]) on a trading day. */
+    fun nseOpen(tradingDay: (LocalDate) -> Boolean): (LocalDate, Int) -> Boolean = { d, minute -> tradingDay(d) && NseHours.foOpen(d, minute) }
+
+    /**
+     * One pass's input to [Failsafe.look]: (holding, priced) over the [held] positions whose market trades at [at] only
+     * ([inSession]). [quoted]: the keys that had a price this pass. Priced when any of them had one, or with [all] when
+     * every one did (Zerodha's REST quotes: one read for all).
+     */
+    fun judge(held: List<Held>, quoted: Set<String>, at: LocalDateTime, nseOpen: (LocalDate, Int) -> Boolean,
+              mcx: McxSession.Calendar, all: Boolean = false): Pair<Boolean, Boolean> {
+        val open = held.filter { inSession(it.exchange, at, nseOpen, mcx, it.expiry) }
+        if (open.isEmpty()) return false to false
+        return true to (if (all) open.all { it.key in quoted } else open.any { it.key in quoted })
+    }
+
+    /**
+     * The books (the paper account, Zerodha) together, each one's [judge]: holding when any holds in its session, priced
+     * only when every one that holds is priced - a priced paper book never hides a live position with no price (15 Oct).
+     */
+    fun combine(books: List<Pair<Boolean, Boolean>>): Pair<Boolean, Boolean> {
+        val holding = books.any { it.first }
+        return holding to (holding && books.all { !it.first || it.second })
+    }
+
+    /**
+     * The failsafe's memory (15 Oct; it was three fields of the sweeper): when the positions were first seen open in their
+     * session, the last pass that priced them, and the silence already said. Thread-safe.
+     */
+    class Failsafe {
+        private var openSince: Long? = null
+        private var lastPrice: Long? = null
+        private var alertedFor: Long? = null
+
+        /**
+         * One pass at [nowMs]. [holding]: a position whose market trades now is open (nothing held, or nothing in its
+         * session: the clock is forgotten). [priced]: every book holding one had a price ([combine]). Returns when the
+         * silence began (epoch ms) when it is to be said now (once per silence); else null.
+         */
+        @Synchronized fun look(holding: Boolean, priced: Boolean, nowMs: Long): Long? {
+            if (!holding) { openSince = null; alertedFor = null; return null }
+            val since = openSince ?: nowMs.also { openSince = it }
+            if (priced) { lastPrice = nowMs; alertedFor = null; return null }
+            if (!alert(lastPrice, since, nowMs)) return null
+            val from = maxOf(lastPrice ?: since, since)
+            if (alertedFor == from) return null
+            alertedFor = from
+            return from
+        }
+    }
 }
