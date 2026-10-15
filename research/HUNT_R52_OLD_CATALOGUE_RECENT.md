@@ -33,6 +33,24 @@ Code, tests and results are in `hunt/r52/`. Pre-registration: `hunt/r52/PREREG.m
 and grid committed in `results/rules_prereg.json` before its design run, and Amendment 1 on the twins. Experiment
 entries: `experiments/entries/r52-*.yaml` (114).
 
+## Amendment 2: foreign-rows and stray-print re-pricing (registered 15 Oct 2026; NOT YET RUN)
+
+**Status: no cleaned number exists yet. Until it does, read the passing result above as possibly inflated by bad data.**
+
+R47 found rows of another underlying in the lake's rolling option files (their own spot more than 3% from the index)
+and stray prints; R52 applied neither filter. Amendment 2 (PREREG.md, committed before any cleaned result) re-prices
+H37-10:g17 (and H37-10:orig, information) on cleaned data: same rule, same spans, same gates, the same twins and BH
+over the same 188 final reads; the final test is re-priced, not re-selected. It also
+reports the drop counts per index, how many of g17's original trades touched a removed row, and g17 at twice the
+spread and slippage.
+
+It also splits the cleaned profit by index (the original's +Rs 46k of +Rs 49k came from MIDCPNIFTY, and R47 found
+MIDCPNIFTY-level rows inside the FINNIFTY files).
+
+Code: `research/hunt/lakeclean.py` (shared with R51), `hunt/r52/r52amend.py`, the cleaned obuy layout via
+`lake2obuy.py <dir> --clean`; tests in `hunt/r52/test_r52amend.py`. The run needs the lake copied from
+`gdrive:IraAlgo-data-lake`, which this session was not allowed to do; the steps are in the `r52amend.py` docstring.
+
 ## What was done
 
 1. **Catalogue (`hunt/r52/CATALOGUE.md`).**

@@ -41,6 +41,21 @@ else. Pre-registered in `research/hunt/r51/PREREG.md` (commit 11fbca1d, before a
 - **Honesty:** earlier studies already looked at parts of 2025-26 (F1 design, R29 2025/26, R41 folds, B2, R44, R45, R27,
   R42 holdouts), so the final test is **not pristine**. Only paper from 15 Oct 2026 on is truly unseen.
 
+## Amendment A: foreign-rows and stray-print re-pricing (registered 15 Oct 2026; NOT YET RUN)
+
+**Status: no cleaned number exists yet. Until it does, read the passing result above as possibly inflated by bad data.**
+
+R47 found rows of another underlying in the lake's rolling option files (their own spot more than 3% from the index)
+and stray prints; R51 applied neither filter. Amendment A (PREREG.md, committed before any cleaned result) re-prices
+R44-donchian20-RT and the 26 index-option near-misses with final q <= 0.20 on cleaned data: same rules, same spans,
+same gates, the same twins and BH over the same 125 variants; the final test is re-priced, not re-selected. It also
+reports the drop counts per index, how many of the passing rule's original trades touched a removed row, and the
+passing rule at twice the spread and slippage.
+
+Code: `research/hunt/lakeclean.py` (shared with R52), `hunt/r51/amend.py`, cleaned stores via `R51_CLEAN=1
+r51data.py build`; tests in `hunt/r51/test_amend.py`. The run needs the lake copied from `gdrive:IraAlgo-data-lake`,
+which this session was not allowed to do; the steps are in the `amend.py` docstring.
+
 ## What would come back on PAPER under the Nov-2024+ view, and what stays off
 
 | strategy | decision | exact settings |

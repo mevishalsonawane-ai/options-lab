@@ -30,6 +30,11 @@ REASONS = {R_NOFILL: "nofill", R_STOP: "stop", R_LOCK: "lock", R_TARGET: "target
 COSTS = Costs("dated")
 EPOCH = date(1970, 1, 1).toordinal()
 NOLOCK = np.zeros((0, 2))
+# Fill multipliers (buy, market sell, stop sell, half-spread ticks). Amendment A runs the passing rule once with SLIP2:
+# twice the bps and twice the half-spread ticks (limit targets still fill at their price; charges unchanged).
+SLIP1 = (1.0005, 0.9995, 0.999, 1.0)
+SLIP2 = (1.001, 0.999, 0.998, 2.0)
+SLIP = SLIP1
 
 
 @dataclass(frozen=True)
@@ -73,7 +78,8 @@ def _vol5(v, r, qty):
 
 
 @njit(cache=True)
-def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty):
+def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty,
+             fb=1.0005, fs=0.9995, fst=0.999, tk=1.0):
     """C: (5, 375) O H L C V of the held contract. e: entry row; sq: square-off row (exit at its open); fx: forced
     exit row (<0 none). Returns (raw_entry, raw_exit, real_entry, real_exit, entry_row, exit_row, reason)."""
     o, h, l, c, v = C[0], C[1], C[2], C[3], C[4]
@@ -87,7 +93,7 @@ def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tma
     if ef < 0:
         return nan, nan, nan, nan, -1, -1, 0
     E = float(o[ef])
-    real_e = _r2(E * 1.0005) + _ticks(_vol5(v, ef - 1, qty)) * tick
+    real_e = _r2(E * fb) + tk * _ticks(_vol5(v, ef - 1, qty)) * tick
     stop = E * (1.0 - stop_f) if stop_f >= 0 else -1.0
     tgt = E * (1.0 + tgt_f) if tgt_f >= 0 else 1e18
     lock = -1.0
@@ -102,7 +108,7 @@ def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tma
     while m < end:
         if pend_cstop:                                # close stop seen last minute: sell at this open
             if o[m] == o[m]:
-                real_x = max(_r2(o[m] * 0.999) - 2.0 * _ticks(_vol5(v, m - 1, qty)) * tick, 0.0)
+                real_x = max(_r2(o[m] * fst) - 2.0 * tk * _ticks(_vol5(v, m - 1, qty)) * tick, 0.0)
                 return E, float(o[m]), real_e, real_x, ef, m, 8
         if not (l[m] == l[m]):
             if m == tend:
@@ -113,7 +119,7 @@ def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tma
         if lvl > 0 and l[m] <= lvl:
             px = o[m] if (o[m] == o[m] and o[m] < lvl) else lvl
             rs = 2 if lock >= stop and lock > 0 else 1
-            real_x = max(_r2(px * 0.999) - 2.0 * _ticks(_vol5(v, m - 1, qty)) * tick, 0.0)
+            real_x = max(_r2(px * fst) - 2.0 * tk * _ticks(_vol5(v, m - 1, qty)) * tick, 0.0)
             return E, px, real_e, real_x, ef, m, rs
         if h[m] >= tgt:
             return E, tgt, real_e, tgt, ef, m, 3
@@ -139,11 +145,11 @@ def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tma
             # Known bias (review, 15 Oct): _vol5(v, m, ...) below includes the exit minute's own volume; with m - 1 the
             # passing rule's final net moves +Rs 81 (design -Rs 60). Kept so the committed results reproduce.
             if need < 0 or c[m] < E * (1.0 + need):
-                real_x = max(_r2(c[m] * 0.9995) - _ticks(_vol5(v, m, qty)) * tick, 0.0)
+                real_x = max(_r2(c[m] * fs) - tk * _ticks(_vol5(v, m, qty)) * tick, 0.0)
                 return E, float(c[m]), real_e, real_x, ef, m, 4
         m += 1
     if m == tend and m < end:                         # the time-stop minute had no trade: its last known close
-        real_x = max(_r2(last * 0.9995) - _ticks(_vol5(v, m, qty)) * tick, 0.0)
+        real_x = max(_r2(last * fs) - tk * _ticks(_vol5(v, m, qty)) * tick, 0.0)
         return E, last, real_e, real_x, ef, m, 7
     xr = end
     rs = 6 if (fx >= 0 and fx < sq) else 5
@@ -156,12 +162,13 @@ def simulate(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tma
     if not (px == px):
         px = last
         rs = 7
-    real_x = max(_r2(px * 0.9995) - _ticks(_vol5(v, xr - 1, qty)) * tick, 0.0)
+    real_x = max(_r2(px * fs) - tk * _ticks(_vol5(v, xr - 1, qty)) * tick, 0.0)
     return E, px, real_e, real_x, ef, xr, rs
 
 
 @njit(cache=True)
-def simulate_many(S, ci, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty):
+def simulate_many(S, ci, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty,
+                  fb=1.0005, fs=0.9995, fst=0.999, tk=1.0):
     """S: (ncon, 5, 375) contracts of one day; ci, e, fx: per trade. Returns (n, 4) prices, entry/exit rows, reasons."""
     n = len(ci)
     out = np.full((n, 4), np.nan)
@@ -172,7 +179,7 @@ def simulate_many(S, ci, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, s
         if ci[i] < 0:
             continue
         a, b, c_, d_, r0, r1, r = simulate(S[ci[i]], e[i], sq, fx[i], stop_f, tgt_f, lk_trig, lk_keep, lk_trail,
-                                           steps, tmax, need, cstop, tick, qty)
+                                           steps, tmax, need, cstop, tick, qty, fb, fs, fst, tk)
         out[i, 0], out[i, 1], out[i, 2], out[i, 3] = a, b, c_, d_
         er[i], xr[i], rs[i] = r0, r1, r
     return out, er, xr, rs
@@ -240,7 +247,7 @@ def run_day(und: str, D, sides, strikes, entries, ex: Exits, forced=None):
     sq = sq_row(D, ex)
     res, er, xr, rs = simulate_many(st.S, ci, np.asarray(entries, np.int64), sq, fx, ex.stop, ex.target, ex.lock_trig,
                                     ex.lock_keep, ex.lock_trail, ex.steps_arr(), ex.tmax, ex.need, ex.close_stop,
-                                    K.TICK, qty)
+                                    K.TICK, qty, *SLIP)
     out = []
     ch = charges(und, np.nan_to_num(res[:, 2]), np.nan_to_num(res[:, 3]), qty, D.d) if n else np.zeros(0)
     for i in range(n):
@@ -273,7 +280,7 @@ def twin_totals(und: str, days: dict, plan: list, ex: Exits, n_twins: int, rng, 
         qty = float(K.lot(und, d))
         res, er, xr, rs = simulate_many(st.S, ci, flat.astype(np.int64), sq_row(D, ex), fx, ex.stop, ex.target,
                                         ex.lock_trig, ex.lock_keep, ex.lock_trail, ex.steps_arr(), ex.tmax, ex.need,
-                                        ex.close_stop, K.TICK, qty)
+                                        ex.close_stop, K.TICK, qty, *SLIP)
         ok = rs != R_NOFILL
         rE, rX = np.nan_to_num(res[:, 2]), np.nan_to_num(res[:, 3])
         net = np.where(ok, (rX - rE) * qty - charges(und, rE, rX, qty, d), 0.0)
