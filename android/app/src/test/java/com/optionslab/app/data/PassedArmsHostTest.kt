@@ -1065,6 +1065,7 @@ class PassedArmsHostTest : RobolectricTest() {
         // 16 Oct (R73 review): counted where Boss sees it - the row, Jarvis and the diagnostics - and kept over a restart.
         assertEquals(1, view().stUnjudged)
         assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("Supertrend filter (R73 T7) on for new breaks, 1 not judged today"))
+        assertFalse("said once, not again from its kept line", PassedArmsHost.diagLine().contains("Supertrend not judged"))
         assertTrue(com.optionslab.app.ui.screens.passedStatusLine(DonchianArm.SOURCE, view()).endsWith(" · 1 not judged by Supertrend"))
         val said = runBlocking { PassedArmsHost.talk(com.optionslab.ira.PassedArmsTalk.Topic.DONCHIAN) }
         assertTrue(said, "Today Supertrend could not judge 1 break (no earlier session in), so it was not taken." in said)

@@ -593,7 +593,8 @@ object PassedArmsHost {
                         "${c.count { it.st }} closed on it %,.0f, ${c.count { !it.st }} on the plain rules %,.0f".format(Locale.ENGLISH,
                             c.filter { it.st }.sumOf { it.net ?: 0.0 }, c.filter { !it.st }.sumOf { it.net ?: 0.0 }) else "") +
                     (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
-                v.status.filterKeys { it.startsWith("$s|") }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} $x" } +
+                // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
+                v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} $x" } +
                 if (s == BreadthDonchianArm.SOURCE) " · ${v.comparison()}" else ""
         } + " · ${PassedArms.PASSED}"
     }
