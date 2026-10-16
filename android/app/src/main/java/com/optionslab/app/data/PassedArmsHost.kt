@@ -766,7 +766,8 @@ object PassedArmsHost {
             val ck = "$today|$src|${c.key}"
             val words = "%s %s %s %.4f".format(Locale.ENGLISH, c.setup.key, c.underlying, if (c.side > 0) "call" else "put", sc.score)
             // Why, in words (memory only, from the numbers in hand: no disk, network or settings read here).
-            val because = Solo2.reason(x, m).let { if (it.isEmpty()) "" else " ($it)" }
+            // (Guarded: the words can never stop or change a decision.)
+            val because = runCatching { Solo2.reason(x, m) }.getOrDefault("").let { if (it.isEmpty()) "" else " · $it" }
             if (!sc.score.isFinite() || !m.take(sc.score)) {
                 b.decided += ck; b.scores += "$today|${c.key.replace('|', ':')}|$words: below ${"%.4f".format(Locale.ENGLISH, m.threshold)}, skipped$because"; changed = true
                 continue

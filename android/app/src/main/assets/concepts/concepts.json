@@ -1471,8 +1471,7 @@
    "name": "Zigzag (swing highs and lows)",
    "aka": [
     "zigzag swings",
-    "swing points",
-    "pivots"
+    "swing points"
    ],
    "what": "A line joining the chart's alternating swing highs and swing lows, ignoring the smaller wiggles in between. It turns a price chart into a list of 'the last high, the last low, the high before it, the low before it'.",
    "use": "To see the trend at a glance (higher highs and higher lows = up) and to place stops beyond the last swing.",

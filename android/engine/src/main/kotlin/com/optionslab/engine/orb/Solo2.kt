@@ -365,28 +365,34 @@ object Solo2 {
     // Boss asked Solo to explain itself. These words come from the 29 inputs and the score the model already computed: they
     // never change what Solo 2.0 trades. Pure arithmetic on numbers in hand: no disk, network or blocking (safe on the tick path).
 
-    /** Each of the first 20 inputs in words: what a value above the model's average means, and below it. */
-    private val WORDS = listOf(
-        "moving its way in the last 15 minutes" to "moving against it in the last 15 minutes",
-        "moving its way in the last hour" to "moving against it in the last hour",
-        "the day's move its way" to "the day's move against it",
-        "a gap its way" to "a gap against it",
-        "a wide day so far" to "a narrow day so far",
-        "lots of room left in the day's range" to "little room left in the day's range",
-        "a busy last 30 minutes" to "a quiet last 30 minutes",
-        "a trending day" to "a choppy day",
-        "price beyond the day's average its way" to "price behind the day's average",
-        "a wide last 30 minutes" to "a narrow last 30 minutes",
-        "away from yesterday's close its way" to "away from yesterday's close against it",
-        "beyond the 30-minute opening range its way" to "inside or against the 30-minute opening range",
-        "big daily ranges lately (ATR)" to "small daily ranges lately (ATR)",
-        "late in the day" to "early in the day",
-        "far from expiry" to "close to expiry",
-        "India VIX high" to "India VIX low",
-        "VIX up today" to "VIX down today",
-        "put-call ratio high" to "put-call ratio low",
-        "options dear (ATM IV high)" to "options cheap (ATM IV low)",
-        "puts dearer than calls (skew high)" to "puts not much dearer than calls (skew low)",
+    /**
+     * The side-signed inputs in words: its way (above 0), against it (below 0), or neither. Their direction is read from the
+     * value itself, never from the model's average (review, 15 Oct: a small move its way is still its way).
+     */
+    private val SIGNED_WORDS = mapOf(
+        0 to Triple("moving its way in the last 15 minutes", "moving against it in the last 15 minutes", "flat in the last 15 minutes"),
+        1 to Triple("moving its way in the last hour", "moving against it in the last hour", "flat in the last hour"),
+        2 to Triple("the day's move its way", "the day's move against it", "a flat day so far"),
+        3 to Triple("a gap its way", "a gap against it", "no gap"),
+        8 to Triple("price beyond the day's average its way", "price behind the day's average", "price at the day's average"),
+        10 to Triple("away from yesterday's close its way", "away from yesterday's close against it", "at yesterday's close"),
+    )
+
+    /** The other inputs of the first 20, against the model's average ("usual"): above it, and below it. */
+    private val WORDS = mapOf(
+        4 to ("a wider day than usual so far" to "a narrower day than usual so far"),
+        5 to ("more room than usual left its way in the day's range" to "less room than usual left its way in the day's range"),
+        6 to ("a busier last 30 minutes than usual" to "a quieter last 30 minutes than usual"),
+        7 to ("a more trending day than usual" to "a choppier day than usual"),
+        9 to ("a wider last 30 minutes than usual" to "a narrower last 30 minutes than usual"),
+        12 to ("bigger daily ranges than usual lately (ATR)" to "smaller daily ranges than usual lately (ATR)"),
+        13 to ("later in the day than usual" to "earlier in the day than usual"),
+        14 to ("further from expiry than usual" to "closer to expiry than usual"),
+        15 to ("India VIX higher than usual" to "India VIX lower than usual"),
+        16 to ("VIX rising more than usual today" to "VIX rising less than usual today, or falling"),
+        17 to ("put-call ratio higher than usual" to "put-call ratio lower than usual"),
+        18 to ("options dearer than usual (ATM IV)" to "options cheaper than usual (ATM IV)"),
+        19 to ("puts dearer than calls by more than usual (skew)" to "puts dearer than calls by less than usual, or cheaper (skew)"),
     )
 
     /**
@@ -403,8 +409,18 @@ object Solo2 {
 
     /** Input [i] at [v] in words; null for a missing value or a one-hot that is off (neither says anything about this candidate). */
     private fun word(i: Int, v: Double, mean: Double): String? = when {
-        v.isNaN() -> null
-        i < WORDS.size -> if (v >= mean) WORDS[i].first else WORDS[i].second
+        v.isNaN() || i >= FEATURES.size -> null
+        // The 30-minute opening range: beyond it its way (1), against it (-1), or inside (0).
+        FEATURES[i] == "or30_state" -> if (v > 0.5) "beyond the 30-minute opening range its way" else if (v < -0.5) "beyond the 30-minute opening range against it"
+            else "inside the 30-minute opening range"
+        i in SIGNED_WORDS -> SIGNED_WORDS.getValue(i).let { (way, against, flat) ->
+            when {
+                v > 0 -> way + if (v >= mean) " (more than usual)" else " (less than usual)"
+                v < 0 -> against
+                else -> flat
+            }
+        }
+        i in WORDS -> WORDS.getValue(i).let { (hi, lo) -> if (v >= mean) hi else lo }
         FEATURES[i] == "side" -> if (v > 0) "being a call" else "being a put"
         v != 1.0 -> null
         FEATURES[i].startsWith("idx_") -> "the index (" + FEATURES[i].removePrefix("idx_") + ")"
@@ -413,8 +429,8 @@ object Solo2 {
 
     /**
      * Why the score came out as it did, in one short line: the [k] inputs that raised it most and the [k] that lowered it most,
-     * e.g. "raised by India VIX high and the setup (S3), lowered by options dear (ATM IV high) and early in the day". Empty when nothing can
-     * be said (the inputs could not be scored).
+     * e.g. "raised by India VIX higher than usual and the setup (S3), lowered by options dearer than usual (ATM IV) and earlier
+     * in the day than usual". Empty when nothing can be said (the inputs could not be scored).
      */
     fun reason(values: DoubleArray?, model: Model, k: Int = 2): String {
         if (values == null || values.size != model.features.size) return ""

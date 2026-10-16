@@ -123,7 +123,7 @@ VERDICTS = {
 R62B_DOC = "research/HUNT_R62B_MSB_ORDER_BLOCK.md"
 R62B_NEW = [
     {
-        "id": "zigzag", "name": "Zigzag (swing highs and lows)", "aka": ["zigzag swings", "swing points", "pivots"],
+        "id": "zigzag", "name": "Zigzag (swing highs and lows)", "aka": ["zigzag swings", "swing points"],
         "what": "A line joining the chart's alternating swing highs and swing lows, ignoring the smaller wiggles in "
                 "between. It turns a price chart into a list of 'the last high, the last low, the high before it, "
                 "the low before it'.",

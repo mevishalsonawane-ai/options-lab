@@ -53,10 +53,12 @@ class ConceptAskRoutingTest {
     }
 
     @Test fun withTheBookLetGoTheGlossaryStillAnswersAndTheBookIsReadAgain() {
+        compose.setContent { IraAlgoTheme("light") { Text("Jarvis") } }
         // The hub needs the app's context to read the book again (the tests' app does not start it).
         IraHub.init(ApplicationProvider.getApplicationContext()); IraHub.awaitLoadedBlocking()
+        // The start-up's own read finishes first, so the read after the drop below can only be the question's.
+        compose.until(30_000, "the start-up's read") { ConceptLibrary.cached() != null }
         ConceptLibrary.drop()
-        compose.setContent { IraAlgoTheme("light") { Text("Jarvis") } }
         IraHub.ask("what is theta")
         compose.until(30_000, "the glossary answer") { lastReply()?.startsWith("Theta is how much") == true }
         compose.until(30_000, "the book read again") { ConceptLibrary.cached() != null }

@@ -292,13 +292,13 @@ class Solo2Test {
         v[Solo2.FEATURES.indexOf("vix")] = 25.0 // VIX is A2's biggest positive weight
         v[Solo2.FEATURES.indexOf("iv_atm")] = 30.0 // ATM IV its biggest negative one
         val r = Solo2.reason(v, model)
-        assertTrue(r.startsWith("raised by India VIX high"), r)
-        assertTrue("lowered by options dear (ATM IV high)" in r, r)
+        assertTrue(r.startsWith("raised by India VIX higher than usual"), r)
+        assertTrue("lowered by options dearer than usual (ATM IV)" in r, r)
         // The opposite readings give the opposite words.
         v[Solo2.FEATURES.indexOf("vix")] = 9.0; v[Solo2.FEATURES.indexOf("iv_atm")] = 9.0
         val r2 = Solo2.reason(v, model)
-        assertTrue("raised by options cheap (ATM IV low)" in r2, r2)
-        assertTrue("lowered by India VIX low" in r2, r2)
+        assertTrue("raised by options cheaper than usual (ATM IV)" in r2, r2)
+        assertTrue("lowered by India VIX lower than usual" in r2, r2)
         // At most k on each side.
         assertEquals(1, Solo2.reason(v, model, k = 1).substringAfter("raised by ").substringBefore(", lowered").split(" and ").size)
     }
@@ -333,5 +333,36 @@ class Solo2Test {
             assertTrue(hi != lo, "input ${Solo2.FEATURES[i]} reads the same both ways")
         }
         assertTrue("traps" in Solo2.CONTEXT_NOTE && "not part of any decision" in Solo2.CONTEXT_NOTE)
+    }
+
+    /** Review (15 Oct): a side-signed input's direction comes from its own sign, never from the model's (positive) average. */
+    @Test fun aSmallMoveItsWayIsStillItsWay() {
+        val i = Solo2.FEATURES.indexOf("ret_15m")
+        assertTrue(model.mean[i] > 0.1)
+        val v = averageCandidate()
+        fun said(x: Double): String { v[i] = x; return Solo2.reason(v, model, k = 29).also { v[i] = model.mean[i] } }
+        assertTrue("moving its way in the last 15 minutes (less than usual)" in said(0.05), said(0.05))
+        assertFalse("against it in the last 15 minutes" in said(0.05))
+        assertTrue("moving its way in the last 15 minutes (more than usual)" in said(1.0))
+        assertTrue("moving against it in the last 15 minutes" in said(-0.2))
+        assertTrue("flat in the last 15 minutes" in said(0.0))
+        val g = Solo2.FEATURES.indexOf("gap_pct")
+        v[g] = 0.05
+        assertTrue("a gap its way (less than usual)" in Solo2.reason(v, model, k = 29))
+        v[g] = model.mean[g]
+        val o = Solo2.FEATURES.indexOf("or30_state")
+        for ((x, w) in listOf(1.0 to "beyond the 30-minute opening range its way", -1.0 to "beyond the 30-minute opening range against it",
+            0.0 to "inside the 30-minute opening range")) {
+            v[o] = x
+            assertTrue(w in Solo2.reason(v, model, k = 29), "$x")
+        }
+    }
+
+    @Test fun aModelWithMoreInputsThanSolosNamesOnlyItsOwn() {
+        // A model of another shape never throws in the words (the decision must never depend on them).
+        val n = 31
+        val m = Solo2.Model(List(n) { "f$it" }, 0.5, ">=", DoubleArray(n), DoubleArray(n), DoubleArray(n) { 1.0 }, DoubleArray(n) { 1.0 }, 0.0)
+        val r = Solo2.reason(DoubleArray(n) { 1.0 }, m, k = n)
+        assertTrue(r.startsWith("raised by "), r)
     }
 }

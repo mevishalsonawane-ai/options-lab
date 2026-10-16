@@ -162,4 +162,29 @@ class ConceptsTest {
         assertEquals(" gamma exposure ", Concepts.plain("Gamma-exposure!"))
         assertEquals("gex", Concepts.find(book, "tell me about gamma exposure and gamma")?.id)
     }
+
+    /** Review (15 Oct): fragments of a name never take other questions. */
+    @Test fun noFragmentOfANameTakesAQuestion() {
+        for (q in listOf("what does high pcr mean", "what does high iv mean", "what does a high vix mean", "explain why the order failed",
+            "what does the term iv mean", "what is premium"))
+            assertTrue(Concepts.answer(book, q).let { it == null || !it.startsWith("Volume profile") && !it.startsWith("Fake") && !it.startsWith("IV term") && !it.startsWith("Futures basis") }, q)
+        assertNull(Concepts.researchNote(book, "what is premium"))
+        for (c in book.concepts) for (p in Concepts.phrases(c)) assertTrue(p !in setOf("high", "failed", "term", "premium", "on volume", "on oi"), "${c.id}: $p")
+    }
+
+    /** Review (15 Oct): "explain" or "tell me about" with today, a number or a figure still wants the figure now. */
+    @Test fun explainWithTodayStillWantsTheFigure() {
+        for (q in listOf("explain the vix today", "tell me about the news", "tell me about today's events", "explain the skew now",
+            "tell me about the order flow today", "what are the pivots", "what are pivots", "what is the market structure", "what's the cvd"))
+            assertNull(Concepts.answer(book, q), q)
+        // A meaning asked in so many words still counts.
+        assertTrue(assertNotNull(Concepts.answer(book, "what does order flow mean")).startsWith("Order flow:"))
+        assertTrue(assertNotNull(Concepts.answer(book, "explain the bull trap")).startsWith("Bull trap"))
+    }
+
+    @Test fun questionWordsAreNeverCorrected() {
+        // "tell" is one letter off "sell" (in "buy / sell volume"): never read as it.
+        assertNull(Concepts.find(book, "tell"))
+        assertEquals("traps", Concepts.find(book, "tell me about the bull trap")?.id)
+    }
 }

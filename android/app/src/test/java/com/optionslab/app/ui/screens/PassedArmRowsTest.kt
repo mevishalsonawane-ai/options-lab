@@ -146,7 +146,7 @@ class PassedArmRowsTest {
 
     /** 15 Oct (Boss: Solo explains itself): today's take / skip reasons and the context-only concepts are in Solo's dialog, not on its row. */
     @Test fun solosDialogSaysWhyItTookOrSkippedAndWhatIsContextOnly() {
-        val skip = "S3 NIFTY call 0.4100: below 0.4871, skipped (raised by India VIX high, lowered by options dear (ATM IV high))"
+        val skip = "S3 NIFTY call 0.4100: below 0.4871, skipped · raised by India VIX higher than usual, lowered by options dearer than usual (ATM IV)"
         show(PassedArmsHost.View(armed = mapOf(Solo2.SOURCE to true), scores = listOf(skip)))
         compose.waitForIdle()
         compose.onNodeWithText(keepNumbersWhole("• $skip."), substring = true).assertDoesNotExist()

@@ -287,7 +287,7 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(bought.size <= 1)
         if (bought.isNotEmpty()) assertTrue(v.scores.any { "bought" in it })
         // 15 Oct: each decision says why in words (what raised and lowered its score most), from the inputs it scored.
-        assertTrue(v.scores.toString(), v.scores.all { "(raised by " in it || "(lowered by " in it })
+        assertTrue(v.scores.toString(), v.scores.all { " · raised by " in it || " · lowered by " in it })
         tick(LocalTime.of(9, 21))
         assertEquals(v.scores.size, PassedArmsHost.view.value.scores.size)
         assertTrue(PassedArmsHost.view.value.open.count { it.arm == Solo2.SOURCE } <= 1)

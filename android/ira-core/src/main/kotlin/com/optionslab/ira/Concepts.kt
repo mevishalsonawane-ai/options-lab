@@ -75,17 +75,39 @@ object Concepts {
         "atr" to listOf("average true range", "atr"),
         "vwap" to listOf("vwap"),
         "theta" to listOf("theta", "time decay"),
+        "pcr" to listOf("put call ratio"),
+        "iv_rank" to listOf("iv rank", "iv percentile"),
+        "volume_profile" to listOf("volume profile"),
+        "value_area" to listOf("value area", "market profile"),
+        "participants" to listOf("participant wise oi", "fii dii flows"),
+        "basis" to listOf("futures basis"),
+        "events" to listOf("event days", "event day"),
+        "news" to listOf("news tone"),
+        "orb" to listOf("opening range"),
+        "ofi" to listOf("order flow imbalance"),
+        "depth_imbalance" to listOf("depth imbalance", "order book imbalance"),
+        "dealers" to listOf("dealer positioning"),
+        "regime" to listOf("trend vs range", "regimes"),
+        "absorption" to listOf("absorption"),
     )
+
+    /** Question words never "corrected" into a concept's word ("tell" is not "sell"). */
+    private val ASKING = setOf("tell", "what", "whats", "does", "mean", "means", "explain", "about", "define", "matlab", "kya", "hota", "hoti",
+        "hain", "samjhao", "jarvis", "boss", "please", "concept", "meaning")
 
     /** Lower case, letters and digits only, single-spaced, with a space at each end (so " word " finds whole words). */
     internal fun plain(s: String): String = " " + s.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim() + " "
 
-    /** Every phrase that names [c]: its name (and the parts of it), what is in its brackets, its other names, its id. */
+    /**
+     * Every phrase that names [c]: its full name, the name without its brackets, a one-word short form in brackets ("OI",
+     * "GEX"), its other names and [EXTRA]. Never a fragment of a name: "high", "term" or "premium" alone would take other
+     * questions ("what does high pcr mean", review 15 Oct).
+     */
     internal fun phrases(c: Concept): List<String> {
-        val inBrackets = Regex("\\(([^)]*)\\)").findAll(c.name).map { it.groupValues[1] }.toList()
+        // A short form is one capitalised word in brackets ("OI", "GEX", "ChoCH"), never "(failed)" in "Fake (failed) breakout".
+        val short = Regex("\\(([A-Z][A-Za-z]*)\\)").findAll(c.name).map { plain(it.groupValues[1]).trim() }.toList()
         val base = c.name.replace(Regex("\\([^)]*\\)"), " ")
-        val parts = base.split(Regex(" and |:|,| / ")).filter { it.isNotBlank() }
-        return (listOf(c.name, base, c.id.replace('_', ' ')) + parts + inBrackets + c.aka + EXTRA[c.id].orEmpty())
+        return (listOf(c.name, base) + short + c.aka + EXTRA[c.id].orEmpty())
             .map { plain(it).trim() }.filter { it.length >= 2 }.distinct()
     }
 
@@ -96,7 +118,7 @@ object Concepts {
         // (before matching, so "gamma exposre" is gamma exposure, not gamma). Words already known are never touched.
         val vocab = book.vocab
         val fixed = plain(text).trim().split(' ').joinToString(" ") { w ->
-            if (w.length < 4 || w in vocab) w
+            if (w.length < 4 || w in vocab || w in ASKING) w
             else vocab.filter { kotlin.math.abs(it.length - w.length) <= 1 && Spelling.distance(w, it) <= (if (it.length >= 8) 2 else 1) }
                 .singleOrNull() ?: w
         }
@@ -108,7 +130,10 @@ object Concepts {
 
     // ---- is a concept's meaning asked? -----------------------------------------------------------------------------------
 
-    private val MEANING = Regex(" (mean|means|meaning|explain|define|definition|what do you mean by|in simple words|concept|tell me about|samjhao|samjha do|samjhaiye) ")
+    /** A meaning asked in so many words: only these override "now", a number, an index named or a figure (as [Glossary]'s strict). */
+    private val STRICT = Regex(" (mean|means|meaning|define|definition|what do you mean by|in simple words) ")
+    /** Asking about a concept, but "explain the vix today" or "tell me about the news" may still want today's figure. */
+    private val ASKING_ABOUT = Regex(" (explain|concept|tell me about|samjhao|samjha do|samjhaiye) ")
     private val WHATIS = Regex("^ (what is|what s|whats|what are|what does|what do|how does|how do) ")
 
     /**
@@ -116,7 +141,9 @@ object Concepts {
      * opening range"): their meaning only when it is asked outright ("what does PCR mean", "PCR ka matlab"), as [Glossary] does.
      */
     private val FIGURES = setOf("oi", "buildup", "pcr", "max_pain", "oi_walls", "iv", "iv_rank", "skew", "term", "vix", "vwap", "atr", "orb",
-        "value_area", "volume_profile", "participants", "basis", "rollover", "events", "news", "regime")
+        "value_area", "volume_profile", "participants", "basis", "rollover", "events", "news", "regime",
+        // (Review, 15 Oct: "what is the market structure", "what's the cvd", "what are the swings" want today's reading.)
+        "zigzag", "bos_choch", "delta_cvd")
 
     /**
      * Concepts whose word [Glossary] already explains ("what is theta", "what is a call wall", "what's the opening range"): the
@@ -132,8 +159,8 @@ object Concepts {
         val own = rx("\\b(mera|meri|mere|apna|apni|apne|hamara|hamari)\\b").containsMatchIn(low)
         val text = (if (own) null else Glossary.HINDI_MEANING.firstOrNull { it.first.matches(low) }?.let { (r, to) -> r.replace(low, to) }) ?: said
         val t = plain(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " ")
-        val meaning = MEANING.containsMatchIn(t) || t.startsWith(" what does ") && t.endsWith(" mean ")
-        if (!meaning && !WHATIS.containsMatchIn(t)) return null
+        val meaning = STRICT.containsMatchIn(t)
+        if (!meaning && !ASKING_ABOUT.containsMatchIn(t) && !WHATIS.containsMatchIn(t)) return null
         if (rx(" (my|our|mine) ").containsMatchIn(t) || own) return null
         val named = Market.mentioned(text).any { it != Market.VIX }
         if (named && !meaning) return null
