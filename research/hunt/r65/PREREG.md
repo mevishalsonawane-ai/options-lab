@@ -41,7 +41,7 @@ The trail is added on top of everything else the arm has: each arm keeps its **o
 and own index exits** (S1). An arm's own profit lock (OOV / S3 / S4: +10% once +40%) is kept too; it never binds,
 because every trail step at +40% is at least +30%.
 
-## 3. Variants (fixed here; 8 per arm, 24 tests)
+## 3. Variants (fixed here; 10 per arm, 30 tests)
 
 | id | stop | profit lock | fixed target | time exit / square-off |
 |---|---|---|---|---|
@@ -53,6 +53,14 @@ because every trail step at +40% is at least +30%.
 | **S75n** | own | step trail g = 7.5 | none | own |
 | **S10** | own | step trail g = 10 (breakeven + charges at +10%) | own | own |
 | **S10n** | own | step trail g = 10 | none | own |
+| **T5** Amendment 1: a -5% stop moved up | **-5%** (replaces the arm's own premium stop) | step trail g = 5 started at +5%: breakeven + charges at +5%, +5% at +10%, +10% at +15%, ... | own | own |
+| **T5n** | -5% | as T5 | none | own |
+
+**Amendment 1 (16 Oct 2026, still before any R65 result was computed).** Boss, mid-task: "Also check if we could move
+5% stop loss u" (the message was cut off; read as "a 5% stop loss moved up"). R65 reads it as: the stop starts **5%
+below the fill** and is moved up in the same 5-point steps, always 5 points below the best gain (breakeven + charges at
++5%, then as S5). T5 / T5n replace the arm's own premium stop with -5% (S1 gets the -5% premium stop on top of its index
+exits); everything else as S5 / S5n. Plain counterparts: T5 against B0, T5n against N0. Boss can correct the reading.
 
 For OOV (no fixed target) S5 = S5n, S75 = S75n, S10 = S10n by construction; they are still run and counted.
 
@@ -88,14 +96,15 @@ unmatched trades counted and reported):
 ## 6. Gates (as R51 / R64, never relaxed) and the decision
 
 Per variant x arm, final period: net > 0; random-ENTRY twin p < 0.05 (R64's twins, 500, seed 65); Benjamini-Hochberg
-q <= 0.10 across **all 24 tests (8 variants x 3 arms)**; >= 40 trades; the top 5 trades < 100% of the net; net > 0 in
+q <= 0.10 across **all 30 tests (10 variants x 3 arms)**; >= 40 trades; the top 5 trades < 100% of the net; net > 0 in
 design and in the walk-forward sum.
 
 **Random-EXIT twins** (the trail's timing against luck), final period, for each trail variant: take its plain
 counterpart's trades; pick at random as many trades as the trail closed (among plain trades held at least 2 minutes),
 and exit each at the open of a uniformly random minute strictly after its fill row and up to its plain exit row (the
 plain stops, targets and time exits still act before that minute); 500 sets, seed 65; p = (1 + #sets with total net >=
-the variant's total net) / 501. BH across the 18 trail tests (6 variants x 3 arms).
+the variant's total net) / 501. BH across the 24 trail tests (8 variants x 3 arms). For T5 / T5n the random-exit twin keeps the plain
+counterpart's own stop, so it tests the -5% stop and the trail together against random early exits.
 
 **Decision (per arm):** a trail variant is recommended only if it passes every gate above AND its exit-twin q <= 0.10
 AND its net is at least **both** B0's and A4's in design, walk-forward and final. Otherwise the arm keeps what it has
