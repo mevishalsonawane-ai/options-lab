@@ -1,0 +1,39 @@
+id: r72-c2-rt
+title: 'R72 C2 Laggard catch-up (re-tune): cross-index signal, 1-ITM'
+family: patterns-indicators
+date: '2026-10-16'
+doc: research/HUNT_R72_CROSS_INDEX.md
+hypothesis: 'Boss (16 Oct, "any more strategies/pattern", chose cross-index signals): the index that has not broken while
+  at least 3 of the other 4 broke within K bars (catch-up), read from the five indices together, buying the 1-ITM option and
+  taken as Donchian takes its trades, earns after real costs and beats random entries on the same days. Gates as R51 (BH over
+  the 12 R72 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R72 (16 Oct); the window was already read for other ideas by R51-R71 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the five indices'' 5-min bars read together (underlying); no option-chain data, no option chart'
+model_or_rule: 'Laggard catch-up: the index that has not broken while at least 3 of the other 4 broke within K bars (catch-up);
+  setting K=3, XL (re-tune (2 parameters x 3 exits; walk-forward picks 6|XL, 3|XL, 3|XL, 3|XI; final pick = best design net))'
+settings: research/hunt/r72/r72rules.py RULES, research/hunt/r71/r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r72/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design: 1716 trades on 323 days, win 39%, net -Rs 243,309 (-Rs 142/trade), avg win Rs 1,570 / loss -Rs 1,246,
+    worst day -Rs 17,309, max DD Rs 266,792, green days 36%. Walk-forward net -Rs 103,842. Final: 613 trades on 125 days,
+    win 40%, net -Rs 100,746 (-Rs 164/trade), avg win Rs 1,441 / loss -Rs 1,240, worst day -Rs 18,686, max DD Rs 125,695,
+    green days 41%, 95.2 trades a month; random-entry twin p 0.8942 (twin mean -Rs 43,699), BH q 0.9721. Verdict: FAIL (final
+    net <= 0, twin p >= 0.05, BH q > 0.10, top 5 >= net, design net <= 0, walk-forward net <= 0). Donchian XB on the same
+    final days: Rs 55,439 on 1787 trades; daily correlation 0.28, same trade as Donchian 0.2235.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the five indices); research only, nothing changes paper or live.
