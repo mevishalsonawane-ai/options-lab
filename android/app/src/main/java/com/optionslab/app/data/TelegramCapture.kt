@@ -99,7 +99,16 @@ object TelegramCapture {
 
     private val _view = MutableStateFlow(View())
     val view: StateFlow<View> = _view
-    private fun upd(f: (View) -> View) { synchronized(this) { _view.value = f(_view.value) } }
+    private fun upd(f: (View) -> View) { synchronized(this) { _view.value = f(_view.value); testViewWrites?.invoke(_view.value) } }
+    /**
+     * 16 Oct: a write from session [s]'s reader (or its paced jobs), made only while [s] is still the open session - the check
+     * and the write under the same lock as [open] and [close], so a closing session's words never land over a newer login's.
+     */
+    private fun updFor(s: TdSession, f: (View) -> View) { synchronized(this) { if (session === s) upd(f) } }
+    /** TEST SEAM: every view written, in order (under the lock). */
+    @Volatile internal var testViewWrites: ((View) -> Unit)? = null
+    /** TEST SEAM: called in [open] right after the reader thread started, while [open] still holds the lock. */
+    @Volatile internal var testReaderStarted: (() -> Unit)? = null
 
     @Volatile private var app: Context? = null
     @Volatile private var session: TdSession? = null
@@ -240,6 +249,7 @@ object TelegramCapture {
         // the reader had just reached into the view a moment before that step's words (the phone step under "Starting…").
         upd { it.copy(running = true, auth = s.auth, available = true) }
         loop = Thread({ loop(t, s) }, "telegram-reader").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+        testReaderStarted?.invoke()
         return true
     }
 
@@ -258,7 +268,7 @@ object TelegramCapture {
             // 16 Oct: still "starting" well after the tap - the dialog says what to check, once, with "Try again".
             if (alive && s.auth == TdSession.Auth.STARTING && now - startedAt > stuckMs && !_view.value.stuck)
                 // TDLib's own error since the start (bad keys, say) stays in front: it is the likelier reason.
-                upd { it.copy(stuck = true, said = listOfNotNull(it.said.takeIf { lastErrorAt >= startedAt }, STUCK_WORDS).joinToString(" ")) }
+                updFor(s) { it.copy(stuck = true, said = listOfNotNull(it.said.takeIf { lastErrorAt >= startedAt }, STUCK_WORDS).joinToString(" ")) }
             if (alive && capturing && s.auth == TdSession.Auth.READY && now - lastPoll >= POLL_MS && now >= pausedUntil) {
                 lastPoll = System.currentTimeMillis()
                 for (id in s.selected) runCatching { s.poll(id) }
@@ -294,10 +304,10 @@ object TelegramCapture {
                     TdSession.Auth.UNSUPPORTED -> "This account needs a step only the Telegram app can do (sign up or e-mail): finish it there, then try again."
                     else -> null
                 }
-                upd { it.copy(auth = e.auth, hint = s.hint, stuck = if (e.auth == TdSession.Auth.STARTING) it.stuck else false, said = next ?: it.said) }
+                updFor(s) { it.copy(auth = e.auth, hint = s.hint, stuck = if (e.auth == TdSession.Auth.STARTING) it.stuck else false, said = next ?: it.said) }
                 if (e.auth == TdSession.Auth.READY) {
                     if (!SecurePrefs.getBoolean(K_LOGGED_IN, false)) SecurePrefs.put(K_LOGGED_IN, true)
-                    upd { it.copy(loggedIn = true) }
+                    updFor(s) { it.copy(loggedIn = true) }
                     s.loadChats()
                     followChannels(s)
                 }
@@ -315,11 +325,11 @@ object TelegramCapture {
                     if (id != null && from != null && retries++ < 5) scope.launch {
                         delay(maxOf(PACE_MS * 4, pausedUntil - System.currentTimeMillis()))
                         if (running && session === s) runCatching { s.history(id, from) }
-                    } else { SignalTesterHost.dropHistory(); upd { it.copy(fetching = null) } }
+                    } else { SignalTesterHost.dropHistory(); updFor(s) { it.copy(fetching = null) } }
                 }
                 // TDLib's words only (never a message's text), in plain words: a wrong code, bad keys, a flood wait.
                 lastErrorAt = System.currentTimeMillis()
-                upd { it.copy(said = TdSession.errorWords(e.message)) }
+                updFor(s) { it.copy(said = TdSession.errorWords(e.message)) }
             }
         }
     }
@@ -330,16 +340,16 @@ object TelegramCapture {
 
     private fun history(s: TdSession, e: TdSession.Event.History) {
         when {
-            e.check -> { SignalTesterHost.checkCounts(e.chat.title, e.msgs); upd { it.copy(said = "Checked ${e.chat.title}.") } }
+            e.check -> { SignalTesterHost.checkCounts(e.chat.title, e.msgs); updFor(s) { it.copy(said = "Checked ${e.chat.title}.") } }
             e.poll -> for (m in e.msgs) SignalTesterHost.telegram(e.chat.id, m, history = false)
             else -> {
                 val next = e.next
                 SignalTesterHost.telegramHistory(e.chat.id, e.msgs, done = next == null)
                 if (next == null) {
-                    upd { it.copy(fetching = null, said = "History of ${e.chat.title} read back to ${TdSession.HISTORY_FROM}.") }
+                    updFor(s) { it.copy(fetching = null, said = "History of ${e.chat.title} read back to ${TdSession.HISTORY_FROM}.") }
                 } else {
                     retries = 0
-                    upd { it.copy(fetching = "history to ${e.msgs.firstOrNull()?.at?.toLocalDate() ?: "…"}") }
+                    updFor(s) { it.copy(fetching = "history to ${e.msgs.firstOrNull()?.at?.toLocalDate() ?: "…"}") }
                     jobUntil = System.currentTimeMillis() + JOB_MS
                     // Paced: one page at a time, longer when Telegram asked to wait.
                     scope.launch {
@@ -403,20 +413,28 @@ object TelegramCapture {
     fun startLogin(prefix: String = ""): String {
         if (!available()) return tell(prefix + (_view.value.why?.let { "$it." } ?: "Telegram login is not in this build."))
         if (params() == null) return tell(prefix + "Enter your api_id and api_hash first.")
-        val s = session
-        // At a step Boss can take (or logged in): said where it is. Any other state (a step only the Telegram app can do, say):
-        // closed and started afresh, so a tap after finishing it there tries again.
-        if (running && s != null && s.auth in AT_STEP) {
-            jobUntil = System.currentTimeMillis() + JOB_MS
-            return tell(prefix + "Telegram is " + s.auth.words + ".")
-        }
-        if (running && s != null && s.auth != TdSession.Auth.STARTING && s.auth != TdSession.Auth.OFF) return restart(prefix)
-        val r = tell(prefix + "Starting Telegram…")
-        if (openForJob()) return r
-        return tell(prefix + when {
-            loop?.isAlive == true -> "Telegram is still closing its last session: try again in a few seconds."
-            else -> "Telegram could not start" + (failed?.let { " ($it)" } ?: "") + "."
-        })
+        // 16 Oct: looked at, said and opened under the reader's lock, so a session a capture round opened meanwhile cannot say its
+        // step in between and have "Starting Telegram…" land over it (the reader's words wait for this lock).
+        return synchronized(this) {
+            val s = session
+            when {
+                // At a step Boss can take (or logged in): said where it is.
+                running && s != null && s.auth in AT_STEP -> {
+                    jobUntil = System.currentTimeMillis() + JOB_MS
+                    tell(prefix + "Telegram is " + s.auth.words + ".")
+                }
+                // Any other state (a step only the Telegram app can do, say): closed and started afresh (below, off the lock), so a
+                // tap after finishing it there tries again.
+                running && s != null && s.auth != TdSession.Auth.STARTING && s.auth != TdSession.Auth.OFF -> null
+                else -> {
+                    val r = tell(prefix + "Starting Telegram…")
+                    if (openForJob()) r else tell(prefix + when {
+                        loop?.isAlive == true -> "Telegram is still closing its last session: try again in a few seconds."
+                        else -> "Telegram could not start" + (failed?.let { " ($it)" } ?: "") + "."
+                    })
+                }
+            }
+        } ?: restart(prefix)
     }
 
     private val AT_STEP = setOf(TdSession.Auth.NEED_PHONE, TdSession.Auth.NEED_CODE, TdSession.Auth.NEED_PASSWORD, TdSession.Auth.READY)
@@ -466,7 +484,7 @@ object TelegramCapture {
                 delay(1_000)
                 if (session !== s) return@launch
                 val now = runCatching { s.channels() }.getOrNull() ?: return@repeat
-                if (now != _view.value.channels) upd { it.copy(channels = now) }
+                if (now != _view.value.channels) updFor(s) { it.copy(channels = now) }
             }
         }
     }
@@ -577,8 +595,11 @@ object TelegramCapture {
     internal fun resetForTest() {
         runCatching { close() }
         loop?.join(2_000)
-        session = null; transport = null; loop = null; running = false; jobUntil = 0L; lastPoll = 0L; pausedUntil = 0L; capturing = false
-        retries = 0; loggingOut = false; startedAt = 0L; lastErrorAt = 0L; failed = null; stuckMs = STUCK_MS
-        loaded = null; testTransport = null; _view.value = View()
+        // Under the reader's lock: a reader still alive after the join sees the session gone before it could write over the reset.
+        synchronized(this) {
+            session = null; transport = null; loop = null; running = false; jobUntil = 0L; lastPoll = 0L; pausedUntil = 0L; capturing = false
+            retries = 0; loggingOut = false; startedAt = 0L; lastErrorAt = 0L; failed = null; stuckMs = STUCK_MS
+            loaded = null; testTransport = null; testViewWrites = null; testReaderStarted = null; _view.value = View()
+        }
     }
 }
