@@ -48,14 +48,25 @@ object SessionCoverage {
      */
     const val GRACE_MS = 2 * 60_000L
 
-    /** When a gap was first seen; [report] is true only once it has lasted [graceMs]. Thread-safe; memory only. */
-    class GapTimer(private val graceMs: Long = GRACE_MS) {
-        private var since = 0L
+    /** A new gap within this long of the last one is told at once: a watch that keeps dying is not hidden by the grace. */
+    const val REPEAT_MS = 30 * 60_000L
 
-        /** [gap] seen at [now]: true when it was first seen at least [graceMs] ago (no gap clears it). */
+    /**
+     * When a gap was first seen; [report] is true once it has lasted [graceMs], or at once when it began within [repeatMs] of
+     * the previous gap's start (the watch keeps ending and being brought back). Thread-safe; memory only.
+     */
+    class GapTimer(private val graceMs: Long = GRACE_MS, private val repeatMs: Long = REPEAT_MS) {
+        private var since = 0L
+        private var lastStart = 0L
+
+        /** [gap] seen at [now]: true when it was first seen at least [graceMs] ago, or it is a repeat (no gap clears it). */
         @Synchronized fun report(gap: Boolean, now: Long): Boolean {
             if (!gap) { since = 0L; return false }
-            if (since == 0L || now < since) { since = now; return false }
+            if (since == 0L || now < since) {
+                val repeat = lastStart > 0L && now >= lastStart && now - lastStart <= repeatMs
+                since = now; lastStart = now
+                return repeat
+            }
             return now - since >= graceMs
         }
 

@@ -125,16 +125,30 @@ class MissedChecksTest {
         assertFalse(t.report(false, at + 20_000))
         assertFalse(t.pending())
         // A real gap: still there when the grace is over - told (and every look after, while it lasts).
-        assertFalse(t.report(true, at + 60_000))
-        assertFalse(t.report(true, at + 60_000 + SessionCoverage.GRACE_MS - 1))
-        assertTrue(t.report(true, at + 60_000 + SessionCoverage.GRACE_MS))
-        assertTrue(t.report(true, at + 60_000 + SessionCoverage.GRACE_MS + 300_000))
+        val r = SessionCoverage.GapTimer()
+        assertFalse(r.report(true, at))
+        assertFalse(r.report(true, at + SessionCoverage.GRACE_MS - 1))
+        assertTrue(r.report(true, at + SessionCoverage.GRACE_MS))
+        assertTrue(r.report(true, at + SessionCoverage.GRACE_MS + 300_000))
         // A clock set back never makes an old gap look new and told at once: its grace starts again.
         val c = SessionCoverage.GapTimer(graceMs = 1_000)
         assertFalse(c.report(true, 5_000))
         assertFalse(c.report(true, 1_000))
         assertTrue(c.report(true, 2_000))
         assertTrue(SessionCoverage.GRACE_MS >= 60_000, "longer than a restart, which took about 16 s")
+    }
+
+    /** Review, 16 Oct: a watch that keeps dying and is brought back within the grace each time is still told. */
+    @Test fun aGapThatKeepsComingBackIsToldAtOnce() {
+        val t = SessionCoverage.GapTimer()
+        val at = 1_000_000L
+        assertFalse(t.report(true, at))
+        assertFalse(t.report(false, at + 20_000))
+        // The watch ended again 5 minutes later: within 30 minutes of the last gap - told at once.
+        assertTrue(t.report(true, at + 5 * 60_000L))
+        assertFalse(t.report(false, at + 5 * 60_000L + 20_000))
+        // Long after the last one: a fresh gap waits for its grace again.
+        assertFalse(t.report(true, at + 5 * 60_000L + SessionCoverage.REPEAT_MS + 1))
     }
 
     // ---- the policy check ----

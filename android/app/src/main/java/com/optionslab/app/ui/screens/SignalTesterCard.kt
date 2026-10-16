@@ -631,7 +631,8 @@ internal fun TelegramDialog(tv: TelegramCapture.View, v: SignalTesterHost.View, 
         val rows = telegramRows(tv.channels, selected)
         val seen = rows.values.map { t -> v.seen.firstOrNull { SignalTesterHost.norm(it.title) == SignalTesterHost.norm(t) && it.stats != null }
             ?: SignalTesterHost.Seen(t, null, SignalTesterHost.TELEGRAM) }
-        ChatPickerDialog(seen, selected.values.toList(), onCheck = { title -> rows.entries.firstOrNull { it.value == title }?.let { a.check(it.key) } },
+        // Ticked by the row's title (a renamed channel's new one), so a selected channel is never shown unticked and dropped.
+        ChatPickerDialog(seen, rows.filterKeys { it in selected }.values.toList(), onCheck = { title -> rows.entries.firstOrNull { it.value == title }?.let { a.check(it.key) } },
             onOk = { chosen -> picking = false; val m = telegramChosen(rows, chosen); if (m == null) a.notListed() else a.select(m) },
             empty = "Your channel list is still coming in from Telegram (a few seconds). Wait for it here, or close and tap Choose channels again.") { picking = false }
     }

@@ -439,8 +439,8 @@ object Paper {
     private fun quoteOf(t: com.optionslab.engine.KiteTicks.Tick): Quote = Quote(t.last, bid = t.bid ?: 0.0, ask = t.ask ?: 0.0, high = t.high,
         low = t.low, open = t.open, prevClose = t.close, volume = t.volume, bidQty = t.bidQty ?: 0L, askQty = t.askQty ?: 0L)
 
-    /** Zerodha's quote for [c] read now, waited [FILL_FRESH_MS] at most (null: none in time, or not listed). */
-    private suspend fun restQuote(c: Contract): Quote? {
+    /** Zerodha's quote for [c] read now (never the stream's memory), waited [FILL_FRESH_MS] at most (null: none in time, or not listed). */
+    private suspend fun freshRestQuote(c: Contract): Quote? {
         val key = zerodhaKey(c) ?: return null
         val q = Broker.within(FILL_FRESH_MS) { Broker.quotesFresh(listOf(key))[key] } ?: return null
         if (q.last <= 0) return null
@@ -726,14 +726,17 @@ object Paper {
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
         // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than
-        // [FILL_FRESH_MS] when a newer one can be had - a stream tick that came in in the last 2 s first, else (logged in to
-        // Zerodha) Zerodha's own quote, waited [FILL_FRESH_MS] at most; only then the caller's [known] quote or the reads below.
-        // The price age is the exchange stamp of the tick actually used (none for a REST quote, read just now).
+        // [FILL_FRESH_MS] when a newer one can be had - a stream tick that came in in the last 2 s first; else, for an ENTRY
+        // only (logged in to Zerodha), Zerodha's own quote, waited [FILL_FRESH_MS] at most. An exit never waits on the network
+        // here: the stream's fresh tick, else the caller's [known] quote, as before. Timed from before that read; the price
+        // age is the exchange stamp of the tick actually used (none for a REST quote, read just now).
         val token = runCatching { kiteToken(c) }.getOrNull()
         val freshTick = token?.let { tok -> runCatching { KiteStream.touch(listOf(tok)); KiteStream.freshTick(tok) }.getOrNull() }?.takeIf { it.last > 0 }
-        val fresh = freshTick?.let { quoteOf(it) } ?: if (Broker.loggedIn && token != null) restQuote(c) else null
-        val stamp = if (fresh != null) freshTick?.exchangeTime else runCatching { token?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
+        val reRead = freshTick == null && token != null && Broker.loggedIn && runCatching { opens(c.symbol, action) }.getOrDefault(false)
+        val stamp = if (freshTick != null) freshTick.exchangeTime
+            else if (reRead) null else runCatching { token?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
+        val fresh = freshTick?.let { quoteOf(it) } ?: if (reRead) freshRestQuote(c) else null
         // 12 Oct: the stream's tick, else a price read in the last [PLACE_REUSE_MS] (the candle feed moves once a minute and
         // the honest-paper checks below still judge its age), else a fresh read - not a download of the day's candles per order.
         val read = fresh?.also { remember(c.symbol, it) } ?: known ?: runCatching { recentQuote(c, PLACE_REUSE_MS) }.getOrNull()

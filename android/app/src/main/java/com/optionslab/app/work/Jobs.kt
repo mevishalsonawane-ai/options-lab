@@ -1278,9 +1278,9 @@ class WatchService : Service() {
         val byAndroid = intent == null
         // On the main thread: from memory and the plain MCX hint only (ANR fix, 9 Oct; [Jobs.watchDueQuick]), never a vault
         // decryption before the foreground. Unknown is not resumed here: the dead-man alarm (off the main thread) brings it back.
-        // 16 Oct: "not known from memory" (a new process, the books not read yet) is resumed too - the watch's own loop, off
-        // the main thread, ends at once when nothing is due. Dropping it left MCX's evening unwatched after Android ended the app.
-        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDueQuick() != false) Jobs.Kind.LIVE
+        // 16 Oct: an armed MCX arm's hint now answers yes here ([com.optionslab.app.data.McxMarket.watchDueQuick]), so Android's
+        // restart in MCX's evening resumes the watch for the armed arms; "unknown" is still left to the dead-man alarm.
+        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDueQuick() == true) Jobs.Kind.LIVE
             else runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (byAndroid && k == null && running.isEmpty()) {
             // Past the watch's hours: nothing to resume. Not a foreground start (it would be refused from the background
