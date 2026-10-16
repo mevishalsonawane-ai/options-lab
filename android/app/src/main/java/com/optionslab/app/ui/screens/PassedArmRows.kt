@@ -92,11 +92,13 @@ internal fun passedNumbersLine(source: String, v: PassedArmsHost.View): String {
     return "${c.size} closed, ${rs(c.sumOf { it.net ?: 0.0 })} · ${PassedArmsHost.apart(source)} ${rs(ap.sumOf { it.net ?: 0.0 })} · forward test $n"
 }
 
-/** What the name's dialog says: the label, settings, research id and result, the forward-test bar, the signal source. */
+/** What the name's dialog says: the label, settings, research id and result, new trades' exits, the forward-test bar, the signal source. */
 internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<String> = listOfNotNull(
     PassedArms.PASSED,
     "Research: ${PassedArmsHost.research(source)}. ${passedRecord(source)}.",
     passedRules(source) + ".",
+    // 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock and R66's +5% once +25%, Boss's choices; paper only).
+    com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On) + ".",
     PassedArms.SIGNAL_INDEX + ".",
     (if (source == Solo2.SOURCE) Solo2.bar() else PassedArms.ForwardBar.BAR) + ".",
     v.forwardLine(source) + ".",

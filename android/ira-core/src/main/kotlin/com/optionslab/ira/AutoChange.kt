@@ -287,7 +287,8 @@ object AutoChange {
             Kind.TREND_EXIT -> if (c.to == SWITCHED_OFF || c.to == HELD) Risk.RAISE else Risk.LOWER
             // The lock drops the fixed target (a trade may be held for more), so on counts as a raise (on paper); off puts the
             // research exits back.
-            Kind.PAPER_LOCK -> if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // 16 Oct: R66's L25 step ([L25_TARGET]) only raises a stop (an earlier exit), so on lowers risk; off takes it away.
+            Kind.PAPER_LOCK -> if (c.target == L25_TARGET) { if (c.to == ON) Risk.LOWER else Risk.RAISE } else if (c.to == ON) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -518,6 +519,23 @@ object AutoChange {
         else "new paper trades of the passed arms are back on their research exits",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.RAISE else Risk.LOWER, Scope.PAPER,
         what = "the 30-60-100 lock on the passed paper arms")
+
+    /** The target of R66's L25 step on the passed paper arms' lock ([Kind.PAPER_LOCK], versioned: its own target, its own undo). */
+    const val L25_TARGET = "lock:passed_paper_l25"
+
+    /**
+     * 16 Oct (Boss's choice after R65 - R69: "Select the best"): R66's L25 switched [on] for NEW trades of the three passed PAPER arms
+     * that enter under the 30-60-100 lock - once the option has been +25% above the fill, its stop is at least +5% above it - or off
+     * again (new trades back on the plain 30-60-100 lock). Not proven: it beat A4 in design, walk-forward and final (+Rs 8,042 /
+     * +Rs 18,050 / +Rs 5,396; final 2,202 trades) but failed the random-exit check, so it is Boss's choice. Paper only: no PIN.
+     */
+    fun passedL25(on: Boolean): Change = Change(Kind.PAPER_LOCK, L25_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (16 Oct, \"Select the best\"): new paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 under " +
+            "the 30-60-100 lock also lock +5% once the option has been +25% (R66 L25: a small improvement, not proven - final test " +
+            "2,202 trades, +₹5,396 over the 30-60-100 lock; design +₹8,042); open trades keep their exits; paper only, never live"
+        else "new paper trades of the passed arms are back on the plain 30-60-100 lock (no +5% step)",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "the +5% once +25% step on the passed paper arms' lock")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {

@@ -66,6 +66,24 @@ class PassedArmsTalkTest {
         assertEquals("Unlock the phone for that, Boss.", PassedArmsTalk.LOCKED)
     }
 
+    @Test fun theExitsNewTradesEnterWithAreSaid() {
+        // 16 Oct (R66 L25, Boss's choice): the lock with the +5% step; the lock alone; neither.
+        val both = PassedArmsTalk.exitsWords(lockOn = true, l25On = true)
+        for (x in listOf("+5% locked once +25%", "breakeven once +30% (never below the +5%)", "+30% once +60%", "+60% once +100%", "no fixed target",
+            "your choice", "not proven", "paper only", "S1 keeps its index exits", "Open trades keep the exits they entered with")) assertTrue(x in both, x)
+        val a4 = PassedArmsTalk.exitsWords(lockOn = true, l25On = false)
+        assertTrue("breakeven locked once +30%" in a4 && "+25%" !in a4, a4)
+        assertTrue("research's own stop, target and time exit" in PassedArmsTalk.exitsWords(false, false))
+        assertTrue("acts only with the 30-60-100 lock" in PassedArmsTalk.exitsWords(false, true))
+        assertEquals("breakeven locked once +30%, +30% once +60%, +60% once +100%", PassedArmsTalk.ladderWords(false))
+        // Jarvis says them after the arm's own words, and once in the round-up.
+        val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm), emptyList(), true, exits = both))
+        assertTrue(w.endsWith(" $both."), w)
+        val all = PassedArmsTalk.answer(PassedArmsTalk.Topic.ALL, PassedArmsTalk.Facts(listOf(arm), emptyList(), true, exits = both))
+        assertEquals(1, Regex(Regex.escape("+5% locked once +25%")).findAll(all).count())
+        assertFalse("New trades' exits" in PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm), emptyList(), true)))
+    }
+
     @Test fun theChangeLogEntriesArePaperBossOwnAndNeedNoPin() {
         val on = AutoChange.passedArmOn(DonchianArm.SOURCE, DonchianArm.LABEL, DonchianArm.RESEARCH_ID)
         assertEquals(AutoChange.Kind.PAPER_ARM_ON, on.kind)

@@ -61,7 +61,9 @@ object PassedArmsTalk {
         val scores: List<String> = emptyList(),
     )
 
-    data class Facts(val arms: List<Arm>, val watch: List<String>, val watchOn: Boolean?, val modelLoaded: Boolean? = null)
+    data class Facts(val arms: List<Arm>, val watch: List<String>, val watchOn: Boolean?, val modelLoaded: Boolean? = null,
+                     /** 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock, R66's +5% once +25%), in words; null: unknown. */
+                     val exits: String? = null)
 
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(x))
 
@@ -90,6 +92,29 @@ object PassedArmsTalk {
     }
 
     private fun bar(source: String) = if (source == Solo2.SOURCE) Solo2.bar() else PassedArms.ForwardBar.BAR
+
+    /** R66's L25 step in words (16 Oct, Boss's choice): what the popup, the notices and the rows say. */
+    const val L25_WORDS = "+5% locked once +25%"
+
+    /** The premium ladder in words: with L25 ([l25]) its first step, then R64's; locks only rise. */
+    fun ladderWords(l25: Boolean): String =
+        if (l25) "$L25_WORDS, breakeven once +30% (never below the +5%), +30% once +60%, +60% once +100%"
+        else "breakeven locked once +30%, +30% once +60%, +60% once +100%"
+
+    /**
+     * 16 Oct: the premium exits NEW trades of the three arms enter with, from the book's switches: R64's 30-60-100 lock ([lockOn])
+     * and R66's +5% once +25% on top of it ([l25On]; it acts only with the lock). Open trades keep the exits they entered with.
+     */
+    fun exitsWords(lockOn: Boolean, l25On: Boolean): String = when {
+        lockOn && l25On -> "New trades' exits: own stop and time exit, no fixed target; ${ladderWords(true)} (the 30-60-100 lock with R66's " +
+            "+5% step, your choice; a small improvement in research, not proven; paper only). Solo 2.0's S1 keeps its index exits with this " +
+            "ladder beside them. Open trades keep the exits they entered with"
+        lockOn -> "New trades' exits: own stop and time exit, no fixed target; ${ladderWords(false)} (the 30-60-100 lock, your choice; " +
+            "paper only). Open trades keep the exits they entered with"
+        else -> "New trades' exits: the research's own stop, target and time exit" +
+            (if (l25On) " (the +5% once +25% step is on, but it acts only with the 30-60-100 lock, which is off)" else "") +
+            ". Open trades keep the exits they entered with"
+    }
 
     /** One arm, plain: the label, the switch, the rules, today, the record, the bar. */
     fun armWords(a: Arm, full: Boolean = true): String = buildString {
@@ -122,13 +147,15 @@ object PassedArmsTalk {
     /** The answer to [topic] from [f]. */
     fun answer(topic: Topic, f: Facts): String {
         fun arm(src: String) = f.arms.firstOrNull { it.source == src }
+        // 16 Oct: the exits new trades enter with (the lock and R66's +5% step), said once after the arm's own words.
+        val exits = f.exits?.let { " $it." } ?: ""
         return when (topic) {
-            Topic.DONCHIAN -> arm(DonchianArm.SOURCE)?.let { armWords(it) } ?: "I could not read ${DonchianArm.LABEL}'s book just now, Boss."
-            Topic.OOV -> arm(OovArm.SOURCE)?.let { armWords(it) } ?: "I could not read ${OovArm.LABEL}'s book just now, Boss."
-            Topic.SOLO2 -> arm(Solo2.SOURCE)?.let { armWords(it) + if (f.modelLoaded == false) " Its model is not loaded yet, so it scores nothing until it is." else "" }
+            Topic.DONCHIAN -> arm(DonchianArm.SOURCE)?.let { armWords(it) + exits } ?: "I could not read ${DonchianArm.LABEL}'s book just now, Boss."
+            Topic.OOV -> arm(OovArm.SOURCE)?.let { armWords(it) + exits } ?: "I could not read ${OovArm.LABEL}'s book just now, Boss."
+            Topic.SOLO2 -> arm(Solo2.SOURCE)?.let { armWords(it) + exits + if (f.modelLoaded == false) " Its model is not loaded yet, so it scores nothing until it is." else "" }
                 ?: "I could not read ${Solo2.LABEL}'s book just now, Boss."
             Topic.WATCHLIST -> watchWords(f.watch, f.watchOn)
-            Topic.ALL -> (f.arms.map { armWords(it, full = false) } + watchWords(f.watch, f.watchOn)).joinToString(" ")
+            Topic.ALL -> (f.arms.map { armWords(it, full = false) } + listOfNotNull(f.exits?.let { "$it." }) + watchWords(f.watch, f.watchOn)).joinToString(" ")
         }
     }
 }

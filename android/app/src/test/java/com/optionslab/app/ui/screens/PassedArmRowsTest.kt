@@ -168,4 +168,18 @@ class PassedArmRowsTest {
         org.junit.Assert.assertTrue(passedExplanation(Solo2.SOURCE, v).containsAll(solo))
         org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, v).none { "Today's decisions" in it || it == Solo2.CONTEXT_NOTE + "." })
     }
+
+    /** 16 Oct (R66 L25, Boss's choice): the name's dialog says the exits new trades enter with; the row stays one line. */
+    @Test fun theDialogSaysTheExitsNewTradesEnterWith() {
+        show(PassedArmsHost.View(armed = mapOf(DonchianArm.SOURCE to true), lockOn = true, l25On = true))
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("+5% locked once +25%"), substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("About ${DonchianArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole(com.optionslab.ira.PassedArmsTalk.exitsWords(true, true) + ".")).assertExists()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, PassedArmsHost.View(lockOn = true)).any { "breakeven locked once +30%" in it && "+25%" !in it })
+        org.junit.Assert.assertTrue(passedExplanation(Solo2.SOURCE, PassedArmsHost.View()).any { "research's own stop, target and time exit" in it })
+    }
 }
