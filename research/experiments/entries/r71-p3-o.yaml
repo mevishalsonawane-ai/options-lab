@@ -1,0 +1,39 @@
+id: r71-p3-o
+title: 'R71 P3 Squeeze release (original): index chart pattern, 1-ITM'
+family: patterns-indicators
+date: '2026-10-16'
+doc: research/HUNT_R71_CHART_PATTERNS.md
+hypothesis: 'Boss (16 Oct, "find something new like Donchian, find chart patterns"): 5-min Bollinger(20,2) inside Keltner(20,1.5
+  ATR) for >= S bars, then the first close beyond a band on the index, buying the 1-ITM option and taken as Donchian takes
+  its trades, earns after real costs and beats random entries on the same days; it would add to Donchian, not copy it. Gates
+  as R51 (BH over the 16 R71 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R71 (16 Oct); the window was already read for other ideas by R51-R70 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (underlying) 5-min / 15-min bars; no option-chain data, no option chart'
+model_or_rule: 'Squeeze release: 5-min Bollinger(20,2) inside Keltner(20,1.5 ATR) for >= S bars, then the first close beyond
+  a band; setting s_min=6, XL (original (fixed before any result))'
+settings: research/hunt/r71/r71rules.py RULES, r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r71/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 803 trades on 265 days, win 44%, net Rs 57,763 (Rs 72/trade), avg win Rs 1,478 / loss -Rs 1,053, worst
+    day -Rs 10,165, max DD Rs 47,194, green days 43%. Walk-forward net Rs 57,763. Final: 305 trades on 111 days, win 40%,
+    net -Rs 41,281 (-Rs 135/trade), avg win Rs 1,315 / loss -Rs 1,089, worst day -Rs 11,394, max DD Rs 65,810, green days
+    38%, 47.4 trades a month; random-entry twin p 0.9082 (twin mean -Rs 11,771), BH q 0.986. Verdict: FAIL (final net <= 0,
+    twin p >= 0.05, BH q > 0.10, top 5 >= net). Donchian XB on the same final days: Rs 55,439 on 1787 trades; daily correlation
+    0.286, same trade as Donchian 0.6689.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (index); research only, nothing changes paper or live.

@@ -1,0 +1,40 @@
+id: r71-p4-rt
+title: 'R71 P4 Flag (re-tune): index chart pattern, 1-ITM'
+family: patterns-indicators
+date: '2026-10-16'
+doc: research/HUNT_R71_CHART_PATTERNS.md
+hypothesis: 'Boss (16 Oct, "find something new like Donchian, find chart patterns"): 5-min flag: a 3-bar pole >= K x ATR14,
+  3-10 flag bars (<= 50% retrace), close beyond the pole extreme on the index, buying the 1-ITM option and taken as Donchian
+  takes its trades, earns after real costs and beats random entries on the same days; it would add to Donchian, not copy it.
+  Gates as R51 (BH over the 16 R71 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R71 (16 Oct); the window was already read for other ideas by R51-R70 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (underlying) 5-min / 15-min bars; no option-chain data, no option chart'
+model_or_rule: 'Flag: 5-min flag: a 3-bar pole >= K x ATR14, 3-10 flag bars (<= 50% retrace), close beyond the pole extreme;
+  setting K=2.0, XI (re-tune (2 parameters x 3 exits; walk-forward picks 2.0|XB, 2.0|XI, 2.0|XI, 2.0|XI; final pick = best
+  design net))'
+settings: research/hunt/r71/r71rules.py RULES, r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r71/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design: 93 trades on 66 days, win 44%, net -Rs 12,110 (-Rs 130/trade), avg win Rs 1,644 / loss -Rs 1,529, worst
+    day -Rs 8,081, max DD Rs 30,360, green days 45%. Walk-forward net -Rs 3,480. Final: 32 trades on 28 days, win 53%, net
+    Rs 5,805 (Rs 181/trade), avg win Rs 1,527 / loss -Rs 1,344, worst day -Rs 3,946, max DD Rs 8,556, green days 57%, 5.0
+    trades a month; random-entry twin p 0.8224 (twin mean Rs 17,798), BH q 0.986. Verdict: FAIL (twin p >= 0.05, BH q > 0.10,
+    fewer than 40 trades, top 5 >= net, design net <= 0, walk-forward net <= 0). Donchian XB on the same final days: Rs 55,439
+    on 1787 trades; daily correlation -0.049, same trade as Donchian 0.4375.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (index); research only, nothing changes paper or live.

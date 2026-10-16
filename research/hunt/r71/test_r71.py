@@ -295,3 +295,24 @@ def test_periods_match_donchian():
 def test_gp_names_round_trip():
     assert S.gp_parse("P4", S.gp_name(1.5, "XI")) == (1.5, "XI")
     assert S.gp_parse("P2", S.gp_name(4, "XB")) == (4, "XB")
+
+
+def test_report_renders_from_small_results():
+    import r71report as Rp
+    s = dict(trades=40, days=10, net=-1234, per_trade=-30.9, win=0.4, avg_win=100, avg_loss=-90, worst_day=-500,
+             max_dd=900, green_days=0.4, ex_top5=-2000, per_month=6.0, why={})
+    des = dict(donchian={x: dict(design=s) for x in ("XB", "XL")}, rules={})
+    fin = dict(end="2026-10-13", sessions=133, read="t", donchian={"XB": s, "XL": s},
+               donchian_alone=dict(net=1, max_dd=2, worst_day=-3), tests={})
+    for r in P.RULES:
+        gp = S.gp_name(P.RULES[r][2], "XL")
+        des["rules"][r] = dict(name=P.NAMES[r], original=gp, final_pick=gp, wf_picks=[gp] * 4, wf=s,
+                               grid={gp: dict(design=s, folds=[1, 2, 3, 4])})
+        for k in ("O", "RT"):
+            fin["tests"][f"{r}-{k}"] = dict(rule=r, kind=k, setting=gp, final=s, p=0.5, q=0.9, twin_mean=-5,
+                                             design_net=-1, wf_net=-1, corr_donchian=0.1, overlap_donchian=0.2,
+                                             with_donchian=dict(net=1, max_dd=2, worst_day=-3), verdict="FAIL",
+                                             fails=["final net <= 0"])
+    md = Rp.render(des, fin)
+    assert "Passed: none" in md and md.count("| P1-O") == 1 and "-Rs 1,234" in md
+    assert Rp.rs(None) == "-" and Rp.pct(0.456) == "46%"
