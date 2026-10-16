@@ -100,8 +100,8 @@ object TrendWatchHost {
         if (o == null) return TrendWatch.Switches()
         val act = HashMap<Source, Boolean>(TrendWatch.Switches().act)
         o.optJSONObject("act")?.let { a -> a.keys().forEach { k -> Source.of(k)?.let { act[it] = a.getBoolean(k) } } }
-        return TrendWatch.Switches(o.optBoolean("on", true), o.optBoolean("live", false), o.optBoolean("alerts", false), act,
-            o.optBoolean("others", false))
+        return TrendWatch.Switches(on = o.optBoolean("on", true), live = o.optBoolean("live", false), alerts = o.optBoolean("alerts", false),
+            others = o.optBoolean("others", false), act = act)
     }
 
     private fun recJson(r: Rec) = JSONObject().put("k", r.key).put("d", r.day.toString()).put("s", r.source.key).put("y", r.symbol)
@@ -188,7 +188,9 @@ object TrendWatchHost {
     fun setLive(on: Boolean): String = synchronized(lock) {
         val l = log()
         if (l.sw.live != on) { l.sw = l.sw.copy(live = on); save(l) }
-        if (on) "Zerodha positions are watched too - notes and alerts only, never an order." else "Zerodha positions are not watched."
+        if (!on) "Zerodha positions are not watched."
+        else if (!l.sw.others) "Zerodha positions will be watched (notes and alerts only, never an order) once \"Other strategies and orders too\" is on."
+        else "Zerodha positions are watched too - notes and alerts only, never an order."
     }
 
     /** Notes for every other strategy and order too (never a sale): off by default (16 Oct, Boss: the Hero ticket only). */
@@ -533,7 +535,7 @@ object TrendWatchHost {
     fun talk(): String {
         val sw = switches()
         val (turns, held) = facts()
-        return com.optionslab.ira.TrendTalk.answer(com.optionslab.ira.TrendTalk.Facts(sw.on, sw.live,
+        return com.optionslab.ira.TrendTalk.answer(com.optionslab.ira.TrendTalk.Facts(sw.on, sw.live && sw.others,
             turns.map { com.optionslab.ira.TrendTalk.Turn(it.line, it.act, it.live) },
             held.map { com.optionslab.ira.TrendTalk.Held(it.source.label, it.symbol, it.rule, it.state, it.live) }))
     }
