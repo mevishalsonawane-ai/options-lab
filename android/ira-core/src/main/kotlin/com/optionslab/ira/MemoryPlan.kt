@@ -40,6 +40,9 @@ object MemoryPlan {
         DIARY("the diary's lines in memory"),
         IDLE_CANDLES("the candles of instruments quiet for two hours"),
         IDLE_PATHS("the tick paths of instruments no longer streamed"),
+        // 16 Oct: the Trend watch's memory (its log, read again by its next round; the stock keys and opening fills it looked up).
+        // Last of all, after everything else - and never the position watch, whose stops and exits it only adds a note beside.
+        TREND_WATCH("the trend notes kept in memory"),
     }
 
     /** What no trim level ever frees or slows (Boss's rule). */

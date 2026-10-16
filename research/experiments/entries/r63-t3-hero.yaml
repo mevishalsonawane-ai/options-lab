@@ -1,0 +1,37 @@
+id: r63-t3-hero
+title: 'R63 T3 on Hero Rs 1,000 ticket: sell when the underlying''s trend turns against the trade'
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R63_TREND_TURN_EXIT.md
+hypothesis: 'Boss, 16 Oct: if the trend turns, sell. Added to the strategy''s own exits, a trend-turn exit on the underlying
+  makes more after costs than the plain rules and than random early exits of the same trades (gates: final net change > 0,
+  twin p < 0.05, BH q <= 0.10 over 28 cells, >= 40 changed trades, not from the top 5, design and walk-forward > 0).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 16 Oct 2026: index_1m and options_rolling_1m WEEK 2024-2026; strategies
+  priced on their own studies'' stores (R51 Amendment A clean, R57, R54)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 'final test 1 Apr - 14 Oct 2026, read once 16 Oct 2026 (not pristine: R51, R52, R54, R55, R57 and R61 read it,
+    and these strategies were chosen on it)'
+instruments:
+- NIFTY
+- SENSEX
+features:
+- 'signal source: the INDEX 1-minute spot bars (5-minute bars); no option-chain or option-price input; the strategy''s own
+  entries held fixed'
+model_or_rule: 'two 5-min closes in a row beyond the session VWAP (TWAP) against the trade; acts only on a completed bar >=
+  5 minutes after the fill; sells the held contract at the next minute''s open (R51 engine forced exit; Hero: R54''s sell)'
+settings: research/hunt/r63/PREREG.md sections 2-7; r63rules.py
+prereg: research/hunt/r63/PREREG.md
+variants_tried: 28
+results:
+  summary: 'two 5-min closes in a row beyond the session VWAP (TWAP) against the trade (signal: the underlying) added to Hero
+    Rs 1,000 ticket''s own exits. Design: 248 trades, 178 changed, net change +Rs 41,827 (saved on losers +Rs 58,315, given
+    up on winners +Rs 16,488), walk-forward +Rs 29,432, twin p 0.002. Final (read once): 107 trades on 55 sessions, 74 changed,
+    net change +Rs 14,730 (saved +Rs 20,659, given up +Rs 5,929; without the top 5 +Rs 11,295), plain -Rs 9,680 -> +Rs 5,050,
+    max DD -Rs 13,429 -> -Rs 8,162, twin p 0.002 (twin mean +Rs 8,187), BH q 0.056. Verdict: PASS.'
+  costs: 'R51 engine: R17 ''liq'' fills, Costs(''dated'') charges, lot in force; Hero: R54''s limit fill, late-minute spread
+    and R50''s dated charges'
+holdout_read: true
+verdict: paper-only
+notes: One of 28 R63 cells in one BH family (research/hunt/r63/results/report.md). Paper only (Hero ticket is paper only,
+  forever); live never acts.

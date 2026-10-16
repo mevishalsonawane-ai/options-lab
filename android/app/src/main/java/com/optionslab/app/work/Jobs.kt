@@ -741,6 +741,10 @@ object Tasks {
         word("overtrading") { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         // Round 4: the app's books against Zerodha's (this round's own positions read; report only, never an order).
         word("zerodha sync") { com.optionslab.app.data.ZerodhaSync.check() }
+        // The Trend watch (16 Oct, research R63): every open position's and pending order's underlying judged on its completed
+        // bars - notes for all; the Hero ticket's paper legs sold on a T3 turn through the arm's own exit (a request in memory).
+        // Early in the round, with the safety words: never on the order or tick path, never slowing a stop or exit.
+        word("Trend watch") { com.optionslab.app.data.TrendWatchHost.watch() }
         // Battery (round 2): with the screen off and nothing held or armed, the slow group below runs every 3 minutes and
         // the news every 10 (every 20 until Boss asks about the news that day, round 6); the safety words above and the time-bound checks run every round as before.
         val quiet = wordsQuiet()

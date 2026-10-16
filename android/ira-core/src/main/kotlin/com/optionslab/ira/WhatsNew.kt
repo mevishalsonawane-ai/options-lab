@@ -73,6 +73,17 @@ object WhatsNew {
             "A position's change now shows only the open trade's move on its average price, not earlier trades on the same option. " +
                 "Below it, Exits shows the stop, target and exit time its strategy is holding it to.",
             "Tap any open position (Trade tab, Home or its notification)"),
+        Entry("2026-10-16-trend-watch", OCT16, "Trend watch: the Hero ticket sold when its index turns",
+            "The Hero ₹1,000 ticket's paper legs are sold when the index's trend turns against them. " +
+                "That one rule passed research. " +
+                "By your choice only the Hero ticket is watched. " +
+                "With \"Other strategies and orders too\" on, each open position and pending order is checked too. " +
+                "Then Jarvis writes a note: what turned, when, and the price it would sell at. " +
+                "For every other strategy the turn lost against random exits, so those stay notes. " +
+                "Live positions are never sold. " +
+                "Each Hero sale is in the change log, and one tap undoes it.",
+            "Home → Strategies → Trend watch (tap the name for the details and switches); ask Jarvis \"has the trend turned on my trades\"",
+            ask = "has the trend turned on my trades"),
         Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
             "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
                 "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +

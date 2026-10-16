@@ -92,6 +92,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
         // Home's Automation card, each opening its section ([AutomationHomeCard]).
         nightRow = { NightRow(); VixDivRow(); HeroTicketRow(); PassedArmRows(); WatchlistCard()
+            // The Trend watch (16 Oct, research R63): every open position judged on its underlying's trend. Not in IraGoldAlgo.
+            if (!com.optionslab.app.BuildConfig.GOLD) TrendWatchRow()
             // The Signal tester (15 Oct, shadow - never trades): the allow-listed Telegram channels scored. Not in IraGoldAlgo.
             if (!com.optionslab.app.BuildConfig.GOLD) SignalTesterCard() },
         basketsVisible = com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.BASKETS),

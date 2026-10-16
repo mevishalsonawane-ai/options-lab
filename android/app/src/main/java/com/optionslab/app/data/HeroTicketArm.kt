@@ -590,9 +590,13 @@ object HeroTicketArm {
             // A resting target is the paper book's to fill; the pure check below covers a target that could not be placed.
             val target = if (p.targetOrderId != null) HeroTicketRules.Target.TRAIL_ONLY else HeroTicketRules.Target.of(p.target)
             val step = HeroTicketRules.exitStep(p.entry, ltp, trail, now.toLocalTime(), target, p.day.isBefore(now.toLocalDate()))
+            // 16 Oct (research R63, Boss's "if the trend changes, sell"): the Trend watch asked to sell this leg - the index turned
+            // against it (T3, which passed every gate for this ticket). Memory only: a map read, never a file or the network here.
+            val trend = runCatching { TrendWatchHost.sellRequested(p.symbol) }.getOrDefault(false)
             // Boss's stop for today (or the daily loss limit) sells what is held: it only lowers risk.
             val (why, limit) = when {
                 step != null -> step.kind.why to step.limit
+                trend -> TREND_WHY to null
                 stopped -> "operator_stop" to null
                 else -> continue
             }
@@ -641,8 +645,15 @@ object HeroTicketArm {
             charges = p.charges + chargesOf(id), targetOrderId = null)
     }
 
+    /** A leg sold because the Trend watch saw the index turn against it ([TrendWatchHost], research R63 T3). */
+    const val TREND_WHY = "trend_turn"
+
     private fun closed(b: Book, p: Pos) {
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
+        if (p.why == TREND_WHY) runCatching {
+            TrendWatchHost.sold(p.symbol, "%s %s sold on paper on the trend turn (T3) @ %s".format(Locale.ENGLISH,
+                HeroTicketRules.LABEL, p.symbol, px(p.exit ?: 0.0)))
+        }
         note(b, "%s: sold (%s) @ %s, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, px(p.exit ?: 0.0), rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, NOTICE + HeroTicketRules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0) * 2 + (if (p.right == "CE") 0 else 1),
             Notifier.SELL, "${HeroTicketRules.LABEL} sold ${p.symbol} · Paper",
