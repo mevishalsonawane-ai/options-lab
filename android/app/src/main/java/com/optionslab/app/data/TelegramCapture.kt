@@ -99,7 +99,11 @@ object TelegramCapture {
 
     private val _view = MutableStateFlow(View())
     val view: StateFlow<View> = _view
-    private fun upd(f: (View) -> View) { synchronized(this) { _view.value = f(_view.value) } }
+    private fun upd(f: (View) -> View) { synchronized(this) { _view.value = f(_view.value); testViewWrites?.invoke(_view.value) } }
+    /** TEST SEAM: every view written, in order (under the lock). */
+    @Volatile internal var testViewWrites: ((View) -> Unit)? = null
+    /** TEST SEAM: called in [open] right after the reader thread started, while [open] still holds the lock. */
+    @Volatile internal var testReaderStarted: (() -> Unit)? = null
 
     @Volatile private var app: Context? = null
     @Volatile private var session: TdSession? = null
@@ -236,6 +240,7 @@ object TelegramCapture {
         upd { it.copy(stuck = false) }
         s.start(params())
         loop = Thread({ loop(t, s) }, "telegram-reader").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+        testReaderStarted?.invoke()
         // Opened: the library is here (the view says so even before the card's first refresh).
         upd { it.copy(running = true, auth = s.auth, available = true) }
         return true
@@ -572,6 +577,6 @@ object TelegramCapture {
         loop?.join(2_000)
         session = null; transport = null; loop = null; running = false; jobUntil = 0L; lastPoll = 0L; pausedUntil = 0L; capturing = false
         retries = 0; loggingOut = false; startedAt = 0L; lastErrorAt = 0L; failed = null; stuckMs = STUCK_MS
-        loaded = null; testTransport = null; _view.value = View()
+        loaded = null; testTransport = null; testViewWrites = null; testReaderStarted = null; _view.value = View()
     }
 }

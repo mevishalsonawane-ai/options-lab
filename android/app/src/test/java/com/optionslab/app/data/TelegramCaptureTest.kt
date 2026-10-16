@@ -430,6 +430,72 @@ class TelegramCaptureTest : RobolectricTest() {
         assertTrue(sent.all { Regex("\"@type\":\"(\\w+)\"").find(it)!!.groupValues[1] in TdSession.ALLOWED })
     }
 
+    /**
+     * 16 Oct (CI, App tests 2/4: the phone step on screen under "Starting Telegram…"): TDLib's first answer is the phone step, read
+     * by the reader the moment it starts, while the login's open still holds the lock - the reader then waits to say its words.
+     * The open used to copy the session's step into the view after starting the reader, so for that moment the dialog showed the
+     * phone step with the "Starting" words. Forced here every time: every view written is recorded, and the open waits (a test
+     * seam) until the reader has read the phone step and is waiting for the lock.
+     */
+    @Test fun thePhoneStepIsNeverShownUnderTheStartingWords() {
+        val reader = java.util.concurrent.atomic.AtomicReference<Thread?>()
+        TelegramCapture.testTransport = { object : TelegramCapture.Transport {
+            override fun send(json: String) { sent += json; if (json.contains("\"getAuthorizationState\"")) inbox += state("authorizationStateWaitPhoneNumber")
+                if (json.contains("\"close\"")) inbox += state("authorizationStateClosed") }
+            override fun receive(timeoutSec: Double): String? { reader.set(Thread.currentThread()); return inbox.poll((timeoutSec * 1000).toLong(), TimeUnit.MILLISECONDS) }
+        } }
+        val writes = java.util.Collections.synchronizedList(ArrayList<TelegramCapture.View>())
+        TelegramCapture.testViewWrites = { writes += it }
+        TelegramCapture.testReaderStarted = {
+            // The reader has read the phone step and waits for the lock this open holds.
+            waitFor("the reader waiting for the lock", 3_000) { reader.get()?.state == Thread.State.BLOCKED && inbox.isEmpty() }
+        }
+        assertEquals("Saved on this phone only (encrypted). Starting Telegram…", TelegramCapture.saveKeys("12345", hash))
+        waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        val phone = "Telegram started. Enter your phone number with the country code (+91…), then Send."
+        assertEquals(phone, TelegramCapture.view.value.said)
+        val wrong = writes.toList().filter { it.auth == TdSession.Auth.NEED_PHONE && it.said != phone }
+        assertTrue("the phone step shown under other words: ${wrong.map { it.said }}", wrong.isEmpty())
+    }
+
+    /**
+     * 16 Oct: a session that is closing (its reader lives on) never writes into the view once a newer session started: its step
+     * arriving late (here the phone step, after the newer session was opened) leaves the newer login's words and step alone.
+     */
+    @Test fun aClosingSessionsLateStepNeverLandsOverANewerLogin() {
+        val first = LinkedBlockingQueue<String>()
+        val firstReader = java.util.concurrent.atomic.AtomicReference<Thread?>()
+        // The first session's reader is held in receive until the test lets its (late) answer through.
+        val gate = java.util.concurrent.CountDownLatch(1)
+        TelegramCapture.testTransport = { object : TelegramCapture.Transport {
+            override fun send(json: String) { sent += json }
+            override fun receive(timeoutSec: Double): String? { firstReader.set(Thread.currentThread()); gate.await(); return first.poll(50, TimeUnit.MILLISECONDS) }
+        } }
+        assertEquals("Saved on this phone only (encrypted). Starting Telegram…", TelegramCapture.saveKeys("12345", hash))
+        waitFor("the first reader in receive", 3_000) { firstReader.get()?.state == Thread.State.WAITING }
+        // A new process view of it: the first session let go as resetForTest does (the reader still alive), a second one opened.
+        TelegramCapture.close()
+        val r = firstReader.get()!!
+        TelegramCapture.resetForTest()   // its join gives up after 2 s: the first reader is still in receive
+        assertTrue(r.isAlive)
+        TelegramCapture.testTransport = { Fake() }
+        SecurePrefs.putAll(mapOf(TelegramCapture.K_API_ID to 12345, TelegramCapture.K_API_HASH to hash))
+        assertEquals("Starting Telegram…", TelegramCapture.startLogin())
+        waitFor("the second session's phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        TelegramCapture.phone("+91 99999 00000")
+        waitFor("the second session's code step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_CODE }
+        val before = TelegramCapture.view.value
+        // The first session's late answer: the phone step and an error.
+        first += state("authorizationStateWaitPhoneNumber")
+        first += """{"@type":"error","code":400,"message":"PHONE_NUMBER_INVALID"}"""
+        gate.countDown()
+        waitFor("the late answers read", 3_000) { first.isEmpty() }
+        Thread.sleep(300)
+        assertEquals(before.auth, TelegramCapture.view.value.auth)
+        assertEquals(before.said, TelegramCapture.view.value.said)
+        assertTrue(TelegramCapture.view.value.running)
+    }
+
     @Test fun badKeysAreToldWhenTelegramRefusesThem() {
         TelegramCapture.testTransport = { Real { json -> when {
             json.contains("\"setTdlibParameters\"") -> listOf(st("authorizationStateWaitPhoneNumber"))
