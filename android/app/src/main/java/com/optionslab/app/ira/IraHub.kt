@@ -3415,7 +3415,7 @@ object IraHub {
         }
         // 15 Oct (Boss: "Both"): "how is the Donchian arm doing", "how is Solo 2.0 doing", "what's on the watchlist", "how are the
         // passed arms doing" ([com.optionslab.ira.PassedArmsTalk], [com.optionslab.app.data.PassedArmsHost.talk]): the paper arms
-        // that passed research (always "Passed research (R51/R52/R57) — paper only") and the shadow Watchlist (always "shadow, not
+        // that passed research (always "Passed research (R51/R52/R57/R72) — paper only") and the shadow Watchlist (always "shadow, not
         // traded; information only, not a trade signal"), from their own books. Before SoloDay ("solo 2.0" is this one's; plain
         // "solo" stays Solo's). Its paper trades are in it, so never on a locked phone; reads only - nothing is switched, bought,
         // sold or promoted. (Not in IraGoldAlgo.)

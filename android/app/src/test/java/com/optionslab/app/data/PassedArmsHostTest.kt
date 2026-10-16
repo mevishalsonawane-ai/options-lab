@@ -11,6 +11,7 @@ import com.optionslab.engine.IST
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Bar
+import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.PassedArms
@@ -128,7 +129,8 @@ class PassedArmsHostTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertFalse(view().on(DonchianArm.SOURCE))
         assertTrue(view().on(OovArm.SOURCE))
-        assertEquals(3, view().log.count { "switched on once" in it })
+        // Three by the 15 Oct update, R72 Breadth Donchian by its own (16 Oct): four lines, never again.
+        assertEquals(4, view().log.count { "switched on once" in it })
         // A book that cannot be read is never switched on by itself.
         PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertTrue(PassedArmsHost.SOURCES.none { view().on(it) })
@@ -640,5 +642,316 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(PassedArmsHost.entryMinute(LocalTime.of(9, 20)) && PassedArmsHost.entryMinute(LocalTime.of(12, 3)))
         assertFalse(PassedArmsHost.entryMinute(LocalTime.of(9, 23)) || PassedArmsHost.entryMinute(LocalTime.of(15, 20)))
         assertTrue(runBlocking { PassedArmsHost.setArmed("nope", true) }.contains("not ready"))
+    }
+
+    // ---- R72 Breadth Donchian (16 Oct, Boss: "Okay add it") --------------------------------------------------------------------
+
+    private val indexKeys = mapOf("NIFTY" to niftyKey, "BANKNIFTY" to "NSE_INDEX|Nifty Bank", "FINNIFTY" to "NSE_INDEX|Nifty Fin Service",
+        "MIDCPNIFTY" to "NSE_INDEX|NIFTY MID SELECT", "SENSEX" to "BSE_INDEX|SENSEX")
+    private val bases = mapOf("NIFTY" to 25_000.0, "BANKNIFTY" to 56_000.0, "FINNIFTY" to 26_500.0, "MIDCPNIFTY" to 13_000.0, "SENSEX" to 82_000.0)
+
+    /**
+     * The four other indices (NIFTY is [market]'s, breaking up at 09:19): each flat at its base yesterday (high +1, low -1) and
+     * today until 09:19; from 09:19 those in [up] +0.4% (a close above the channel on the 09:15 bar), the rest flat. [off]: no
+     * bar today at all (its feed down). Only NIFTY's options are listed, so only NIFTY can be bought.
+     */
+    private fun breadthMarket(up: Set<String>, until: LocalTime, off: Set<String> = emptySet()) {
+        PassedArmsHost.testHistory = { u -> bases[u]?.let { b -> (0 until 375).map { Bar(day.minusDays(1).atTime(9, 15).plusMinutes(it.toLong()), b, b + 1, b - 1, b) } }.orEmpty() }
+        runBlocking { PassedArmsHost.prefetchNow(day) }
+        for (u in indexKeys.keys - "NIFTY") {
+            if (u in off) { upstox.minutes.remove(indexKeys.getValue(u)); continue }
+            val b = bases.getValue(u)
+            minutes(indexKeys.getValue(u), until) { t -> if (t.isBefore(LocalTime.of(9, 19)) || u !in up) b else b * 1.004 }
+        }
+    }
+
+    private fun bothDonchians() {
+        only(BreadthDonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) }
+    }
+
+    @Test fun theUpdateSwitchesBreadthDonchianOnOnceBesideDonchianWithItsRiskAndNeverAgain() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        val v = view()
+        // Never in IraGoldAlgo (its passes never run there either); in IraAlgo on at once, on paper, beside Donchian.
+        assertEquals(!com.optionslab.app.BuildConfig.GOLD, v.on(BreadthDonchianArm.SOURCE))
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        assertTrue(v.on(DonchianArm.SOURCE))
+        val line = v.log.single { "switched on once by the 16 Oct update" in it }
+        for (w in listOf(BreadthDonchianArm.LABEL, PassedArms.PASSED, BreadthDonchianArm.RESEARCH_ID, "Okay add it", "beside ${DonchianArm.LABEL}", BreadthDonchianArm.RISK))
+            assertTrue(w, w in line)
+        assertEquals(day, v.breadthSince)
+        assertTrue(PassedArmsHost.diagLine().contains("${BreadthDonchianArm.LABEL}: on (paper only)"))
+        assertTrue(PassedArmsHost.diagLine().contains("Breadth Donchian vs Donchian on paper since"))
+        // Boss switches it off: a restart never switches it back on.
+        assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().on(BreadthDonchianArm.SOURCE))
+        assertTrue(view().on(DonchianArm.SOURCE))
+        assertEquals(1, view().log.count { "switched on once by the 16 Oct update" in it })
+        assertEquals("the switch-on day is kept", day, view().breadthSince)
+        // A book where the update ran without switching it on (here the tests' own seam) never switches it later; nor an unreadable one.
+        PassedArmsHost.wipe(); bookFile.delete(); PassedArmsHost.testNoAutoOn = true; view()
+        PassedArmsHost.testNoAutoOn = false; PassedArmsHost.wipe()
+        assertFalse("marked done once", view().on(BreadthDonchianArm.SOURCE))
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().on(BreadthDonchianArm.SOURCE))
+    }
+
+    @Test fun breadthDonchiansSwitchOnIsInTheChangeLogOnceAndOneTapSwitchesItOff() {
+        // The change log's Undo through Autopilot's own setter (every build).
+        bothDonchians()
+        val on = AutoChange.passedArmOn(BreadthDonchianArm.SOURCE, BreadthDonchianArm.LABEL, BreadthDonchianArm.RESEARCH_ID, "your choice")
+        assertEquals("${BreadthDonchianArm.LABEL} off.", Autopilot.apply(AutoChange.inverse(on, "undone by you"), false))
+        assertFalse(view().on(BreadthDonchianArm.SOURCE))
+        assertTrue("Donchian is never touched", view().on(DonchianArm.SOURCE))
+        assertTrue(Autopilot.apply(on, false)!!.contains("paper only"))
+        assertTrue(view().on(BreadthDonchianArm.SOURCE))
+        // The update's own entry: Boss's, kept, once; its Undo turns it off (paper only, no PIN).
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete(); view()
+        fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (entries().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val e = entries().single()
+        assertEquals(AutoChange.Status.KEPT, e.status)
+        assertEquals("your choice", e.by)
+        assertTrue(e.change.reason, e.change.reason.contains("Okay add it"))
+        assertTrue(e.note, e.note.contains(BreadthDonchianArm.RISK))
+        assertFalse("no PIN: paper only", Autopilot.undoNeedsPin(e.id))
+        AutomationSupport.reloadFromDisk(PassedArmsHost); view(); Thread.sleep(200)
+        assertEquals(1, entries().size)
+        assertTrue(Autopilot.undo(e.id).startsWith("Undone"))
+        assertFalse(view().on(BreadthDonchianArm.SOURCE))
+    }
+
+    @Test fun fourIndicesBreakingTogetherBuyBreadthsOwnTradeBesideDonchiansOnTheSameOptionAndEachSellsItsOwnLot() {
+        bothDonchians()
+        runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(true) }
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        assertEquals(open.toString(), 2, open.size)
+        val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
+        val dn = open.single { it.arm == DonchianArm.SOURCE }
+        // The same 1-ITM call, each its own lot; breadth's with Donchian's exits plus the lock and L25 (the book's switches).
+        assertEquals(dn.symbol, br.symbol); assertTrue(br.symbol, br.symbol.contains("25050")); assertEquals("CE", br.right); assertEquals(65, br.qty)
+        assertTrue(br.lock && br.l25)
+        assertNull(br.breadth); assertEquals("Donchian's break labelled as confirmed", true, dn.breadth)
+        assertEquals(130, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
+        val x = PassedArmsHost.exitsOf(br, null)
+        assertEquals(br.entry * 0.85, x.stop!!, 1e-9); assertNull(x.target); assertEquals("+5% locked once +25%", x.note)
+        assertTrue(PassedArmsHost.diagLine().contains("${BreadthDonchianArm.LABEL}: on (paper only) · open 1"))
+        assertNothingAtZerodha()
+        // The bar is decided once: the next pass buys nothing more.
+        market(LocalTime.of(9, 21)); breadthMarket(setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
+        assertEquals(2, PassedArmsHost.view.value.open.size)
+        // 09:24 trades at 84 (under -15%): each arm's stop sells its own lot.
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        assertEquals(setOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE), closed.map { it.arm }.toSet())
+        assertTrue(closed.all { it.why == "stop" && it.qty == 65 })
+        assertEquals(0, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
+        // Its own record, from its own rows; the comparison for Boss.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals(1, view().closedOf(BreadthDonchianArm.SOURCE).size)
+        assertTrue(view().forwardLine(BreadthDonchianArm.SOURCE).startsWith("Forward test: 1 of 40"))
+        val cmp = view().comparison()
+        assertTrue(cmp, cmp.contains("R72 Breadth Donchian 1 trade, −₹") && cmp.contains("R51 Donchian 20 1 trade, −₹") &&
+            cmp.contains("Donchian's trades breadth did not confirm: 0 trades, +₹0"))
+        assertNothingAtZerodha()
+    }
+
+    /** Both arms' lots of the same option sold elsewhere in one sale (a square-off): each closes, each with only its share of its charges. */
+    @Test fun aSharedOptionSoldElsewhereInOneSaleClosesBothWithTheirShareOfItsCharges() {
+        bothDonchians()
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        assertEquals(2, open.size)
+        val c = Paper.contractOf(open.first().symbol)!!
+        market(LocalTime.of(9, 22)); at(LocalTime.of(9, 22))
+        val r = runBlocking { Paper.place(c, "SELL", 2, "MARKET", "MIS", null, null) }
+        assertTrue(r.message, r.ok)
+        val sale = Paper.state.trades.last { it.symbol == c.symbol && it.action == "SELL" }
+        assertEquals(130, sale.quantity)
+        runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        assertEquals(2, closed.size)
+        for (x in closed) {
+            assertEquals("closed_elsewhere", x.why)
+            val entryCharges = open.single { it.arm == x.arm }.charges
+            assertEquals(entryCharges + sale.charges.toDouble() / 2, x.charges, 1e-6)
+        }
+        assertNothingAtZerodha()
+    }
+
+    /** Both arms in the same option; one lot sold elsewhere at [t] (at the call's price then): that sale, as a paper trade. */
+    private fun sharedThenSold(t: LocalTime, call: Double = 100.0): Pair<List<PassedArmsHost.Pos>, com.optionslab.engine.sandbox.Trade> {
+        val open = PassedArmsHost.view.value.open.takeIf { it.size == 2 } ?: run {
+            bothDonchians()
+            breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+            market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+            PassedArmsHost.view.value.open
+        }
+        assertEquals(2, open.size)
+        val c = Paper.contractOf(open.first().symbol)!!
+        market(t.plusMinutes(1), call = { call }); at(t)
+        val r = runBlocking { Paper.place(c, "SELL", 1, "MARKET", "MIS", null, null) }
+        assertTrue(r.message, r.ok)
+        val sale = Paper.state.trades.last { it.symbol == c.symbol && it.action == "SELL" }
+        assertEquals(65, sale.quantity)
+        return open to sale
+    }
+
+    /**
+     * 16 Oct (R72 review): one lot of the two sold elsewhere is noticed at once and closes the OLDEST trade (entry, then book
+     * order) at that sale, with all its charges; the other's own stop later sells the last lot and is never taken for a sale
+     * elsewhere - each sale's charges booked once.
+     */
+    @Test fun oneLotOfASharedOptionSoldElsewhereClosesTheOldestTradeAndTheOthersOwnExitIsItsOwn() {
+        val (open, sale) = sharedThenSold(LocalTime.of(9, 22))
+        runBlocking { PassedArmsHost.manageOnly() }
+        val gone = view().closed.single()
+        assertEquals(open.first().arm, gone.arm)
+        assertEquals("closed_elsewhere", gone.why)
+        assertEquals(sale.price.toDouble(), gone.exit!!, 1e-9)
+        assertEquals(open.first().charges + sale.charges.toDouble(), gone.charges, 1e-6)
+        assertEquals("${sale.orderId}:65", gone.soldBy)
+        assertEquals(open.last().arm, view().open.single().arm)
+        // 09:24 trades at 84 (under -15%): the other's own stop sells the last lot.
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        assertEquals(2, closed.size)
+        val own = closed.single { it.arm == open.last().arm }
+        assertEquals("stop", own.why)
+        val exit = Paper.state.trades.last { it.symbol == sale.symbol && it.action == "SELL" }
+        assertTrue(exit.orderId != sale.orderId)
+        assertEquals(open.last().charges + exit.charges.toDouble(), own.charges, 1e-6)
+        assertEquals("the first is never re-booked", gone, closed.single { it.arm == open.first().arm })
+        assertEquals(0, Paper.state.positions.filter { it.symbol == sale.symbol }.sumOf { it.quantity })
+        // Kept in the book: read back, the next look books nothing more.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        at(LocalTime.of(9, 26)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(closed.toSet(), view().closed.toSet())
+        assertNothingAtZerodha()
+    }
+
+    /** 16 Oct (R72 review): two separate sales elsewhere, one lot each: each trade books its own sale's price and charges. */
+    @Test fun twoSalesElsewhereOfASharedOptionEachBookTheirOwnPriceAndCharges() {
+        val (open, first) = sharedThenSold(LocalTime.of(9, 22), call = 100.0)
+        // Not looked at in between (the app was asleep): the second sale, at another price, before the next look.
+        val (_, second) = sharedThenSold(LocalTime.of(9, 23), call = 120.0)
+        assertTrue(first.orderId != second.orderId)
+        runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        assertEquals(2, closed.size)
+        assertTrue(closed.all { it.why == "closed_elsewhere" })
+        val a = closed.single { it.arm == open.first().arm }
+        val b = closed.single { it.arm == open.last().arm }
+        assertEquals(first.price.toDouble(), a.exit!!, 1e-9); assertEquals(open.first().charges + first.charges.toDouble(), a.charges, 1e-6)
+        assertEquals(second.price.toDouble(), b.exit!!, 1e-9); assertEquals(open.last().charges + second.charges.toDouble(), b.charges, 1e-6)
+        // Each booked to its own sale (so the first sale is never lost, nor the second counted twice).
+        assertEquals("${first.orderId}:65", a.soldBy); assertEquals("${second.orderId}:65", b.soldBy)
+        assertNothingAtZerodha()
+    }
+
+    /** 16 Oct (R72 review): Boss switching R72 back on from its row is logged with his "Okay add it", never the 15 Oct "Both". */
+    @Test fun bossSwitchingBreadthBackOnFromItsRowIsLoggedAsHisOkayAddIt() {
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        bothDonchians()
+        assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
+        assertTrue(runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true) }.contains("paper only"))
+        fun kept() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON &&
+            it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" && it.status == AutoChange.Status.KEPT }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (kept().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val e = kept().single()
+        assertEquals("your choice", e.by)
+        assertTrue(e.change.reason, e.change.reason.startsWith("your \"Okay add it\" (16 Oct, after R72): "))
+        assertFalse(e.change.reason, "Both" in e.change.reason)
+    }
+
+    @Test fun threeIndicesBreakingIsNoBreadthTradeButDonchiansAndAFeedDownCountsAsNotBreaking() {
+        bothDonchians()
+        // NIFTY, BANKNIFTY and FINNIFTY break: Donchian buys NIFTY's call, breadth nothing.
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals(DonchianArm.SOURCE, p.arm)
+        assertEquals("labelled: breadth did not confirm it", false, p.breadth)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals("the label is kept in the book", false, view().open.single().breadth)
+    }
+
+    @Test fun withSensexsFeedDownTheOtherFourBreakingStillBuy() {
+        only(BreadthDonchianArm.SOURCE)
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20), off = setOf("SENSEX"))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        assertEquals(BreadthDonchianArm.SOURCE, PassedArmsHost.view.value.open.single().arm)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withSensexsFeedDownThreeBreakingBuyNothing() {
+        only(BreadthDonchianArm.SOURCE)
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY"), until = LocalTime.of(9, 20), off = setOf("SENSEX"))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(Paper.state.orders.isEmpty())
+    }
+
+    @Test fun aBreadthTradeThatWasPlus25AndCameBackSellsAtAboutPlus5() {
+        only(BreadthDonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(true) }
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals(BreadthDonchianArm.SOURCE, p.arm); assertTrue(p.lock && p.l25)
+        val peak = p.entry * 1.26
+        ride(LocalTime.of(9, 33), peak, peak)
+        at(LocalTime.of(9, 33)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(1, view().open.size)
+        assertTrue(com.optionslab.ira.ArmExits.line(false, p.symbol)!!.contains("lock held"))
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        ride(LocalTime.of(9, 35), peak, p.entry * 1.055)
+        at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = view().closed.single()
+        assertEquals("lock", sold.why)
+        assertTrue("${sold.exit} vs ${p.entry}", sold.exit!! in p.entry * 1.02..p.entry * 1.07)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun aRestartRestoresBreadthsOpenTradeFirstAndItsStopStillSells() {
+        only(BreadthDonchianArm.SOURCE)
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        assertEquals(BreadthDonchianArm.SOURCE, PassedArmsHost.view.value.open.single().arm)
+        // The app is killed: the start-up's positions-first step reads the book before anything else and finds it open.
+        PassedArmsHost.wipe()
+        assertFalse(PassedArmsHost.holding())
+        assertTrue(runBlocking { PositionsFirst.restore() })
+        assertTrue(PassedArmsHost.holding())
+        assertTrue("watched at full cadence, whatever the time", PassedArmsHost.wantsPass(16 * 60))
+        market(LocalTime.of(9, 27), call = { t -> if (t.isBefore(LocalTime.of(9, 25))) 100.0 else 80.0 })
+        at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertFalse(PassedArmsHost.holding())
+    }
+
+    @Test fun breadthsFailedFortyTradeBarSwitchesItOffByItselfAndLeavesDonchianOn() {
+        bothDonchians()
+        val t0 = day.minusDays(3).atTime(10, 0)
+        runBlocking { PassedArmsHost.addClosedForTest(List(40) { i ->
+            PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", "B$i", "CE", 65, 100.0, t0.plusMinutes(i.toLong()), null, exit = 98.0, exitTime = t0, why = "stop") }) }
+        tick(LocalTime.of(9, 0))
+        val v = view()
+        assertFalse(v.on(BreadthDonchianArm.SOURCE))
+        assertTrue(v.paused[BreadthDonchianArm.SOURCE].orEmpty().contains("after 40 paper trades"))
+        assertTrue(v.log.any { "${BreadthDonchianArm.LABEL} switched itself off on its forward-test bar" in it })
+        assertTrue(v.on(DonchianArm.SOURCE))
     }
 }

@@ -104,7 +104,7 @@ class ArmsCleanupTest {
 
     @Test fun theKeptArmsAreNeverHidden() {
         for (k in listOf("liquidity", "liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin", "liquidity15_mid", "liquidity5_mid",
-            "hero_ticket", DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, "watchlist", "solo_midday", "mcx")) {
+            "hero_ticket", DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, BreadthDonchianArm.SOURCE, "watchlist", "solo_midday", "mcx")) {
             assertFalse(ArmsCleanup.covers(k), k)
             val (s, _) = ArmsCleanup.pass(State(), flat())
             assertTrue(ArmsCleanup.visible(s, k), k)
