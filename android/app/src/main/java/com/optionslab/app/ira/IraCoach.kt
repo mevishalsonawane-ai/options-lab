@@ -747,7 +747,9 @@ internal object IraCoach {
                 val i = ins[p.symbol]
                 val g = i?.let { runCatching { greeks(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() }
                 val lv = levels(true, p.symbol)
-                out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second,
+                // 16 Oct: the open trade's own average where the watch worked it out from the day's fills (memory only).
+                val avg = com.optionslab.app.work.PositionCards.liveOpenAvg(p.symbol, p.qty, p.avg) ?: p.avg
+                out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, avg, p.last, i?.name, g?.first, g?.second,
                     stop = lv.first, target = lv.second, model = g?.third)
             }
             if (book != null) zerodha = com.optionslab.ira.SinceMorning.Zerodha.READ

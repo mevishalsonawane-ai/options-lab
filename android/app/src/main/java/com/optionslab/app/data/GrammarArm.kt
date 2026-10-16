@@ -169,7 +169,7 @@ object GrammarArm {
             IdeaView(x, b.positions.firstOrNull { it.idea == x.id && it.open }, nets, GrammarPaper.judge(nets, x.expect)?.why)
         }, b.log.takeLast(30))
         // The trade manager's one call: SHADOW (an unlisted family records only); this arm's own exits stay authoritative.
-        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(b, it) }) }
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(b, it) }, owner = "grammar") }
     }
 
     private fun managerId(p: Pos): String = "${GrammarPaper.FAMILY}:${p.symbol}:${p.entryTime}"

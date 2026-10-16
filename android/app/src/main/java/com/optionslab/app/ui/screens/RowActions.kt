@@ -55,6 +55,37 @@ sealed interface RowTarget {
 }
 
 private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
+
+/**
+ * A position popup's open-trade lines (16 Oct 2026; Boss read "Change +48.57%" as the open trade's +50% while it was +18.4%):
+ * "Open trade change", the open trade's own move on its [avg] ([com.optionslab.ira.OpenChange], never a figure that mixes in
+ * trades already closed on the symbol), and "Exits", the stop, target and exit time its arm is holding it to now
+ * ([com.optionslab.ira.ArmExits], memory only). A closed position shows neither; a zero average or no price, no change.
+ */
+internal fun openTradeLines(live: Boolean, symbol: String, qty: Int, avg: Double, ltp: Double): List<Pair<String, String>> {
+    if (qty == 0) return emptyList()
+    return listOfNotNull(
+        com.optionslab.ira.OpenChange.line(qty, avg, ltp)?.let { "Open trade change" to it },
+        com.optionslab.ira.ArmExits.line(live, symbol)?.let { "Exits" to it },
+    )
+}
+
+/**
+ * The Zerodha popup's open-trade lines: [openTradeLines] on the open trade's own average ([com.optionslab.app.data.LiveOpen],
+ * from the day's [trades]); an "Open trade average" line when it differs from Zerodha's, and "(on Zerodha's average)" on the
+ * change when Zerodha's had to be kept.
+ */
+internal fun liveOpenTradeLines(r: Broker.Position, trades: List<Broker.Trade>?): List<Pair<String, String>> {
+    if (r.qty == 0) return emptyList()
+    val a = com.optionslab.app.data.LiveOpen.of(r, trades)
+    val out = ArrayList<Pair<String, String>>()
+    if (!a.brokers && abs(a.price - r.avg) >= 0.005) out += "Open trade average" to px(a.price)
+    out += openTradeLines(true, r.symbol, r.qty, a.price, r.last).map { (k, v) ->
+        if (k == "Open trade change" && a.brokers) k to "$v (on Zerodha's average)" else k to v
+    }
+    return out
+}
+
 private val PAPER_WORKING = setOf("open", "trigger pending", "pending")
 
 /**
@@ -133,7 +164,8 @@ fun RowActionPopup(model: AppModel) {
             lines += "Last price (LTP)" to px(r.ltp)
             lines += "Unrealised P&L" to rs(r.unrealizedPnl, true)
             lines += "Realised today" to rs(r.todayRealizedPnl, true)
-            lines += "Change" to String.format(Locale.ENGLISH, "%+.2f%%", r.pnlPercent)
+            // 16 Oct: the open trade's own move, never the sandbox row's pnlPercent (the day's P&L on the symbol over the open cost).
+            lines += openTradeLines(false, r.symbol, r.quantity, r.averagePrice, r.ltp)
             (paper as? Load.Done)?.value?.let { v -> com.optionslab.app.data.Origins.paperPosition(owners, v.trades, r.symbol, r.product, r.quantity) }
                 ?.let { source = com.optionslab.app.data.Origins.positionDisplay(it) }
             if (r.quantity != 0) {
@@ -205,6 +237,9 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised · realised" to "${rs(r.unrealised, true)} · ${rs(r.realised, true)}"
             lines += "M2M" to rs(r.m2m, true)
             lines += "Bought · sold today" to "${r.buyQty} @ ${px(r.buyAvg)} · ${r.sellQty} @ ${px(r.sellAvg)}"
+            // 16 Oct: the open trade measured from its own average, worked out from the day's fills (Zerodha's may count a
+            // trade already closed on the symbol); Zerodha's kept, and said, when that cannot be done for certain.
+            lines += liveOpenTradeLines(r, (account as? Load.Done)?.value?.trades)
             (account as? Load.Done)?.value?.let { a -> com.optionslab.app.data.Origins.livePosition(owners, a.trades, a.orders, r.symbol, r.product, r.qty) }
                 ?.let { source = com.optionslab.app.data.Origins.positionDisplay(it) }
             if (r.qty != 0) {

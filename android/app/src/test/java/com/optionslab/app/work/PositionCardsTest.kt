@@ -38,7 +38,7 @@ class PositionCardsTest : RobolectricTest() {
         PositionCards.card(context, "Paper", "NIFTY25O2124500PE", 75, 100.0, 120.0, 1_500.0)
         val n = posted("Paper", "NIFTY25O2124500PE")!!
         assertEquals("NIFTY25O2124500PE · Paper · +₹1,500", Background.title(n))
-        assertEquals("LONG 75 @ 100.00 · LTP 120.00\nP&L +₹1,500 (+20.0%)", Background.text(n))
+        assertEquals("LONG 75 @ 100.00 · LTP 120.00\nP&L +₹1,500 · open trade +20.0%", Background.text(n))
         assertEquals(com.optionslab.app.work.Notifier.BUY, n.channelId)
         assertTrue("stays while the position is open", n.flags and Notification.FLAG_ONGOING_EVENT != 0)
         val close = n.actions.single()
@@ -55,7 +55,7 @@ class PositionCardsTest : RobolectricTest() {
         PositionCards.card(context, "Live", "NIFTY25O2124500CE", -75, 80.0, 90.0, -750.0)
         val n = posted("Live", "NIFTY25O2124500CE")!!
         assertEquals("NIFTY25O2124500CE · Live · −₹750", Background.title(n))
-        assertEquals("SHORT 75 @ 80.00 · LTP 90.00\nP&L −₹750 (-12.5%)", Background.text(n))
+        assertEquals("SHORT 75 @ 80.00 · LTP 90.00\nP&L −₹750 · open trade -12.5%", Background.text(n))
         assertEquals(com.optionslab.app.work.Notifier.SELL, n.channelId)
         val close = n.actions.single()
         assertEquals("Close…", close.title.toString())
@@ -66,11 +66,25 @@ class PositionCardsTest : RobolectricTest() {
         assertNotNull(pi.savedIntent.getStringExtra(MainActivity.EXTRA_NONCE))
     }
 
-    @Test fun thePercentageIsOfTheProfitSoItsSignMatches() {
-        // The owner's card: +₹2,474 on the day with the open trade below its price read "(-1.9%)"; it is +8.0% of the cost.
-        assertEquals("P&L +₹2,474 (+8.0%)", PositionCards.pnlLine(30, 1028.40, 2474.0))
-        assertEquals("P&L −₹600 (-1.9%)", PositionCards.pnlLine(30, 1028.40, -600.0))
-        assertEquals("P&L +₹0", PositionCards.pnlLine(50, 0.0, 0.0))
+    @Test fun thePercentageIsTheOpenTradesOwnAndSaysSo() {
+        // 16 Oct, Boss's NIFTY19OCT2623050CE: +₹3,858 on the day (an earlier closed trade's +₹2,399 with it) read "+48.6%";
+        // the open trade alone was +18.4% on its 122.20 average.
+        assertEquals("P&L +₹3,858 · open trade +18.4%", PositionCards.pnlLine(65, 122.20, 144.65, 3858.0))
+        // The day's money and the open trade can differ in sign: each is labelled.
+        assertEquals("P&L +₹2,474 · open trade -1.9%", PositionCards.pnlLine(30, 1028.40, 1008.85, 2474.0))
+        // A short gains as the price falls.
+        assertEquals("P&L +₹750 · open trade +12.5%", PositionCards.pnlLine(-75, 80.0, 70.0, 750.0))
+        // No price yet, or a zero average: no percentage.
+        assertEquals("P&L +₹0", PositionCards.pnlLine(50, 0.0, 10.0, 0.0))
+        assertEquals("P&L −₹600", PositionCards.pnlLine(30, 1028.40, null, -600.0))
+    }
+
+    @Test fun aZerodhaReEntrysCardUsesTheOpenTradesOwnAverage() {
+        // Zerodha's average 103.75 counts the closed trade; the open trade was bought at 122.20: +18.4%, not +39.4%.
+        PositionCards.card(context, "Live", "RE", 65, 103.75, 144.65, 3_858.0, openAvg = 122.20)
+        assertEquals("LONG 65 @ 122.20 · LTP 144.65\nP&L +₹3,858 · open trade +18.4%", Background.text(posted("Live", "RE")!!))
+        // Nothing worked out for it: Zerodha's.
+        assertEquals(null, PositionCards.liveOpenAvg("RE", 65, 103.75))
     }
 
     @Test fun aClosedPositionsCardIsTakenDown() {
@@ -88,7 +102,7 @@ class PositionCardsTest : RobolectricTest() {
 
     @Test fun theCardSaysWhoOpenedThePositionAndKeepsItOnSilentUpdates() {
         PositionCards.card(context, "Paper", "W", 75, 100.0, 110.0, 750.0, source = "ORB + Manual")
-        assertEquals("LONG 75 @ 100.00 · LTP 110.00\nP&L +₹750 (+10.0%)\nOpened by ORB + Manual", Background.text(posted("Paper", "W")!!))
+        assertEquals("LONG 75 @ 100.00 · LTP 110.00\nP&L +₹750 · open trade +10.0%\nOpened by ORB + Manual", Background.text(posted("Paper", "W")!!))
         PositionCards.card(context, "Paper", "W", 75, 100.0, 111.0, 825.0)
         assertTrue(Background.text(posted("Paper", "W")!!)!!.endsWith("\nOpened by ORB + Manual"))
     }
@@ -102,7 +116,7 @@ class PositionCardsTest : RobolectricTest() {
         PositionCards.card(context, "Paper", "SAME", 75, 100.0, 102.0, 150.0)
         val moved = posted("Paper", "SAME")!!
         assertFalse("a moved price is posted", first === moved)
-        assertEquals("LONG 75 @ 100.00 · LTP 102.00\nP&L +₹150 (+2.0%)", Background.text(moved))
+        assertEquals("LONG 75 @ 100.00 · LTP 102.00\nP&L +₹150 · open trade +2.0%", Background.text(moved))
         PositionCards.card(context, "Paper", "SAME", 75, 100.0, 102.0, 150.0, alert = true, headline = "BUY filled · Paper · Manual")
         assertFalse("a fill always sounds", moved === posted("Paper", "SAME"))
         // Taken down and opened again: posted again, even with the same words.

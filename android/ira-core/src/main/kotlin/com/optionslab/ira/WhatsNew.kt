@@ -58,6 +58,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-open-trade-change", OCT16, "A position's change is now its open trade only",
+            "A position's change now shows only the open trade's move on its average price, not earlier trades on the same option. " +
+                "Below it, Exits shows the stop, target and exit time its strategy is holding it to.",
+            "Tap any open position (Trade tab, Home or its notification)"),
         Entry("2026-10-16-telegram-login-fix", OCT16, "The Telegram login shows what it is doing",
             "Each step of the Telegram login now shows its result inside the login window, with a spinner while Telegram starts. " +
                 "If Telegram does not answer within 20 seconds, it says what to check and offers Try again. " +

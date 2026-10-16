@@ -91,6 +91,7 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     @After fun down() {
+        com.optionslab.ira.ArmExits.clear()
         Market.testClock = null
         PassedArmsHost.testNoAutoOn = true
         if (Autopilot.enabled()) Autopilot.resetForTest()
@@ -170,6 +171,42 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
         assertTrue(view().forwardLine(DonchianArm.SOURCE).startsWith("Forward test: 1 of 40"))
         assertNothingAtZerodha()
+    }
+
+    /** 16 Oct (Boss: "+50% profit, still not selling"): the position popup's Exits line is the arm's own stop, target and time. */
+    @Test fun theOpenTradesExitsAreInThePopupsLineUntilItCloses() {
+        only(DonchianArm.SOURCE)
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        val out = p.entryMinute.plusMinutes(30).toLocalTime()
+        assertEquals("stop %.2f · target %.2f · time %02d:%02d".format(java.util.Locale.ENGLISH, p.entry * 0.85, p.entry * 1.3, out.hour, out.minute),
+            com.optionslab.ira.ArmExits.line(false, p.symbol))
+        assertNull("a paper arm's trade is never the Zerodha position's", com.optionslab.ira.ArmExits.line(true, p.symbol))
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertNull("closed: no exits", com.optionslab.ira.ArmExits.line(false, p.symbol))
+    }
+
+    @Test fun theExitsOfALockedTradeTheSquareOffAndSoloTwosIndexStop() {
+        val t0 = day.atTime(14, 50)
+        val oov = PassedArmsHost.Pos(OovArm.SOURCE, "NIFTY", "X", "CE", 65, 100.0, t0, null)
+        // Before +40%: the -30% stop and the lock to come; the 60 minutes run past the 15:10 square-off, so 15:10.
+        val before = PassedArmsHost.exitsOf(oov, null)
+        assertEquals(70.0, before.stop!!, 1e-9); assertNull(before.target)
+        assertEquals(OovArm.EXITS.squareOff, before.at)
+        assertEquals("+10% locked once +40%", before.note)
+        // The lock earned: the stop is raised to it.
+        val locked = PassedArmsHost.exitsOf(oov, "${t0.plusMinutes(5)}|110.0")
+        assertEquals(110.0, locked.stop!!, 1e-9); assertEquals("lock held", locked.note)
+        // Donchian: no lock steps, no note.
+        val d = PassedArmsHost.exitsOf(oov.copy(arm = DonchianArm.SOURCE, entryTime = day.atTime(10, 15, 30)), null)
+        assertEquals(LocalTime.of(10, 45), d.at); assertNull(d.note); assertEquals(130.0, d.target!!, 1e-9)
+        // Solo 2.0's S1: out on the index, by 14:30.
+        val s1 = PassedArmsHost.exitsOf(oov.copy(arm = Solo2.SOURCE, setup = Solo2.Setup.S1.key, idx = 25_000.0, atr = 100.0), null)
+        assertNull(s1.stop); assertNull(s1.target); assertEquals(LocalTime.of(14, 30), s1.at)
+        assertTrue(s1.note!!, s1.note!!.startsWith("stop on the index at "))
+        assertEquals("stop on the index, breakeven lock", PassedArmsHost.exitsOf(oov.copy(arm = Solo2.SOURCE, setup = Solo2.Setup.S1.key), null).note)
     }
 
     @Test fun theTargetAndTheThirtyMinuteExit() {

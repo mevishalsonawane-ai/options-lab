@@ -58,8 +58,15 @@ internal object IraNewsTrades {
     fun all(): List<Pos> = runCatching {
         val raw = com.optionslab.app.security.SecurePrefs.getString(KEY)
         val kept = lastRead
-        if (kept != null && kept.first == raw) kept.second else parse(raw).also { lastRead = raw to it }
+        if (kept != null && kept.first == raw) kept.second else parse(raw).also { lastRead = raw to it; exits(it) }
     }.getOrDefault(emptyList())
+
+    /** 16 Oct: the open trades' stop and target for the position popup's "Exits" line (memory only), each time the record changes. */
+    private fun exits(list: List<Pos>) = runCatching {
+        com.optionslab.ira.ArmExits.set("jarvis", list.filter { !it.closed }.map { p ->
+            com.optionslab.ira.ArmExits.Entry("jarvis", "Jarvis", p.live, p.symbol, p.stop, p.entry + p.ladderPoints, null)
+        })
+    }
 
     private fun parse(raw: String?): List<Pos> = runCatching {
         val a = JSONArray(raw ?: "[]")

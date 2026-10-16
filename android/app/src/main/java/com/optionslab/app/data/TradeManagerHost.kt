@@ -298,13 +298,29 @@ object TradeManagerHost {
     )
 
     /**
+     * [a]'s exits as the position popup words them: its stop and target where it has them on its own price, and its last exit
+     * time ([ArmTrade.squareOffMs]), dated when that is after the day it was bought (an overnight hold).
+     */
+    internal fun exitsOf(owner: String, a: ArmTrade, note: String? = null): com.optionslab.ira.ArmExits.Entry {
+        val off = java.time.Instant.ofEpochMilli(a.squareOffMs).atZone(com.optionslab.engine.IST).toLocalDateTime()
+        val bought = java.time.Instant.ofEpochMilli(a.entryMs).atZone(com.optionslab.engine.IST).toLocalDate()
+        val later = if (off.toLocalDate().isAfter(bought))
+            "out on " + off.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM", java.util.Locale.ENGLISH)) else null
+        // A live one is found by Zerodha's name for it (the positions book's), a paper one by the paper book's.
+        return com.optionslab.ira.ArmExits.Entry(owner, a.label, a.live, if (a.live) a.kite ?: a.symbol else a.symbol, a.stop, a.target, off.toLocalTime(),
+            listOfNotNull(note, later).joinToString(" · ").ifEmpty { null })
+    }
+
+    /**
      * An arm's positions handed over in ONE call, from its book's publish (never on its order path; a contract's Zerodha token
      * not yet in memory is resolved on this host's worker, so every later look reads memory only): each open
      * one is attached (SHADOW by default: the arm's own exits stay authoritative, the manager only records), each one closed
      * since is told its real exit. A short future is followed with its prices negated (a long on −price: the same
      * arithmetic; the words show the market's prices). Never throws.
      */
-    fun sync(trades: List<ArmTrade>) {
+    fun sync(trades: List<ArmTrade>, owner: String? = null) {
+        // 16 Oct: the open ones' own exits for the position popup's "Exits" line ([com.optionslab.ira.ArmExits], memory only).
+        owner?.let { o -> runCatching { com.optionslab.ira.ArmExits.set(o, trades.filter { it.exit == null }.map { exitsOf(o, it) }) } }
         if (com.optionslab.app.BuildConfig.GOLD) return
         for (a in trades) runCatching {
             val k = if (a.shortFuture) -1.0 else 1.0
