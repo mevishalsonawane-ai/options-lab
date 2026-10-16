@@ -1,3 +1,7 @@
+> **WITHDRAWN 16 Oct 2026, before anything was run.** Boss clarified: *"I meant 25% -5% rule, where stop increase by
+> 5% when reaches the 25"*, which is R66's L25. R71 already tested that (exit XL), so nothing in R71b was computed, read
+> or logged as a test. Kept only as a record.
+
 # R71b pre-registration: a Donchian-channel trailing stop on the index, for the R71 patterns and for Donchian itself
 
 Written 16 Oct 2026, **before any R71b profit or loss was computed**; committed first. Research only (no `android/**`).

@@ -117,6 +117,30 @@ this code gives exactly R66's numbers (design Rs 8,281 / Rs 9,998, final Rs 55,4
 per test, seed 71. Benjamini-Hochberg across all 16 tests. Tests: `research/hunt/r71/test_r71.py` (38 tests, including a
 look-ahead guard for every rule and setting).
 
+## Boss's follow-up: "what if they had the 25% -> 5% stop rule, like Donchian?"
+
+They already did. Exit XL is exactly Donchian's paper exit with Boss's L25 rule (stop -15%; once the option is +25%, the
+stop moves to +5%; plus the 30/60/100 ladder; 30-minute time exit), and it is the **original** exit of every pattern
+above. Each pattern with Donchian's plain exits (XB, no L25) next to it with L25 (XL), net Rs:
+
+| strategy | design, plain (XB) | design, with L25 (XL) | final with L25: trades / net / win / worst day / max DD | trades the lock closed in the final |
+|---|---|---|---|---|
+| **Donchian 20** | Rs 8,281 | Rs 9,998 | 1,781 / **Rs 81,845** / 44% / -Rs 23,012 / Rs 91,626 | (R66: 43 by the +5% step) |
+| P1 Inside bar | -Rs 2,93,054 | -Rs 2,99,782 | 1,075 / -Rs 1,23,667 / 42% / -Rs 11,375 / Rs 1,42,459 | 9 |
+| P2 NR7 | -Rs 6,26,420 | -Rs 6,50,195 | 1,341 / -Rs 1,68,820 / 39% / -Rs 21,758 / Rs 2,14,246 | 6 |
+| P3 Squeeze release | Rs 62,605 | Rs 57,763 | 305 / -Rs 41,281 / 40% / -Rs 11,394 / Rs 65,810 | 1 |
+| P4 Flag | -Rs 24,519 | -Rs 27,378 | 32 / -Rs 442 / 44% / -Rs 2,618 / Rs 8,511 | 0 |
+| P5 Double bottom / top | -Rs 89,511 | -Rs 94,311 | 502 / -Rs 12,091 / 42% / -Rs 10,553 / Rs 59,040 | 5 |
+| P6 Heikin-Ashi flip | -Rs 35,153 | -Rs 8,797 | 357 / -Rs 79,173 / 44% / -Rs 17,305 / Rs 88,217 | 3 |
+| P7 Three-bar reversal | -Rs 3,21,384 | -Rs 3,21,930 | 855 / -Rs 1,67,689 / 38% / -Rs 20,918 / Rs 1,82,990 | 7 |
+| P8 Swing structure | -Rs 8,599 | Rs 2,320 | 374 / -Rs 40,109 / 45% / -Rs 13,949 / Rs 56,346 | 4 |
+
+**What it says:** the L25 rule moves each pattern by only a few thousand rupees either way, because with a 30-minute time
+exit few trades reach +25% and then fall back (0-9 lock exits per pattern in the final, about 1% of trades). It cannot
+turn a losing entry into a winning one: the patterns lose because their entries are no better than random, not because
+winners give back profit. With L25 every pattern still lost in the final, while Donchian with the same rule made
+Rs 81,845. (A Donchian-channel trailing stop was also pre-registered as R71b, then withdrawn unrun once Boss clarified.)
+
 ## Where the code is narrower than the pre-registration's words (disclosed)
 
 Found in the self-review after the final read. The code was written and committed (ec76c5b) before any profit or loss
