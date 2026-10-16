@@ -246,7 +246,9 @@ object TelegramCapture {
         var closingSince = 0L
         while (true) {
             val json = runCatching { t.receive(1.0) }.getOrNull()
-            if (json != null) runCatching { handle(s, s.onUpdate(json)) }
+            // 16 Oct: a session still closing (its reader lives on up to 15 s) keeps its own state, but never writes into the view
+            // once a newer session has started - its words would stand over the current login step's.
+            if (json != null) runCatching { val events = s.onUpdate(json); if (session === s) handle(s, events) }
             val alive = running && session === s
             val now = System.currentTimeMillis()
             // A job Boss started is over and capture is not wanted now: closed (whether or not the words lane runs).

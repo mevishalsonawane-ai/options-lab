@@ -243,6 +243,10 @@ class TelegramCaptureTest : RobolectricTest() {
         assertEquals(setOf(kings, other), SignalTesterHost.telegramSelected().keys)
         TelegramCapture.refresh()
         assertTrue(TelegramCapture.setCapture(true).startsWith("Capture on"))
+        try { readAfterRestart() } finally { TelegramCapture.setCapture(false) }   // capture left on would run in the next tests
+    }
+
+    private fun readAfterRestart() {
         TelegramCapture.ensure(day.atTime(10, 0))
         assertTrue(TelegramCapture.view.value.running)
         assertTrue(TelegramCapture.diagLine(), TelegramCapture.diagLine().endsWith("· running · 2 channels selected"))
