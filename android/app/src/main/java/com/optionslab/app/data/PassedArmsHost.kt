@@ -80,6 +80,8 @@ object PassedArmsHost {
     internal const val AUTO_ON = "passed_on_2026-10-15"
     /** 16 Oct (Boss's choice: "All three"): R64's 30-60-100 lock switched on once for new paper trades ([setLock]). */
     internal const val LOCK_ON = "lock_306100_2026-10-16"
+    /** 16 Oct (Boss's choice after R65 - R69: "Select the best"): R66's +5% once +25% switched on once for new locked trades ([setL25]). */
+    internal const val L25_ON = "lock_l25_2026-10-16"
 
     /** TEST SEAM: true in the JVM tests' app (the other tests' books start with these arms off). Its setter throws in a release build. */
     @Volatile internal var testNoAutoOn: Boolean = false
@@ -107,6 +109,11 @@ object PassedArmsHost {
         val adopted: String? = null,
         /** 16 Oct (R64 A4, Boss's choice): entered under the 30-60-100 lock (no fixed target). */
         val lock: Boolean = false,
+        /**
+         * 16 Oct (R66 L25, Boss's choice): entered with the lock's +5% once +25% step too ([PassedArms.LOCK_L25]); only with [lock].
+         * The ladder a trade entered with is kept (persisted); a trade from an older book reads as the plain A4 ladder.
+         */
+        val l25: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -142,10 +149,12 @@ object PassedArmsHost {
         val locks: MutableMap<String, String> = HashMap(),
         /** R64's 30-60-100 lock for NEW trades ([setLock]); open trades keep what they entered with ([Pos.lock]). */
         var lockOn: Boolean = false,
+        /** R66's +5% once +25% step for NEW trades under the lock ([setL25]); open trades keep what they entered with ([Pos.l25]). */
+        var l25On: Boolean = false,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), HashMap(status), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On)
     }
 
     /** What the rows and Jarvis read (memory only). */
@@ -158,6 +167,8 @@ object PassedArmsHost {
         val base: Map<String, Int> = emptyMap(), val soloBase: SoloMidday.Baseline = SoloMidday.Baseline(),
         /** R64's 30-60-100 lock is on for new trades. */
         val lockOn: Boolean = false,
+        /** R66's +5% once +25% step is on for new trades under the lock. */
+        val l25On: Boolean = false,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         fun closedOf(source: String): List<Pos> = all.filter { it.arm == source }
@@ -203,6 +214,7 @@ object PassedArmsHost {
             o.optJSONArray("scores")?.let { a -> for (i in 0 until a.length()) b.scores += a.getString(i) }
             o.optJSONObject("locks")?.let { m -> m.keys().forEach { b.locks[it] = m.getString(it) } }
             b.lockOn = o.optBoolean("lock306100", false)
+            b.l25On = o.optBoolean("lockL25", false)
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
         cache = b
         // 15 Oct (the PAPER rule): on once, on paper. A book that could not be read is never switched on by itself (Boss may
@@ -229,6 +241,18 @@ object PassedArmsHost {
             }
             save(b)
         }
+        // 16 Oct (Boss's choice after R65 - R69: "Select the best"): R66's L25, +5% locked once +25%, on once for NEW paper trades
+        // that enter under the lock - a small improvement, not proven (it failed the random-exit check), so it is Boss's choice;
+        // logged so the timeline shows it and one tap undoes it. Same care: never on an unreadable book, never in Gold.
+        if (L25_ON !in b.migrated) {
+            b.migrated += L25_ON
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && !b.l25On) {
+                b.l25On = true
+                note(b, "L25 turned on by the 16 Oct update for new paper trades under the 30-60-100 lock, your choice: $L25_WORDS (R66)")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedL25On() }
+            }
+            save(b)
+        }
         return b
     }
 
@@ -237,7 +261,8 @@ object PassedArmsHost {
         return Pos(p.getString("arm"), p.getString("index"), p.getString("symbol"), p.getString("right"), p.getInt("qty"), p.getDouble("entry"),
             LocalDateTime.parse(p.getString("entryTime")), p.optString("orderId").ifEmpty { null }, p.optString("setup").ifEmpty { null },
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
-            p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false))
+            p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
+            p.optBoolean("l25", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -247,6 +272,7 @@ object PassedArmsHost {
             p.exit?.let { put("exit", it) }; p.exitTime?.let { put("exitTime", it.toString()) }; p.why?.let { put("why", it) }
             p.exitRef?.let { put("exitRef", it) }; p.paperFill?.let { put("paperFill", it) }; p.adopted?.let { put("adopted", it) }
             if (p.lock) put("lock", true)
+            if (p.l25) put("l25", true)
         }
 
     private val written = Vault.LastWrite()
@@ -265,6 +291,7 @@ object PassedArmsHost {
         o.put("paused", JSONObject().apply { b.paused.forEach { (k, v) -> put(k, v) } })
         o.put("scores", JSONArray().apply { b.scores.takeLast(120).forEach { put(it) } })
         o.put("lock306100", b.lockOn)
+        o.put("lockL25", b.l25On)
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && it.symbol == k } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
@@ -279,7 +306,7 @@ object PassedArmsHost {
         val closed = b.positions.filter { !it.open }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
-            model != null, b.base.toMap(), soloBase(b), b.lockOn)
+            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On)
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open }.map { exitsOf(it, b.locks[it.symbol]) }) }
     }
@@ -292,20 +319,26 @@ object PassedArmsHost {
     internal fun exitsOf(p: Pos, lock: String?): com.optionslab.ira.ArmExits.Entry {
         if (p.setup == Solo2.Setup.S1.key) {
             val idxStop = if (p.idx != null && p.atr != null) SoloMidday.stopLevel(p.side, p.idx, p.atr) else null
-            return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, null, null, SoloMidday.EXIT,
-                (idxStop?.let { "stop on the index at %.2f".format(Locale.ENGLISH, it) } ?: "stop on the index") + ", breakeven lock")
+            val held = lock?.split('|')?.getOrNull(1)?.toDoubleOrNull()
+            // 16 Oct: a locked S1 keeps its index exits, with the premium ladder beside them (its first step, or "lock held").
+            return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, held, null, SoloMidday.EXIT,
+                (idxStop?.let { "stop on the index at %.2f".format(Locale.ENGLISH, it) } ?: "stop on the index") + ", breakeven lock" +
+                    if (!p.lock) "" else if (held != null) "; premium lock held" else "; on the premium, " + firstStepWords(exitsOf(p)).orEmpty())
         }
         val x = exitsOf(p)
         val held = lock?.split('|')?.getOrNull(1)?.toDoubleOrNull()
         val stop = listOfNotNull(PassedArms.stopLevel(p.entry, x), held).maxOrNull()
         val sq = x.squareOff
         val at = PassedArms.timeExitAt(p.entryMinute, x)?.takeIf { it.toLocalDate() == p.day && it.toLocalTime().isBefore(sq) }?.toLocalTime() ?: sq
-        // R64's ladder keeps breakeven (NaN: the fill plus the charges) at its first step: worded so, never "+NaN%".
-        val step = if (held == null) x.steps.firstOrNull()?.let { (t, k) ->
-            (if (k.isNaN()) "breakeven" else "+%.0f%%".format(Locale.ENGLISH, k * 100)) + " locked once +%.0f%%".format(Locale.ENGLISH, t * 100)
-        } else "lock held"
+        // R66's L25 first: "+5% locked once +25%" before it is earned, "lock held" after.
+        val step = if (held == null) firstStepWords(x) else "lock held"
         return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, stop, PassedArms.targetLevel(p.entry, x), at,
             step?.takeIf { x.steps.isNotEmpty() })
+    }
+
+    /** The ladder's first step in words. R64's keeps breakeven (NaN: the fill plus the charges) there: worded so, never "+NaN%". */
+    private fun firstStepWords(x: PassedArms.PremiumExits): String? = x.steps.firstOrNull()?.let { (t, k) ->
+        (if (k.isNaN()) "breakeven" else "+%.0f%%".format(Locale.ENGLISH, k * 100)) + " locked once +%.0f%%".format(Locale.ENGLISH, t * 100)
     }
 
     private fun now0(): LocalDateTime = runCatching { Market.now().toLocalDateTime().withNano(0) }.getOrElse { LocalDateTime.now().withNano(0) }
@@ -392,6 +425,29 @@ object PassedArmsHost {
         }
     }
 
+    /** R66's L25 step in words (the notes, the notices). */
+    const val L25_WORDS = "+5% locked once the option has been +25% above the fill; the rest of the 30-60-100 lock stays, locks only rise"
+
+    /**
+     * R66's L25 (+5% locked once +25%) on or off for NEW paper trades of the three arms that enter under the 30-60-100 lock (open
+     * trades keep the ladder they entered with). Paper only. [log]: false for the change log's own Undo (the switch-on is logged by
+     * the 16 Oct update).
+     */
+    suspend fun setL25(on: Boolean, log: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.l25On == on) return@withLock "The +5% once +25% step is already ${if (on) "on" else "off"} (paper only)."
+            b.l25On = on
+            note(b, if (on) "L25 on for new paper trades under the 30-60-100 lock: $L25_WORDS" else "L25 off: new paper trades use the plain 30-60-100 lock" +
+                if (b.positions.any { it.open && it.l25 }) "; open trades keep the step they entered with" else "")
+            save(b)
+            if (log && on) runCatching { com.optionslab.app.ira.Autopilot.logPassedL25On() }
+            if (on) "The +5% once +25% step is on for new paper trades" + (if (b.lockOn) "." else ", but it acts only with the 30-60-100 lock, which is off.")
+            else "The +5% once +25% step is off: new paper trades use the plain 30-60-100 lock."
+        }
+    }
+
     /** The diagnostics lines: each arm's switch, open trades, record, apart index and forward test. */
     fun diagLine(): String {
         val v = _view.value
@@ -402,7 +458,9 @@ object PassedArmsHost {
                 "${c.size} closed %,.0f after charges · ${apart(s)} ${ap.size} %,.0f · ".format(Locale.ENGLISH, c.sumOf { it.net ?: 0.0 }, ap.sumOf { it.net ?: 0.0 }) +
                 v.forwardLine(s) + " · 30-60-100 lock ${if (v.lockOn) "on" else "off"} for new trades, ${c.count { it.lock }} closed on it " +
                     "%,.0f, ${c.count { !it.lock }} on the research exits %,.0f".format(Locale.ENGLISH, c.filter { it.lock }.sumOf { it.net ?: 0.0 },
-                        c.filter { !it.lock }.sumOf { it.net ?: 0.0 }) + (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
+                        c.filter { !it.lock }.sumOf { it.net ?: 0.0 }) +
+                    " · L25 +5% once +25% ${if (v.l25On && v.lockOn) "on" else if (v.l25On) "on (acts only with the lock, which is off)" else "off"} for new trades, " +
+                    "${c.count { it.l25 }} closed on it %,.0f".format(Locale.ENGLISH, c.filter { it.l25 }.sumOf { it.net ?: 0.0 }) + (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
                 v.status.filterKeys { it.startsWith("$s|") }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} $x" }
         } + " · ${PassedArms.PASSED}"
     }
@@ -702,7 +760,8 @@ object PassedArmsHost {
                     null
                 } else {
                     val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
-                    val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn)
+                    val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
+                        l25 = b.lockOn && b.l25On)
                     b.positions += pos
                     b.marks[c.symbol] = fill.price
                     b.decided += keys
@@ -742,9 +801,9 @@ object PassedArmsHost {
 
     private fun exitWords(p: Pos): String = when {
         p.setup == Solo2.Setup.S1.key -> "Out on SoloMidday's index stop, at breakeven or at 14:30" +
-            if (p.lock) "; on the premium, breakeven locked once +30%, +30% once +60%, +60% once +100%" else ""
+            if (p.lock) "; on the premium, ${com.optionslab.ira.PassedArmsTalk.ladderWords(p.l25)}" else ""
         p.lock -> exitsOf(p).let { x ->
-            listOfNotNull(x.stop?.let { "stop −%.0f%%".format(Locale.ENGLISH, it * 100) }, "breakeven locked once +30%, +30% once +60%, +60% once +100%",
+            listOfNotNull(x.stop?.let { "stop −%.0f%%".format(Locale.ENGLISH, it * 100) }, com.optionslab.ira.PassedArmsTalk.ladderWords(p.l25),
                 x.tmaxMinutes?.let { "out after $it minutes" }, "square-off ${x.squareOff}").joinToString(", ")
         }
         else -> exitsOf(p).let { x ->
@@ -761,7 +820,7 @@ object PassedArmsHost {
         DonchianArm.SOURCE -> DonchianArm.EXITS
         OovArm.SOURCE -> OovArm.EXITS
         else -> Solo2.exits(Solo2.Setup.entries.firstOrNull { it.key == p.setup } ?: Solo2.Setup.S2)
-    }.let { if (p.lock) PassedArms.withLock(it) else it }
+    }.let { if (p.lock) PassedArms.withLock(it, p.l25) else it }
 
     /** The lock's breakeven for [p]: its fill plus the round-trip charges per unit (R64: the fill + charges(entry, entry) / qty). */
     private fun breakeven(p: Pos): Double = p.entry + ProfitLock.roundTripPerUnit(p.entry, p.qty)
@@ -1043,7 +1102,7 @@ object PassedArmsHost {
             if (b.positions.any { it.open && it.symbol == o.symbol }) return@withLock null
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
-                adopted = ADOPT_FILL, lock = b.lockOn)
+                adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On)
             b.positions += p
             b.marks[p.symbol] = p.entry
             val words = "${label(arm)}: ${p.symbol} ${p.qty} was held on paper with no record here, so its exits were not running; " +
@@ -1072,14 +1131,18 @@ object PassedArmsHost {
                 if (s == Solo2.SOURCE) v.scores else emptyList())
         }
         val w = runCatching { WatchlistHost.cards() }.getOrDefault(emptyList()).map { com.optionslab.engine.orb.Watchlist.line(it) }
-        return com.optionslab.ira.PassedArmsTalk.Facts(arms, w, runCatching { WatchlistHost.on() }.getOrNull(), v.modelLoaded)
+        return com.optionslab.ira.PassedArmsTalk.Facts(arms, w, runCatching { WatchlistHost.on() }.getOrNull(), v.modelLoaded,
+            com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On))
     }
 
     /** One trade in words (its row and Jarvis). */
     fun tradeLine(p: Pos, marks: Map<String, Double>): String =
         if (p.open) "${p.symbol} ${p.qty} @ ${px(p.entry)}" + (marks[p.symbol]?.let { " · now ${px(it)}" } ?: "") + (p.setup?.let { " ($it)" } ?: "") +
-            (if (p.lock) " · 30-60-100 lock" else "") + " · paper"
-        else "${p.symbol} ${p.qty} @ ${px(p.entry)} → ${px(p.exit ?: 0.0)} (${p.why}) · ${rs(p.net ?: 0.0)}" + (if (p.lock) " · 30-60-100 lock" else "")
+            lockTag(p) + " · paper"
+        else "${p.symbol} ${p.qty} @ ${px(p.entry)} → ${px(p.exit ?: 0.0)} (${p.why}) · ${rs(p.net ?: 0.0)}" + lockTag(p)
+
+    /** The ladder a trade entered with, labelled so each record stays separable (the research exits, A4, A4 + L25). */
+    private fun lockTag(p: Pos): String = if (!p.lock) "" else if (p.l25) " · 30-60-100 lock + L25" else " · 30-60-100 lock"
 
     /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
     internal fun wipe() { cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear() }

@@ -144,6 +144,17 @@ object PassedArms {
      */
     fun withLock(x: PremiumExits): PremiumExits = x.copy(target = null, steps = LOCK_306100)
 
+    /**
+     * R66's L25 (16 Oct 2026, Boss's choice after R65 - R69: "Select the best"; research/HUNT_R66_LOCK_AT_25.md): [LOCK_306100] with
+     * one step more before it - once the premium has traded +25% above the fill, at least +5% is locked (entry x 1.05). The other
+     * steps stay; locks only rise, so after +25% the stop never drops below +5%, even at the +30% breakeven step. A small, not
+     * proven, improvement (final +Rs 5,396 over 2,202 trades; design +Rs 8,042): Boss's choice, PAPER only.
+     */
+    val LOCK_L25: List<Pair<Double, Double>> = listOf(0.25 to 0.05) + LOCK_306100
+
+    /** [withLock] with R66's L25 step when [l25] (a trade keeps the ladder it entered with). */
+    fun withLock(x: PremiumExits, l25: Boolean): PremiumExits = x.copy(target = null, steps = if (l25) LOCK_L25 else LOCK_306100)
+
     enum class ExitKind(val why: String) { STOP("stop"), LOCK("lock"), TARGET("target"), TIME("time"), SQUARE_OFF("squareoff") }
 
     /** An exit decided: why, and the price the research would have booked it at (a stop's level or a gap's open; the target). */

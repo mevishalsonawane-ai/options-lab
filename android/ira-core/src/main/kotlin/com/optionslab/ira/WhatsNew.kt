@@ -58,6 +58,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-passed-arms-l25", OCT16, "+5% locked once a paper trade has been +25% (your choice)",
+            "This is for new paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0. " +
+                "Each will lock +5% once the option has been +25%. " +
+                "The 30-60-100 lock stays on top, and a lock never goes back down. " +
+                "Research R66 found it a small improvement, not a proven one. " +
+                "It made +₹5,396 more over 2,202 trades in the final test, and +₹8,042 in design. " +
+                "It is your choice, on paper only, and open trades keep their exits. " +
+                "It is in the change log, and one tap undoes it.",
+            "Home → Strategies → tap a passed-research arm's name; tap an open position for its exits"),
         Entry("2026-10-16-passed-arms-lock", OCT16, "The 30-60-100 lock on three paper arms (your choice)",
             "New paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 have no fixed target now. " +
                 "Each keeps its own stop and time exit. " +

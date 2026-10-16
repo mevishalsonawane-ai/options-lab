@@ -294,6 +294,111 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(view().log.last().contains("30-60-100 lock off"))
     }
 
+    // ---- R66's L25: +5% locked once +25% (16 Oct, Boss's choice: "Select the best") ------------------------------------------
+
+    @Test fun theUpdateSwitchesL25OnOnceAndItsOwnUndoSwitchesItOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        assertTrue(view().l25On); assertTrue(view().lockOn)
+        assertEquals(1, view().log.count { "L25 turned on by the 16 Oct update" in it })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().l25On)
+        assertEquals(1, view().log.count { "L25 turned on" in it })
+        assertTrue(PassedArmsHost.diagLine().contains("L25 +5% once +25% on for new trades"))
+        // Its own Undo (another target than the lock's): the step off, the lock stays on; paper only, no PIN.
+        val on = AutoChange.passedL25(true)
+        assertTrue(Autopilot.apply(AutoChange.inverse(on, "undone by you"), false)!!.contains("plain 30-60-100 lock"))
+        assertFalse(view().l25On); assertTrue(view().lockOn)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("its Undo stays undone after a restart", view().l25On)
+        assertTrue(PassedArmsHost.diagLine().contains("L25 +5% once +25% off for new trades"))
+        assertTrue(Autopilot.apply(on, false)!!.contains("is on"))
+        assertTrue(view().l25On)
+        // The lock's Undo leaves the step's switch alone (it acts only with the lock: said so).
+        assertTrue(Autopilot.apply(AutoChange.inverse(AutoChange.passedLock(true), "undone by you"), false)!!.contains("research exits"))
+        assertTrue(view().l25On); assertFalse(view().lockOn)
+        assertTrue(PassedArmsHost.diagLine().contains("acts only with the lock, which is off"))
+        // A book that cannot be read is never switched on by itself.
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().l25On)
+    }
+
+    /** NIFTY's CE: 100 until 09:30, [peak] 09:30 - 09:32, then [after] (the minute candles' high is the close + 1). */
+    private fun ride(until: LocalTime, peak: Double, after: Double) =
+        market(until, call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 100.0 else if (t.isBefore(LocalTime.of(9, 33))) peak else after })
+
+    @Test fun withL25ATradeThatWasPlus25AndCameBackSellsAtAboutPlus5EvenAfterARestart() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(true) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertTrue("it entered with the lock and the step", p.lock && p.l25)
+        assertTrue(PassedArmsHost.tradeLine(p, emptyMap()).contains("30-60-100 lock + L25"))
+        // The popup before +25%: "+5% locked once +25%".
+        assertTrue(com.optionslab.ira.ArmExits.line(false, p.symbol)!!, com.optionslab.ira.ArmExits.line(false, p.symbol)!!.contains("+5% locked once +25%"))
+        // 09:30 - 09:32 at 126 (high 127: past +25%, under +30%): +5% earned, nothing sold.
+        val peak = p.entry * 1.26
+        ride(LocalTime.of(9, 33), peak, peak)
+        at(LocalTime.of(9, 33)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(1, view().open.size)
+        assertTrue(com.optionslab.ira.ArmExits.line(false, p.symbol)!!.contains("lock held"))
+        // A restart in the middle of the trade: it keeps the ladder it entered with, and the lock it earned.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().open.single().l25)
+        // 09:33 on at +5.5% (its low a rupee under, below +5%): through the +5% lock - sold by the lock at about +5%.
+        ride(LocalTime.of(9, 35), peak, p.entry * 1.055)
+        at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = view().closed.single()
+        assertEquals("lock", sold.why)
+        assertTrue("${sold.exit} vs ${p.entry}", sold.exit!! in p.entry * 1.02..p.entry * 1.07)
+        assertTrue(PassedArmsHost.tradeLine(sold, emptyMap()).endsWith("30-60-100 lock + L25"))
+        assertTrue(PassedArmsHost.diagLine().contains("1 closed on it"))
+        assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withoutL25OrForATradeEnteredBeforeItTheSameRideIsHeld() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(false) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertTrue(p.lock); assertFalse(p.l25)
+        assertTrue(com.optionslab.ira.ArmExits.line(false, p.symbol)!!.contains("breakeven locked once +30%"))
+        // Switched on while it is held: this trade keeps the plain A4 ladder (open trades keep the exits they entered with).
+        assertEquals("The +5% once +25% step is on for new paper trades.", runBlocking { PassedArmsHost.setL25(true) })
+        assertEquals("The +5% once +25% step is already on (paper only).", runBlocking { PassedArmsHost.setL25(true) })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("an older trade reads as the plain A4 ladder", view().open.single().l25)
+        val peak = p.entry * 1.26
+        ride(LocalTime.of(9, 35), peak, p.entry * 1.055)
+        at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("A4 alone: +26% then +5.5% is still held (its stop is −15%)", 1, view().open.size)
+        assertTrue(view().closed.isEmpty())
+        runBlocking { PassedArmsHost.setL25(false) }
+        assertTrue(view().log.last().contains("L25 off"))
+        assertNothingAtZerodha()
+    }
+
+    @Test fun l25WordsInThePopupTheBuyNoticeAndJarvis() {
+        val t0 = day.atTime(10, 0)
+        val oov = PassedArmsHost.Pos(OovArm.SOURCE, "NIFTY", "X", "CE", 65, 100.0, t0, null, lock = true, l25 = true)
+        val e = PassedArmsHost.exitsOf(oov, null)
+        assertNull(e.target); assertEquals(70.0, e.stop!!, 1e-9); assertEquals("+5% locked once +25%", e.note)
+        val held = PassedArmsHost.exitsOf(oov, "${t0.plusMinutes(5)}|105.0")
+        assertEquals(105.0, held.stop!!, 1e-9); assertEquals("lock held", held.note)
+        // The plain A4 ladder is still worded as before.
+        assertEquals("breakeven locked once +30%", PassedArmsHost.exitsOf(oov.copy(l25 = false), null).note)
+        // Solo 2.0's S1 keeps its index exits, with the premium ladder beside them.
+        val s1 = oov.copy(arm = Solo2.SOURCE, setup = Solo2.Setup.S1.key)
+        assertEquals("stop on the index, breakeven lock; on the premium, +5% locked once +25%", PassedArmsHost.exitsOf(s1, null).note)
+        assertEquals("stop on the index, breakeven lock; premium lock held", PassedArmsHost.exitsOf(s1, "${t0.plusMinutes(5)}|105.0").note)
+        assertEquals("stop on the index, breakeven lock", PassedArmsHost.exitsOf(s1.copy(lock = false, l25 = false), null).note)
+        // Jarvis: the exits new trades enter with.
+        val f = PassedArmsHost.facts(PassedArmsHost.View(lockOn = true, l25On = true))
+        assertTrue(f.exits!!, f.exits!!.contains("+5% locked once +25%"))
+        assertTrue(PassedArmsHost.facts(PassedArmsHost.View(lockOn = true)).exits!!.contains("breakeven locked once +30%"))
+    }
+
     @Test fun nothingOnTheIndexsOwnExpiryDayAndTheKillSwitchRefuses() {
         only(DonchianArm.SOURCE)
         // The kill switch: the break is not bought (refused), nothing placed.

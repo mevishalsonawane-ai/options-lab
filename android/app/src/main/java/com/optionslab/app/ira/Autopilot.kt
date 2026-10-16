@@ -404,10 +404,14 @@ internal object Autopilot {
             }
             // 16 Oct (Boss's choice: "All three"): R64's 30-60-100 lock on the passed paper arms ([logPassedLockOn]): its Undo switches it off
             // for new trades (open ones keep what they entered with). Paper only, never Zerodha: no PIN either way; not logged again.
+            // 16 Oct (Boss's choice: "Select the best"): R66's +5% once +25% step ([AutoChange.L25_TARGET], its own entry): its Undo
+            // switches the step off for new trades (back to the plain 30-60-100 lock). Paper only; not logged again.
             AutoChange.Kind.PAPER_LOCK -> {
-                if (c.target != AutoChange.LOCK_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
-                kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setLock(c.to == AutoChange.ON, log = false) }
-                    .takeIf { !it.contains("not ready") }
+                if ((c.target != AutoChange.LOCK_TARGET && c.target != AutoChange.L25_TARGET) || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                kotlinx.coroutines.runBlocking {
+                    if (c.target == AutoChange.L25_TARGET) com.optionslab.app.data.PassedArmsHost.setL25(c.to == AutoChange.ON, log = false)
+                    else com.optionslab.app.data.PassedArmsHost.setLock(c.to == AutoChange.ON, log = false)
+                }.takeIf { !it.contains("not ready") }
             }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
@@ -842,6 +846,16 @@ internal object Autopilot {
     fun logPassedLockOn() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedLock(true), "the 16 Oct update (your choice: \"All three\"); paper only - never live")
+    }
+
+    /**
+     * 16 Oct (Boss's choice after R65 - R69: "Select the best"): R66's L25, +5% locked once +25%, switched on once for new trades of the
+     * three passed PAPER arms under the 30-60-100 lock - not proven (a small improvement that failed the random-exit check), so it
+     * is Boss's: logged as Boss's (kept) so the change log and "Today's changes" show it; one tap undoes it. Paper only.
+     */
+    fun logPassedL25On() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedL25(true), "the 16 Oct update (your choice: \"Select the best\"); paper only - never live")
     }
 
     /**
