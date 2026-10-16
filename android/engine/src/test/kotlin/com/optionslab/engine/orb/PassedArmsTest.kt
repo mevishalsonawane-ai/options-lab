@@ -209,6 +209,38 @@ class PassedArmsTest {
         assertEquals(110.0, hi.lock!!, 1e-9)
     }
 
+    // ---- 16 Oct: a second trade on the same option the same day ------------------------------------------------------------
+
+    @Test fun aReEntryOnTheSameOptionIsWalkedFromItsOwnEntryAndItsOwnFill() {
+        val x = DonchianArm.EXITS
+        // The first trade: 09:40 at 100, out at its target (130) by 09:50. The bars of that morning stay in the feed.
+        val morning = (0 until 40).map { i -> val m = t(9, 40).plusMinutes(i.toLong()); Bar(m, 100.0 + i, 101.0 + i, 99.0 + i, 100.0 + i) }
+        // The re-entry: 10:20 at 122.20 (the 16 Oct trade); its target is 158.86.
+        val e = 122.20
+        val tgt = PassedArms.targetLevel(e, x)!!
+        assertEquals(158.86, tgt, 1e-9)
+        val after = (0 until 8).map { i -> bar(10, 20 + i, 122.0 + 3 * i, 123.0 + 3 * i, 121.0 + 3 * i, 122.0 + 3 * i) }
+        // 10:28: the minute's high went over 159 - sold at the target (a limit: booked at 158.86), not at 158.40 or later.
+        val spike = bar(10, 28, 156.0, 159.10, 155.0, 158.40)
+        val w = PassedArms.exitOnBars(e, t(10, 20), morning + after + spike, 158.40, t(10, 29), x)
+        assertEquals(PassedArms.ExitKind.TARGET, w.exit!!.kind); assertEquals(tgt, w.exit!!.price, 1e-9)
+        // The morning's bars (all above the re-entry's stop, some above 130) never decide it: nothing before 10:20 is read.
+        assertNull(PassedArms.exitOnBars(e, t(10, 20), morning, 125.0, t(10, 21), x).exit)
+        // Between bars, the price now over the target sells too (no option bars at all: the stream's price alone).
+        assertEquals(PassedArms.ExitKind.TARGET, PassedArms.exitOnBars(e, t(10, 20), emptyList(), 159.0, t(10, 28), x).exit!!.kind)
+        // Its 30 minutes: out at 10:50 with no bars and no price at all (the clock alone).
+        val time = PassedArms.exitOnBars(e, t(10, 20), emptyList(), null, t(10, 50), x).exit!!
+        assertEquals(PassedArms.ExitKind.TIME, time.kind)
+        assertNull(PassedArms.exitOnBars(e, t(10, 20), emptyList(), null, t(10, 49), x).exit)
+        // Its stop: -15% (103.87).
+        assertEquals(PassedArms.ExitKind.STOP, PassedArms.exitOnBars(e, t(10, 20), listOf(bar(10, 22, 110.0, 111.0, 103.0, 104.0)), 104.0, t(10, 23), x).exit!!.kind)
+        // A lock the FIRST trade earned (seen at 09:45, level 120) is never this trade's: at 118 it is not sold on it.
+        val layered = PassedArms.PremiumExits(0.15, 0.30, 30, listOf(0.10 to 0.05), x.squareOff)
+        assertNull(PassedArms.exitOnBars(e, t(10, 20), emptyList(), 118.0, t(10, 21), layered, t(9, 45) to 120.0).exit)
+        // One seen during this trade still holds.
+        assertEquals(PassedArms.ExitKind.LOCK, PassedArms.exitOnBars(e, t(10, 20), emptyList(), 125.0, t(10, 25), layered, t(10, 22) to 128.0).exit!!.kind)
+    }
+
     @Test fun theSpreadPaidAndTheWords() {
         // Bought 100.5 against 100 seen, sold 119.4 against 120 seen, 65 units: (0.5 + 0.6) x 65.
         assertEquals(71.5, PassedArms.spreadPaid(65, 100.5, 100.0, 119.4, 120.0, 0.0016), 1e-9)

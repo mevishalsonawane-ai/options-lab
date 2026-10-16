@@ -188,7 +188,8 @@ object NightArm {
         lock.withLock {
             val b = book()
             val now = Market.now().toLocalDateTime()
-            var changed = runCatching { exits(b, now) }.getOrDefault(false)
+            // 16 Oct: a failure part-way still saves what was sold before it (a sale booked in the book must reach its file).
+            var changed = runCatching { exits(b, now) }.getOrElse { runCatching { Diag.record("night", "exit check failed: ${it.javaClass.simpleName}") }; true }
             // The strategy lab (11 Oct): Night ran today, on paper (one map write: no setting, no I/O).
             if (b.armed) VariantRunner.saw(NightRules.SOURCE, live = false)
             if (b.armed && NightRules.entryWindow(now.toLocalTime())) {

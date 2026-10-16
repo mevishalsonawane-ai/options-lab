@@ -58,6 +58,11 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-passed-arms-exits", OCT16, "Passed arms always sell at their target, stop and time",
+            "A second trade on the same option could be left with nothing selling it; now each trade is booked the moment it fills " +
+                "and its exits are checked every 15 seconds. A safety net takes back any arm's paper position that has no record and " +
+                "tells you, all on paper.",
+            "Home → Strategies → the passed-research arms"),
         Entry("2026-10-16-telegram-login-fix", OCT16, "The Telegram login shows what it is doing",
             "Each step of the Telegram login now shows its result inside the login window, with a spinner while Telegram starts. " +
                 "If Telegram does not answer within 20 seconds, it says what to check and offers Try again. " +

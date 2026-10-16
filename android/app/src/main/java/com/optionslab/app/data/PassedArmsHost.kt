@@ -99,6 +99,8 @@ object PassedArmsHost {
         val orderId: String?, val setup: String? = null, val entryRef: Double? = null, val idx: Double? = null, val atr: Double? = null,
         val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null, val charges: Double = 0.0, val exitRef: Double? = null,
         val paperFill: Double? = null,
+        /** 16 Oct: taken back by the safety net ([adopt]) after it was found held with no record here ([ADOPT_FILL]: from its real fill). */
+        val adopted: String? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -167,7 +169,7 @@ object PassedArmsHost {
     private const val LOG_KEPT = 200
     /** Closed trades kept per arm. */
     private const val CLOSED_KEPT = 1500
-    /** Its own notices: 8100.. (buys 8100-8114, switch-offs 8120-8122, sells 8140-8154); no other part of the app uses 81xx. */
+    /** Its own notices: 8100.. (buys 8100-8114, switch-offs 8120-8122, sells 8140-8154, taken back 8160-8174); no other part of the app uses 81xx. */
     private const val NOTICE = 8100
 
     private fun ready() = ::file.isInitialized
@@ -212,7 +214,7 @@ object PassedArmsHost {
         return Pos(p.getString("arm"), p.getString("index"), p.getString("symbol"), p.getString("right"), p.getInt("qty"), p.getDouble("entry"),
             LocalDateTime.parse(p.getString("entryTime")), p.optString("orderId").ifEmpty { null }, p.optString("setup").ifEmpty { null },
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
-            p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"))
+            p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null })
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -220,7 +222,7 @@ object PassedArmsHost {
         .apply {
             p.setup?.let { put("setup", it) }; p.entryRef?.let { put("entryRef", it) }; p.idx?.let { put("idx", it) }; p.atr?.let { put("atr", it) }
             p.exit?.let { put("exit", it) }; p.exitTime?.let { put("exitTime", it.toString()) }; p.why?.let { put("why", it) }
-            p.exitRef?.let { put("exitRef", it) }; p.paperFill?.let { put("paperFill", it) }
+            p.exitRef?.let { put("exitRef", it) }; p.paperFill?.let { put("paperFill", it) }; p.adopted?.let { put("adopted", it) }
         }
 
     private val written = Vault.LastWrite()
@@ -486,7 +488,8 @@ object PassedArmsHost {
             if (!changed) return
             lock.withLock {
                 val b = book()
-                val added = work.positions.drop(n0)
+                // 16 Oct: each entry is booked in the book the moment it fills ([buy]); only one that is not there yet is added.
+                val added = work.positions.drop(n0).filter { a -> b.positions.none { same(it, a) } }
                 b.positions += added
                 added.forEach { p -> work.marks[p.symbol]?.let { b.marks[p.symbol] = it } }
                 b.decided += work.decided
@@ -499,6 +502,17 @@ object PassedArmsHost {
     }
 
     private data class Quad(val a: Book, val b: Int, val c: Int, val d: Int)
+
+    /** The same trade: one paper order (or, with none, the same option bought at the same time). */
+    private fun same(a: Pos, b: Pos): Boolean = a.symbol == b.symbol && if (a.orderId != null || b.orderId != null) a.orderId == b.orderId else a.entryTime == b.entryTime
+
+    /** The options an entry is buying now (between its order and its booking): the safety net never takes them for orphans. */
+    private val inFlight: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    internal const val ADOPT_FILL = "fill"
+
+    /** The options these arms hold or are buying now (memory only): the safety net's ([OrphanWatch]) "watched here". */
+    fun claims(): Set<String> = _view.value.open.map { it.symbol }.toSet() + inFlight
 
     /** Closed trades kept: the last [CLOSED_KEPT] of each arm; the forward bars' baselines move with what is dropped. */
     private fun prune(b: Book): Boolean {
@@ -583,7 +597,7 @@ object PassedArmsHost {
      * The position, or why not (null position).
      */
     private suspend fun buy(b: Book, arm: String, u: String, side: Int, strikes: List<Int>, now: LocalDateTime, setup: String? = null,
-                            idx: Double? = null, atr: Double? = null): Pair<Pos?, String> {
+                            idx: Double? = null, atr: Double? = null, keys: List<String> = emptyList()): Pair<Pos?, String> {
         val today = now.toLocalDate()
         val right = if (side > 0) Right.CE else Right.PE
         val expiry = OrbRules.expiryAfter(today, listed(u).map { it.expiry }.distinct()) ?: return null to "no $u expiry after today is listed"
@@ -596,32 +610,60 @@ object PassedArmsHost {
             if (c.lotSize <= 0) { why = "lot size unknown"; continue }
             // One contract, one arm: never two of these arms holding the same option (each one's exits read its own lot).
             b.positions.firstOrNull { it.open && it.symbol == c.symbol }?.let { why = "${c.symbol} is held by ${label(it.arm)}"; return null to why }
+            // (and the book itself: one the safety net took back since this pass's copy was made)
+            if (c.symbol in _view.value.open.map { it.symbol }) { why = "${c.symbol} is held by these arms"; return null to why }
             val q = runCatching { Paper.quote(c) }.getOrNull()
             val ref = q?.ltp?.takeIf { it > 0 } ?: run { why = "${c.symbol}: no fresh price"; null } ?: continue
             val snap = runCatching { Paper.snapshot() }.getOrNull()
             val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref), snap?.let { Guard.paperAccount(it) }, paper = true)
             if (refusals.isNotEmpty()) return null to "refused by the account guard: " + refusals.joinToString(" ")
             runCatching { LiveRecorder.signal(label(arm), c.symbol, u, right.name, ref, paper = true) }
-            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q)
-            val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
-            if (fill == null) {
-                r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
-                why = "${c.symbol} not filled (${r.message})"
-                continue
-            }
-            r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(arm)} · entry") } }
-            runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
-            val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
-            val p = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges)
-            b.positions += p
-            b.marks[c.symbol] = fill.price
+            inFlight += c.symbol
+            val p: Pos = (try {
+                val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q)
+                val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
+                if (fill == null) {
+                    r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
+                    why = "${c.symbol} not filled (${r.message})"
+                    null
+                } else {
+                    val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
+                    val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges)
+                    b.positions += pos
+                    b.marks[c.symbol] = fill.price
+                    b.decided += keys
+                    // 16 Oct (the unwatched re-entry): booked in the book itself at once, never only on the entries' copy until the
+                    // end of the pass - its stop, target and time exit run from the next minute-lane look, and a pass cut short or
+                    // a restart after the fill can never leave it held with no record here. Not cancellable between the two.
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys) }
+                    r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(arm)} · entry") } }
+                    runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
+                    pos
+                }
+            } finally { inFlight -= c.symbol }) ?: continue
             runCatching { Notifier.post(app, NOTICE + SOURCES.indexOf(arm) * 5 + ALL_INDICES.indexOf(u).coerceAtLeast(0), Notifier.BUY,
                 "${label(arm)} bought ${c.symbol} · Paper",
-                "Bought %d @ %s. %s. %s.".format(Locale.ENGLISH, fill.quantity, px(fill.price), exitWords(p), PassedArms.PASSED), "almanac") }
-            note(b, "${label(arm)} bought ${c.symbol} ${fill.quantity} @ ${px(fill.price)} · paper" + (setup?.let { " ($it)" } ?: ""))
+                "Bought %d @ %s. %s. %s.".format(Locale.ENGLISH, p.qty, px(p.entry), exitWords(p), PassedArms.PASSED), "almanac") }
+            note(b, "${label(arm)} bought ${c.symbol} ${p.qty} @ ${px(p.entry)} · paper" + (setup?.let { " ($it)" } ?: ""))
             return p to "bought"
         }
         return null to why
+    }
+
+    /**
+     * [p] (just filled, on the entries' copy) booked in the book itself, with its decisions [keys]; saved. One the safety net
+     * took back meanwhile (the same order) is replaced by it, while still open.
+     */
+    private suspend fun record(p: Pos, keys: List<String>) = lock.withLock {
+        val r = book()
+        val i = r.positions.indexOfFirst { same(it, p) }
+        when {
+            i < 0 -> r.positions += p
+            r.positions[i].adopted != null && r.positions[i].open -> r.positions[i] = p
+        }
+        r.marks[p.symbol] = p.entry
+        r.decided += keys
+        save(r)
     }
 
     private fun exitWords(p: Pos): String = when {
@@ -669,7 +711,7 @@ object PassedArmsHost {
                 val taken = b.positions.filter { it.arm == src && it.index == u && it.day == today }.groupingBy { it.side }.eachCount()
                 val skip = DonchianArm.mayTake(s, open, taken)
                 if (skip != null) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} break skipped: $skip") || changed; continue }
-                val (p, why) = buy(b, src, u, s.side, listOf(s.strike), now)
+                val (p, why) = buy(b, src, u, s.side, listOf(s.strike), now, keys = listOf(dk))
                 changed = true
                 if (p != null) { b.decided += dk; say(b, key, "bought ${p.symbol} @ ${px(p.entry)} (${s.entryTime.toLocalTime()} break)") }
                 else say(b, key, "${s.entryTime.toLocalTime()} break: $why; tried again until ${s.entryTime.plusMinutes(DonchianArm.FILL_SLACK_MINUTES).toLocalTime()}")
@@ -700,7 +742,7 @@ object PassedArmsHost {
             if (first.lastRow < 4) continue
             val side = OovArm.signal(first, OovArm.valueArea(prev))
             if (side == 0) { b.decided += dk; changed = say(b, key, "opened inside (or at) yesterday's value area: no trade today") || changed; continue }
-            val (p, why) = buy(b, src, u, side, listOf(OovArm.strike(u, side, first)), now)
+            val (p, why) = buy(b, src, u, side, listOf(OovArm.strike(u, side, first)), now, keys = listOf(dk))
             changed = true
             if (p != null) { b.decided += dk; say(b, key, "bought ${p.symbol} @ ${px(p.entry)} (opened outside value)") }
             else say(b, key, "$why; tried again until 09:22")
@@ -772,7 +814,7 @@ object PassedArmsHost {
                 b.decided += ck; b.scores += "$today|${c.key.replace('|', ':')}|$words: below ${"%.4f".format(Locale.ENGLISH, m.threshold)}, skipped$because"; changed = true
                 continue
             }
-            val (p, why) = buy(b, src, c.underlying, c.side, c.strikes, now, c.setup.key, c.index, c.atr)
+            val (p, why) = buy(b, src, c.underlying, c.side, c.strikes, now, c.setup.key, c.index, c.atr, keys = listOf(ck, dayKey))
             changed = true
             if (p != null) {
                 b.decided += ck; b.decided += dayKey
@@ -794,50 +836,72 @@ object PassedArmsHost {
     private fun chargesOf(orderId: String?): Double =
         if (orderId == null) 0.0 else Paper.state.trades.filter { it.orderId == orderId }.sumOf { it.charges.toDouble() }
 
-    /** Each open trade's exit, when due. True when [b] changed. */
+    /**
+     * Each open trade's exit, when due. True when [b] changed. Each trade in its own try (16 Oct): one that fails is said
+     * (its status and Diag, once per reason) and the others' exits still run - never one failure stopping every exit.
+     */
     private suspend fun exits(b: Book, now: LocalDateTime): Boolean {
         var changed = false
         val stopped = stoppedToday()
         for ((i, p) in b.positions.withIndex().toList()) {
             if (!p.open) continue
-            val c = Paper.contractOf(p.symbol)
-            if (c == null) {
-                // The paper book no longer knows the contract (a reset): nothing is held there, so the trade is closed at its entry.
-                val done = p.copy(exit = p.entry, exitTime = now, why = "closed_elsewhere")
-                b.positions[i] = done; closed(b, done); changed = true; continue
+            try {
+                if (exitOne(b, i, p, now, stopped)) changed = true
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                val k = "${p.arm}|exit"
+                val w = "exit check failed on ${p.symbol}: ${e.javaClass.simpleName}; tried again next look"
+                if (b.status[k] != w) { b.status[k] = w; note(b, w); changed = true }
             }
-            // Gone from the paper book without this host selling it (the loss limit, Boss, a square-off): closed there.
-            val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
-            if (held <= 0) {
-                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
-                val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
-                    charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
-                b.positions[i] = done; closed(b, done); changed = true; continue
-            }
-            val overnight = p.day.isBefore(now.toLocalDate())
-            val bars = if (!overnight) runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty() else emptyList()
-            val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.lastOrNull()?.close
-                ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
-            ltp?.let { b.marks[p.symbol] = it }
-            val known = b.locks[p.symbol]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
-            val why: String? = when {
-                overnight -> "overnight"
-                p.setup == Solo2.Setup.S1.key -> {
-                    val ones = runCatching { minutes(upKey(p.index), now) }.getOrNull().orEmpty()
-                    val w = SoloMidday.walk(SoloMidday.Open(p.index, p.side, p.idx ?: Double.NaN, p.atr ?: Double.NaN, p.entryMinute), ones, now)
-                    // The index unread (or its levels unknown): the premium backstop, -30% (the Solo layer's stop), so it never runs unwatched.
-                    w.exit ?: if (ones.isEmpty() || p.idx == null || p.atr == null)
-                        PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, S1_BACKSTOP).exit?.kind?.let { "backstop_" + it.why } else null
-                }
-                else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known).also { w ->
-                    w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[p.symbol] = "$now|$lv" }
-                }.exit?.kind?.why
-            } ?: if (stopped) "operator_stop" else null
-            if (why == null) continue
-            val next = sell(b, p, c, why, ltp)
-            if (next != p) { b.positions[i] = next; changed = true }
         }
         return changed
+    }
+
+    /** The stream's last price counts as the price now for this long (ms). */
+    private const val FRESH_MS = 15_000L
+
+    /** [p]'s exit (at [i] in [b]), when due. True when [b] changed. */
+    private suspend fun exitOne(b: Book, i: Int, p: Pos, now: LocalDateTime, stopped: Boolean): Boolean {
+        val c = Paper.contractOf(p.symbol)
+        if (c == null) {
+            // The paper book no longer knows the contract (a reset): nothing is held there, so the trade is closed at its entry.
+            val done = p.copy(exit = p.entry, exitTime = now, why = "closed_elsewhere")
+            b.positions[i] = done; closed(b, done); return true
+        }
+        // Gone from the paper book without this host selling it (the loss limit, Boss, a square-off): closed there.
+        val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
+        if (held <= 0) {
+            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
+                charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+            b.positions[i] = done; closed(b, done); return true
+        }
+        val overnight = p.day.isBefore(now.toLocalDate())
+        val bars = if (!overnight) runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty() else emptyList()
+        // The stream's price only while fresh (16 Oct: a tick left from a stream that stopped following the option is not
+        // the price now); else the last closed minute, else a quote.
+        val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_MS }?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.lastOrNull()?.close
+            ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
+        ltp?.let { b.marks[p.symbol] = it }
+        val known = b.locks[p.symbol]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
+        val why: String? = when {
+            overnight -> "overnight"
+            p.setup == Solo2.Setup.S1.key -> {
+                val ones = runCatching { minutes(upKey(p.index), now) }.getOrNull().orEmpty()
+                val w = SoloMidday.walk(SoloMidday.Open(p.index, p.side, p.idx ?: Double.NaN, p.atr ?: Double.NaN, p.entryMinute), ones, now)
+                // The index unread (or its levels unknown): the premium backstop, -30% (the Solo layer's stop), so it never runs unwatched.
+                w.exit ?: if (ones.isEmpty() || p.idx == null || p.atr == null)
+                    PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, S1_BACKSTOP).exit?.kind?.let { "backstop_" + it.why } else null
+            }
+            else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known).also { w ->
+                w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[p.symbol] = "$now|$lv" }
+            }.exit?.kind?.why
+        } ?: if (stopped) "operator_stop" else null
+        if (why == null) return false
+        val next = sell(b, p, c, why, ltp)
+        if (next != p) { b.positions[i] = next; return true }
+        return false
     }
 
     /** Sells all of [p] at market on paper (a target is booked at the target at most). */
@@ -863,11 +927,49 @@ object PassedArmsHost {
     }
 
     private fun closed(b: Book, p: Pos) {
+        // 16 Oct: on every way out (closed elsewhere too), so a later trade on the same option never reads this one's lock.
+        b.marks.remove(p.symbol); b.locks.remove(p.symbol)
         b.status["${p.arm}|${p.index}"] = "closed ${p.symbol}: ${p.why}"
         note(b, "%s: %s sold (%s) @ %s, %s after charges · paper".format(Locale.ENGLISH, label(p.arm), p.symbol, p.why, px(p.exit ?: 0.0), rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, NOTICE + 40 + SOURCES.indexOf(p.arm) * 5 + ALL_INDICES.indexOf(p.index).coerceAtLeast(0), Notifier.SELL,
             "${label(p.arm)} sold ${p.symbol} · Paper",
             "Sold (%s) @ %s: %s after charges. %s.".format(Locale.ENGLISH, p.why, px(p.exit ?: 0.0), rs(p.net ?: 0.0), PassedArms.PASSED), "almanac") }
+    }
+
+    // ---- the safety net (16 Oct) ----------------------------------------------------------------------------------------
+
+    /** The arm whose owner label is [owner] ("R51 Donchian 20"), or null. */
+    fun armOf(owner: String): String? = SOURCES.firstOrNull { label(it) == owner }
+
+    /**
+     * Takes back [o], a paper long one of these arms opened that has no open record here ([OrphanWatch] found it unwatched):
+     * booked as its arm's trade from its real fill and fill time, so its stop, target and time exit run from the next look.
+     * Said plainly to Boss (a notice, the log, Diag). The words,
+     * or null when it is not taken (not these arms', already held here, being bought now, or the contract unknown).
+     */
+    suspend fun adopt(o: com.optionslab.engine.orb.OrphanAudit.Orphan): String? {
+        if (!ready() || com.optionslab.app.BuildConfig.GOLD) return null
+        val arm = armOf(o.owner) ?: return null
+        if (o.symbol in inFlight) return null
+        val c = Paper.contractOf(o.symbol) ?: return null
+        return lock.withLock {
+            val b = book()
+            if (b.positions.any { it.open && it.symbol == o.symbol }) return@withLock null
+            val now = now0()
+            val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
+                adopted = ADOPT_FILL)
+            b.positions += p
+            b.marks[p.symbol] = p.entry
+            val words = "${label(arm)}: ${p.symbol} ${p.qty} was held on paper with no record here, so its exits were not running; " +
+                "taken back as its trade (filled @ ${px(p.entry)} at ${p.entryTime.toLocalTime()})" +
+                ". ${exitWords(p)}"
+            b.status["$arm|${p.index}"] = "taken back ${p.symbol} (safety net)"
+            note(b, words)
+            save(b)
+            runCatching { Notifier.post(app, NOTICE + 60 + SOURCES.indexOf(arm) * 5 + ALL_INDICES.indexOf(p.index).coerceAtLeast(0), Notifier.SELL,
+                "${label(arm)}: ${p.symbol} taken back · Paper", "$words. ${PassedArms.PASSED}.", "almanac") }
+            words
+        }
     }
 
     // ---- Jarvis ----------------------------------------------------------------------------------------------------------

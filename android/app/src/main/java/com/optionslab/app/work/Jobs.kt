@@ -841,6 +841,8 @@ object Tasks {
         // The safety steps first, in order (10 Oct: their Zerodha requests go first, and Jarvis's model gives way meanwhile).
         safely {
             step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
+            // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) before the arms run.
+            step("unwatched positions") { com.optionslab.app.data.OrphanWatch.run(context) }
             // One daily loss limit over every bot: past it, all of them sell and stop for the day.
             step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
             // The guards as they stand now, in the shared state (memory: the settings and the breaker's record).
@@ -1530,8 +1532,11 @@ class WatchService : Service() {
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
+                // 16 Oct: the paper arms that sell from the app (the passed-research arms, the Hero ticket, the Signal tester) count
+                // too, so their stops, targets and time exits are looked at every 15 s even without the stream's minute lane.
                 val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
-                    com.optionslab.app.data.PineAuto.holding() ||
+                    com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
+                    com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
                     (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
                 stepSec = if (holding) 15 else 60
                 // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
@@ -1602,6 +1607,14 @@ class WatchService : Service() {
                         } catch (e: Throwable) {
                             Tasks.stepFailed("15-second stop check: paper orders", e)
                         }
+                        // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) first.
+                        try {
+                            com.optionslab.app.data.OrphanWatch.run(this)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: unwatched positions", e)
+                        }
                         // The arms' exits side by side (10 Oct): ORB's (with Liquidity's index exits), and every money exit run
                         // here too (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3) - the Pine scripts' stops and locks, Solo's exits,
                         // Jarvis's own trades' profit-lock stop and exits. Each under its own lock, as in the full pass, so a
@@ -1611,6 +1624,11 @@ class WatchService : Service() {
                             com.optionslab.ira.Supervisor.Step("15-second stop check: Pine scripts") { com.optionslab.app.data.PineAuto.watchOnly() },
                             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Solo") { com.optionslab.app.ira.IraSolo.manageOnly() } else null,
                             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
+                            // 16 Oct: the paper arms whose exits ran only in the minute lane (which needs the stream's ticks) and the
+                            // full pass (which waits behind their own entries' reads): their exits only, every 15 s while held.
+                            if (com.optionslab.app.data.PassedArmsHost.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.PASSED_ARMS}") { com.optionslab.app.data.PassedArmsHost.manageOnly() } else null,
+                            if (com.optionslab.app.data.HeroTicketArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.HERO_TICKET}") { com.optionslab.app.data.HeroTicketArm.manageOnly() } else null,
+                            if (com.optionslab.app.data.SignalPaperArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.SIGNAL_PAPER}") { com.optionslab.app.data.SignalPaperArm.manageOnly() } else null,
                         ), WatchWorkers.EXITS_WAIT_MS, inOrder = false)
                         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the
                         // bots' live stops, and the no-price failsafe (REST quotes; a loud warning after two minutes).
