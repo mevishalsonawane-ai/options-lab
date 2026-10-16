@@ -1,0 +1,26 @@
+id: r74-map
+title: 'R74 strategy map: every family tried here, the outside evidence, the untried families ranked'
+family: diagnosis
+date: '2026-10-16'
+doc: research/HUNT_R74_STRATEGY_MAP.md
+hypothesis: 'Inventory and literature review (no test): what families remain untried after R1-R72.'
+data_version: research/experiments/entries (1,190 entries before R74), research/HUNT_*.md, published papers
+period:
+  design: n/a
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- n/a
+model_or_rule: map and ranking (evidence x fit x data x low overlap with Donchian)
+settings: research/HUNT_R74_STRATEGY_MAP.md
+prereg: null
+variants_tried: null
+results:
+  summary: Ranks 1-5 tested in R74 Part B (PREREG.md); ranks 6-8 are risk tools proposed for later.
+  costs: n/a
+holdout_read: null
+verdict: not-a-test

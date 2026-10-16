@@ -38,6 +38,18 @@ CONTEXT = {"M1": "the index only", "V1": "the index, with India VIX (computed fr
            "B2": "the index, with the large caps' volume as a filter"}
 
 
+AFTER = {   # diagnostics read after the final (results/diag.json); no new gate, nothing re-picked
+    "r74-b2-o": (" Diagnostics after the read (results/diag.json): of the final +Rs 1,35,342, +Rs 1,18,879 (200 trades) "
+                 "are trades Breadth Donchian also takes; its own 169 trades made only +Rs 16,463. In design its own 411 "
+                 "trades lost Rs 1,59,498, design at twice the slippage is -Rs 20,241, and 3 of 6 design quarters lost. "
+                 "Not recommended as an arm beside Breadth Donchian: it is a weaker copy of it."),
+}
+
+
+def e_id(rule, kind):
+    return f"r74-{rule.lower()}-{kind.lower()}"
+
+
 def main():
     des = json.loads((R.RESULTS / "design.json").read_text())
     fin = json.loads((R.RESULTS / "final.json").read_text())
@@ -52,7 +64,7 @@ def main():
         passed = t["verdict"] == "PASS"
         slip = f" At twice the slippage: final {rs(t['slip2']['net'])}." if t.get("slip2") else ""
         e = dict(
-            id=f"r74-{rule.lower()}-{kind.lower()}",
+            id=e_id(rule, kind),
             title=f"R74 {rule} {P.NAMES[rule]} ({'original' if kind == 'O' else 're-tune'}): index signal, 1-ITM",
             family=FAMILY[rule],
             date="2026-10-16",
@@ -86,8 +98,9 @@ def main():
             holdout_read=True,
             verdict="paper-only" if passed else "rejected",
             notes=("Signal on the underlying; research only, nothing changes paper or live."
-                   + (" PASSED every gate; proposed to Boss for PAPER only (not running until Boss switches it on)."
+                   + (" PASSED every gate (paper-only is Boss's call; not running until Boss switches it on)."
                       if passed else "")
+                   + AFTER.get(e_id(rule, kind), "")
                    + (" Labelled a duplicate (daily correlation >= 0.6 with Donchian or Breadth Donchian)."
                       if t.get("duplicate") else "")
                    + (" Beat random entries (twin p < 0.05) but failed other gates." if (t["p"] or 1) < 0.05 and not passed

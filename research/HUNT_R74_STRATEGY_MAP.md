@@ -3,8 +3,18 @@
 16 Oct 2026. Research only (no `android/**`). Boss, 16 Oct: *"Except Donchian, what all things could we think of as a
 strategy or arm? Deep research."*
 
-Part A (this section) is the map. Part B (the test of the best untried ideas) is pre-registered in
-`research/hunt/r74/PREREG.md` and its results are added at the end of this file once read.
+Part A (sections 1-4) is the map. Part B (section 5) tests the five best untried ideas, pre-registered in
+`research/hunt/r74/PREREG.md`.
+
+**Part B answer: no new arm.** One of the 10 tests passed every gate on paper: **B2, the volume-confirmed Donchian
+break**. It made +Rs 1,35,342 on 369 final trades (p 0.006, q 0.06). But it is a weaker copy of Breadth Donchian, not
+a new edge, so it is **not recommended as an arm**:
+- Of its final profit, Rs 1,18,879 comes from trades that Breadth Donchian also takes.
+- Its own extra trades lost Rs 1,59,498 in design.
+- Its design was only +Rs 6,792, and it was -Rs 20,241 at twice the slippage.
+
+The other four families failed: late-day momentum, VIX divergence, the VIX-confirmed break and the stock-breadth
+thrust. Details are in section 5.
 
 ## The short answer
 
@@ -173,3 +183,144 @@ direction forecasts, debit spreads, OTM strikes, and the cross-index rules of R7
    Each of these only lowers risk, so it could later be considered for live through the shadow path.
 5. **Signal source:** every Part B rule reads its signal from the index (and, as context, India VIX or the large caps'
    prices and volume), then buys the 1-ITM option. None reads an option's own chart.
+
+## 5. Part B: the five best untried families, tested (read once, 16 Oct)
+
+Pre-registered in `research/hunt/r74/PREREG.md` (7929fb2), before any result. The code was committed before any result
+(f32b375), and the design picks were frozen (3ed02d1) before the one final read.
+- **Measurement:** R71's study code unchanged, R64's engine, R51's Amendment A clean stores, dated charges, R17 fills,
+  1 lot, Donchian's trade-taking.
+- **Signal:** on the index, the 1-ITM option bought.
+- **Periods:** design 20 Nov 2024 - 31 Mar 2026; final 1 Apr - 13 Oct 2026 (133 sessions).
+- **Statistics:** 500 random-entry twins per test (seed 74); BH across the 10 tests, and across all 38 tests of
+  16 Oct (R71 + R72 + R74).
+- **Reproduction:** the Donchian numbers it prints match R66 and R72 exactly (design Rs 8,281; final Rs 55,439).
+
+### Answer
+
+**Nothing new to add as an arm.**
+- **B2 (volume-confirmed Donchian, original setting) passed every pre-registered gate.** Its diagnostics show it is
+  Breadth Donchian seen through a different lens:
+  - 88% of its final profit comes from trades Breadth Donchian also takes;
+  - the trades only it takes lost heavily in design;
+  - its design is marginal (+Rs 6,792 on 1,139 trades, about Rs 6 a trade).
+- **M1, V1, V2 and B1 failed.**
+
+The one useful lesson is that **participation (many indices, or heavy volume in the big stocks) is what separates a real
+Donchian break from noise**, which Breadth Donchian already uses.
+
+### The results (1 lot per trade, net after all charges and slippage)
+
+| test (signal on the index) | design trades / net | final trades / net | win | worst day | max DD | trades / month | twin p | BH q (10 / 38) | corr. Donchian / Breadth D. | same trade as Donchian / Breadth D. | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Donchian 20 (reference, XB) | 4,518 / Rs 8,281 | 1,787 / Rs 55,439 | 44% | -Rs 23,012 | Rs 92,452 | 278 | | | | | on paper |
+| Breadth Donchian (reference, R72 C1) | 3,071 / Rs 2,16,929 | 1,202 / Rs 1,71,366 | 46% | -Rs 22,571 | Rs 61,884 | 187 | | | | | passed R72 |
+| **M1** late-day momentum on high-volatility days (k 0.5) | 641 / Rs 63,683 | 203 / **-Rs 42,725** | 34% | -Rs 11,415 | Rs 94,246 | 32 | 1.0 | 1.0 / 1.0 | -0.04 / -0.09 | 1% / 1% | **fail** (lost in the final; random entries on the same days made +Rs 48,026) |
+| M1 re-tune (picked the original) | same | same | | | | | | | | | fail |
+| **V1** VIX / index divergence, faded (k 0.2%) | 253 / -Rs 25,287 | 65 / -Rs 23,860 | 31% | -Rs 5,679 | Rs 30,160 | 10 | 0.52 | 1.0 / 1.0 | 0.09 / 0.02 | 11% / 5% | **fail** (lost in both periods; R1's old lead did not survive the new market) |
+| V1 re-tune (index stop) | 253 / -Rs 17,513 | 65 / -Rs 21,326 | 25% | -Rs 6,693 | Rs 34,809 | 10 | 0.39 | 1.0 / 1.0 | 0.15 / 0.01 | 11% / 5% | fail |
+| **V2** VIX-confirmed Donchian break (x 0) | 3,447 / **-Rs 3,66,813** | 1,382 / Rs 1,19,125 | 44% | -Rs 22,440 | Rs 40,877 | 215 | 0.064 | 0.32 / 0.35 | 0.59 / 0.62 | 75% / 45% | **fail** (lost Rs 3.7 lakh in design; a duplicate) |
+| V2 re-tune (x 1%) | 1,646 / -Rs 69,077 | 770 / Rs 53,786 | 46% | -Rs 16,149 | Rs 57,874 | 120 | 0.59 | 1.0 / 1.0 | 0.35 / 0.49 | 63% / 50% | fail |
+| **B1** stock-breadth thrust (T 70%) | 342 / Rs 32,667 | 76 / -Rs 20,507 | 41% | -Rs 12,545 | Rs 21,530 | 12 | 0.76 | 1.0 / 1.0 | -0.13 / -0.11 | 49% / 29% | **fail** (design profit mostly one quarter; lost in the final) |
+| B1 re-tune (XB) | 342 / Rs 35,776 | 76 / -Rs 20,761 | 41% | -Rs 12,545 | Rs 21,785 | 12 | 0.77 | 1.0 / 1.0 | | | fail |
+| **B2** volume-confirmed Donchian break (m 1.5x) | 1,139 / Rs 6,792 | 369 / **Rs 1,35,342** | 48% | -Rs 13,774 | **Rs 21,640** | 57 | **0.006** | **0.06 / 0.046** | 0.33 / 0.51 | 69% / 54% | **PASS on the gates; not recommended (see below)** |
+| B2 re-tune (2x, index stop) | 440 / Rs 34,067 | 144 / Rs 28,712 | 43% | -Rs 11,932 | Rs 32,628 | 22 | 0.87 | 1.0 / 1.0 | 0.19 / 0.32 | 61% / 53% | fail (random entries did better) |
+
+Full tables, including every design grid point and the walk-forward picks, are in `research/hunt/r74/results/report.md`.
+The diagnostics are in `results/diag.json`.
+
+### Why B2 is not a new arm, even though it passed
+
+B2 passed every gate:
+- final net > 0;
+- twin p 0.006;
+- BH q 0.06 across R74's 10 tests (0.046 across all 38);
+- 369 trades;
+- +Rs 67,995 without its top 5;
+- design and walk-forward > 0;
+- +Rs 1,25,847 at twice the slippage.
+
+The checks read **after** the final (no new gate, nothing re-picked) show where that profit comes from:
+
+| B2 split | design | final |
+|---|---|---|
+| trades Breadth Donchian also takes | 728 / **+Rs 1,66,290** | 200 / **+Rs 1,18,879** |
+| trades only B2 takes | 411 / **-Rs 1,59,498** | 169 / +Rs 16,463 |
+| all | 1,139 / +Rs 6,792 (at 2x slippage: **-Rs 20,241**) | 369 / +Rs 1,35,342 |
+
+- **Its edge is Breadth Donchian's edge.** Where B2 disagrees with Breadth Donchian, B2 loses (design) or barely makes
+  anything (final).
+- Adding B2's own trades to Breadth Donchian would raise the final net only from Rs 1,71,366 to Rs 1,87,828, while the
+  drawdown grows from Rs 61,884 to Rs 75,616. In design the same trades lost Rs 1.6 lakh.
+- **Its design is fragile:**
+  - 3 of 6 design quarters lost (Q4 2024 -Rs 27k, Q1 2025 -Rs 78k, Q4 2025 -Rs 42k);
+  - BANKNIFTY and NIFTY lost in design;
+  - the neighbouring settings mostly lost in design (1.5x with XB -Rs 36,968, with XI -Rs 26,633; 2x with XB and XL both
+    negative).
+- In the final it made money on all four indices (BANKNIFTY Rs 50k, FINNIFTY Rs 35k, SENSEX Rs 35k, NIFTY Rs 15k), but
+  September and October were red.
+- The final window has been read by about 25 studies. A pass there, backed by a design of about Rs 6 a trade, is weak.
+
+**Recommendation (Boss decides):**
+- **Do not add B2 as an arm.** If Breadth Donchian goes on paper, it already captures what B2 found.
+- A possible later study, on paper data only, is whether **stock volume** can stand in for Breadth Donchian's
+  five-index count on days a feed is missing. That is a question for after the paper trial, not a new arm.
+- Nothing changes in the app from R74.
+
+### What the failures teach
+
+- **M1, late-day momentum:**
+  - Design +Rs 63,683, but almost all of it was one quarter (Jan-Mar 2026 +Rs 1.44 lakh); two of four quarters lost.
+    It lost Rs 42,725 in the final.
+  - Random entries on the same days and sides made +Rs 48,026 in the final. So the high-volatility **days** were fine
+    for buyers, but entering at 14:45 for the last 30 minutes was the worst time: theta and the 15:15 square-off.
+  - This matches the old measurement (first half-hour vs last half-hour correlation about 0 in India). The US
+    "momentum into the close" effect does not pay an Indian option buyer.
+- **V1, VIX divergence:**
+  - Lost in design and in the final. It traded only about 10 times a month across five indices.
+  - R1's weak lead from the old data does not survive the post-Nov-2024 market.
+- **V2, VIX-confirmed break:**
+  - The pure "VIX falling" filter lost Rs 3.67 lakh in design. That is worse than plain Donchian: the filter keeps the
+    wrong breaks.
+  - Its final profit (+Rs 1.19 lakh) did not beat random entries (p 0.064).
+  - It is a duplicate of Breadth Donchian (correlation 0.62).
+- **B1, stock-breadth thrust:**
+  - Its design profit came mostly from one quarter (Apr-Jun 2025, +Rs 45,024; the other three walk-forward quarters lost). It lost in the final. It trades about 12 times a month.
+
+### Exact rules of B2 (recorded for completeness, not recommended)
+
+1. Donchian 20 on the 5-minute bars of NIFTY, BANKNIFTY, FINNIFTY or SENSEX: a close above the previous 20 bars'
+   highest high (call), or below their lowest low (put).
+2. Take the break only if the 59 large caps' total traded volume in that 5-minute bar is **at least 1.5 times** their
+   average volume in the same 5-minute slot over the previous 20 sessions.
+3. Trade-taking and exits are those of the Donchian paper arm with L25:
+   - 1-ITM, entries 09:20-15:10, one open a side, at most 2 a side a day, never on expiry day;
+   - -15% stop, 30/60/100 ladder, +5% once +25%, 30 minutes, square-off 15:15.
+
+### Honest limits of Part B
+
+- **The final window is not clean.** It was read by R49-R72, and Donchian and Breadth Donchian were chosen on it. 38
+  tests were read on 16 Oct alone.
+- **The stock data is today's 59 stocks** (survivorship), from Sep 2024 only.
+- **India VIX is computed from option prices.** V1 and V2 use it as context around an index condition, as CLAUDE.md
+  allows; it is labelled in the entries.
+- **Costs:** STT 0.15% from 1 Apr 2026, R17 fills, 1 lot. Spreads on BANKNIFTY, FINNIFTY and MIDCPNIFTY monthlies can
+  be wider than the R17 model on fast bars.
+- **Logging:** every test, failures included, is in `research/experiments/entries/r74-*.yaml`, plus `r74-map` for
+  this map.
+- **Tests:** `research/hunt/r74/test_r74.py` (28 tests):
+  - the VIX and stock builders;
+  - each rule on a hand-made market;
+  - a look-ahead guard for every rule and setting, checked by injecting a deliberate leak, which it catches;
+  - the wiring into R71's study code.
+
+### Reproduce
+
+```
+rclone copy gdrive:IraAlgo-data-lake/index_1m $L --include "index_1m_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX,INDIAVIX}_202[456].parquet"
+rclone copy gdrive:IraAlgo-data-lake/options_rolling_1m $L --include "opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_WEEK_202[456].parquet"
+rclone copy gdrive:IraAlgo-data-lake/equity_1m $L --include "equity_1m_202[456].parquet"
+R51_CLEAN=1 python research/hunt/r51/r51data.py build
+python research/hunt/r74/r74study.py design      # then: final (once), report
+python research/hunt/r74/r74diag.py && python research/hunt/r74/r74entries.py
+```

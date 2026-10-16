@@ -1,0 +1,146 @@
+{
+ "design": {
+  "all": {
+   "trades": 1139,
+   "net": 6792
+  },
+  "shared_with_c1": {
+   "trades": 728,
+   "net": 166290
+  },
+  "not_in_c1": {
+   "trades": 411,
+   "net": -159498
+  },
+  "slip2": {
+   "trades": 1139,
+   "net": -20241
+  },
+  "by_index": {
+   "BANKNIFTY": {
+    "trades": 323,
+    "net": -28850
+   },
+   "FINNIFTY": {
+    "trades": 302,
+    "net": 15186
+   },
+   "NIFTY": {
+    "trades": 256,
+    "net": -13548
+   },
+   "SENSEX": {
+    "trades": 258,
+    "net": 34003
+   }
+  },
+  "by_quarter": {
+   "2024Q4": {
+    "trades": 70,
+    "net": -27474
+   },
+   "2025Q1": {
+    "trades": 245,
+    "net": -78177
+   },
+   "2025Q2": {
+    "trades": 194,
+    "net": 50595
+   },
+   "2025Q3": {
+    "trades": 185,
+    "net": 6869
+   },
+   "2025Q4": {
+    "trades": 153,
+    "net": -42449
+   },
+   "2026Q1": {
+    "trades": 292,
+    "net": 97427
+   }
+  }
+ },
+ "final": {
+  "all": {
+   "trades": 369,
+   "net": 135342
+  },
+  "shared_with_c1": {
+   "trades": 200,
+   "net": 118879
+  },
+  "not_in_c1": {
+   "trades": 169,
+   "net": 16463
+  },
+  "by_index": {
+   "BANKNIFTY": {
+    "trades": 103,
+    "net": 50178
+   },
+   "FINNIFTY": {
+    "trades": 87,
+    "net": 34901
+   },
+   "NIFTY": {
+    "trades": 88,
+    "net": 15227
+   },
+   "SENSEX": {
+    "trades": 91,
+    "net": 35036
+   }
+  },
+  "by_month": {
+   "2026-04": {
+    "trades": 42,
+    "net": 38815
+   },
+   "2026-05": {
+    "trades": 62,
+    "net": 35050
+   },
+   "2026-06": {
+    "trades": 50,
+    "net": 24235
+   },
+   "2026-07": {
+    "trades": 68,
+    "net": 37705
+   },
+   "2026-08": {
+    "trades": 36,
+    "net": 9532
+   },
+   "2026-09": {
+    "trades": 75,
+    "net": -8508
+   },
+   "2026-10": {
+    "trades": 36,
+    "net": -1487
+   }
+  },
+  "by_side": {
+   "C": {
+    "trades": 210,
+    "net": 80283
+   },
+   "P": {
+    "trades": 159,
+    "net": 55059
+   }
+  },
+  "c1_alone": {
+   "net": 171366,
+   "max_dd": 61884,
+   "worst_day": -22571
+  },
+  "c1_plus_b2_not_in_c1": {
+   "net": 187828,
+   "max_dd": 75616,
+   "worst_day": -30557
+  }
+ }
+}

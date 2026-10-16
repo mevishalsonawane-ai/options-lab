@@ -1,0 +1,44 @@
+id: r74-b2-o
+title: 'R74 B2 Volume-confirmed Donchian break (original): index signal, 1-ITM'
+family: daily-filters
+date: '2026-10-16'
+doc: research/HUNT_R74_STRATEGY_MAP.md
+hypothesis: 'Boss (16 Oct, "except Donchian, what else could be a strategy or arm"; R74 strategy map rank of the untried families):
+  a Donchian-20 break on NIFTY / BANKNIFTY / FINNIFTY / SENSEX taken only when the large caps'' volume in that bar is >= m
+  x its mean at that time of day over the previous 20 sessions, buying the 1-ITM option and taken as Donchian takes its trades,
+  earns after real costs and beats random entries on the same days. Gates as R51 (BH over the 10 R74 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK, equity_1m 59 large caps),
+  R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R74 (16 Oct); the window was already read for other ideas by R49-R72 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- 'signal source: the index, with the large caps'' volume as a filter; no option chart'
+model_or_rule: 'Volume-confirmed Donchian break: a Donchian-20 break on NIFTY / BANKNIFTY / FINNIFTY / SENSEX taken only when
+  the large caps'' volume in that bar is >= m x its mean at that time of day over the previous 20 sessions; setting m=1.5,
+  XL (original (fixed before any result))'
+settings: research/hunt/r74/r74rules.py RULES, research/hunt/r71/r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r74/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 1139 trades on 223 days, win 46%, net Rs 6,792 (Rs 6/trade), avg win Rs 1,608 / loss -Rs 1,364, worst
+    day -Rs 21,226, max DD Rs 121,163, green days 46%. Walk-forward net Rs 6,792. Final: 369 trades on 78 days, win 48%, net
+    Rs 135,342 (Rs 367/trade), avg win Rs 2,156 / loss -Rs 1,283, worst day -Rs 13,774, max DD Rs 21,640, green days 42%,
+    57.3 trades a month; random-entry twin p 0.006 (twin mean Rs 43,696), BH q 0.06 (q 0.0456 across the 38 tests of 16 Oct).
+    Verdict: PASS (all gates). At twice the slippage: final Rs 125,847. Same final days: Donchian XB Rs 55,439 on 1787 trades
+    (daily correlation 0.331, same trade 0.6911); Breadth Donchian Rs 171,366 on 1202 trades (correlation 0.507, same trade
+    0.542).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: paper-only
+notes: 'Signal on the underlying; research only, nothing changes paper or live. PASSED every gate (paper-only is Boss''s call;
+  not running until Boss switches it on). Diagnostics after the read (results/diag.json): of the final +Rs 1,35,342, +Rs 1,18,879
+  (200 trades) are trades Breadth Donchian also takes; its own 169 trades made only +Rs 16,463. In design its own 411 trades
+  lost Rs 1,59,498, design at twice the slippage is -Rs 20,241, and 3 of 6 design quarters lost. Not recommended as an arm
+  beside Breadth Donchian: it is a weaker copy of it.'

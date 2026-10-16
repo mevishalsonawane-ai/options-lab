@@ -348,13 +348,17 @@ def test_guard_sees_m1_and_v1_signals():
 # ------------------------------------------------------------------------------------------------ wiring
 def test_rules_table_and_param_round_trip():
     sys.path.insert(0, str(HERE.parent / "r71"))
-    import r71study as S
     import r74study as X
-    X.use_r74()
-    assert S.P is P and S.R.SEED == 74 and S.rule_signals is X.rule_signals
-    for rule, (_, _, orig, grid) in P.RULES.items():
-        assert orig in grid and len(grid) == 2
-        for g in grid:
-            for ex in S.R.EXIT_ORDER:
-                assert S.gp_parse(rule, S.gp_name(g, ex)) == (g, ex)
-    assert S.R.FINAL_FLAG.parent.name == "results" and S.R.FINAL_FLAG.parent.parent.name == "r74"
+    S = X.S
+    saved = (S.R, S.P, X.RP.R, X.RP.P, S.rule_signals, X.RP.TITLE)
+    try:
+        X.use_r74()
+        assert S.P is P and S.R.SEED == 74 and S.rule_signals is X.rule_signals
+        for rule, (_, _, orig, grid) in P.RULES.items():
+            assert orig in grid and len(grid) == 2
+            for g in grid:
+                for ex in S.R.EXIT_ORDER:
+                    assert S.gp_parse(rule, S.gp_name(g, ex)) == (g, ex)
+        assert S.R.FINAL_FLAG.parent.name == "results" and S.R.FINAL_FLAG.parent.parent.name == "r74"
+    finally:                                                       # the R71 modules are shared: put them back
+        S.R, S.P, X.RP.R, X.RP.P, S.rule_signals, X.RP.TITLE = saved
