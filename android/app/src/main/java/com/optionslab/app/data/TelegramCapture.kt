@@ -269,10 +269,15 @@ object TelegramCapture {
                 if (s.auth == TdSession.Auth.CLOSED || System.currentTimeMillis() - closingSince > 15_000) break
             } else if (s.auth == TdSession.Auth.CLOSED) { synchronized(this) { if (session === s) running = false }; break }
         }
-        val last = synchronized(this) { if (session === s) { session = null; transport = null; loop = null; true } else false }
-        // 16 Oct: a login step left on screen after a slow close would show a "Send" that goes nowhere - closed instead.
-        if (last) upd { it.copy(running = false, auth = if (it.auth == TdSession.Auth.READY || it.auth in STEPS) TdSession.Auth.CLOSED else it.auth,
-            channels = emptyList(), stuck = false) }
+        // 16 Oct: a login step left on screen after a slow close would show a "Send" that goes nowhere - closed instead. Said under
+        // the same lock as the hand-over, so a newer session opened in between is never marked closed by this old reader.
+        synchronized(this) {
+            if (session === s) {
+                session = null; transport = null; loop = null
+                upd { it.copy(running = false, auth = if (it.auth == TdSession.Auth.READY || it.auth in STEPS) TdSession.Auth.CLOSED else it.auth,
+                    channels = emptyList(), stuck = false) }
+            }
+        }
     }
 
     private fun handle(s: TdSession, events: List<TdSession.Event>) {
