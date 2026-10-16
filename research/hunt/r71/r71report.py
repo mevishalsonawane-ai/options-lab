@@ -9,6 +9,7 @@ from pathlib import Path
 import r71cfg as R
 import r71rules as P
 
+TITLE = "# R71 report: chart patterns on the index (tables)"
 EXL = {"XB": "-15% / +30% / 30 min", "XL": "-15% + ladder + L25, 30 min", "XI": "index stop + ladder + L25, 60 min"}
 
 
@@ -90,7 +91,7 @@ def combined_rows(fin: dict) -> list:
 
 def render(des: dict, fin: dict) -> str:
     passed = [k for k, t in fin["tests"].items() if t["verdict"] == "PASS"]
-    out = ["# R71 report: chart patterns on the index (tables)", "",
+    out = [TITLE, "",
            f"Final period 1 Apr - {fin['end']} ({fin['sessions']} sessions), read once at {fin['read']}. "
            f"Tests gated: {len(fin['tests'])} (BH across all). Passed: {', '.join(passed) or 'none'}.", "",
            "## Final period, every gated test", ""] + final_table(fin, des) + \
