@@ -127,7 +127,7 @@ object NightArm {
         _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(20),
             b.log.takeLast(30))
         // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own 09:16 sale stays the exit.
-        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }, owner = "night") }
     }
 
     /** When a position bought on [entryDay] is out by: 09:16 of the next trading session (a Friday's is Monday's), as the arm's own sale. */

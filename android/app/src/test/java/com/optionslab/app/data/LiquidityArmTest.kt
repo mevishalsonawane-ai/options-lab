@@ -88,6 +88,7 @@ class LiquidityArmTest : RobolectricTest() {
     }
 
     @After fun down() {
+        com.optionslab.ira.ArmExits.clear()
         AutomationSupport.realClocks()
         Market.testClock = null
         upstox.close()
@@ -152,6 +153,9 @@ class LiquidityArmTest : RobolectricTest() {
         // The owner's 15% stop rests in the book at 85% of the fill.
         assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), p.stopTrigger)
         assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)
+        // 16 Oct: the position popup's Exits line: its 15% stop, its exit time and its 20-minute check (no level ahead: no target).
+        val exits = com.optionslab.ira.ArmExits.line(false, p.symbol)!!
+        assertTrue(exits, exits.startsWith("stop %.2f · time ".format(java.util.Locale.ENGLISH, p.stopTrigger!!)) && exits.endsWith(" · 20-minute check at 13:25"))
         val stop = Paper.state.orders.single { it.action == "SELL" }
         assertEquals(p.stopOrderId, stop.orderId); assertEquals("trigger pending", stop.status)
         val buys = Paper.state.orders.filter { it.action == "BUY" }
@@ -162,6 +166,7 @@ class LiquidityArmTest : RobolectricTest() {
         val closed = row().today.single()
         assertFalse(closed.open)
         assertEquals("failed_break", closed.why)
+        assertNull("closed: no exits line", com.optionslab.ira.ArmExits.line(false, p.symbol))
         // The row counts it from 06 Oct, with and without each candidate (neither would have dropped it).
         val s = row().shadow!!
         assertEquals(1, s.all.trades); assertEquals(1, s.withoutNear.trades); assertEquals(1, s.withoutFin30.trades)

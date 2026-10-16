@@ -248,7 +248,7 @@ object McxPaperArms {
             val now = McxMarket.now()
             val since = now.minusDays(2)
             val cal = runCatching { McxMarket.calendar() }.getOrDefault(McxSession.DEFAULT)
-            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.isAfter(since) == true }.mapNotNull { managed(it, cal, now.toLocalDate()) })
+            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.isAfter(since) == true }.mapNotNull { managed(it, cal, now.toLocalDate()) }, owner = "mcx")
         }
     }
 

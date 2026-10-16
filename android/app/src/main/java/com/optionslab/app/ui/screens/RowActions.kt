@@ -55,6 +55,21 @@ sealed interface RowTarget {
 }
 
 private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
+
+/**
+ * A position popup's open-trade lines (16 Oct 2026; Boss read "Change +48.57%" as the open trade's +50% while it was +18.4%):
+ * "Open trade change", the open trade's own move on its [avg] ([com.optionslab.ira.OpenChange], never a figure that mixes in
+ * trades already closed on the symbol), and "Exits", the stop, target and exit time its arm is holding it to now
+ * ([com.optionslab.ira.ArmExits], memory only). A closed position shows neither; a zero average or no price, no change.
+ */
+internal fun openTradeLines(live: Boolean, symbol: String, qty: Int, avg: Double, ltp: Double): List<Pair<String, String>> {
+    if (qty == 0) return emptyList()
+    return listOfNotNull(
+        com.optionslab.ira.OpenChange.line(qty, avg, ltp)?.let { "Open trade change" to it },
+        com.optionslab.ira.ArmExits.line(live, symbol)?.let { "Exits" to it },
+    )
+}
+
 private val PAPER_WORKING = setOf("open", "trigger pending", "pending")
 
 /**
@@ -133,7 +148,8 @@ fun RowActionPopup(model: AppModel) {
             lines += "Last price (LTP)" to px(r.ltp)
             lines += "Unrealised P&L" to rs(r.unrealizedPnl, true)
             lines += "Realised today" to rs(r.todayRealizedPnl, true)
-            lines += "Change" to String.format(Locale.ENGLISH, "%+.2f%%", r.pnlPercent)
+            // 16 Oct: the open trade's own move, never the sandbox row's pnlPercent (the day's P&L on the symbol over the open cost).
+            lines += openTradeLines(false, r.symbol, r.quantity, r.averagePrice, r.ltp)
             (paper as? Load.Done)?.value?.let { v -> com.optionslab.app.data.Origins.paperPosition(owners, v.trades, r.symbol, r.product, r.quantity) }
                 ?.let { source = com.optionslab.app.data.Origins.positionDisplay(it) }
             if (r.quantity != 0) {
@@ -205,6 +221,7 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised · realised" to "${rs(r.unrealised, true)} · ${rs(r.realised, true)}"
             lines += "M2M" to rs(r.m2m, true)
             lines += "Bought · sold today" to "${r.buyQty} @ ${px(r.buyAvg)} · ${r.sellQty} @ ${px(r.sellAvg)}"
+            lines += openTradeLines(true, r.symbol, r.qty, r.avg, r.last)
             (account as? Load.Done)?.value?.let { a -> com.optionslab.app.data.Origins.livePosition(owners, a.trades, a.orders, r.symbol, r.product, r.qty) }
                 ?.let { source = com.optionslab.app.data.Origins.positionDisplay(it) }
             if (r.qty != 0) {

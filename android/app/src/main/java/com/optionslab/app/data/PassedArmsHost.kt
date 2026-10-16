@@ -255,6 +255,29 @@ object PassedArmsHost {
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b))
+        // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
+        runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open }.map { exitsOf(it, b.locks[it.symbol]) }) }
+    }
+
+    /**
+     * [p]'s exits now, as the position popup words them: the stop on the premium (raised to a lock already earned, [lock] as
+     * the book keeps it, "time|level"), the target, and the time it is out by - the time stop or the square-off, the earlier.
+     * Solo 2.0's S1 is out on SoloMidday's index stop, its breakeven lock or 14:30.
+     */
+    internal fun exitsOf(p: Pos, lock: String?): com.optionslab.ira.ArmExits.Entry {
+        if (p.setup == Solo2.Setup.S1.key) {
+            val idxStop = if (p.idx != null && p.atr != null) SoloMidday.stopLevel(p.side, p.idx, p.atr) else null
+            return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, null, null, SoloMidday.EXIT,
+                (idxStop?.let { "stop on the index at %.2f".format(Locale.ENGLISH, it) } ?: "stop on the index") + ", breakeven lock")
+        }
+        val x = exitsOf(p)
+        val held = lock?.split('|')?.getOrNull(1)?.toDoubleOrNull()
+        val stop = listOfNotNull(PassedArms.stopLevel(p.entry, x), held).maxOrNull()
+        val sq = x.squareOff
+        val at = PassedArms.timeExitAt(p.entryMinute, x)?.takeIf { it.toLocalDate() == p.day && it.toLocalTime().isBefore(sq) }?.toLocalTime() ?: sq
+        val step = if (held == null) x.steps.firstOrNull()?.let { (t, k) -> "+%.0f%% locked once +%.0f%%".format(Locale.ENGLISH, k * 100, t * 100) } else "lock held"
+        return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, stop, PassedArms.targetLevel(p.entry, x), at,
+            step?.takeIf { x.steps.isNotEmpty() })
     }
 
     private fun now0(): LocalDateTime = runCatching { Market.now().toLocalDateTime().withNano(0) }.getOrElse { LocalDateTime.now().withNano(0) }

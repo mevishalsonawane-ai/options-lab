@@ -69,6 +69,10 @@ object WhatsNew {
                 "After you save your api keys, the login starts by itself. " +
                 "Leaving the app to read the login code no longer closes the login.",
             "Home → Strategies → tap Signal tester's name → Telegram login"),
+        Entry("2026-10-16-open-trade-change", OCT16, "A position's change is now its open trade only",
+            "A position's change now shows only the open trade's move on its average price, not earlier trades on the same option. " +
+                "Below it, Exits shows the stop, target and exit time its strategy is holding it to.",
+            "Tap any open position (Trade tab, Home or its notification)"),
         Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
             "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
                 "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +
