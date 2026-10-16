@@ -120,6 +120,12 @@ def main():
         verdict="inconclusive",
         notes="Not gated (one labelled look, no BH); information for Boss only, nothing changes.",
     )
+    t7 = R.RESULTS / "extra_c1_T7.json"
+    if t7.exists():                                  # the second look, after the final read (T7 is the recommended one)
+        x = json.loads(t7.read_text())
+        e["notes"] += (f" Second labelled look AFTER the final read, with the recommended T7: design C1 + T7 "
+                       f"{line(x['design']['c1_plus'])}; final {line(x['final']['c1_plus'])}; random-skip twin p "
+                       f"{x['final']['skip_p']}.")
     (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
     print(n + 1, "entries")
 

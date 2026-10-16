@@ -365,3 +365,11 @@ def test_baseline_reproduces_the_paper_arm_and_filters_only_remove_signals():
         if v == "W5HD":
             assert all(z["er"] >= z["sig"] + 5 for z in t)
     assert sig_b
+
+
+def test_shared_pnl_compares_the_same_signals():
+    d = date(2025, 3, 3)
+    base = [_tr(d, 500, sig=50), _tr(d, -100, sig=60), _tr(d, 70, sig=70)]
+    var = [_tr(d, 200, sig=50, er=55), _tr(d, -30, sig=60, er=65), _tr(d, 9, sig=99)]
+    assert X.shared_pnl(base, var) == dict(n=2, base_net=400, var_net=170)
+    assert X.shared_pnl([], var) == dict(n=0, base_net=0, var_net=0)

@@ -423,12 +423,59 @@ def final() -> dict:
     return out
 
 
+def extra_c1(v: str) -> dict:
+    """A second labelled, non-gated look (16 Oct, added AFTER the final read): variant v on top of C1 under exits P, on
+    design and final. The pre-fixed extra (design's best variant) is in final.json; this one exists because the
+    recommended variant differs from it. Written once to results/extra_c1_<v>.json (refuses a second run)."""
+    path = R.RESULTS / f"extra_c1_{v}.json"
+    if not R.FINAL_FLAG.exists():
+        raise SystemExit("the final read comes first")
+    if path.exists():
+        raise SystemExit(f"{path.name} exists; read once")
+    des = json.loads((R.RESULTS / "design.json").read_text())
+    M = S.mods()
+    M["C"].open_final()
+    out = dict(variant=v, note="labelled extra, not gated, run after the final read")
+    for ph, lo, hi in (("design", R.START, R.DESIGN_END), ("final", R.FINAL_START, M["K"].END)):
+        c1 = trades("base", "P", lo, hi, source="c1")
+        c1v = trades(v, "P", lo, hi, des["c_pick"], source="c1")
+        sk = skip_twins([z["net"] for z in c1], len(c1v), R.TWINS, np.random.default_rng(R.SEED))
+        out[ph] = dict(c1=stats(c1, months(lo, hi)), c1_plus=stats(c1v, months(lo, hi)), vs_c1=skip_compare(c1, c1v),
+                       skip_p=p_of(sk, sum(z["net"] for z in c1v)))
+        if ph == "design":
+            out[ph]["c1_wf_net"], out[ph]["c1_plus_wf_net"] = wf_net_of(c1), wf_net_of(c1v)
+    _json(out, path)
+    return out
+
+
+def shared_pnl(base: list, var: list) -> dict:
+    """On the signals both took: the baseline's net there vs the variant's (for a wait, the same break entered N
+    minutes later). Pure."""
+    kv = {key(t): t for t in var}
+    sh = [(t, kv[key(t)]) for t in base if key(t) in kv]
+    return dict(n=len(sh), base_net=round(sum(b["net"] for b, _ in sh)), var_net=round(sum(v["net"] for _, v in sh)))
+
+
+def shared() -> dict:
+    """results/shared.json from the saved trades (no new data read): shared_pnl for every test, both periods."""
+    out = {}
+    for t in TESTS:
+        v, x = t.split("-")
+        out[t] = {ph: shared_pnl(_load(f"base_{x}_{ph}"), _load(f"{v}_{x}_{ph}")) for ph in ("design", "final")}
+    _json(out, R.RESULTS / "shared.json")
+    return out
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "design":
         design()
     elif cmd == "final":
         final()
+    elif cmd == "shared":
+        shared()
+    elif cmd == "extra" and len(sys.argv) == 3 and sys.argv[2] in VARIANTS:
+        extra_c1(sys.argv[2])
     elif cmd == "report":
         import r73report
         r73report.write()

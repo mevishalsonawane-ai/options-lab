@@ -82,8 +82,8 @@ def render(des: dict, fin: dict) -> str:
         w = fin["tests"][f"{v}-P"].get("wait_cost")
         if w:
             L.append(f"| {name(v, des)} | {w['n']:,} | {w['points_mean']} / {w['points_median']} | "
-                     f"{rs(w['rs_lot_mean'])} / {rs(w['rs_lot_median'])} | {pct(w['pct_mean'])} / "
-                     f"{pct(w['pct_median'])} | {pct(w['same_strike'])} |")
+                     f"{rs(w['rs_lot_mean'])} / {rs(w['rs_lot_median'])} | {100 * w['pct_mean']:.1f}% / "
+                     f"{100 * w['pct_median']:.1f}% | {pct(w['same_strike'])} |")
     L.append("")
     L += ["## Design period (20 Nov 2024 - 31 Mar 2026)", "",
           "| rule | exits | trades | net | win | worst day | max DD | green days | WF net | skip p (design, info) |",
@@ -121,4 +121,23 @@ def render(des: dict, fin: dict) -> str:
 def write():
     des = json.loads((R.RESULTS / "design.json").read_text())
     fin = json.loads((R.RESULTS / "final.json").read_text())
-    (R.RESULTS / "report.md").write_text(render(des, fin))
+    md = render(des, fin)
+    sp = R.RESULTS / "shared.json"
+    if sp.exists():                                             # the same signals, entered at each rule's own time
+        sh = json.loads(sp.read_text())
+        md += ("\n## The same signals, taken by both (exits P): Donchian's net there vs the rule's\n\n"
+               "| rule | design: signals / Donchian / rule | final: signals / Donchian / rule |\n|---|---|---|\n")
+        for v in P.TRENDS + P.WAITS + ("C",):
+            a, b = sh[f"{v}-P"]["design"], sh[f"{v}-P"]["final"]
+            md += (f"| {name(v, des)} | {a['n']:,} / {rs(a['base_net'])} / {rs(a['var_net'])} | {b['n']:,} / "
+                   f"{rs(b['base_net'])} / {rs(b['var_net'])} |\n")
+    for f in sorted(R.RESULTS.glob("extra_c1_*.json")):        # the second labelled look (after the final read)
+        e = json.loads(f.read_text())
+        md += (f"\n## Extra (labelled, not gated, run after the final read): {e['variant']} on top of C1 (exits P)\n\n"
+               "| book | period | trades | net | win | avg win / loss | worst day | max DD | green days | days |\n"
+               "|---|---|---|---|---|---|---|---|---|---|\n")
+        for ph in ("design", "final"):
+            for lab, k in (("C1 Breadth Donchian", "c1"), (f"C1 + {e['variant']}", "c1_plus")):
+                md += row(lab, e[ph][k]).replace(f"| {lab} |", f"| {lab} | {ph} |") + "\n"
+        md += "\n" + "; ".join(f"{ph}: random-skip twin p {e[ph]['skip_p']}" for ph in ("design", "final")) + ".\n"
+    (R.RESULTS / "report.md").write_text(md)
