@@ -221,8 +221,8 @@ class BatteryRestTest {
         // after it); the battery's is the one right below them. The SILVERM morning call's switch-off (14 Oct, R42) is newest.
         // (15 Oct: the Hero ₹1,000 ticket's entry, then the passed arms' and the Watchlist's, sit above them all; the market concepts' and 16 Oct's exits fix on top.)
         val o = WhatsNew.ENTRIES.indexOfFirst { it.id == "2026-10-14-silverm-morning-off" }
-        // (16 Oct: the passed arms' exits fix and the Telegram login fix, the open trade change on top of those.)
-        assertEquals(13, o)
+        // (16 Oct: the passed arms' exits fix and the Telegram login fix, the open trade change on top of those; R72 Breadth Donchian newest.)
+        assertEquals(14, o)
         assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
         assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
         assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)

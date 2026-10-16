@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.PassedArmsHost
 import com.optionslab.app.data.WatchlistHost
 import com.optionslab.app.ui.theme.IraAlgoTheme
+import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.PassedArms
@@ -181,5 +182,30 @@ class PassedArmRowsTest {
         compose.waitForIdle()
         org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, PassedArmsHost.View(lockOn = true)).any { "breakeven locked once +30%" in it && "+25%" !in it })
         org.junit.Assert.assertTrue(passedExplanation(Solo2.SOURCE, PassedArmsHost.View()).any { "research's own stop, target and time exit" in it })
+    }
+
+    /** 16 Oct (R72, Boss: "Okay add it"): its compact row beside Donchian's; its dialog carries its risk line and the comparison. */
+    @Test fun breadthDonchiansRowAndItsDialogSayItsRiskAndTheComparison() {
+        val t = LocalDateTime.of(2026, 10, 16, 9, 20)
+        val br = PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", "N1", "CE", 65, 100.0, t, "b1", exit = 120.0, exitTime = t.plusMinutes(10), why = "time")
+        val dn = PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "N2", "CE", 65, 100.0, t, "d1", exit = 90.0, exitTime = t.plusMinutes(10), why = "stop", breadth = false)
+        val v = PassedArmsHost.View(armed = mapOf(BreadthDonchianArm.SOURCE to true, DonchianArm.SOURCE to true), all = listOf(br, dn),
+            breadthSince = LocalDate.of(2026, 10, 16))
+        show(v)
+        compose.waitForIdle()
+        compose.onNodeWithText(BreadthDonchianArm.LABEL).assertExists()
+        compose.onNodeWithText(keepNumbersWhole("Risk: ${BreadthDonchianArm.RISK}."), substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("About ${BreadthDonchianArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("Risk: ${BreadthDonchianArm.RISK}.")).assertExists()
+        compose.onNodeWithText(keepNumbersWhole("Research: ${BreadthDonchianArm.RESEARCH_ID}"), substring = true).assertExists()
+        compose.onNodeWithText(keepNumbersWhole(v.comparison() + ".")).assertExists()
+        org.junit.Assert.assertTrue(v.comparison(), v.comparison().contains("since 16 Oct: R72 Breadth Donchian 1 trade, +₹1,300; R51 Donchian 20 1 trade, −₹650; " +
+            "Donchian's trades breadth did not confirm: 1 trade, −₹650"))
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Paper only: switch ${BreadthDonchianArm.LABEL}").assertIsOn()
+        // Donchian's own dialog carries neither.
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, v).none { "Risk:" in it || "Breadth Donchian vs Donchian" in it })
     }
 }

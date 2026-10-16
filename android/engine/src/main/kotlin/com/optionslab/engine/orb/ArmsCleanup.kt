@@ -69,6 +69,7 @@ object ArmsCleanup {
         Kept("R51 Donchian 20", "android/app/.../data/PassedArmsHost.kt, engine orb/DonchianArm.kt"),
         Kept("R52 Open outside value", "android/app/.../data/PassedArmsHost.kt, engine orb/OovArm.kt"),
         Kept("Solo 2.0", "android/app/.../data/PassedArmsHost.kt, engine orb/Solo2.kt"),
+        Kept("R72 Breadth Donchian (16 Oct)", "android/app/.../data/PassedArmsHost.kt, engine orb/BreadthDonchianArm.kt"),
         Kept("Watchlist (shadow)", "android/app/.../data/WatchlistHost.kt, engine orb/Watchlist.kt"),
         Kept("Solo (midday)", "android/app/.../ira/IraSolo.kt, engine orb/SoloMidday.kt"),
         Kept("MCX paper arms", "android/app/.../data/McxPaperArms.kt"),

@@ -58,6 +58,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-breadth-donchian", OCT16, "Breadth Donchian on paper, beside Donchian (your choice)",
+            "A new paper arm buys a Donchian break only when at least 4 of the five indices break together. " +
+                "It runs beside R51 Donchian 20, so you can compare the two on the same days. " +
+                "Research R72 made +₹1,71,366 over 1,202 trades in the final test, against Donchian's +₹55,439. " +
+                "Its backtest drawdown of ₹1.99 lakh is beyond your −₹40k account stop, so it stays on paper only. " +
+                "It is in the change log, and one tap undoes it.",
+            "Home → Strategies → tap R72 Breadth Donchian's name for its risk and the comparison with Donchian",
+            ask = "how is breadth donchian doing"),
         Entry("2026-10-16-passed-arms-l25", OCT16, "+5% locked once a paper trade has been +25% (your choice)",
             "This is for new paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0. " +
                 "Each will lock +5% once the option has been +25%. " +

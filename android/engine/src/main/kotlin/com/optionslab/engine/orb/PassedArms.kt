@@ -11,11 +11,13 @@ import kotlin.math.floor
  * The paper arms whose rules PASSED every research gate (Boss, 15 Oct 2026: "Both" - paper arms for the rules that passed, a
  * shadow Watchlist for the near misses). Under CLAUDE.md's PAPER rule a passed idea may act on paper at once: each arm is
  * switched on once by the update, logged in Autopilot's change timeline as "PAPER_ARM_ON", undone in one tap, shown to Boss,
- * and never carries over to live by itself (these arms have no live path at all). The three:
+ * and never carries over to live by itself (these arms have no live path at all). The four:
  *
  *  - [DonchianArm] "R51 Donchian 20" (research R51, R44-donchian20-RT, Amendment A);
  *  - [OovArm] "R52 Open outside value" (research R52, H37-10 grid point g17, Amendment 2), with R57's Solo layer as its stop;
- *  - [Solo2] "Solo 2.0" (research R57, the A2 meta-labeller): Jarvis's own second paper Solo, next to Solo (midday).
+ *  - [Solo2] "Solo 2.0" (research R57, the A2 meta-labeller): Jarvis's own second paper Solo, next to Solo (midday);
+ *  - [BreadthDonchianArm] "R72 Breadth Donchian" (research R72 C1, 16 Oct): Donchian's break when at least 4 of the five indices
+ *    break together, beside R51 Donchian 20.
  *
  * This file holds what they share: the session's minute grid ([Session], [DayBars]), the 5-minute bars the research built
  * ([bars5]), the strike rule ([step], [itmStrike]), the premium exits as the research's engine ran them ([PremiumExits],
@@ -23,7 +25,7 @@ import kotlin.math.floor
  */
 object PassedArms {
     /** What every row, notice and Jarvis answer of these arms says first. */
-    const val PASSED = "Passed research (R51/R52/R57) — paper only"
+    const val PASSED = "Passed research (R51/R52/R57/R72) — paper only"
     /** Signal source (CLAUDE.md, 14 Oct: stated for every rule). */
     const val SIGNAL_INDEX = "Signal: the index's own bars (the default); the option is only what is bought"
 

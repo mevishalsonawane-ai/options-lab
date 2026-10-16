@@ -420,10 +420,11 @@ object AutoChange {
     /**
      * 15 Oct (Boss: "Both"): the paper arm [source] ([label]) PASSED every research gate ([research]), so under CLAUDE.md's
      * PAPER rule the update switches it on at once - "off → on" on paper, logged as Boss's (kept, never Autopilot's), shown in
-     * the timeline and undone in one tap (the arm off; paper only, no PIN). It never carries over to live by itself.
+     * the timeline and undone in one tap (the arm off; paper only, no PIN). It never carries over to live by itself. [choice]: Boss's
+     * words that asked for it (16 Oct: R72 Breadth Donchian's "Okay add it").
      */
-    fun passedArmOn(source: String, label: String, research: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, SWITCHED_OFF, ON,
-        "your \"Both\" (15 Oct): $label passed every research gate ($research), so under the PAPER rule it trades on paper at once - " +
+    fun passedArmOn(source: String, label: String, research: String, choice: String = "your \"Both\" (15 Oct)"): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, SWITCHED_OFF, ON,
+        "$choice: $label passed every research gate ($research), so under the PAPER rule it trades on paper at once - " +
             "1 lot, its own record, never live; it never carries over to live by itself",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "$label's switch (paper)")
 

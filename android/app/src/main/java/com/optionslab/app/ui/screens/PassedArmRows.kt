@@ -32,6 +32,7 @@ import com.optionslab.app.data.WatchlistHost
 import com.optionslab.app.ui.components.Rule
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
+import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.PassedArms
@@ -43,7 +44,8 @@ import java.util.Locale
 
 /**
  * The paper arms that passed research on Home's Strategies card (15 Oct, Boss: "Both"; [PassedArmsHost]): R51 Donchian 20,
- * R52 Open outside value and Solo 2.0. COMPACT (Boss, 15 Oct): each row shows only its name, one short status line (on / off,
+ * R52 Open outside value, Solo 2.0 and (16 Oct) R72 Breadth Donchian - whose dialog also carries its risk line and Boss's
+ * comparison with R51 Donchian 20 on the same days. COMPACT (Boss, 15 Oct): each row shows only its name, one short status line (on / off,
  * paper, today's state) and its key numbers (record, P&L, forward-test progress), with its Off switch. A tap on the NAME opens
  * a small dialog with the explanation - its settings, research id and result, its forward-test bar and the "paper only"
  * label - and one OK button. Reads [PassedArmsHost.view] (memory only); every change goes through the host off the main thread.
@@ -62,12 +64,14 @@ private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + "%,.0f".format(L
 
 internal fun passedRules(source: String): String = when (source) {
     DonchianArm.SOURCE -> DonchianArm.RULES
+    BreadthDonchianArm.SOURCE -> BreadthDonchianArm.RULES
     OovArm.SOURCE -> OovArm.RULES + ". " + OovArm.STOP_ADDED
     else -> Solo2.RULES + ". " + Solo2.RETRAIN_TODO
 }
 
 internal fun passedRecord(source: String): String = when (source) {
     DonchianArm.SOURCE -> DonchianArm.RECORD
+    BreadthDonchianArm.SOURCE -> BreadthDonchianArm.RECORD
     OovArm.SOURCE -> OovArm.RECORD
     else -> Solo2.RECORD
 }
@@ -97,6 +101,9 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     PassedArms.PASSED,
     "Research: ${PassedArmsHost.research(source)}. ${passedRecord(source)}.",
     passedRules(source) + ".",
+    // 16 Oct (R72): its risk line, and the point of running it beside Donchian - the two on the same days.
+    if (source == BreadthDonchianArm.SOURCE) "Risk: ${BreadthDonchianArm.RISK}." else null,
+    if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,
     // 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock and R66's +5% once +25%, Boss's choices; paper only).
     com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On) + ".",
     PassedArms.SIGNAL_INDEX + ".",

@@ -1,5 +1,6 @@
 package com.optionslab.ira
 
+import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.PassedArms
@@ -10,9 +11,10 @@ import java.util.Locale
 /**
  * Jarvis on the arms that PASSED research and on the shadow Watchlist (15 Oct 2026, Boss: "Both"): "how is the Donchian arm
  * doing", "what did open outside value do today", "how is Solo 2.0 doing", "what's on the watchlist", "how are the passed
- * arms doing", "solo 2.0 kaisa chal raha hai". Answered from the arms' own book and the Watchlist's log: each arm's switch
+ * arms doing", "solo 2.0 kaisa chal raha hai", and (16 Oct) "how is breadth donchian doing" - with Boss's comparison of R72
+ * Breadth Donchian and R51 Donchian 20 on the same days, and R72's risk line. Answered from the arms' own book and the Watchlist's log: each arm's switch
  * (paper only), its rules and signal source, today's trades, its record (the index the research said to report apart, apart),
- * its forward-test bar - always with "Passed research (R51/R52/R57) — paper only"; the Watchlist's scorecard always with
+ * its forward-test bar - always with "Passed research (R51/R52/R57/R72) — paper only"; the Watchlist's scorecard always with
  * "shadow, not traded; information only, not a trade signal" (and C4 marked NON-DEFAULT: an option-chain signal). Read only:
  * a sentence with something to do ("switch off the donchian arm") is not read here, and nothing is switched, bought, sold or
  * promoted. Pure.
@@ -20,11 +22,13 @@ import java.util.Locale
 object PassedArmsTalk {
     const val LOCKED = "Unlock the phone for that, Boss."
 
-    enum class Topic { DONCHIAN, OOV, SOLO2, WATCHLIST, ALL }
+    enum class Topic { DONCHIAN, OOV, SOLO2, WATCHLIST, ALL, BREADTH }
 
     /** Words of doing: such a sentence is an action (or a setting), never this reader's question. */
     private val ACT = Regex(" (switch|switched|turn|band|chalu|enable|disable|set|change|buy|sell|close|cancel|square|start|stop|pause|resume|arm on|disarm|add|remove|delete|promote|undo) ")
     private val DONCHIAN = Regex(" (donchian|r51) ")
+    /** 16 Oct: R72 Breadth Donchian ("breadth donchian", "breadth arm", "r72 arm"). */
+    private val BREADTH = Regex(" (breadth donchian|breadth arm|breadth paper|r72 arm|r72 paper|r72 breadth) ")
     private val DON_CONTEXT = Regex(" (arm|arms|r51|paper|trade|trades|doing|today|record|kaisa|kya|forward|test|bot) ")
     private val CHANNEL = Regex(" (channel|channels|indicator|formula|explain|meaning) ")
     private val OOV = Regex(" (open outside value|outside value|oov|r52 arm|r52 paper) ")
@@ -41,6 +45,7 @@ object PassedArmsTalk {
         return when {
             SOLO2.containsMatchIn(t) -> Topic.SOLO2
             OOV.containsMatchIn(t) -> Topic.OOV
+            BREADTH.containsMatchIn(t) -> Topic.BREADTH
             DONCHIAN.containsMatchIn(t) && DON_CONTEXT.containsMatchIn(t) && !CHANNEL.containsMatchIn(t) -> Topic.DONCHIAN
             WATCH.containsMatchIn(t) && !MINE.containsMatchIn(t) -> Topic.WATCHLIST
             ALL.containsMatchIn(t) -> Topic.ALL
@@ -63,30 +68,36 @@ object PassedArmsTalk {
 
     data class Facts(val arms: List<Arm>, val watch: List<String>, val watchOn: Boolean?, val modelLoaded: Boolean? = null,
                      /** 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock, R66's +5% once +25%), in words; null: unknown. */
-                     val exits: String? = null)
+                     val exits: String? = null,
+                     /** 16 Oct: R72 Breadth Donchian vs R51 Donchian 20 on the same days, in words; null: unknown. */
+                     val comparison: String? = null)
 
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(x))
 
     private fun label(source: String) = when (source) {
         DonchianArm.SOURCE -> DonchianArm.LABEL
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.LABEL
         OovArm.SOURCE -> OovArm.LABEL
         else -> Solo2.LABEL
     }
 
     private fun rules(source: String) = when (source) {
         DonchianArm.SOURCE -> DonchianArm.RULES
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.RULES + ". " + BreadthDonchianArm.RISK
         OovArm.SOURCE -> OovArm.RULES + ". " + OovArm.STOP_ADDED
         else -> Solo2.RULES
     }
 
     private fun record(source: String) = when (source) {
         DonchianArm.SOURCE -> DonchianArm.RECORD
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.RECORD
         OovArm.SOURCE -> OovArm.RECORD
         else -> Solo2.RECORD
     }
 
     private fun apart(source: String) = when (source) {
         DonchianArm.SOURCE -> DonchianArm.REPORT_APART
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.REPORT_APART
         OovArm.SOURCE -> OovArm.REPORT_APART
         else -> Solo2.REPORT_APART
     }
@@ -152,10 +163,13 @@ object PassedArmsTalk {
         return when (topic) {
             Topic.DONCHIAN -> arm(DonchianArm.SOURCE)?.let { armWords(it) + exits } ?: "I could not read ${DonchianArm.LABEL}'s book just now, Boss."
             Topic.OOV -> arm(OovArm.SOURCE)?.let { armWords(it) + exits } ?: "I could not read ${OovArm.LABEL}'s book just now, Boss."
+            Topic.BREADTH -> arm(BreadthDonchianArm.SOURCE)?.let { armWords(it) + exits + (f.comparison?.let { c -> " $c." } ?: "") }
+                ?: "I could not read ${BreadthDonchianArm.LABEL}'s book just now, Boss."
             Topic.SOLO2 -> arm(Solo2.SOURCE)?.let { armWords(it) + exits + if (f.modelLoaded == false) " Its model is not loaded yet, so it scores nothing until it is." else "" }
                 ?: "I could not read ${Solo2.LABEL}'s book just now, Boss."
             Topic.WATCHLIST -> watchWords(f.watch, f.watchOn)
-            Topic.ALL -> (f.arms.map { armWords(it, full = false) } + listOfNotNull(f.exits?.let { "$it." }) + watchWords(f.watch, f.watchOn)).joinToString(" ")
+            Topic.ALL -> (f.arms.map { armWords(it, full = false) } + listOfNotNull(f.exits?.let { "$it." }, f.comparison?.let { "$it." }) +
+                watchWords(f.watch, f.watchOn)).joinToString(" ")
         }
     }
 }

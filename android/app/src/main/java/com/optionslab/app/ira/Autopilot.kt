@@ -833,10 +833,12 @@ internal object Autopilot {
      * 15 Oct (Boss's "Both"): the paper arm [source] PASSED research and was switched on once by the update under the PAPER rule
      * ([com.optionslab.app.data.PassedArmsHost]). Logged as Boss's (kept, never Autopilot's) so the change log shows it and one
      * tap undoes it (the arm off; paper only, no PIN). Once: never logged twice. In the background, on Autopilot's own worker.
+     * 16 Oct: R72 Breadth Donchian's own switch-on gives Boss's words ([choice], "Okay add it") and its [note] (with its risk line).
      */
-    fun logPassedArmOn(source: String, label: String, research: String) {
+    fun logPassedArmOn(source: String, label: String, research: String, choice: String? = null, note: String? = null) {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.passedArmOn(source, label, research), "the 15 Oct update (your \"Both\"); paper only - never live")
+        val c = if (choice == null) AutoChange.passedArmOn(source, label, research) else AutoChange.passedArmOn(source, label, research, choice)
+        logBossOwnOnce(c, note ?: "the 15 Oct update (your \"Both\"); paper only - never live")
     }
 
     /**

@@ -6,6 +6,7 @@ import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Bar
+import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
 import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.OovArm
@@ -38,8 +39,11 @@ import java.util.Locale
  *  - "R51 Donchian 20" ([DonchianArm]) on NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX;
  *  - "R52 Open outside value" ([OovArm]) on the same five, with R57's Solo layer as its stop (labelled);
  *  - "Solo 2.0" ([Solo2], research R57's A2 meta-labeller): Jarvis's own second paper Solo, next to Solo (midday), which it
- *    never changes.
- * Every row, notice and answer says "Passed research (R51/R52/R57) — paper only".
+ *    never changes;
+ *  - "R72 Breadth Donchian" ([BreadthDonchianArm], 16 Oct, Boss: "Okay add it"): Donchian's break taken only when at least 4 of
+ *    the five indices break together, BESIDE R51 Donchian 20 (both run, compared on the same days: [comparison]); it reads the
+ *    same five 5-minute series Donchian builds (no extra read), its trades in its own rows with Donchian's exits.
+ * Every row, notice and answer says "Passed research (R51/R52/R57/R72) — paper only".
  *
  * PAPER ONLY, always: every order is the paper account's ([Paper.place]); there is no live flag and no Zerodha call anywhere
  * here, so nothing can reach Zerodha whatever Live, "AI trades go live" or a voice command says - and Solo 2.0 is never
@@ -51,7 +55,7 @@ import java.util.Locale
  * Under CLAUDE.md's PAPER rule a passed idea acts on paper at once: each arm is switched ON once by this update (logged in
  * Autopilot's change timeline as PAPER_ARM_ON, Boss's, undone in one tap); after that only Boss switches it - except its
  * forward-test bar, set in advance, which switches it OFF by itself (risk-lowering, logged the same way):
- *  - R51 / R52: at 40 paper trades, a net below 0 or below the cost of twice the spread ([PassedArms.ForwardBar]);
+ *  - R51 / R52 / R72: at 40 paper trades, a net below 0 or below the cost of twice the spread ([PassedArms.ForwardBar]);
  *  - Solo 2.0: SoloMidday's bar - after 60 trades a net per trade <= 0, or a drawdown beyond -Rs 25,000 at any time.
  *
  * Off the order and tick paths: the entries run in the watch's arms passes (a worker), their reads and orders on a copy of the
@@ -70,11 +74,18 @@ object PassedArmsHost {
         file = File(app.filesDir, "passed_arms.vault")
     }
 
-    val SOURCES = listOf(DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE)
-    fun label(source: String): String = when (source) { DonchianArm.SOURCE -> DonchianArm.LABEL; OovArm.SOURCE -> OovArm.LABEL; else -> Solo2.LABEL }
-    fun research(source: String): String = when (source) { DonchianArm.SOURCE -> DonchianArm.RESEARCH_ID; OovArm.SOURCE -> OovArm.RESEARCH_ID; else -> Solo2.RESEARCH_ID }
-    fun underlyings(source: String): List<String> = when (source) { DonchianArm.SOURCE -> DonchianArm.UNDERLYINGS; OovArm.SOURCE -> OovArm.UNDERLYINGS; else -> Solo2.UNDERLYINGS }
-    fun apart(source: String): String = when (source) { DonchianArm.SOURCE -> DonchianArm.REPORT_APART; OovArm.SOURCE -> OovArm.REPORT_APART; else -> Solo2.REPORT_APART }
+    /** 16 Oct: R72 Breadth Donchian last (each arm's notice numbers go by its place here, so the first three keep theirs). */
+    val SOURCES = listOf(DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, BreadthDonchianArm.SOURCE)
+    /** The arms the 15 Oct update switched on (R72's has its own switch-on, [BREADTH_ON]). */
+    private val FIRST_THREE = listOf(DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE)
+    fun label(source: String): String = when (source) { DonchianArm.SOURCE -> DonchianArm.LABEL; OovArm.SOURCE -> OovArm.LABEL
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.LABEL; else -> Solo2.LABEL }
+    fun research(source: String): String = when (source) { DonchianArm.SOURCE -> DonchianArm.RESEARCH_ID; OovArm.SOURCE -> OovArm.RESEARCH_ID
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.RESEARCH_ID; else -> Solo2.RESEARCH_ID }
+    fun underlyings(source: String): List<String> = when (source) { DonchianArm.SOURCE -> DonchianArm.UNDERLYINGS; OovArm.SOURCE -> OovArm.UNDERLYINGS
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.UNDERLYINGS; else -> Solo2.UNDERLYINGS }
+    fun apart(source: String): String = when (source) { DonchianArm.SOURCE -> DonchianArm.REPORT_APART; OovArm.SOURCE -> OovArm.REPORT_APART
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.REPORT_APART; else -> Solo2.REPORT_APART }
     private val ALL_INDICES = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
 
     /** The one-time switch-on of 15 Oct (the PAPER rule, Boss's "Both"); in [Book.migrated] once done, never again. */
@@ -83,6 +94,12 @@ object PassedArmsHost {
     internal const val LOCK_ON = "lock_306100_2026-10-16"
     /** 16 Oct (Boss's choice after R65 - R69: "Select the best"): R66's +5% once +25% switched on once for new locked trades ([setL25]). */
     internal const val L25_ON = "lock_l25_2026-10-16"
+    /** 16 Oct (Boss: "Okay add it"): R72 Breadth Donchian switched on once ([BreadthDonchianArm]); the day kept in [Book.breadthSince]. */
+    internal const val BREADTH_ON = "breadth_on_2026-10-16"
+    /** Its change-log words: Boss's choice, and the note with its risk line. */
+    private const val BREADTH_CHOICE = "your \"Okay add it\" (16 Oct, after R72)"
+    private val BREADTH_NOTE = "the 16 Oct update (your \"Okay add it\"), beside ${DonchianArm.LABEL} to compare on the same days. " +
+        "${BreadthDonchianArm.RISK} - never live"
 
     /** TEST SEAM: true in the JVM tests' app (the other tests' books start with these arms off). Its setter throws in a release build. */
     @Volatile internal var testNoAutoOn: Boolean = false
@@ -115,6 +132,11 @@ object PassedArmsHost {
          * The ladder a trade entered with is kept (persisted); a trade from an older book reads as the plain A4 ladder.
          */
         val l25: Boolean = false,
+        /**
+         * 16 Oct (R72): an R51 Donchian 20 trade's break was also a breadth break (at least 4 of the five indices broke that way on
+         * that bar): true / false; null for the other arms and older trades. Labels only (Boss's comparison); never changes a trade.
+         */
+        val breadth: Boolean? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -152,10 +174,12 @@ object PassedArmsHost {
         var lockOn: Boolean = false,
         /** R66's +5% once +25% step for NEW trades under the lock ([setL25]); open trades keep what they entered with ([Pos.l25]). */
         var l25On: Boolean = false,
+        /** 16 Oct: the day R72 Breadth Donchian was first switched on (Boss's comparison counts from it); null: never on. */
+        var breadthSince: LocalDate? = null,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), HashMap(status), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, breadthSince)
     }
 
     /** What the rows and Jarvis read (memory only). */
@@ -170,6 +194,8 @@ object PassedArmsHost {
         val lockOn: Boolean = false,
         /** R66's +5% once +25% step is on for new trades under the lock. */
         val l25On: Boolean = false,
+        /** The day R72 Breadth Donchian was first switched on (null: never). */
+        val breadthSince: LocalDate? = null,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         fun closedOf(source: String): List<Pos> = all.filter { it.arm == source }
@@ -182,6 +208,19 @@ object PassedArmsHost {
             return if (source == Solo2.SOURCE) SoloMidday.forwardLine(SoloMidday.record(c.map { it.net ?: 0.0 })).replace("Forward test", "Forward test (60 trades)").removeSuffix(".")
             else PassedArms.ForwardBar.line(PassedArms.ForwardBar.judge(c.map { it.net ?: 0.0 }, c.map { it.spread }, base[source] ?: 0))
         }
+
+        /**
+         * 16 Oct (R72, the point of running both): R72 Breadth Donchian's closed paper trades next to R51 Donchian 20's on the same
+         * days, since the breadth arm was first switched on, and Donchian's trades breadth did not confirm (those labelled). Words.
+         */
+        fun comparison(): String {
+            val since = breadthSince
+            fun from(s: String) = closedOf(s).filter { since == null || !it.day.isBefore(since) }
+            val don = from(DonchianArm.SOURCE)
+            val labelled = don.filter { it.breadth != null }
+            return BreadthDonchianArm.comparison(since, from(BreadthDonchianArm.SOURCE).map { it.net ?: 0.0 }, don.map { it.net ?: 0.0 },
+                labelled.takeIf { it.isNotEmpty() }?.filter { it.breadth == false }?.map { it.net ?: 0.0 })
+        }
     }
 
     private val _view = MutableStateFlow(View())
@@ -191,7 +230,7 @@ object PassedArmsHost {
     private const val LOG_KEPT = 200
     /** Closed trades kept per arm. */
     private const val CLOSED_KEPT = 1500
-    /** Its own notices: 8100.. (buys 8100-8114, switch-offs 8120-8122, sells 8140-8154, taken back 8160-8174); no other part of the app uses 81xx. */
+    /** Its own notices: 8100.. (buys 8100-8119, switch-offs 8120-8123, sells 8140-8159, taken back 8160-8179); no other part of the app uses 81xx. */
     private const val NOTICE = 8100
 
     private fun ready() = ::file.isInitialized
@@ -216,6 +255,7 @@ object PassedArmsHost {
             o.optJSONObject("locks")?.let { m -> m.keys().forEach { b.locks[it] = m.getString(it) } }
             b.lockOn = o.optBoolean("lock306100", false)
             b.l25On = o.optBoolean("lockL25", false)
+            b.breadthSince = o.optString("breadthSince").ifEmpty { null }?.let { LocalDate.parse(it) }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
         cache = b
         // 15 Oct (the PAPER rule): on once, on paper. A book that could not be read is never switched on by itself (Boss may
@@ -223,7 +263,7 @@ object PassedArmsHost {
         if (AUTO_ON !in b.migrated) {
             b.migrated += AUTO_ON
             val on = !unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD
-            if (on) for (s in SOURCES) if (b.armed[s] != true) {
+            if (on) for (s in FIRST_THREE) if (b.armed[s] != true) {
                 b.armed[s] = true
                 note(b, "${label(s)} switched on once by the 15 Oct update: ${PassedArms.PASSED} (${research(s)})")
                 runCatching { com.optionslab.app.ira.Autopilot.logPassedArmOn(s, label(s), research(s)) }
@@ -254,6 +294,22 @@ object PassedArmsHost {
             }
             save(b)
         }
+        // 16 Oct (Boss: "Okay add it", after R72): R72 Breadth Donchian passed every gate, so under the PAPER rule it trades on paper
+        // at once, BESIDE R51 Donchian 20 (both run, to compare on the same days) - on once, logged in the change timeline (one tap
+        // undoes it), shown to Boss with its risk line. Same care: never on an unreadable book, never in Gold; after this only Boss
+        // switches it (and its forward bar, which only switches it off).
+        if (BREADTH_ON !in b.migrated) {
+            b.migrated += BREADTH_ON
+            val s = BreadthDonchianArm.SOURCE
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && b.armed[s] != true) {
+                b.armed[s] = true
+                if (b.breadthSince == null) b.breadthSince = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                note(b, "${label(s)} switched on once by the 16 Oct update, your \"Okay add it\": ${PassedArms.PASSED} (${research(s)}), beside " +
+                    "${DonchianArm.LABEL} to compare on the same days. ${BreadthDonchianArm.RISK}")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedArmOn(s, label(s), research(s), BREADTH_CHOICE, BREADTH_NOTE) }
+            }
+            save(b)
+        }
         return b
     }
 
@@ -263,7 +319,7 @@ object PassedArmsHost {
             LocalDateTime.parse(p.getString("entryTime")), p.optString("orderId").ifEmpty { null }, p.optString("setup").ifEmpty { null },
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
-            p.optBoolean("l25", false))
+            p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null)
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -274,6 +330,7 @@ object PassedArmsHost {
             p.exitRef?.let { put("exitRef", it) }; p.paperFill?.let { put("paperFill", it) }; p.adopted?.let { put("adopted", it) }
             if (p.lock) put("lock", true)
             if (p.l25) put("l25", true)
+            p.breadth?.let { put("breadth", it) }
         }
 
     private val written = Vault.LastWrite()
@@ -293,7 +350,8 @@ object PassedArmsHost {
         o.put("scores", JSONArray().apply { b.scores.takeLast(120).forEach { put(it) } })
         o.put("lock306100", b.lockOn)
         o.put("lockL25", b.l25On)
-        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && it.symbol == k } }.forEach { (k, v) -> put(k, v) } })
+        b.breadthSince?.let { o.put("breadthSince", it.toString()) }
+        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
@@ -307,9 +365,9 @@ object PassedArmsHost {
         val closed = b.positions.filter { !it.open }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
-            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On)
+            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.breadthSince)
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
-        runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open }.map { exitsOf(it, b.locks[it.symbol]) }) }
+        runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
 
     /**
@@ -393,6 +451,7 @@ object PassedArmsHost {
             val b = book()
             if ((b.armed[source] == true) == on) return@withLock "${label(source)} is already ${if (on) "on" else "off"} (paper only)."
             b.armed[source] = on
+            if (on && source == BreadthDonchianArm.SOURCE && b.breadthSince == null) b.breadthSince = runCatching { Market.today() }.getOrElse { LocalDate.now() }
             if (on && b.paused.remove(source) != null) {
                 val nets = b.positions.filter { it.arm == source && !it.open }.map { it.net ?: 0.0 }
                 if (source == Solo2.SOURCE) SoloMidday.baseline(nets).let { b.soloBase = "${it.from}|${it.peak}" } else b.base[source] = nets.size
@@ -462,7 +521,8 @@ object PassedArmsHost {
                         c.filter { !it.lock }.sumOf { it.net ?: 0.0 }) +
                     " · L25 +5% once +25% ${if (v.l25On && v.lockOn) "on" else if (v.l25On) "on (acts only with the lock, which is off)" else "off"} for new trades, " +
                     "${c.count { it.l25 }} closed on it %,.0f".format(Locale.ENGLISH, c.filter { it.l25 }.sumOf { it.net ?: 0.0 }) + (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
-                v.status.filterKeys { it.startsWith("$s|") }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} $x" }
+                v.status.filterKeys { it.startsWith("$s|") }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} $x" } +
+                if (s == BreadthDonchianArm.SOURCE) " · ${v.comparison()}" else ""
         } + " · ${PassedArms.PASSED}"
     }
 
@@ -626,6 +686,7 @@ object PassedArmsHost {
             if (work.armed[DonchianArm.SOURCE] == true) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.armed[OovArm.SOURCE] == true) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.armed[Solo2.SOURCE] == true) changed = runCatching { solo2(work, now, reads) }.getOrElse { work.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (work.armed[BreadthDonchianArm.SOURCE] == true) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (!changed) return
             lock.withLock {
                 val b = book()
@@ -738,7 +799,7 @@ object PassedArmsHost {
      * The position, or why not (null position).
      */
     private suspend fun buy(b: Book, arm: String, u: String, side: Int, strikes: List<Int>, now: LocalDateTime, setup: String? = null,
-                            idx: Double? = null, atr: Double? = null, keys: List<String> = emptyList()): Pair<Pos?, String> {
+                            idx: Double? = null, atr: Double? = null, keys: List<String> = emptyList(), breadth: Boolean? = null): Pair<Pos?, String> {
         val today = now.toLocalDate()
         val right = if (side > 0) Right.CE else Right.PE
         val expiry = OrbRules.expiryAfter(today, listed(u).map { it.expiry }.distinct()) ?: return null to "no $u expiry after today is listed"
@@ -749,10 +810,11 @@ object PassedArmsHost {
         for (k in strikes) {
             val c = Paper.ticketContract(u, expiry, k.toDouble(), right) ?: run { why = "$k ${right.name} not listed"; null } ?: continue
             if (c.lotSize <= 0) { why = "lot size unknown"; continue }
-            // One contract, one arm: never two of these arms holding the same option (each one's exits read its own lot).
-            b.positions.firstOrNull { it.open && it.symbol == c.symbol }?.let { why = "${c.symbol} is held by ${label(it.arm)}"; return null to why }
+            // One contract, one arm: never two of these arms holding the same option (each one's exits read its own lot) - except
+            // R51 and R72, which run side by side on the same breaks ([mayShare]); never the same arm twice.
+            b.positions.firstOrNull { it.open && it.symbol == c.symbol && !mayShare(arm, it.arm) }?.let { why = "${c.symbol} is held by ${label(it.arm)}"; return null to why }
             // (and the book itself: one the safety net took back since this pass's copy was made)
-            if (c.symbol in _view.value.open.map { it.symbol }) { why = "${c.symbol} is held by these arms"; return null to why }
+            if (_view.value.open.any { it.symbol == c.symbol && !mayShare(arm, it.arm) }) { why = "${c.symbol} is held by these arms"; return null to why }
             val q = runCatching { Paper.quote(c) }.getOrNull()
             val ref = q?.ltp?.takeIf { it > 0 } ?: run { why = "${c.symbol}: no fresh price"; null } ?: continue
             // 16 Oct: the account guard's view shares prices read in the last [Paper.SHARED_QUOTE_MS] (it re-read every held
@@ -772,7 +834,7 @@ object PassedArmsHost {
                 } else {
                     val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
                     val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
-                        l25 = b.lockOn && b.l25On)
+                        l25 = b.lockOn && b.l25On, breadth = breadth)
                     b.positions += pos
                     b.marks[c.symbol] = fill.price
                     b.decided += keys
@@ -829,6 +891,7 @@ object PassedArmsHost {
 
     private fun exitsOf(p: Pos): PassedArms.PremiumExits = when (p.arm) {
         DonchianArm.SOURCE -> DonchianArm.EXITS
+        BreadthDonchianArm.SOURCE -> BreadthDonchianArm.EXITS
         OovArm.SOURCE -> OovArm.EXITS
         else -> Solo2.exits(Solo2.Setup.entries.firstOrNull { it.key == p.setup } ?: Solo2.Setup.S2)
     }.let { if (p.lock) PassedArms.withLock(it, p.l25) else it }
@@ -842,32 +905,68 @@ object PassedArmsHost {
         return h.flatMap { PassedArms.bars5(it) } + PassedArms.bars5(today, today.lastRow)
     }
 
+    /** The five indices' continuous 5-minute series this pass (an index unread is left out: for breadth it is not breaking). */
+    private fun seriesAll(today: LocalDate, reads: Reads): Map<String, List<PassedArms.Bar5>> =
+        BreadthDonchianArm.UNDERLYINGS.mapNotNull { u -> todayBars(u, today, reads)?.let { u to series(u, it) } }.toMap()
+
     private suspend fun donchian(b: Book, now: LocalDateTime, reads: Reads): Boolean {
         val src = DonchianArm.SOURCE
         val today = now.toLocalDate()
+        val all = seriesAll(today, reads)
+        // 16 Oct (R72): each of its breaks labelled with whether breadth confirmed it (Boss's comparison; never changes a trade).
+        val confirmed = runCatching { BreadthDonchianArm.signals(all, today).map { Triple(it.underlying, it.bar.b, it.side) }.toSet() }.getOrNull()
         var changed = false
         for (u in DonchianArm.UNDERLYINGS) {
-            val key = "$src|$u"
-            val d = todayBars(u, today, reads) ?: continue
-            when (expiryToday(u, today)) {
-                null -> { changed = say(b, key, "waiting for the options list") || changed; continue }
-                true -> { changed = say(b, key, "its expiry day: no trades") || changed; continue }
-                false -> Unit
-            }
-            for (s in DonchianArm.signals(u, series(u, d), today)) {
-                val dk = "$today|$src|$u|${s.bar.b}|${s.side}"
-                if (dk in b.decided) continue
-                if (now.isBefore(s.entryTime)) continue
-                if (!DonchianArm.mayFill(s, now)) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break missed (the fill window passed)", final = true) || changed; continue }
-                val open = b.positions.filter { it.arm == src && it.index == u && it.open }.map { it.side }.toSet()
-                val taken = b.positions.filter { it.arm == src && it.index == u && it.day == today }.groupingBy { it.side }.eachCount()
-                val skip = DonchianArm.mayTake(s, open, taken)
-                if (skip != null) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} break skipped: $skip") || changed; continue }
-                val (p, why) = buy(b, src, u, s.side, listOf(s.strike), now, keys = listOf(dk))
-                changed = true
-                if (p != null) { b.decided += dk; say(b, key, "bought ${p.symbol} @ ${px(p.entry)} (${s.entryTime.toLocalTime()} break)") }
-                else say(b, key, "${s.entryTime.toLocalTime()} break: $why; tried again until ${s.entryTime.plusMinutes(DonchianArm.FILL_SLACK_MINUTES).toLocalTime()}")
-            }
+            val s = all[u] ?: continue
+            changed = breaks(b, src, u, DonchianArm.signals(u, s, today), now) { x -> confirmed?.let { Triple(u, x.bar.b, x.side) in it } } || changed
+        }
+        return changed
+    }
+
+    /**
+     * R72 Breadth Donchian ([BreadthDonchianArm]): the same five series Donchian reads (no extra read), its breadth signals,
+     * then Donchian's own taking ([breaks]) in its own rows: its caps count only its own trades.
+     */
+    private suspend fun breadth(b: Book, now: LocalDateTime, reads: Reads): Boolean {
+        val src = BreadthDonchianArm.SOURCE
+        val today = now.toLocalDate()
+        val sigs = BreadthDonchianArm.signals(seriesAll(today, reads), today).groupBy { it.underlying }
+        var changed = false
+        for (u in BreadthDonchianArm.UNDERLYINGS) {
+            if (reads.bars[u] == null) continue
+            changed = breaks(b, src, u, sigs[u].orEmpty(), now) || changed
+        }
+        return changed
+    }
+
+    /**
+     * Donchian's taking of [sigs] on [u] for [src] (R51's own, and R72's): its expiry day trades nothing; each break decided once;
+     * the 2-minute fill slack, one position a side and 2 a side a day in [src]'s own rows; the buy. [confirm]: a bought trade's
+     * R72 label (R51's only).
+     */
+    private suspend fun breaks(b: Book, src: String, u: String, sigs: List<DonchianArm.Signal>, now: LocalDateTime,
+                               confirm: (DonchianArm.Signal) -> Boolean? = { null }): Boolean {
+        val today = now.toLocalDate()
+        val key = "$src|$u"
+        var changed = false
+        when (expiryToday(u, today)) {
+            null -> return say(b, key, "waiting for the options list")
+            true -> return say(b, key, "its expiry day: no trades")
+            false -> Unit
+        }
+        for (s in sigs) {
+            val dk = "$today|$src|$u|${s.bar.b}|${s.side}"
+            if (dk in b.decided) continue
+            if (now.isBefore(s.entryTime)) continue
+            if (!DonchianArm.mayFill(s, now)) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break missed (the fill window passed)", final = true) || changed; continue }
+            val open = b.positions.filter { it.arm == src && it.index == u && it.open }.map { it.side }.toSet()
+            val taken = b.positions.filter { it.arm == src && it.index == u && it.day == today }.groupingBy { it.side }.eachCount()
+            val skip = DonchianArm.mayTake(s, open, taken)
+            if (skip != null) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} break skipped: $skip") || changed; continue }
+            val (p, why) = buy(b, src, u, s.side, listOf(s.strike), now, keys = listOf(dk), breadth = confirm(s))
+            changed = true
+            if (p != null) { b.decided += dk; say(b, key, "bought ${p.symbol} @ ${px(p.entry)} (${s.entryTime.toLocalTime()} break)") }
+            else say(b, key, "${s.entryTime.toLocalTime()} break: $why; tried again until ${s.entryTime.plusMinutes(DonchianArm.FILL_SLACK_MINUTES).toLocalTime()}")
         }
         return changed
     }
@@ -1036,7 +1135,7 @@ object PassedArmsHost {
         val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_MS }?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.lastOrNull()?.close
             ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
         ltp?.let { b.marks[p.symbol] = it }
-        val known = b.locks[p.symbol]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
+        val known = b.locks[lockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
         val why: String? = when {
             overnight -> "overnight"
             p.setup == Solo2.Setup.S1.key -> {
@@ -1047,11 +1146,11 @@ object PassedArmsHost {
                     PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, S1_BACKSTOP).exit?.kind?.let { "backstop_" + it.why } else null)
                     // R64's lock on S1's premium, beside its index exits (A4: S1 keeps them; its own premium stop is none).
                     ?: if (p.lock) PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, exitsOf(p), known, breakeven(p)).also { lw ->
-                        lw.lock?.let { lv -> if (known == null || lv > known.second) b.locks[p.symbol] = "$now|$lv" }
+                        lw.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
                     }.exit?.kind?.why else null
             }
             else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known, if (p.lock) breakeven(p) else null).also { w ->
-                w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[p.symbol] = "$now|$lv" }
+                w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
             }.exit?.kind?.why
         } ?: if (stopped) "operator_stop" else null
         if (why == null) return false
@@ -1077,14 +1176,33 @@ object PassedArmsHost {
         val booked = if (why == PassedArms.ExitKind.TARGET.why) PassedArms.booked(PassedArms.ExitKind.TARGET, fill.price, target) else fill.price
         val done = p.copy(exit = booked, exitTime = now0(), why = why, charges = p.charges + chargesOf(r.orderId), exitRef = ltp,
             paperFill = fill.price.takeIf { kotlin.math.abs(it - booked) > 1e-9 })
-        b.marks.remove(p.symbol); b.locks.remove(p.symbol)
+        forget(b, p)
         closed(b, done)
         return done
     }
 
+    /**
+     * 16 Oct (R72): the book's key of [p]'s earned lock - its option's symbol, as before, or "arm|symbol" for R72 Breadth Donchian's,
+     * which may hold the very option R51 Donchian 20 holds (the same break, [mayShare]): each trade keeps its own lock.
+     */
+    private fun lockKey(p: Pos): String = if (p.arm == BreadthDonchianArm.SOURCE) "${p.arm}|${p.symbol}" else p.symbol
+
+    /**
+     * 16 Oct (R72): R51 Donchian 20 and R72 Breadth Donchian may hold the same option at once - most of R72's breaks are R51's own,
+     * and the two run side by side to be compared on the same days. Each holds its own lot on paper and sells only it; their
+     * locks are kept apart ([lockKey]). Any other two of these arms: never the same option.
+     */
+    private fun mayShare(a: String, b: String): Boolean = a != b && setOf(a, b) == setOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE)
+
+    /** [p]'s lock and (when no other open trade here holds its option) its last price, forgotten. */
+    private fun forget(b: Book, p: Pos) {
+        b.locks.remove(lockKey(p))
+        if (b.positions.none { it.open && it.symbol == p.symbol && !same(it, p) }) b.marks.remove(p.symbol)
+    }
+
     private fun closed(b: Book, p: Pos) {
         // 16 Oct: on every way out (closed elsewhere too), so a later trade on the same option never reads this one's lock.
-        b.marks.remove(p.symbol); b.locks.remove(p.symbol)
+        forget(b, p)
         b.status["${p.arm}|${p.index}"] = "closed ${p.symbol}: ${p.why}"
         note(b, "%s: %s sold (%s) @ %s, %s after charges · paper".format(Locale.ENGLISH, label(p.arm), p.symbol, p.why, px(p.exit ?: 0.0), rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, NOTICE + 40 + SOURCES.indexOf(p.arm) * 5 + ALL_INDICES.indexOf(p.index).coerceAtLeast(0), Notifier.SELL,
@@ -1143,7 +1261,7 @@ object PassedArmsHost {
         }
         val w = runCatching { WatchlistHost.cards() }.getOrDefault(emptyList()).map { com.optionslab.engine.orb.Watchlist.line(it) }
         return com.optionslab.ira.PassedArmsTalk.Facts(arms, w, runCatching { WatchlistHost.on() }.getOrNull(), v.modelLoaded,
-            com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On))
+            com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On), v.comparison())
     }
 
     /** One trade in words (its row and Jarvis). */
