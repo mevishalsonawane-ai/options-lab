@@ -70,7 +70,7 @@ class TrendWatchRowTest {
         click("About ${TrendWatch.LABEL}")
         compose.onNodeWithText("tested four turns", substring = true).assertExists()
         compose.onNodeWithText("Nothing is watched right now.").assertExists()
-        compose.onNodeWithText("would sell at", substring = true).assertExists()
+        compose.onNodeWithText("Today: trend turned against Liquidity", substring = true).assertExists()
         compose.onNodeWithContentDescription("Live positions too (notes and alerts only)").assertIsOff().performClick()
         compose.waitForIdle()
         assertEquals(listOf(true), live)
