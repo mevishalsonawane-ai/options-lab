@@ -124,7 +124,9 @@ object Ask {
         // "What should I buy?" - the pattern expert's suggestion (with why), or why there is none now.
         if (SUGGEST.containsMatchIn(t)) return Question(text, Market.mentioned(text), setOf(Topic.SUGGEST), null)
         // "What is a hammer?" - the pattern explained, with its own record.
-        if (rx(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !rx(" (backtest|back test) ").containsMatchIn(t))
+        // (15 Oct: a fake breakout is the concept book's - [Concepts] - not the plain "breakout" pattern.)
+        if (rx(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !rx(" (backtest|back test) ").containsMatchIn(t) &&
+            !rx(" (fake|false|failed|nakli|jhoota|jhootha|jhutha) break ?outs? | fake ?outs? ").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.EXPLAIN), null, pattern = named(t))
         // "What's moving?" / "top gainers": the app follows the indices, so every index's move (Boss, 4 Oct).
         if (rx("^ (so )?((what s|whats|what is) moving( today| now)?|top (gainers|losers|movers)( today)?|(biggest|big) (movers|moves)( today)?|any big moves( today)?|which (index|indices|market) (is|are) (moving|up|down|strongest|weakest)( today)?) $").containsMatchIn(t))

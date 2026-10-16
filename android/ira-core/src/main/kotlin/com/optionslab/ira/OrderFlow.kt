@@ -933,10 +933,14 @@ object OrderFlow {
     private val HELP = Regex(" (helping|helped|help|working|worked|record|results?|paying|useful|worth) ")
     private val NOT = Regex(" (turn|switch|set|enable|disable|confirm mode|shadow mode|export|delete|explain|what is an?|meaning|definition) ")
 
+    /** The word itself ("what is gamma exposure", "what's GEX"): the concept book's meaning ([Concepts], 15 Oct), not a live reading. */
+    private val WORD = Regex("^ (what is|what s|whats|what does|define) (gamma exposure|gex)( mean| means| in options)? $" +
+        "|^ (gamma exposure|gex) (kya hai|kya hota hai|ka matlab|ka matlab kya hai|meaning) $")
+
     /** Which underlying [text] asks the order flow of ("" when none is named: the charted or BankNifty), or null. */
     fun asked(text: String): String? {
         val t = " " + text.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        if (!FLOW.containsMatchIn(t) || HELP.containsMatchIn(t) || NOT.containsMatchIn(t)) return null
+        if (!FLOW.containsMatchIn(t) || HELP.containsMatchIn(t) || NOT.containsMatchIn(t) || WORD.containsMatchIn(t)) return null
         return when {
             Regex(" (midcap ?nifty|midcpnifty|mid cap nifty|midcp) ").containsMatchIn(t) -> "MIDCPNIFTY"
             Regex(" (fin ?nifty|finnifty|nifty fin|fin) ").containsMatchIn(t) -> "FINNIFTY"

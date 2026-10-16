@@ -187,4 +187,15 @@ class ConceptsTest {
         assertNull(Concepts.find(book, "tell"))
         assertEquals("traps", Concepts.find(book, "tell me about the bull trap")?.id)
     }
+
+    /** Jarvis's own routing (the audit's mirror of IraHub): each concept question reaches the book, the live readings keep theirs. */
+    @Test fun theQuestionsReachTheBookAndTheLiveReadingsKeepTheirs() {
+        val audit = CoverageTest()
+        for (q in listOf("what is gamma exposure", "what's gex", "what does gex mean", "gex kya hai", "gamma exposure ka matlab", "what is a fake breakout?", "explain the fakeout", "fake breakout kya hai",
+            "bull trap kya hai", "what is an order block"))
+            assertEquals("Concepts", audit.feature(q), q)
+        assertEquals("OrderFlow", audit.feature("what is the gamma exposure on banknifty"))
+        assertEquals("PatternExpert", audit.feature("what is a breakout"))
+        assertEquals("Glossary", audit.feature("what is theta"))
+    }
 }
