@@ -430,6 +430,25 @@ class TelegramCaptureTest : RobolectricTest() {
         assertTrue(sent.all { Regex("\"@type\":\"(\\w+)\"").find(it)!!.groupValues[1] in TdSession.ALLOWED })
     }
 
+    /**
+     * 16 Oct: the view says "opened" (running, starting) before the reader reads TDLib's first answer, so the reader alone moves
+     * the step and its words together; a step never shows under the last step's words (once seen as the phone step under
+     * "Starting Telegram…" in CI).
+     */
+    @Test fun theViewSaysOpenedBeforeTheReaderReadsAnything() {
+        val seen = java.util.concurrent.atomic.AtomicReference<TelegramCapture.View?>()
+        TelegramCapture.testTransport = { object : TelegramCapture.Transport by Fake() {
+            override fun receive(timeoutSec: Double): String? { seen.compareAndSet(null, TelegramCapture.view.value); return inbox.poll((timeoutSec * 1000).toLong(), TimeUnit.MILLISECONDS) }
+        } }
+        assertEquals("Saved on this phone only (encrypted). Starting Telegram…", TelegramCapture.saveKeys("12345", hash))
+        waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        val first = seen.get()!!
+        assertTrue(first.running)
+        assertEquals(TdSession.Auth.STARTING, first.auth)
+        assertEquals("Saved on this phone only (encrypted). Starting Telegram…", first.said)
+        assertEquals("Telegram started. Enter your phone number with the country code (+91…), then Send.", TelegramCapture.view.value.said)
+    }
+
     @Test fun badKeysAreToldWhenTelegramRefusesThem() {
         TelegramCapture.testTransport = { Real { json -> when {
             json.contains("\"setTdlibParameters\"") -> listOf(st("authorizationStateWaitPhoneNumber"))

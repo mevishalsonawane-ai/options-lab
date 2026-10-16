@@ -235,9 +235,11 @@ object TelegramCapture {
         startedAt = System.currentTimeMillis()
         upd { it.copy(stuck = false) }
         s.start(params())
-        loop = Thread({ loop(t, s) }, "telegram-reader").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
-        // Opened: the library is here (the view says so even before the card's first refresh).
+        // Opened: the library is here (the view says so even before the card's first refresh). 16 Oct: said BEFORE the reader
+        // starts, so from here on only the reader moves the step, together with its words; said after, it could copy a step
+        // the reader had just reached into the view a moment before that step's words (the phone step under "Starting…").
         upd { it.copy(running = true, auth = s.auth, available = true) }
+        loop = Thread({ loop(t, s) }, "telegram-reader").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
         return true
     }
 
