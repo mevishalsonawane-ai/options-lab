@@ -163,6 +163,70 @@ class PassedArmsTest {
 
     // ---- the forward bar ----------------------------------------------------------------------------------------------------
 
+    // ---- R64's 30-60-100 lock (A4) ------------------------------------------------------------------------------------------
+
+    private val a4 = PassedArms.withLock(DonchianArm.EXITS)
+
+    @Test fun theLockKeepsTheArmsOwnStopAndTimeAndDropsTheTarget() {
+        assertEquals(PassedArms.PremiumExits(0.15, null, 30, PassedArms.LOCK_306100, LocalTime.of(15, 15)), a4)
+        val oov = PassedArms.withLock(OovArm.EXITS)
+        assertEquals(0.30, oov.stop); assertNull(oov.target); assertEquals(60, oov.tmaxMinutes); assertEquals(PassedArms.LOCK_306100, oov.steps)
+        assertEquals(LocalTime.of(15, 10), oov.squareOff)
+        for (s in Solo2.Setup.entries) {
+            val x = PassedArms.withLock(Solo2.exits(s))
+            assertNull(x.target); assertEquals(PassedArms.LOCK_306100, x.steps)
+            assertEquals(Solo2.exits(s).stop, x.stop); assertEquals(Solo2.exits(s).tmaxMinutes, x.tmaxMinutes)
+        }
+        assertNull(PassedArms.targetLevel(100.0, a4))
+        // The steps: breakeven (NaN) once +30%, +30% once +60%, +60% once +100%.
+        assertTrue(PassedArms.LOCK_306100[0].second.isNaN())
+        assertEquals(listOf(0.30, 0.60, 1.00), PassedArms.LOCK_306100.map { it.first })
+    }
+
+    @Test fun aBigMoverIsHeldPastThirtyPercentWithTheLock() {
+        // +40% at 10:01: the research exits sell at the +30% target; the lock holds it to the 30-minute time exit.
+        val bars = listOf(flat(10, 0, 100.0), bar(10, 1, 120.0, 140.0, 118.0, 135.0)) + (2 until 30).map { flat(10, it, 136.0) }
+        assertEquals(PassedArms.ExitKind.TARGET, PassedArms.exitOnBars(100.0, t(10, 0), bars, null, t(10, 30), r51).exit!!.kind)
+        val w = PassedArms.exitOnBars(100.0, t(10, 0), bars, null, t(10, 30), a4, breakeven = 101.0)
+        assertEquals(PassedArms.ExitKind.TIME, w.exit!!.kind); assertEquals(136.0, w.exit!!.price)
+        assertEquals(101.0, w.lock!!, 1e-9)
+    }
+
+    @Test fun theLockIsBreakevenPlusChargesFromTheNextMinuteNeverTheSameMinute() {
+        // 10:01 reaches +31% and dips to 95 in the same minute: the lock is not active yet and the -15% stop (85) is not hit.
+        val bars = listOf(flat(10, 0, 100.0), bar(10, 1, 100.0, 131.0, 95.0, 120.0), bar(10, 2, 102.0, 103.0, 100.5, 101.0))
+        val held = PassedArms.exitOnBars(100.0, t(10, 0), bars.take(2), null, t(10, 2), a4, breakeven = 101.0)
+        assertNull(held.exit); assertEquals(101.0, held.lock!!, 1e-9)
+        // 10:02 dips under breakeven 101: sold at 101 (a lock).
+        val w = PassedArms.exitOnBars(100.0, t(10, 0), bars, null, t(10, 3), a4, breakeven = 101.0)
+        assertEquals(PassedArms.ExitKind.LOCK, w.exit!!.kind); assertEquals(101.0, w.exit!!.price, 1e-9)
+        // No breakeven given: the fill plus ProfitLock's fallback 0.3%.
+        assertEquals(100.3, PassedArms.exitOnBars(100.0, t(10, 0), bars.take(2), null, t(10, 2), a4).lock!!, 1e-9)
+    }
+
+    @Test fun theLockSteps60And100AndOnlyRises() {
+        // +65% at 10:01, +105% at 10:02 (lows stay high): 160 locked from 10:03; 10:03 dips to 150 -> sold at 160, never 130.
+        val bars = listOf(flat(10, 0, 100.0), bar(10, 1, 160.0, 165.0, 158.0, 162.0), bar(10, 2, 170.0, 205.0, 168.0, 190.0),
+            bar(10, 3, 175.0, 176.0, 150.0, 151.0))
+        val w = PassedArms.exitOnBars(100.0, t(10, 0), bars, null, t(10, 4), a4, breakeven = 101.0)
+        assertEquals(PassedArms.ExitKind.LOCK, w.exit!!.kind); assertEquals(160.0, w.exit!!.price, 1e-9)
+        // A gap through the lock fills at the open (the worse price).
+        val gap = bars.take(3) + bar(10, 3, 140.0, 141.0, 139.0, 140.0)
+        assertEquals(140.0, PassedArms.exitOnBars(100.0, t(10, 0), gap, null, t(10, 4), a4, breakeven = 101.0).exit!!.price)
+        // Between bars, the price now under the lock sells (a lock).
+        val now = PassedArms.exitOnBars(100.0, t(10, 0), bars.take(3), 150.0, t(10, 3), a4, breakeven = 101.0)
+        assertEquals(PassedArms.ExitKind.LOCK, now.exit!!.kind)
+    }
+
+    @Test fun theOwnStopStillSellsWithTheLock() {
+        val w = PassedArms.exitOnBars(100.0, t(10, 0), listOf(flat(10, 0, 100.0), bar(10, 1, 99.0, 100.0, 84.0, 86.0)), null, t(10, 2), a4, breakeven = 101.0)
+        assertEquals(PassedArms.ExitKind.STOP, w.exit!!.kind); assertEquals(85.0, w.exit!!.price, 1e-9)
+        // No bars yet, no price: nothing; the square-off still sells.
+        assertNull(PassedArms.exitOnBars(100.0, t(10, 0), emptyList(), null, t(10, 0), a4, breakeven = 101.0).exit)
+        assertEquals(PassedArms.ExitKind.SQUARE_OFF, PassedArms.exitOnBars(100.0, t(12, 0), emptyList(), 100.0, t(14, 30),
+            PassedArms.withLock(Solo2.exits(Solo2.Setup.S1)), breakeven = 101.0).exit!!.kind)
+    }
+
     @Test fun theFortyTradeBarIsJudgedOnce() {
         val F = PassedArms.ForwardBar
         assertEquals(PassedArms.ForwardBar.Verdict.RUNNING, F.judge(List(39) { -100.0 }, List(39) { 10.0 }).verdict)

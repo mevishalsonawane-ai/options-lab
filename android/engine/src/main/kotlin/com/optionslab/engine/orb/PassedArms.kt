@@ -131,6 +131,19 @@ object PassedArms {
     data class PremiumExits(val stop: Double?, val target: Double?, val tmaxMinutes: Int?, val steps: List<Pair<Double, Double>> = emptyList(),
                             val squareOff: LocalTime)
 
+    /**
+     * R64's 30-60-100 profit lock (16 Oct 2026, Boss: "apply it"; research/HUNT_R64_LOCK_30_60_100.md, variant A4): once the premium
+     * has traded +30% above the fill the stop rises to breakeven (a NaN keep: the fill plus the round-trip charges, [exitOnBars]'s
+     * `breakeven`), at +60% it locks +30%, at +100% +60%. Locks only rise.
+     */
+    val LOCK_306100: List<Pair<Double, Double>> = listOf(0.30 to Double.NaN, 0.60 to 0.30, 1.00 to 0.60)
+
+    /**
+     * R64's A4 on an arm's exits [x]: its own stop, time exit and square-off, no fixed target (it would sell before the lock could
+     * act), and [LOCK_306100] in place of any lock it had. Passed every R64 gate on R51, R52 and Solo 2.0; PAPER only.
+     */
+    fun withLock(x: PremiumExits): PremiumExits = x.copy(target = null, steps = LOCK_306100)
+
     enum class ExitKind(val why: String) { STOP("stop"), LOCK("lock"), TARGET("target"), TIME("time"), SQUARE_OFF("squareoff") }
 
     /** An exit decided: why, and the price the research would have booked it at (a stop's level or a gap's open; the target). */
@@ -156,7 +169,9 @@ object PassedArms {
      */
     fun exitOnBars(entry: Double, entryMinute: LocalDateTime, bars: List<Bar>, ltp: Double?, now: LocalDateTime, x: PremiumExits,
                    /** A lock level an earlier look saw earned by that time (it holds for the bars starting then or later, and now). */
-                   known: Pair<LocalDateTime, Double>? = null): Walk {
+                   known: Pair<LocalDateTime, Double>? = null,
+                   /** The price a NaN-keep step locks (breakeven: the fill plus the round-trip charges); null: the fill + [ProfitLock.FALLBACK_COST_PCT]. */
+                   breakeven: Double? = null): Walk {
         if (!(entry > 0)) return Walk(null, entry, null)
         val stop = stopLevel(entry, x)
         val tgt = targetLevel(entry, x)
@@ -178,7 +193,10 @@ object PassedArms {
             if (tgt != null && b.high >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, b.start, tgt), peak, lock)
             if (b.high > peak) peak = b.high
             val g = peak / entry - 1
-            for ((trig, keep) in x.steps) if (g >= trig - 1e-12) { val l = entry * (1 + keep); if (lock == null || l > lock) lock = l }
+            for ((trig, keep) in x.steps) if (g >= trig - 1e-12) {
+                val l = if (keep.isNaN()) breakeven ?: (entry * (1 + ProfitLock.FALLBACK_COST_PCT / 100)) else entry * (1 + keep)
+                if (lock == null || l > lock) lock = l
+            }
             if (tend != null && b.start == tend) return Walk(Exit(ExitKind.TIME, b.start.plusMinutes(1), b.close), peak, lock)
         }
         // Between bars: the price now against the same levels (and a lock seen earned before), then the clock.
