@@ -59,6 +59,8 @@ object MemoryTrim {
                 MemoryPlan.Item.IDLE_PATHS -> { val (p, c) = KiteStream.pruneIdle(); paths += p; candles += c }
                 // The same pass as the paths (one look at what is followed).
                 MemoryPlan.Item.IDLE_CANDLES -> if (MemoryPlan.Item.IDLE_PATHS !in items) candles += KiteStream.pruneIdle().second
+                // Last: the Trend watch's memory (never a Hero leg's sell request: that is part of the position watch).
+                MemoryPlan.Item.TREND_WATCH -> TrendWatchHost.releaseForMemory()
             }
             done += i
         }

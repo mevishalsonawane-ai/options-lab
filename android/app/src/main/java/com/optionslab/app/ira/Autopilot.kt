@@ -391,6 +391,17 @@ internal object Autopilot {
                     else -> null
                 }
             }
+            // 16 Oct (research R63): the Trend watch's paper exit for a source whose rule passed (today only the Hero ticket). Its
+            // Undo switches that exit off (a sold leg is not bought back); undone twice, on again. Paper only: no PIN either way.
+            AutoChange.Kind.TREND_EXIT -> {
+                val src = com.optionslab.engine.trend.TrendWatch.Source.of(c.target.removePrefix(AutoChange.TREND_TARGET))
+                if (!c.target.startsWith(AutoChange.TREND_TARGET) || src == null || !com.optionslab.engine.trend.TrendWatch.canAct(src)) return null
+                when (c.to) {
+                    AutoChange.SWITCHED_OFF, AutoChange.HELD -> com.optionslab.app.data.TrendWatchHost.setAct(src, false, log = false)
+                    AutoChange.ON, AutoChange.SOLD_ON_TURN -> com.optionslab.app.data.TrendWatchHost.setAct(src, true, log = false)
+                    else -> null
+                }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -506,6 +517,8 @@ internal object Autopilot {
         synchronized(lock) { _book.value = AutoChange.undone(_book.value, id, Market.today()) }
         runCatching { Diag.record("autopilot", "undone by you: ${u.entry.change.what}") }
         saveSoon()
+        // A leg sold on the trend turn is not bought back: its Undo only switches the trend exit off ([AutoChange.trendExitSold]).
+        if (u.entry.change.kind == AutoChange.Kind.TREND_EXIT && u.entry.change.to == AutoChange.SOLD_ON_TURN) return "Undone: $said The leg sold stays sold."
         return "Undone: ${u.entry.change.what} is back to ${u.entry.change.from}. $said"
     }
 
@@ -927,6 +940,59 @@ internal object Autopilot {
     fun logLiqIndexOn(index: String, parked: Boolean) {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.liqIndexOn(index, parked), "your choice, 15 Oct; paper only - never cleared for Zerodha by this change")
+    }
+
+    /**
+     * 16 Oct (research R63): [label]'s trend-turn exit on PAPER ([source], a [com.optionslab.engine.trend.TrendWatch.Source] key)
+     * switched on once by the update - its rule passed every gate, so the PAPER rule lets it act at once. Logged as Boss's ask
+     * (kept), undone in one tap (the exit off). Once: never logged twice.
+     */
+    fun logTrendExitOn(source: String, label: String, rule: String, research: String) {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.trendExitOn(source, label, rule, research), "your ask, 16 Oct (research R63); paper only - never live")
+    }
+
+    /** One paper leg of [label] sold on the trend turn ([line]): logged (kept); its Undo switches the trend exit off. */
+    fun logTrendExitSold(source: String, label: String, line: String) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): $line") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, AutoChange.trendExitSold(source, label, line), AutoChange.Status.KEPT,
+                        System.currentTimeMillis(), today, by = "the Trend watch", note = "paper only; research R63 T3").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * Boss switched [label]'s trend-turn exit from the Trend watch's dialog: off closes the newest kept entry of it (so an
+     * older Undo can never flip it later); on records "off → on" as Boss's (kept, undone in one tap).
+     */
+    fun trendExitSwitchedByBoss(source: String, label: String, on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val target = AutoChange.TREND_TARGET + source
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.TREND_EXIT && it.change.target == target }
+                    if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
+                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.trendExitOn(source, label, "T3",
+                        com.optionslab.engine.trend.TrendWatch.RECORD), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "your choice", note = "switched on in the Trend watch; paper only - never live").first
+                    save()
+                }
+            }
+        }
     }
 
     /** One lane for [logBossTrail]: the switch's flips are logged in the order they were made. */

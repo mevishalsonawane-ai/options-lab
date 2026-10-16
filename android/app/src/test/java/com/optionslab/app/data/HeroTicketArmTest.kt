@@ -243,6 +243,49 @@ class HeroTicketArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 16 Oct (research R63): T3 passed for this ticket, so when NIFTY closes twice below the day's average after 12:40 the Trend
+     * watch asks for the CALL leg to be sold, and the arm sells it on paper through its own exit ("trend_turn") - the put, with
+     * the trend, is kept; nothing reaches Zerodha; the sale is in Autopilot's change log, and its Undo switches the exit off.
+     */
+    @Test fun theTrendWatchSellsTheLegTheIndexTurnedAgainstThroughTheArmsOwnExit() {
+        market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
+        val call = HeroTicketArm.view.value.open.single { it.right == "CE" }
+        val put = HeroTicketArm.view.value.open.single { it.right == "PE" }
+        TrendWatchHost.resetForTest(); TrendWatchHost.init(context)
+        // NIFTY flat at 25,010 from 09:15, then down 2 points a minute from 12:40 (finished minutes only).
+        TrendWatchHost.testMinutes = { _, n -> (0 until 375).map { r -> day.atTime(9, 15).plusMinutes(r.toLong()) }.filter { !it.plusMinutes(1).isAfter(n) }
+            .map { t -> val c = if (t.toLocalTime().isBefore(LocalTime.of(12, 40))) 25_010.0 else 25_010.0 - 2.0 * (java.time.Duration.between(day.atTime(12, 40), t).toMinutes() + 1)
+                com.optionslab.engine.orb.Bar(t, c, c + 1, c - 1, c) } }
+        market(LocalTime.of(12, 52))
+        at(LocalTime.of(12, 46)); runBlocking { TrendWatchHost.round(day.atTime(12, 46, 20)) }
+        assertFalse("not yet: one close below", TrendWatchHost.sellRequested(call.symbol))
+        at(LocalTime.of(12, 51)); runBlocking { TrendWatchHost.round(day.atTime(12, 51, 20)) }
+        assertTrue(TrendWatchHost.sellRequested(call.symbol))
+        assertFalse("the put is with the trend", TrendWatchHost.sellRequested(put.symbol))
+        assertTrue(TrendWatchHost.view.value.recent.single().line.contains("selling on paper at about"))
+        // The arm's own minute lane sells it.
+        at(LocalTime.of(12, 51)); runBlocking { HeroTicketArm.manageOnly() }
+        val sold = HeroTicketArm.view.value.closed.single { it.right == "CE" }
+        assertEquals(HeroTicketArm.TREND_WHY, sold.why)
+        assertEquals(put.symbol, HeroTicketArm.view.value.open.single().symbol)
+        assertEquals(0, Paper.state.positions.filter { it.symbol == call.symbol }.sumOf { it.quantity })
+        assertFalse(TrendWatchHost.sellRequested(call.symbol))
+        assertNothingAtZerodha()
+        if (Autopilot.enabled()) {
+            val end = System.currentTimeMillis() + 10_000
+            fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.TREND_EXIT }
+            while (entries().none { it.change.to == AutoChange.SOLD_ON_TURN } && System.currentTimeMillis() < end) Thread.sleep(50)
+            val e = entries().last { it.change.to == AutoChange.SOLD_ON_TURN }
+            assertTrue(e.change.reason, e.change.reason.contains(call.symbol))
+            assertTrue(entries().any { it.change.to == AutoChange.ON })     // the one-time switch-on under the PAPER rule
+            // One tap: the Hero trend exit off; the leg stays sold.
+            assertTrue(Autopilot.undo(e.id).contains("The leg sold stays sold"))
+            assertFalse(TrendWatchHost.switches().acts(com.optionslab.engine.trend.TrendWatch.Source.HERO_TICKET))
+        }
+        TrendWatchHost.resetForTest()
+    }
+
     @Test fun theTrailSellsBeforeATargetThatWasNeverReachedAndTheRestingTargetIsTakenOut() {
         runBlocking { HeroTicketArm.setTarget(HeroTicketRules.Target.X3) }
         runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }

@@ -111,6 +111,13 @@ object AutoChange {
          * logged so the timeline shows it and one tap undoes it (the index parked again). BANKNIFTY is never one of them.
          */
         LIQ_INDEX_ON("strategies", "a Liquidity index switched on by your choice"),
+        /**
+         * 16 Oct (Boss: "if the trend changes, sell the orders"; research R63): the Trend watch's paper exit where a rule PASSED -
+         * today only the Hero ₹1,000 ticket's legs, with T3 ([trendExitOn], [trendExitSold]). Logged as Boss's (his ask, the PAPER
+         * rule), shown in the timeline; one tap undoes it - the Hero trend exit switched off (a sold leg is not bought back).
+         * Paper only, so no PIN either way; never live.
+         */
+        TREND_EXIT("trend watch", "a trend-turn exit on paper"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -269,6 +276,8 @@ object AutoChange {
             // Hidden: switched off (lower); restored: it may come back on, on paper (adds risk, on paper).
             Kind.ARM_HIDE -> if (c.to == HIDDEN) Risk.LOWER else Risk.RAISE
             Kind.LIQ_INDEX_ON -> if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // An earlier exit on paper lowers risk (on, or a leg sold); off takes the earlier exits away.
+            Kind.TREND_EXIT -> if (c.to == SWITCHED_OFF || c.to == HELD) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -307,7 +316,8 @@ object AutoChange {
      * Boss's own changes, only logged here so they show in the timeline and undo in one tap (13 Oct: the arms' park, the
      * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
      */
-    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON
+    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
+        k == Kind.TREND_EXIT
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -456,6 +466,32 @@ object AutoChange {
         "your choice (15 Oct): Liquidity 15+5 keeps its $index books on with its switch, on paper only - labelled \"Boss's choice\" and " +
             "kept apart; BANKNIFTY is not touched, so its plain-rules record stays separable for 26 Oct",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Liquidity 15+5 $index (paper)")
+
+    /** The target prefix of a source's trend-turn exit on paper ([Kind.TREND_EXIT]): + the Trend watch's source key. */
+    const val TREND_TARGET = "trendexit:"
+    /** A leg still held ([trendExitSold]'s "from"); its Undo lands on it and switches the source's trend exit off. */
+    const val HELD = "held"
+    /** A leg sold on the trend turn ([trendExitSold]'s "to"). */
+    const val SOLD_ON_TURN = "sold on the trend turn"
+
+    /**
+     * 16 Oct (Boss's ask, research R63): [label]'s trend-turn exit on PAPER switched on by the update - its rule ([rule]) passed
+     * every gate ([research]), so under CLAUDE.md's PAPER rule it acts at once: "off → on", lowering risk (it only adds an earlier
+     * exit), logged as Boss's, undone in one tap (the exit off; paper only, no PIN).
+     */
+    fun trendExitOn(source: String, label: String, rule: String, research: String): Change = Change(Kind.TREND_EXIT, TREND_TARGET + source,
+        SWITCHED_OFF, ON,
+        "your ask (16 Oct: \"if the trend changes, sell\"): $label's legs are sold on paper when the index turns against them ($rule), " +
+            "which passed every research gate ($research) - so under the PAPER rule it acts at once; never live, and it never carries over to live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.LOWER, Scope.PAPER, what = "$label's trend-turn exit (paper)")
+
+    /**
+     * One paper leg of [label] sold on the trend turn ([line]: what was sold, when, at what). Its Undo cannot buy the leg back:
+     * it switches the source's trend exit off, so no further leg is sold that way (paper only, no PIN).
+     */
+    fun trendExitSold(source: String, label: String, line: String): Change = Change(Kind.TREND_EXIT, TREND_TARGET + source, HELD, SOLD_ON_TURN,
+        "the Trend watch (research R63): $line. Undo switches $label's trend exit off; the leg sold stays sold",
+        Evidence(1, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's trend-turn exit (paper)")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
@@ -853,7 +889,8 @@ object AutoChange {
      */
     fun superseded(book: Book, e: Entry): Boolean {
         // 15 Oct: an arm hidden, restored and hidden again ([Kind.ARM_HIDE]) likewise - only its newest entry undoes.
-        if (e.change.kind != Kind.LIQ_TRAIL && e.change.kind != Kind.ARM_HIDE) return false
+        // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) likewise - its switch flipped since is the one to undo.
+        if (e.change.kind != Kind.LIQ_TRAIL && e.change.kind != Kind.ARM_HIDE && e.change.kind != Kind.TREND_EXIT) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

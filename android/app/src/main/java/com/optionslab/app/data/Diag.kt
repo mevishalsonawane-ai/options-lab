@@ -221,6 +221,7 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { HeroTicketArm.diagLine() }.getOrElse { "Hero ₹1,000 ticket: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { PassedArmsHost.diagLine() }.getOrElse { "Passed-research arms: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { WatchlistHost.diagLine() }.getOrElse { "Watchlist: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { TrendWatchHost.diagLine() }.getOrElse { "Trend watch: could not read" }).append('\n')
         // The Signal tester (15 Oct, shadow): counts only - never a channel name or a message.
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { SignalTesterHost.diagLine() }.getOrElse { "Signal tester: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { SignalPaperArm.diagLine() }.getOrElse { "Telegram calls (paper): could not read" }).append('\n')

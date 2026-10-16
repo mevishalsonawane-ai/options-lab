@@ -796,6 +796,7 @@ class CoverageTest {
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
         if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
         if (alone && SignalTalk.asked(q) != null) return "SignalTalk"
+        if (alone && TrendTalk.asked(q)) return "TrendWatch"
         if (alone && PassedArmsTalk.asked(q) != null) return "PassedArms"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"
         if (alone && HeroTicketTalk.asked(q)) return "HeroTicket"
@@ -1103,6 +1104,9 @@ class CoverageTest {
         "how is open outside value doing" to "PassedArms", "how is solo 2.0 doing" to "PassedArms", "solo 2.0 kaisa chal raha hai" to "PassedArms",
         "what did solo two do today" to "PassedArms", "what's on the watchlist" to "PassedArms", "how are the near misses doing" to "PassedArms",
         "how are the passed arms doing" to "PassedArms", "how is the watchlist doing" to "PassedArms",
+        // ---- TrendWatch: has the trend turned against my trades (16 Oct, research R63), from the Trend watch's own log ----
+        "has the trend turned on my trades" to "TrendWatch", "did the trend change against my positions" to "TrendWatch",
+        "kya mere trades par trend badla" to "TrendWatch",
         // ---- SoloDay: what Solo (midday) did today and why, from its own records ----
         "what did solo do today" to "SoloDay", "why didn't solo trade" to "SoloDay", "solo ne aaj kya kiya" to "SoloDay",
         "how did solo decide" to "SoloDay", "why no solo trade today" to "SoloDay", "solo ne trade kyu nahi liya" to "SoloDay",

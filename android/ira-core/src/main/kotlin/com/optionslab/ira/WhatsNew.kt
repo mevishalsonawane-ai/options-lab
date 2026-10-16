@@ -53,10 +53,20 @@ object WhatsNew {
     private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
     private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
+    private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-trend-watch", OCT16, "Trend watch: every open trade checked against its index",
+            "Each open position and pending order is now checked against its index's trend about once a minute. " +
+                "When the trend turns against it, Jarvis writes a note: what turned, when, and the price it would sell at. " +
+                "Only the Hero ₹1,000 ticket's paper legs are sold on a turn; that one rule passed research. " +
+                "For every other strategy the turn lost against random exits, so those stay notes. " +
+                "Live positions are never sold, and are watched only if you switch them on. " +
+                "Each Hero sale is in the change log, and one tap undoes it.",
+            "Home → Strategies → Trend watch (tap the name for the details and switches); ask Jarvis \"has the trend turned on my trades\"",
+            ask = "has the trend turned on my trades"),
         Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
             "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
                 "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +

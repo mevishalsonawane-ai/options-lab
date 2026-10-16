@@ -70,11 +70,11 @@ Every source in the app, and how it is covered:
 | Liquidity 15+5 (BANKNIFTY, FINNIFTY, MIDCPNIFTY) | paper; BANKNIFTY live with PIN | yes - all fail | shadow note + optional alert (BANKNIFTY labelled: its plain-rules record stays separable for 26 Oct) |
 | R51 Donchian 20, R52 Open outside value, Solo 2.0 | paper only | yes - all fail | shadow note + optional alert |
 | Solo (midday) | paper (Jarvis's) | yes - all fail | shadow note + optional alert |
-| MCX paper arms (NG evening, SILVERM morning (parked), MCX 12-month trend, US-night silver) | paper only | no (MCX minutes start Aug 2025, closes only; US-silver needs a Yahoo cache; the 12-month trend holds for weeks) | shadow note on the MCX future's own bars |
+| MCX paper arms (NG evening, SILVERM morning (parked), MCX 12-month trend, US-night silver) | paper only | no (MCX minutes start Aug 2025, closes only; US-silver needs a Yahoo cache; the 12-month trend holds for weeks) | shadow note on the MCX future's own bars, during NSE hours only (Jarvis's background round sleeps after 15:40, so MCX evening positions are not watched) |
 | Hidden arms (ORB, ORB Fresh, ORB Sweep, Range Fade, old Hero, Night, VIX divergence, forge ideas, Pine auto-trade, shadow arms, scheduled baskets, Jarvis's news trades) | hidden since 15 Oct | no (switched off; ORB family failed R49; Night sells at 09:16) | if restored, their paper positions are watched like any other (shadow) |
 | Boss's manual orders (paper and live, NSE / BSE / MCX), stock-option tools | both | no fixed rules | shadow note; live only with the live switch on (off by default) |
 | Jarvis's orders on request, the Telegram Signal-tester paper arm | paper (Jarvis's live orders go through order review) | no fixed rules | shadow note; acting would need the POOLED rule to pass - it did not, so their switches stay locked off |
-| Pending entry orders (any source) | both | - | shadow note "would cancel" only; never cancels |
+| Pending entry orders (any source) | both | - | shadow note "would cancel" only; never cancels (Zerodha's only with the live switch on; its order book read at most every 5 minutes) |
 | Protections, expiry square-off, missed-lock sweep | both | they are exits | not watched (they are already closing) |
 | Watchlist | shadow, no orders | - | nothing to watch |
 | Gold flavour (XAUUSD paper books) | paper, Gold build only | no | not watched by this change: those books keep their own stop and profit lock; the Gold build has no index feed for these rules |
