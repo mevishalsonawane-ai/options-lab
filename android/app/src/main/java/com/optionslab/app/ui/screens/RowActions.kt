@@ -70,6 +70,22 @@ internal fun openTradeLines(live: Boolean, symbol: String, qty: Int, avg: Double
     )
 }
 
+/**
+ * The Zerodha popup's open-trade lines: [openTradeLines] on the open trade's own average ([com.optionslab.app.data.LiveOpen],
+ * from the day's [trades]); an "Open trade average" line when it differs from Zerodha's, and "(on Zerodha's average)" on the
+ * change when Zerodha's had to be kept.
+ */
+internal fun liveOpenTradeLines(r: Broker.Position, trades: List<Broker.Trade>?): List<Pair<String, String>> {
+    if (r.qty == 0) return emptyList()
+    val a = com.optionslab.app.data.LiveOpen.of(r, trades)
+    val out = ArrayList<Pair<String, String>>()
+    if (!a.brokers && abs(a.price - r.avg) >= 0.005) out += "Open trade average" to px(a.price)
+    out += openTradeLines(true, r.symbol, r.qty, a.price, r.last).map { (k, v) ->
+        if (k == "Open trade change" && a.brokers) k to "$v (on Zerodha's average)" else k to v
+    }
+    return out
+}
+
 private val PAPER_WORKING = setOf("open", "trigger pending", "pending")
 
 /**
@@ -221,7 +237,9 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised · realised" to "${rs(r.unrealised, true)} · ${rs(r.realised, true)}"
             lines += "M2M" to rs(r.m2m, true)
             lines += "Bought · sold today" to "${r.buyQty} @ ${px(r.buyAvg)} · ${r.sellQty} @ ${px(r.sellAvg)}"
-            lines += openTradeLines(true, r.symbol, r.qty, r.avg, r.last)
+            // 16 Oct: the open trade measured from its own average, worked out from the day's fills (Zerodha's may count a
+            // trade already closed on the symbol); Zerodha's kept, and said, when that cannot be done for certain.
+            lines += liveOpenTradeLines(r, (account as? Load.Done)?.value?.trades)
             (account as? Load.Done)?.value?.let { a -> com.optionslab.app.data.Origins.livePosition(owners, a.trades, a.orders, r.symbol, r.product, r.qty) }
                 ?.let { source = com.optionslab.app.data.Origins.positionDisplay(it) }
             if (r.qty != 0) {

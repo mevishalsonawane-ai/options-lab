@@ -36,6 +36,16 @@ object PositionCards {
     private val sources = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val sourceQty = java.util.concurrent.ConcurrentHashMap<String, Int>()
     /**
+     * 16 Oct: each Zerodha position's open-trade average worked out from the day's fills ([com.optionslab.app.data.LiveOpen]),
+     * with the quantity and Zerodha's average it was read at (a close and a re-entry of the same size between two reads
+     * changes Zerodha's average, so the old one is not used); read with the trades above, memory only.
+     */
+    private val openAvg = java.util.concurrent.ConcurrentHashMap<String, Triple<Int, Double, Double>>()
+
+    /** [symbol]'s open-trade average on Zerodha when known for [qty] at Zerodha's [avg] (else null: the card uses [avg]). */
+    internal fun liveOpenAvg(symbol: String, qty: Int, avg: Double): Double? =
+        openAvg["Live|$symbol"]?.takeIf { it.first == qty && kotlin.math.abs(it.second - avg) < 1e-9 }?.third?.takeIf { it.isFinite() }
+    /**
      * What each card ("venue|symbol") last showed, as posted. ANR fix (9 Oct): a silent update that would show exactly the
      * same words is not posted again - every post is a binder call into Android with the card's two drawn tiles, which the
      * system then hands to the shade; a book re-read every few seconds at an unchanged price posted the same card each time.
@@ -86,7 +96,9 @@ object PositionCards {
     fun card(context: Context, venue: String, symbol: String, qty: Int, avg: Double, ltp: Double?, pnl: Double,
              alert: Boolean = false, headline: String? = null, source: String? = null,
              /** A fill shown without sound, buzz or pop-up (a Liquidity 15+5 paper fill, [Notifier.quietFill]): low priority. */
-             quiet: Boolean = false) {
+             quiet: Boolean = false,
+             /** The open trade's own average for its percentage, when it differs from [avg] (a Zerodha re-entry); null: [avg]. */
+             openAvg: Double? = null) {
         // A position closed (squared off, stopped out, settled): its card is taken down, not left as a result.
         if (qty == 0) { dismiss(context, venue, symbol); return }
         if (source != null) sources["$venue|$symbol"] = source
@@ -94,8 +106,8 @@ object PositionCards {
         val open = qty != 0
         val by = sources["$venue|$symbol"]?.let { "\n" + com.optionslab.app.data.Origins.positionDisplay(it).first } ?: ""
         val title = headline ?: if (open) "$symbol · $venue · ${rs(pnl)}" else "Closed $symbol · $venue · ${rs(pnl)}"
-        val text0 = if (open) "${if (qty > 0) "LONG" else "SHORT"} ${abs(qty)} @ ${px(avg)}" + (ltp?.let { " · LTP ${px(it)}" } ?: "") +
-            "\n" + pnlLine(qty, avg, ltp, pnl)
+        val text0 = if (open) "${if (qty > 0) "LONG" else "SHORT"} ${abs(qty)} @ ${px(openAvg ?: avg)}" + (ltp?.let { " · LTP ${px(it)}" } ?: "") +
+            "\n" + pnlLine(qty, openAvg ?: avg, ltp, pnl)
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
         val key = "$venue|$symbol"
@@ -128,7 +140,7 @@ object PositionCards {
     /** Take down [symbol]'s card on [venue] ("Paper" / "Live"): the position is closed. */
     fun dismiss(context: Context, venue: String, symbol: String) {
         val key = "$venue|$symbol"
-        shown.remove(key); sources.remove(key); sourceQty.remove(key); posted.remove(key)
+        shown.remove(key); sources.remove(key); sourceQty.remove(key); posted.remove(key); openAvg.remove(key)
         runCatching { NotificationManagerCompat.from(context).cancel(idOf(venue, symbol)) }
     }
 
@@ -143,7 +155,7 @@ object PositionCards {
         if (com.optionslab.app.data.KiteStream.status.value != com.optionslab.app.data.KiteStream.Status.LIVE) return
         val moved = com.optionslab.app.data.KiteStream.live(book)
         moved.net.filter { it.qty != 0 && shown.containsKey("Live|${it.symbol}") }.forEach { p ->
-            card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl)
+            card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl, openAvg = liveOpenAvg(p.symbol, p.qty, p.avg))
         }
         widgetFromStream(context, moved.pnl)
         runCatching { com.optionslab.app.widget.OpenWidget.fromStream(context, moved) }
@@ -194,7 +206,10 @@ object PositionCards {
             com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
         }?.let { com.optionslab.app.data.KiteStream.live(it) }?.also { liveBook = it }?.net?.also { net ->
             // Who opened a Zerodha position is read from the day's trades only when it is new or its size changed.
-            val stale = net.filter { it.qty != 0 && sourceQty["Live|${it.symbol}"] != it.qty }
+            // 16 Oct: also when Zerodha's average moved at the same size (a close and a same-size re-entry between two
+            // reads), so the open trade's average is worked out again; once per (size, average), never every pass.
+            val stale = net.filter { it.qty != 0 && (sourceQty["Live|${it.symbol}"] != it.qty ||
+                openAvg["Live|${it.symbol}"]?.let { o -> o.first != it.qty || kotlin.math.abs(o.second - it.avg) >= 1e-9 } != false) }
             if (stale.isNotEmpty()) runCatching {
                 val trades = Broker.trades()
                 val orders = Broker.orders()
@@ -203,16 +218,19 @@ object PositionCards {
                 stale.forEach { p ->
                     Origins.livePosition(owners, trades, orders, p.symbol, p.product, p.qty)?.let { sources["Live|${p.symbol}"] = it }
                     sourceQty["Live|${p.symbol}"] = p.qty
+                    val a = com.optionslab.app.data.LiveOpen.of(p, trades)
+                    // Kept even when it could not be worked out (NaN: Zerodha's is used), so it is not read again at that size and average.
+                    openAvg["Live|${p.symbol}"] = Triple(p.qty, p.avg, if (a.brokers) Double.NaN else a.price)
                 }
             }
         }?.forEach { p ->
             val key = "Live|${p.symbol}"
-            if (p.qty != 0) { now[key] = Unit; card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl) }
+            if (p.qty != 0) { now[key] = Unit; card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl, openAvg = liveOpenAvg(p.symbol, p.qty, p.avg)) }
             else if (shown.remove(key) != null) card(context, "Live", p.symbol, 0, p.avg, null, p.pnl)
         }
         // A card whose position vanished from the book entirely (a new session): no longer ongoing.
         shown.keys.filter { it !in now }.forEach { k ->
-            shown.remove(k); posted.remove(k)
+            shown.remove(k); posted.remove(k); openAvg.remove(k); sourceQty.remove(k)
             runCatching { NotificationManagerCompat.from(context).cancel(idOf(k.substringBefore('|'), k.substringAfter('|'))) }
         }
         anyOpen = now.isNotEmpty()

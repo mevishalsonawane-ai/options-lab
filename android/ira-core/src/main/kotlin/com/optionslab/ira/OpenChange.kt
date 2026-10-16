@@ -24,6 +24,32 @@ object OpenChange {
     /** [pct] as the popup shows it ("+18.37%"), or null. */
     fun line(qty: Int, avg: Double, ltp: Double): String? = pct(qty, avg, ltp)?.let { "%+.2f%%".format(Locale.ENGLISH, it) }
 
+    /** One fill of the day on a symbol, in the order it happened: [buy] or a sale, [qty] units at [price]. */
+    data class Fill(val buy: Boolean, val qty: Int, val price: Double)
+
+    /**
+     * The average price of what is still open, from the day's [fills] on one symbol and product in time order (16 Oct: on an
+     * intraday re-entry Zerodha's average may count the closed round trip too). Each time the position goes flat the average
+     * starts again; a fill that crosses through flat opens the rest at its own price; adding to the position averages in.
+     * Null - keep the broker's average - when the position was carried in from an earlier day ([overnight] not 0), the fills
+     * do not end at [qty] (not all read yet), or nothing is open.
+     */
+    fun openAverage(fills: List<Fill>, qty: Int, overnight: Int = 0): Double? {
+        if (overnight != 0 || qty == 0) return null
+        var q = 0
+        var avg = 0.0
+        for (f in fills) {
+            if (f.qty <= 0 || !f.price.isFinite() || f.price <= 0) return null
+            val d = if (f.buy) f.qty else -f.qty
+            when {
+                q == 0 || (q > 0) == (d > 0) -> { avg = (avg * kotlin.math.abs(q) + f.price * f.qty) / (kotlin.math.abs(q) + f.qty); q += d }
+                kotlin.math.abs(d) <= kotlin.math.abs(q) -> { q += d; if (q == 0) avg = 0.0 }
+                else -> { q += d; avg = f.price }
+            }
+        }
+        return if (q == qty && avg > 0) avg else null
+    }
+
     private fun px(x: Double) = "%.2f".format(Locale.ENGLISH, x)
 
     /**

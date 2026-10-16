@@ -79,6 +79,14 @@ class PositionCardsTest : RobolectricTest() {
         assertEquals("P&L −₹600", PositionCards.pnlLine(30, 1028.40, null, -600.0))
     }
 
+    @Test fun aZerodhaReEntrysCardUsesTheOpenTradesOwnAverage() {
+        // Zerodha's average 103.75 counts the closed trade; the open trade was bought at 122.20: +18.4%, not +39.4%.
+        PositionCards.card(context, "Live", "RE", 65, 103.75, 144.65, 3_858.0, openAvg = 122.20)
+        assertEquals("LONG 65 @ 122.20 · LTP 144.65\nP&L +₹3,858 · open trade +18.4%", Background.text(posted("Live", "RE")!!))
+        // Nothing worked out for it: Zerodha's.
+        assertEquals(null, PositionCards.liveOpenAvg("RE", 65, 103.75))
+    }
+
     @Test fun aClosedPositionsCardIsTakenDown() {
         PositionCards.card(context, "Paper", "X", 75, 100.0, 98.0, -150.0)
         assertNotNull(posted("Paper", "X"))

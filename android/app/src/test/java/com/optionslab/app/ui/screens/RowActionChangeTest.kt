@@ -121,13 +121,30 @@ class RowActionChangeTest {
         donchian(live = false)
         show(RowTarget.LivePosition(Broker.Position(sym, "NRML", 65, 122.20, 144.65, 3_858.25)))
         compose.waitUntil(10_000) { inDialog("Open trade change") }
-        assertTrue(inDialog("+18.37%"))
+        // No trades read in this test: Zerodha's average is kept, and the line says so.
+        assertTrue(inDialog("+18.37% (on Zerodha's average)"))
         assertFalse("a paper arm's trade is not the Zerodha position's", inDialog("Exits"))
         ArmExits.set("orb", listOf(ArmExits.Entry("orb", "ORB", true, sym, 92.2, 162.2, LocalTime.of(15, 10))))
         // Re-read on the next composition (the popup re-composes as the live book moves).
         holder.model.rowAction.value = RowTarget.LivePosition(Broker.Position(sym, "NRML", 65, 122.20, 145.0, 3_880.0))
         compose.waitUntil(10_000) { inDialog("stop 92.20 · target 162.20 · time 15:10") }
         assertEquals(1, compose.onAllNodes(hasText("Exits") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().size)
+    }
+
+    @Test fun theZerodhaLinesUseTheOpenTradesOwnAverageFromTheDaysFills() {
+        // Zerodha's average 103.75 (the day's buys together); the fills say the open trade was bought at 122.20.
+        val p = Broker.Position(sym, "MIS", 65, 103.75, 144.65, 3_858.25, buyQty = 130, sellQty = 65)
+        val trades = listOf(
+            Broker.Trade("3", "O3", sym, "NFO", "BUY", 65, 122.20, "MIS", "2026-10-16 10:15:02"),
+            Broker.Trade("2", "O2", sym, "NFO", "SELL", 65, 122.20, "MIS", "2026-10-16 10:05:40"),
+            Broker.Trade("1", "O1", sym, "NFO", "BUY", 65, 85.30, "MIS", "2026-10-16 09:31:10"))
+        assertEquals(listOf("Open trade average" to "122.20", "Open trade change" to "+18.37%"), liveOpenTradeLines(p, trades))
+        // Not read: Zerodha's, said.
+        assertEquals(listOf("Open trade change" to "+39.42% (on Zerodha's average)"), liveOpenTradeLines(p, null))
+        // The same average: no extra line.
+        assertEquals(listOf("Open trade change" to "+18.37%"), liveOpenTradeLines(p.copy(avg = 122.20), trades))
+        // Closed: nothing.
+        assertEquals(emptyList<Pair<String, String>>(), liveOpenTradeLines(p.copy(qty = 0), trades))
     }
 
     @Test fun theLinesAlone() {
