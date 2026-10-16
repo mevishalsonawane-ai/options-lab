@@ -1,0 +1,39 @@
+id: r68-oov-a4
+title: R68 OOV A4 app today (30/60/100 ladder, no target)
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R68_STAIRCASE.md
+hypothesis: 'Boss (16 Oct): a staircase stop (-10% at +25%, then +5 points of stop for every +5 points of gain), read on the
+  option''s profit, on progress toward the target, or with a target that moves up too, improves the paper arms after real
+  costs. This variant: A4 app today (30/60/100 ladder, no target); gates as R51 (BH over 21 tests); recommended only if it
+  also beats B0 and A4 everywhere and random early exits (q <= 0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Donchian,
+  OOV) / R57 stores (Solo 2.0), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026; Solo 2.0 Jul 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R52 / R57 / R64 - R67 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bar + previous day''s value area (unchanged); only the option exits differ (stops and locks
+  on the premium)'
+model_or_rule: 'R52 Open outside value (previous day''s value area + first 5-min bar, 1-ITM at 09:20, 5 indices); exits: A4
+  app today (30/60/100 ladder, no target)'
+settings: research/hunt/r68/r68cfg.py exit_spec / TRIGGER; PREREG.md
+prereg: research/hunt/r68/PREREG.md
+variants_tried: 21
+results:
+  summary: 'Design: 706 trades, win 52%, net Rs 285,053 (Rs 404/trade), worst day -Rs 25,140, max DD Rs 83,971, stops 74.
+    Walk-forward: 529 trades, win 53%, net Rs 231,678 (Rs 438/trade), worst day -Rs 25,140, max DD Rs 51,752, stops 51. Final:
+    293 trades, win 49%, net Rs 45,734 (Rs 156/trade), worst day -Rs 16,554, max DD Rs 45,977, stops 14; entry-twin p 0.0299,
+    BH q 0.0339. Verdict: PASS. Versus B0: design Rs 7,915 (bootstrap p 0.153), final -Rs 3,222 (p 0.743).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: paper-only
+notes: 'Baseline 2: R64 A4, what the paper arm runs today; unchanged by R68. Signal on the underlying; research only, nothing
+  changes paper or live.'

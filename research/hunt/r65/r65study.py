@@ -156,6 +156,13 @@ def add_post(E, K, load, trades: list):
         t["post"] = float(h.max() / t["E"] - 1.0) if len(h) else float("nan")
 
 
+def _hook(v: str):
+    """A config may switch engine modes per variant (R68's moving target); R65 - R67 have no hook."""
+    h = getattr(R, "before_variant", None)
+    if h is not None:
+        h(v)
+
+
 def _record(arm, v, phase, tr, res, out):
     _save(f"{arm}_{v}_{phase}", _strip(tr))
     out[arm][v] = res
@@ -198,6 +205,7 @@ def run_r51(phase: str) -> dict:
     for arm in GROUPS["r51"]:
         out[arm], by_v = {}, {}
         for v in RUN:
+            _hook(v)
             ex = _exits(E, K, R.exit_spec(R.OWN[arm], v))
             tr = A.donchian_trades(C, E, K, fam_r44, r51data, G, ex, lo, hi) if arm == "Donchian" else \
                 A.oov_trades(C, E, K, r51data, G, ex, lo, hi)
@@ -216,6 +224,7 @@ def run_r51(phase: str) -> dict:
             ex = _exits(E, K, R.exit_spec(R.OWN[arm], pv))
 
             def nf(t, rows):
+                _hook(pv)
                 D = r51data.load(t["und"])[t["day"]]
                 m = len(rows)
                 return G.twin_nets(t["und"], D, [t["side"]] * m, [t["strike"]] * m, [t["er"]] * m, ex, rows)
@@ -274,6 +283,7 @@ def run_solo2(phase: str) -> dict:
 
     out, by_v = {"Solo2": {}}, {}
     for v in RUN:
+        _hook(v)
         tr = solo2_reprice(E, S, G, r57data.load, picks, lambda s: exits_of(s, v))
         add_post(E, K, r57data.load, tr)
         by_v[v] = tr
@@ -290,6 +300,7 @@ def run_solo2(phase: str) -> dict:
 
     def nf_of(pv):
         def nf(t, rows):
+            _hook(pv)
             D = r57data.load(t["und"])[t["day"]]
             m = len(rows)
             return G.twin_nets(t["und"], D, [t["side"]] * m, [t["strike"]] * m, [t["er"]] * m,
