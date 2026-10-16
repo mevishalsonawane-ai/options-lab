@@ -9,7 +9,7 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "r66"))
+sys.path.insert(0, os.environ.get("HUNT_CFG_DIR", str(Path(__file__).resolve().parent.parent / "r66")))
 R = __import__(os.environ.get("HUNT_CFG", "r65cfg"))   # r65cfg or r66cfg
 
 PH = (("design", "Design 20 Nov 2024 - 31 Mar 2026"), ("wf", "Walk-forward Apr 2025 - Mar 2026 (Solo 2.0: Jul 2025 -)"),

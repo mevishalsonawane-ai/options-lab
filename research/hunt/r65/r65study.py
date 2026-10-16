@@ -26,7 +26,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "r64"))
-sys.path.insert(0, str(HERE.parent / "r66"))
+sys.path.insert(0, os.environ.get("HUNT_CFG_DIR", str(HERE.parent / "r66")))   # where HUNT_CFG lives
 R = __import__(os.environ.get("HUNT_CFG", "r65cfg"))   # R66 reuses this study with its own config (r66cfg)
 import r64study as P  # noqa: E402  (R64's pure statistics: stats, periods, split, bh, gates, paired_boot)
 
