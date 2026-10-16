@@ -125,6 +125,12 @@ object AutoChange {
          * one tap undoes it (back to the research exits for new trades). Paper only, never live: no PIN either way.
          */
         PAPER_LOCK("strategies", "the 30-60-100 lock on the passed paper arms"),
+        /**
+         * 16 Oct (Boss: "Update normal Donchian as you recommended, T7 supertrend agree"; research R73 T7, passed every gate): R51
+         * Donchian 20's paper breaks taken only when Supertrend (10, 3) agrees ([passedSupertrend]). It only skips entries, so on
+         * lowers risk. Logged so the timeline shows it and one tap undoes it (back to the plain rules). Paper only: no PIN.
+         */
+        PAPER_FILTER("strategies", "an entry filter on a passed paper arm"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -289,6 +295,8 @@ object AutoChange {
             // research exits back.
             // 16 Oct: R66's L25 step ([L25_TARGET]) only raises a stop (an earlier exit), so on lowers risk; off takes it away.
             Kind.PAPER_LOCK -> if (c.target == L25_TARGET) { if (c.to == ON) Risk.LOWER else Risk.RAISE } else if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // 16 Oct: an entry filter only skips paper entries: on lowers risk, off takes the skips away.
+            Kind.PAPER_FILTER -> if (c.to == ON) Risk.LOWER else Risk.RAISE
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -328,7 +336,7 @@ object AutoChange {
      * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
-        k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK
+        k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -548,6 +556,24 @@ object AutoChange {
         else "new paper trades of the passed arms are back on the plain 30-60-100 lock (no +5% step)",
         Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "the +5% once +25% step on the passed paper arms' lock")
+
+    /** The target of R73 T7's Supertrend filter on R51 Donchian 20's paper entries ([Kind.PAPER_FILTER]). */
+    const val ST_TARGET = "filter:r51_donchian20_supertrend"
+
+    /**
+     * 16 Oct (Boss: "Update normal Donchian as you recommended, T7 supertrend agree"): R73 T7 switched [on] for R51 Donchian 20's
+     * NEW paper breaks - taken only when Supertrend (10, 3) on the same 5-minute index bars points the same way - or off again
+     * (every break taken, the plain rules). It passed every R73 gate and beat Donchian in design, walk-forward and final (final
+     * 1,670 trades, +Rs 1,34,743 vs +Rs 81,845). Paper only, never live: no PIN either way.
+     */
+    fun passedSupertrend(on: Boolean): Change = Change(Kind.PAPER_FILTER, ST_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (16 Oct, \"T7 supertrend agree\"): R51 Donchian 20 takes a paper break only when Supertrend (10, 3) on the " +
+            "same 5-minute index bars agrees (R73 T7: passed every gate; final test 1,670 trades, +₹1,34,743 against Donchian's " +
+            "+₹81,845; it skipped 162 losers and 111 winners); open trades are not touched; its trades are labelled apart from the " +
+            "plain rules'; paper only, never live"
+        else "R51 Donchian 20 is back on its plain rules: every paper break is taken",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "R51 Donchian 20's Supertrend filter (paper)")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
@@ -947,7 +973,7 @@ object AutoChange {
         // 15 Oct: an arm hidden, restored and hidden again ([Kind.ARM_HIDE]) likewise - only its newest entry undoes.
         // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
         // switch flipped since is the one to undo.
-        if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK)) return false
+        if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

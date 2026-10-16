@@ -954,4 +954,160 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(v.log.any { "${BreadthDonchianArm.LABEL} switched itself off on its forward-test bar" in it })
         assertTrue(v.on(DonchianArm.SOURCE))
     }
+
+    // ---- R73 T7: R51 Donchian 20 takes a break only when Supertrend (10, 3) agrees (16 Oct, Boss) ------------------------------
+
+    /** NIFTY yesterday: falling from 30,000 to 25,000 by 13:35, then flat at 25,000: Supertrend (10, 3) is down at the close. */
+    private fun fallingYesterday(): List<Bar> {
+        val d = day.minusDays(1)
+        return (0 until 375).map { i -> val c = if (i < 260) 30_000.0 - 5_000.0 * i / 259 else 25_000.0
+            Bar(d.atTime(9, 15).plusMinutes(i.toLong()), c, c + 1, c - 1, c) }
+    }
+
+    private val ce24950 = "NSE_FO|PA24950CE"
+
+    /** Today's history read again from [h] (the day's earlier read dropped first). */
+    private fun historyNow(h: (String) -> List<Bar>) {
+        PassedArmsHost.testHistory = h
+        PassedArmsHost.wipe()
+        runBlocking { PassedArmsHost.prefetchNow(day) }
+    }
+
+    /**
+     * After [fallingYesterday]: a 25,010 break at 09:19 (above the last 20 bars' 25,001 high; Supertrend stays down - it would
+     * flip only above about 25,031), with the 24,950 CE listed too (the 1-ITM call of 25,010), priced at 100.
+     */
+    private fun fallingMarket(until: LocalTime) {
+        val exp = day.plusDays(7)
+        AutomationSupport.contracts(context, listOf(
+            Upstox.Contract("NIFTY", exp, 25_050.0, Right.CE, 65, ce, "NIFTY-PA-25050CE"),
+            Upstox.Contract("NIFTY", exp, 24_950.0, Right.CE, 65, ce24950, "NIFTY-PA-24950CE"),
+            Upstox.Contract("NIFTY", exp, 25_150.0, Right.PE, 65, pe, "NIFTY-PA-25150PE"),
+            Upstox.Contract("NIFTY", exp.plusDays(7), 25_000.0, Right.CE, 65, "NSE_FO|PANEXT", "NIFTY-PA-NEXT")))
+        market(until, open = 25_010.0)
+        minutes(ce24950, until) { 100.0 }
+    }
+
+    @Test fun theUpdateSwitchesTheSupertrendFilterOnOnceAndItsOwnUndoSwitchesItOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        assertTrue(view().stOn)
+        assertEquals(1, view().log.count { "Supertrend filter turned on by the 16 Oct update" in it })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().stOn)
+        assertEquals(1, view().log.count { "Supertrend filter turned on" in it })
+        assertTrue(PassedArmsHost.diagLine().contains("Supertrend filter (R73 T7) on for new breaks"))
+        // Its own Undo: back to the plain rules (the lock and L25 untouched); paper only, no PIN; it stays undone after a restart.
+        val on = AutoChange.passedSupertrend(true)
+        assertNull(Autopilot.apply(on.copy(target = "filter:other"), false))
+        assertTrue(Autopilot.apply(AutoChange.inverse(on, "undone by you"), false)!!.contains("plain rules"))
+        assertFalse(view().stOn); assertTrue(view().lockOn); assertTrue(view().l25On)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("its Undo stays undone after a restart", view().stOn)
+        assertTrue(PassedArmsHost.diagLine().contains("Supertrend filter (R73 T7) off for new breaks"))
+        assertTrue(Autopilot.apply(on, false)!!.contains("Supertrend (10, 3) agrees"))
+        assertTrue(view().stOn)
+        assertEquals("${DonchianArm.LABEL}'s Supertrend filter is already on (paper only).", runBlocking { PassedArmsHost.setSupertrend(true) })
+        // A book that cannot be read is never switched on by itself.
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().stOn)
+    }
+
+    @Test fun withTheFilterOnABreakSupertrendAgreesWithIsBoughtAndLabelled() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        market(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals("CE", p.right); assertTrue(p.st)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue("the label is kept on disk", view().open.single().st)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withTheFilterOnABreakSupertrendIsAgainstIsSkipped() {
+        historyNow { u -> if (u == "NIFTY") fallingYesterday() else emptyList() }
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        fallingMarket(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))
+        assertTrue("nothing bought", PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(view().log.any { "break skipped: Supertrend (10, 3) is against it (R73 T7)" in it })
+        assertTrue(Paper.state.positions.none { it.quantity != 0 })
+        // Decided once: the next pass does not buy it either.
+        fallingMarket(LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
+        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withTheFilterOffTheSameBreakIsBoughtOnThePlainRules() {
+        historyNow { u -> if (u == "NIFTY") fallingYesterday() else emptyList() }
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(false) }
+        fallingMarket(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals("CE", p.right); assertTrue(p.symbol, p.symbol.contains("24950")); assertFalse("a plain-rules trade", p.st)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withTheFilterOnABreakWithNoEarlierSessionIsNotJudgedSoNotTaken() {
+        historyNow { emptyList() }
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        // Flat at 25,000 until 10:55, then 25,100: today's 21st bar breaks up (entry 11:00), with no earlier session in.
+        val until = LocalTime.of(11, 0)
+        minutes(niftyKey, until) { t -> if (t.isBefore(LocalTime.of(10, 59))) 25_000.0 else 25_100.0 }
+        minutes(ce, until) { 100.0 }; minutes(pe, until) { 90.0 }
+        tick(LocalTime.of(11, 0))
+        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(view().log.any { "Supertrend cannot be judged yet" in it })
+        // 16 Oct (R73 review): counted where Boss sees it - the row, Jarvis and the diagnostics - and kept over a restart.
+        assertEquals(1, view().stUnjudged)
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("Supertrend filter (R73 T7) on for new breaks, 1 not judged today"))
+        assertTrue(com.optionslab.app.ui.screens.passedStatusLine(DonchianArm.SOURCE, view()).endsWith(" · 1 not judged by Supertrend"))
+        val said = runBlocking { PassedArmsHost.talk(com.optionslab.ira.PassedArmsTalk.Topic.DONCHIAN) }
+        assertTrue(said, "Today Supertrend could not judge 1 break (no earlier session in), so it was not taken." in said)
+        assertTrue(said, DonchianArm.ST_RULE in said)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals(1, view().stUnjudged)
+        assertNothingAtZerodha()
+    }
+
+    /** Flat at 25,000 (high 25,001, low 24,999) on [d], 09:15 - 15:29. */
+    private fun flat(d: LocalDate, base: Double = 25_000.0): List<Bar> =
+        (0 until 375).map { Bar(d.atTime(9, 15).plusMinutes(it.toLong()), base, base + 1, base - 1, base) }
+
+    @Test fun theSupertrendFilterIsR51sOnlyBreadthDonchianStillBuysABreakSupertrendIsAgainst() {
+        // 16 Oct (R73 review): the filter is passed to R51's taking only; R72 keeps its own rules (R73: it does not help R72).
+        bothDonchians()
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        historyNow { u -> if (u == "NIFTY") fallingYesterday() else bases[u]?.let { flat(day.minusDays(1), it) }.orEmpty() }
+        fallingMarket(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        assertEquals(open.toString(), listOf(BreadthDonchianArm.SOURCE), open.map { it.arm })
+        assertTrue(open.single().symbol, open.single().symbol.contains("24950")); assertFalse("R72's trade is never labelled as filtered", open.single().st)
+        assertTrue(view().log.any { DonchianArm.LABEL in it && "call break skipped: Supertrend (10, 3) is against it (R73 T7)" in it })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun supertrendIsSeededFromEveryEarlierSessionInMemoryNotOnlyTheLastTwo() {
+        // 16 Oct (R73 review): a fall three sessions back, then two flat sessions. Over the whole series (the research's way)
+        // Supertrend is still down at 25,004 (its band sits near 25,006); seeded from the last two flat sessions only it starts
+        // up. Donchian's own break (a close above the last 20 bars' 25,001) is the same either way.
+        historyNow { u -> if (u != "NIFTY") emptyList() else
+            fallingYesterday().map { it.copy(start = it.start.minusDays(2)) } + flat(day.minusDays(2)) + flat(day.minusDays(1)) }
+        assertEquals(3, PassedArmsHost.history("NIFTY", day)!!.sessions.size)
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        fallingMarket(LocalTime.of(9, 20))
+        minutes(niftyKey, LocalTime.of(9, 20)) { t -> if (t.isBefore(LocalTime.of(9, 19))) 25_000.0 else 25_004.0 }
+        tick(LocalTime.of(9, 20))
+        assertTrue(PassedArmsHost.view.value.open.toString(), PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(view().log.any { "call break skipped: Supertrend (10, 3) is against it (R73 T7)" in it })
+        assertEquals(0, view().stUnjudged)
+        assertNothingAtZerodha()
+    }
 }

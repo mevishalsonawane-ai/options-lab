@@ -64,6 +64,10 @@ object PassedArmsTalk {
         val pausedWhy: String? = null,
         /** Solo 2.0: today's scored candidates in words. */
         val scores: List<String> = emptyList(),
+        /** 16 Oct (R73 review): R51 Donchian 20's Supertrend filter is on for new breaks (false for the other arms). */
+        val stOn: Boolean = false,
+        /** 16 Oct (R73 review): today's breaks the filter skipped because Supertrend could not judge them (no earlier session in). */
+        val stUnjudged: Int = 0,
     )
 
     data class Facts(val arms: List<Arm>, val watch: List<String>, val watchOn: Boolean?, val modelLoaded: Boolean? = null,
@@ -81,8 +85,8 @@ object PassedArmsTalk {
         else -> Solo2.LABEL
     }
 
-    private fun rules(source: String) = when (source) {
-        DonchianArm.SOURCE -> DonchianArm.RULES
+    private fun rules(source: String, stOn: Boolean = false) = when (source) {
+        DonchianArm.SOURCE -> DonchianArm.rules(stOn)
         BreadthDonchianArm.SOURCE -> BreadthDonchianArm.RULES + ". " + BreadthDonchianArm.RISK
         OovArm.SOURCE -> OovArm.RULES + ". " + OovArm.STOP_ADDED
         else -> Solo2.RULES
@@ -133,7 +137,12 @@ object PassedArmsTalk {
         append(when (a.on) { true -> "on, paper only"; false -> "off"; null -> "its switch could not be read just now" })
         a.pausedWhy?.let { append(" (it switched itself off: $it)") }
         append(". ${PassedArms.PASSED}. ")
-        if (full) append(rules(a.source)).append(". ").append(PassedArms.SIGNAL_INDEX).append(". ")
+        // 16 Oct (R73 review): R51's rules with its Supertrend filter when on; the short answer still says the filter is on, and
+        // both say the breaks it could not judge today.
+        if (full) append(rules(a.source, a.stOn)).append(". ").append(PassedArms.SIGNAL_INDEX).append(". ")
+        else if (a.stOn && a.source == DonchianArm.SOURCE) append("Its Supertrend (10, 3) filter is on for new breaks (paper only). ")
+        if (a.stOn && a.source == DonchianArm.SOURCE && a.stUnjudged > 0)
+            append("Today Supertrend could not judge ${a.stUnjudged} break${if (a.stUnjudged == 1) "" else "s"} (no earlier session in), so ${if (a.stUnjudged == 1) "it was" else "they were"} not taken. ")
         append(if (a.todayLines.isEmpty()) "No trade today." else "Today: " + a.todayLines.joinToString("; ") + ".")
         if (a.scores.isNotEmpty()) append(" Today's candidates: ").append(a.scores.joinToString("; ")).append(".")
         append(" Its own record: ")
@@ -141,6 +150,7 @@ object PassedArmsTalk {
         append("; ${apart(a.source)} apart: ${a.apartTrades} trade${if (a.apartTrades == 1) "" else "s"}, ${rs(a.apartNet)}. ")
         append(a.forward).append(". ")
         if (full) append(bar(a.source)).append(". ").append(record(a.source)).append(".")
+        if (full && a.stOn && a.source == DonchianArm.SOURCE) append(" ").append(DonchianArm.ST_RECORD).append(".")
         if (full && a.source == Solo2.SOURCE) append(" ").append(Solo2.RETRAIN_TODO).append(".")
     }
 

@@ -208,4 +208,33 @@ class PassedArmRowsTest {
         // Donchian's own dialog carries neither.
         org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, v).none { "Risk:" in it || "Breadth Donchian vs Donchian" in it })
     }
+
+    /** 16 Oct (R73 review): R51's row says the breaks Supertrend could not judge; its dialog says the filter and its record when on. */
+    @Test fun donchiansRowAndDialogSayTheSupertrendFilterWhenItIsOn() {
+        val t = LocalDateTime.of(2026, 10, 16, 9, 20)
+        val st = PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "N1", "CE", 65, 100.0, t, "d1", exit = 120.0, exitTime = t.plusMinutes(10), why = "time", st = true)
+        val plain = PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "N2", "CE", 65, 100.0, t, "d2", exit = 90.0, exitTime = t.plusMinutes(10), why = "stop")
+        val br = PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", "N3", "CE", 65, 100.0, t, "b1", exit = 110.0, exitTime = t.plusMinutes(10), why = "time")
+        val v = PassedArmsHost.View(armed = mapOf(DonchianArm.SOURCE to true), all = listOf(st, plain, br), stOn = true, stUnjudged = 2,
+            breadthSince = LocalDate.of(2026, 10, 16))
+        show(v)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole(passedStatusLine(DonchianArm.SOURCE, v))).assertExists()
+        org.junit.Assert.assertTrue(passedStatusLine(DonchianArm.SOURCE, v), passedStatusLine(DonchianArm.SOURCE, v).endsWith(" · 2 not judged by Supertrend"))
+        compose.onNodeWithContentDescription("About ${DonchianArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole(DonchianArm.rules(true) + ".")).assertExists()
+        compose.onNodeWithText(keepNumbersWhole(DonchianArm.ST_RECORD + ".")).assertExists()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        // The comparison sets Breadth against Donchian's filtered and plain-rules records apart, labelled.
+        org.junit.Assert.assertTrue(v.comparison(), v.comparison().contains("Donchian's with its Supertrend filter: 1 trade, +₹1,300, on its plain rules: 1 trade, −₹650"))
+        // Off: the plain rules, no record of the filter, no count on the row; never on another arm's row.
+        val off = v.copy(stOn = false)
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, off).none { "Supertrend" in it })
+        org.junit.Assert.assertTrue(DonchianArm.RULES + "." in passedExplanation(DonchianArm.SOURCE, off))
+        org.junit.Assert.assertFalse("Supertrend" in passedStatusLine(DonchianArm.SOURCE, off))
+        org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, v).none { "Supertrend (10, 3)" in it })
+        org.junit.Assert.assertFalse("Supertrend" in passedStatusLine(BreadthDonchianArm.SOURCE, v))
+    }
 }

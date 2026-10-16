@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -129,6 +130,11 @@ class BreadthDonchianArmTest {
         assertTrue("+₹1,37,635" in c && "−₹55,790" in c, c)
         val none = BreadthDonchianArm.comparison(null, emptyList(), emptyList(), null)
         assertTrue(none.contains("so far: R72 Breadth Donchian 0 trades, +₹0; R51 Donchian 20 0 trades, +₹0 (after charges"), none)
+        assertFalse("Supertrend" in c || "Supertrend" in none)
+        // 16 Oct (R73 T7 on R51 only): Donchian's record split into its Supertrend-filtered trades and its plain-rules ones, labelled.
+        val st = BreadthDonchianArm.comparison(LocalDate.of(2026, 10, 16), listOf(1_000.0), listOf(500.0, -900.0, 100.0), null,
+            listOf(500.0, 100.0) to listOf(-900.0))
+        assertTrue("R51 Donchian 20 3 trades, −₹300; Donchian's with its Supertrend filter: 2 trades, +₹600, on its plain rules: 1 trade, −₹900 (after charges;" in st, st)
     }
 
     // ---- research parity -----------------------------------------------------------------------------------------------------

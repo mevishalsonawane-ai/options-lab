@@ -1,0 +1,41 @@
+id: r73-extra-c1
+title: 'R73 extra (not gated): T2 on top of R72''s C1 Breadth Donchian, exits P'
+family: daily-filters
+date: '2026-10-16'
+doc: research/HUNT_R73_DONCHIAN_TREND_WAIT.md
+hypothesis: Does the best R73 filter (chosen on design) add anything on top of R72's Breadth Donchian (C1)? Labelled extra,
+  not part of R73's 36 gated tests.
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R73 (16 Oct); the second computation of the same frozen plan (the first run
+    as 'R72' computed it once and its results were lost unrecorded); the window was already read for Donchian itself by R51-R72
+    (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the five indices (C1) and the index (the filter)'
+model_or_rule: R72 C1 (4 of 5 indices break on the same bar) + T2 5-min close beyond its EMA 50; exits P
+settings: research/hunt/r73/r73study.py extra_c1
+prereg: research/hunt/r73/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: C1 3071 trades on 323 days, win 47%, net Rs 2,16,929, avg win Rs 1,715 / loss -Rs 1,374, worst day -Rs
+    58,613, max DD Rs 1,99,077, green days 46%; C1 + filter 2994 trades on 323 days, win 47%, net Rs 2,22,607, avg win Rs
+    1,715 / loss -Rs 1,366, worst day -Rs 58,613, max DD Rs 1,74,321, green days 46%. Final: C1 1202 trades on 129 days, win
+    46%, net Rs 1,71,366, avg win Rs 1,748 / loss -Rs 1,217, worst day -Rs 22,571, max DD Rs 61,884, green days 52%; C1 +
+    filter 1158 trades on 129 days, win 45%, net Rs 1,60,479, avg win Rs 1,795 / loss -Rs 1,216, worst day -Rs 22,571, max
+    DD Rs 73,023, green days 51%; random-skip twin p 0.6467.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: inconclusive
+notes: 'Not gated (one labelled look, no BH); information for Boss only, nothing changes. Second labelled look AFTER the final
+  read, with the recommended T7: design C1 + T7 2965 trades on 322 days, win 47%, net Rs 2,56,207, avg win Rs 1,734 / loss
+  -Rs 1,376, worst day -Rs 51,838, max DD Rs 1,95,247, green days 46%; final 1163 trades on 129 days, win 46%, net Rs 1,65,758,
+  avg win Rs 1,761 / loss -Rs 1,213, worst day -Rs 22,571, max DD Rs 68,021, green days 51%; random-skip twin p 0.4611.'

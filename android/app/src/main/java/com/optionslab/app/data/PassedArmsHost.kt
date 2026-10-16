@@ -101,6 +101,19 @@ object PassedArmsHost {
     private val BREADTH_CHOICE = com.optionslab.ira.AutoChange.passedArmChoice(BreadthDonchianArm.SOURCE)
     private val BREADTH_NOTE = "the 16 Oct update (your \"Okay add it\"), beside ${DonchianArm.LABEL} to compare on the same days. " +
         "${BreadthDonchianArm.RISK} - never live"
+    /** 16 Oct (Boss: "Update normal Donchian ... T7 supertrend agree"): R73 T7 switched on once for R51 Donchian 20's new entries ([setSupertrend]). */
+    internal const val ST_ON = "donchian_st_2026-10-16"
+    /** A filtered break Supertrend could not judge (skipped): its status words, counted on the row and in the diagnostics. */
+    internal const val ST_UNJUDGED = "Supertrend cannot be judged yet (no earlier session in), so not taken"
+    /**
+     * 16 Oct (R73 review): where today's count of those is kept ([Book.status], "<day>: <n> ..."), so the row, Jarvis and the
+     * diagnostics show how many breaks the filter skipped unjudged (a day with no history read would otherwise look quiet).
+     */
+    internal const val ST_UNJUDGED_KEY = "${DonchianArm.SOURCE}|Supertrend not judged"
+
+    /** Today's ([day]) count kept under [ST_UNJUDGED_KEY] in [status]; 0 for another day or none. */
+    internal fun stUnjudgedOn(status: Map<String, String>, day: LocalDate): Int =
+        status[ST_UNJUDGED_KEY]?.takeIf { it.startsWith("$day: ") }?.substringAfter(": ")?.substringBefore(' ')?.toIntOrNull() ?: 0
 
     /** TEST SEAM: true in the JVM tests' app (the other tests' books start with these arms off). Its setter throws in a release build. */
     @Volatile internal var testNoAutoOn: Boolean = false
@@ -144,6 +157,11 @@ object PassedArmsHost {
          * a sale elsewhere, when R51 and R72 hold the same option. Null: none (an older trade, or nothing explained it).
          */
         val soldBy: String? = null,
+        /**
+         * 16 Oct (R73 T7, Boss): an R51 Donchian 20 trade taken under the Supertrend filter (its break agreed with Supertrend
+         * (10, 3)); false for the other arms and for Donchian's plain-rules trades, so the two records stay apart.
+         */
+        val st: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -181,12 +199,14 @@ object PassedArmsHost {
         var lockOn: Boolean = false,
         /** R66's +5% once +25% step for NEW trades under the lock ([setL25]); open trades keep what they entered with ([Pos.l25]). */
         var l25On: Boolean = false,
+        /** R73 T7: R51 Donchian 20's new breaks are taken only when Supertrend agrees ([setSupertrend]). */
+        var stOn: Boolean = false,
         /** 16 Oct: the day R72 Breadth Donchian was first switched on (Boss's comparison counts from it); null: never on. */
         var breadthSince: LocalDate? = null,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), HashMap(status), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, breadthSince)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince)
     }
 
     /** What the rows and Jarvis read (memory only). */
@@ -201,8 +221,12 @@ object PassedArmsHost {
         val lockOn: Boolean = false,
         /** R66's +5% once +25% step is on for new trades under the lock. */
         val l25On: Boolean = false,
+        /** R73 T7's Supertrend filter is on for R51 Donchian 20's new breaks. */
+        val stOn: Boolean = false,
         /** The day R72 Breadth Donchian was first switched on (null: never). */
         val breadthSince: LocalDate? = null,
+        /** 16 Oct (R73 review): today's R51 breaks the Supertrend filter skipped because it could not judge them. */
+        val stUnjudged: Int = 0,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         fun closedOf(source: String): List<Pos> = all.filter { it.arm == source }
@@ -225,8 +249,10 @@ object PassedArmsHost {
             fun from(s: String) = closedOf(s).filter { since == null || !it.day.isBefore(since) }
             val don = from(DonchianArm.SOURCE)
             val labelled = don.filter { it.breadth != null }
+            // 16 Oct (R73 T7): Donchian's trades taken under its Supertrend filter apart from its plain-rules ones (labelled).
+            val split = if (stOn || don.any { it.st }) don.filter { it.st }.map { it.net ?: 0.0 } to don.filter { !it.st }.map { it.net ?: 0.0 } else null
             return BreadthDonchianArm.comparison(since, from(BreadthDonchianArm.SOURCE).map { it.net ?: 0.0 }, don.map { it.net ?: 0.0 },
-                labelled.takeIf { it.isNotEmpty() }?.filter { it.breadth == false }?.map { it.net ?: 0.0 })
+                labelled.takeIf { it.isNotEmpty() }?.filter { it.breadth == false }?.map { it.net ?: 0.0 }, split)
         }
     }
 
@@ -263,6 +289,7 @@ object PassedArmsHost {
             b.lockOn = o.optBoolean("lock306100", false)
             b.l25On = o.optBoolean("lockL25", false)
             b.breadthSince = o.optString("breadthSince").ifEmpty { null }?.let { LocalDate.parse(it) }
+            b.stOn = o.optBoolean("donchianST", false)
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
         cache = b
         // 15 Oct (the PAPER rule): on once, on paper. A book that could not be read is never switched on by itself (Boss may
@@ -317,6 +344,19 @@ object PassedArmsHost {
             }
             save(b)
         }
+        // 16 Oct (Boss: "Update normal Donchian as you recommended, T7 supertrend agree"): R73 T7 passed every gate and beat
+        // Donchian in design, walk-forward and final, so under the PAPER rule it acts on R51 Donchian 20's paper entries at once:
+        // on once, logged in the change timeline (one tap undoes it). It only skips breaks, never adds or resizes one. Its trades
+        // are labelled ([Pos.st]) so the plain-rules record stays apart. Same care: never on an unreadable book, never in Gold.
+        if (ST_ON !in b.migrated) {
+            b.migrated += ST_ON
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && !b.stOn) {
+                b.stOn = true
+                note(b, "${DonchianArm.LABEL}: Supertrend filter turned on by the 16 Oct update, your ask: ${DonchianArm.ST_RULE}")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedSupertrendOn() }
+            }
+            save(b)
+        }
         return b
     }
 
@@ -326,7 +366,7 @@ object PassedArmsHost {
             LocalDateTime.parse(p.getString("entryTime")), p.optString("orderId").ifEmpty { null }, p.optString("setup").ifEmpty { null },
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
-            p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null })
+            p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -339,6 +379,7 @@ object PassedArmsHost {
             if (p.l25) put("l25", true)
             p.breadth?.let { put("breadth", it) }
             p.soldBy?.let { put("soldBy", it) }
+            if (p.st) put("st", true)
         }
 
     private val written = Vault.LastWrite()
@@ -359,6 +400,7 @@ object PassedArmsHost {
         o.put("lock306100", b.lockOn)
         o.put("lockL25", b.l25On)
         b.breadthSince?.let { o.put("breadthSince", it.toString()) }
+        o.put("donchianST", b.stOn)
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
@@ -373,7 +415,7 @@ object PassedArmsHost {
         val closed = b.positions.filter { !it.open }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
-            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.breadthSince)
+            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today))
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -516,6 +558,24 @@ object PassedArmsHost {
         }
     }
 
+    /**
+     * R73 T7's Supertrend filter on or off for R51 Donchian 20's NEW breaks (open trades are not touched). Paper only. [log]: false
+     * for the change log's own Undo (the switch-on is logged by the 16 Oct update).
+     */
+    suspend fun setSupertrend(on: Boolean, log: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.stOn == on) return@withLock "${DonchianArm.LABEL}'s Supertrend filter is already ${if (on) "on" else "off"} (paper only)."
+            b.stOn = on
+            note(b, if (on) "${DonchianArm.LABEL}: Supertrend filter on: ${DonchianArm.ST_RULE}" else "${DonchianArm.LABEL}: Supertrend filter off: new breaks are taken on the plain rules")
+            save(b)
+            if (log && on) runCatching { com.optionslab.app.ira.Autopilot.logPassedSupertrendOn() }
+            if (on) "${DonchianArm.LABEL} takes a break only when Supertrend (10, 3) agrees (paper only)."
+            else "${DonchianArm.LABEL} is back on its plain rules: every break is taken (paper only)."
+        }
+    }
+
     /** The diagnostics lines: each arm's switch, open trades, record, apart index and forward test. */
     fun diagLine(): String {
         val v = _view.value
@@ -528,7 +588,11 @@ object PassedArmsHost {
                     "%,.0f, ${c.count { !it.lock }} on the research exits %,.0f".format(Locale.ENGLISH, c.filter { it.lock }.sumOf { it.net ?: 0.0 },
                         c.filter { !it.lock }.sumOf { it.net ?: 0.0 }) +
                     " · L25 +5% once +25% ${if (v.l25On && v.lockOn) "on" else if (v.l25On) "on (acts only with the lock, which is off)" else "off"} for new trades, " +
-                    "${c.count { it.l25 }} closed on it %,.0f".format(Locale.ENGLISH, c.filter { it.l25 }.sumOf { it.net ?: 0.0 }) + (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
+                    "${c.count { it.l25 }} closed on it %,.0f".format(Locale.ENGLISH, c.filter { it.l25 }.sumOf { it.net ?: 0.0 }) + (if (s == DonchianArm.SOURCE) " · Supertrend filter (R73 T7) ${if (v.stOn) "on" else "off"} for new breaks, " +
+                        "${v.stUnjudged} not judged today, " +
+                        "${c.count { it.st }} closed on it %,.0f, ${c.count { !it.st }} on the plain rules %,.0f".format(Locale.ENGLISH,
+                            c.filter { it.st }.sumOf { it.net ?: 0.0 }, c.filter { !it.st }.sumOf { it.net ?: 0.0 }) else "") +
+                    (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
                 v.status.filterKeys { it.startsWith("$s|") }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} $x" } +
                 if (s == BreadthDonchianArm.SOURCE) " · ${v.comparison()}" else ""
         } + " · ${PassedArms.PASSED}"
@@ -842,7 +906,7 @@ object PassedArmsHost {
                 } else {
                     val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
                     val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
-                        l25 = b.lockOn && b.l25On, breadth = breadth)
+                        l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn)
                     b.positions += pos
                     b.marks[c.symbol] = fill.price
                     b.decided += keys
@@ -913,6 +977,14 @@ object PassedArmsHost {
         return h.flatMap { PassedArms.bars5(it) } + PassedArms.bars5(today, today.lastRow)
     }
 
+    /**
+     * 16 Oct (R73 review): the longer series Supertrend (10, 3) reads for R51's filter: every earlier session already prefetched
+     * (about 11, from [prefetchNow]'s 16 days; in memory, no extra read) and today's. The research's Supertrend ran on one
+     * continuous series, so seeding it from 2 sessions could differ near its start; Donchian's own signals still use [series].
+     */
+    private fun stSeries(u: String, today: PassedArms.DayBars): List<PassedArms.Bar5> =
+        history(u, today.date)?.sessions.orEmpty().flatMap { PassedArms.bars5(it) } + PassedArms.bars5(today, today.lastRow)
+
     /** The five indices' continuous 5-minute series this pass (an index unread is left out: for breadth it is not breaking). */
     private fun seriesAll(today: LocalDate, reads: Reads): Map<String, List<PassedArms.Bar5>> =
         BreadthDonchianArm.UNDERLYINGS.mapNotNull { u -> todayBars(u, today, reads)?.let { u to series(u, it) } }.toMap()
@@ -926,7 +998,11 @@ object PassedArmsHost {
         var changed = false
         for (u in DonchianArm.UNDERLYINGS) {
             val s = all[u] ?: continue
-            changed = breaks(b, src, u, DonchianArm.signals(u, s, today), now) { x -> confirmed?.let { Triple(u, x.bar.b, x.side) in it } } || changed
+            // 16 Oct (R73 T7, Boss): the Supertrend filter is R51's only (R73 found it does not help R72's breadth breaks), so it
+            // is passed here and not inside [breaks]. Its series is built only when the filter is on (memory only).
+            val st = if (b.stOn) todayBars(u, today, reads)?.let { stSeries(u, it) }.orEmpty() else null
+            val gate: ((DonchianArm.Signal) -> Boolean?)? = st?.let { ser -> { x: DonchianArm.Signal -> DonchianArm.supertrendAgrees(ser, x) } }
+            changed = breaks(b, src, u, DonchianArm.signals(u, s, today), now, gate) { x -> confirmed?.let { Triple(u, x.bar.b, x.side) in it } } || changed
         }
         return changed
     }
@@ -950,9 +1026,11 @@ object PassedArmsHost {
     /**
      * Donchian's taking of [sigs] on [u] for [src] (R51's own, and R72's): its expiry day trades nothing; each break decided once;
      * the 2-minute fill slack, one position a side and 2 a side a day in [src]'s own rows; the buy. [confirm]: a bought trade's
-     * R72 label (R51's only).
+     * R72 label (R51's only). [gate]: R73 T7's Supertrend filter (R51's only, when on): a break it does not pass (false: against
+     * it; null: cannot be judged) is skipped and decided, before the day's caps as the research filtered before taking.
      */
     private suspend fun breaks(b: Book, src: String, u: String, sigs: List<DonchianArm.Signal>, now: LocalDateTime,
+                               gate: ((DonchianArm.Signal) -> Boolean?)? = null,
                                confirm: (DonchianArm.Signal) -> Boolean? = { null }): Boolean {
         val today = now.toLocalDate()
         val key = "$src|$u"
@@ -967,6 +1045,19 @@ object PassedArmsHost {
             if (dk in b.decided) continue
             if (now.isBefore(s.entryTime)) continue
             if (!DonchianArm.mayFill(s, now)) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break missed (the fill window passed)", final = true) || changed; continue }
+            // 16 Oct (R73 T7): with the filter on, a break is taken only when Supertrend (10, 3) agrees; one it is against, or
+            // cannot judge (no earlier session in, or no direction yet), is skipped - it only ever skips (lowers risk), never
+            // adds. Decided once, before the day's caps, as the research filtered the signals before taking them.
+            if (gate != null) {
+                val ag = gate(s)
+                if (ag != true) {
+                    b.decided += dk
+                    if (ag == null) b.status[ST_UNJUDGED_KEY] = "$today: ${stUnjudgedOn(b.status, today) + 1} skipped, Supertrend could not judge (no earlier session in)"
+                    changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break skipped: " +
+                        if (ag == false) "Supertrend (10, 3) is against it (R73 T7)" else ST_UNJUDGED, final = true) || changed
+                    continue
+                }
+            }
             val open = b.positions.filter { it.arm == src && it.index == u && it.open }.map { it.side }.toSet()
             val taken = b.positions.filter { it.arm == src && it.index == u && it.day == today }.groupingBy { it.side }.eachCount()
             val skip = DonchianArm.mayTake(s, open, taken)
@@ -1297,7 +1388,7 @@ object PassedArmsHost {
             if (b.positions.any { it.open && it.symbol == o.symbol }) return@withLock null
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
-                adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On)
+                adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On, st = arm == DonchianArm.SOURCE && b.stOn)
             b.positions += p
             b.marks[p.symbol] = p.entry
             val words = "${label(arm)}: ${p.symbol} ${p.qty} was held on paper with no record here, so its exits were not running; " +
@@ -1323,7 +1414,8 @@ object PassedArmsHost {
             val ap = c.filter { it.index == apart(s) }
             com.optionslab.ira.PassedArmsTalk.Arm(s, v.armed[s] ?: false, v.todayOf(s).map { tradeLine(it, v.marks) }, c.size, c.sumOf { it.net ?: 0.0 },
                 c.count { (it.net ?: 0.0) > 0 }, ap.size, ap.sumOf { it.net ?: 0.0 }, v.forwardLine(s), v.paused[s],
-                if (s == Solo2.SOURCE) v.scores else emptyList())
+                if (s == Solo2.SOURCE) v.scores else emptyList(), stOn = s == DonchianArm.SOURCE && v.stOn,
+                stUnjudged = if (s == DonchianArm.SOURCE) v.stUnjudged else 0)
         }
         val w = runCatching { WatchlistHost.cards() }.getOrDefault(emptyList()).map { com.optionslab.engine.orb.Watchlist.line(it) }
         return com.optionslab.ira.PassedArmsTalk.Facts(arms, w, runCatching { WatchlistHost.on() }.getOrNull(), v.modelLoaded,
@@ -1337,7 +1429,8 @@ object PassedArmsHost {
         else "${p.symbol} ${p.qty} @ ${px(p.entry)} → ${px(p.exit ?: 0.0)} (${p.why}) · ${rs(p.net ?: 0.0)}" + lockTag(p)
 
     /** The ladder a trade entered with, labelled so each record stays separable (the research exits, A4, A4 + L25). */
-    private fun lockTag(p: Pos): String = if (!p.lock) "" else if (p.l25) " · 30-60-100 lock + L25" else " · 30-60-100 lock"
+    private fun lockTag(p: Pos): String = (if (!p.lock) "" else if (p.l25) " · 30-60-100 lock + L25" else " · 30-60-100 lock") +
+        if (p.st) " · Supertrend filter" else ""
 
     /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
     internal fun wipe() { cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear() }

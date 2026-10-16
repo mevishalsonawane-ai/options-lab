@@ -1,0 +1,45 @@
+id: r73-w2h-p
+title: 'R73 W2H wait 2 one-minute candles; all close beyond the broken channel edge on Donchian 20, exits P (paper today:
+  -15%, A4 ladder + L25, 30 min)'
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R73_DONCHIAN_TREND_WAIT.md
+hypothesis: 'Boss (16 Oct: "add trend find for Donchian, or wait for 5 candles [1 min] before buying any options ... it could
+  help us with less loss"): taking Donchian 20''s index breakouts only when wait 2 one-minute candles; all close beyond the
+  broken channel edge (wait of 1-minute index candles after the signal bar) loses less than Donchian and beats skipping the
+  same number of its trades at random. Gates as R51 (BH over R73''s 36 tests), plus random-skip twins.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R73 (16 Oct); the second computation of the same frozen plan (the first run
+    as 'R72' computed it once and its results were lost unrecorded); the window was already read for Donchian itself by R51-R72
+    (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Donchian 20 on 5-minute index bars; the filter / wait on the index''s 5-minute and 1-minute candles);
+  no option-chain data, no option chart'
+model_or_rule: 'Donchian 20 (paper arm) + W2H wait 2 one-minute candles; all close beyond the broken channel edge; exits P
+  (paper today: -15%, A4 ladder + L25, 30 min); 1-ITM, entries 09:20-15:10'
+settings: research/hunt/r73/r73rules.py, research/hunt/r73/r73cfg.py EXIT_SETS; PREREG.md
+prereg: research/hunt/r73/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 4000 trades on 337 days, win 45%, net -Rs 24,689, avg win Rs 1,634 / loss -Rs 1,344, worst day -Rs 61,227,
+    max DD Rs 1,78,116, green days 44%; walk-forward net Rs 70,338 (Donchian: design Rs 9,998, walk-forward Rs 1,75,789).
+    Final: 1562 trades on 133 days, win 45%, net Rs 1,24,449, avg win Rs 1,615 / loss -Rs 1,180, worst day -Rs 20,892, max
+    DD Rs 88,689, green days 47% (Donchian Rs 81,845 on 1781 trades). Random-entry twin p 0.008 (BH q 0.018); random-skip
+    twin p 0.02 (BH q 0.045). Vs Donchian in the final: skipped 502 trades: 353 losers avoided (Rs 4,24,607), 149 winners
+    missed (Rs 2,08,071; 8 closed +30% or more, Rs 30,691); 283 trades Donchian did not take (-Rs 15,397). Cost of waiting
+    on 1279 shared signals: the index moved 7.2 points (mean) in the break''s direction before the entry; the option cost
+    -Rs 17 a lot more (0%). Verdict: FAIL (design net <= 0).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the index); research only, nothing changes paper or live.

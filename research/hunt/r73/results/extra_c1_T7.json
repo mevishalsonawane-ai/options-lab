@@ -1,0 +1,122 @@
+{
+ "variant": "T7",
+ "note": "labelled extra, not gated, run after the final read",
+ "design": {
+  "c1": {
+   "trades": 3071,
+   "days": 323,
+   "net": 216929,
+   "per_trade": 70.6,
+   "win": 0.4676,
+   "avg_win": 1715,
+   "avg_loss": -1374,
+   "worst_day": -58613,
+   "best_day": 57446,
+   "max_dd": 199077,
+   "green_days": 0.4551,
+   "ex_top5": 160476,
+   "per_month": 188.1,
+   "why": {
+    "time": 2247,
+    "lock": 66,
+    "stop": 568,
+    "squareoff": 182,
+    "missing": 8
+   }
+  },
+  "c1_plus": {
+   "trades": 2965,
+   "days": 322,
+   "net": 256207,
+   "per_trade": 86.4,
+   "win": 0.4702,
+   "avg_win": 1734,
+   "avg_loss": -1376,
+   "worst_day": -51838,
+   "best_day": 57446,
+   "max_dd": 195247,
+   "green_days": 0.4596,
+   "ex_top5": 199753,
+   "per_month": 181.6,
+   "why": {
+    "time": 2161,
+    "lock": 62,
+    "stop": 551,
+    "squareoff": 183,
+    "missing": 8
+   }
+  },
+  "vs_c1": {
+   "skipped": 182,
+   "skipped_net": -68023,
+   "losers_avoided": 112,
+   "losers_avoided_rs": 148335,
+   "winners_missed": 70,
+   "winners_missed_rs": 80311,
+   "big_missed": 4,
+   "big_missed_rs": 11748,
+   "extra": 76,
+   "extra_net": -28746
+  },
+  "skip_p": 0.016,
+  "c1_wf_net": 335882,
+  "c1_plus_wf_net": 367589
+ },
+ "final": {
+  "c1": {
+   "trades": 1202,
+   "days": 129,
+   "net": 171366,
+   "per_trade": 142.6,
+   "win": 0.4584,
+   "avg_win": 1748,
+   "avg_loss": -1217,
+   "worst_day": -22571,
+   "best_day": 39099,
+   "max_dd": 61884,
+   "green_days": 0.5194,
+   "ex_top5": 112623,
+   "per_month": 186.7,
+   "why": {
+    "time": 950,
+    "stop": 174,
+    "squareoff": 65,
+    "lock": 13
+   }
+  },
+  "c1_plus": {
+   "trades": 1163,
+   "days": 129,
+   "net": 165758,
+   "per_trade": 142.5,
+   "win": 0.4557,
+   "avg_win": 1761,
+   "avg_loss": -1213,
+   "worst_day": -22571,
+   "best_day": 39099,
+   "max_dd": 68021,
+   "green_days": 0.5116,
+   "ex_top5": 107015,
+   "per_month": 180.6,
+   "why": {
+    "time": 916,
+    "stop": 169,
+    "squareoff": 66,
+    "lock": 12
+   }
+  },
+  "vs_c1": {
+   "skipped": 79,
+   "skipped_net": 14731,
+   "losers_avoided": 41,
+   "losers_avoided_rs": 52634,
+   "winners_missed": 38,
+   "winners_missed_rs": 67365,
+   "big_missed": 3,
+   "big_missed_rs": 15131,
+   "extra": 40,
+   "extra_net": 9123
+  },
+  "skip_p": 0.4611
+ }
+}

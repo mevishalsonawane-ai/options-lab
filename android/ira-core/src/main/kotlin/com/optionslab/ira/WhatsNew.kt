@@ -58,6 +58,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-donchian-supertrend", OCT16, "R51 Donchian 20 waits for Supertrend to agree (your ask)",
+            "New paper trades of R51 Donchian 20 now need Supertrend (10, 3) to agree with the break. " +
+                "Research R73 made +₹1,34,743 over 1,670 trades in the final test, against +₹81,845 without it. " +
+                "It only skips trades, and a break it cannot judge is not taken. " +
+                "R72 Breadth Donchian keeps its own rules. " +
+                "It is on paper only, in the change log, and one tap undoes it.",
+            "Home → Strategies → tap R51 Donchian 20's name for its rules and the filter's record",
+            ask = "how is the donchian arm doing"),
         Entry("2026-10-16-breadth-donchian", OCT16, "Breadth Donchian on paper, beside Donchian (your choice)",
             "A new paper arm buys a Donchian break only when at least 4 of the five indices break together. " +
                 "It runs beside R51 Donchian 20, so you can compare the two on the same days. " +

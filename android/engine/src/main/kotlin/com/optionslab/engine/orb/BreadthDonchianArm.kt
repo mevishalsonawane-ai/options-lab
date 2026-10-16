@@ -100,13 +100,17 @@ object BreadthDonchianArm {
     /**
      * Boss's comparison (the point of running both): since [since] (the switch-on day), this arm's closed paper trades
      * ([breadthNets]) next to Donchian's ([donchianNets]), and Donchian's trades that breadth did not confirm ([unconfirmedNets];
-     * null: not known yet). Nets after charges, in words.
+     * null: not known yet). Nets after charges, in words. 16 Oct (R73 T7 on R51 only): [stSplit], Donchian's trades split into
+     * those taken under its Supertrend filter and those on its plain rules (null: no filtered trade yet and the filter off), so
+     * the comparison says which Donchian record it is set against.
      */
-    fun comparison(since: LocalDate?, breadthNets: List<Double>, donchianNets: List<Double>, unconfirmedNets: List<Double>?): String {
+    fun comparison(since: LocalDate?, breadthNets: List<Double>, donchianNets: List<Double>, unconfirmedNets: List<Double>?,
+                   stSplit: Pair<List<Double>, List<Double>>? = null): String {
         fun side(n: List<Double>) = "${n.size} trade${if (n.size == 1) "" else "s"}, ${rs(n.sum())}"
         val from = since?.let { "since ${it.dayOfMonth} ${it.month.name.lowercase().replaceFirstChar { c -> c.uppercase() }.take(3)}" } ?: "so far"
         return "Breadth Donchian vs Donchian on paper $from: $LABEL ${side(breadthNets)}; ${DonchianArm.LABEL} ${side(donchianNets)}" +
             (unconfirmedNets?.let { "; Donchian's trades breadth did not confirm: ${side(it)}" } ?: "") +
+            (stSplit?.let { (f, p) -> "; Donchian's with its Supertrend filter: ${side(f)}, on its plain rules: ${side(p)}" } ?: "") +
             " (after charges; $SPLIT)"
     }
 

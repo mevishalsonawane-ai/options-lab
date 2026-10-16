@@ -85,7 +85,9 @@ internal fun passedStatusLine(source: String, v: PassedArmsHost.View): String {
         t.isNotEmpty() -> "${t.size} trade${if (t.size == 1) "" else "s"} today, ${rs(v.todayPnl(source))}"
         else -> "no trade today"
     }
-    return (if (v.on(source)) "On · paper" else "Off") + " · " + state
+    // 16 Oct (R73 review): breaks R51's Supertrend filter skipped today because it could not judge them, said on the row.
+    val unjudged = if (source == DonchianArm.SOURCE && v.stOn && v.stUnjudged > 0) " · ${v.stUnjudged} not judged by Supertrend" else ""
+    return (if (v.on(source)) "On · paper" else "Off") + " · " + state + unjudged
 }
 
 /** The key numbers: its own record, the index reported apart, the forward test's progress. */
@@ -100,7 +102,9 @@ internal fun passedNumbersLine(source: String, v: PassedArmsHost.View): String {
 internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<String> = listOfNotNull(
     PassedArms.PASSED,
     "Research: ${PassedArmsHost.research(source)}. ${passedRecord(source)}.",
-    passedRules(source) + ".",
+    // 16 Oct (R73 review): R51's rules say its Supertrend filter when it is on, with the filter's own research record.
+    (if (source == DonchianArm.SOURCE) DonchianArm.rules(v.stOn) else passedRules(source)) + ".",
+    if (source == DonchianArm.SOURCE && v.stOn) DonchianArm.ST_RECORD + "." else null,
     // 16 Oct (R72): its risk line, and the point of running it beside Donchian - the two on the same days.
     if (source == BreadthDonchianArm.SOURCE) "Risk: ${BreadthDonchianArm.RISK}." else null,
     if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,

@@ -1,0 +1,434 @@
+{
+ "T1-P": {
+  "design": {
+   "n": 4497,
+   "base_net": 9800,
+   "var_net": 9800
+  },
+  "final": {
+   "n": 1779,
+   "base_net": 82590,
+   "var_net": 82590
+  }
+ },
+ "T1-Q": {
+  "design": {
+   "n": 4497,
+   "base_net": 7275,
+   "var_net": 7275
+  },
+  "final": {
+   "n": 1779,
+   "base_net": 79522,
+   "var_net": 79522
+  }
+ },
+ "T2-P": {
+  "design": {
+   "n": 4097,
+   "base_net": 117071,
+   "var_net": 117071
+  },
+  "final": {
+   "n": 1570,
+   "base_net": 69728,
+   "var_net": 69728
+  }
+ },
+ "T2-Q": {
+  "design": {
+   "n": 4097,
+   "base_net": 115604,
+   "var_net": 115604
+  },
+  "final": {
+   "n": 1570,
+   "base_net": 70244,
+   "var_net": 70244
+  }
+ },
+ "T3-P": {
+  "design": {
+   "n": 3032,
+   "base_net": 20007,
+   "var_net": 20007
+  },
+  "final": {
+   "n": 1145,
+   "base_net": -57402,
+   "var_net": -57402
+  }
+ },
+ "T3-Q": {
+  "design": {
+   "n": 3030,
+   "base_net": 19976,
+   "var_net": 19976
+  },
+  "final": {
+   "n": 1145,
+   "base_net": -55166,
+   "var_net": -55166
+  }
+ },
+ "T4-P": {
+  "design": {
+   "n": 2146,
+   "base_net": 59078,
+   "var_net": 59078
+  },
+  "final": {
+   "n": 819,
+   "base_net": -89175,
+   "var_net": -89175
+  }
+ },
+ "T4-Q": {
+  "design": {
+   "n": 2146,
+   "base_net": 57991,
+   "var_net": 57991
+  },
+  "final": {
+   "n": 819,
+   "base_net": -90902,
+   "var_net": -90902
+  }
+ },
+ "T5-P": {
+  "design": {
+   "n": 2822,
+   "base_net": 9909,
+   "var_net": 9909
+  },
+  "final": {
+   "n": 1216,
+   "base_net": -9996,
+   "var_net": -9996
+  }
+ },
+ "T5-Q": {
+  "design": {
+   "n": 2821,
+   "base_net": 990,
+   "var_net": 990
+  },
+  "final": {
+   "n": 1216,
+   "base_net": -10693,
+   "var_net": -10693
+  }
+ },
+ "T6-P": {
+  "design": {
+   "n": 1803,
+   "base_net": -76176,
+   "var_net": -76176
+  },
+  "final": {
+   "n": 783,
+   "base_net": -31796,
+   "var_net": -31796
+  }
+ },
+ "T6-Q": {
+  "design": {
+   "n": 1801,
+   "base_net": -85508,
+   "var_net": -85508
+  },
+  "final": {
+   "n": 783,
+   "base_net": -33156,
+   "var_net": -33156
+  }
+ },
+ "T7-P": {
+  "design": {
+   "n": 3839,
+   "base_net": 158655,
+   "var_net": 158655
+  },
+  "final": {
+   "n": 1508,
+   "base_net": 90096,
+   "var_net": 90096
+  }
+ },
+ "T7-Q": {
+  "design": {
+   "n": 3839,
+   "base_net": 154075,
+   "var_net": 154075
+  },
+  "final": {
+   "n": 1508,
+   "base_net": 90742,
+   "var_net": 90742
+  }
+ },
+ "T8-P": {
+  "design": {
+   "n": 3963,
+   "base_net": -2513,
+   "var_net": -2513
+  },
+  "final": {
+   "n": 1500,
+   "base_net": 15039,
+   "var_net": 15039
+  }
+ },
+ "T8-Q": {
+  "design": {
+   "n": 3962,
+   "base_net": -2864,
+   "var_net": -2864
+  },
+  "final": {
+   "n": 1500,
+   "base_net": 13284,
+   "var_net": 13284
+  }
+ },
+ "W2H-P": {
+  "design": {
+   "n": 3358,
+   "base_net": 568622,
+   "var_net": 63165
+  },
+  "final": {
+   "n": 1279,
+   "base_net": 298380,
+   "var_net": 139846
+  }
+ },
+ "W2H-Q": {
+  "design": {
+   "n": 3360,
+   "base_net": 572429,
+   "var_net": 66526
+  },
+  "final": {
+   "n": 1279,
+   "base_net": 296860,
+   "var_net": 141182
+  }
+ },
+ "W2D-P": {
+  "design": {
+   "n": 2227,
+   "base_net": 1061428,
+   "var_net": 118006
+  },
+  "final": {
+   "n": 843,
+   "base_net": 463582,
+   "var_net": 145456
+  }
+ },
+ "W2D-Q": {
+  "design": {
+   "n": 2229,
+   "base_net": 1066119,
+   "var_net": 121954
+  },
+  "final": {
+   "n": 843,
+   "base_net": 464139,
+   "var_net": 146536
+  }
+ },
+ "W2HD-P": {
+  "design": {
+   "n": 2145,
+   "base_net": 1046448,
+   "var_net": 118593
+  },
+  "final": {
+   "n": 801,
+   "base_net": 453229,
+   "var_net": 143572
+  }
+ },
+ "W2HD-Q": {
+  "design": {
+   "n": 2146,
+   "base_net": 1053900,
+   "var_net": 124908
+  },
+  "final": {
+   "n": 801,
+   "base_net": 453787,
+   "var_net": 141931
+  }
+ },
+ "W3H-P": {
+  "design": {
+   "n": 3086,
+   "base_net": 694960,
+   "var_net": -10730
+  },
+  "final": {
+   "n": 1189,
+   "base_net": 353889,
+   "var_net": 170923
+  }
+ },
+ "W3H-Q": {
+  "design": {
+   "n": 3088,
+   "base_net": 690934,
+   "var_net": -16586
+  },
+  "final": {
+   "n": 1189,
+   "base_net": 352697,
+   "var_net": 171774
+  }
+ },
+ "W3D-P": {
+  "design": {
+   "n": 2187,
+   "base_net": 1201058,
+   "var_net": 46879
+  },
+  "final": {
+   "n": 820,
+   "base_net": 485398,
+   "var_net": 126582
+  }
+ },
+ "W3D-Q": {
+  "design": {
+   "n": 2188,
+   "base_net": 1201791,
+   "var_net": 50877
+  },
+  "final": {
+   "n": 820,
+   "base_net": 485956,
+   "var_net": 132185
+  }
+ },
+ "W3HD-P": {
+  "design": {
+   "n": 2015,
+   "base_net": 1147097,
+   "var_net": 55728
+  },
+  "final": {
+   "n": 746,
+   "base_net": 488390,
+   "var_net": 143101
+  }
+ },
+ "W3HD-Q": {
+  "design": {
+   "n": 2016,
+   "base_net": 1147831,
+   "var_net": 58501
+  },
+  "final": {
+   "n": 746,
+   "base_net": 488948,
+   "var_net": 145697
+  }
+ },
+ "W5H-P": {
+  "design": {
+   "n": 2737,
+   "base_net": 955316,
+   "var_net": -66989
+  },
+  "final": {
+   "n": 1044,
+   "base_net": 439453,
+   "var_net": 186041
+  }
+ },
+ "W5H-Q": {
+  "design": {
+   "n": 2738,
+   "base_net": 956453,
+   "var_net": -73940
+  },
+  "final": {
+   "n": 1044,
+   "base_net": 439319,
+   "var_net": 184946
+  }
+ },
+ "W5D-P": {
+  "design": {
+   "n": 2240,
+   "base_net": 1465068,
+   "var_net": -71306
+  },
+  "final": {
+   "n": 786,
+   "base_net": 517396,
+   "var_net": 38252
+  }
+ },
+ "W5D-Q": {
+  "design": {
+   "n": 2239,
+   "base_net": 1466383,
+   "var_net": -77173
+  },
+  "final": {
+   "n": 786,
+   "base_net": 517716,
+   "var_net": 35498
+  }
+ },
+ "W5HD-P": {
+  "design": {
+   "n": 1916,
+   "base_net": 1354104,
+   "var_net": -28061
+  },
+  "final": {
+   "n": 670,
+   "base_net": 488152,
+   "var_net": 64198
+  }
+ },
+ "W5HD-Q": {
+  "design": {
+   "n": 1916,
+   "base_net": 1355537,
+   "var_net": -34334
+  },
+  "final": {
+   "n": 670,
+   "base_net": 488800,
+   "var_net": 62307
+  }
+ },
+ "C-P": {
+  "design": {
+   "n": 3130,
+   "base_net": 579914,
+   "var_net": 104567
+  },
+  "final": {
+   "n": 1156,
+   "base_net": 268631,
+   "var_net": 127697
+  }
+ },
+ "C-Q": {
+  "design": {
+   "n": 3131,
+   "base_net": 585317,
+   "var_net": 105653
+  },
+  "final": {
+   "n": 1156,
+   "base_net": 269146,
+   "var_net": 132305
+  }
+ }
+}

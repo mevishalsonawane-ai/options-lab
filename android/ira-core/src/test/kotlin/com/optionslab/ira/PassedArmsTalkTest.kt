@@ -44,6 +44,24 @@ class PassedArmsTalkTest {
     private val arm = PassedArmsTalk.Arm(DonchianArm.SOURCE, true, listOf("NIFTY26OCT25150CE 1 lot @ 120.00 → 150.00 (target), +₹1,800"),
         3, 2_500.0, 2, 1, 1_200.0, "Forward test: 3 of 40 paper trades, net ₹2,500 after charges, at twice the spread ₹2,100")
 
+    @Test fun donchiansSupertrendFilterIsSaidWhenOnAndNotWhenOff() {
+        // 16 Oct (R73 review): Jarvis says R51's rules with the Supertrend filter and its record when it is on; the plain rules when off.
+        val on = PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm.copy(stOn = true)), emptyList(), true))
+        assertTrue(DonchianArm.ST_RULE in on && DonchianArm.ST_UNJUDGED_RULE in on && DonchianArm.ST_RECORD in on, on)
+        val off = PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm), emptyList(), true))
+        assertFalse("Supertrend" in off, off)
+        assertTrue(DonchianArm.RULES in off, off)
+        // The short answer (all arms) still names it; the breaks it could not judge today are said (one, then several).
+        val all = PassedArmsTalk.answer(PassedArmsTalk.Topic.ALL, PassedArmsTalk.Facts(listOf(arm.copy(stOn = true, stUnjudged = 1)), emptyList(), true))
+        assertTrue("Its Supertrend (10, 3) filter is on for new breaks (paper only)." in all, all)
+        assertTrue("Today Supertrend could not judge 1 break (no earlier session in), so it was not taken." in all, all)
+        val two = PassedArmsTalk.armWords(arm.copy(stOn = true, stUnjudged = 2))
+        assertTrue("could not judge 2 breaks (no earlier session in), so they were not taken." in two, two)
+        // Never on another arm, nor with the filter off.
+        assertFalse("Supertrend" in PassedArmsTalk.armWords(arm.copy(source = BreadthDonchianArm.SOURCE, stOn = true, stUnjudged = 3)))
+        assertFalse("Supertrend" in PassedArmsTalk.armWords(arm.copy(stUnjudged = 3), full = false))
+    }
+
     @Test fun eachArmIsSaidWithItsLabelRulesRecordAndBar() {
         val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm), emptyList(), true))
         assertTrue(w.startsWith("R51 Donchian 20: on, paper only. Passed research (R51/R52/R57/R72) — paper only. "), w)

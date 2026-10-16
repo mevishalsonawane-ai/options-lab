@@ -1,0 +1,2578 @@
+{
+ "written": "2026-10-16T14:47:50+00:00",
+ "base": {
+  "P": {
+   "design": {
+    "trades": 4498,
+    "days": 337,
+    "net": 9998,
+    "per_trade": 2.2,
+    "win": 0.4473,
+    "avg_win": 1701,
+    "avg_loss": -1373,
+    "worst_day": -56647,
+    "best_day": 54259,
+    "max_dd": 224592,
+    "green_days": 0.4659,
+    "ex_top5": -57344,
+    "per_month": 275.5,
+    "why": {
+     "time": 3403,
+     "lock": 79,
+     "stop": 815,
+     "squareoff": 184,
+     "missing": 17
+    }
+   },
+   "wf": {
+    "trades": 3266,
+    "days": 247,
+    "net": 175789,
+    "per_trade": 53.8,
+    "win": 0.4596,
+    "avg_win": 1661,
+    "avg_loss": -1313,
+    "worst_day": -31959,
+    "best_day": 46699,
+    "max_dd": 103931,
+    "green_days": 0.4939,
+    "ex_top5": 108447,
+    "per_month": null,
+    "why": {
+     "stop": 524,
+     "lock": 58,
+     "time": 2540,
+     "squareoff": 132,
+     "missing": 12
+    }
+   },
+   "wf_net": 175789
+  },
+  "Q": {
+   "design": {
+    "trades": 4498,
+    "days": 337,
+    "net": 7474,
+    "per_trade": 1.7,
+    "win": 0.4389,
+    "avg_win": 1738,
+    "avg_loss": -1356,
+    "worst_day": -56647,
+    "best_day": 54259,
+    "max_dd": 227485,
+    "green_days": 0.457,
+    "ex_top5": -59868,
+    "per_month": 275.5,
+    "why": {
+     "time": 3440,
+     "lock": 35,
+     "stop": 821,
+     "squareoff": 185,
+     "missing": 17
+    }
+   },
+   "wf": {
+    "trades": 3266,
+    "days": 247,
+    "net": 173115,
+    "per_trade": 53.0,
+    "win": 0.4507,
+    "avg_win": 1698,
+    "avg_loss": -1297,
+    "worst_day": -31959,
+    "best_day": 46383,
+    "max_dd": 101267,
+    "green_days": 0.4818,
+    "ex_top5": 105773,
+    "per_month": null,
+    "why": {
+     "stop": 529,
+     "lock": 25,
+     "time": 2567,
+     "squareoff": 133,
+     "missing": 12
+    }
+   },
+   "wf_net": 173115
+  }
+ },
+ "variants": {
+  "C-P": {
+   "design": {
+    "trades": 3881,
+    "days": 337,
+    "net": -29805,
+    "per_trade": -7.7,
+    "win": 0.4476,
+    "avg_win": 1644,
+    "avg_loss": -1346,
+    "worst_day": -61227,
+    "best_day": 43804,
+    "max_dd": 166163,
+    "green_days": 0.4451,
+    "ex_top5": -83217,
+    "per_month": 237.7,
+    "why": {
+     "lock": 83,
+     "time": 2895,
+     "stop": 706,
+     "squareoff": 191,
+     "missing": 6
+    }
+   },
+   "wf": {
+    "trades": 1902,
+    "days": 245,
+    "net": -99953,
+    "per_trade": -52.6,
+    "win": 0.4532,
+    "avg_win": 1439,
+    "avg_loss": -1289,
+    "worst_day": -23503,
+    "best_day": 44614,
+    "max_dd": 160421,
+    "green_days": 0.449,
+    "ex_top5": -144091,
+    "per_month": null,
+    "why": {
+     "stop": 327,
+     "time": 1429,
+     "squareoff": 112,
+     "missing": 3,
+     "lock": 31
+    }
+   },
+   "wf_net": -99953,
+   "vs_base": {
+    "skipped": 1368,
+    "skipped_net": -569916,
+    "losers_avoided": 898,
+    "losers_avoided_rs": 1209395,
+    "winners_missed": 470,
+    "winners_missed_rs": 639479,
+    "big_missed": 23,
+    "big_missed_rs": 110179,
+    "extra": 751,
+    "extra_net": -134372
+   },
+   "skip_p_design": 0.7745,
+   "wait_cost": {
+    "n": 3130,
+    "points_mean": 6.3,
+    "points_median": 3.9,
+    "rs_lot_mean": -25,
+    "rs_lot_median": 7,
+    "pct_mean": -0.0002,
+    "pct_median": 0.0004,
+    "same_strike": 0.7409
+   }
+  },
+  "C-Q": {
+   "design": {
+    "trades": 3881,
+    "days": 337,
+    "net": -24138,
+    "per_trade": -6.2,
+    "win": 0.4383,
+    "avg_win": 1685,
+    "avg_loss": -1326,
+    "worst_day": -61227,
+    "best_day": 43804,
+    "max_dd": 154408,
+    "green_days": 0.451,
+    "ex_top5": -77549,
+    "per_month": 237.7,
+    "why": {
+     "lock": 34,
+     "time": 2940,
+     "stop": 707,
+     "squareoff": 194,
+     "missing": 6
+    }
+   },
+   "wf": {
+    "trades": 1902,
+    "days": 245,
+    "net": -99236,
+    "per_trade": -52.2,
+    "win": 0.4474,
+    "avg_win": 1462,
+    "avg_loss": -1278,
+    "worst_day": -23503,
+    "best_day": 43896,
+    "max_dd": 159704,
+    "green_days": 0.4531,
+    "ex_top5": -143375,
+    "per_month": null,
+    "why": {
+     "stop": 328,
+     "time": 1443,
+     "squareoff": 112,
+     "missing": 4,
+     "lock": 15
+    }
+   },
+   "wf_net": -99236,
+   "vs_base": {
+    "skipped": 1367,
+    "skipped_net": -577844,
+    "losers_avoided": 907,
+    "losers_avoided_rs": 1213646,
+    "winners_missed": 460,
+    "winners_missed_rs": 635802,
+    "big_missed": 23,
+    "big_missed_rs": 110179,
+    "extra": 750,
+    "extra_net": -129791
+   },
+   "skip_p_design": 0.7285,
+   "wait_cost": {
+    "n": 3131,
+    "points_mean": 6.3,
+    "points_median": 3.9,
+    "rs_lot_mean": -25,
+    "rs_lot_median": 7,
+    "pct_mean": -0.0003,
+    "pct_median": 0.0005,
+    "same_strike": 0.7407
+   }
+  },
+  "T1-P": {
+   "design": {
+    "trades": 4498,
+    "days": 337,
+    "net": 10019,
+    "per_trade": 2.2,
+    "win": 0.4473,
+    "avg_win": 1701,
+    "avg_loss": -1373,
+    "worst_day": -56647,
+    "best_day": 54259,
+    "max_dd": 224592,
+    "green_days": 0.4659,
+    "ex_top5": -57323,
+    "per_month": 275.5,
+    "why": {
+     "time": 3403,
+     "lock": 79,
+     "stop": 815,
+     "squareoff": 184,
+     "missing": 17
+    }
+   },
+   "wf": {
+    "trades": 3266,
+    "days": 247,
+    "net": 175810,
+    "per_trade": 53.8,
+    "win": 0.4596,
+    "avg_win": 1661,
+    "avg_loss": -1313,
+    "worst_day": -31959,
+    "best_day": 46699,
+    "max_dd": 103931,
+    "green_days": 0.4939,
+    "ex_top5": 108468,
+    "per_month": null,
+    "why": {
+     "stop": 524,
+     "lock": 58,
+     "time": 2540,
+     "squareoff": 132,
+     "missing": 12
+    }
+   },
+   "wf_net": 175810,
+   "vs_base": {
+    "skipped": 1,
+    "skipped_net": 198,
+    "losers_avoided": 0,
+    "losers_avoided_rs": 0,
+    "winners_missed": 1,
+    "winners_missed_rs": 198,
+    "big_missed": 0,
+    "big_missed_rs": 0,
+    "extra": 1,
+    "extra_net": 219
+   },
+   "skip_p_design": 0.002,
+   "wait_cost": null
+  },
+  "T2-P": {
+   "design": {
+    "trades": 4302,
+    "days": 337,
+    "net": 79607,
+    "per_trade": 18.5,
+    "win": 0.4512,
+    "avg_win": 1708,
+    "avg_loss": -1371,
+    "worst_day": -56647,
+    "best_day": 49774,
+    "max_dd": 195926,
+    "green_days": 0.4718,
+    "ex_top5": 12265,
+    "per_month": 263.5,
+    "why": {
+     "time": 3242,
+     "stop": 784,
+     "squareoff": 182,
+     "lock": 77,
+     "missing": 17
+    }
+   },
+   "wf": {
+    "trades": 3112,
+    "days": 247,
+    "net": 243221,
+    "per_trade": 78.2,
+    "win": 0.4643,
+    "avg_win": 1677,
+    "avg_loss": -1308,
+    "worst_day": -31959,
+    "best_day": 49774,
+    "max_dd": 85136,
+    "green_days": 0.4939,
+    "ex_top5": 175879,
+    "per_month": null,
+    "why": {
+     "stop": 500,
+     "time": 2411,
+     "squareoff": 131,
+     "lock": 58,
+     "missing": 12
+    }
+   },
+   "wf_net": 243221,
+   "vs_base": {
+    "skipped": 401,
+    "skipped_net": -107073,
+    "losers_avoided": 243,
+    "losers_avoided_rs": 319534,
+    "winners_missed": 158,
+    "winners_missed_rs": 212462,
+    "big_missed": 12,
+    "big_missed_rs": 47842,
+    "extra": 205,
+    "extra_net": -37463
+   },
+   "skip_p_design": 0.01,
+   "wait_cost": null
+  },
+  "T3-P": {
+   "design": {
+    "trades": 3775,
+    "days": 337,
+    "net": -107467,
+    "per_trade": -28.5,
+    "win": 0.4461,
+    "avg_win": 1623,
+    "avg_loss": -1359,
+    "worst_day": -36520,
+    "best_day": 42001,
+    "max_dd": 220756,
+    "green_days": 0.4362,
+    "ex_top5": -167900,
+    "per_month": 231.2,
+    "why": {
+     "time": 2905,
+     "stop": 664,
+     "squareoff": 130,
+     "lock": 62,
+     "missing": 14
+    }
+   },
+   "wf": {
+    "trades": 2720,
+    "days": 247,
+    "net": 59381,
+    "per_trade": 21.8,
+    "win": 0.4603,
+    "avg_win": 1568,
+    "avg_loss": -1296,
+    "worst_day": -24203,
+    "best_day": 42001,
+    "max_dd": 130808,
+    "green_days": 0.4696,
+    "ex_top5": -882,
+    "per_month": null,
+    "why": {
+     "stop": 425,
+     "time": 2142,
+     "squareoff": 95,
+     "lock": 48,
+     "missing": 10
+    }
+   },
+   "wf_net": 59381,
+   "vs_base": {
+    "skipped": 1466,
+    "skipped_net": -10008,
+    "losers_avoided": 821,
+    "losers_avoided_rs": 1143585,
+    "winners_missed": 645,
+    "winners_missed_rs": 1133577,
+    "big_missed": 52,
+    "big_missed_rs": 245598,
+    "extra": 743,
+    "extra_net": -127473
+   },
+   "skip_p_design": 0.988,
+   "wait_cost": null
+  },
+  "T4-P": {
+   "design": {
+    "trades": 2722,
+    "days": 335,
+    "net": -57001,
+    "per_trade": -20.9,
+    "win": 0.4541,
+    "avg_win": 1590,
+    "avg_loss": -1361,
+    "worst_day": -36520,
+    "best_day": 35823,
+    "max_dd": 195826,
+    "green_days": 0.403,
+    "ex_top5": -111220,
+    "per_month": 166.7,
+    "why": {
+     "time": 2116,
+     "stop": 470,
+     "lock": 43,
+     "squareoff": 84,
+     "missing": 9
+    }
+   },
+   "wf": {
+    "trades": 1963,
+    "days": 246,
+    "net": 50749,
+    "per_trade": 25.9,
+    "win": 0.4646,
+    "avg_win": 1539,
+    "avg_loss": -1288,
+    "worst_day": -17080,
+    "best_day": 35823,
+    "max_dd": 85024,
+    "green_days": 0.4024,
+    "ex_top5": -3194,
+    "per_month": null,
+    "why": {
+     "stop": 283,
+     "time": 1575,
+     "lock": 35,
+     "squareoff": 65,
+     "missing": 5
+    }
+   },
+   "wf_net": 50749,
+   "vs_base": {
+    "skipped": 2352,
+    "skipped_net": -49080,
+    "losers_avoided": 1338,
+    "losers_avoided_rs": 1813879,
+    "winners_missed": 1014,
+    "winners_missed_rs": 1764800,
+    "big_missed": 84,
+    "big_missed_rs": 444478,
+    "extra": 576,
+    "extra_net": -116079
+   },
+   "skip_p_design": 0.8164,
+   "wait_cost": null
+  },
+  "T5-P": {
+   "design": {
+    "trades": 3600,
+    "days": 333,
+    "net": -87955,
+    "per_trade": -24.4,
+    "win": 0.45,
+    "avg_win": 1671,
+    "avg_loss": -1411,
+    "worst_day": -52942,
+    "best_day": 54259,
+    "max_dd": 216921,
+    "green_days": 0.4264,
+    "ex_top5": -153110,
+    "per_month": 220.5,
+    "why": {
+     "stop": 678,
+     "time": 2677,
+     "lock": 77,
+     "squareoff": 157,
+     "missing": 11
+    }
+   },
+   "wf": {
+    "trades": 2616,
+    "days": 244,
+    "net": 63545,
+    "per_trade": 24.3,
+    "win": 0.4629,
+    "avg_win": 1615,
+    "avg_loss": -1347,
+    "worst_day": -23638,
+    "best_day": 46699,
+    "max_dd": 145923,
+    "green_days": 0.4672,
+    "ex_top5": -1392,
+    "per_month": null,
+    "why": {
+     "stop": 432,
+     "lock": 61,
+     "time": 1995,
+     "squareoff": 120,
+     "missing": 8
+    }
+   },
+   "wf_net": 63545,
+   "vs_base": {
+    "skipped": 1676,
+    "skipped_net": 90,
+    "losers_avoided": 938,
+    "losers_avoided_rs": 1170536,
+    "winners_missed": 738,
+    "winners_missed_rs": 1170626,
+    "big_missed": 43,
+    "big_missed_rs": 226599,
+    "extra": 778,
+    "extra_net": -97863
+   },
+   "skip_p_design": 0.9501,
+   "wait_cost": null
+  },
+  "T6-P": {
+   "design": {
+    "trades": 2780,
+    "days": 327,
+    "net": -174950,
+    "per_trade": -62.9,
+    "win": 0.4342,
+    "avg_win": 1677,
+    "avg_loss": -1398,
+    "worst_day": -49122,
+    "best_day": 52879,
+    "max_dd": 245939,
+    "green_days": 0.4098,
+    "ex_top5": -234547,
+    "per_month": 170.3,
+    "why": {
+     "time": 2064,
+     "stop": 510,
+     "squareoff": 149,
+     "lock": 52,
+     "missing": 5
+    }
+   },
+   "wf": {
+    "trades": 2022,
+    "days": 239,
+    "net": -7946,
+    "per_trade": -3.9,
+    "win": 0.4515,
+    "avg_win": 1610,
+    "avg_loss": -1333,
+    "worst_day": -26584,
+    "best_day": 46699,
+    "max_dd": 131623,
+    "green_days": 0.4435,
+    "ex_top5": -66442,
+    "per_month": null,
+    "why": {
+     "stop": 327,
+     "time": 1542,
+     "lock": 41,
+     "squareoff": 109,
+     "missing": 3
+    }
+   },
+   "wf_net": -7946,
+   "vs_base": {
+    "skipped": 2695,
+    "skipped_net": 86174,
+    "losers_avoided": 1479,
+    "losers_avoided_rs": 1898469,
+    "winners_missed": 1216,
+    "winners_missed_rs": 1984643,
+    "big_missed": 97,
+    "big_missed_rs": 475704,
+    "extra": 977,
+    "extra_net": -98774
+   },
+   "skip_p_design": 0.992,
+   "wait_cost": null
+  },
+  "T7-P": {
+   "design": {
+    "trades": 4208,
+    "days": 337,
+    "net": 50425,
+    "per_trade": 12.0,
+    "win": 0.4446,
+    "avg_win": 1752,
+    "avg_loss": -1381,
+    "worst_day": -49738,
+    "best_day": 54259,
+    "max_dd": 214239,
+    "green_days": 0.451,
+    "ex_top5": -17892,
+    "per_month": 257.7,
+    "why": {
+     "time": 3130,
+     "lock": 73,
+     "stop": 796,
+     "squareoff": 193,
+     "missing": 16
+    }
+   },
+   "wf": {
+    "trades": 3044,
+    "days": 247,
+    "net": 213748,
+    "per_trade": 70.2,
+    "win": 0.4589,
+    "avg_win": 1716,
+    "avg_loss": -1326,
+    "worst_day": -28942,
+    "best_day": 46699,
+    "max_dd": 94176,
+    "green_days": 0.4858,
+    "ex_top5": 145431,
+    "per_month": null,
+    "why": {
+     "stop": 512,
+     "time": 2332,
+     "squareoff": 136,
+     "lock": 53,
+     "missing": 11
+    }
+   },
+   "wf_net": 213748,
+   "vs_base": {
+    "skipped": 659,
+    "skipped_net": -148657,
+    "losers_avoided": 382,
+    "losers_avoided_rs": 458190,
+    "winners_missed": 277,
+    "winners_missed_rs": 309533,
+    "big_missed": 13,
+    "big_missed_rs": 38698,
+    "extra": 369,
+    "extra_net": -108230
+   },
+   "skip_p_design": 0.1238,
+   "wait_cost": null
+  },
+  "T8-P": {
+   "design": {
+    "trades": 4264,
+    "days": 337,
+    "net": 38372,
+    "per_trade": 9.0,
+    "win": 0.4489,
+    "avg_win": 1683,
+    "avg_loss": -1354,
+    "worst_day": -56126,
+    "best_day": 54259,
+    "max_dd": 216297,
+    "green_days": 0.4659,
+    "ex_top5": -29945,
+    "per_month": 261.2,
+    "why": {
+     "time": 3265,
+     "lock": 73,
+     "stop": 756,
+     "squareoff": 157,
+     "missing": 13
+    }
+   },
+   "wf": {
+    "trades": 3077,
+    "days": 247,
+    "net": 209841,
+    "per_trade": 68.2,
+    "win": 0.4631,
+    "avg_win": 1650,
+    "avg_loss": -1296,
+    "worst_day": -31959,
+    "best_day": 48595,
+    "max_dd": 96440,
+    "green_days": 0.4818,
+    "ex_top5": 141523,
+    "per_month": null,
+    "why": {
+     "stop": 491,
+     "time": 2414,
+     "squareoff": 110,
+     "lock": 53,
+     "missing": 9
+    }
+   },
+   "wf_net": 209841,
+   "vs_base": {
+    "skipped": 535,
+    "skipped_net": 12512,
+    "losers_avoided": 295,
+    "losers_avoided_rs": 422769,
+    "winners_missed": 240,
+    "winners_missed_rs": 435280,
+    "big_missed": 24,
+    "big_missed_rs": 110437,
+    "extra": 301,
+    "extra_net": 40886
+   },
+   "skip_p_design": 0.1936,
+   "wait_cost": null
+  },
+  "W2H-P": {
+   "design": {
+    "trades": 4000,
+    "days": 337,
+    "net": -24689,
+    "per_trade": -6.2,
+    "win": 0.4492,
+    "avg_win": 1634,
+    "avg_loss": -1344,
+    "worst_day": -61227,
+    "best_day": 54503,
+    "max_dd": 178116,
+    "green_days": 0.4421,
+    "ex_top5": -78101,
+    "per_month": 245.0,
+    "why": {
+     "lock": 83,
+     "time": 2994,
+     "stop": 725,
+     "squareoff": 194,
+     "missing": 4
+    }
+   },
+   "wf": {
+    "trades": 2900,
+    "days": 247,
+    "net": 70338,
+    "per_trade": 24.3,
+    "win": 0.459,
+    "avg_win": 1573,
+    "avg_loss": -1289,
+    "worst_day": -24033,
+    "best_day": 46792,
+    "max_dd": 135466,
+    "green_days": 0.4494,
+    "ex_top5": 19154,
+    "per_month": null,
+    "why": {
+     "stop": 481,
+     "time": 2221,
+     "squareoff": 138,
+     "lock": 56,
+     "missing": 4
+    }
+   },
+   "wf_net": 70338,
+   "vs_base": {
+    "skipped": 1140,
+    "skipped_net": -558624,
+    "losers_avoided": 779,
+    "losers_avoided_rs": 1056565,
+    "winners_missed": 361,
+    "winners_missed_rs": 497941,
+    "big_missed": 19,
+    "big_missed_rs": 94789,
+    "extra": 642,
+    "extra_net": -87854
+   },
+   "skip_p_design": 0.7485,
+   "wait_cost": {
+    "n": 3358,
+    "points_mean": 6.4,
+    "points_median": 3.9,
+    "rs_lot_mean": -26,
+    "rs_lot_median": 8,
+    "pct_mean": -0.0005,
+    "pct_median": 0.0005,
+    "same_strike": 0.7442
+   }
+  },
+  "W2D-P": {
+   "design": {
+    "trades": 3315,
+    "days": 337,
+    "net": -72910,
+    "per_trade": -22.0,
+    "win": 0.4459,
+    "avg_win": 1611,
+    "avg_loss": -1336,
+    "worst_day": -37964,
+    "best_day": 42846,
+    "max_dd": 145227,
+    "green_days": 0.4243,
+    "ex_top5": -124927,
+    "per_month": 203.0,
+    "why": {
+     "lock": 60,
+     "time": 2473,
+     "stop": 601,
+     "squareoff": 177,
+     "missing": 4
+    }
+   },
+   "wf": {
+    "trades": 2450,
+    "days": 247,
+    "net": 37937,
+    "per_trade": 15.5,
+    "win": 0.4588,
+    "avg_win": 1541,
+    "avg_loss": -1278,
+    "worst_day": -34373,
+    "best_day": 42846,
+    "max_dd": 116094,
+    "green_days": 0.4494,
+    "ex_top5": -13246,
+    "per_month": null,
+    "why": {
+     "stop": 408,
+     "time": 1862,
+     "squareoff": 135,
+     "lock": 41,
+     "missing": 4
+    }
+   },
+   "wf_net": 37937,
+   "vs_base": {
+    "skipped": 2271,
+    "skipped_net": -1051430,
+    "losers_avoided": 1512,
+    "losers_avoided_rs": 2141467,
+    "winners_missed": 759,
+    "winners_missed_rs": 1090038,
+    "big_missed": 37,
+    "big_missed_rs": 179459,
+    "extra": 1088,
+    "extra_net": -190916
+   },
+   "skip_p_design": 0.8942,
+   "wait_cost": {
+    "n": 2227,
+    "points_mean": 17.8,
+    "points_median": 10.5,
+    "rs_lot_mean": -28,
+    "rs_lot_median": 108,
+    "pct_mean": 0.0,
+    "pct_median": 0.0064,
+    "same_strike": 0.722
+   }
+  },
+  "W2HD-P": {
+   "design": {
+    "trades": 3240,
+    "days": 336,
+    "net": -43188,
+    "per_trade": -13.3,
+    "win": 0.4475,
+    "avg_win": 1618,
+    "avg_loss": -1335,
+    "worst_day": -37964,
+    "best_day": 47330,
+    "max_dd": 164102,
+    "green_days": 0.4405,
+    "ex_top5": -97034,
+    "per_month": 198.4,
+    "why": {
+     "lock": 62,
+     "time": 2410,
+     "stop": 589,
+     "squareoff": 176,
+     "missing": 3
+    }
+   },
+   "wf": {
+    "trades": 2402,
+    "days": 247,
+    "net": 47387,
+    "per_trade": 19.7,
+    "win": 0.4584,
+    "avg_win": 1552,
+    "avg_loss": -1277,
+    "worst_day": -24783,
+    "best_day": 47330,
+    "max_dd": 104536,
+    "green_days": 0.4534,
+    "ex_top5": -5834,
+    "per_month": null,
+    "why": {
+     "stop": 406,
+     "time": 1814,
+     "squareoff": 138,
+     "lock": 41,
+     "missing": 3
+    }
+   },
+   "wf_net": 47387,
+   "vs_base": {
+    "skipped": 2353,
+    "skipped_net": -1036450,
+    "losers_avoided": 1553,
+    "losers_avoided_rs": 2194150,
+    "winners_missed": 800,
+    "winners_missed_rs": 1157701,
+    "big_missed": 41,
+    "big_missed_rs": 205103,
+    "extra": 1095,
+    "extra_net": -161780
+   },
+   "skip_p_design": 0.7964,
+   "wait_cost": {
+    "n": 2145,
+    "points_mean": 18.2,
+    "points_median": 10.9,
+    "rs_lot_mean": -37,
+    "rs_lot_median": 102,
+    "pct_mean": -0.0005,
+    "pct_median": 0.0063,
+    "same_strike": 0.7128
+   }
+  },
+  "W3H-P": {
+   "design": {
+    "trades": 3832,
+    "days": 336,
+    "net": -64912,
+    "per_trade": -16.9,
+    "win": 0.4559,
+    "avg_win": 1563,
+    "avg_loss": -1341,
+    "worst_day": -58139,
+    "best_day": 42053,
+    "max_dd": 174254,
+    "green_days": 0.4554,
+    "ex_top5": -111764,
+    "per_month": 234.7,
+    "why": {
+     "stop": 695,
+     "time": 2872,
+     "squareoff": 185,
+     "lock": 69,
+     "missing": 11
+    }
+   },
+   "wf": {
+    "trades": 2786,
+    "days": 247,
+    "net": 68266,
+    "per_trade": 24.5,
+    "win": 0.467,
+    "avg_win": 1519,
+    "avg_loss": -1285,
+    "worst_day": -28214,
+    "best_day": 39382,
+    "max_dd": 143731,
+    "green_days": 0.4656,
+    "ex_top5": 25089,
+    "per_month": null,
+    "why": {
+     "stop": 452,
+     "time": 2139,
+     "squareoff": 139,
+     "lock": 47,
+     "missing": 9
+    }
+   },
+   "wf_net": 68266,
+   "vs_base": {
+    "skipped": 1412,
+    "skipped_net": -684962,
+    "losers_avoided": 957,
+    "losers_avoided_rs": 1329122,
+    "winners_missed": 455,
+    "winners_missed_rs": 644160,
+    "big_missed": 22,
+    "big_missed_rs": 115695,
+    "extra": 746,
+    "extra_net": -54182
+   },
+   "skip_p_design": 0.9361,
+   "wait_cost": {
+    "n": 3086,
+    "points_mean": 9.1,
+    "points_median": 5.4,
+    "rs_lot_mean": 17,
+    "rs_lot_median": 32,
+    "pct_mean": 0.0026,
+    "pct_median": 0.002,
+    "same_strike": 0.7126
+   }
+  },
+  "W3D-P": {
+   "design": {
+    "trades": 3242,
+    "days": 336,
+    "net": -94611,
+    "per_trade": -29.2,
+    "win": 0.4531,
+    "avg_win": 1540,
+    "avg_loss": -1329,
+    "worst_day": -41948,
+    "best_day": 38873,
+    "max_dd": 170305,
+    "green_days": 0.4286,
+    "ex_top5": -141350,
+    "per_month": 198.6,
+    "why": {
+     "stop": 575,
+     "time": 2424,
+     "squareoff": 189,
+     "lock": 48,
+     "missing": 6
+    }
+   },
+   "wf": {
+    "trades": 2380,
+    "days": 247,
+    "net": -11265,
+    "per_trade": -4.7,
+    "win": 0.4622,
+    "avg_win": 1484,
+    "avg_loss": -1284,
+    "worst_day": -30983,
+    "best_day": 38873,
+    "max_dd": 131297,
+    "green_days": 0.4453,
+    "ex_top5": -53384,
+    "per_month": null,
+    "why": {
+     "stop": 378,
+     "time": 1820,
+     "squareoff": 143,
+     "lock": 34,
+     "missing": 5
+    }
+   },
+   "wf_net": -11265,
+   "vs_base": {
+    "skipped": 2311,
+    "skipped_net": -1191059,
+    "losers_avoided": 1559,
+    "losers_avoided_rs": 2243239,
+    "winners_missed": 752,
+    "winners_missed_rs": 1052180,
+    "big_missed": 34,
+    "big_missed_rs": 164544,
+    "extra": 1055,
+    "extra_net": -141490
+   },
+   "skip_p_design": 0.9481,
+   "wait_cost": {
+    "n": 2187,
+    "points_mean": 21.2,
+    "points_median": 12.4,
+    "rs_lot_mean": 10,
+    "rs_lot_median": 110,
+    "pct_mean": 0.0026,
+    "pct_median": 0.0066,
+    "same_strike": 0.6941
+   }
+  },
+  "W3HD-P": {
+   "design": {
+    "trades": 3090,
+    "days": 336,
+    "net": -73544,
+    "per_trade": -23.8,
+    "win": 0.4544,
+    "avg_win": 1545,
+    "avg_loss": -1331,
+    "worst_day": -41948,
+    "best_day": 37569,
+    "max_dd": 168270,
+    "green_days": 0.4464,
+    "ex_top5": -120396,
+    "per_month": 189.3,
+    "why": {
+     "stop": 554,
+     "time": 2299,
+     "squareoff": 181,
+     "lock": 50,
+     "missing": 6
+    }
+   },
+   "wf": {
+    "trades": 2283,
+    "days": 247,
+    "net": -22014,
+    "per_trade": -9.6,
+    "win": 0.459,
+    "avg_win": 1487,
+    "avg_loss": -1279,
+    "worst_day": -24276,
+    "best_day": 35725,
+    "max_dd": 132680,
+    "green_days": 0.4534,
+    "ex_top5": -65190,
+    "per_month": null,
+    "why": {
+     "stop": 373,
+     "time": 1725,
+     "squareoff": 146,
+     "lock": 34,
+     "missing": 5
+    }
+   },
+   "wf_net": -22014,
+   "vs_base": {
+    "skipped": 2483,
+    "skipped_net": -1137099,
+    "losers_avoided": 1645,
+    "losers_avoided_rs": 2350134,
+    "winners_missed": 838,
+    "winners_missed_rs": 1213035,
+    "big_missed": 44,
+    "big_missed_rs": 221943,
+    "extra": 1075,
+    "extra_net": -129272
+   },
+   "skip_p_design": 0.8902,
+   "wait_cost": {
+    "n": 2015,
+    "points_mean": 22.1,
+    "points_median": 13.0,
+    "rs_lot_mean": 8,
+    "rs_lot_median": 114,
+    "pct_mean": 0.0026,
+    "pct_median": 0.0067,
+    "same_strike": 0.6829
+   }
+  },
+  "W5H-P": {
+   "design": {
+    "trades": 3604,
+    "days": 336,
+    "net": -126378,
+    "per_trade": -35.1,
+    "win": 0.4478,
+    "avg_win": 1552,
+    "avg_loss": -1322,
+    "worst_day": -48992,
+    "best_day": 41849,
+    "max_dd": 250453,
+    "green_days": 0.4673,
+    "ex_top5": -179114,
+    "per_month": 220.7,
+    "why": {
+     "stop": 647,
+     "time": 2675,
+     "squareoff": 199,
+     "lock": 76,
+     "missing": 7
+    }
+   },
+   "wf": {
+    "trades": 2617,
+    "days": 247,
+    "net": 75559,
+    "per_trade": 28.9,
+    "win": 0.462,
+    "avg_win": 1536,
+    "avg_loss": -1265,
+    "worst_day": -29882,
+    "best_day": 41849,
+    "max_dd": 142916,
+    "green_days": 0.5061,
+    "ex_top5": 26778,
+    "per_month": null,
+    "why": {
+     "stop": 419,
+     "squareoff": 151,
+     "time": 1986,
+     "lock": 55,
+     "missing": 6
+    }
+   },
+   "wf_net": 75559,
+   "vs_base": {
+    "skipped": 1761,
+    "skipped_net": -945317,
+    "losers_avoided": 1207,
+    "losers_avoided_rs": 1706459,
+    "winners_missed": 554,
+    "winners_missed_rs": 761142,
+    "big_missed": 28,
+    "big_missed_rs": 144904,
+    "extra": 867,
+    "extra_net": -59389
+   },
+   "skip_p_design": 0.994,
+   "wait_cost": {
+    "n": 2737,
+    "points_mean": 14.1,
+    "points_median": 8.5,
+    "rs_lot_mean": 7,
+    "rs_lot_median": 14,
+    "pct_mean": 0.0018,
+    "pct_median": 0.0011,
+    "same_strike": 0.6438
+   }
+  },
+  "W5D-P": {
+   "design": {
+    "trades": 3163,
+    "days": 336,
+    "net": -317522,
+    "per_trade": -100.4,
+    "win": 0.4293,
+    "avg_win": 1510,
+    "avg_loss": -1312,
+    "worst_day": -30466,
+    "best_day": 31798,
+    "max_dd": 321072,
+    "green_days": 0.4315,
+    "ex_top5": -370852,
+    "per_month": 193.7,
+    "why": {
+     "stop": 590,
+     "time": 2309,
+     "squareoff": 197,
+     "lock": 63,
+     "missing": 4
+    }
+   },
+   "wf": {
+    "trades": 2301,
+    "days": 247,
+    "net": -84090,
+    "per_trade": -36.5,
+    "win": 0.4459,
+    "avg_win": 1478,
+    "avg_loss": -1255,
+    "worst_day": -28396,
+    "best_day": 31798,
+    "max_dd": 107588,
+    "green_days": 0.4575,
+    "ex_top5": -132584,
+    "per_month": null,
+    "why": {
+     "stop": 382,
+     "time": 1719,
+     "squareoff": 150,
+     "lock": 46,
+     "missing": 4
+    }
+   },
+   "wf_net": -84090,
+   "vs_base": {
+    "skipped": 2258,
+    "skipped_net": -1455069,
+    "losers_avoided": 1578,
+    "losers_avoided_rs": 2340495,
+    "winners_missed": 680,
+    "winners_missed_rs": 885426,
+    "big_missed": 23,
+    "big_missed_rs": 114370,
+    "extra": 923,
+    "extra_net": -246216
+   },
+   "skip_p_design": 1.0,
+   "wait_cost": {
+    "n": 2240,
+    "points_mean": 26.4,
+    "points_median": 15.3,
+    "rs_lot_mean": 5,
+    "rs_lot_median": 105,
+    "pct_mean": 0.0021,
+    "pct_median": 0.006,
+    "same_strike": 0.633
+   }
+  },
+  "W5HD-P": {
+   "design": {
+    "trades": 2910,
+    "days": 335,
+    "net": -190929,
+    "per_trade": -65.6,
+    "win": 0.4419,
+    "avg_win": 1519,
+    "avg_loss": -1320,
+    "worst_day": -34713,
+    "best_day": 26747,
+    "max_dd": 200654,
+    "green_days": 0.4448,
+    "ex_top5": -238090,
+    "per_month": 178.2,
+    "why": {
+     "stop": 536,
+     "time": 2120,
+     "squareoff": 184,
+     "lock": 65,
+     "missing": 5
+    }
+   },
+   "wf": {
+    "trades": 2139,
+    "days": 247,
+    "net": -48804,
+    "per_trade": -22.8,
+    "win": 0.4535,
+    "avg_win": 1480,
+    "avg_loss": -1270,
+    "worst_day": -28396,
+    "best_day": 26747,
+    "max_dd": 120633,
+    "green_days": 0.4656,
+    "ex_top5": -91122,
+    "per_month": null,
+    "why": {
+     "stop": 363,
+     "time": 1577,
+     "squareoff": 146,
+     "lock": 48,
+     "missing": 5
+    }
+   },
+   "wf_net": -48804,
+   "vs_base": {
+    "skipped": 2582,
+    "skipped_net": -1344105,
+    "losers_avoided": 1737,
+    "losers_avoided_rs": 2506884,
+    "winners_missed": 845,
+    "winners_missed_rs": 1162778,
+    "big_missed": 38,
+    "big_missed_rs": 202468,
+    "extra": 994,
+    "extra_net": -162868
+   },
+   "skip_p_design": 0.998,
+   "wait_cost": {
+    "n": 1916,
+    "points_mean": 28.1,
+    "points_median": 16.8,
+    "rs_lot_mean": 7,
+    "rs_lot_median": 90,
+    "pct_mean": 0.0019,
+    "pct_median": 0.0057,
+    "same_strike": 0.6086
+   }
+  },
+  "T1-Q": {
+   "design": {
+    "trades": 4498,
+    "days": 337,
+    "net": 7494,
+    "per_trade": 1.7,
+    "win": 0.4389,
+    "avg_win": 1738,
+    "avg_loss": -1356,
+    "worst_day": -56647,
+    "best_day": 54259,
+    "max_dd": 227485,
+    "green_days": 0.457,
+    "ex_top5": -59848,
+    "per_month": 275.5,
+    "why": {
+     "time": 3440,
+     "lock": 35,
+     "stop": 821,
+     "squareoff": 185,
+     "missing": 17
+    }
+   },
+   "wf": {
+    "trades": 3266,
+    "days": 247,
+    "net": 173136,
+    "per_trade": 53.0,
+    "win": 0.4507,
+    "avg_win": 1698,
+    "avg_loss": -1297,
+    "worst_day": -31959,
+    "best_day": 46383,
+    "max_dd": 101267,
+    "green_days": 0.4818,
+    "ex_top5": 105794,
+    "per_month": null,
+    "why": {
+     "stop": 529,
+     "lock": 25,
+     "time": 2567,
+     "squareoff": 133,
+     "missing": 12
+    }
+   },
+   "wf_net": 173136,
+   "vs_base": {
+    "skipped": 1,
+    "skipped_net": 198,
+    "losers_avoided": 0,
+    "losers_avoided_rs": 0,
+    "winners_missed": 1,
+    "winners_missed_rs": 198,
+    "big_missed": 0,
+    "big_missed_rs": 0,
+    "extra": 1,
+    "extra_net": 219
+   },
+   "skip_p_design": 0.002,
+   "wait_cost": null
+  },
+  "T2-Q": {
+   "design": {
+    "trades": 4302,
+    "days": 337,
+    "net": 80071,
+    "per_trade": 18.6,
+    "win": 0.443,
+    "avg_win": 1746,
+    "avg_loss": -1355,
+    "worst_day": -56647,
+    "best_day": 49458,
+    "max_dd": 197496,
+    "green_days": 0.4688,
+    "ex_top5": 12729,
+    "per_month": 263.5,
+    "why": {
+     "time": 3281,
+     "stop": 790,
+     "squareoff": 183,
+     "lock": 31,
+     "missing": 17
+    }
+   },
+   "wf": {
+    "trades": 3112,
+    "days": 247,
+    "net": 242482,
+    "per_trade": 77.9,
+    "win": 0.455,
+    "avg_win": 1717,
+    "avg_loss": -1291,
+    "worst_day": -31959,
+    "best_day": 49458,
+    "max_dd": 83548,
+    "green_days": 0.4899,
+    "ex_top5": 175140,
+    "per_month": null,
+    "why": {
+     "stop": 505,
+     "time": 2439,
+     "squareoff": 132,
+     "lock": 24,
+     "missing": 12
+    }
+   },
+   "wf_net": 242482,
+   "vs_base": {
+    "skipped": 401,
+    "skipped_net": -108131,
+    "losers_avoided": 247,
+    "losers_avoided_rs": 319576,
+    "winners_missed": 154,
+    "winners_missed_rs": 211446,
+    "big_missed": 12,
+    "big_missed_rs": 47842,
+    "extra": 205,
+    "extra_net": -35533
+   },
+   "skip_p_design": 0.008,
+   "wait_cost": null
+  },
+  "T3-Q": {
+   "design": {
+    "trades": 3775,
+    "days": 337,
+    "net": -109834,
+    "per_trade": -29.1,
+    "win": 0.4384,
+    "avg_win": 1660,
+    "avg_loss": -1347,
+    "worst_day": -36520,
+    "best_day": 47155,
+    "max_dd": 218719,
+    "green_days": 0.4273,
+    "ex_top5": -170268,
+    "per_month": 231.2,
+    "why": {
+     "time": 2935,
+     "stop": 674,
+     "squareoff": 130,
+     "lock": 22,
+     "missing": 14
+    }
+   },
+   "wf": {
+    "trades": 2720,
+    "days": 247,
+    "net": 52853,
+    "per_trade": 19.4,
+    "win": 0.4507,
+    "avg_win": 1606,
+    "avg_loss": -1283,
+    "worst_day": -24203,
+    "best_day": 47155,
+    "max_dd": 130189,
+    "green_days": 0.4575,
+    "ex_top5": -7410,
+    "per_month": null,
+    "why": {
+     "stop": 433,
+     "time": 2161,
+     "squareoff": 95,
+     "lock": 21,
+     "missing": 10
+    }
+   },
+   "wf_net": 52853,
+   "vs_base": {
+    "skipped": 1468,
+    "skipped_net": -12503,
+    "losers_avoided": 838,
+    "losers_avoided_rs": 1145885,
+    "winners_missed": 630,
+    "winners_missed_rs": 1133382,
+    "big_missed": 52,
+    "big_missed_rs": 245598,
+    "extra": 745,
+    "extra_net": -129811
+   },
+   "skip_p_design": 0.988,
+   "wait_cost": null
+  },
+  "T4-Q": {
+   "design": {
+    "trades": 2722,
+    "days": 335,
+    "net": -60421,
+    "per_trade": -22.2,
+    "win": 0.4453,
+    "avg_win": 1627,
+    "avg_loss": -1346,
+    "worst_day": -36520,
+    "best_day": 40203,
+    "max_dd": 203228,
+    "green_days": 0.397,
+    "ex_top5": -114640,
+    "per_month": 166.7,
+    "why": {
+     "time": 2135,
+     "stop": 476,
+     "lock": 18,
+     "squareoff": 84,
+     "missing": 9
+    }
+   },
+   "wf": {
+    "trades": 1963,
+    "days": 246,
+    "net": 47784,
+    "per_trade": 24.3,
+    "win": 0.4544,
+    "avg_win": 1581,
+    "avg_loss": -1272,
+    "worst_day": -17080,
+    "best_day": 40203,
+    "max_dd": 90126,
+    "green_days": 0.3943,
+    "ex_top5": -6160,
+    "per_month": null,
+    "why": {
+     "stop": 288,
+     "time": 1589,
+     "lock": 16,
+     "squareoff": 65,
+     "missing": 5
+    }
+   },
+   "wf_net": 47784,
+   "vs_base": {
+    "skipped": 2352,
+    "skipped_net": -50517,
+    "losers_avoided": 1356,
+    "losers_avoided_rs": 1815741,
+    "winners_missed": 996,
+    "winners_missed_rs": 1765224,
+    "big_missed": 84,
+    "big_missed_rs": 444478,
+    "extra": 576,
+    "extra_net": -118411
+   },
+   "skip_p_design": 0.8323,
+   "wait_cost": null
+  },
+  "T5-Q": {
+   "design": {
+    "trades": 3600,
+    "days": 333,
+    "net": -94535,
+    "per_trade": -26.3,
+    "win": 0.4403,
+    "avg_win": 1709,
+    "avg_loss": -1392,
+    "worst_day": -52942,
+    "best_day": 54259,
+    "max_dd": 220527,
+    "green_days": 0.4234,
+    "ex_top5": -159690,
+    "per_month": 220.5,
+    "why": {
+     "stop": 683,
+     "time": 2711,
+     "lock": 35,
+     "squareoff": 160,
+     "missing": 11
+    }
+   },
+   "wf": {
+    "trades": 2616,
+    "days": 244,
+    "net": 57915,
+    "per_trade": 22.1,
+    "win": 0.4526,
+    "avg_win": 1654,
+    "avg_loss": -1327,
+    "worst_day": -23638,
+    "best_day": 46383,
+    "max_dd": 148255,
+    "green_days": 0.459,
+    "ex_top5": -7022,
+    "per_month": null,
+    "why": {
+     "stop": 436,
+     "lock": 27,
+     "time": 2022,
+     "squareoff": 123,
+     "missing": 8
+    }
+   },
+   "wf_net": 57915,
+   "vs_base": {
+    "skipped": 1677,
+    "skipped_net": 6484,
+    "losers_avoided": 945,
+    "losers_avoided_rs": 1172204,
+    "winners_missed": 732,
+    "winners_missed_rs": 1178688,
+    "big_missed": 43,
+    "big_missed_rs": 226599,
+    "extra": 779,
+    "extra_net": -95525
+   },
+   "skip_p_design": 0.9601,
+   "wait_cost": null
+  },
+  "T6-Q": {
+   "design": {
+    "trades": 2780,
+    "days": 327,
+    "net": -185880,
+    "per_trade": -66.9,
+    "win": 0.4237,
+    "avg_win": 1720,
+    "avg_loss": -1381,
+    "worst_day": -49122,
+    "best_day": 52879,
+    "max_dd": 249723,
+    "green_days": 0.4098,
+    "ex_top5": -245477,
+    "per_month": 170.3,
+    "why": {
+     "time": 2082,
+     "stop": 517,
+     "squareoff": 149,
+     "lock": 27,
+     "missing": 5
+    }
+   },
+   "wf": {
+    "trades": 2022,
+    "days": 239,
+    "net": -17373,
+    "per_trade": -8.6,
+    "win": 0.4397,
+    "avg_win": 1653,
+    "avg_loss": -1312,
+    "worst_day": -26584,
+    "best_day": 46383,
+    "max_dd": 132722,
+    "green_days": 0.4435,
+    "ex_top5": -75869,
+    "per_month": null,
+    "why": {
+     "stop": 332,
+     "time": 1556,
+     "lock": 22,
+     "squareoff": 109,
+     "missing": 3
+    }
+   },
+   "wf_net": -17373,
+   "vs_base": {
+    "skipped": 2697,
+    "skipped_net": 92981,
+    "losers_avoided": 1496,
+    "losers_avoided_rs": 1901641,
+    "winners_missed": 1201,
+    "winners_missed_rs": 1994622,
+    "big_missed": 98,
+    "big_missed_rs": 478847,
+    "extra": 979,
+    "extra_net": -100373
+   },
+   "skip_p_design": 0.994,
+   "wait_cost": null
+  },
+  "T7-Q": {
+   "design": {
+    "trades": 4208,
+    "days": 337,
+    "net": 46658,
+    "per_trade": 11.1,
+    "win": 0.4356,
+    "avg_win": 1792,
+    "avg_loss": -1363,
+    "worst_day": -49738,
+    "best_day": 54259,
+    "max_dd": 215894,
+    "green_days": 0.4421,
+    "ex_top5": -21659,
+    "per_month": 257.7,
+    "why": {
+     "time": 3162,
+     "lock": 34,
+     "stop": 802,
+     "squareoff": 194,
+     "missing": 16
+    }
+   },
+   "wf": {
+    "trades": 3044,
+    "days": 247,
+    "net": 209693,
+    "per_trade": 68.9,
+    "win": 0.4494,
+    "avg_win": 1756,
+    "avg_loss": -1308,
+    "worst_day": -28942,
+    "best_day": 47418,
+    "max_dd": 94494,
+    "green_days": 0.4737,
+    "ex_top5": 141375,
+    "per_month": null,
+    "why": {
+     "stop": 517,
+     "time": 2355,
+     "squareoff": 137,
+     "lock": 24,
+     "missing": 11
+    }
+   },
+   "wf_net": 209693,
+   "vs_base": {
+    "skipped": 659,
+    "skipped_net": -146601,
+    "losers_avoided": 384,
+    "losers_avoided_rs": 458224,
+    "winners_missed": 275,
+    "winners_missed_rs": 311623,
+    "big_missed": 13,
+    "big_missed_rs": 38698,
+    "extra": 369,
+    "extra_net": -107416
+   },
+   "skip_p_design": 0.1277,
+   "wait_cost": null
+  },
+  "T8-Q": {
+   "design": {
+    "trades": 4264,
+    "days": 337,
+    "net": 40741,
+    "per_trade": 9.6,
+    "win": 0.4416,
+    "avg_win": 1718,
+    "avg_loss": -1342,
+    "worst_day": -56126,
+    "best_day": 54259,
+    "max_dd": 216136,
+    "green_days": 0.4599,
+    "ex_top5": -27577,
+    "per_month": 261.2,
+    "why": {
+     "time": 3300,
+     "lock": 29,
+     "stop": 764,
+     "squareoff": 158,
+     "missing": 13
+    }
+   },
+   "wf": {
+    "trades": 3077,
+    "days": 247,
+    "net": 209844,
+    "per_trade": 68.2,
+    "win": 0.4553,
+    "avg_win": 1685,
+    "avg_loss": -1283,
+    "worst_day": -31959,
+    "best_day": 48739,
+    "max_dd": 96758,
+    "green_days": 0.4737,
+    "ex_top5": 141526,
+    "per_month": null,
+    "why": {
+     "stop": 497,
+     "time": 2438,
+     "squareoff": 111,
+     "lock": 22,
+     "missing": 9
+    }
+   },
+   "wf_net": 209844,
+   "vs_base": {
+    "skipped": 536,
+    "skipped_net": 10338,
+    "losers_avoided": 303,
+    "losers_avoided_rs": 423731,
+    "winners_missed": 233,
+    "winners_missed_rs": 434069,
+    "big_missed": 24,
+    "big_missed_rs": 110437,
+    "extra": 302,
+    "extra_net": 43605
+   },
+   "skip_p_design": 0.1457,
+   "wait_cost": null
+  },
+  "W2H-Q": {
+   "design": {
+    "trades": 4000,
+    "days": 337,
+    "net": -21184,
+    "per_trade": -5.3,
+    "win": 0.4395,
+    "avg_win": 1676,
+    "avg_loss": -1324,
+    "worst_day": -61227,
+    "best_day": 54277,
+    "max_dd": 166379,
+    "green_days": 0.4451,
+    "ex_top5": -74595,
+    "per_month": 245.0,
+    "why": {
+     "lock": 35,
+     "time": 3038,
+     "stop": 726,
+     "squareoff": 197,
+     "missing": 4
+    }
+   },
+   "wf": {
+    "trades": 2900,
+    "days": 247,
+    "net": 71270,
+    "per_trade": 24.6,
+    "win": 0.4497,
+    "avg_win": 1611,
+    "avg_loss": -1271,
+    "worst_day": -24033,
+    "best_day": 46792,
+    "max_dd": 137408,
+    "green_days": 0.4534,
+    "ex_top5": 20087,
+    "per_month": null,
+    "why": {
+     "stop": 482,
+     "time": 2250,
+     "squareoff": 139,
+     "lock": 25,
+     "missing": 4
+    }
+   },
+   "wf_net": 71270,
+   "vs_base": {
+    "skipped": 1138,
+    "skipped_net": -564956,
+    "losers_avoided": 784,
+    "losers_avoided_rs": 1059791,
+    "winners_missed": 354,
+    "winners_missed_rs": 494836,
+    "big_missed": 19,
+    "big_missed_rs": 94789,
+    "extra": 640,
+    "extra_net": -87710
+   },
+   "skip_p_design": 0.6906,
+   "wait_cost": {
+    "n": 3360,
+    "points_mean": 6.4,
+    "points_median": 3.9,
+    "rs_lot_mean": -27,
+    "rs_lot_median": 8,
+    "pct_mean": -0.0006,
+    "pct_median": 0.0005,
+    "same_strike": 0.7438
+   }
+  },
+  "W2D-Q": {
+   "design": {
+    "trades": 3315,
+    "days": 337,
+    "net": -73028,
+    "per_trade": -22.0,
+    "win": 0.4371,
+    "avg_win": 1648,
+    "avg_loss": -1319,
+    "worst_day": -37964,
+    "best_day": 44158,
+    "max_dd": 144201,
+    "green_days": 0.4214,
+    "ex_top5": -125045,
+    "per_month": 203.0,
+    "why": {
+     "lock": 23,
+     "time": 2507,
+     "stop": 603,
+     "squareoff": 178,
+     "missing": 4
+    }
+   },
+   "wf": {
+    "trades": 2450,
+    "days": 247,
+    "net": 36203,
+    "per_trade": 14.8,
+    "win": 0.4506,
+    "avg_win": 1573,
+    "avg_loss": -1263,
+    "worst_day": -34373,
+    "best_day": 41647,
+    "max_dd": 119236,
+    "green_days": 0.4453,
+    "ex_top5": -14981,
+    "per_month": null,
+    "why": {
+     "stop": 409,
+     "time": 1885,
+     "squareoff": 136,
+     "lock": 16,
+     "missing": 4
+    }
+   },
+   "wf_net": 36203,
+   "vs_base": {
+    "skipped": 2269,
+    "skipped_net": -1058645,
+    "losers_avoided": 1524,
+    "losers_avoided_rs": 2144650,
+    "winners_missed": 745,
+    "winners_missed_rs": 1086005,
+    "big_missed": 37,
+    "big_missed_rs": 179459,
+    "extra": 1086,
+    "extra_net": -194981
+   },
+   "skip_p_design": 0.8902,
+   "wait_cost": {
+    "n": 2229,
+    "points_mean": 17.8,
+    "points_median": 10.5,
+    "rs_lot_mean": -28,
+    "rs_lot_median": 108,
+    "pct_mean": -0.0,
+    "pct_median": 0.0064,
+    "same_strike": 0.7218
+   }
+  },
+  "W2HD-Q": {
+   "design": {
+    "trades": 3239,
+    "days": 336,
+    "net": -39291,
+    "per_trade": -12.1,
+    "win": 0.439,
+    "avg_win": 1656,
+    "avg_loss": -1317,
+    "worst_day": -37964,
+    "best_day": 46612,
+    "max_dd": 156039,
+    "green_days": 0.4345,
+    "ex_top5": -93138,
+    "per_month": 198.4,
+    "why": {
+     "lock": 24,
+     "time": 2445,
+     "stop": 590,
+     "squareoff": 177,
+     "missing": 3
+    }
+   },
+   "wf": {
+    "trades": 2402,
+    "days": 247,
+    "net": 45755,
+    "per_trade": 19.0,
+    "win": 0.4505,
+    "avg_win": 1583,
+    "avg_loss": -1263,
+    "worst_day": -24783,
+    "best_day": 46612,
+    "max_dd": 99124,
+    "green_days": 0.4494,
+    "ex_top5": -7466,
+    "per_month": null,
+    "why": {
+     "stop": 407,
+     "time": 1836,
+     "squareoff": 139,
+     "lock": 17,
+     "missing": 3
+    }
+   },
+   "wf_net": 45755,
+   "vs_base": {
+    "skipped": 2352,
+    "skipped_net": -1046426,
+    "losers_avoided": 1566,
+    "losers_avoided_rs": 2200094,
+    "winners_missed": 786,
+    "winners_missed_rs": 1153668,
+    "big_missed": 41,
+    "big_missed_rs": 205103,
+    "extra": 1093,
+    "extra_net": -164199
+   },
+   "skip_p_design": 0.7665,
+   "wait_cost": {
+    "n": 2146,
+    "points_mean": 18.2,
+    "points_median": 10.9,
+    "rs_lot_mean": -37,
+    "rs_lot_median": 103,
+    "pct_mean": -0.0005,
+    "pct_median": 0.0063,
+    "same_strike": 0.7125
+   }
+  },
+  "W3H-Q": {
+   "design": {
+    "trades": 3832,
+    "days": 336,
+    "net": -75894,
+    "per_trade": -19.8,
+    "win": 0.4455,
+    "avg_win": 1603,
+    "avg_loss": -1323,
+    "worst_day": -58139,
+    "best_day": 44087,
+    "max_dd": 182194,
+    "green_days": 0.4524,
+    "ex_top5": -122746,
+    "per_month": 234.7,
+    "why": {
+     "stop": 700,
+     "time": 2905,
+     "squareoff": 186,
+     "lock": 30,
+     "missing": 11
+    }
+   },
+   "wf": {
+    "trades": 2786,
+    "days": 247,
+    "net": 58232,
+    "per_trade": 20.9,
+    "win": 0.4576,
+    "avg_win": 1548,
+    "avg_loss": -1268,
+    "worst_day": -28214,
+    "best_day": 39382,
+    "max_dd": 146991,
+    "green_days": 0.4656,
+    "ex_top5": 15056,
+    "per_month": null,
+    "why": {
+     "stop": 454,
+     "time": 2159,
+     "squareoff": 140,
+     "lock": 24,
+     "missing": 9
+    }
+   },
+   "wf_net": 58232,
+   "vs_base": {
+    "skipped": 1410,
+    "skipped_net": -683460,
+    "losers_avoided": 961,
+    "losers_avoided_rs": 1327147,
+    "winners_missed": 449,
+    "winners_missed_rs": 643688,
+    "big_missed": 22,
+    "big_missed_rs": 115695,
+    "extra": 744,
+    "extra_net": -59308
+   },
+   "skip_p_design": 0.9521,
+   "wait_cost": {
+    "n": 3088,
+    "points_mean": 9.1,
+    "points_median": 5.4,
+    "rs_lot_mean": 16,
+    "rs_lot_median": 30,
+    "pct_mean": 0.0025,
+    "pct_median": 0.0019,
+    "same_strike": 0.7118
+   }
+  },
+  "W3D-Q": {
+   "design": {
+    "trades": 3242,
+    "days": 336,
+    "net": -93165,
+    "per_trade": -28.7,
+    "win": 0.446,
+    "avg_win": 1573,
+    "avg_loss": -1318,
+    "worst_day": -41948,
+    "best_day": 44087,
+    "max_dd": 173635,
+    "green_days": 0.4286,
+    "ex_top5": -139904,
+    "per_month": 198.6,
+    "why": {
+     "stop": 578,
+     "time": 2452,
+     "squareoff": 189,
+     "lock": 17,
+     "missing": 6
+    }
+   },
+   "wf": {
+    "trades": 2380,
+    "days": 247,
+    "net": -17046,
+    "per_trade": -7.2,
+    "win": 0.4555,
+    "avg_win": 1507,
+    "avg_loss": -1274,
+    "worst_day": -30983,
+    "best_day": 38112,
+    "max_dd": 136294,
+    "green_days": 0.4453,
+    "ex_top5": -59165,
+    "per_month": null,
+    "why": {
+     "stop": 380,
+     "time": 1837,
+     "squareoff": 143,
+     "lock": 15,
+     "missing": 5
+    }
+   },
+   "wf_net": -17046,
+   "vs_base": {
+    "skipped": 2310,
+    "skipped_net": -1194318,
+    "losers_avoided": 1573,
+    "losers_avoided_rs": 2243994,
+    "winners_missed": 737,
+    "winners_missed_rs": 1049676,
+    "big_missed": 34,
+    "big_missed_rs": 164544,
+    "extra": 1054,
+    "extra_net": -144042
+   },
+   "skip_p_design": 0.9381,
+   "wait_cost": {
+    "n": 2188,
+    "points_mean": 21.2,
+    "points_median": 12.4,
+    "rs_lot_mean": 9,
+    "rs_lot_median": 108,
+    "pct_mean": 0.0025,
+    "pct_median": 0.0066,
+    "same_strike": 0.6933
+   }
+  },
+  "W3HD-Q": {
+   "design": {
+    "trades": 3090,
+    "days": 336,
+    "net": -74232,
+    "per_trade": -24.0,
+    "win": 0.4466,
+    "avg_win": 1580,
+    "avg_loss": -1318,
+    "worst_day": -41948,
+    "best_day": 44087,
+    "max_dd": 174903,
+    "green_days": 0.4524,
+    "ex_top5": -121083,
+    "per_month": 189.3,
+    "why": {
+     "stop": 557,
+     "time": 2327,
+     "squareoff": 181,
+     "lock": 18,
+     "missing": 7
+    }
+   },
+   "wf": {
+    "trades": 2283,
+    "days": 247,
+    "net": -28790,
+    "per_trade": -12.6,
+    "win": 0.452,
+    "avg_win": 1510,
+    "avg_loss": -1269,
+    "worst_day": -24276,
+    "best_day": 34995,
+    "max_dd": 138673,
+    "green_days": 0.4575,
+    "ex_top5": -71967,
+    "per_month": null,
+    "why": {
+     "stop": 375,
+     "time": 1741,
+     "squareoff": 146,
+     "lock": 15,
+     "missing": 6
+    }
+   },
+   "wf_net": -28790,
+   "vs_base": {
+    "skipped": 2482,
+    "skipped_net": -1140357,
+    "losers_avoided": 1659,
+    "losers_avoided_rs": 2350888,
+    "winners_missed": 823,
+    "winners_missed_rs": 1210531,
+    "big_missed": 44,
+    "big_missed_rs": 221943,
+    "extra": 1074,
+    "extra_net": -132733
+   },
+   "skip_p_design": 0.8942,
+   "wait_cost": {
+    "n": 2016,
+    "points_mean": 22.1,
+    "points_median": 13.0,
+    "rs_lot_mean": 7,
+    "rs_lot_median": 113,
+    "pct_mean": 0.0025,
+    "pct_median": 0.0066,
+    "same_strike": 0.682
+   }
+  },
+  "W5H-Q": {
+   "design": {
+    "trades": 3604,
+    "days": 336,
+    "net": -139305,
+    "per_trade": -38.7,
+    "win": 0.4359,
+    "avg_win": 1593,
+    "avg_loss": -1299,
+    "worst_day": -48992,
+    "best_day": 41849,
+    "max_dd": 261966,
+    "green_days": 0.4583,
+    "ex_top5": -192042,
+    "per_month": 220.7,
+    "why": {
+     "stop": 652,
+     "time": 2709,
+     "squareoff": 200,
+     "lock": 36,
+     "missing": 7
+    }
+   },
+   "wf": {
+    "trades": 2617,
+    "days": 247,
+    "net": 65285,
+    "per_trade": 24.9,
+    "win": 0.4505,
+    "avg_win": 1573,
+    "avg_loss": -1244,
+    "worst_day": -29882,
+    "best_day": 41849,
+    "max_dd": 143297,
+    "green_days": 0.498,
+    "ex_top5": 16505,
+    "per_month": null,
+    "why": {
+     "stop": 423,
+     "squareoff": 151,
+     "time": 2011,
+     "lock": 26,
+     "missing": 6
+    }
+   },
+   "wf_net": 65285,
+   "vs_base": {
+    "skipped": 1760,
+    "skipped_net": -948979,
+    "losers_avoided": 1215,
+    "losers_avoided_rs": 1707976,
+    "winners_missed": 545,
+    "winners_missed_rs": 758997,
+    "big_missed": 28,
+    "big_missed_rs": 144904,
+    "extra": 866,
+    "extra_net": -65366
+   },
+   "skip_p_design": 0.996,
+   "wait_cost": {
+    "n": 2738,
+    "points_mean": 14.0,
+    "points_median": 8.4,
+    "rs_lot_mean": 7,
+    "rs_lot_median": 14,
+    "pct_mean": 0.0017,
+    "pct_median": 0.0011,
+    "same_strike": 0.6435
+   }
+  },
+  "W5D-Q": {
+   "design": {
+    "trades": 3162,
+    "days": 336,
+    "net": -327949,
+    "per_trade": -103.7,
+    "win": 0.4181,
+    "avg_win": 1550,
+    "avg_loss": -1292,
+    "worst_day": -30466,
+    "best_day": 31592,
+    "max_dd": 332172,
+    "green_days": 0.4345,
+    "ex_top5": -381279,
+    "per_month": 193.7,
+    "why": {
+     "stop": 592,
+     "time": 2341,
+     "squareoff": 197,
+     "lock": 28,
+     "missing": 4
+    }
+   },
+   "wf": {
+    "trades": 2301,
+    "days": 247,
+    "net": -94762,
+    "per_trade": -41.2,
+    "win": 0.4342,
+    "avg_win": 1515,
+    "avg_loss": -1235,
+    "worst_day": -28396,
+    "best_day": 31592,
+    "max_dd": 118347,
+    "green_days": 0.4615,
+    "ex_top5": -143256,
+    "per_month": null,
+    "why": {
+     "stop": 385,
+     "time": 1740,
+     "squareoff": 150,
+     "lock": 22,
+     "missing": 4
+    }
+   },
+   "wf_net": -94762,
+   "vs_base": {
+    "skipped": 2259,
+    "skipped_net": -1458909,
+    "losers_avoided": 1589,
+    "losers_avoided_rs": 2342682,
+    "winners_missed": 670,
+    "winners_missed_rs": 883773,
+    "big_missed": 23,
+    "big_missed_rs": 114370,
+    "extra": 923,
+    "extra_net": -250776
+   },
+   "skip_p_design": 1.0,
+   "wait_cost": {
+    "n": 2239,
+    "points_mean": 26.3,
+    "points_median": 15.2,
+    "rs_lot_mean": 4,
+    "rs_lot_median": 105,
+    "pct_mean": 0.0019,
+    "pct_median": 0.006,
+    "same_strike": 0.6324
+   }
+  },
+  "W5HD-Q": {
+   "design": {
+    "trades": 2910,
+    "days": 335,
+    "net": -202868,
+    "per_trade": -69.7,
+    "win": 0.4292,
+    "avg_win": 1562,
+    "avg_loss": -1297,
+    "worst_day": -34713,
+    "best_day": 26542,
+    "max_dd": 208976,
+    "green_days": 0.4537,
+    "ex_top5": -250028,
+    "per_month": 178.2,
+    "why": {
+     "stop": 539,
+     "time": 2151,
+     "squareoff": 185,
+     "lock": 30,
+     "missing": 5
+    }
+   },
+   "wf": {
+    "trades": 2139,
+    "days": 247,
+    "net": -58863,
+    "per_trade": -27.5,
+    "win": 0.4409,
+    "avg_win": 1520,
+    "avg_loss": -1247,
+    "worst_day": -28396,
+    "best_day": 26542,
+    "max_dd": 124579,
+    "green_days": 0.4777,
+    "ex_top5": -101181,
+    "per_month": null,
+    "why": {
+     "stop": 366,
+     "time": 1598,
+     "squareoff": 147,
+     "lock": 23,
+     "missing": 5
+    }
+   },
+   "wf_net": -58863,
+   "vs_base": {
+    "skipped": 2582,
+    "skipped_net": -1348064,
+    "losers_avoided": 1750,
+    "losers_avoided_rs": 2508918,
+    "winners_missed": 832,
+    "winners_missed_rs": 1160854,
+    "big_missed": 38,
+    "big_missed_rs": 202468,
+    "extra": 994,
+    "extra_net": -168534
+   },
+   "skip_p_design": 0.998,
+   "wait_cost": {
+    "n": 1916,
+    "points_mean": 28.1,
+    "points_median": 16.8,
+    "rs_lot_mean": 5,
+    "rs_lot_median": 89,
+    "pct_mean": 0.0017,
+    "pct_median": 0.0057,
+    "same_strike": 0.608
+   }
+  }
+ },
+ "check": {
+  "XB": {
+   "net": 8281,
+   "expect": 8281,
+   "trades": 4518
+  },
+  "P": {
+   "net": 9998,
+   "expect": 9998,
+   "trades": 4498
+  },
+  "Q": {
+   "net": 7474,
+   "expect": 7474,
+   "trades": 4498
+  }
+ },
+ "c_pick": {
+  "T": "T2",
+  "W": "W2H"
+ },
+ "c_wf_picks": [
+  {
+   "T": "T4",
+   "W": "W3HD"
+  },
+  {
+   "T": "T2",
+   "W": "W3HD"
+  },
+  {
+   "T": "T5",
+   "W": "W3HD"
+  },
+  {
+   "T": "T5",
+   "W": "W2H"
+  }
+ ],
+ "extra_c1": {
+  "variant": "T2",
+  "c1": {
+   "trades": 3071,
+   "days": 323,
+   "net": 216929,
+   "per_trade": 70.6,
+   "win": 0.4676,
+   "avg_win": 1715,
+   "avg_loss": -1374,
+   "worst_day": -58613,
+   "best_day": 57446,
+   "max_dd": 199077,
+   "green_days": 0.4551,
+   "ex_top5": 160476,
+   "per_month": 188.1,
+   "why": {
+    "time": 2247,
+    "lock": 66,
+    "stop": 568,
+    "squareoff": 182,
+    "missing": 8
+   }
+  },
+  "c1_expect": 216929,
+  "c1_plus": {
+   "trades": 2994,
+   "days": 323,
+   "net": 222607,
+   "per_trade": 74.4,
+   "win": 0.4676,
+   "avg_win": 1715,
+   "avg_loss": -1366,
+   "worst_day": -58613,
+   "best_day": 45865,
+   "max_dd": 174321,
+   "green_days": 0.4582,
+   "ex_top5": 166153,
+   "per_month": 183.4,
+   "why": {
+    "time": 2193,
+    "stop": 551,
+    "squareoff": 182,
+    "lock": 60,
+    "missing": 8
+   }
+  },
+  "vs_c1": {
+   "skipped": 130,
+   "skipped_net": -33713,
+   "losers_avoided": 75,
+   "losers_avoided_rs": 116187,
+   "winners_missed": 55,
+   "winners_missed_rs": 82474,
+   "big_missed": 1,
+   "big_missed_rs": 5922,
+   "extra": 53,
+   "extra_net": -28036
+  },
+  "c1_wf_net": 335882,
+  "c1_plus_wf_net": 340147
+ }
+}
