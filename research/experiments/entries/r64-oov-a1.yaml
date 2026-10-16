@@ -1,0 +1,38 @@
+id: r64-oov-a1
+title: 'R64 OOV AFTER A1: -10% + ladder, no target, own time exit'
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R64_LOCK_30_60_100.md
+hypothesis: 'Boss (16 Oct): a -10% premium stop and a 30-60-100 stepped profit lock (breakeven at +30%, +30% at +60%, +60%
+  at +100%) improve the new paper arms after real costs. This variant: AFTER A1: -10% + ladder, no target, own time exit;
+  gates as R51 (final net > 0, twin p < 0.05, BH q <= 0.10 over 15 tests, 40+ trades, top-5 < net, design and walk-forward
+  > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Donchian,
+  OOV) / R57 clean stores (Solo 2.0), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026; Solo 2.0 Jul 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R52 / R57 (weaker)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bar + previous day''s value area (unchanged); only the option exits differ'
+model_or_rule: 'R52 Open outside value (previous day''s value area + first 5-min bar, 1-ITM at 09:20, 5 indices); exits: AFTER
+  A1: -10% + ladder, no target, own time exit'
+settings: research/hunt/r64/r64cfg.py exit_spec / OWN; PREREG.md section 2
+prereg: research/hunt/r64/PREREG.md
+variants_tried: 15
+results:
+  summary: 'Design: 706 trades, win 38%, net Rs 116,843 (Rs 166/trade), worst day -Rs 22,536, max DD Rs 89,197, stops 364.
+    Walk-forward: 529 trades, win 40%, net Rs 66,773 (Rs 126/trade), worst day -Rs 22,536, max DD Rs 59,422, stops 261. Final:
+    293 trades, win 41%, net Rs 1,952 (Rs 7/trade), worst day -Rs 11,911, max DD Rs 38,439, stops 132; twin p 0.1457, BH q
+    0.1821. Verdict: FAIL: p >= 0.05; q > 0.10; top-5 >= net. Versus BEFORE on the same signals: design -Rs 160,294 (bootstrap
+    p 0.99), final -Rs 47,003 (p 0.9045).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, one held
+    contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Failed the gates. Signal on the underlying; nothing changes live.
