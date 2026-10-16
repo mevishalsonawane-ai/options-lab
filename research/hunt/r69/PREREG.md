@@ -37,5 +37,5 @@ seed 69), gates (as R51; BH across these 15 tests; exit twins BH across the 9 X 
 it passes every gate AND its exit-twin q <= 0.10 AND its net is at least both B0's and A4's in design, walk-forward and
 final. Otherwise A4 stays.
 
-**Honest note:** the final period has been read by R51, R52, R57 and R64 - R68 (weak evidence). This is the sixth
-trade-management idea of the day (96 tests across R65 - R69), logged as such.
+**Honest note:** the final period has been read by R51, R52, R57 and R64 - R68 (weak evidence). This is the fifth
+trade-management study of the day (96 tests across R65 - R69), logged as such.

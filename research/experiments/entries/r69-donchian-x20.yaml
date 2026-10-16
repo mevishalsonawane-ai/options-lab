@@ -1,0 +1,37 @@
+id: r69-donchian-x20
+title: R69 Donchian X20 +5% at +20%, then +1 per +1
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R69_ONE_POINT_TRAIL.md
+hypothesis: 'Boss (16 Oct): a +5% stop once the option is +25%, then +1 point of stop for every +1 point of gain (on top of
+  the A4 ladder), improves the paper arms after real costs. This variant: {R.VLABEL[v]}; gates as R51 (BH over 15 tests);
+  recommended only if it also beats B0 and A4 everywhere and random early exits (q <= 0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Donchian,
+  OOV) / R57 stores (Solo 2.0), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026; Solo 2.0 Jul 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R52 / R57 / R64 - R68 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (Donchian 20) (unchanged); only the option exits differ (stops and locks on the premium)'
+model_or_rule: 'R51 Donchian 20 (5-min index Donchian-20 break, 1-ITM, 5 indices); exits: X20 +5% at +20%, then +1 per +1'
+settings: research/hunt/r69/r69cfg.py exit_spec / TRIGGER; PREREG.md
+prereg: research/hunt/r69/PREREG.md
+variants_tried: 15
+results:
+  summary: 'Design: 4510 trades, win 46%, net -Rs 15,307 (-Rs 3/trade), worst day -Rs 53,682, max DD Rs 226,706, stops 806.
+    Walk-forward: 3272 trades, win 47%, net Rs 164,098 (Rs 50/trade), worst day -Rs 31,959, max DD Rs 99,546, stops 517. Final:
+    1786 trades, win 44%, net Rs 82,481 (Rs 46/trade), worst day -Rs 23,012, max DD Rs 90,976, stops 237; entry-twin p 0.006,
+    BH q 0.0112, exit-twin p 0.4391 (q 0.7006). Verdict: FAIL: design net <= 0. Versus B0: design -Rs 23,588 (bootstrap p
+    0.7425), final Rs 27,042 (p 0.0925). Versus A4: design -Rs 22,781 (bootstrap p 0.734), final Rs 3,704 (p 0.3905). Final:
+    versus A4 the rule changed 92 trades; it gave up Rs 36,389 and saved Rs 42,994 (net Rs 6,604).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Failed the gates. Signal on the underlying; research only, nothing changes paper or live.
