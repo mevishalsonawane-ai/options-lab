@@ -236,7 +236,8 @@ object TelegramCapture {
         upd { it.copy(stuck = false) }
         s.start(params())
         loop = Thread({ loop(t, s) }, "telegram-reader").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
-        upd { it.copy(running = true, auth = s.auth) }
+        // Opened: the library is here (the view says so even before the card's first refresh).
+        upd { it.copy(running = true, auth = s.auth, available = true) }
         return true
     }
 
