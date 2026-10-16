@@ -87,6 +87,7 @@ class PassedArmsHostTest : RobolectricTest() {
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") yesterday() else emptyList() }
         PassedArmsHost.testDaily = { emptyList() }
         runBlocking { PassedArmsHost.prefetchNow(day) }
+        OrphanWatch.wipe()
         kite.requests.clear()
     }
 
@@ -242,6 +243,129 @@ class PassedArmsHostTest : RobolectricTest() {
         market(LocalTime.of(9, 27), call = { t -> if (t.isBefore(LocalTime.of(9, 25))) 100.0 else 80.0 })
         at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
         assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertFalse(PassedArmsHost.holding())
+    }
+
+    // ---- 16 Oct: a second trade on the same option, and the safety net ----------------------------------------------------------
+
+    /**
+     * Boss's 16 Oct day on the test option: a 09:20 break bought, sold at its target at 09:30; a second break at 09:50 (NIFTY
+     * 25,100 -> 25,105, the same 1-ITM 25,050 call) bought again at about 120. The call after 09:50 is [after]. The re-entry.
+     */
+    private fun reEntered(until: LocalTime, after: (LocalTime) -> Double): PassedArmsHost.Pos {
+        only(DonchianArm.SOURCE)
+        fun index(t: LocalTime) = when { t.isBefore(LocalTime.of(9, 19)) -> 25_000.0; t.isBefore(LocalTime.of(9, 45)) -> 25_100.0; else -> 25_105.0 }
+        fun call(t: LocalTime) = when { t.isBefore(LocalTime.of(9, 30)) -> 100.0; t.isBefore(LocalTime.of(9, 45)) -> 140.0
+            t.isBefore(LocalTime.of(9, 51)) -> 120.0; else -> after(t) }
+        fun upto(t: LocalTime) { minutes(niftyKey, t, ::index); minutes(ce, t, ::call); minutes(pe, t) { 90.0 } }
+        upto(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val first = PassedArmsHost.view.value.open.single()
+        upto(LocalTime.of(9, 31)); at(LocalTime.of(9, 31)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("target", PassedArmsHost.view.value.closed.single().why)
+        upto(LocalTime.of(9, 50)); tick(LocalTime.of(9, 50))
+        val second = PassedArmsHost.view.value.open.single()
+        assertEquals(first.symbol, second.symbol)
+        assertTrue("its own fill, not the first trade's: ${second.entry}", second.entry >= 120.0 && second.entry < 125.0)
+        assertEquals(day.atTime(9, 50), second.entryMinute)
+        // Booked in the book's own file at once (a restart now keeps it).
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals(second.orderId, view().open.single().orderId)
+        upto(until)
+        return second
+    }
+
+    @Test fun aReEntryAfterAClosedTradeOnTheSameOptionSellsAtItsOwnTarget() {
+        val p = reEntered(LocalTime.of(10, 1)) { t -> if (t.isBefore(LocalTime.of(9, 58))) 130.0 else 160.0 }
+        at(LocalTime.of(10, 1)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = PassedArmsHost.view.value.closed.filter { it.orderId == p.orderId }.single()
+        assertEquals("target", sold.why)
+        assertTrue("${sold.exit}", sold.exit!! <= PassedArms.targetLevel(p.entry, DonchianArm.EXITS)!! + 1e-9)
+        assertEquals(2, PassedArmsHost.view.value.closed.size)
+        assertFalse(PassedArmsHost.holding())
+        assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun aReEntrysThirtyMinutesAndItsStop() {
+        val p = reEntered(LocalTime.of(10, 21)) { 121.0 }
+        at(LocalTime.of(10, 19)); runBlocking { PassedArmsHost.manageOnly() }
+        assertTrue("not before its 30 minutes", PassedArmsHost.holding())
+        at(LocalTime.of(10, 21)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("time", PassedArmsHost.view.value.closed.single { it.orderId == p.orderId }.why)
+    }
+
+    @Test fun aReEntrysStop() {
+        val p = reEntered(LocalTime.of(9, 56)) { 100.0 }
+        at(LocalTime.of(9, 56)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("stop", PassedArmsHost.view.value.closed.single { it.orderId == p.orderId }.why)
+    }
+
+    @Test fun withTheOptionsFeedGoneItsTimeExitStillRuns() {
+        val p = reEntered(LocalTime.of(10, 21)) { 121.0 }
+        // The option's minutes stop at 09:55 (the feed lost it): no bars after that, the clock still sells it at 10:20.
+        upstox.minutes[ce] = upstox.minutes[ce].orEmpty().filter { it.at.isBefore(LocalTime.of(9, 55)) }
+        at(LocalTime.of(10, 21)); runBlocking { PassedArmsHost.manageOnly() }
+        val v = PassedArmsHost.view.value
+        val sold = v.closed.firstOrNull { it.orderId == p.orderId }
+        assertTrue(v.status.toString(), sold?.why == "time" || v.status["${DonchianArm.SOURCE}|exit"].orEmpty().startsWith("exit_retry"))
+    }
+
+    /** A paper buy of the test call tagged [owner]'s, outside any arm's book (the record lost): the orphan. */
+    private fun orphanBuy(owner: String): String {
+        val c = Paper.ticketContract("NIFTY", day.plusDays(7), 25_050.0, Right.CE)!!
+        val r = runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }
+        assertTrue(r.message, r.ok)
+        runBlocking { Strategies.tagOwner("paper:${r.orderId}", "$owner · entry") }
+        return r.orderId!!
+    }
+
+    @Test fun anArmsPositionWithNoRecordIsTakenBackWithItsArmsExitsFromItsRealFill() {
+        only("none")
+        minutes(niftyKey, LocalTime.of(10, 0)) { 25_000.0 }; minutes(ce, LocalTime.of(10, 0)) { 100.0 }
+        at(LocalTime.of(10, 0))
+        val id = orphanBuy(DonchianArm.LABEL)
+        val fill = Paper.state.trades.single { it.orderId == id }
+        assertFalse(PassedArmsHost.holding())
+        // The first sighting does nothing (an entry may still be being booked); the second, 20 s later, takes it back.
+        at(LocalTime.of(10, 1), 0); runBlocking { OrphanWatch.run(context) }
+        assertFalse(PassedArmsHost.holding())
+        at(LocalTime.of(10, 1), 30); runBlocking { OrphanWatch.run(context) }
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals(DonchianArm.SOURCE, p.arm); assertEquals(id, p.orderId); assertEquals(PassedArmsHost.ADOPT_FILL, p.adopted)
+        assertEquals(fill.price.toDouble(), p.entry, 1e-9); assertEquals(fill.timestamp, p.entryTime); assertEquals(65, p.qty)
+        assertTrue(PassedArmsHost.view.value.log.last().contains("taken back"))
+        // Not taken twice.
+        at(LocalTime.of(10, 2)); runBlocking { OrphanWatch.run(context) }
+        assertEquals(1, PassedArmsHost.view.value.open.size)
+        // Its arm's own target sells it.
+        minutes(ce, LocalTime.of(10, 6)) { t -> if (t.isBefore(LocalTime.of(10, 5))) 100.0 else 140.0 }
+        at(LocalTime.of(10, 6)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("target", PassedArmsHost.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun anotherArmsUnwatchedPositionGetsTheNetsStopAndTargetAndAHandOrderIsLeftAlone() {
+        only("none")
+        minutes(niftyKey, LocalTime.of(10, 0)) { 25_000.0 }; minutes(ce, LocalTime.of(10, 0)) { 100.0 }
+        at(LocalTime.of(10, 0))
+        orphanBuy(com.optionslab.engine.orb.NightRules.LABEL)
+        at(LocalTime.of(10, 1), 0); runBlocking { OrphanWatch.run(context) }
+        at(LocalTime.of(10, 1), 30); runBlocking { OrphanWatch.run(context) }
+        val prot = runBlocking { Protections.active() }.single()
+        assertTrue(prot.symbol.contains("25050"))
+        assertTrue(Paper.state.orders.count { it.action == "SELL" && (it.status == "open" || it.status == "trigger pending") } >= 1)
+        assertFalse("never adopted by the passed arms", PassedArmsHost.holding())
+        assertNothingAtZerodha()
+    }
+
+    @Test fun aHandBuyIsNeverAnOrphan() {
+        only("none")
+        minutes(niftyKey, LocalTime.of(10, 0)) { 25_000.0 }; minutes(ce, LocalTime.of(10, 0)) { 100.0 }
+        at(LocalTime.of(10, 0))
+        orphanBuy(Origins.MANUAL)
+        assertTrue(runBlocking { OrphanWatch.find() }.isEmpty())
+        at(LocalTime.of(10, 1), 30); runBlocking { OrphanWatch.run(context) }
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertFalse(PassedArmsHost.holding())
     }
 

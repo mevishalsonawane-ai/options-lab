@@ -301,6 +301,8 @@ object FastPath {
                     step("missed-lock sweep") { Sweeper.run(ctx) }
                     // 15 Oct: the Hero ₹1,000 ticket (paper): its open tickets' trail, target and 15:05 every minute (exits only - its
                     // 12:30 chain reads run in the watch's arms passes, never in this lane).
+                    // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) before their exits.
+                    step("unwatched positions") { OrphanWatch.run(ctx) }
                     step(HERO_TICKET) { HeroTicketArm.manageOnly() }
                     // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0): their open trades' stops, targets, locks, time exits
                     // and square-offs every minute (exits only - their entries' reads run in the watch's arms passes).

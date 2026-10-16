@@ -158,6 +158,9 @@ object PassedArms {
                    /** A lock level an earlier look saw earned by that time (it holds for the bars starting then or later, and now). */
                    known: Pair<LocalDateTime, Double>? = null): Walk {
         if (!(entry > 0)) return Walk(null, entry, null)
+        // 16 Oct: a lock seen before this trade's entry minute belongs to an earlier trade on the same option (a re-entry):
+        // never this one's.
+        val known = known?.takeIf { !it.first.isBefore(entryMinute) }
         val stop = stopLevel(entry, x)
         val tgt = targetLevel(entry, x)
         val tend = x.tmaxMinutes?.let { entryMinute.plusMinutes((it - 1).toLong()) }

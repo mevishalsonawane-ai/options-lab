@@ -53,10 +53,16 @@ object WhatsNew {
     private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
     private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
+    private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-passed-arms-exits", OCT16, "Passed arms always sell at their target, stop and time",
+            "A second trade on the same option could be left with nothing selling it. Now each trade is booked the moment it fills, " +
+                "its exits are checked every 15 seconds, and a safety net takes back any arm's paper position that has no record " +
+                "and tells you. It stays on paper.",
+            "Home → Strategies → the passed-research arms"),
         Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
             "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
                 "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +
