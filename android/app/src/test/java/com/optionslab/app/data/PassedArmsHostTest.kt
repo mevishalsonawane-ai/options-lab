@@ -641,4 +641,110 @@ class PassedArmsHostTest : RobolectricTest() {
         assertFalse(PassedArmsHost.entryMinute(LocalTime.of(9, 23)) || PassedArmsHost.entryMinute(LocalTime.of(15, 20)))
         assertTrue(runBlocking { PassedArmsHost.setArmed("nope", true) }.contains("not ready"))
     }
+    // ---- R73 T7: R51 Donchian 20 takes a break only when Supertrend (10, 3) agrees (16 Oct, Boss) ------------------------------
+
+    /** NIFTY yesterday: falling from 30,000 to 25,000 by 13:35, then flat at 25,000: Supertrend (10, 3) is down at the close. */
+    private fun fallingYesterday(): List<Bar> {
+        val d = day.minusDays(1)
+        return (0 until 375).map { i -> val c = if (i < 260) 30_000.0 - 5_000.0 * i / 259 else 25_000.0
+            Bar(d.atTime(9, 15).plusMinutes(i.toLong()), c, c + 1, c - 1, c) }
+    }
+
+    private val ce25000 = "NSE_FO|PA25000CE"
+
+    /** The falling yesterday read in, and the 25,000 CE listed too (a 25,030 break buys the 1-ITM 25,000 CE), priced at 100. */
+    /** Today's history read again from [h] (the day's earlier read dropped first). */
+    private fun historyNow(h: (String) -> List<Bar>) {
+        PassedArmsHost.testHistory = h
+        PassedArmsHost.wipe()
+        runBlocking { PassedArmsHost.prefetchNow(day) }
+    }
+
+    private fun fallingMarket(until: LocalTime) {
+        val exp = day.plusDays(7)
+        AutomationSupport.contracts(context, listOf(
+            Upstox.Contract("NIFTY", exp, 25_050.0, Right.CE, 65, ce, "NIFTY-PA-25050CE"),
+            Upstox.Contract("NIFTY", exp, 25_000.0, Right.CE, 65, ce25000, "NIFTY-PA-25000CE"),
+            Upstox.Contract("NIFTY", exp, 25_150.0, Right.PE, 65, pe, "NIFTY-PA-25150PE"),
+            Upstox.Contract("NIFTY", exp.plusDays(7), 25_000.0, Right.CE, 65, "NSE_FO|PANEXT", "NIFTY-PA-NEXT")))
+        market(until, open = 25_030.0)
+        minutes(ce25000, until) { 100.0 }
+    }
+
+    @Test fun theUpdateSwitchesTheSupertrendFilterOnOnceAndItsOwnUndoSwitchesItOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        assertTrue(view().stOn)
+        assertEquals(1, view().log.count { "Supertrend filter turned on by the 16 Oct update" in it })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().stOn)
+        assertEquals(1, view().log.count { "Supertrend filter turned on" in it })
+        assertTrue(PassedArmsHost.diagLine().contains("Supertrend filter (R73 T7) on for new breaks"))
+        // Its own Undo: back to the plain rules (the lock and L25 untouched); paper only, no PIN; it stays undone after a restart.
+        val on = AutoChange.passedSupertrend(true)
+        assertNull(Autopilot.apply(on.copy(target = "filter:other"), false))
+        assertTrue(Autopilot.apply(AutoChange.inverse(on, "undone by you"), false)!!.contains("plain rules"))
+        assertFalse(view().stOn); assertTrue(view().lockOn); assertTrue(view().l25On)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("its Undo stays undone after a restart", view().stOn)
+        assertTrue(PassedArmsHost.diagLine().contains("Supertrend filter (R73 T7) off for new breaks"))
+        assertTrue(Autopilot.apply(on, false)!!.contains("Supertrend (10, 3) agrees"))
+        assertTrue(view().stOn)
+        assertEquals("${DonchianArm.LABEL}'s Supertrend filter is already on (paper only).", runBlocking { PassedArmsHost.setSupertrend(true) })
+        // A book that cannot be read is never switched on by itself.
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().stOn)
+    }
+
+    @Test fun withTheFilterOnABreakSupertrendAgreesWithIsBoughtAndLabelled() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        market(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals("CE", p.right); assertTrue(p.st)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue("the label is kept on disk", view().open.single().st)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withTheFilterOnABreakSupertrendIsAgainstIsSkipped() {
+        historyNow { u -> if (u == "NIFTY") fallingYesterday() else emptyList() }
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        fallingMarket(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))
+        assertTrue("nothing bought", PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(view().log.any { "break skipped: Supertrend (10, 3) is against it (R73 T7)" in it })
+        assertTrue(Paper.state.positions.none { it.quantity != 0 })
+        // Decided once: the next pass does not buy it either.
+        fallingMarket(LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
+        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withTheFilterOffTheSameBreakIsBoughtOnThePlainRules() {
+        historyNow { u -> if (u == "NIFTY") fallingYesterday() else emptyList() }
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(false) }
+        fallingMarket(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals("CE", p.right); assertTrue(p.symbol, p.symbol.contains("25000")); assertFalse("a plain-rules trade", p.st)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withTheFilterOnABreakWithNoEarlierSessionIsNotJudgedSoNotTaken() {
+        historyNow { emptyList() }
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        // Flat at 25,000 until 10:55, then 25,100: today's 21st bar breaks up (entry 11:00), with no earlier session in.
+        val until = LocalTime.of(11, 0)
+        minutes(niftyKey, until) { t -> if (t.isBefore(LocalTime.of(10, 59))) 25_000.0 else 25_100.0 }
+        minutes(ce, until) { 100.0 }; minutes(pe, until) { 90.0 }
+        tick(LocalTime.of(11, 0))
+        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(view().log.any { "Supertrend cannot be judged yet" in it })
+        assertNothingAtZerodha()
+    }
 }

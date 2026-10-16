@@ -413,6 +413,13 @@ internal object Autopilot {
                     else com.optionslab.app.data.PassedArmsHost.setLock(c.to == AutoChange.ON, log = false)
                 }.takeIf { !it.contains("not ready") }
             }
+            // 16 Oct (Boss: "T7 supertrend agree"): R73 T7's Supertrend filter on R51 Donchian 20 ([logPassedSupertrendOn]): its Undo
+            // switches it off for new breaks (back to the plain rules). Paper only, never Zerodha: no PIN either way; not logged again.
+            AutoChange.Kind.PAPER_FILTER -> {
+                if (c.target != AutoChange.ST_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setSupertrend(c.to == AutoChange.ON, log = false) }
+                    .takeIf { !it.contains("not ready") }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -856,6 +863,16 @@ internal object Autopilot {
     fun logPassedL25On() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedL25(true), "the 16 Oct update (your choice: \"Select the best\"); paper only - never live")
+    }
+
+    /**
+     * 16 Oct (Boss: "Update normal Donchian as you recommended, T7 supertrend agree"): R73 T7's Supertrend filter switched on once for
+     * R51 Donchian 20's new paper breaks (it passed every R73 gate): logged as Boss's (kept) so the change log and "Today's changes"
+     * show it; one tap undoes it. Paper only.
+     */
+    fun logPassedSupertrendOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedSupertrend(true), "the 16 Oct update (your ask: \"T7 supertrend agree\"); paper only - never live")
     }
 
     /**

@@ -85,4 +85,54 @@ class DonchianArmTest {
             assertTrue(w in DonchianArm.RULES, w)
         assertTrue("1,787 trades" in DonchianArm.RECORD && "+₹55,439" in DonchianArm.RECORD && "FINNIFTY" in DonchianArm.RECORD)
     }
+    // ---- R73 T7: Supertrend (10, 3) agrees with the break (16 Oct, Boss) -------------------------------------------------
+
+    /** 300 bars of a deterministic wave over 3 days (the same formula as the R73 parity run in Python). */
+    private fun wave(): List<PassedArms.Bar5> = (0 until 300).map { i ->
+        val c = 100 + 5 * kotlin.math.sin(i / 7.0) + 3 * kotlin.math.sin(i / 3.1) + 0.02 * i
+        b5(day.minusDays(4L - i / 75), i % 75, c, c + 1 + 0.5 * kotlin.math.abs(kotlin.math.sin(i.toDouble())),
+            c - 1 - 0.5 * kotlin.math.abs(kotlin.math.cos(i.toDouble())), c)
+    }
+
+    @Test fun supertrendMatchesTheResearchLineForLine() {
+        // research/hunt/r73/r73rules.py supertrend_dir on the same 300 bars (u up, d down, 0 not yet known).
+        val want = "000000000uuuuuuuuuuuuuuuuuuuuddddddddddddduuuuuuuuuuuuuuuuuuuuuuuuuuuddddddddddddddddddddddddduuuuuuuuuuuuuuudddddddddddddddddddddddddddduuuuuuuuuuuuuudddddddddddddddddddddddddduuuuuuuuuuuuuuuuuuuuuuuuuuuddddddddddddduuuuuuuuuuuuuuuuuuuuuuuuuuuuddddddddddddddddddddddddduuuuuuuuuuuuuuuddddddddddddddd"
+        val got = DonchianArm.supertrend(wave()).joinToString("") { when (it) { 1 -> "u"; -1 -> "d"; else -> "0" } }
+        assertEquals(want, got)
+        assertEquals(10, DonchianArm.ST_ATR); assertEquals(3.0, DonchianArm.ST_MULT)
+    }
+
+    @Test fun supertrendOnEmptyShortAndGappySeries() {
+        assertEquals(0, DonchianArm.supertrend(emptyList()).size)
+        assertTrue(DonchianArm.supertrend(wave().take(9)).all { it == 0 }, "no ATR before 10 bars")
+        // A bar with a missing price is left out (0) and does not break the rest.
+        val w = wave().toMutableList()
+        w[150] = b5(w[150].date, w[150].b, 1.0, Double.NaN, Double.NaN, Double.NaN)
+        val g = DonchianArm.supertrend(w)
+        assertEquals(0, g[150]); assertTrue(g[299] != 0)
+    }
+
+    @Test fun supertrendAgreesReadsOnlyBarsUpToTheSignal() {
+        val w = wave()
+        val dirs = DonchianArm.supertrend(w)
+        val i = 200
+        val up = DonchianArm.Signal("NIFTY", 1, w[i], 25_000)
+        val dn = DonchianArm.Signal("NIFTY", -1, w[i], 25_000)
+        assertEquals(dirs[i] == 1, DonchianArm.supertrendAgrees(w, up))
+        assertEquals(dirs[i] == -1, DonchianArm.supertrendAgrees(w, dn))
+        // Look-ahead guard: scrambling every later bar changes nothing.
+        val scrambled = w.take(i + 1) + w.drop(i + 1).map { b5(it.date, it.b, 1.0, 9_999.0, 0.5, if (it.b % 2 == 0) 9_000.0 else 1.0) }
+        assertEquals(DonchianArm.supertrendAgrees(w, up), DonchianArm.supertrendAgrees(scrambled, up))
+        assertEquals(DonchianArm.supertrendAgrees(w, dn), DonchianArm.supertrendAgrees(scrambled, dn))
+    }
+
+    @Test fun supertrendCannotBeJudgedWithoutAnEarlierSessionOrTheBar() {
+        val w = wave()
+        val todayOnly = w.filter { it.date == w[299].date }
+        assertNull(DonchianArm.supertrendAgrees(todayOnly, DonchianArm.Signal("NIFTY", 1, todayOnly[40], 1)), "no earlier session")
+        assertNull(DonchianArm.supertrendAgrees(w, DonchianArm.Signal("NIFTY", 1, b5(day.plusDays(9), 3, 1.0, 1.0, 1.0, 1.0), 1)), "bar not in the series")
+        assertNull(DonchianArm.supertrendAgrees(w.take(5), DonchianArm.Signal("NIFTY", 1, w[4], 1)), "no direction yet")
+        assertTrue(DonchianArm.ST_RULE.contains("Supertrend (10, 3)") && DonchianArm.ST_RULE.contains("R73 T7"))
+        assertTrue("1,670 trades" in DonchianArm.ST_RECORD && "+₹1,34,743" in DonchianArm.ST_RECORD && "+₹81,845" in DonchianArm.ST_RECORD)
+    }
 }
