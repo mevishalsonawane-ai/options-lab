@@ -49,7 +49,8 @@ object MemoryTrim {
             when (i) {
                 MemoryPlan.Item.MODEL -> com.optionslab.app.ira.IraModel.releaseForMemory()
                 // 15 Oct: the Signal tester's Telegram reader closes (its next round starts it again once the pressure has passed).
-                MemoryPlan.Item.TELEGRAM -> TelegramCapture.releaseForMemory()
+                // 16 Oct: a login Boss is in the middle of is kept through a mild trim (then it is not counted as let go).
+                MemoryPlan.Item.TELEGRAM -> if (!TelegramCapture.releaseForMemory(level)) return@runCatching
                 MemoryPlan.Item.KNOWLEDGE_INDEX -> com.optionslab.app.ira.KnowledgeLibrary.drop()
                 MemoryPlan.Item.CONCEPTS -> com.optionslab.app.ira.ConceptLibrary.drop()
                 MemoryPlan.Item.SHARED_FINDINGS -> SharedKnowledgeHost.dropCounts()

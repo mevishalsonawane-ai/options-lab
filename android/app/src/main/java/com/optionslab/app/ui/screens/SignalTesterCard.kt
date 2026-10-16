@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
@@ -69,6 +70,12 @@ internal fun SignalTesterCard() {
     var picking by remember { mutableStateOf<Pair<ExportSource, List<SignalTesterHost.Seen>>?>(null) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { SignalTesterHost.on(); SignalPaperArm.refresh(); TelegramCapture.refresh() } } }
     fun io(f: suspend () -> String?) { scope.launch { said = withContext(Dispatchers.IO) { runCatching { f() }.getOrElse { "That did not work: ${it.javaClass.simpleName}." } } } }
+    // 16 Oct (Boss: "Telegram login button not working"): the Telegram steps tell their results in the login dialog itself
+    // ([TelegramCapture.say]); before, they went to this card's line, hidden behind the open dialog.
+    fun tio(f: suspend () -> Unit) { scope.launch { withContext(Dispatchers.IO) { runCatching { f() }.onFailure {
+        // The card left the screen meanwhile: not an error to show (the step itself carries on or stops on its own).
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        TelegramCapture.say("That did not work: ${it.javaClass.simpleName}.") } } } }
     val importer = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             // Read and scanned off the main thread; the picker then lists every chat in the file (titles and counts only).
@@ -99,12 +106,13 @@ internal fun SignalTesterCard() {
         paperLimits = { n, cap -> io { SignalPaperArm.setLimits(n, cap) } },
         now = { com.optionslab.app.data.Market.now().toLocalDateTime().withNano(0) },
         tg = TelegramActions(
-            keys = { id, hash -> io { TelegramCapture.saveKeys(id, hash) } }, login = { io { TelegramCapture.startLogin() } },
-            phone = { x -> io { TelegramCapture.phone(x) } }, code = { x -> io { TelegramCapture.code(x) } },
-            password = { x -> io { TelegramCapture.password(x) } }, capture = { on -> io { TelegramCapture.setCapture(on) } },
-            window = { f, t -> io { TelegramCapture.setWindow(f, t) } }, channels = { io { TelegramCapture.loadChannels() } },
-            check = { id -> io { TelegramCapture.check(id) } }, select = { m -> io { TelegramCapture.select(m) } },
-            history = { id -> io { TelegramCapture.fetchHistory(id) } }, logOut = { io { TelegramCapture.logOut() } },
+            keys = { id, hash -> tio { TelegramCapture.saveKeys(id, hash) } }, login = { tio { TelegramCapture.startLogin() } },
+            phone = { x -> tio { TelegramCapture.phone(x) } }, code = { x -> tio { TelegramCapture.code(x) } },
+            password = { x -> tio { TelegramCapture.password(x) } }, capture = { on -> tio { TelegramCapture.setCapture(on) } },
+            window = { f, t -> tio { TelegramCapture.setWindow(f, t) } }, channels = { tio { TelegramCapture.loadChannels() } },
+            check = { id -> tio { TelegramCapture.check(id) } }, select = { m -> tio { TelegramCapture.select(m) } },
+            history = { id -> tio { TelegramCapture.fetchHistory(id) } }, logOut = { tio { TelegramCapture.logOut() } },
+            retry = { tio { TelegramCapture.retryLogin() } },
         ),
     ))
     picking?.let { (src, seen) ->
@@ -148,7 +156,7 @@ internal class TelegramActions(
     val keys: (String, String) -> Unit = { _, _ -> }, val login: () -> Unit = {}, val phone: (String) -> Unit = {}, val code: (String) -> Unit = {},
     val password: (String) -> Unit = {}, val capture: (Boolean) -> Unit = {}, val window: (LocalTime, LocalTime) -> Unit = { _, _ -> },
     val channels: () -> Unit = {}, val check: (Long) -> Unit = {}, val select: (Map<Long, String>) -> Unit = {}, val history: (Long) -> Unit = {},
-    val logOut: () -> Unit = {},
+    val logOut: () -> Unit = {}, val retry: () -> Unit = {},
 )
 
 private fun rs(x: Double) = ChannelScore.rs(x)
@@ -216,7 +224,8 @@ internal fun SignalPanel(v: SignalTesterHost.View, pv: SignalPaperArm.View, said
     Column {
         said?.let { Text(keepNumbersWhole(it), style = Type.bodySmall.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(bottom = 6.dp)) }
         // The Telegram login, compact: its name (a tap: every step, in its dialog), one status line, its capture switch.
-        if (tv.available) TelegramRow(tv, v, a.tg)
+        // 16 Oct: also when the library cannot load on this phone, to say why (a 32-bit phone, a library that failed).
+        if (tv.available || tv.why != null) TelegramRow(tv, v, a.tg)
         Text("Chats followed", style = Type.label)
         if (v.cards.isEmpty()) Text("None yet: pick chats from an export, or add one by name.", style = Type.bodySmall)
         v.cards.forEach { c ->
@@ -554,10 +563,18 @@ internal fun TelegramDialog(tv: TelegramCapture.View, v: SignalTesterHost.View, 
         "Read-only: IraAlgo never sends, joins, leaves, reacts or marks anything as read. Your api_id and api_hash (from my.telegram.org → " +
             "API development tools) and the login stay encrypted on this phone only; your phone number, code and password go only to Telegram.",
         "Status: ${tv.line}." + (tv.hint?.let { " The code / password hint: $it." } ?: ""),
-        tv.said ?: "",
     ), extra = {
+        // 16 Oct (Boss: "Telegram login button not working"): every step's result, here, next to its button; a visible busy state
+        // while Telegram starts, and what to check (with "Try again") when it does not answer.
+        if (tv.busy) Row(Modifier.padding(bottom = 6.dp).semantics { contentDescription = "Telegram is starting" }, verticalAlignment = Alignment.CenterVertically) {
+            com.optionslab.app.ui.components.CompassSpinner(Modifier.size(16.dp))
+            Text("Starting Telegram…", style = Type.bodySmall, modifier = Modifier.padding(start = 8.dp))
+        }
+        // While starting, the spinner's own words stand in for the "Starting Telegram…" said (what came before it stays).
+        (if (tv.busy) tv.said?.removeSuffix("Starting Telegram…")?.trim()?.ifEmpty { null } else tv.said)?.let { Text(keepNumbersWhole(it), style = Type.bodySmall.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(bottom = 6.dp)) }
         val auth = tv.auth
         when {
+            !tv.available -> Unit
             !tv.keys -> {
                 OutlinedTextField(apiId, { apiId = it.filter { c -> c.isDigit() }.take(12) }, singleLine = true, label = { Text("api_id") },
                     modifier = Modifier.semantics { contentDescription = "api_id" })
@@ -578,7 +595,9 @@ internal fun TelegramDialog(tv: TelegramCapture.View, v: SignalTesterHost.View, 
                     modifier = Modifier.semantics { contentDescription = label })
                 TextButton({ if (entry.isNotBlank()) { send(entry); entry = "" } }, Modifier.heightIn(min = 48.dp)) { Text("Send") }
             }
-            !tv.loggedIn -> TextButton(a.login, Modifier.heightIn(min = 48.dp)) { Text("Log in to Telegram") }
+            tv.stuck -> TextButton(a.retry, Modifier.heightIn(min = 48.dp)) { Text("Try again") }
+            // Starting: the spinner above, no second "Log in" to tap meanwhile.
+            !tv.loggedIn -> if (!tv.busy) TextButton(a.login, Modifier.heightIn(min = 48.dp)) { Text("Log in to Telegram") }
             else -> {
                 TextButton({ a.channels(); picking = true }, Modifier.heightIn(min = 48.dp)) { Text("Choose channels (${selected.size} selected)") }
                 selected.forEach { (id, title) ->

@@ -53,10 +53,17 @@ object WhatsNew {
     private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
     private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
+    private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-telegram-login-fix", OCT16, "The Telegram login shows what it is doing",
+            "Each step of the Telegram login now shows its result inside the login window, with a spinner while Telegram starts. " +
+                "If Telegram does not answer within 20 seconds, it says what to check and offers Try again. " +
+                "After you save your api keys, the login starts by itself. " +
+                "Leaving the app to read the login code no longer closes the login.",
+            "Home → Strategies → tap Signal tester's name → Telegram login"),
         Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
             "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
                 "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +
