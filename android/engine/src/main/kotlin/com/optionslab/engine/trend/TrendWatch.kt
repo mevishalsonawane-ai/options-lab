@@ -125,6 +125,15 @@ object TrendWatch {
         val key: String get() = "${if (live) "live" else "paper"}|$symbol|$fill"
     }
 
+    /**
+     * A sale is made only this soon after the turn's act minute (R63 sold at that minute): a turn first seen later (the
+     * background round delayed, a restart, the exit switched back on) is a note, never a late sale at a later price.
+     */
+    const val FRESH_MINUTES = 3L
+
+    /** Whether the turn [v] is still fresh at [now] ([FRESH_MINUTES]). */
+    fun fresh(v: Verdict, now: LocalDateTime): Boolean = v.at != null && !now.isAfter(v.at.plusMinutes(FRESH_MINUTES).plusSeconds(59))
+
     /** What to do about a turn. */
     enum class Act { NONE, NOTE, SELL }
 
@@ -178,11 +187,12 @@ object TrendWatch {
     private fun px(x: Double?): String = x?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "the market"
 
     /** The log line: "trend turned against R51 Donchian 20 NIFTY..CE at 11:05: would sell at 84.20 (T2, shadow)". */
-    fun line(h: Held, v: Verdict, act: Act): String {
+    fun line(h: Held, v: Verdict, act: Act, late: Boolean = false): String {
         val at = v.at?.let { hhmm(it) } ?: "?"
         val who = "${h.source.label} ${h.symbol}"
         val tail = when {
             act == Act.SELL -> "selling on paper at about ${px(h.premium)} (${v.rule.key}, passed research $RESEARCH)"
+            late -> "would sell at ${px(h.premium)} (${v.rule.key}: seen too late to sell, note only)"
             h.live -> "would sell at ${px(h.premium)} (${v.rule.key}, live: alert only, never an order)"
             !h.tested -> "would sell at ${px(h.premium)} (${v.rule.key}, a setting research did not test: note only)"
             else -> "would sell at ${px(h.premium)} (${v.rule.key}, shadow: failed research)"

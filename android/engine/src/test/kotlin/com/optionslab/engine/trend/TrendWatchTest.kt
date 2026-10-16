@@ -148,6 +148,16 @@ class TrendWatchTest {
     }
 
     @Test
+    fun aTurnSeenLateIsANoteNeverALateSale() {
+        val v = TrendWatch.Verdict(Rule.T3, day.atTime(11, 5), "turned at 11:05")
+        assertTrue(TrendWatch.fresh(v, day.atTime(11, 5)))
+        assertTrue(TrendWatch.fresh(v, day.atTime(11, 8, 59)))
+        assertFalse(TrendWatch.fresh(v, day.atTime(11, 9)))
+        assertFalse(TrendWatch.fresh(v.copy(at = null), day.atTime(11, 5)))
+        assertTrue(TrendWatch.line(held(Source.HERO_TICKET), v, Act.NOTE, late = true).contains("seen too late to sell, note only"))
+    }
+
+    @Test
     fun statusLine() {
         val sw = TrendWatch.Switches()
         assertEquals("Off: no position is watched", TrendWatch.status(sw.copy(on = false), 3, 1, 0))

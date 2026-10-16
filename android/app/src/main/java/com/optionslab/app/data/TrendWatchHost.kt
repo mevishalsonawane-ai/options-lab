@@ -85,6 +85,9 @@ object TrendWatchHost {
     /** The Hero legs the watch asked the arm to sell: symbol -> when (memory only; read on the minute lane, so no file here). */
     private val sells = ConcurrentHashMap<String, LocalDateTime>()
 
+    /** A pending order's note ([Rec.act]): never counted as a position that turned. */
+    const val PENDING_ACT = "PENDING"
+
     /** The one-time switch-on of the Hero ticket's trend exit under the PAPER rule (logged once in Autopilot's change log). */
     internal const val AUTO_ON = "hero_trend_exit_2026-10-16"
 
@@ -119,7 +122,13 @@ object TrendWatchHost {
             o.optJSONArray("told")?.let { a -> for (i in 0 until a.length()) l.told += a.getString(i) }
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) l.migrated += a.getString(i) }
         }.isSuccess
-        if (!ok && f != null && f.exists()) runCatching { Vault.setAside(f) }
+        if (!ok && f != null && f.exists()) {
+            runCatching { Vault.setAside(f) }
+            // Unreadable (never silently back on): the Hero exit starts OFF and the one-time switch-on is not logged again.
+            l.sw = l.sw.copy(act = l.sw.act + (Source.HERO_TICKET to false))
+            l.migrated += AUTO_ON
+            runCatching { Diag.record("trend watch", "its file could not be read: set aside; the Hero ticket's trend exit starts off") }
+        }
         cache = l
         // The Hero ticket's trend exit passed research: on by the update under the PAPER rule, logged once as Boss's ask.
         if (AUTO_ON !in l.migrated) {
@@ -150,7 +159,7 @@ object TrendWatchHost {
 
     private fun publish(l: Log, watched: List<Watched>) {
         val d = today()
-        val todays = l.recs.filter { it.day == d }
+        val todays = l.recs.filter { it.day == d && it.act != PENDING_ACT }
         _view.value = View(l.sw, TrendWatch.status(l.sw, watched.size, todays.size, todays.count { it.act == TrendWatch.Act.SELL.name }),
             watched, l.recs.takeLast(40), loaded = true)
     }
@@ -161,11 +170,17 @@ object TrendWatchHost {
     fun switches(): TrendWatch.Switches = synchronized(lock) { log().sw }
 
     /** The row's switch: off, nothing is watched or noted (and no Hero leg is sold on a turn). */
-    fun setOn(on: Boolean): String = synchronized(lock) {
-        val l = log()
-        if (l.sw.on != on) { l.sw = l.sw.copy(on = on); save(l) }
-        if (!on) sells.clear()
-        if (on) "${TrendWatch.LABEL} on: notes for every open position; the Hero ticket's legs sold on paper on a T3 turn." else "${TrendWatch.LABEL} off."
+    fun setOn(on: Boolean): String {
+        val heroChanged = synchronized(lock) {
+            val l = log()
+            val changed = l.sw.on != on
+            if (changed) { l.sw = l.sw.copy(on = on); save(l) }
+            if (!on) sells.clear()
+            changed && l.sw.acts(Source.HERO_TICKET)
+        }
+        // The Hero ticket's paper exit goes with the main switch: logged in the change timeline like its own switch.
+        if (heroChanged) runCatching { com.optionslab.app.ira.Autopilot.trendExitSwitchedByBoss(Source.HERO_TICKET.key, Source.HERO_TICKET.label, on) }
+        return if (on) "${TrendWatch.LABEL} on: notes for every open position; the Hero ticket's legs sold on paper on a T3 turn." else "${TrendWatch.LABEL} off."
     }
 
     /** "Live positions too" (notes and alerts only, never an order): off by default. */
@@ -221,6 +236,8 @@ object TrendWatchHost {
     /** One round of the words lane. Never throws. */
     suspend fun watch() {
         if (com.optionslab.app.BuildConfig.GOLD) return
+        // Never in the unit tests' other passes (their Autopilot books and reads are their own); its tests set [testMinutes].
+        if (android.os.Build.FINGERPRINT == "robolectric" && testMinutes == null) return
         val now = Market.now().toLocalDateTime().withNano(0)
         if (!runCatching { Market.isTradingDay(now.toLocalDate()) }.getOrDefault(false) || now.toLocalTime().isBefore(START)) return
         // Restored positions first (start-up order): the watch only reads them once they are.
@@ -263,11 +280,17 @@ object TrendWatchHost {
         synchronized(lock) {
             val l = log()
             val d = now.toLocalDate()
-            for ((h, v, act) in found) {
+            for ((h, v, act0) in found) {
+                // The switches as they are now (Boss may have switched the exit off during the round's reads), and a sale only
+                // while the turn is fresh: one first seen late is a note, never a late sale at a later price.
+                val wanted = if (act0 == TrendWatch.Act.SELL) TrendWatch.act(h, l.sw) else act0
+                val late = wanted == TrendWatch.Act.SELL && !TrendWatch.fresh(v, now)
+                val act = if (late) TrendWatch.Act.NOTE else wanted
                 val k = "$d#${h.key}|${v.rule.key}"
                 if (k in l.told) { if (act == TrendWatch.Act.SELL && !heroGone(h.symbol)) sells.putIfAbsent(h.symbol, now); continue }
+                if (act == TrendWatch.Act.NONE) continue
                 l.told += k
-                val line = TrendWatch.line(h, v, act)
+                val line = TrendWatch.line(h, v, act, late)
                 if (act == TrendWatch.Act.SELL) sells[h.symbol] = now
                 val r = Rec(k, d, h.source, h.symbol, h.live, v.rule.key, v.at!!, act.name, line)
                 l.recs += r; new += r
@@ -275,7 +298,7 @@ object TrendWatchHost {
             for ((k, line, src) in pending) {
                 if (k in l.told) continue
                 l.told += k
-                val r = Rec(k, d, src.first, src.second, false, TrendWatch.SHADOW_RULE.key, now, "PENDING", line)
+                val r = Rec(k, d, src.first, src.second, false, TrendWatch.SHADOW_RULE.key, now, PENDING_ACT, line)
                 l.recs += r; new += r
             }
             if (new.isNotEmpty()) save(l)
@@ -520,6 +543,9 @@ object TrendWatchHost {
         synchronized(lock) { cache = null; written.forget() }
         liveFillCache.clear(); stockKeys.clear()
     }
+
+    /** TEST ONLY: a sell request as a SELL round leaves it. */
+    internal fun requestForTest(symbol: String) { sells[symbol] = LocalDateTime.now(IST) }
 
     /** TEST ONLY: forget the log's memory (the file stays) and the sell requests, as a restart would. */
     internal fun resetForTest() = synchronized(lock) { cache = null; written.forget(); sells.clear(); _view.value = View(); testMinutes = null; testLive = null; testLiveOrders = null; liveOrders = null }

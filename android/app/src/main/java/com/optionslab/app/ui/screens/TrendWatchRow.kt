@@ -45,7 +45,7 @@ internal fun TrendWatchRow() {
 /** The dialog's paragraphs: what it does and what research found, then what is watched and today's turns. */
 internal fun trendExplanation(v: TrendWatchHost.View): List<String> = listOf(
     "Every open position and pending order, paper and (with its switch) live, is judged on its underlying's completed bars - " +
-        "the index, the stock or the MCX future, never the option's own price - about once a minute, in Jarvis's background round.",
+        "the index, the stock or the MCX future, never the option's own price - about once a minute, in Jarvis's background round (NSE hours, 09:20-15:40: MCX evening positions are not watched).",
     "Research R63 tested four turns (${TrendTurn.Rule.entries.joinToString("; ") { "${it.key} ${it.label}" }}) on six strategies " +
         "from 20 Nov 2024. ${TrendWatch.RECORD}.",
     "So only the Hero ₹1,000 ticket's paper legs are sold on a turn (T3), through the arm's own exit; each sale is in the change " +

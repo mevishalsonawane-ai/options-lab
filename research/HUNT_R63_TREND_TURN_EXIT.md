@@ -139,7 +139,8 @@ years) and R19b / R19c (Liquidity give-back trails cut big winners and lost to r
 - The Hero ticket is priced with R54's engine (limit buy, late-minute spread, stray-print guard), not R51's, because that
   is how the ticket is bought; the trend exit uses R54's market sell at the act minute's open.
 - In the app the Hero exit fires from the Trend watch's worker round after the 5-minute bar closes, so the sale can come
-  up to a minute or so after the research's next-minute open.
+  up to a minute or so after the research's next-minute open. A turn first seen more than 3 minutes after its bar closed (a delayed
+  round, a restart, the exit switched back on) is only noted, never sold late at a later price.
 - Sample sizes: every number above is on the trades and days listed with it; Liquidity's T1 / T2 have 0 changed trades.
 
 ## In the app (what changed)

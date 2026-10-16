@@ -176,8 +176,12 @@ object TrendTurn {
     }
 
     /** The first turn that sells a position filled at [fill]: completed while open, >= [MIN_OPEN_MINUTES] after the fill. */
-    fun exitTurn(rule: Rule, turns: List<Turn>, fill: LocalDateTime): Turn? = turns.firstOrNull { t ->
-        !t.act.isBefore(fill.plusMinutes(MIN_OPEN_MINUTES)) && (rule != Rule.T3 || (t.firstAct != null && t.firstAct.isAfter(fill)))
+    fun exitTurn(rule: Rule, turns: List<Turn>, fill: LocalDateTime): Turn? {
+        // The fill's minute, as the research's rows count it (a fill at 10:05:20 is row 10:05).
+        val f = fill.withSecond(0).withNano(0)
+        return turns.firstOrNull { t ->
+            !t.act.isBefore(f.plusMinutes(MIN_OPEN_MINUTES)) && (rule != Rule.T3 || (t.firstAct != null && t.firstAct.isAfter(f)))
+        }
     }
 
     /** How many bars a rule needs before it can say anything (EMA: 2; Supertrend: its ATR; Donchian: 10 before). */

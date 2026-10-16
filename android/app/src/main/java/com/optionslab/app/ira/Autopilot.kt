@@ -949,7 +949,23 @@ internal object Autopilot {
      */
     fun logTrendExitOn(source: String, label: String, rule: String, research: String) {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.trendExitOn(source, label, rule, research), "your ask, 16 Oct (research R63); paper only - never live")
+        val c = AutoChange.trendExitOn(source, label, rule, research)
+        // On the same lane as the sales, so the switch-on is always logged before them; once (by its "on", not any entry).
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target && it.change.to == AutoChange.ON }) {
+                        _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
+                            note = "your ask, 16 Oct (research R63); paper only - never live").first
+                        save()
+                    }
+                }
+            }
+        }
     }
 
     /** One paper leg of [label] sold on the trend turn ([line]): logged (kept); its Undo switches the trend exit off. */

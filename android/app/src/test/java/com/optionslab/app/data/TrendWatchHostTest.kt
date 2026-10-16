@@ -170,7 +170,9 @@ class TrendWatchHostTest : RobolectricTest() {
             Source.OTHER_ARM, Source.HERO_TICKET), got)
         // A Hero-labelled leg the Hero arm does not hold is not a tested ticket: never sold, only noted.
         assertTrue(TrendWatchHost.view.value.watched.all { it.act == "NOTE" })
-        assertEquals(TrendWatch.status(TrendWatchHost.switches(), 9, 0, 0), TrendWatchHost.view.value.status)
+        assertTrue(TrendWatchHost.view.value.status, TrendWatchHost.view.value.status.startsWith("On · 9 watched"))
+        // Notes only: no sell request for any of them, the Hero-labelled one included.
+        assertTrue(TrendWatchHost.view.value.recent.none { it.act == TrendWatch.Act.SELL.name })
         assertNothingAtZerodha()
     }
 
@@ -217,10 +219,12 @@ class TrendWatchHostTest : RobolectricTest() {
     }
 
     @Test fun aMemoryTrimLetsGoLastAndKeepsTheSellRequests() {
+        TrendWatchHost.requestForTest("NIFTY-HERO-CE")
         assertEquals(MemoryPlan.Item.TREND_WATCH, MemoryPlan.Item.entries.last())
         val done = MemoryTrim.release(MemoryPlan.releases(MemoryPlan.BACKGROUND), MemoryPlan.BACKGROUND)
         assertEquals(MemoryPlan.Item.TREND_WATCH, done.last())
         assertTrue(TrendWatchHost.switches().on)           // read again from its file
         assertTrue(MemoryTrim.lastLine.orEmpty().contains("the position watch untouched"))
+        assertTrue("a Hero leg's sell request is part of the position watch: never let go", TrendWatchHost.sellRequested("NIFTY-HERO-CE"))
     }
 }

@@ -132,6 +132,8 @@ class TrendTurnTest {
         val turns = listOf(TrendTurn.Turn(day.atTime(10, 40), null), TrendTurn.Turn(t, null))
         assertEquals(t, TrendTurn.exitTurn(Rule.T1, turns, day.atTime(11, 0))?.act)
         assertNull(TrendTurn.exitTurn(Rule.T1, turns, day.atTime(11, 1)))
+        // The fill's minute counts, as the research's rows do: filled at 11:00:40, the 11:05 act is 5 minutes on.
+        assertEquals(t, TrendTurn.exitTurn(Rule.T1, turns, day.atTime(11, 0, 40))?.act)
         val pair = listOf(TrendTurn.Turn(day.atTime(11, 10), day.atTime(11, 5)), TrendTurn.Turn(day.atTime(11, 15), day.atTime(11, 10)))
         assertEquals(day.atTime(11, 10), TrendTurn.exitTurn(Rule.T3, pair, day.atTime(11, 4))?.act)
         assertEquals(day.atTime(11, 15), TrendTurn.exitTurn(Rule.T3, pair, day.atTime(11, 6))?.act)
