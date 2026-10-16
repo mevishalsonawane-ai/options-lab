@@ -60,6 +60,11 @@ class TdSession(private val clientId: Int? = null, private val send: (String) ->
     /** Boss's selected channels (the app sets them; nothing is selected at first). */
     @Volatile var selected: Set<Long> = emptySet()
     private var params: Params? = null
+    /**
+     * The parameters went to TDLib (16 Oct, the login fix: TDLib says it waits for them twice - its update, and the answer to
+     * the [start]'s getAuthorizationState - and a second setTdlibParameters only earns an "Unexpected setTdlibParameters" error).
+     */
+    private var paramsSent = false
 
     /** The channels TDLib has listed, titles only, newest first as Telegram orders them. */
     fun channels(): List<Channel> = synchronized(chats) { chats.map { Channel(it.key, it.value) } }
@@ -90,6 +95,29 @@ class TdSession(private val clientId: Int? = null, private val send: (String) ->
         @Suppress("UNCHECKED_CAST")
         private fun obj(x: Any?): Map<String, Any?>? = x as? Map<String, Any?>
         private fun long(x: Any?): Long? = (x as? Double)?.toLong() ?: (x as? String)?.toLongOrNull()
+
+        /**
+         * TDLib's error [message] in plain words for the login dialog (16 Oct, the login fix: Boss saw nothing when a step failed).
+         * TDLib's own words only - never a phone number, a code or a password (TDLib does not repeat them).
+         */
+        fun errorWords(message: String): String {
+            val m = message.uppercase()
+            val wait = Regex("(?:retry after|FLOOD_WAIT_)\\s*(\\d+)", RegexOption.IGNORE_CASE).find(message)?.groupValues?.get(1)
+            return when {
+                "API_ID_INVALID" in m || "API_ID_PUBLISHED_FLOOD" in m || "VALID API_ID MUST BE PROVIDED" in m ->
+                    "Telegram says the api_id / api_hash are not valid. Copy both again from my.telegram.org → API development tools; " +
+                        "\"Log out of Telegram\" here clears the saved ones, then enter them again."
+                "PHONE_NUMBER_INVALID" in m -> "Telegram says that phone number is not valid: enter it with the country code, e.g. +91 98…"
+                "PHONE_NUMBER_BANNED" in m -> "Telegram says this phone number is banned."
+                "PHONE_CODE_INVALID" in m -> "That login code is not right: enter the newest code Telegram sent."
+                "PHONE_CODE_EXPIRED" in m -> "That login code has expired: tap \"Log in to Telegram\" for a new one."
+                "PASSWORD_HASH_INVALID" in m -> "That 2-step verification password is not right."
+                "ENCRYPTION KEY" in m || "DATABASE" in m && "KEY" in m ->
+                    "Telegram's saved login on this phone could not be opened. Tap \"Log out of Telegram\" to clear it, then log in again."
+                wait != null || "TOO MANY REQUESTS" in m -> "Telegram asks to wait" + (wait?.let { " $it s" } ?: " a while") + " before trying again."
+                else -> "Telegram: ${message.take(200)}"
+            }
+        }
     }
 
     /** A request to TDLib; anything not in [ALLOWED] is refused here, whoever asks. */
@@ -104,6 +132,7 @@ class TdSession(private val clientId: Int? = null, private val send: (String) ->
     /** Started with [p] (null: no keys yet - the login asks for them). TDLib's log off; its parameters when it asks. */
     fun start(p: Params?) {
         params = p
+        paramsSent = false
         auth = if (p == null) Auth.NEED_KEYS else Auth.STARTING
         request("setLogStream", "\"log_stream\":{\"@type\":\"logStreamEmpty\"}")
         request("setLogVerbosityLevel", "\"new_verbosity_level\":0")
@@ -223,6 +252,8 @@ class TdSession(private val clientId: Int? = null, private val send: (String) ->
             "authorizationStateWaitTdlibParameters" -> {
                 val p = params
                 if (p == null) { setAuth(Auth.NEED_KEYS, out); return }
+                if (paramsSent) return
+                paramsSent = true
                 request("setTdlibParameters", "\"use_test_dc\":false,\"database_directory\":${q(p.dbDir)},\"files_directory\":${q(p.filesDir)}," +
                     "\"database_encryption_key\":${q(p.dbKeyB64)},\"use_file_database\":false,\"use_chat_info_database\":true," +
                     "\"use_message_database\":false,\"use_secret_chats\":false,\"api_id\":${p.apiId},\"api_hash\":${q(p.apiHash)}," +

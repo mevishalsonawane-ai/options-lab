@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -223,5 +224,65 @@ class SignalTesterCardTest {
         val f = SignalTesterHost.Rec("s3", "Sensex Kings", t0.plusMinutes(9), SignalTesterHost.TELEGRAM, kind = SignalTesterHost.FOLLOW, text = "T1 done",
             follow = CallParser.Reading.FollowUp(CallParser.Follow.TARGET, 1), link = "s1", verdict = com.optionslab.engine.signals.CallReader.Verdict.AFTER_STOP)
         assertTrue(callLine(f).contains("follow-up: target hit (T1) - reached only after our stop · Telegram (read-only login)"))
+    }
+
+    // ---- 16 Oct, Boss: "Telegram login button not working" (its results were shown only behind the dialog) -------------------
+
+    @Test fun theLoginsResultsShowInsideTheDialogWithABusyStateAndTryAgain() {
+        val log = ArrayList<String>()
+        val step = androidx.compose.runtime.mutableStateOf(com.optionslab.app.data.TelegramCapture.View(available = true, keys = true))
+        compose.setContent { IraAlgoTheme("light") { TelegramDialog(step.value, SignalTesterHost.View(on = true), TelegramActions(login = { log += "login" },
+            phone = { log += "phone $it" }, password = { log += "password ${it.length}" }, retry = { log += "retry" })) { log += "closed" } } }
+        compose.waitForIdle()
+        tapText("Log in to Telegram")
+        assertEquals("login", log.last())
+        // Starting: a spinner with its words, the "Saved…" said kept, no second "Log in" to tap.
+        step.value = step.value.copy(running = true, auth = com.optionslab.engine.signals.TdSession.Auth.STARTING, said = "Saved on this phone only (encrypted). Starting Telegram…")
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Telegram is starting").assertExists()
+        compose.onNodeWithText("Starting Telegram…").assertExists()
+        compose.onNodeWithText(keepNumbersWhole("Saved on this phone only (encrypted).")).assertExists()
+        assertTrue(compose.onAllNodesWithText("Log in to Telegram").fetchSemanticsNodes().isEmpty())
+        // Stuck: what to check, and "Try again".
+        step.value = step.value.copy(stuck = true, said = com.optionslab.app.data.TelegramCapture.STUCK_WORDS)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole(com.optionslab.app.data.TelegramCapture.STUCK_WORDS)).assertExists()
+        tapText("Try again")
+        assertEquals("retry", log.last())
+        // The phone step: its field, and what TDLib said, in the dialog.
+        step.value = step.value.copy(stuck = false, auth = com.optionslab.engine.signals.TdSession.Auth.NEED_PHONE, said = "Telegram started. Enter your phone number with the country code (+91…), then Send.")
+        compose.waitForIdle()
+        assertTrue(compose.onAllNodesWithContentDescription("Telegram is starting").fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithText(keepNumbersWhole("Telegram started. Enter your phone number with the country code (+91…), then Send.")).assertExists()
+        compose.onNodeWithContentDescription("Phone number (+91…)").performTextInput("+91 99999 00000")
+        tapText("Send")
+        assertEquals("phone +91 99999 00000", log.last())
+        // TDLib's error in plain words; then the 2-step password, masked.
+        step.value = step.value.copy(said = "Telegram says that phone number is not valid: enter it with the country code, e.g. +91 98…")
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("Telegram says that phone number is not valid: enter it with the country code, e.g. +91 98…")).assertExists()
+        step.value = step.value.copy(auth = com.optionslab.engine.signals.TdSession.Auth.NEED_PASSWORD, hint = "pet", said = "Your account has 2-step verification: enter its password, then Send.")
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("2-step verification password").performTextInput("secret77")
+        assertTrue("the password is masked", compose.onAllNodesWithText("secret77").fetchSemanticsNodes().isEmpty())
+        tapText("Send")
+        assertEquals("password 8", log.last())
+        tapText("OK")
+        assertEquals("closed", log.last())
+    }
+
+    @Test fun aPhoneWithoutTheLibrarySaysWhy() {
+        val log = ArrayList<String>()
+        val why = "Not on this phone: the Telegram login needs a 64-bit ARM phone (arm64-v8a); this one is armeabi-v7a"
+        val tv = com.optionslab.app.data.TelegramCapture.View(available = false, why = why)
+        compose.setContent { IraAlgoTheme("light") { Column { SignalPanel(SignalTesterHost.View(on = true), com.optionslab.app.data.SignalPaperArm.View(), null,
+            SignalActions(tg = TelegramActions(login = { log += "login" })), tv) } } }
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole(why)).assertExists()
+        tap("Telegram login")
+        // The dialog says it too, and offers no step that cannot work.
+        assertTrue(compose.onAllNodesWithText("Log in to Telegram").fetchSemanticsNodes().isEmpty())
+        assertTrue(compose.onAllNodesWithContentDescription("api_id").fetchSemanticsNodes().isEmpty())
+        assertTrue(log.isEmpty())
     }
 }

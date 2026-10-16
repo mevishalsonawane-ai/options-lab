@@ -183,4 +183,55 @@ class TdSessionTest {
         val m = (s.onUpdate(page).single() as TdSession.Event.History).msgs.single()
         assertTrue(m.edited); assertEquals(t0.plusMinutes(4), m.editedAt)
     }
+
+    // 16 Oct, the login fix (Boss: "Telegram login button not working").
+    @Test fun theParametersGoOnceThoughTdlibAsksTwice() {
+        val c = TdSession(clientId = 1) { sent += it }
+        c.start(params)
+        assertTrue(sent.last().contains("\"getAuthorizationState\""))
+        // TDLib's update, then the answer to the getAuthorizationState kick (no "authorization_state" wrapper), with its client id.
+        c.onUpdate("""{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateWaitTdlibParameters"},"@client_id":1}""")
+        c.onUpdate("""{"@type":"authorizationStateWaitTdlibParameters","@client_id":1}""")
+        assertEquals(1, sent.count { it.contains("\"setTdlibParameters\"") })
+        // Every field TDLib 1.8.67's setTdlibParameters takes, flat (no "parameters" object), the key as base64 bytes.
+        val p = sent.single { it.contains("\"setTdlibParameters\"") }
+        for (f in listOf("use_test_dc", "database_directory", "files_directory", "database_encryption_key", "use_file_database",
+            "use_chat_info_database", "use_message_database", "use_secret_chats", "api_id", "api_hash", "system_language_code",
+            "device_model", "system_version", "application_version")) assertTrue(p.contains("\"$f\":"), f)
+        assertTrue(!p.contains("\"parameters\""))
+        assertEquals(TdSession.Auth.STARTING, c.auth)
+        // Another client's answer (a whole number, as TDLib's JSON gives it) changes nothing; ours does.
+        assertEquals(emptyList(), c.onUpdate("""{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateWaitPhoneNumber"},"@client_id":2}"""))
+        assertEquals(TdSession.Auth.STARTING, c.auth)
+        val e = c.onUpdate("""{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateWaitPhoneNumber"},"@client_id":1}""")
+        assertEquals(listOf<TdSession.Event>(TdSession.Event.AuthChanged(TdSession.Auth.NEED_PHONE)), e)
+        // A restarted session sends them again.
+        c.start(params)
+        c.onUpdate("""{"@type":"authorizationStateWaitTdlibParameters","@client_id":1}""")
+        assertEquals(2, sent.count { it.contains("\"setTdlibParameters\"") })
+    }
+
+    @Test fun aChannelIdBeyondThirtyTwoBitsAndAStringIdReadWhole() {
+        login()
+        val big = -1002_345_678_901L
+        s.onUpdate(chat(big, "Big Channel", channelType))
+        s.onUpdate("""{"@type":"updateNewChat","chat":{"@type":"chat","id":"-1009876543210","title":"Str","type":$channelType}}""")
+        assertEquals(listOf(big, -1009876543210L), s.channels().map { it.id })
+    }
+
+    @Test fun tdlibsErrorsInPlainWords() {
+        assertTrue(TdSession.errorWords("API_ID_INVALID").contains("api_id / api_hash are not valid"))
+        assertTrue(TdSession.errorWords("Valid api_id must be provided. Can be obtained at https://my.telegram.org").contains("not valid"))
+        assertTrue(TdSession.errorWords("PHONE_NUMBER_INVALID").contains("country code"))
+        assertTrue(TdSession.errorWords("PHONE_NUMBER_BANNED").contains("banned"))
+        assertTrue(TdSession.errorWords("PHONE_CODE_INVALID").contains("not right"))
+        assertTrue(TdSession.errorWords("PHONE_CODE_EXPIRED").contains("expired"))
+        assertTrue(TdSession.errorWords("PASSWORD_HASH_INVALID").contains("password is not right"))
+        assertTrue(TdSession.errorWords("Wrong database encryption key").contains("could not be opened"))
+        assertEquals("Telegram asks to wait 30 s before trying again.", TdSession.errorWords("Too Many Requests: retry after 30"))
+        assertEquals("Telegram asks to wait 7 s before trying again.", TdSession.errorWords("FLOOD_WAIT_7"))
+        assertEquals("Telegram asks to wait a while before trying again.", TdSession.errorWords("Too Many Requests"))
+        assertEquals("Telegram: Something else", TdSession.errorWords("Something else"))
+        assertEquals(210, TdSession.errorWords("x".repeat(500)).length)
+    }
 }
