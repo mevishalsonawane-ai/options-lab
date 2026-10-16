@@ -176,6 +176,16 @@ val = DataLoader(load("validation"), batch_size=1024)
 
 ```
 python -I research/data/xau/fetch_duka_xau_bidask.py RAW.parquet          # ~2 files a minute when throttled
+```
+
+The fetch is resumable (16 Oct 2026): every downloaded day and side is kept in `~/.cache/iraalgo/xau_duka/` (outside
+git; `--cache DIR` to move it), so after a container restart just run the same command again and it downloads only
+the days it does not have yet. Days that failed on the network are not cached and are tried again on the rerun; a
+throttled server (HTTP 429) is waited out (30 s, 60 s, ... up to 5 minutes a step). Run it detached with a log:
+
+```
+setsid nohup python -I -u research/data/xau/fetch_duka_xau_bidask.py RAW.parquet > fetch.log 2>&1 < /dev/null &
+# once fetch.log ends with "rows ... missed [] 0":
 python research/data/xau/xau_build.py RAW.parquet OUT_DIR --upload         # clean, bars, features, labels, nn, html
 python -m pytest research/data/tests/test_xau_lab.py -q
 ```

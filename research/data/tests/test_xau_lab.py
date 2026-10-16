@@ -121,12 +121,16 @@ def test_get_retries_then_gives_up():
 
     def boom(*a, **k):
         calls.append(1)
-        raise urllib.error.HTTPError("u", 429, "Too Many", {}, None)
+        raise urllib.error.HTTPError("u", 500, "Server error", {}, None)  # 429 has its own, longer budget (below)
     assert fd.get("https://x", tries=3, opener=boom, sleep=lambda s: None) is None and len(calls) == 3
 
     def nf(*a, **k):
         raise urllib.error.HTTPError("u", 404, "nf", {}, None)
     assert fd.get("https://x", tries=3, opener=nf, sleep=lambda s: None) == b""
+
+    def busy(*a, **k):  # 503 "No server is available" is the datafeed being busy, never "no file"
+        raise urllib.error.HTTPError("u", 503, "busy", {}, None)
+    assert fd.get("https://x", tries=3, opener=busy, sleep=lambda s: None, throttled_tries=4) is None
 
 
 # ----------------------------------------------------------------------------------------------------------- cleaning
@@ -497,3 +501,78 @@ def test_gap_report_classifies(clean):
     df["gap_min"] = (df.ts_utc.diff().dt.total_seconds() / 60).fillna(1.0)
     g = xau_build.gap_report(df)
     assert g["weekend"] == 1 and g["other_count"] >= 1 and g["other"][0]["minutes"] >= 30
+
+
+# ------------------------------------------------------------------------------------------------- resumable fetch
+def _bi5(day_secs, price):
+    return lzma.compress(fd.RECORD.pack(day_secs, price, price, price, price, 1.0))
+
+
+def test_get_waits_longer_on_throttle_then_succeeds():
+    import urllib.error
+    waits, n = [], [0]
+
+    class R:
+        def read(self):
+            return b"ok"
+
+    def throttled(*a, **k):
+        n[0] += 1
+        if n[0] <= 7:  # more 429s than the 6 plain network retries: must not give up
+            raise urllib.error.HTTPError("u", 429, "Too Many", {}, None)
+        return R()
+    assert fd.get("https://x", tries=6, opener=throttled, sleep=waits.append) == b"ok"
+    assert waits[0] == 30 and waits == sorted(waits) and max(waits) <= 300
+
+    def always(*a, **k):
+        raise urllib.error.HTTPError("u", 429, "Too Many", {}, None)
+    assert fd.get("https://x", opener=always, sleep=lambda s: None, throttled_tries=5) is None
+
+
+def test_fetch_resumes_from_cache_after_a_restart(tmp_path):
+    """A first run is 'killed' after a few files; the rerun downloads only what is not cached, never re-downloads
+    cached days, retries the day that failed, and gives the same parquet as one clean run."""
+    days = [dt.date(2026, 3, 2) + dt.timedelta(days=i) for i in range(3)]  # Mon..Wed
+    payload = {fd.URL.format(y=d.year, m=d.month - 1, d=d.day, side=s): _bi5(60 * i, 2000_000 + 1000 * i)
+               for i, d in enumerate(days) for s in ("BID", "ASK")}
+    cache, calls = tmp_path / "cache", []
+
+    class Killed(Exception):
+        pass
+
+    def dying(url):
+        calls.append(url)
+        if len(calls) > 3:
+            raise Killed
+        return payload[url]
+    args = [str(tmp_path / "a.parquet"), "--start", "2026-03-02", "--end", "2026-03-04", "--cache", str(cache)]
+    with pytest.raises(Killed):
+        fd.main(args, fetch=dying, pause=0)
+    assert len(list(cache.glob("*.bi5"))) == 3 and not list(cache.glob("*.part"))
+
+    calls2 = []
+
+    def flaky(url):  # the rerun: Wednesday BID fails on the network
+        calls2.append(url)
+        return None if url.endswith("/02/04/BID_candles_min_1.bi5") else payload[url]
+    fd.main(args, fetch=flaky, pause=0)
+    assert len(calls2) == 3 and not set(calls2) & set(calls[:3])  # cached files are never downloaded again
+    assert pd.read_parquet(tmp_path / "a.parquet").close_bid.isna().sum() == 1  # Wednesday has no BID yet
+
+    calls3 = []
+    fd.main(args, fetch=lambda u: calls3.append(u) or payload[u], pause=0)
+    assert len(calls3) == 1  # only the missed file is fetched again
+    clean = str(tmp_path / "b.parquet")
+    fd.main([clean] + args[1:-1] + [str(tmp_path / "fresh")], fetch=lambda u: payload[u], pause=0)
+    pd.testing.assert_frame_equal(pd.read_parquet(tmp_path / "a.parquet"), pd.read_parquet(clean))
+
+
+def test_cache_keeps_empty_days_and_drops_corrupt_files(tmp_path):
+    d = dt.date(2026, 3, 2)
+    assert fd.day_rows(d, "BID", fetch=lambda u: b"", cache=str(tmp_path)) == []
+    assert (tmp_path / "2026-03-02_BID.bi5").read_bytes() == b""
+    assert fd.day_rows(d, "BID", fetch=lambda u: 1 / 0, cache=str(tmp_path)) == []  # cached: no fetch
+    assert fd.day_rows(d, "ASK", fetch=lambda u: b"not lzma", cache=str(tmp_path)) is None
+    assert not (tmp_path / "2026-03-02_ASK.bi5").exists()
+    assert fd.day_rows(d, "ASK", fetch=lambda u: None, cache=str(tmp_path)) is None
+    assert not (tmp_path / "2026-03-02_ASK.bi5").exists()
