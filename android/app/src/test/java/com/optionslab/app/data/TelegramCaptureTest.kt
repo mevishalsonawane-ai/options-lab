@@ -42,12 +42,13 @@ class TelegramCaptureTest : RobolectricTest() {
     private val mom = 77L
 
     /** The stand-in: answers the login steps itself; everything else is pushed by the test. */
-    private inner class Fake : TelegramCapture.Transport {
+    /** [loggedIn]: a session already authorised on this phone (a restart after a login): ready as soon as it starts. */
+    private inner class Fake(private val loggedIn: Boolean = false) : TelegramCapture.Transport {
         override fun send(json: String) {
             sent += json
             when {
                 json.contains("\"getAuthorizationState\"") -> inbox += state("authorizationStateWaitTdlibParameters")
-                json.contains("\"setTdlibParameters\"") -> inbox += state("authorizationStateWaitPhoneNumber")
+                json.contains("\"setTdlibParameters\"") -> inbox += state(if (loggedIn) "authorizationStateReady" else "authorizationStateWaitPhoneNumber")
                 json.contains("\"setAuthenticationPhoneNumber\"") -> inbox += state("authorizationStateWaitCode")
                 json.contains("\"checkAuthenticationCode\"") -> inbox += state("authorizationStateReady")
                 json.contains("\"loadChats\"") -> listOf(chat(kings, "Sensex Kings", true), chat(other, "Other Calls", true), chat(group, "Family", false)).forEach { inbox += it }
@@ -236,7 +237,7 @@ class TelegramCaptureTest : RobolectricTest() {
         assertTrue(TelegramCapture.diagLine(), TelegramCapture.diagLine().endsWith("· 2 channels selected"))
         // A new process: everything in memory forgotten; the vault file and the settings stay.
         TelegramCapture.resetForTest(); SignalTesterHost.resetForTest()
-        TelegramCapture.testTransport = { Fake() }
+        TelegramCapture.testTransport = { Fake(loggedIn = true) }
         SignalTesterHost.testBars = { _, _ -> emptyList() }; SignalTesterHost.testContracts = emptyList()
         SignalTesterHost.testModelMissing = true; SignalTesterHost.testHolding = false
         assertEquals(setOf(kings, other), SignalTesterHost.telegramSelected().keys)
@@ -245,6 +246,8 @@ class TelegramCaptureTest : RobolectricTest() {
         TelegramCapture.ensure(day.atTime(10, 0))
         assertTrue(TelegramCapture.view.value.running)
         assertTrue(TelegramCapture.diagLine(), TelegramCapture.diagLine().endsWith("· running · 2 channels selected"))
+        // Logged in again by itself, the channel list read (posts are read only from chats the session knows).
+        waitFor("the channel list after the restart", 6_000) { TelegramCapture.view.value.channels.size == 2 }
         push(kings, 1L shl 20, "#sensex 73100 CE\nAbove 280\nTarget 310", day.atTime(10, 0, 5))
         push(other, 2L shl 20, "NIFTY 25000 PE above 90 target 120", day.atTime(10, 0, 9))
         push(group, 3L shl 20, "NIFTY 25100 CE above 100 FAMILYGROUP", day.atTime(10, 0, 9))
