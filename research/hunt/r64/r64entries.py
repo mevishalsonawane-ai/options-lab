@@ -42,6 +42,11 @@ def main():
             passed = r["verdict"] == "PASS"
             if v == "B0":
                 verdict, note = "paper-only", "The current paper arm re-measured (the BEFORE column); unchanged."
+            elif v == "A4":
+                verdict = "paper-only"
+                note = ("Passed every gate; not at least BEFORE's net in every period (PREREG section 5), but Boss chose it on "
+                        "16 Oct (\"apply it\"): applied to the three PAPER arms' new trades, logged in the Autopilot timeline, "
+                        "undone in one tap (android PassedArmsHost.setLock, AutoChange.Kind.PAPER_LOCK).")
             elif passed:
                 verdict = "inconclusive"
                 note = ("Passed every gate, but not at least BEFORE's net in design, walk-forward and final (PREREG "

@@ -32,6 +32,7 @@ results:
   costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, one held
     contract, 1 lot in force
 holdout_read: true
-verdict: inconclusive
-notes: Passed every gate, but not at least BEFORE's net in design, walk-forward and final (PREREG section 5), so not recommended;
-  Boss may still choose it. Signal on the underlying; nothing changes live.
+verdict: paper-only
+notes: 'Passed every gate; not at least BEFORE''s net in every period (PREREG section 5), but Boss chose it on 16 Oct ("apply
+  it"): applied to the three PAPER arms'' new trades, logged in the Autopilot timeline, undone in one tap (android PassedArmsHost.setLock,
+  AutoChange.Kind.PAPER_LOCK). Signal on the underlying; nothing changes live.'
