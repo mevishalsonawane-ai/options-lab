@@ -59,9 +59,9 @@ object WhatsNew {
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
         Entry("2026-10-16-passed-arms-exits", OCT16, "Passed arms always sell at their target, stop and time",
-            "A second trade on the same option could be left with nothing selling it. Now each trade is booked the moment it fills, " +
-                "its exits are checked every 15 seconds, and a safety net takes back any arm's paper position that has no record " +
-                "and tells you. It stays on paper.",
+            "A second trade on the same option could be left with nothing selling it; now each trade is booked the moment it fills " +
+                "and its exits are checked every 15 seconds. A safety net takes back any arm's paper position that has no record and " +
+                "tells you, all on paper.",
             "Home → Strategies → the passed-research arms"),
         Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
             "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
