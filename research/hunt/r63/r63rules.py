@@ -169,3 +169,12 @@ def exit_row(turns: dict, side: str, ef: int, tf: int, rule: str = "") -> int:
             continue
         return x
     return -1
+
+
+def combine(fx_own: int, x: int) -> int:
+    """The strategy's own forced exit row with a trend act row x added (-1 = none): the earlier one wins."""
+    if x < 0:
+        return fx_own
+    if fx_own < 0:
+        return x
+    return min(fx_own, x)
