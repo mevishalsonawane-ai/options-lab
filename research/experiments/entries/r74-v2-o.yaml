@@ -1,0 +1,42 @@
+id: r74-v2-o
+title: 'R74 V2 VIX-confirmed Donchian break (original): index signal, 1-ITM'
+family: daily-filters
+date: '2026-10-16'
+doc: research/HUNT_R74_STRATEGY_MAP.md
+hypothesis: 'Boss (16 Oct, "except Donchian, what else could be a strategy or arm"; R74 strategy map rank of the untried families):
+  a Donchian-20 break taken only when India VIX moved the confirming way over the last 30 minutes (calls: falling by more
+  than x; puts: rising by more than x), buying the 1-ITM option and taken as Donchian takes its trades, earns after real costs
+  and beats random entries on the same days. Gates as R51 (BH over the 10 R74 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK, equity_1m 59 large caps),
+  R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R74 (16 Oct); the window was already read for other ideas by R49-R72 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index, with India VIX as a filter; no option chart'
+model_or_rule: 'VIX-confirmed Donchian break: a Donchian-20 break taken only when India VIX moved the confirming way over
+  the last 30 minutes (calls: falling by more than x; puts: rising by more than x); setting x=0.0, XL (original (fixed before
+  any result))'
+settings: research/hunt/r74/r74rules.py RULES, research/hunt/r71/r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r74/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 3447 trades on 336 days, win 42%, net -Rs 366,813 (-Rs 106/trade), avg win Rs 1,461 / loss -Rs 1,226,
+    worst day -Rs 34,425, max DD Rs 452,508, green days 37%. Walk-forward net -Rs 366,813. Final: 1382 trades on 133 days,
+    win 44%, net Rs 119,125 (Rs 86/trade), avg win Rs 1,614 / loss -Rs 1,097, worst day -Rs 22,440, max DD Rs 40,877, green
+    days 41%, 214.6 trades a month; random-entry twin p 0.0639 (twin mean Rs 25,593), BH q 0.3195 (q 0.3469 across the 38
+    tests of 16 Oct). Verdict: FAIL (twin p >= 0.05, BH q > 0.10, design net <= 0, walk-forward net <= 0). Same final days:
+    Donchian XB Rs 55,439 on 1787 trades (daily correlation 0.585, same trade 0.7504); Breadth Donchian Rs 171,366 on 1202
+    trades (correlation 0.617, same trade 0.4465).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; research only, nothing changes paper or live. Labelled a duplicate (daily correlation >=
+  0.6 with Donchian or Breadth Donchian).

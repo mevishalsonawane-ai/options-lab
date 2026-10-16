@@ -1,0 +1,42 @@
+id: r74-m1-rt
+title: 'R74 M1 Late-day momentum on high-volatility days (re-tune): index signal, 1-ITM'
+family: patterns-indicators
+date: '2026-10-16'
+doc: research/HUNT_R74_STRATEGY_MAP.md
+hypothesis: 'Boss (16 Oct, "except Donchian, what else could be a strategy or arm"; R74 strategy map rank of the untried families):
+  at 14:45, the return since the previous close beyond k x the 20-day mean absolute daily return, on a day whose range so
+  far is at least its 20-day median; buy that way for the last 30 minutes, buying the 1-ITM option and taken as Donchian takes
+  its trades, earns after real costs and beats random entries on the same days. Gates as R51 (BH over the 10 R74 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK, equity_1m 59 large caps),
+  R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R74 (16 Oct); the window was already read for other ideas by R49-R72 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index only; no option chart'
+model_or_rule: 'Late-day momentum on high-volatility days: at 14:45, the return since the previous close beyond k x the 20-day
+  mean absolute daily return, on a day whose range so far is at least its 20-day median; buy that way for the last 30 minutes;
+  setting k=0.5, XL (re-tune (2 parameters x 3 exits; walk-forward picks 1.0|XL, 1.0|XB, 1.0|XL, 1.0|XL; final pick = best
+  design net))'
+settings: research/hunt/r74/r74rules.py RULES, research/hunt/r71/r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r74/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design: 641 trades on 231 days, win 50%, net Rs 63,683 (Rs 99/trade), avg win Rs 1,475 / loss -Rs 1,289, worst
+    day -Rs 20,155, max DD Rs 106,194, green days 49%. Walk-forward net Rs 99,214. Final: 203 trades on 80 days, win 34%,
+    net -Rs 42,725 (-Rs 210/trade), avg win Rs 1,629 / loss -Rs 1,178, worst day -Rs 11,415, max DD Rs 94,246, green days
+    30%, 31.5 trades a month; random-entry twin p 1.0 (twin mean Rs 48,026), BH q 1.0 (q 1.0 across the 38 tests of 16 Oct).
+    Verdict: FAIL (final net <= 0, twin p >= 0.05, BH q > 0.10, top 5 >= net). Same final days: Donchian XB Rs 55,439 on 1787
+    trades (daily correlation -0.041, same trade 0.0099); Breadth Donchian Rs 171,366 on 1202 trades (correlation -0.085,
+    same trade 0.0099).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; research only, nothing changes paper or live.
