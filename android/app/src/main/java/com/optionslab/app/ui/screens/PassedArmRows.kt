@@ -101,7 +101,16 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     (if (source == Solo2.SOURCE) Solo2.bar() else PassedArms.ForwardBar.BAR) + ".",
     v.forwardLine(source) + ".",
     v.paused[source]?.let { "It switched itself off: $it. Switching it back on is your choice." },
-)
+) + (if (source == Solo2.SOURCE) soloDecisions(v) else emptyList())
+
+/**
+ * Solo 2.0's own words for today's decisions (15 Oct, Boss: Solo explains itself): each candidate it took or skipped, with
+ * the inputs that raised and lowered its score most, then the concepts it does NOT use, labelled as context. Explanation
+ * only: the words are made from the numbers it already scored and never change what it trades.
+ */
+internal fun soloDecisions(v: PassedArmsHost.View): List<String> =
+    (if (v.scores.isEmpty()) listOf("Today's decisions: none yet (it decides at each setup's entry minute).")
+    else listOf("Today's decisions (its score against its bar; the words say what moved the score most):") + v.scores.map { "• $it." }) + (Solo2.CONTEXT_NOTE + ".")
 
 /** One arm's compact row from plain state ([v]) and its switch callback. */
 @Composable

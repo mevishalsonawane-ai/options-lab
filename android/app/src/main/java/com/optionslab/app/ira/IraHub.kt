@@ -200,6 +200,8 @@ object IraHub {
             }
         }
         IraModel.init(context)
+        // The concept book (15 Oct) read once in the background, after the open positions are restored (they come first).
+        scope.launch(Dispatchers.IO) { runCatching { com.optionslab.app.data.PositionsFirst.awaitPositions(); ConceptLibrary.load(context.applicationContext) } }
         // The question readers' patterns made ready off the main thread, so Boss's first question does not wait for them.
         scope.launch { runCatching { com.optionslab.ira.Warm.up() } }
         val f = File(context.applicationContext.noBackupFilesDir, "ira-book.vault")
@@ -2473,9 +2475,27 @@ object IraHub {
                 return
             }
         }
+        // A market concept explained ("what is gamma exposure", "bull trap kya hai", "what is a fake breakout"; 15 Oct): its
+        // meaning, its signal source and the honest research verdict, from the concept book in memory ([ConceptLibrary]).
+        // Before the glossary, which would read "gamma exposure" as its "gamma"; the glossary's own words ("what is theta") stay
+        // its answers, with the research note added below. Market words only, fine on a locked phone; nothing acts. The book not
+        // in memory (a trim let it go): read again off the main thread, and this question goes on as before.
+        if (parsed.order == null && parsed.command == null && Topic.EXPLAIN !in parsed.topics &&
+            runCatching { com.optionslab.ira.Concepts.asked(q) }.getOrNull() != null) {
+            val book = ConceptLibrary.cached()
+            if (book == null) scope.launch(Dispatchers.IO) { runCatching { ConceptLibrary.load(app) } }
+            else runCatching { com.optionslab.ira.Concepts.answer(book, q) }.getOrNull()?.let { text ->
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+                return
+            }
+        }
         // A trading word explained ("what is theta", "explain max pain"): at once, before anything is looked up.
         if (parsed.order == null && parsed.command == null && (Topic.ACCOUNT !in parsed.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in parsed.topics) runCatching { com.optionslab.ira.Glossary.explain(q) }.getOrNull()?.let { text ->
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+            // 15 Oct: the same word in the concept book adds what our research found (memory only; nothing when it is not in memory).
+            val book = ConceptLibrary.cached()
+            if (book == null) scope.launch(Dispatchers.IO) { runCatching { ConceptLibrary.load(app) } }
+            val note = book?.let { b -> runCatching { com.optionslab.ira.Concepts.researchNote(b, q) }.getOrNull() }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, if (note == null) text else "$text $note")).takeLast(MAX_MESSAGES)) }
             return
         }
         // "What is the premium of 24500 CE": the option chain read now (8 seconds at most) - never an order. (Not in IraGoldAlgo.)

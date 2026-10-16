@@ -18,6 +18,11 @@ class CoverageTest {
     enum class Kind { MARKET, ACCOUNT, JARVIS, INFO, CHAT, ACT, SUGGESTED, MISSED, HONEST }
 
     private val today: LocalDate = LocalDate.of(2026, 10, 5)
+    /** The shipped concept book (IraHub keeps it in memory from the start-up). */
+    private val conceptBook: Concepts.Book by lazy {
+        listOf(java.io.File("../app/src/main/assets/${Concepts.ASSET}"), java.io.File("android/app/src/main/assets/${Concepts.ASSET}"))
+            .first { it.isFile }.let { Concepts.parse(it.readText()) }
+    }
 
     /**
      * The kind of each question [said] is understood as, in the order the app's hub takes them (IraHub.ask). Boss's learned
@@ -195,6 +200,7 @@ class CoverageTest {
         if (Goals.asked(q) || SelfWhy.asked(q) || Vetting.asked(q) || SelfCalibration.asked(q) || Lessons.asked(q) || Sources.asked(q)) return Kind.JARVIS
         if (Habits.asked(q)) return Kind.MARKET
         if (depth == 0 && p.command?.kind.let { it == null || it == Command.Kind.STOP_ONE }) Intents.quick(q)?.let { return kind(it, 1) }
+        if (p.order == null && p.command == null && Topic.EXPLAIN !in p.topics && Concepts.answer(conceptBook, q) != null) return Kind.INFO
         if ((Topic.ACCOUNT !in p.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in p.topics && Glossary.explain(q) != null) return Kind.INFO
         if (Topic.ACCOUNT !in p.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q) && OptionQuote.asked(p.text.ifBlank { q }) != null) return Kind.MARKET
         if (Topic.BACKTEST in p.topics) return Kind.MARKET
@@ -918,6 +924,8 @@ class CoverageTest {
         if (Sources.asked(q)) return "Sources"
         if (!understood && Habits.asked(q)) return "Habits"
         if (!understood && p.order == null && (p.command == null || p.command?.kind == Command.Kind.STOP_ONE)) Intents.quick(q)?.let { return feature(it, understood = true) }
+        // 15 Oct: a market concept's meaning (IraHub: the concept book, just before the glossary).
+        if (plain && p.order == null && p.command == null && Topic.EXPLAIN !in p.topics && Concepts.answer(conceptBook, q) != null) return "Concepts"
         if (plain && (Topic.ACCOUNT !in p.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in p.topics &&
             Glossary.explain(q) != null) return "Glossary"
         if (plain && Topic.ACCOUNT !in p.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q) && OptionQuote.asked(p.text.ifBlank { q }) != null) return "OptionQuote"

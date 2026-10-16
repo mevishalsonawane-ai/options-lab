@@ -143,4 +143,29 @@ class PassedArmRowsTest {
         assertEquals("R52 R4-8 Gann swing break · 2026-10-20 12:00 · NIFTY ? 25050 CE · open (shadow)", watchRecordLine(WatchlistHost.Rec(s, null, null, null, null)))
         assertEquals(true, watchRecordLine(r.copy(state = WatchlistHost.NOFILL, p = null)).endsWith("would not have filled"))
     }
+
+    /** 15 Oct (Boss: Solo explains itself): today's take / skip reasons and the context-only concepts are in Solo's dialog, not on its row. */
+    @Test fun solosDialogSaysWhyItTookOrSkippedAndWhatIsContextOnly() {
+        val skip = "S3 NIFTY call 0.4100: below 0.4871, skipped (raised by India VIX high, lowered by options dear (ATM IV high))"
+        show(PassedArmsHost.View(armed = mapOf(Solo2.SOURCE to true), scores = listOf(skip)))
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("• $skip."), substring = true).assertDoesNotExist()
+        compose.onNodeWithText(keepNumbersWhole(Solo2.CONTEXT_NOTE), substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("About ${Solo2.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("• $skip.")).assertExists()
+        compose.onNodeWithText(keepNumbersWhole(Solo2.CONTEXT_NOTE + ".")).assertExists()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("• $skip.")).assertDoesNotExist()
+    }
+
+    @Test fun soloWithNoDecisionYetSaysSoAndOtherArmsCarryNone() {
+        val v = PassedArmsHost.View()
+        val solo = soloDecisions(v)
+        assertEquals("Today's decisions: none yet (it decides at each setup's entry minute).", solo.first())
+        assertEquals(Solo2.CONTEXT_NOTE + ".", solo.last())
+        org.junit.Assert.assertTrue(passedExplanation(Solo2.SOURCE, v).containsAll(solo))
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, v).none { "Today's decisions" in it || it == Solo2.CONTEXT_NOTE + "." })
+    }
 }

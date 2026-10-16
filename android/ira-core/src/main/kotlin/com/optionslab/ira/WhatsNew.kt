@@ -57,6 +57,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
+            "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
+                "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +
+                "None of them beat Solo 2.0 in our tests, and Jarvis says so. " +
+                "Solo 2.0 now says why it took or skipped each candidate today. " +
+                "The words come from the numbers it already scores, so what it trades is unchanged. " +
+                "It stays on paper.",
+            "More → Assistant → Market concepts (tap a name); ask Jarvis \"what is a bull trap\"; Home → Strategies → tap Solo 2.0's name",
+            ask = "what is a bull trap"),
         Entry("2026-10-15-arms-cleanup", OCT15, "Fewer arms: the others switched off and hidden",
             "On your choice, a short list of arms keeps running as today. " +
                 "Liquidity 15+5 on BANKNIFTY, FINNIFTY and MIDCPNIFTY, the Hero ₹1,000 ticket, R51, R52, Solo 2.0 and the Watchlist stay. " +

@@ -32,6 +32,8 @@ object MemoryPlan {
         // 15 Oct: the Signal tester's Telegram reader (TDLib, read-only) - started again by its next round once the pressure passes.
         TELEGRAM("the Telegram reader"),
         KNOWLEDGE_INDEX("the research index"),
+        // 15 Oct: Jarvis's concept book (read again by the next concept question or the Market concepts screen).
+        CONCEPTS("the concept book"),
         SHARED_FINDINGS("the shared knowledge's findings counts"),
         ANSWER_CACHE("the short-answer readings"),
         MOVE_SUMMARIES("the big-move summaries"),

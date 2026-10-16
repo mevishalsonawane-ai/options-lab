@@ -267,4 +267,71 @@ class Solo2Test {
         assertEquals(LocalDateTime.of(2026, 10, 20, 9, 45), c.entryTime(day))
         assertNotNull(Solo2.LAYER)
     }
+
+    // ---- why it took or skipped (15 Oct 2026: explanation only) --------------------------------------------------------
+
+    /** The model's average for every input (each push 0), with one-hots set as a NIFTY S3 call. */
+    private fun averageCandidate(): DoubleArray = model.mean.copyOf().also { v ->
+        for (i in 20 until 29) v[i] = 0.0
+        v[Solo2.FEATURES.indexOf("idx_NIFTY")] = 1.0; v[Solo2.FEATURES.indexOf("side")] = 1.0; v[Solo2.FEATURES.indexOf("setup_S3")] = 1.0
+    }
+
+    @Test fun thePushesAreTheLogitsOwnTerms() {
+        val g = res("/solo2/A2_golden.json")
+        @Suppress("UNCHECKED_CAST") val rows = g["rows"] as List<Map<String, Any?>>
+        for (row in rows) {
+            val x = arr(row["inputs"])
+            val z = model.intercept + Solo2.pushes(x, model).sum()
+            assertEquals(model.score(x), Solo2.sigmoid(z), 1e-12)
+        }
+        assertFailsWith<IllegalArgumentException> { Solo2.pushes(DoubleArray(3), model) }
+    }
+
+    @Test fun theReasonNamesWhatRaisedAndLoweredTheScore() {
+        val v = averageCandidate()
+        v[Solo2.FEATURES.indexOf("vix")] = 25.0 // VIX is A2's biggest positive weight
+        v[Solo2.FEATURES.indexOf("iv_atm")] = 30.0 // ATM IV its biggest negative one
+        val r = Solo2.reason(v, model)
+        assertTrue(r.startsWith("raised by India VIX high"), r)
+        assertTrue("lowered by options dear (ATM IV high)" in r, r)
+        // The opposite readings give the opposite words.
+        v[Solo2.FEATURES.indexOf("vix")] = 9.0; v[Solo2.FEATURES.indexOf("iv_atm")] = 9.0
+        val r2 = Solo2.reason(v, model)
+        assertTrue("raised by options cheap (ATM IV low)" in r2, r2)
+        assertTrue("lowered by India VIX low" in r2, r2)
+        // At most k on each side.
+        assertEquals(1, Solo2.reason(v, model, k = 1).substringAfter("raised by ").substringBefore(", lowered").split(" and ").size)
+    }
+
+    @Test fun theReasonSkipsMissingInputsAndOneHotsThatAreOff() {
+        val v = DoubleArray(29) { Double.NaN }
+        // Everything missing (each at its median) and one-hots off: nothing to say about this candidate but its side.
+        assertTrue(Solo2.reason(v, model).let { it == "" || "being a call" in it || "being a put" in it })
+        v[Solo2.FEATURES.indexOf("side")] = -1.0
+        assertEquals("lowered by being a put", Solo2.reason(v, model))
+        v[Solo2.FEATURES.indexOf("setup_S4")] = 1.0 // S4 has a negative weight
+        v[Solo2.FEATURES.indexOf("idx_MIDCPNIFTY")] = 1.0 // MIDCPNIFTY a positive one
+        val r = Solo2.reason(v, model)
+        assertTrue("raised by the index (MIDCPNIFTY)" in r && "the setup (S4)" in r, r)
+        assertFalse("NaN" in r)
+    }
+
+    @Test fun noReasonWithoutInputs() {
+        assertEquals("", Solo2.reason(null, model))
+        assertEquals("", Solo2.reason(DoubleArray(5), model))
+        assertEquals("", Solo2.reason(averageCandidate(), model, k = 0))
+    }
+
+    @Test fun everyInputHasBothWords() {
+        val v = averageCandidate()
+        for (i in 0 until 20) {
+            v[i] = model.mean[i] + model.scale[i]
+            val hi = Solo2.reason(v, model, k = 29)
+            v[i] = model.mean[i] - model.scale[i]
+            val lo = Solo2.reason(v, model, k = 29)
+            v[i] = model.mean[i]
+            assertTrue(hi != lo, "input ${Solo2.FEATURES[i]} reads the same both ways")
+        }
+        assertTrue("traps" in Solo2.CONTEXT_NOTE && "not part of any decision" in Solo2.CONTEXT_NOTE)
+    }
 }

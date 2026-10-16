@@ -1,0 +1,1567 @@
+{
+ "schema": 1,
+ "asOf": "2026-10-15",
+ "houseRule": "Signals are read from the underlying index; option-chain data is context or a filter only. Solo is paper only, forever.",
+ "summary": "No concept here passed the research gates on its own. Solo 2.0 passed as a whole and stays on paper; R61, R61b and R62b found nothing that beats it.",
+ "concepts": [
+  {
+   "id": "oi",
+   "name": "Open interest (OI) and OI change",
+   "aka": [
+    "OI",
+    "change in OI"
+   ],
+   "what": "The number of option (or futures) contracts still open at a strike: every contract has one buyer and one seller, so OI counts positions, not trades. OI rises when new positions open and falls when they close.",
+   "use": "Traders read rising OI as fresh conviction and falling OI as positions being closed. Big call-OI additions are read as call writing (a ceiling), big put-OI additions as put writing (a floor).",
+   "measure": "Read directly from the chain for each strike and side. R61: near-the-money OI = call + put OI at the 5 strikes nearest the money (log10); OI change = % change of call + put OI at the 11 nearest strikes since the day's first chain minute; 'writer tilt' = put OI % change minus call OI % change over 30 minutes.",
+   "phone": "yes: ChainAnalytics.oiData / oiProfile / oiChange from the live chain (Dhan or Zerodha)",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: no OI check helped an arm (OI_FILTER, 145 results; H26, 2,268 variants). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "OI is published with a lag (NSE updates it every few minutes), so minute-level OI changes are stale.",
+    "You cannot tell from OI alone whether the buyer or the seller opened the position.",
+    "Lot-size changes and expiry roll-offs move OI without any view behind it."
+   ],
+   "evidence": [
+    {
+     "study": "OI_FILTER",
+     "sample": "BANKNIFTY, two years (Feb 2024-Feb 2026), 145 arm x check results",
+     "finding": "No OI or volume check improved the Liquidity arm in both years; the ORB 'volume surge' kept 3% of trades and never reached t = 2.",
+     "verdict": "failed"
+    },
+    {
+     "study": "H26",
+     "sample": "2,268 variants, five indices",
+     "finding": "Put-minus-call OI change had a 15-minute IC of about 0.03, too small to pay costs (holdout -Rs 45 a day). The filter 'skip when the 15-minute OI build-up opposes the trade' (BU15): holdout +Rs 81 a day on 876 trades, p 0.035, pre-holdout q 0.13.",
+     "verdict": "failed (BU15 near-miss, paper-log only)"
+    },
+    {
+     "study": "R15 F4",
+     "sample": "Liquidity arm days",
+     "finding": "Futures OI rising as a daily filter: -Rs 9.4 a day, q 0.50.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'oi level change' inputs from the all-inputs model changed walk-forward AUC by +0.0007 (design) / +0.0011 (final) and net by Rs +11,103 / Rs +1,225. Each input added alone to A2's 29 changed AUC (design / final): `oi_near_log` -0.0010 / -0.0012, `oi_near_chg_pct` +0.0005 / +0.0002, `writer_tilt30` +0.0000 / -0.0008. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "buildup",
+   "name": "OI build-up types",
+   "aka": [
+    "long build-up",
+    "short build-up",
+    "short covering",
+    "long unwinding"
+   ],
+   "what": "Price change and OI change read together: price up + OI up = long build-up (new buyers); price down + OI up = short build-up (new sellers); price up + OI down = short covering (sellers closing); price down + OI down = long unwinding (buyers closing).",
+   "use": "A trend is trusted when it comes with build-up on its side (long build-up for up moves) and doubted when it is only covering or unwinding.",
+   "measure": "R61: the index's 30-minute change and the 30-minute change of call + put OI at the 11 strikes nearest the money: +2 long build-up, +1 short covering, -1 long unwinding, -2 short build-up, 0 if either is flat. Classic build-up uses FUTURES OI; the lake has index-futures minutes only from Jul 2026, so R61 uses near-the-money option OI instead.",
+   "phone": "yes (option OI version); futures build-up from the futures quote stream (recorded from Jul 2026)",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: build-up rules lost (IV1 O3, 7,339 trades; H38, 2,880 variants). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "It labels the past 30 minutes; it is a description, not a forecast.",
+    "Option OI mixes calls and puts and both buyers and writers; the labels come from futures."
+   ],
+   "evidence": [
+    {
+     "study": "IV1 O3",
+     "sample": "5 indices, 7,339 trades",
+     "finding": "A fixed 'smart money' rule (puts written, calls covered, PCR rising) lost on all 5 indices (-Rs 24 to -245 a trade).",
+     "verdict": "failed"
+    },
+    {
+     "study": "H38",
+     "sample": "1,080 intraday variants (43 days) + 1,800 daily variants",
+     "finding": "Futures build-up: lowest q 0.54; nothing survives.",
+     "verdict": "failed"
+    },
+    {
+     "study": "F1",
+     "sample": "feature screen, 5 indices",
+     "finding": "Put long-unwinding share: 15-minute direction IC +0.029 ('barely').",
+     "verdict": "weak"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'buildup' inputs from the all-inputs model changed walk-forward AUC by -0.0009 (design) / +0.0003 (final) and net by Rs +17,993 / Rs +4,651. Each input added alone to A2's 29 changed AUC (design / final): `buildup` +0.0017 / +0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "pcr",
+   "name": "Put-call ratio (PCR), on OI and on volume",
+   "aka": [
+    "PCR",
+    "PCR OI",
+    "PCR volume"
+   ],
+   "what": "Put OI divided by call OI (or put volume / call volume). Above 1: more puts than calls.",
+   "use": "Read both ways: as sentiment (many puts = fear, a contrarian buy) or as writing (many puts written = a floor, bullish). Extremes versus the index's own history matter more than the raw level.",
+   "measure": "R61: put / call OI at the 11 strikes nearest the money (A2 already uses this level); its change over 30 minutes; put / call volume summed since 09:15; and the rank of today's OI ratio among the last 5 and 20 sessions at the same minute.",
+   "phone": "yes: ChainAnalytics.pcr (OI and volume); the ranks need the phone's own stored history of past sessions",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side. Using PCR AS THE SIGNAL (R47 C4) is non-default: an option-chain signal, Boss-only",
+   "verdict": "Failed as a filter (R15 F3); PCR as the signal is a non-default option-chain rule, Boss-only (R57 A4, 121 final trades). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "The same number is read bullish by one school and bearish by another.",
+    "The ratio depends on which strikes are included and on the expiry; compare like with like.",
+    "Near expiry, OI shifts fast and the ratio swings without meaning."
+   ],
+   "evidence": [
+    {
+     "study": "R47 C4",
+     "sample": "BANKNIFTY; holdout 91 trades; Nov 2024+ final 55 trades",
+     "finding": "'PCR in its top fifth of 60 sessions at 10:15 -> buy a call' (and bottom fifth -> put): +Rs 865 a trade, p 0.0499 but q 0.50; Nov 2024+ final +Rs 1,125 a trade, q 0.76; design profit faded from +1,766 a trade (2022) to +9 (2025).",
+     "verdict": "near-miss, note only"
+    },
+    {
+     "study": "R15 F3",
+     "sample": "Liquidity arm days",
+     "finding": "PCR extremes as a daily filter: -Rs 19.4 a day, q 0.61.",
+     "verdict": "failed"
+    },
+    {
+     "study": "F1",
+     "sample": "feature screen",
+     "finding": "PCR level and change: noise for direction (15-minute IC about +0.026).",
+     "verdict": "failed"
+    },
+    {
+     "study": "R57 A4",
+     "sample": "final 121 trades",
+     "finding": "A2-style model with C4 as an extra candidate passed (+Rs 59,706, p 0.002), but it is a non-default option-chain signal.",
+     "verdict": "passed as a non-default variant only"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'pcr' inputs from the all-inputs model changed walk-forward AUC by -0.0015 (design) / +0.0007 (final) and net by Rs -22,947 / Rs -59. Each input added alone to A2's 29 changed AUC (design / final): `pcr_oi_chg30` +0.0046 / -0.0007, `pcr_vol` -0.0014 / +0.0010, `pcr_rank5` -0.0019 / -0.0014, `pcr_rank20` -0.0034 / -0.0019."
+  },
+  {
+   "id": "max_pain",
+   "name": "Max pain",
+   "aka": [
+    "option pain",
+    "max pain strike"
+   ],
+   "what": "The expiry price at which option holders, taken together, would get the least money: the strike that minimises the total payout on all open calls and puts.",
+   "use": "Folklore says the index is 'pulled' toward max pain into expiry because option writers defend it.",
+   "measure": "For each chain strike X: sum over strikes K of call OI x max(X - K, 0) + put OI x max(K - X, 0); max pain = the X with the smallest total (ties: the lowest strike). R61: (max pain - index) / index x 100, signed by the trade's side, over the 21 strikes around the money.",
+   "phone": "yes: ChainAnalytics.maxPain",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: price is not pulled to max pain (R16; EXPIRY_PLAYBOOK, 64 expiries). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "It changes every minute as OI changes, and depends on the strike window used.",
+    "It assumes writers can move the index; our data says they do not."
+   ],
+   "evidence": [
+    {
+     "study": "R16",
+     "sample": "NIFTY and BANKNIFTY expiries",
+     "finding": "As a forecast of the expiry close, max pain is worse than 'no change': error 0.74% vs 0.43% (BANKNIFTY), 0.58% vs 0.52% (NIFTY).",
+     "verdict": "failed"
+    },
+    {
+     "study": "EXPIRY_PLAYBOOK",
+     "sample": "53 NIFTY, 11 BANKNIFTY expiries",
+     "finding": "The close ended 0.58% from max pain vs 0.50% from the open; within 0.25% of it on only 25% / 27% of expiries.",
+     "verdict": "failed"
+    },
+    {
+     "study": "H18",
+     "sample": "intraday, several indices",
+     "finding": "No drift toward max pain or max OI (BANKNIFTY -10 bps, t -2.2: if anything, away).",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'max pain' inputs from the all-inputs model changed walk-forward AUC by +0.0006 (design) / +0.0009 (final) and net by Rs +6,347 / Rs -6,258. Each input added alone to A2's 29 changed AUC (design / final): `maxpain_dist_pct` +0.0001 / -0.0057. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "oi_walls",
+   "name": "OI walls (support and resistance from OI)",
+   "aka": [
+    "call wall",
+    "put wall",
+    "max OI strike"
+   ],
+   "what": "The strike with the most call OI above the index (read as resistance) and with the most put OI below it (read as support).",
+   "use": "Option buyers avoid buying calls just under a big call wall; breakouts 'through a wall' are chased.",
+   "measure": "R61: % distance from the index to the biggest call-OI strike at or above it and to the biggest put-OI strike at or below it (ties: the nearer one), within the 21 strikes around the money; expressed as 'wall ahead' (on the trade's way) and 'wall behind'.",
+   "phone": "yes: ChainAnalytics.oiProfile (max call / put OI strikes)",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: max-OI strikes were neither walls nor magnets (OF1, 0 of 12 tests on 873 expiries); as a breakout range random levels did better (R20b, 155 trades). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Walls move as OI shifts; a wall is only as strong as the writers' willingness to hold.",
+    "Far walls just mean the market expects a wide range."
+   ],
+   "evidence": [
+    {
+     "study": "OF1",
+     "sample": "873 expiries",
+     "finding": "Max-OI strikes were neither walls nor magnets: 0 of 12 tests; the max-OI strike was closer to settlement than a random same-distance strike on 42-43% of expiries (no-magnet level about 44%).",
+     "verdict": "failed"
+    },
+    {
+     "study": "R20b",
+     "sample": "98 design + 57 holdout trades",
+     "finding": "OI walls as the breakout range: +1,745 design, -3,972 holdout; random levels did better in 6 of 7 variants.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R26",
+     "sample": "770 expiries, 15 trades",
+     "finding": "OI-wall blast: -Rs 3,851; best p 0.73, every q 1.00. 'The OI part adds nothing.'",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'oi walls' inputs from the all-inputs model changed walk-forward AUC by +0.0000 (design) / +0.0014 (final) and net by Rs +5,745 / Rs -15,469. Each input added alone to A2's 29 changed AUC (design / final): `wall_ahead_pct` -0.0003 / +0.0003, `wall_behind_pct` +0.0000 / -0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "iv",
+   "name": "Implied volatility (IV), ATM IV",
+   "aka": [
+    "IV",
+    "ATM IV"
+   ],
+   "what": "The volatility that makes the Black-Scholes price equal the option's market price: how much movement the market is paying for. Higher IV = dearer options.",
+   "use": "Option buyers prefer cheap IV (less to lose if IV falls) and fear 'IV crush' after events; sellers like high IV.",
+   "measure": "From the chain's IV column (the lake and the broker both give it per strike); ATM IV = mean of the at-the-money call and put IV. R61 adds its change since the day's first chain minute.",
+   "phone": "yes: ChainAnalytics.ivSmile (ATM IV), broker IV per strike",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "size/context only: our research says it predicts how much the index may move, not which way",
+   "verdict": "Size only: IV says how much the index may move, not which way (VOLATILITY, 249 days). Solo 2.0 already uses ATM IV as one input (128 final trades). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "A buyer can be right on direction and still lose when IV falls.",
+    "IV is quoted per expiry; weekly IV near expiry is noisy.",
+    "Bad ticks in thin strikes give absurd IVs (R61 removes them before use)."
+   ],
+   "evidence": [
+    {
+     "study": "VOLATILITY",
+     "sample": "BANKNIFTY, 249 days",
+     "finding": "Day range rose with opening IV: 464 / 540 / 631 points by IV third (83 days each). Descriptive.",
+     "verdict": "size only"
+    },
+    {
+     "study": "H29",
+     "sample": "16 variants + 12 filters",
+     "finding": "Buying when IV is cheap versus a realised-vol forecast: best -Rs 30 a day net, q 0.80; 0 of 12 filters adopted.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R57 A2",
+     "sample": "128 final trades",
+     "finding": "In Solo 2.0, ATM IV is the largest negative weight (-0.21): dear options are skipped.",
+     "verdict": "used as context in A2"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'iv level rank' inputs from the all-inputs model changed walk-forward AUC by +0.0040 (design) / +0.0024 (final) and net by Rs +2,878 / Rs -5,810. Each input added alone to A2's 29 changed AUC (design / final): `iv_chg_day` -0.0023 / -0.0002. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "iv_rank",
+   "name": "IV rank and IV percentile",
+   "aka": [
+    "IVR",
+    "IV percentile"
+   ],
+   "what": "Where today's IV sits in its own past: IV rank = (IV - lowest) / (highest - lowest) over a look-back; IV percentile = share of past days with lower IV.",
+   "use": "Buy options when IV rank is low, sell when it is high.",
+   "measure": "R61: ATM IV rank (min-max) among the previous 60 sessions at the same minute (needs 40 sessions; Boss's Nov 2024 data rule makes 252-day ranks too short to train on).",
+   "phone": "partly: needs 60 sessions of the phone's own stored ATM IV; missing until then",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "size/context only: our research says it predicts how much the index may move, not which way",
+   "verdict": "Failed as a rule (F1 S18, 158 holdout trades); size only. In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "One spike in the window squashes every later rank (min-max).",
+    "A short look-back mixes event weeks with quiet ones."
+   ],
+   "evidence": [
+    {
+     "study": "F1 S18",
+     "sample": "158 holdout trades",
+     "finding": "BANKNIFTY calls when IV percentile is high: +Rs 12,319, p 0.02-0.03 but q 0.28, and it lost in design.",
+     "verdict": "failed"
+    },
+    {
+     "study": "OBUY_GC",
+     "sample": "straddles",
+     "finding": "Buying straddles at low IV percentile loses.",
+     "verdict": "failed"
+    },
+    {
+     "study": "F1",
+     "sample": "feature screen",
+     "finding": "IV percentile / rank are good SIZE predictors (IC about +0.23-0.24), not direction.",
+     "verdict": "size only"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'iv level rank' inputs from the all-inputs model changed walk-forward AUC by +0.0040 (design) / +0.0024 (final) and net by Rs +2,878 / Rs -5,810. Each input added alone to A2's 29 changed AUC (design / final): `iv_rank60` -0.0070 / +0.0000. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "skew",
+   "name": "IV skew and smile",
+   "aka": [
+    "skew",
+    "smile",
+    "25-delta skew",
+    "risk reversal"
+   ],
+   "what": "How IV differs across strikes. Skew: out-of-the-money puts usually carry higher IV than calls (crash insurance). Smile: both wings dearer than the middle.",
+   "use": "Steep put skew = demand for protection (fear); flattening skew = calm. Some read rising call skew as upside speculation.",
+   "measure": "A2: put IV 3 strikes below minus call IV 3 strikes above (skew). R61 adds smile curvature = (put IV -3 + call IV +3) / 2 - ATM IV. 25-delta skew is NOT used: deltas of far strikes on a 21-strike chain are noisy; the +-3-strike version is the stated substitute.",
+   "phone": "yes: ChainAnalytics.ivSmile",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: weak at best (H29, 24 variants; R30 M4 near-miss on 77 trades). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Skew in points depends on the strike distance chosen and on IV level.",
+    "Thin far strikes give unreliable IVs."
+   ],
+   "evidence": [
+    {
+     "study": "F1",
+     "sample": "feature screen, 5 indices",
+     "finding": "The one direction clue that pointed the same way everywhere: when puts are dearer, the index tends to rise over 30-60 minutes (IC +0.03 to +0.13 fit, +0.01 to +0.08 selection). Too small to pay costs.",
+     "verdict": "weak lead"
+    },
+    {
+     "study": "H29",
+     "sample": "24 variants",
+     "finding": "Skew / synthetic-forward direction rules all lose (best -Rs 76 a day net).",
+     "verdict": "failed"
+    },
+    {
+     "study": "R30 M4",
+     "sample": "NIFTY, 77 trades",
+     "finding": "A rule leaning on skew: +Rs 277 a trade, q 0.109; near-miss, in a forward test.",
+     "verdict": "near-miss"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'skew smile term' inputs from the all-inputs model changed walk-forward AUC by +0.0027 (design) / +0.0017 (final) and net by Rs -7,434 / Rs -5,429. Each input added alone to A2's 29 changed AUC (design / final): `smile_curv` +0.0002 / -0.0043. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "term",
+   "name": "IV term structure",
+   "aka": [
+    "term structure",
+    "calendar IV"
+   ],
+   "what": "IV of the next expiry versus a later one. Normally later expiries carry slightly higher IV (contango); near-term IV above far-term (backwardation) signals near-term stress or an event.",
+   "use": "Backwardation warns of an event or panic; option buyers prefer the expiry whose IV is relatively cheap.",
+   "measure": "R61: NIFTY only, monthly-file ATM IV minus weekly-file ATM IV (0 when both are the same contract). For BANKNIFTY, FINNIFTY and MIDCPNIFTY there are only monthly expiries since 20 Nov 2024, so there is no second expiry in the lake to compare (missing).",
+   "phone": "yes: ChainAnalytics.volSurface across expiries",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed (H29; MCX options). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Only exists while two expiries trade; the week of the monthly expiry collapses it.",
+    "Weekly IV jumps around expiry days by construction."
+   ],
+   "evidence": [
+    {
+     "study": "H29",
+     "sample": "NIFTY, weeklies vs monthlies",
+     "finding": "Monthly minus weekly ATM IV 'did not sort the realised move at all'.",
+     "verdict": "failed"
+    },
+    {
+     "study": "MCX_OPTIONS",
+     "sample": "crude oil",
+     "finding": "Crude term structure predicts nothing.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'skew smile term' inputs from the all-inputs model changed walk-forward AUC by +0.0027 (design) / +0.0017 (final) and net by Rs -7,434 / Rs -5,429. Each input added alone to A2's 29 changed AUC (design / final): `term_slope` -0.0001 / +0.0015. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "vix",
+   "name": "India VIX",
+   "aka": [
+    "VIX",
+    "fear index"
+   ],
+   "what": "NSE's index of NIFTY's expected volatility over the next 30 days, computed from NIFTY option prices (annualised %).",
+   "use": "High VIX = bigger expected moves and dearer options; spikes mark fear, falling VIX calm.",
+   "measure": "Streamed as an index (INDIAVIX). A2 uses the level and the change from the previous close; R61 adds its rank among the previous 60 sessions at the same minute.",
+   "phone": "yes: VIX stream / 1-minute bars (MarketRecorder)",
+   "source": "market",
+   "sourceText": "Market-wide data (not a chart signal): context or size only.",
+   "role": "size/context only: our research says it predicts how much the index may move, not which way",
+   "verdict": "Size only (R16 / F1). Failed as a filter (R15 F2, 228 trades). Solo 2.0 already uses VIX as one input (128 final trades). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "VIX is about NIFTY; other indices have their own IV.",
+    "It says how big, not which way."
+   ],
+   "evidence": [
+    {
+     "study": "R15 F2",
+     "sample": "228 trades",
+     "finding": "Skipping low-VIX days cost -Rs 73.4 a day (q 0.77): low-VIX days were good for the Liquidity arm.",
+     "verdict": "failed"
+    },
+    {
+     "study": "SIDEWAYS_GUARD",
+     "sample": "2 x 249 days",
+     "finding": "VIX pointed the wrong way for ORB in one year (-8.9k) and the right way in the other.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R16 / F1",
+     "sample": "range forecasts",
+     "finding": "VIX alone matches a model for the next day's and rest-of-day range (size IC +0.22).",
+     "verdict": "size only"
+    },
+    {
+     "study": "R57 A2",
+     "sample": "128 final trades",
+     "finding": "VIX is A2's largest positive weight (+0.22).",
+     "verdict": "used as context in A2"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'vix rank' inputs from the all-inputs model changed walk-forward AUC by +0.0029 (design) / +0.0009 (final) and net by Rs -8,460 / Rs -8,525. Each input added alone to A2's 29 changed AUC (design / final): `vix_rank60` -0.0010 / +0.0003. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "delta",
+   "name": "Delta",
+   "aka": [
+    "option delta",
+    "hedge ratio"
+   ],
+   "what": "How much the option's price moves for a 1-point move in the index (0 to 1 for calls, 0 to -1 for puts); also roughly the chance of expiring in the money.",
+   "use": "Pick strikes (ITM = higher delta, behaves like the index), size positions, convert an index view into option points.",
+   "measure": "Black-Scholes: call N(d1), put N(d1) - 1, d1 = (ln(S/K) + (r + s^2/2) T) / (s sqrt T), from the contract's own IV; R61 uses r = 6.5% and T = (sessions to expiry + rest of today / 375) / 252.",
+   "phone": "yes: ChainAnalytics / OptionMath Greeks",
+   "source": "contract",
+   "sourceText": "The option contract Solo would buy: describes it; the strike rule picks it.",
+   "role": "context: describes the contract Solo would buy (the strike rule is fixed by the setup)",
+   "verdict": "Describes the option only; never a rule (F1). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Delta changes with the index (gamma), time and IV.",
+    "Model delta with a wrong IV or T misleads near expiry."
+   ],
+   "evidence": [
+    {
+     "study": "F1",
+     "sample": "feature screen",
+     "finding": "Delta as a direction feature: IC about +0.012 (noise).",
+     "verdict": "context only; never tested as a rule"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `delta_abs` +0.0016 / +0.0002. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "gamma",
+   "name": "Gamma",
+   "aka": [
+    "option gamma"
+   ],
+   "what": "How fast delta changes as the index moves. High gamma (at the money, near expiry) = the option's exposure grows quickly in a move, both ways.",
+   "use": "Buyers like gamma for fast moves (expiry-day 'hero' trades); sellers fear it.",
+   "measure": "Black-Scholes gamma = pdf(d1) / (S s sqrt T); R61 reports it as the change in delta for a 1% index move (gamma x S x 0.01).",
+   "phone": "yes: OptionMath Greeks",
+   "source": "contract",
+   "sourceText": "The option contract Solo would buy: describes it; the strike rule picks it.",
+   "role": "context: describes the contract Solo would buy",
+   "verdict": "Describes the option only; 0 of 52 expiry-day gamma rules passed (R21-R37). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Gamma explodes in the last hours of expiry; small index moves swing the premium wildly."
+   ],
+   "evidence": [
+    {
+     "study": "F1",
+     "sample": "feature screen",
+     "finding": "Gamma near the money predicts move SIZE (IC about +0.15), not direction.",
+     "verdict": "size only"
+    },
+    {
+     "study": "R21-R37 hero family",
+     "sample": "52 expiry-day hero rules (one BH family)",
+     "finding": "0 of 52 pass.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `gamma_1pct` +0.0038 / +0.0053. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "theta",
+   "name": "Theta (time decay)",
+   "aka": [
+    "time decay"
+   ],
+   "what": "How much value the option loses per day if nothing else changes. Always a cost to the buyer; biggest at the money and near expiry.",
+   "use": "Buyers want the move to come before decay eats the premium; time stops exist because of theta.",
+   "measure": "Black-Scholes theta per session (1/252 year); R61 reports it as % of the premium.",
+   "phone": "yes: OptionMath Greeks",
+   "source": "contract",
+   "sourceText": "The option contract Solo would buy: describes it; the strike rule picks it.",
+   "role": "context: describes the contract Solo would buy",
+   "verdict": "Describes the option only (EXPIRY_PLAYBOOK, 64 expiries). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Theta is not linear: the last day's decay is far bigger than the average day's."
+   ],
+   "evidence": [
+    {
+     "study": "EXPIRY_PLAYBOOK",
+     "sample": "53 NIFTY, 11 BANKNIFTY expiries",
+     "finding": "On expiry day the ATM option keeps a median 11% (NIFTY) / 19% (BANKNIFTY) of its 09:20 time value at 14:00, and 2% / 4% at 15:00. Descriptive.",
+     "verdict": "context"
+    },
+    {
+     "study": "F1",
+     "sample": "feature screen",
+     "finding": "Theta: size IC about +0.10.",
+     "verdict": "size only"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `theta_pct_day` -0.0012 / -0.0015. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "vega",
+   "name": "Vega",
+   "aka": [
+    "IV sensitivity"
+   ],
+   "what": "How much the option's price moves for a 1-point change in IV.",
+   "use": "Buyers of long-dated or ATM options carry more vega: an IV drop (after an event) hurts them.",
+   "measure": "Black-Scholes vega = S pdf(d1) sqrt T / 100 per IV point; R61 reports it as % of the premium.",
+   "phone": "yes: OptionMath Greeks",
+   "source": "contract",
+   "sourceText": "The option contract Solo would buy: describes it; the strike rule picks it.",
+   "role": "context: describes the contract Solo would buy",
+   "verdict": "Describes the option only (F1). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Weekly options have little vega; IV crush matters more for monthlies."
+   ],
+   "evidence": [
+    {
+     "study": "F1",
+     "sample": "feature screen",
+     "finding": "Vega: direction IC about +0.01.",
+     "verdict": "context only"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'greeks' inputs from the all-inputs model changed walk-forward AUC by -0.0026 (design) / +0.0009 (final) and net by Rs +7,025 / Rs +18,533. Each input added alone to A2's 29 changed AUC (design / final): `vega_pct` -0.0004 / -0.0005. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "gex",
+   "name": "Gamma exposure (GEX) and the gamma-flip level",
+   "aka": [
+    "GEX",
+    "gamma flip",
+    "zero gamma"
+   ],
+   "what": "An estimate of how much option dealers must buy or sell the index to stay hedged as it moves. If dealers are long gamma (positive GEX) they sell rallies and buy dips (calmer market); short gamma (negative GEX) they chase moves (wilder market). The flip is the index level where net GEX changes sign.",
+   "use": "Positive GEX: fade moves, expect ranges. Negative GEX / below the flip: expect trends and bigger moves.",
+   "measure": "Net GEX = sum over strikes of (call gamma x call OI - put gamma x put OI) x S^2 x 0.01, assuming dealers are long calls and short puts (the convention R28 used). R61: net / gross (between -1 and +1), its sign, and the % distance to the level (within +-3%) where net GEX, re-priced, changes sign.",
+   "phone": "yes: ChainAnalytics.gex / gammaDensity (note: the phone prices from the forward; a port must match R61's definition exactly)",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "size/context only: our research says it predicts how much the index may move, not which way",
+   "verdict": "Size only: negative GEX means somewhat bigger ranges, never the direction. Trading it failed (R36, 264 expiries, -Rs 1,03,781; R37, 42 trades, -Rs 40,003; R9, 0 of 28). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "In India we do not know who holds which side; the sign convention is an assumption (OF1: clients and Pros are net option writers).",
+    "GEX is strongly tied to IV (R36: correlation -0.69), so it mostly repeats what IV says."
+   ],
+   "evidence": [
+    {
+     "study": "R28",
+     "sample": "lake Aug 2021-Oct 2026, 5 indices",
+     "finding": "Negative GEX at 10:00 -> somewhat bigger rest-of-day range (BANKNIFTY 0.87% vs 0.75%); 0 of 10 arm filters passed; on the Night arm it cut the holdout from +249 to -18 a day.",
+     "verdict": "size only; failed as a filter"
+    },
+    {
+     "study": "R36",
+     "sample": "341 expiries; 264 traded",
+     "finding": "Correlation 0.33 with the afternoon move, but it is an IV effect; trades 0 of 4 pass, -Rs 1,03,781.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R37",
+     "sample": "446 expiries, 42 trades",
+     "finding": "Trading the flip: -Rs 40,003, worse than 99.4% of random entries; 0 of 4 pass.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R9",
+     "sample": "28 filters",
+     "finding": "GEX sign flipped between periods; 0 of 28 pass.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'gex flip' inputs from the all-inputs model changed walk-forward AUC by +0.0021 (design) / +0.0008 (final) and net by Rs -13,036 / Rs -808. Each input added alone to A2's 29 changed AUC (design / final): `gex_norm` -0.0016 / -0.0035, `gex_sign` +0.0000 / -0.0030, `flip_dist_pct` -0.0004 / -0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "dealers",
+   "name": "Dealer positioning",
+   "aka": [
+    "who is short gamma",
+    "writer positioning"
+   ],
+   "what": "Which group holds which side of the options book; GEX depends on it.",
+   "use": "Traders assume writers (dealers) hedge and so pin or push the index.",
+   "measure": "Not observable directly. NSE's participant-wise OI (client, DII, FII, Pro; daily, after 18:30) is the closest public proxy.",
+   "phone": "partly: MarketRecorder records the participant file daily; intraday positioning is not available",
+   "source": "chain",
+   "sourceText": "Option chain: context or filter only, never the signal by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: follow-the-group signals stopped working, 0 of 15 held in the last 12 months (OF1, 3,632 days). Who holds which side is not visible intraday, so it is not an R61 input.",
+   "pitfalls": [
+    "Indian clients and Pros, not 'dealers', are the net writers (OF1: 97% / 92% of days).",
+    "Daily file only, a day late for intraday decisions."
+   ],
+   "evidence": [
+    {
+     "study": "OF1",
+     "sample": "3,632 days (2012-2026)",
+     "finding": "Follow-the-group signals: 15 of 36 passed on 2012-2025, then 0 of 15 held in the last 12 months (13 flipped sign).",
+     "verdict": "failed"
+    },
+    {
+     "study": "MARKET_DRIVERS",
+     "sample": "review",
+     "finding": "'GEX sign / flip decides trend': inconsistent in our data.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "No R61 input: positioning is not observable intraday; participant OI (its proxy) is measured under 'FII / DII flows and participant-wise OI'."
+  },
+  {
+   "id": "vwap",
+   "name": "VWAP",
+   "aka": [
+    "volume-weighted average price"
+   ],
+   "what": "The average price of the day weighted by volume: where most of the day's trading happened.",
+   "use": "Above VWAP = buyers in control; pullbacks to VWAP are bought in up-trends.",
+   "measure": "sum(price x volume) / sum(volume) from the open. The index itself has no volume, so A2 uses the typical-price average of the session ('dist_tpavg_pct') as the index proxy; true VWAP needs futures volume (futures minutes from Jul 2026 in the lake).",
+   "phone": "partly: futures VWAP from the futures stream; the index has no volume",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed as a filter (TREND_FILTER, 249 days; H46, 2,400 variants). Solo 2.0 already has a VWAP-like input; not tested again.",
+   "pitfalls": [
+    "On an index without volume, 'VWAP' is a different number in every app."
+   ],
+   "evidence": [
+    {
+     "study": "TREND_FILTER",
+     "sample": "BANKNIFTY 249 days",
+     "finding": "9 EMA + VWAP + HH/HL: every version loses or is flat.",
+     "verdict": "failed"
+    },
+    {
+     "study": "H46",
+     "sample": "2,400 variants",
+     "finding": "'VWAP reject': best q 0.12; primary -Rs 1,505 a day in the holdout.",
+     "verdict": "failed"
+    },
+    {
+     "study": "F1 C1/C2",
+     "sample": "3,891 + 2,256 trades",
+     "finding": "EMA + Supertrend + VWAP lost Rs 2.5-3.3 lakh in design and holdout.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "Not a new R61 input (A2 already has the typical-price proxy `dist_tpavg_pct`); R61 did not test it again."
+  },
+  {
+   "id": "atr",
+   "name": "ATR (average true range)",
+   "aka": [
+    "ATR14"
+   ],
+   "what": "The average daily (or bar) range including gaps: the index's normal move size.",
+   "use": "Scale stops and targets to the market's current movement.",
+   "measure": "True range = max(high - low, |high - previous close|, |low - previous close|); ATR14 = mean of the last 14 completed days. A2 uses daily ATR14 as % of price; SoloMidday's stops are in ATR.",
+   "phone": "yes: from index candles",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "size/context only: our research says it predicts how much the index may move, not which way",
+   "verdict": "Size only (F1); ATR stops did not help (R17 / R20). Solo 2.0 already uses ATR; not tested again.",
+   "pitfalls": [
+    "Lags: after a quiet spell a sudden move is far bigger than ATR."
+   ],
+   "evidence": [
+    {
+     "study": "F1",
+     "sample": "feature screen",
+     "finding": "ATR is the strongest SIZE predictor (IC +0.335); direction is noise.",
+     "verdict": "size only"
+    },
+    {
+     "study": "R20 / R17",
+     "sample": "ORB and stop studies",
+     "finding": "ATR-adaptive ranges and range-scaled stops were no better.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "Not a new R61 input (A2 already has `atr14d_pct`); R61 did not test it again."
+  },
+  {
+   "id": "orb",
+   "name": "Opening range",
+   "aka": [
+    "ORB",
+    "opening range breakout"
+   ],
+   "what": "The high and low of the first minutes of the session (15 or 30); a break above or below is read as the day's direction.",
+   "use": "Buy the breakout side, stop at the other side.",
+   "measure": "High / low of 09:15-09:29 (R61's S4) or 09:15-09:44 (A2's 'or30_state').",
+   "phone": "yes: from index minutes",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "a candidate setup (S4, signal on the index) and a context feature",
+   "verdict": "On its own the opening-range breakout failed (R3, 2,489 trades, -Rs 2,23,040; R57, 459 final trades). It is one of Solo 2.0's candidate setups (S4), almost never taken.",
+   "pitfalls": [
+    "Most breaks fail or reverse in a range day; costs eat the small wins."
+   ],
+   "evidence": [
+    {
+     "study": "R3",
+     "sample": "2,489 trades, Aug 2021-Oct 2026",
+     "finding": "ORB: -Rs 2,23,040; 0 of 6 years profitable; 0 of 16 versions pass.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R49",
+     "sample": "Nov 2024+",
+     "finding": "Still loses.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R57",
+     "sample": "final 459 trades",
+     "finding": "S4 (15-min ORB) unfiltered: -Rs 1,14,070.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "Not a new R61 input (A2 has `or30_state`; S4 is a candidate setup). In R61's final test the 15-minute ORB setup was almost never taken (0-2 trades per variant)."
+  },
+  {
+   "id": "value_area",
+   "name": "Value area / market profile",
+   "aka": [
+    "TPO",
+    "POC",
+    "VAH",
+    "VAL",
+    "volume profile"
+   ],
+   "what": "Market profile counts how long price spent at each level (time-price opportunities). POC = the most traded level; the value area holds 70% of the day's activity (VAH top, VAL bottom).",
+   "use": "Opening outside yesterday's value and staying there = trend day ('open outside value and go'); inside value = range.",
+   "measure": "Previous day's 30-minute TPO profile, 70% value area (h37 sigs.profile_levels). R61: (index - previous POC) / (VAH - VAL), signed by the trade's side.",
+   "phone": "yes: from index minutes",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "a candidate setup (S3, signal on the index) and a context feature",
+   "verdict": "Rules on value-area levels failed (R9, 0 of 56; H37, 18,170 variants). 'Open outside value and go' is Solo 2.0's main setup S3 (92 of 128 final trades; not fresh, paper only).",
+   "pitfalls": [
+    "Many ways to build a profile (bin size, TPO period); results depend on them."
+   ],
+   "evidence": [
+    {
+     "study": "R52 H37-10 / R57 S3",
+     "sample": "final 232 trades",
+     "finding": "'Open outside value and go' (S3) made +Rs 49,360 unfiltered in the final window; A2 took 92 of its 128 trades from it. R52 chose its exit on this same window, so it is not fresh.",
+     "verdict": "candidate setup (not fresh)"
+    },
+    {
+     "study": "R9",
+     "sample": "56 + 32 tests",
+     "finding": "HVNs and the POC turn price no more often than placebo levels; auction rules 0 of 56.",
+     "verdict": "failed"
+    },
+    {
+     "study": "H37",
+     "sample": "18,170 variants",
+     "finding": "TPO-based rules among them: SPA p 1.00.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'value area' inputs from the all-inputs model changed walk-forward AUC by +0.0007 (design) / -0.0002 (final) and net by Rs -1,001 / Rs -3,439. Each input added alone to A2's 29 changed AUC (design / final): `va_pos` -0.0019 / -0.0005. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "regime",
+   "name": "Trend vs range regimes",
+   "aka": [
+    "efficiency ratio",
+    "ADX",
+    "choppiness"
+   ],
+   "what": "Whether the market is trending (moves far for its distance travelled) or ranging (back and forth).",
+   "use": "Use trend rules in trends and fade rules in ranges.",
+   "measure": "Efficiency ratio = |net move| / sum of |bar moves| (A2's 'er_day'); ADX14; choppiness index.",
+   "phone": "yes: from index candles",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed as a guard (SIDEWAYS_GUARD, 0 of 35). Solo 2.0 already uses trend / chop inputs; not tested again.",
+   "pitfalls": [
+    "You know the regime well only after it is over."
+   ],
+   "evidence": [
+    {
+     "study": "SIDEWAYS_GUARD",
+     "sample": "7 detectors x 5 arms = 35 tests",
+     "finding": "None beat random skipping in both years; the ADX pause cut Liquidity from +1,03,019 to +52,096.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R16",
+     "sample": "first 30/45 minutes",
+     "finding": "Trend vs range day not predictable (AUC 0.46-0.52).",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "Not a new R61 input (A2 already has `er_day`, `rv_30m`, `day_range_vs_adr10`); not tested again."
+  },
+  {
+   "id": "participants",
+   "name": "FII / DII flows and participant-wise OI",
+   "aka": [
+    "FII OI",
+    "client OI",
+    "Pro OI"
+   ],
+   "what": "NSE publishes each evening how many index futures and options each group (client, DII, FII, Pro) holds long and short; FII/DII cash flows are published by exchanges/NSDL.",
+   "use": "Follow FII futures positioning as 'smart money'; fade crowded client positioning.",
+   "measure": "R61: FII index-futures long share = long / (long + short) from the PREVIOUS session's participant file (published after 18:30), and its change from the session before.",
+   "phone": "yes: MarketRecorder records the participant file daily (after 18:30); DII cash flows not reachable",
+   "source": "market",
+   "sourceText": "Market-wide data (not a chart signal): context or size only.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed (OF1, 3,632 days; H40, 9,600 variants). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "A day late; FII futures positions are often hedges for cash holdings.",
+    "Signals that worked for years flipped in the last 12 months (OF1)."
+   ],
+   "evidence": [
+    {
+     "study": "OF1",
+     "sample": "3,632 days",
+     "finding": "Follow signals pass in design and fail in the holdout; option-buying rules R0-R3 all lose in the holdout.",
+     "verdict": "failed"
+    },
+    {
+     "study": "H40",
+     "sample": "9,600 variants, 2020-2026",
+     "finding": "0 pass (SPA 0.96); FII flows carry a small real signal that is smaller than option costs; 0 of 160 Liquidity filters.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'participants' inputs from the all-inputs model changed walk-forward AUC by +0.0018 (design) / -0.0017 (final) and net by Rs +10,142 / Rs +6,388. Each input added alone to A2's 29 changed AUC (design / final): `fii_fut_long_share` -0.0010 / +0.0014, `fii_fut_long_chg` -0.0028 / +0.0003. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "basis",
+   "name": "Futures basis / premium",
+   "aka": [
+    "basis",
+    "futures premium",
+    "cost of carry"
+   ],
+   "what": "Futures price minus the index: normally positive (interest minus dividends to expiry). An unusual premium or discount is read as positioning.",
+   "use": "Rising premium = long positioning; discount = hedging or short positioning.",
+   "measure": "R61: synthetic forward from put-call parity at the ATM strike: (K + call - put - index) / index x 10,000 bps. Real futures minutes are in the lake only from Jul 2026.",
+   "phone": "yes: ChainAnalytics.syntheticFuture; real basis from the futures quote",
+   "source": "market",
+   "sourceText": "Market-wide data (not a chart signal): context or size only.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed (H38, 72 real-basis trades). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Mostly interest and dividends; the 'signal' part is tiny.",
+    "Synthetic forward uses last-traded prices that can be minutes apart."
+   ],
+   "evidence": [
+    {
+     "study": "H38",
+     "sample": "daily + intraday + 72 real-basis trades",
+     "finding": "Basis change, synthetic premium and real basis all fail; a Liquidity skip filter passed design (q 0.008) and went -Rs 35 a day in the holdout.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'basis' inputs from the all-inputs model changed walk-forward AUC by +0.0010 (design) / -0.0025 (final) and net by Rs -10,054 / Rs +13,198. Each input added alone to A2's 29 changed AUC (design / final): `synth_basis_bps` -0.0003 / +0.0005. Verdict: no measurable help out of sample (every AUC change under 0.01; the net changes go both ways and are within what one or two trades swing)."
+  },
+  {
+   "id": "rollover",
+   "name": "Rollover",
+   "aka": [
+    "rollover %",
+    "roll cost"
+   ],
+   "what": "Near expiry, the share of futures positions moved to the next month, and the price paid to roll.",
+   "use": "High rollover with a rising premium = longs carried forward (bullish).",
+   "measure": "Next-month OI / (near + next OI) in the last sessions before expiry. Not built in the brain.",
+   "phone": "not available on the phone (needs both futures months' OI history); context only",
+   "source": "market",
+   "sourceText": "Market-wide data (not a chart signal): context or size only.",
+   "role": "not a model input (not on the phone)",
+   "verdict": "Barely tested (H40 S10) and not on the phone. Not an R61 input.",
+   "pitfalls": [
+    "Monthly only; a handful of observations a year."
+   ],
+   "evidence": [
+    {
+     "study": "H40 S10",
+     "sample": "last 5 sessions of each series",
+     "finding": "Rollover % and roll cost carry no information.",
+     "verdict": "failed / barely tested"
+    }
+   ],
+   "latest": "No R61 input: not available on the phone."
+  },
+  {
+   "id": "events",
+   "name": "Event days (RBI, Budget, CPI, Fed, expiry)",
+   "aka": [
+    "event risk",
+    "macro calendar"
+   ],
+   "what": "Scheduled news that moves the market: RBI policy (10:00 IST), the Union Budget (11:00), US FOMC decision and US CPI (after the Indian close, so they hit the next session), India CPI (16:00), and expiry days.",
+   "use": "Avoid or size down before events (IV crush, whipsaw); some trade the post-event trend.",
+   "measure": "R61: event_rbi_budget = 1 on an RBI policy or Budget day; post_us_event = 1 on the first NSE session after an FOMC decision or US CPI; other_expiry_today = 1 when another of the four indices expires today (Solo never trades an index on its own expiry day). Calendars pre-listed in r61events.py.",
+   "phone": "partly: EventCalendar.kt has RBI and Budget; a static FOMC / US CPI list would need bundling; expiry calendar yes",
+   "source": "market",
+   "sourceText": "Market-wide data (not a chart signal): context or size only.",
+   "role": "size/context only: our research says it predicts how much the index may move, not which way",
+   "verdict": "Size warning only: RBI and Budget days move more (EVENT_SHIELD, 995 sessions); 0 trade rules survived (H28, about 10,300 tests). In R61 it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Dates shift (the US 2025 shutdown moved CPI); the app's RBI Aug 2026 date (6 Aug) differs from the research list (7 Aug).",
+    "Few event days: every result rests on a handful of sessions."
+   ],
+   "evidence": [
+    {
+     "study": "EVENT_SHIELD",
+     "sample": "BANKNIFTY 497, NIFTY 498 sessions",
+     "finding": "BANKNIFTY moves more on RBI + Budget days (range 1.44% vs 0.98%, 15 vs 359 sessions; q 0.08, holdout confirmed p 0.03 on 7 sessions); US CPI / FOMC: bigger gap, same day range.",
+     "verdict": "passed as a size warning"
+    },
+    {
+     "study": "H28",
+     "sample": "about 10,300 tests",
+     "finding": "0 survivors as trade rules; Budget days 2.1-2.4x range; the session after FOMC gaps more.",
+     "verdict": "size only"
+    },
+    {
+     "study": "EXPIRY_PLAYBOOK",
+     "sample": "53 vs 446 NIFTY sessions",
+     "finding": "The last hour of expiry moves more (0.15% vs 0.10%, p 0.004); expiry rules R21-R37 0 of 52 pass.",
+     "verdict": "size only"
+    }
+   ],
+   "latest": "R61 (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026, not fresh): removing the 'events' inputs from the all-inputs model changed walk-forward AUC by -0.0016 (design) / +0.0003 (final) and net by Rs -6,252 / Rs -4; removing the 'other expiry' inputs from the all-inputs model changed walk-forward AUC by -0.0015 (design) / -0.0011 (final) and net by Rs +2,406 / Rs -2,221."
+  },
+  {
+   "id": "news",
+   "name": "News tone (positive / negative headlines)",
+   "aka": [
+    "news sentiment",
+    "headline tone"
+   ],
+   "what": "Whether the latest business headlines read good or bad for the market: 'Sensex surges', 'Nifty falls as war fears grow'. Scheduled events (RBI, Budget, Fed) are a separate concept.",
+   "use": "Traders avoid buying calls into a flood of bad news and chase good news; desks read overnight news to set the day's bias.",
+   "measure": "The phone's own word-list reader (News.tone): good words (rally, surge, gains, rate cut...) and bad words (crash, falls, war, tariffs...) with weights, phrases first, a 'not' one or two words back flips a word; score / 2 clipped to -1..+1. News.tag decides which index a headline concerns. R61-N: mean tone of the headlines out between the previous close and the signal minute, signed by the trade's side, and their count.",
+   "phone": "yes: Jarvis reads the news feeds every 5 minutes (News, NewsAnalyst) and MarketRecorder logs them",
+   "source": "market",
+   "sourceText": "Market-wide data (not a chart signal): context or size only.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: trading headlines lost (h33, 3,072 variants); news tone did not beat Solo 2.0 (R61-N, 127 final trades, +Rs 85,483 vs +Rs 99,172).",
+   "pitfalls": [
+    "Headlines usually come AFTER the price has moved (h33: 1-4 minutes late on intraday shocks).",
+    "A word list misreads mixed headlines ('bounce back from morning losses... gains' scores 0).",
+    "Good overnight news is usually already in the opening gap."
+   ],
+   "evidence": [
+    {
+     "study": "h33",
+     "sample": "3,072 variants, 59,189 timed headlines 2020-2026",
+     "finding": "Trading intraday headlines or price shocks loses (walk-forward -Rs 1.02 lakh); the price moves before the headline.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R61-N",
+     "sample": "Moneycontrol business headlines Oct 2024 - Oct 2026 (116,570; 13,782 market-wide); 5,780 design candidate rows, 127 final trades",
+     "finding": "Adding pre-signal news tone to Solo 2.0 passed the gates but did not beat it (final +Rs 85,483 vs +Rs 99,172; AUC 0.544 vs 0.538; paired p 0.86). Descriptive: pre-open tone vs the day's open-to-close move, correlation -0.16 on 337 design days per index (good news tends to fade after the open).",
+     "verdict": "failed as a Solo input; fade effect descriptive only"
+    }
+   ],
+   "latest": "R61-N (pre-registered in NEWS_PREREG.md): see the R61-N row under 'What our research found'. Verdict: no help beyond Solo 2.0 out of sample."
+  },
+  {
+   "id": "fake_breakout",
+   "name": "Fake (failed) breakout",
+   "aka": [
+    "failed breakout",
+    "false break",
+    "breakout failure"
+   ],
+   "what": "Price closes beyond a level everyone watches (the opening range, yesterday's high or low, a swing high) and then comes back inside it within minutes, leaving the breakout buyers trapped.",
+   "use": "Breakout traders wait for a close outside, a retest, or volume before trusting a break; fade traders sell a break that slips back inside.",
+   "measure": "R61b (signal time only): a break = a 1-minute index close beyond the level after a close that was not; it failed if a close at one of the next 15 minutes (and not after the signal) is back inside. Flags for the opening range (09:15-09:29) and the previous day's high / low, on the trade's side and the other side. The break quality of the signal bar: rejection wick share and close location of the 5 minutes before entry, and near-ATM option volume in those 5 minutes vs the same window of the last 20 non-expiry sessions (the index has no volume; futures minutes exist only from Jul 2026).",
+   "phone": "yes: index minutes and the live chain's volume (ChainAnalytics); no futures history needed",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Fakes cannot be told apart in advance (R11); buying breaks made no money after costs (H18, 4,537 trades). In R61b it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "Whether a break 'failed' is known only after it fails; a rule must not use the future.",
+    "A failed break on a 1-minute chart is often a normal pullback on a 5-minute chart.",
+    "Most breaks look fine at the moment they happen; the bad ones are clear only in hindsight."
+   ],
+   "evidence": [
+    {
+     "study": "R11",
+     "sample": "5-min top-5% candles making a new day high / low after 10:15, 2020-2026",
+     "finding": "Fakes (fully given back within 15 minutes): BANKNIFTY 12.8% design / 21.1% holdout, NIFTY 14.9% / 14.6%; they come in busier markets, but nothing separates fakes from real breaks reliably.",
+     "verdict": "descriptive; no rule"
+    },
+    {
+     "study": "H18",
+     "sample": "4,537 trades, 5 years",
+     "finding": "Breaks continue and sweeps do not reverse (30-min sweep fades -0.42 / -0.62 bp, t -2.6 / -3.3); buying the break is gross +Rs 3.25 lakh but net +Rs 3k, walk-forward -Rs 1.73 lakh, SPA p 0.87.",
+     "verdict": "failed (no edge after costs)"
+    },
+    {
+     "study": "R61b",
+     "sample": "S1-S4 candidates, 20 Nov 2024 - 14 Oct 2026",
+     "finding": "Skip filters and meta-labeller inputs for failed breaks, wicks and break volume; see R61b result.",
+     "verdict": "see R61b result"
+    }
+   ],
+   "latest": "R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'traps' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0024 (design) / +0.0003 (final) and net by Rs -13,755 / Rs -2,327; removing the 'break bar' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by -0.0055 (design) / -0.0078 (final) and net by Rs -14,313 / Rs -10,808; removing the 'break volume' inputs from M1 (A2 + all 15 R6..."
+  },
+  {
+   "id": "traps",
+   "name": "Bull trap and bear trap",
+   "aka": [
+    "bull trap",
+    "bear trap",
+    "turtle soup"
+   ],
+   "what": "A bull trap is an upside break that fails, catching buyers who then sell; a bear trap is the downside mirror. 'Turtle soup' trades the reversal after a false break of a 20-day or previous-day extreme.",
+   "use": "Traders avoid a direction right after it trapped people, or trade the other way once the trap is clear.",
+   "measure": "R61b: the failed-break flags above, read for the trade's own side (a trap against Solo's direction) and the other side (a trap that supports it), for the opening range and the previous day's high / low.",
+   "phone": "yes: index minutes only",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: trading traps lost (R1 N7, 1,434 trades; R52, 166 final trades, -Rs 17,852). As a skip filter (R61b F1) it made less than Solo 2.0 (126 final trades, +Rs 90,775 vs +Rs 99,172).",
+   "pitfalls": [
+    "The same pattern is called a 'shakeout' when the move continues; the label comes after the fact.",
+    "Our tests of trading the reversal all lost (below)."
+   ],
+   "evidence": [
+    {
+     "study": "R1 N7",
+     "sample": "NIFTY 777, BANKNIFTY 657 design trades",
+     "finding": "Turtle soup (false break of the previous day's high / low, then reclaim): design -Rs 25 / -77 a day; BANKNIFTY's +Rs 247 a day in the locked year was judged noise.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R52 r1-7",
+     "sample": "166 final trades (Nov 2024 onwards)",
+     "finding": "Turtle soup re-tested on recent data: final -Rs 17,852.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R61b",
+     "sample": "S1-S4 candidates",
+     "finding": "Trap flags as a skip filter (F1, F4) and as inputs; see R61b result.",
+     "verdict": "see R61b result"
+    }
+   ],
+   "latest": "R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'traps' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0024 (design) / +0.0003 (final) and net by Rs -13,755 / Rs -2,327. Each input added alone to A2's 29 changed AUC (design / final): `trap_same_or` +0.0001 / +0.0004, `trap_opp_or` -0.0008 / -0.0001, `trap_same_pd` -0.0022 / -0.0003, `trap_opp_pd` -0.0014 / +0.0003."
+  },
+  {
+   "id": "stop_hunt",
+   "name": "Stop-hunts and liquidity sweeps",
+   "aka": [
+    "stop run",
+    "liquidity grab",
+    "sweep",
+    "ORB sweep"
+   ],
+   "what": "Price pokes just past an obvious high or low where stop orders sit, fills them, and snaps back: the 'liquidity' (resting stops) was taken, and the story is that the real move then goes the other way.",
+   "use": "SMC / ICT traders wait for a sweep of the highs or lows and enter the other way; others put stops past the obvious level to avoid being swept.",
+   "measure": "R61b: in the last 30 one-minute bars (from 09:30), a bar that makes a new high (or low) of the day but closes back below (above) the old extreme; flagged on the trade's side (a warning) and the other side (support).",
+   "phone": "yes: index minutes only",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed: sweeps do not reverse (H18); ORB Sweep lost (R3, 3,156 trades, -Rs 5.06 lakh; R49, 0 of 336). R61b's best skip filter made less than Solo 2.0 (117 final trades, +Rs 75,675 vs +Rs 99,172).",
+   "pitfalls": [
+    "On the index a 'sweep' is usually just a wick; there is no real stop book to see in minute data.",
+    "Our data says breaks continue more often than sweeps reverse (H18)."
+   ],
+   "evidence": [
+    {
+     "study": "H18",
+     "sample": "5 years, NIFTY and BANKNIFTY",
+     "finding": "'Liquidity sweep, then reversal' is folklore: 30-minute sweep fades -0.42 / -0.62 bp (t -2.6 / -3.3); breaks +2.34 bp (t 4.9), holdout +2.95 (t 3.2).",
+     "verdict": "failed (the fade)"
+    },
+    {
+     "study": "R3",
+     "sample": "BANKNIFTY + NIFTY 5 years 3,156 trades; unseen indices 3,303",
+     "finding": "The app's ORB Sweep (poke beyond the 09:15-10:00 range, close back inside, buy the other way): -Rs 5,05,954 in design and -Rs 5,85,798 on unseen indices, 0 of 6 years in profit; all 16 enhanced versions failed.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R49",
+     "sample": "20 Nov 2024 onwards: 2,093 design / 870 final trades",
+     "finding": "ORB Sweep -Rs 4,12,532 design, -Rs 92,211 final; Range Fade -Rs 4,06,570 / -Rs 1,14,187; 0 of 336 tests pass.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R8",
+     "sample": "one MCX evening, 11 stop-hunt events (tick data)",
+     "finding": "Crude was back inside 33% / 50% / 83% of the time by 30 / 60 / 120 seconds; proposed a 60-second confirm and a 120-second failed-break label (not tested on P&L).",
+     "verdict": "not-a-test (too small)"
+    },
+    {
+     "study": "R61b",
+     "sample": "S1-S4 candidates",
+     "finding": "Sweep flags in the F4 skip filter and as inputs; see R61b result.",
+     "verdict": "see R61b result"
+    }
+   ],
+   "latest": "R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'sweeps' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0015 (design) / +0.0002 (final) and net by Rs +8,281 / Rs +1,329. Each input added alone to A2's 29 changed AUC (design / final): `sweep_same30` -0.0010 / +0.0015, `sweep_opp30` -0.0005 / -0.0004."
+  },
+  {
+   "id": "absorption",
+   "name": "Absorption",
+   "aka": [
+    "passive absorption",
+    "iceberg buying / selling"
+   ],
+   "what": "Heavy aggressive selling (or buying) that does not move the price, because a big passive buyer (seller) soaks it up at one level. Read on a footprint or tape as lots of volume at one price with little range.",
+   "use": "Traders read absorption at a level as 'this level will hold' and trade the bounce.",
+   "measure": "True absorption needs trades and the order book at each price. R61b proxy: log(15-minute near-ATM option volume / its 20-session same-window mean) minus log(15-minute index range / its 20-session same-window mean): high volume with a small range. The phone's TickZoneRecorder (from 12 Oct 2026) flags real absorption per minute (60%+ of volume at one price, 2x the usual minute, narrow range).",
+   "phone": "proxy yes (index minutes + chain volume); real absorption only from TickZoneRecorder's recordings (NIFTY / BANKNIFTY futures and ATM +-3 options, since 12 Oct 2026)",
+   "source": "orderflow",
+   "sourceText": "Order flow (ticks and order book): context only; our history has only minute-bar proxies.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Failed (R8, one MCX evening; R9, 52 events). In R61b it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days).",
+   "pitfalls": [
+    "On real MCX tick data flagged levels broke MORE often than others (R8).",
+    "Index minutes have no volume; option volume is a noisy stand-in."
+   ],
+   "evidence": [
+    {
+     "study": "R8",
+     "sample": "MCX tick sample: 368 option + 47 futures episodes",
+     "finding": "Absorption did not mean 'this level will hold': flagged levels broke 58% (options) and 68% (futures) of the time vs 55% for unflagged levels.",
+     "verdict": "failed (one evening)"
+    },
+    {
+     "study": "R9",
+     "sample": "NIFTY / BANKNIFTY minutes, 52 events",
+     "finding": "Heavy-volume narrow-range 5-minute bars: NIFTY design +2-6 bp vs control, q 0.29; holdout +2 bp then negative; below the cost of trading.",
+     "verdict": "failed (proxy)"
+    },
+    {
+     "study": "R61b",
+     "sample": "S1-S4 candidates",
+     "finding": "`absorb15` as a meta-labeller input; see R61b result.",
+     "verdict": "see R61b result"
+    }
+   ],
+   "latest": "R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'absorption' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0015 (design) / -0.0007 (final) and net by Rs +7,247 / Rs -2,398. Each input added alone to A2's 29 changed AUC (design / final): `absorb15` -0.0013 / -0.0011. Verdict: no measurable help out of sample (every AUC change under 0.01)."
+  },
+  {
+   "id": "delta_cvd",
+   "name": "Order flow: delta and cumulative delta (CVD)",
+   "aka": [
+    "volume delta",
+    "CVD",
+    "buy / sell volume",
+    "footprint"
+   ],
+   "what": "Delta = volume traded at the ask (aggressive buyers) minus volume at the bid (aggressive sellers) in a bar; cumulative delta adds it up through the day. Divergence (price up, CVD down) is read as weak buying.",
+   "use": "Confirm a breakout with positive delta; fade a move whose delta diverges.",
+   "measure": "Needs every trade with its side (tick rule or bid / ask). The lake has only 1-minute bars, so R61b uses a proxy: each index minute's close location ((C - L) - (H - C)) / (H - L) weighted by that minute's near-ATM option volume, over 30 minutes (`delta30`) and from 09:15 (`cdelta_day`), signed by the trade's side. TickZoneRecorder computes the real tick-rule delta and CVD per minute from 12 Oct 2026.",
+   "phone": "proxy yes; real delta / CVD in TickZoneRecorder's orderflow_1m (NIFTY / BANKNIFTY futures, ATM +-3 options) and OrderFlowLive's 1-second file",
+   "source": "orderflow",
+   "sourceText": "Order flow (ticks and order book): context only; our history has only minute-bar proxies.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "No lead found (R7, 34-minute sample); minute-bar proxies failed (R9). In R61b it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days). Real tick delta needs 3-6 months of the phone's recordings.",
+   "pitfalls": [
+    "A close-location proxy is not delta: it only says where the bar closed.",
+    "Same-time delta always 'explains' the move; the question is whether it LEADS it (R7: it did not)."
+   ],
+   "evidence": [
+    {
+     "study": "R7",
+     "sample": "34-minute Dhan full-feed sample, 14 MCX contracts, 217,517 packets; own NIFTY / BANKNIFTY option-flow feature",
+     "finding": "Same-10-second correlation with the move +0.71 to +0.90, but no lead across 66 cells; the app's option-flow signal leads (IC +0.109 at 1 minute) but its edge is 0.42x the cost; best use a filter, not a signal.",
+     "verdict": "not-a-test (needs 8-12 weeks of recording)"
+    },
+    {
+     "study": "R9",
+     "sample": "NIFTY / BANKNIFTY minutes",
+     "finding": "Delta divergence (proxy): reversal -2.6 to +0.6 bp.",
+     "verdict": "failed (proxy)"
+    },
+    {
+     "study": "R61b",
+     "sample": "S1-S4 candidates",
+     "finding": "`delta30`, `cdelta_day` as inputs; see R61b result.",
+     "verdict": "see R61b result"
+    }
+   ],
+   "latest": "R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'delta proxies' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by -0.0024 (design) / -0.0027 (final) and net by Rs +13,733 / Rs +1,730. Each input added alone to A2's 29 changed AUC (design / final): `delta30` +0.0036 / +0.0015, `cdelta_day` +0.0004 / -0.0012. Verdict: no measurable help out of sample (every AUC change under 0.01)."
+  },
+  {
+   "id": "ofi",
+   "name": "Order-flow imbalance (OFI)",
+   "aka": [
+    "OFI",
+    "MOFI",
+    "multi-level OFI"
+   ],
+   "what": "The net change in the best bid and ask queues between quotes: bids growing or asks being taken pushes OFI up. Academic work finds it explains same-time price changes very well.",
+   "use": "HFT and scalpers lean on short-horizon OFI; discretionary traders watch the bid / ask stack.",
+   "measure": "Needs every best-bid / best-ask update (Cont, Kukanov and Stoikov 2014). Not computable from minute bars. R61b's nearest proxy: the near-ATM call minus put volume share over 15 minutes (`optvol_imb15`), signed by side; it is an activity tilt, not OFI.",
+   "phone": "real OFI only from OrderFlowLive (1-second, index futures + ATM +-2) and TickZoneRecorder (from 12 Oct 2026); proxy yes",
+   "source": "orderflow",
+   "sourceText": "Order flow (ticks and order book): context only; our history has only minute-bar proxies.",
+   "role": "context or filter only: may make Solo skip or prefer a candidate, never create a trade or pick its side",
+   "verdict": "Not testable on our history (R7, R10 75 tests). In R61b it added nothing to Solo 2.0 (AUC change under 0.01 on 5,780 design candidates and the final days). Real OFI needs 3-6 months of the phone's recordings.",
+   "pitfalls": [
+    "Strongly same-time, weakly predictive; any lead lasts seconds.",
+    "Call volume is not 'buying': writers sell calls too."
+   ],
+   "evidence": [
+    {
+     "study": "R7",
+     "sample": "MCX full-feed sample",
+     "finding": "OFI +0.71 / +0.73 and MOFI +0.81 / +0.90 same-10-second correlation (CRUDEOIL / NATURALGAS), no lead; cost hurdle about 2 bp of the index for BANKNIFTY.",
+     "verdict": "not-a-test"
+    },
+    {
+     "study": "R10",
+     "sample": "75 design tests on the arms",
+     "finding": "VWAP / profile tools: one Range Fade filter passed (q 0.075) but Range Fade still loses Rs 309 a day; proposes recording 1-second quotes and footprints and testing after 20 sessions.",
+     "verdict": "failed / record first"
+    },
+    {
+     "study": "R61b",
+     "sample": "S1-S4 candidates",
+     "finding": "`optvol_imb15` as an input; see R61b result.",
+     "verdict": "see R61b result"
+    }
+   ],
+   "latest": "R61b (15 Oct 2026; design walk-forward Jul 2025 - Mar 2026 on 5,780 candidate rows, final 1 Apr - 14 Oct 2026 on 2,248, not fresh; signals from the index, these inputs are minute-bar PROXIES, not tick order flow): removing the 'optvol imbalance' inputs from M1 (A2 + all 15 R61b inputs) changed walk-forward AUC by +0.0013 (design) / +0.0014 (final) and net by Rs +16,257 / Rs -1,394. Each input added alone to A2's 29 changed AUC (design / final): `optvol_imb15` -0.0005 / -0.0007. Verdict: no measurable help out of sample (every AUC change under 0.01)."
+  },
+  {
+   "id": "depth_imbalance",
+   "name": "Depth (order-book) imbalance",
+   "aka": [
+    "book imbalance",
+    "bid/ask imbalance",
+    "walls in the book"
+   ],
+   "what": "Total bid quantity vs total ask quantity in the visible book (5 levels on NSE): (bids - asks) / (bids + asks). Big resting orders are read as 'walls'.",
+   "use": "Lean with the heavier side of the book; watch walls being pulled.",
+   "measure": "Needs the order book; the lake has none (Dhan does not provide historical depth). TickZoneRecorder stores 5 bid and 5 ask levels each second from 12 Oct 2026. Not an R61b input.",
+   "phone": "live only: TickZoneRecorder / OrderFlowLive book imbalance; no history before 12 Oct 2026",
+   "source": "orderflow",
+   "sourceText": "Order flow (ticks and order book): context only; our history has only minute-bar proxies.",
+   "role": "not a model input yet (no history): needs the phone's recordings",
+   "verdict": "Waiting for data: walls in the book lasted a median 1.2 s (R8, 11,700 walls, one evening). Needs 3-6 months of the phone's recordings.",
+   "pitfalls": [
+    "Visible depth is mostly cancelled within seconds (R8: about half of added size within 3-5 s; walls live a median 1.2 s and 50% are pulled, 5% traded).",
+    "Spoofing: size shown to be pulled."
+   ],
+   "evidence": [
+    {
+     "study": "R8",
+     "sample": "one MCX evening, 11,700 walls",
+     "finding": "Walls (2x or more) had a median life of 1.2 seconds; half were pulled and 5% traded; no extra pulling at candle closes (hazard 1.03x, p 0.53).",
+     "verdict": "not-a-test"
+    },
+    {
+     "study": "OF1",
+     "sample": "the app's recordings as of 13-14 Oct 2026",
+     "finding": "0 uploaded releases and an empty catalogue: no recorded day analysed yet; footprints.py is ready for large prints, absorption, sweeps and refills.",
+     "verdict": "waiting for data"
+    }
+   ],
+   "latest": "Not measurable in R61b: the lake has no order book. The phone's TickZoneRecorder stores 5-level depth each second only from 12 Oct 2026 (a few sessions, none uploaded or analysed yet)."
+  },
+  {
+   "id": "volume_profile",
+   "name": "Volume profile: POC, value area, high / low-volume nodes",
+   "aka": [
+    "VPOC",
+    "VAH / VAL",
+    "HVN",
+    "LVN"
+   ],
+   "what": "Volume traded at each price over a session: the point of control (POC) is the busiest price, the value area the band holding 70% of the volume, high-volume nodes act as magnets and low-volume nodes are 'thin' prices that get crossed quickly. The time-based version (TPO / market profile) is the 'Value area / market profile' concept above.",
+   "use": "Trade back to the POC, fade at value-area edges, expect fast moves through low-volume nodes.",
+   "measure": "Needs volume by price; the index has no volume, so our studies use a TPO profile (30-minute letters) or option / futures volume as a stand-in. R62 (branch claude/r62-volume-profile-smc) tests Boss's 15 Oct volume-profile video strategy separately; R61b does not duplicate it.",
+   "phone": "TPO version yes (index minutes); volume version only with futures volume (recorded from Jul 2026)",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "R62's subject; in Solo only through S3 and A2's inputs",
+   "verdict": "Failed as levels (R9, 0 of 32; LEVEL_MAP, 0 of 24). Appears in Solo 2.0 only through S3 (paper only).",
+   "pitfalls": [
+    "Levels picked by eye look magical; against randomly shifted placebo levels they do no better (R9, LEVEL_MAP)."
+   ],
+   "evidence": [
+    {
+     "study": "R9",
+     "sample": "224 design tests, holdout 1 Oct 2025 - 6 Oct 2026",
+     "finding": "POC / value area / HVN / LVN vs placebo levels: 0 of 32 design tests pass BH (best q 0.26); real futures volume (48 days) gives scattered results.",
+     "verdict": "failed"
+    },
+    {
+     "study": "LEVEL_MAP",
+     "sample": "24 tests (12 level types x 2 indices)",
+     "finding": "No level type beats placebo levels shifted 0.3-0.7% (lowest q 0.76).",
+     "verdict": "failed"
+    },
+    {
+     "study": "R52 H37-10",
+     "sample": "294 final trades",
+     "finding": "'Open outside value and go' (TPO value area): final +Rs 48,772, p 0.001, q 0.03, PASS but MIDCPNIFTY carries +Rs 46,329 and the exit was re-tuned; it is Solo's S3.",
+     "verdict": "paper-only candidate"
+    }
+   ],
+   "latest": "Not an R61b input: R62 (branch claude/r62-volume-profile-smc) tests the volume-profile strategy separately. In Solo it appears only through S3 (open outside the previous day's TPO value area)."
+  },
+  {
+   "id": "order_blocks",
+   "name": "Order blocks",
+   "aka": [
+    "OB",
+    "institutional candle",
+    "supply / demand zone"
+   ],
+   "what": "SMC idea: the last opposite-colour candle before a strong move marks where 'institutions' placed orders; price is expected to come back to that zone and react.",
+   "use": "Enter on a return to the order block in the direction of the impulse.",
+   "measure": "Typical: the last down candle before an up-impulse that breaks structure (bullish OB), its high-low as a zone. Not an R61b input. R62 tests the SMC strategy separately.",
+   "phone": "computable from index candles; not built",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "not a setup; notes only",
+   "verdict": "Failed: 0 of 16 R62b variants passed (5 indices; win 21-54%, not the 75-80% claimed); R62 not robust.",
+   "pitfalls": [
+    "Defined after the impulse, so zones are easy to draw in hindsight and hard to test honestly.",
+    "No order data is behind it: it is a candle pattern."
+   ],
+   "evidence": [
+    {
+     "study": "R62b",
+     "sample": "5 indices, 16 variants",
+     "finding": "First-touch and rejection entries both failed; of 343-355 fresh 5-minute zones per index only 92-106 were touched in the trading window.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R62",
+     "sample": "5 indices + 10 stocks",
+     "finding": "POC on a clean OB roughly halved the design loss but was as bad as the base in the final.",
+     "verdict": "failed (not robust)"
+    }
+   ],
+   "latest": "R62b: win rate 21-54% across the 16 gated variants (design and final); average win Rs 963-3,814 against average loss Rs 1,208-2,750 a lot."
+  },
+  {
+   "id": "fvg",
+   "name": "Fair value gaps (FVG)",
+   "aka": [
+    "FVG",
+    "imbalance (ICT)",
+    "liquidity void"
+   ],
+   "what": "A three-candle pattern where the first candle's high and the third candle's low do not overlap (bullish), leaving a 'gap' the middle candle moved through; price is expected to return to fill it.",
+   "use": "ICT traders enter when price returns into the gap after a break of structure.",
+   "measure": "Bullish FVG: low[t] > high[t-2]; bearish: high[t] < low[t-2]; usually a minimum gap size. Not an R61b input; R62 tests the strategy separately.",
+   "phone": "computable from index candles; not built",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "R62's subject; not an R61b input",
+   "verdict": "Failed: flipped to a loss (R1 N6, 1,796 design trades); R52 lost on 207 final trades; ADVANCED, 209 trades, -Rs 35,814.",
+   "pitfalls": [
+    "Gaps are everywhere on 1-5 minute charts; filters picked after the fact make backtests look good.",
+    "Our design favourite flipped to a loss on unseen data."
+   ],
+   "evidence": [
+    {
+     "study": "R1 N6",
+     "sample": "BANKNIFTY 814 / NIFTY 982 design trades",
+     "finding": "ICT first FVG: design +Rs 142 / +125 a day, then the locked year -Rs 196 / -334 a day; q 1.00.",
+     "verdict": "failed (flipped)"
+    },
+    {
+     "study": "R52",
+     "sample": "BANKNIFTY 110, NIFTY 97 final trades",
+     "finding": "FVG re-tested on Nov 2024+ data: -Rs 15,329 and -Rs 18,658.",
+     "verdict": "failed"
+    },
+    {
+     "study": "ADVANCED",
+     "sample": "209 trades",
+     "finding": "Entering in the FVG removed the pullback edge (-Rs 35,814).",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "Not an R61b input: R62 tests it separately."
+  },
+  {
+   "id": "bos_choch",
+   "name": "Break of structure (BOS) and change of character (ChoCH)",
+   "aka": [
+    "BOS",
+    "CHoCH",
+    "MSS",
+    "market structure"
+   ],
+   "what": "SMC terms: a BOS is a break of the last swing high in an uptrend (continuation); a ChoCH is the first break against the trend (the last higher low broken), read as a possible reversal.",
+   "use": "Trade continuation after a BOS and the new direction after a ChoCH, often with an order block or FVG.",
+   "measure": "Swing points from N-bar pivots; BOS = close beyond the last swing in the trend's direction, ChoCH = close beyond the last opposite swing. Not an R61b input; R62 tests the strategy separately.",
+   "phone": "computable from index candles (Matrix Pine script had BOS / ChoCH entries)",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "context only (trend description); never a trade rule or a filter on the arms",
+   "verdict": "Failed: lost in all 38 Matrix versions; ADVANCED, 167 trades, -Rs 54,886; R62 0 of 32; R62b as a filter did not rescue the rule.",
+   "pitfalls": [
+    "Swing definitions change the answer; many parameters to over-fit.",
+    "A BOS is just a breakout with a new name; breaks barely pay after costs (H18)."
+   ],
+   "evidence": [
+    {
+     "study": "MATRIX_V22",
+     "sample": "38 in-spec versions, two years",
+     "finding": "BOS / ChoCH entries lose in both years in every version (5-minute example 608 trades, -Rs 2,30,966 on 2 lots).",
+     "verdict": "failed"
+    },
+    {
+     "study": "ADVANCED",
+     "sample": "167 trades",
+     "finding": "'Base + break of structure': -Rs 54,886.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R62",
+     "sample": "5 indices + 10 stocks, Nov 2024 onwards, 32 primary tests",
+     "finding": "1-hour BOS / ChoCH filter: fewer trades, no better per trade; 0 of 32 pass.",
+     "verdict": "failed"
+    },
+    {
+     "study": "R62b",
+     "sample": "5 indices, 8 filter-on vs 8 filter-off variants",
+     "finding": "The 1-hour MSB filter halved the trades; no variant passed.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R62b, as a filter: design net -Rs 13,395 to -Rs 84,702 at fib 0.273 (except one variant, +Rs 2,560 on 95 trades), so it did not rescue the rule."
+  },
+  {
+   "id": "zigzag",
+   "name": "Zigzag (swing highs and lows)",
+   "aka": [
+    "zigzag swings",
+    "swing points",
+    "pivots"
+   ],
+   "what": "A line joining the chart's alternating swing highs and swing lows, ignoring the smaller wiggles in between. It turns a price chart into a list of 'the last high, the last low, the high before it, the low before it'.",
+   "use": "To see the trend at a glance (higher highs and higher lows = up) and to place stops beyond the last swing.",
+   "measure": "EmreKb's script (length 9): the trend turns down when a bar's low is the lowest of the last 9 bars and up when a bar's high is the highest of the last 9; the extreme since the last turn becomes the swing. A swing is only known 9 bars later.",
+   "phone": "not built in",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "context only: a way to describe the recent swings; never a trade rule on its own",
+   "verdict": "Context only; as R62b's swing source no variant passed (0 of 16, 5 indices).",
+   "pitfalls": [
+    "A swing is only known AFTER price has moved away from it; a zigzag drawn back at the swing bar looks perfect in hindsight (repainting).",
+    "The length decides everything: a short one finds many small swings, a long one few late ones.",
+    "On an intraday chart the zigzag runs across the overnight gap."
+   ],
+   "evidence": [
+    {
+     "study": "R62b",
+     "sample": "5 indices, 5- and 15-minute bars, 20 Nov 2024 - 14 Oct 2026",
+     "finding": "Used as the swing source for the MSB and order-block rule; no variant passed.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R62b: the zigzag swings did not lead to a profitable rule (see Market structure break)."
+  },
+  {
+   "id": "msb",
+   "name": "Market structure break (MSB)",
+   "aka": [
+    "MSB",
+    "structure shift",
+    "market structure shift"
+   ],
+   "what": "The moment the chart's swing pattern turns: in a downtrend, price makes a high that clears the last swing high by a clear margin (bullish MSB); the mirror for an uptrend (bearish MSB).",
+   "use": "As the signal that the trend has changed side, and as the trigger that creates an order block to trade on the pullback.",
+   "measure": "EmreKb compares confirmed zigzag swings, not a close: bullish when the newest swing high is above the previous one by more than fib x the last leg; bearish the mirror. After a break, a new swing high and low are needed before the next one.",
+   "phone": "not built in",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "not a setup; notes only",
+   "verdict": "Failed: 0 of 16 R62b variants passed (28-415 design trades each, win 21-44%); MATRIX_V22 all 38 versions lost.",
+   "pitfalls": [
+    "Read from confirmed swings, so it is known late: only after price has already bounced 9 bars.",
+    "The same word means different things in different scripts (pivot-based here, close-based in others)."
+   ],
+   "evidence": [
+    {
+     "study": "R62b",
+     "sample": "5 indices, 16 variants, design 20 Nov 2024 - 31 Mar 2026, final 1 Apr - 14 Oct 2026",
+     "finding": "MSB + order-block pullback: design win rate 21-44% (28-415 trades a variant), every variant failed the design gate; final 30-54%, 4 variants positive but each fails top-5 and design. Claimed 75-80%.",
+     "verdict": "failed"
+    },
+    {
+     "study": "MV-1 Matrix v2.2",
+     "sample": "BANKNIFTY Feb 2024 - Feb 2026, 38 versions",
+     "finding": "Close beyond the last 3-bar swing pivot: all 38 lost in both years; R52 re-test 602 trades, -Rs 86,873.",
+     "verdict": "failed"
+    }
+   ],
+   "latest": "R62b (15 Oct 2026; signal on the index, 1-ITM nearest-expiry option, real fills and charges; fib 0.273, zigzag 9): 0 of 16 pass. The best design variant (95 trades, win 41%, +Rs 2,560) was positive in only 2 of 5 quarters and lost Rs 896 on 46 final trades."
+  },
+  {
+   "id": "fib_factor",
+   "name": "Fib breakout confirmation (fib factor)",
+   "aka": [
+    "fib factor",
+    "Fibonacci confirmation",
+    "breakout margin"
+   ],
+   "what": "A margin a break must clear before it counts: a new swing must go beyond the old one by a fraction (the fib factor) of the last swing leg, so small pokes beyond a level are ignored.",
+   "use": "A larger factor means fewer, 'cleaner' breaks; a smaller one more, earlier breaks.",
+   "measure": "Bullish break needs the new high above the old by more than fib x the leg; bearish the mirror. The script's default is 0.33, the video uses 0.273; R62b also tried 0.50.",
+   "phone": "not built in",
+   "source": "underlying",
+   "sourceText": "Index chart (the underlying): may be a signal source by default.",
+   "role": "none",
+   "verdict": "No effect worth using: changing it moved trade counts 10-20% and turned no variant profitable (R62b, 16 variants x 3 values).",
+   "pitfalls": [
+    "0.273 and 0.33 are not magic numbers: nothing in the data prefers them.",
+    "Tuning the factor on past charts until the win rate looks good is curve-fitting."
+   ],
+   "evidence": [
+    {
+     "study": "R62b",
+     "sample": "16 variants x 3 fib values",
+     "finding": "fib 0.33: 0 of 16 positive in design; fib 0.50: 3 of 16 positive in design, the best +Rs 1,226 on 46 final trades; not gated.",
+     "verdict": "no effect worth using"
+    }
+   ],
+   "latest": "R62b: changing the factor moves trade counts by about 10-20% and does not turn the rule profitable in design."
+  }
+ ]
+}

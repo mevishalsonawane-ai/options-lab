@@ -756,26 +756,32 @@ object PassedArmsHost {
         // Only the candidates whose entry minute is now (or up to 2 minutes ago): earlier ones were decided when they came.
         val live = cands.filter { (c, _) -> val e = c.entryTime(today); !now.isBefore(e) && now.isBefore(e.plusMinutes(3)) && "$today|$src|${c.key}" !in b.decided }
         if (live.isEmpty()) return changed
-        val scored = live.map { (c, d) -> Solo2.Scored(c, runCatching { m.score(Solo2.features(d, c, context(c.underlying, today, now, reads))) }.getOrDefault(Double.NaN)) to d }
-        for ((sc, _) in scored.sortedWith(compareBy<Pair<Solo2.Scored, PassedArms.DayBars>> { it.first.c.entryRow }.thenByDescending { it.first.score })) {
+        // Each candidate's 29 inputs are kept with its score: the decision's words (15 Oct: "why", explanation only) come from them.
+        val scored = live.map { (c, d) ->
+            val x = runCatching { Solo2.features(d, c, context(c.underlying, today, now, reads)) }.getOrNull()
+            Triple(Solo2.Scored(c, x?.let { runCatching { m.score(it) }.getOrNull() } ?: Double.NaN), d, x)
+        }
+        for ((sc, _, x) in scored.sortedWith(compareBy<Triple<Solo2.Scored, PassedArms.DayBars, DoubleArray?>> { it.first.c.entryRow }.thenByDescending { it.first.score })) {
             val c = sc.c
             val ck = "$today|$src|${c.key}"
             val words = "%s %s %s %.4f".format(Locale.ENGLISH, c.setup.key, c.underlying, if (c.side > 0) "call" else "put", sc.score)
+            // Why, in words (memory only, from the numbers in hand: no disk, network or settings read here).
+            val because = Solo2.reason(x, m).let { if (it.isEmpty()) "" else " ($it)" }
             if (!sc.score.isFinite() || !m.take(sc.score)) {
-                b.decided += ck; b.scores += "$today|${c.key.replace('|', ':')}|$words: below ${"%.4f".format(Locale.ENGLISH, m.threshold)}, skipped"; changed = true
+                b.decided += ck; b.scores += "$today|${c.key.replace('|', ':')}|$words: below ${"%.4f".format(Locale.ENGLISH, m.threshold)}, skipped$because"; changed = true
                 continue
             }
             val (p, why) = buy(b, src, c.underlying, c.side, c.strikes, now, c.setup.key, c.index, c.atr)
             changed = true
             if (p != null) {
                 b.decided += ck; b.decided += dayKey
-                b.scores += "$today|${c.key.replace('|', ':')}|$words: bought ${p.symbol}"
+                b.scores += "$today|${c.key.replace('|', ':')}|$words: bought ${p.symbol}$because"
                 say(b, src, "bought ${p.symbol} @ ${px(p.entry)}: ${Solo2.why(c, sc.score, m)}", final = true)
                 return true
             }
             // R57 takes the day's first passing candidate and nothing more that day: one that cannot be bought ends the day too.
             b.decided += ck; b.decided += dayKey
-            b.scores += "$today|${c.key.replace('|', ':')}|$words: passed, not bought ($why)"
+            b.scores += "$today|${c.key.replace('|', ':')}|$words: passed, not bought ($why)$because"
             say(b, src, "${c.setup.key} ${c.underlying} passed but could not be bought: $why; nothing more today (one pick a day)", final = true)
             return true
         }

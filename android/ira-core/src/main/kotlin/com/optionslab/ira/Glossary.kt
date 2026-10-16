@@ -54,7 +54,7 @@ object Glossary {
     private val WHATIS = Regex("^ (what is|what s|whats|what are|what does|what do) ")
 
     /** "Theta kya hai", "PCR ka matlab", "doji matlab kya hota hai" (audit, 5 Oct): the meaning asked in Hinglish. */
-    private val HINDI_MEANING = listOf(
+    internal val HINDI_MEANING = listOf(
         Regex("^(.+?)\\s+(?:ka\\s+|ki\\s+|ke\\s+)?(?:matlab|meaning|arth)(?:\\s+kya)?(?:\\s+(?:hai|hota\\s+hai|hoti\\s+hai))?$") to "what does $1 mean",
         Regex("^(.+?)\\s+kya\\s+(?:hai|hota\\s+hai|hoti\\s+hai|hote\\s+hain)$") to "what is $1",
     )

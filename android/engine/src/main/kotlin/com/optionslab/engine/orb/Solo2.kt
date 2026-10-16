@@ -361,6 +361,75 @@ object Solo2 {
     fun why(c: Candidate, score: Double, model: Model): String =
         "${c.underlying} ${if (c.side > 0) "call" else "put"} from ${c.setup.key} (${c.setup.words}): score %.4f, at or above %.4f".format(java.util.Locale.ENGLISH, score, model.threshold)
 
+    // ---- why it took or skipped (explanation only, 15 Oct 2026) -------------------------------------------------------------
+    // Boss asked Solo to explain itself. These words come from the 29 inputs and the score the model already computed: they
+    // never change what Solo 2.0 trades. Pure arithmetic on numbers in hand: no disk, network or blocking (safe on the tick path).
+
+    /** Each of the first 20 inputs in words: what a value above the model's average means, and below it. */
+    private val WORDS = listOf(
+        "moving its way in the last 15 minutes" to "moving against it in the last 15 minutes",
+        "moving its way in the last hour" to "moving against it in the last hour",
+        "the day's move its way" to "the day's move against it",
+        "a gap its way" to "a gap against it",
+        "a wide day so far" to "a narrow day so far",
+        "lots of room left in the day's range" to "little room left in the day's range",
+        "a busy last 30 minutes" to "a quiet last 30 minutes",
+        "a trending day" to "a choppy day",
+        "price beyond the day's average its way" to "price behind the day's average",
+        "a wide last 30 minutes" to "a narrow last 30 minutes",
+        "away from yesterday's close its way" to "away from yesterday's close against it",
+        "beyond the 30-minute opening range its way" to "inside or against the 30-minute opening range",
+        "big daily ranges lately (ATR)" to "small daily ranges lately (ATR)",
+        "late in the day" to "early in the day",
+        "far from expiry" to "close to expiry",
+        "India VIX high" to "India VIX low",
+        "VIX up today" to "VIX down today",
+        "put-call ratio high" to "put-call ratio low",
+        "options dear (ATM IV high)" to "options cheap (ATM IV low)",
+        "puts dearer than calls (skew high)" to "puts not much dearer than calls (skew low)",
+    )
+
+    /**
+     * Each input's push on the score (the logit's own terms: weight x standardised value, a missing one at its median), in
+     * [Model.features] order. Their sum plus the intercept is the score before the sigmoid.
+     */
+    fun pushes(values: DoubleArray, model: Model): DoubleArray {
+        require(values.size == model.features.size) { "expected ${model.features.size} features, got ${values.size}" }
+        return DoubleArray(values.size) { i ->
+            val v = if (values[i].isNaN()) model.medians[i] else values[i]
+            model.coef[i] * (v - model.mean[i]) / model.scale[i]
+        }
+    }
+
+    /** Input [i] at [v] in words; null for a missing value or a one-hot that is off (neither says anything about this candidate). */
+    private fun word(i: Int, v: Double, mean: Double): String? = when {
+        v.isNaN() -> null
+        i < WORDS.size -> if (v >= mean) WORDS[i].first else WORDS[i].second
+        FEATURES[i] == "side" -> if (v > 0) "being a call" else "being a put"
+        v != 1.0 -> null
+        FEATURES[i].startsWith("idx_") -> "the index (" + FEATURES[i].removePrefix("idx_") + ")"
+        else -> "the setup (" + FEATURES[i].removePrefix("setup_") + ")"
+    }
+
+    /**
+     * Why the score came out as it did, in one short line: the [k] inputs that raised it most and the [k] that lowered it most,
+     * e.g. "raised by India VIX high and the setup (S3), lowered by options dear (ATM IV high) and early in the day". Empty when nothing can
+     * be said (the inputs could not be scored).
+     */
+    fun reason(values: DoubleArray?, model: Model, k: Int = 2): String {
+        if (values == null || values.size != model.features.size) return ""
+        val p = pushes(values, model)
+        val said = p.indices.mapNotNull { i -> word(i, values[i], model.mean[i])?.let { it to p[i] } }
+        val up = said.filter { it.second > 0 }.sortedByDescending { it.second }.take(k).map { it.first }
+        val down = said.filter { it.second < 0 }.sortedBy { it.second }.take(k).map { it.first }
+        return listOfNotNull(up.takeIf { it.isNotEmpty() }?.joinToString(" and ", "raised by "),
+            down.takeIf { it.isNotEmpty() }?.joinToString(" and ", "lowered by ")).joinToString(", ")
+    }
+
+    /** Shown under Solo 2.0's decisions: concepts that are context only (R61, R61b, R62b), never part of the decision. */
+    const val CONTEXT_NOTE = "Context only, not part of any decision: Solo 2.0 does not check traps, fake breakouts, order flow, " +
+        "OI walls, max pain or gamma exposure. R61, R61b and R62b tested them and none beat Solo 2.0 (ask Jarvis \"what is a bull trap\")"
+
     /** The forward-test card lines (SoloMidday's bar: 60 trades, -Rs 25,000). */
     fun bar(): String = "The bar (set in advance): after ${SoloMidday.FORWARD_TRADES} trades it must make more than ₹0 a trade, and it switches " +
         "itself off if it is ever more than ${SoloMidday.rs(SoloMidday.FORWARD_MAX_DRAWDOWN)} below its best; switching it back on is your choice"

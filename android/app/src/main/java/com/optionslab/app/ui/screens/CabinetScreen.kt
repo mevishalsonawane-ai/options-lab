@@ -41,6 +41,8 @@ private data class Drawer(val key: String, val title: String, val blurb: String)
 private val GROUPS = listOf(
     "Assistant" to listOf(
         Drawer("ira", "Ira", "Ask about today's market: trend, levels, patterns"),
+        // 15 Oct: Jarvis's concept book (MarketConceptsPage): names only; a tap explains one, with our research verdict.
+        Drawer("concepts", MARKET_CONCEPTS_TITLE, "OI, gamma, traps, fake breakouts, order flow: what each means and what our research found"),
     ),
 ) + (if (com.optionslab.app.BuildConfig.JARVIS) listOf(
     "Jarvis" to listOf(
@@ -107,6 +109,7 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
         when (pg) {
             "ira" -> IraPage(androidx.compose.runtime.remember(model) { iraOrderPathsFor(model) })
             "jarvis" -> JarvisSettingsPage()
+            "concepts" -> MarketConceptsPage()
             "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
             "risk" -> RiskPage(model)

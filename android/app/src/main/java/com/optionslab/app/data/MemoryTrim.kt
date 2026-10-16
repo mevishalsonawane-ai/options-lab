@@ -51,6 +51,7 @@ object MemoryTrim {
                 // 15 Oct: the Signal tester's Telegram reader closes (its next round starts it again once the pressure has passed).
                 MemoryPlan.Item.TELEGRAM -> TelegramCapture.releaseForMemory()
                 MemoryPlan.Item.KNOWLEDGE_INDEX -> com.optionslab.app.ira.KnowledgeLibrary.drop()
+                MemoryPlan.Item.CONCEPTS -> com.optionslab.app.ira.ConceptLibrary.drop()
                 MemoryPlan.Item.SHARED_FINDINGS -> SharedKnowledgeHost.dropCounts()
                 MemoryPlan.Item.ANSWER_CACHE -> com.optionslab.ira.ShortAnswer.clearCache()
                 MemoryPlan.Item.MOVE_SUMMARIES -> MoveRecorder.dropCaches()
