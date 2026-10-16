@@ -223,6 +223,74 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(sold.net!! > 0)
     }
 
+    // ---- R64's 30-60-100 lock (16 Oct, Boss's choice: "All three") ------------------------------------------------------------------
+
+    @Test fun theUpdateSwitchesTheLockOnOnceAndTheChangeLogsUndoSwitchesItOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        assertTrue(view().lockOn)
+        assertEquals(1, view().log.count { "30-60-100 lock turned on by the 16 Oct update" in it })
+        // Once only: a restart does not log it again.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().lockOn)
+        assertEquals(1, view().log.count { "30-60-100 lock turned on" in it })
+        // The change log's Undo switches it off (paper only, no PIN); a change for another target does nothing.
+        val on = AutoChange.passedLock(true)
+        assertNull(Autopilot.apply(on.copy(target = "lock:other"), false))
+        assertTrue(Autopilot.apply(AutoChange.inverse(on, "undone by you"), false)!!.contains("research exits"))
+        assertFalse(view().lockOn)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("its Undo stays undone after a restart", view().lockOn)
+        assertTrue(Autopilot.apply(on, false)!!.contains("is on"))
+        assertTrue(view().lockOn)
+        // A book that cannot be read is never switched on by itself.
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().lockOn)
+    }
+
+    @Test fun withTheLockABigMoverIsHeldPastThirtyPercentAndTheLockSellsIt() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(true) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertTrue("it entered with the lock", p.lock)
+        // Up to 141 at 09:30 (+40%): the research exits would sell at the +30% target; with the lock it is held.
+        market(LocalTime.of(9, 32), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 105.0 else 140.0 })
+        at(LocalTime.of(9, 32)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertTrue(PassedArmsHost.view.value.closed.isEmpty())
+        // A restart keeps the rule it entered with.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().open.single().lock)
+        // 09:33 trades at 95: under breakeven (the fill plus the round-trip charges), locked since +30% - sold by the lock.
+        market(LocalTime.of(9, 34), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 105.0 else if (t.isBefore(LocalTime.of(9, 33))) 140.0 else 95.0 })
+        at(LocalTime.of(9, 34)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = PassedArmsHost.view.value.closed.single()
+        assertEquals("lock", sold.why)
+        // Labelled apart, so the research-exit record stays separable.
+        assertTrue(PassedArmsHost.tradeLine(sold, emptyMap()).endsWith("30-60-100 lock"))
+        assertTrue(PassedArmsHost.diagLine().contains("1 closed on it"))
+        assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun anOpenTradeKeepsTheExitsItEnteredWith() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(false) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        assertFalse(p.lock)
+        // The lock switched on while it is held: it still sells at its +30% target.
+        assertEquals("The 30-60-100 lock is on for new paper trades.", runBlocking { PassedArmsHost.setLock(true) })
+        assertEquals("The 30-60-100 lock is already on (paper only).", runBlocking { PassedArmsHost.setLock(true) })
+        market(LocalTime.of(9, 31), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 105.0 else 140.0 })
+        at(LocalTime.of(9, 31)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("target", PassedArmsHost.view.value.closed.single().why)
+        // Switched off while a locked trade is held: the note says it keeps its lock.
+        runBlocking { PassedArmsHost.setLock(false) }
+        assertTrue(view().log.last().contains("30-60-100 lock off"))
+    }
+
     @Test fun nothingOnTheIndexsOwnExpiryDayAndTheKillSwitchRefuses() {
         only(DonchianArm.SOURCE)
         // The kill switch: the break is not bought (refused), nothing placed.

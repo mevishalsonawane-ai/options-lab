@@ -118,6 +118,13 @@ object AutoChange {
          * Paper only, so no PIN either way; never live.
          */
         TREND_EXIT("trend watch", "a trend-turn exit on paper"),
+        /**
+         * 16 Oct (Boss's choice: "All three"): R64's 30-60-100 profit lock (variant A4, passed every research gate) on the three passed PAPER
+         * arms - R51 Donchian 20, R52 Open outside value, Solo 2.0 ([passedLock]): new paper trades keep their own stop and time
+         * exit, drop the fixed target and lock breakeven at +30%, +30% at +60%, +60% at +100%. Logged so the timeline shows it and
+         * one tap undoes it (back to the research exits for new trades). Paper only, never live: no PIN either way.
+         */
+        PAPER_LOCK("strategies", "the 30-60-100 lock on the passed paper arms"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -278,6 +285,9 @@ object AutoChange {
             Kind.LIQ_INDEX_ON -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // An earlier exit on paper lowers risk (on, or a leg sold); off takes the earlier exits away.
             Kind.TREND_EXIT -> if (c.to == SWITCHED_OFF || c.to == HELD) Risk.RAISE else Risk.LOWER
+            // The lock drops the fixed target (a trade may be held for more), so on counts as a raise (on paper); off puts the
+            // research exits back.
+            Kind.PAPER_LOCK -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -317,7 +327,7 @@ object AutoChange {
      * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
-        k == Kind.TREND_EXIT
+        k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -492,6 +502,22 @@ object AutoChange {
     fun trendExitSold(source: String, label: String, line: String): Change = Change(Kind.TREND_EXIT, TREND_TARGET + source, HELD, SOLD_ON_TURN,
         "the Trend watch (research R63): $line. Undo switches $label's trend exit off; the leg sold stays sold",
         Evidence(1, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's trend-turn exit (paper)")
+    /** The target of R64's lock on the passed paper arms ([Kind.PAPER_LOCK]). */
+    const val LOCK_TARGET = "lock:passed_paper"
+
+    /**
+     * 16 Oct (Boss's choice: "All three"): R64's 30-60-100 lock (A4) switched [on] for new trades of the three passed PAPER arms, or off again
+     * ([Kind.PAPER_LOCK]). It passed every R64 gate on all three (final test 1 Apr - 13 Oct 2026, already read by R51 / R52 / R57:
+     * the three together 2,202 trades, +Rs 2,22,063 against +Rs 2,03,566 on the research exits); not better in every period, so
+     * it is Boss's choice. Paper only, never live: no PIN either way.
+     */
+    fun passedLock(on: Boolean): Change = Change(Kind.PAPER_LOCK, LOCK_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (16 Oct): new paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 keep their own stop and " +
+            "time exit, drop the fixed target and lock breakeven at +30%, +30% at +60%, +60% at +100% (R64 A4: passed every gate; " +
+            "final test 2,202 trades, ₹2,22,063 against ₹2,03,566 - about equal, not better in every period); paper only, never live"
+        else "new paper trades of the passed arms are back on their research exits",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.RAISE else Risk.LOWER, Scope.PAPER,
+        what = "the 30-60-100 lock on the passed paper arms")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
@@ -889,8 +915,9 @@ object AutoChange {
      */
     fun superseded(book: Book, e: Entry): Boolean {
         // 15 Oct: an arm hidden, restored and hidden again ([Kind.ARM_HIDE]) likewise - only its newest entry undoes.
-        // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) likewise - its switch flipped since is the one to undo.
-        if (e.change.kind != Kind.LIQ_TRAIL && e.change.kind != Kind.ARM_HIDE && e.change.kind != Kind.TREND_EXIT) return false
+        // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
+        // switch flipped since is the one to undo.
+        if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

@@ -402,6 +402,13 @@ internal object Autopilot {
                     else -> null
                 }
             }
+            // 16 Oct (Boss's choice: "All three"): R64's 30-60-100 lock on the passed paper arms ([logPassedLockOn]): its Undo switches it off
+            // for new trades (open ones keep what they entered with). Paper only, never Zerodha: no PIN either way; not logged again.
+            AutoChange.Kind.PAPER_LOCK -> {
+                if (c.target != AutoChange.LOCK_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setLock(c.to == AutoChange.ON, log = false) }
+                    .takeIf { !it.contains("not ready") }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -826,6 +833,15 @@ internal object Autopilot {
     fun logPassedArmOn(source: String, label: String, research: String) {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedArmOn(source, label, research), "the 15 Oct update (your \"Both\"); paper only - never live")
+    }
+
+    /**
+     * 16 Oct (Boss's choice: "All three"): R64's 30-60-100 lock switched on once for new trades of the three passed PAPER arms - Boss's own
+     * choice (A4 passed every R64 gate but was not better than the research exits in every period): logged as Boss's (kept) so the change log and "Today's changes" show it; one tap undoes it. Paper only.
+     */
+    fun logPassedLockOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedLock(true), "the 16 Oct update (your choice: \"All three\"); paper only - never live")
     }
 
     /**
