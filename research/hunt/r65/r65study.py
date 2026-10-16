@@ -26,7 +26,8 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "r64"))
-import r65cfg as R  # noqa: E402
+sys.path.insert(0, str(HERE.parent / "r66"))
+R = __import__(os.environ.get("HUNT_CFG", "r65cfg"))   # R66 reuses this study with its own config (r66cfg)
 import r64study as P  # noqa: E402  (R64's pure statistics: stats, periods, split, bh, gates, paired_boot)
 
 GROUPS = {"r51": ("Donchian", "OOV"), "solo2": ("Solo2",)}

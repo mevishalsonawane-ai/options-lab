@@ -36,7 +36,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 3,350 (247) | 32% | **-Rs 138,893** | -Rs 41 | Rs 1,342 | -Rs 705 | -Rs 9,603 | -Rs 15,738 | Rs 147,263 | 42% | 1376 / 1273 / 0 |
 | N0 own rules, no target (reference) | 3,266 (247) | 45% | **Rs 170,052** | Rs 52 | Rs 1,696 | -Rs 1,307 | -Rs 11,511 | -Rs 31,959 | Rs 101,717 | 48% | 533 / 0 / 0 |
 
-### Donchian - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64: weak evidence)
+### Donchian - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64 and later studies: weak evidence)
 
 | variant | trades (days) | win | net | per trade | avg win | avg loss | biggest loss | worst day | max DD | green days | stops / locks / targets |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -52,7 +52,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 1,831 (133) | 31% | **-Rs 73,088** | -Rs 40 | Rs 1,487 | -Rs 733 | -Rs 4,218 | -Rs 17,530 | Rs 87,882 | 41% | 792 / 567 / 0 |
 | N0 own rules, no target (reference) | 1,781 (133) | 44% | **Rs 77,806** | Rs 44 | Rs 1,626 | -Rs 1,178 | -Rs 6,245 | -Rs 23,012 | Rs 97,646 | 46% | 239 / 0 / 0 |
 
-### Donchian - what the lock did, design (against the plain counterpart: B0, or N0 for 'n' variants and A4)
+### Donchian - what the lock did, design (against each variant's plain counterpart, PREREG: S5 vs B0, S75 vs B0, S10 vs B0, T5 vs B0, S5n vs N0, S75n vs N0, S10n vs N0, T5n vs N0, A4 vs N0)
 
 | variant | trades the lock closed (matched) | Rs given up (n) | Rs saved on give-backs (n) | net effect | cut a plain +30% exit | option went on to +30% after the exit |
 |---|---|---|---|---|---|---|
@@ -66,7 +66,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 1810 (1483) | Rs 1,188,779 (742) | Rs 875,976 (739) | **-Rs 312,803** | 114 | 793 |
 | A4 app today (30/60/100 ladder, no target) | 35 (35) | Rs 11,791 (14) | Rs 16,705 (21) | **Rs 4,914** | 5 | 22 |
 
-### Donchian - what the lock did, final (against the plain counterpart: B0, or N0 for 'n' variants and A4)
+### Donchian - what the lock did, final (against each variant's plain counterpart, PREREG: S5 vs B0, S75 vs B0, S10 vs B0, T5 vs B0, S5n vs N0, S75n vs N0, S10n vs N0, T5n vs N0, A4 vs N0)
 
 | variant | trades the lock closed (matched) | Rs given up (n) | Rs saved on give-backs (n) | net effect | cut a plain +30% exit | option went on to +30% after the exit |
 |---|---|---|---|---|---|---|
@@ -138,7 +138,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 529 (187) | 32% | **Rs 14,136** | Rs 27 | Rs 1,788 | -Rs 793 | -Rs 9,603 | -Rs 16,401 | Rs 46,320 | 41% | 233 / 268 / 0 |
 | N0 own rules, no target (reference) | 529 (187) | 55% | **Rs 226,650** | Rs 428 | Rs 2,572 | -Rs 2,192 | -Rs 14,592 | -Rs 25,140 | Rs 54,466 | 54% | 53 / 2 / 0 |
 
-### OOV - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64: weak evidence)
+### OOV - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64 and later studies: weak evidence)
 
 | variant | trades (days) | win | net | per trade | avg win | avg loss | biggest loss | worst day | max DD | green days | stops / locks / targets |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -154,7 +154,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 293 (101) | 31% | **-Rs 4,700** | -Rs 16 | Rs 1,720 | -Rs 786 | -Rs 7,102 | -Rs 10,261 | Rs 37,799 | 44% | 133 / 136 / 0 |
 | N0 own rules, no target (reference) | 293 (101) | 50% | **Rs 48,955** | Rs 167 | Rs 2,204 | -Rs 1,884 | -Rs 9,049 | -Rs 16,554 | Rs 45,689 | 55% | 14 / 2 / 0 |
 
-### OOV - what the lock did, design (against the plain counterpart: B0, or N0 for 'n' variants and A4)
+### OOV - what the lock did, design (against each variant's plain counterpart, PREREG: S5 vs B0, S75 vs B0, S10 vs B0, T5 vs B0, S5n vs N0, S75n vs N0, S10n vs N0, T5n vs N0, A4 vs N0)
 
 | variant | trades the lock closed (matched) | Rs given up (n) | Rs saved on give-backs (n) | net effect | cut a plain +30% exit | option went on to +30% after the exit |
 |---|---|---|---|---|---|---|
@@ -168,7 +168,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 352 (352) | Rs 444,667 (191) | Rs 316,094 (160) | **-Rs 128,573** | 50 | 174 |
 | A4 app today (30/60/100 ladder, no target) | 25 (25) | Rs 11,247 (15) | Rs 13,788 (10) | **Rs 2,541** | 2 | 12 |
 
-### OOV - what the lock did, final (against the plain counterpart: B0, or N0 for 'n' variants and A4)
+### OOV - what the lock did, final (against each variant's plain counterpart, PREREG: S5 vs B0, S75 vs B0, S10 vs B0, T5 vs B0, S5n vs N0, S75n vs N0, S10n vs N0, T5n vs N0, A4 vs N0)
 
 | variant | trades the lock closed (matched) | Rs given up (n) | Rs saved on give-backs (n) | net effect | cut a plain +30% exit | option went on to +30% after the exit |
 |---|---|---|---|---|---|---|
@@ -240,7 +240,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 166 (166) | 37% | **Rs 41,418** | Rs 250 | Rs 2,328 | -Rs 958 | -Rs 2,764 | -Rs 2,764 | Rs 10,650 | 37% | 64 / 79 / 0 |
 | N0 own rules, no target (reference) | 166 (166) | 57% | **Rs 57,441** | Rs 346 | Rs 2,455 | -Rs 2,407 | -Rs 10,370 | -Rs 10,370 | Rs 25,843 | 57% | 9 / 0 / 0 |
 
-### Solo2 - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64: weak evidence)
+### Solo2 - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64 and later studies: weak evidence)
 
 | variant | trades (days) | win | net | per trade | avg win | avg loss | biggest loss | worst day | max DD | green days | stops / locks / targets |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -256,7 +256,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 128 (128) | 41% | **Rs 24,689** | Rs 193 | Rs 2,137 | -Rs 1,137 | -Rs 4,218 | -Rs 4,218 | Rs 12,912 | 41% | 55 / 55 / 0 |
 | N0 own rules, no target (reference) | 128 (128) | 59% | **Rs 99,172** | Rs 775 | Rs 2,628 | -Rs 1,933 | -Rs 6,120 | -Rs 6,120 | Rs 18,056 | 59% | 5 / 0 / 0 |
 
-### Solo2 - what the lock did, design (against the plain counterpart: B0, or N0 for 'n' variants and A4)
+### Solo2 - what the lock did, design (against each variant's plain counterpart, PREREG: S5 vs B0, S75 vs B0, S10 vs B0, T5 vs B0, S5n vs N0, S75n vs N0, S10n vs N0, T5n vs N0, A4 vs N0)
 
 | variant | trades the lock closed (matched) | Rs given up (n) | Rs saved on give-backs (n) | net effect | cut a plain +30% exit | option went on to +30% after the exit |
 |---|---|---|---|---|---|---|
@@ -270,7 +270,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 79 (79) | Rs 71,690 (41) | Rs 61,048 (38) | **-Rs 10,642** | 5 | 29 |
 | A4 app today (30/60/100 ladder, no target) | 2 (2) | Rs 822 (1) | Rs 2,022 (1) | **Rs 1,199** | 0 | 2 |
 
-### Solo2 - what the lock did, final (against the plain counterpart: B0, or N0 for 'n' variants and A4)
+### Solo2 - what the lock did, final (against each variant's plain counterpart, PREREG: S5 vs B0, S75 vs B0, S10 vs B0, T5 vs B0, S5n vs N0, S75n vs N0, S10n vs N0, T5n vs N0, A4 vs N0)
 
 | variant | trades the lock closed (matched) | Rs given up (n) | Rs saved on give-backs (n) | net effect | cut a plain +30% exit | option went on to +30% after the exit |
 |---|---|---|---|---|---|---|
@@ -340,7 +340,7 @@ Decision (PREREG section 6): recommended **none**; keep A4 (app today). Risk tra
 | T5n -5% stop moved up, no target | 4,045 (247) | 32% | **-Rs 83,339** | -Rs 21 | Rs 1,445 | -Rs 727 | -Rs 9,603 | -Rs 26,671 | Rs 156,160 | 42% | 1673 / 1620 / 0 |
 | N0 own rules, no target (reference) | 3,961 (247) | 47% | **Rs 454,143** | Rs 115 | Rs 1,871 | -Rs 1,445 | -Rs 14,592 | -Rs 40,366 | Rs 168,132 | 53% | 595 / 2 / 0 |
 
-### Together - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64: weak evidence)
+### Together - Final 1 Apr - 13/14 Oct 2026 (already read by R51 / R52 / R57 / R64 and later studies: weak evidence)
 
 | variant | trades (days) | win | net | per trade | avg win | avg loss | biggest loss | worst day | max DD | green days | stops / locks / targets |
 |---|---|---|---|---|---|---|---|---|---|---|---|

@@ -3,7 +3,7 @@
 Written 16 Oct 2026, **before any R66 result was computed**. Research only (no `android/**`); the app change is Boss's
 decision.
 
-Boss, 16 Oct, after R65 (the +10% -> +5% step trail lost to A4) and after 8 of his 10 recent paper trades went into
+Boss, 16 Oct, after R65 (the +10% -> +5% step trail lost to A4) and after 8 of their 10 recent paper trades went into
 profit and then came back to the stop: *"What if we do 25% of target, means if the target moves 25% then move stoploss 5
 percent up."*
 

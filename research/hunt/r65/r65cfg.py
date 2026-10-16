@@ -22,10 +22,12 @@ OUT = Path(os.environ.get("R65_OUT", R64.CACHE_ROOT / "r65")).expanduser()
 RESULTS = HERE / "results"
 FINAL_FLAG = RESULTS / "FINAL_READ"
 
+NAME = "R65"
 ARMS = R64.ARMS
 OWN = R64.OWN
 VARIANTS = ("B0", "A4", "S5", "S5n", "S75", "S75n", "S10", "S10n", "T5", "T5n")
 TRAILS = VARIANTS[2:]
+EXAMPLES = ("S5", "S5n", "S10", "T5")    # report: the variants whose biggest give-up / save are shown
 REFS = ("N0",)                           # plain counterpart of the "n" variants: own rules, no target, no trail
 PLAIN = {"S5": "B0", "S75": "B0", "S10": "B0", "T5": "B0", "S5n": "N0", "S75n": "N0", "S10n": "N0", "T5n": "N0"}
 VLABEL = {"B0": "B0 research rules", "A4": "A4 app today (30/60/100 ladder, no target)",
