@@ -53,10 +53,15 @@ object WhatsNew {
     private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
     private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
+    private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-open-trade-change", OCT16, "A position's change is now its open trade only",
+            "A position's change now shows only the open trade's move on its average price, not earlier trades on the same option. " +
+                "Below it, Exits shows the stop, target and exit time its strategy is holding it to.",
+            "Tap any open position (Trade tab, Home or its notification)"),
         Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
             "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
                 "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +

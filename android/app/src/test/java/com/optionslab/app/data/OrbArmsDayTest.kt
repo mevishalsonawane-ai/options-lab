@@ -168,6 +168,10 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals("inside_range", arm().status)
         tick(LocalTime.of(10, 35))                                  // the 10:30 bar closed above 54,000
         assertOneCeBuy(signalBar = LocalTime.of(10, 30), entryTime = LocalTime.of(10, 35))
+        // 16 Oct: the position popup's Exits line is the arm's own resting stop and its 15:10 exit.
+        val held = arm().today.single()
+        val exits = com.optionslab.ira.ArmExits.line(false, held.symbol)!!
+        assertTrue(exits, exits.startsWith("stop %.2f".format(java.util.Locale.ENGLISH, held.stopTrigger!!)) && "time 15:10" in exits)
         passes(LocalTime.of(10, 36), LocalTime.of(11, 30))
         assertOneCeBuy(signalBar = LocalTime.of(10, 30), entryTime = LocalTime.of(10, 35))
     }

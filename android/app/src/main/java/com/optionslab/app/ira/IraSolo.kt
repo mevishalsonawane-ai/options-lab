@@ -575,6 +575,8 @@ internal object IraSolo {
         // The trade manager (10 Oct): Solo's open trade handed over (memory only; paper acts by default). It may only want it
         // out sooner - Solo has no target, so nothing is ever extended - and Solo's own exits below come first.
         val mid = if (t.midday && a != null) runCatching { attachManager(t, a) }.getOrNull() else null
+        // 16 Oct: its exits for the position popup's "Exits" line (memory only; cleared when it closes, [finish]).
+        if (t.midday) runCatching { com.optionslab.ira.ArmExits.set(exitsOwner(t), listOf(exitsOf(t))) }
         // The retired Solo's trade, still open when Solo (midday) replaced it: its rules are gone, so it is closed now.
         val walked: Pair<SoloMidday.Open, SoloMidday.Walk>? = if (!t.midday || a == null) null else {
             // From the 12:00 decision minute (the research's entry bar), not the minute the paper order filled.
@@ -694,7 +696,17 @@ internal object IraSolo {
         return if (q == 0) null else value / q to sells.first().orderId
     }
 
+    private fun exitsOwner(t: T) = "solo|${t.day}|${t.symbol}"
+
+    /** [t]'s exits as the position popup words them: SoloMidday's stop on the index (0.3 ATR), its breakeven lock, out by 14:30. */
+    internal fun exitsOf(t: T): com.optionslab.ira.ArmExits.Entry {
+        val stop = t.atr?.let { SoloMidday.stopLevel(if (t.call) 1 else -1, t.index, it) }
+        return com.optionslab.ira.ArmExits.Entry(exitsOwner(t), "Solo", false, t.symbol, null, null, SoloMidday.EXIT,
+            (stop?.let { "stop on the index at %.2f".format(java.util.Locale.ENGLISH, it) } ?: "stop on the index") + ", breakeven lock")
+    }
+
     private fun finish(t: T, list: List<T>, px: Double?, why: String, exitOrderId: String? = null) {
+        runCatching { com.optionslab.ira.ArmExits.set(exitsOwner(t), emptyList()) }
         val net = px?.let { (it - t.entry) * t.qty - ShadowRules.charges(t.entry, it, t.qty) }
         val done = t.copy(closed = true, exitPrice = px, net = net, exit = why, exitOrderId = exitOrderId)
         val all = list.map { if (it === t) done else it }

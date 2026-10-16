@@ -129,7 +129,7 @@ object VixDivArm {
         _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(20), b.log.takeLast(30),
             closed.map { it.net ?: 0.0 }, closed.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) })
         // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own exits stay authoritative.
-        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }, owner = "vixdiv") }
     }
 
     /** [p]'s id for the trade manager. */

@@ -288,6 +288,20 @@ object TradeManagerHost {
      * [stop] / [target] on that price where it has them (null: none there), its last exit time [squareOffMs], [live], when it
      * was bought, and - once closed - its [exit] price and [exitWhy].
      */
+    /**
+     * [a]'s exits as the position popup words them: its stop and target where it has them on its own price, and its last exit
+     * time ([ArmTrade.squareOffMs]), dated when that is after the day it was bought (an overnight hold).
+     */
+    internal fun exitsOf(owner: String, a: ArmTrade, note: String? = null): com.optionslab.ira.ArmExits.Entry {
+        val off = java.time.Instant.ofEpochMilli(a.squareOffMs).atZone(com.optionslab.engine.IST).toLocalDateTime()
+        val bought = java.time.Instant.ofEpochMilli(a.entryMs).atZone(com.optionslab.engine.IST).toLocalDate()
+        val later = if (off.toLocalDate().isAfter(bought))
+            "out on " + off.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM", java.util.Locale.ENGLISH)) else null
+        // A live one is found by Zerodha's name for it (the positions book's), a paper one by the paper book's.
+        return com.optionslab.ira.ArmExits.Entry(owner, a.label, a.live, if (a.live) a.kite ?: a.symbol else a.symbol, a.stop, a.target, off.toLocalTime(),
+            listOfNotNull(note, later).joinToString(" · ").ifEmpty { null })
+    }
+
     data class ArmTrade(
         val family: String, val tradeId: String, val label: String, val underlying: String, val side: Int, val symbol: String,
         val entry: Double, val qty: Int, val stop: Double?, val target: Double?, val squareOffMs: Long, val live: Boolean, val entryMs: Long,
@@ -304,7 +318,9 @@ object TradeManagerHost {
      * since is told its real exit. A short future is followed with its prices negated (a long on −price: the same
      * arithmetic; the words show the market's prices). Never throws.
      */
-    fun sync(trades: List<ArmTrade>) {
+    fun sync(trades: List<ArmTrade>, owner: String? = null) {
+        // 16 Oct: the open ones' own exits for the position popup's "Exits" line ([com.optionslab.ira.ArmExits], memory only).
+        owner?.let { o -> runCatching { com.optionslab.ira.ArmExits.set(o, trades.filter { it.exit == null }.map { exitsOf(o, it) }) } }
         if (com.optionslab.app.BuildConfig.GOLD) return
         for (a in trades) runCatching {
             val k = if (a.shortFuture) -1.0 else 1.0

@@ -210,6 +210,9 @@ class HeroArmTest : RobolectricTest() {
         tick(LocalTime.of(13, 59))
         assertEquals(0, hero().today.single().sold)
         assertEquals(1, Paper.state.orders.size)
+        // 16 Oct: the position popup's Exits line: -60% on a minute's close, 5x first, out by 15:05.
+        assertEquals("stop 1.62 · target 20.25 · time 15:05 · half at 5×, the rest at 20×, stop on a 1-minute close",
+            com.optionslab.ira.ArmExits.line(false, p.symbol))
         // 14:00: it trades at 20.50: half the lots (9 of 18) go with a LIMIT SELL at 20.25, filled at the market.
         upstox.price(ce, 20.5)
         tick(LocalTime.of(14, 0))
@@ -224,6 +227,8 @@ class HeroArmTest : RobolectricTest() {
         assertEquals("complete", half.status)
         assertEquals("Hero · hero_5x", runBlocking { Strategies.owners() }["paper:${half.orderId}"])
         assertEquals(9 * lot, Paper.state.positions.filter { it.symbol == h.symbol }.sumOf { it.quantity })
+        assertEquals("stop 1.62 · target %.2f · time 15:05 · half sold at 5×, stop on a 1-minute close".format(java.util.Locale.ENGLISH, HeroRules.target2(h.entry)),
+            com.optionslab.ira.ArmExits.line(false, h.symbol))
         // Up to 30 (below 20x = 80.00, and 5x is never sold twice): held to 15:05.
         upstox.price(ce, 30.0)
         passes(LocalTime.of(14, 1), LocalTime.of(15, 4))
