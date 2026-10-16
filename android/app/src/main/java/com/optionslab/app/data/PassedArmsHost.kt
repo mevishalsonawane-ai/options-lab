@@ -300,7 +300,10 @@ object PassedArmsHost {
         val stop = listOfNotNull(PassedArms.stopLevel(p.entry, x), held).maxOrNull()
         val sq = x.squareOff
         val at = PassedArms.timeExitAt(p.entryMinute, x)?.takeIf { it.toLocalDate() == p.day && it.toLocalTime().isBefore(sq) }?.toLocalTime() ?: sq
-        val step = if (held == null) x.steps.firstOrNull()?.let { (t, k) -> "+%.0f%% locked once +%.0f%%".format(Locale.ENGLISH, k * 100, t * 100) } else "lock held"
+        // R64's ladder keeps breakeven (NaN: the fill plus the charges) at its first step: worded so, never "+NaN%".
+        val step = if (held == null) x.steps.firstOrNull()?.let { (t, k) ->
+            (if (k.isNaN()) "breakeven" else "+%.0f%%".format(Locale.ENGLISH, k * 100)) + " locked once +%.0f%%".format(Locale.ENGLISH, t * 100)
+        } else "lock held"
         return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, stop, PassedArms.targetLevel(p.entry, x), at,
             step?.takeIf { x.steps.isNotEmpty() })
     }
@@ -1040,7 +1043,7 @@ object PassedArmsHost {
             if (b.positions.any { it.open && it.symbol == o.symbol }) return@withLock null
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
-                adopted = ADOPT_FILL)
+                adopted = ADOPT_FILL, lock = b.lockOn)
             b.positions += p
             b.marks[p.symbol] = p.entry
             val words = "${label(arm)}: ${p.symbol} ${p.qty} was held on paper with no record here, so its exits were not running; " +

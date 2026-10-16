@@ -197,6 +197,9 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(70.0, before.stop!!, 1e-9); assertNull(before.target)
         assertEquals(OovArm.EXITS.squareOff, before.at)
         assertEquals("+10% locked once +40%", before.note)
+        // R64's lock (16 Oct): no target, breakeven worded (never "+NaN%").
+        val lk = PassedArmsHost.exitsOf(oov.copy(lock = true), null)
+        assertNull(lk.target); assertEquals("breakeven locked once +30%", lk.note)
         // The lock earned: the stop is raised to it.
         val locked = PassedArmsHost.exitsOf(oov, "${t0.plusMinutes(5)}|110.0")
         assertEquals(110.0, locked.stop!!, 1e-9); assertEquals("lock held", locked.note)
