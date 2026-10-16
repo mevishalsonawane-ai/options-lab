@@ -1124,8 +1124,10 @@ object PassedArmsHost {
         val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
         if (held <= 0) {
             val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            // 16 Oct (R72): one sale may have closed R51's and R72's lots of the same option together: each books only its share.
+            val share = t?.let { (p.qty.toDouble() / it.quantity.coerceAtLeast(1)).coerceAtMost(1.0) } ?: 0.0
             val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
-                charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+                charges = p.charges + (t?.charges?.toDouble() ?: 0.0) * share)
             b.positions[i] = done; closed(b, done); return true
         }
         val overnight = p.day.isBefore(now.toLocalDate())

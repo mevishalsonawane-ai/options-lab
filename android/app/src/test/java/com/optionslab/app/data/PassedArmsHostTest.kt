@@ -765,6 +765,30 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** Both arms' lots of the same option sold elsewhere in one sale (a square-off): each closes, each with only its share of its charges. */
+    @Test fun aSharedOptionSoldElsewhereInOneSaleClosesBothWithTheirShareOfItsCharges() {
+        bothDonchians()
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        assertEquals(2, open.size)
+        val c = Paper.contractOf(open.first().symbol)!!
+        market(LocalTime.of(9, 22)); at(LocalTime.of(9, 22))
+        val r = runBlocking { Paper.place(c, "SELL", 2, "MARKET", "MIS", null, null) }
+        assertTrue(r.message, r.ok)
+        val sale = Paper.state.trades.last { it.symbol == c.symbol && it.action == "SELL" }
+        assertEquals(130, sale.quantity)
+        runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        assertEquals(2, closed.size)
+        for (x in closed) {
+            assertEquals("closed_elsewhere", x.why)
+            val entryCharges = open.single { it.arm == x.arm }.charges
+            assertEquals(entryCharges + sale.charges.toDouble() / 2, x.charges, 1e-6)
+        }
+        assertNothingAtZerodha()
+    }
+
     @Test fun threeIndicesBreakingIsNoBreadthTradeButDonchiansAndAFeedDownCountsAsNotBreaking() {
         bothDonchians()
         // NIFTY, BANKNIFTY and FINNIFTY break: Donchian buys NIFTY's call, breadth nothing.
