@@ -106,6 +106,28 @@ and waiting gives exactly that part away.
 
 Neither filter adds to Breadth Donchian in the final (random-skip p 0.65 and 0.46).
 
+**Fuller check, 16 Oct (Boss: "check r72 ... find if this super trend works on that"; after the final read,
+information only, `research/hunt/r73/c1_supertrend.py`, `results/extra_c1_T7_full.json`).** The R72 app session has
+built the Breadth Donchian paper arm (`claude/breadth-donchian-arm`, waiting on its CI). Supertrend on top of it:
+
+| C1 Breadth Donchian vs C1 + Supertrend | design net (trades) | walk-forward net | final net (trades) | final max DD | final worst day | final green days |
+|---|---|---|---|---|---|---|
+| exits P, C1 alone | Rs 2,16,929 (3,071) | Rs 3,35,882 | Rs 1,71,366 (1,202) | Rs 61,884 | -Rs 22,571 | 52% |
+| exits P, C1 + Supertrend | Rs 2,56,207 (2,965) | Rs 3,67,589 | Rs 1,65,758 (1,163) | Rs 68,021 | -Rs 22,571 | 51% |
+| exits Q, C1 alone | Rs 2,16,882 (3,070) | Rs 3,33,538 | Rs 1,68,944 (1,202) | Rs 63,444 | -Rs 22,571 | 52% |
+| exits Q, C1 + Supertrend | Rs 2,55,473 (2,964) | Rs 3,64,028 | Rs 1,64,912 (1,163) | Rs 67,740 | -Rs 22,571 | 51% |
+
+- **Design:** it helped (+Rs 39k, better in 12 of 17 months, design worst day -Rs 51,838 vs -Rs 58,613; random-skip p
+  0.016).
+- **Final:** it did not (-Rs 5.6k; better in only 2 of 7 months; drawdown Rs 6k larger; random-skip p 0.46). It
+  skipped 79 C1 trades: 41 losers (Rs 52,634 saved) and 38 winners (Rs 67,365 missed, 3 of them +30% winners).
+- **Why so little:** the two filters remove mostly the same trades. Of the 273 Donchian trades Supertrend skips in
+  the final, Breadth Donchian already drops 212 (78%; design 504 of 659). Once breadth has filtered the breaks, little
+  is left for Supertrend to remove. On calls it cut too much (final calls Rs 1,06,076 vs Rs 1,27,371); on puts it
+  helped (Rs 59,682 vs Rs 43,995).
+- **Verdict:** do not add Supertrend to the Breadth Donchian arm. Use one filter on Donchian, not both. Breadth is the
+  stronger one (final Rs 1,71,366 vs Supertrend-on-Donchian Rs 1,34,743).
+
 ## The rule, if Boss wants it on paper (Boss decides; live unchanged)
 
 **Donchian 20 with Supertrend agreement (T7):** on the index's 5-minute bars (09:15-anchored, one continuous series
