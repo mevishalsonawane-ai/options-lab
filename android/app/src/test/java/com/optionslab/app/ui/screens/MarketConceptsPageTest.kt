@@ -3,6 +3,7 @@ package com.optionslab.app.ui.screens
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
@@ -12,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.ira.ConceptLibrary
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.ira.Concepts
+import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,11 +67,17 @@ class MarketConceptsPageTest {
         compose.onNodeWithText("The concept book could not be read.").assertExists()
     }
 
+    // 16 Oct: waits for the name on screen, not for ConceptLibrary.cached(). The cache is filled on the IO thread a moment
+    // before the page's coroutine hands the book back to Compose, and waitForIdle does not wait for that hand-back, so
+    // the old wait could read the screen while it still said "Reading…" (failed once in CI, shard 3/4). Any other test's
+    // background load (IraHub warms the book on IO) could also fill the cache before this page read it.
     @Test fun thePageReadsTheBookOffTheMainThreadAndListsIt() {
+        val first = book.concepts.first().name
         ConceptLibrary.drop()
         compose.setContent { IraAlgoTheme("light") { MarketConceptsPage() } }
-        compose.waitUntil(10_000) { ConceptLibrary.cached() != null }
-        compose.waitForIdle()
-        compose.onNodeWithText(book.concepts.first().name).assertExists()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText(first).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(first).assertExists()
+        compose.onNodeWithText("Reading the concept book…").assertDoesNotExist()
+        assertNotNull(ConceptLibrary.cached())
     }
 }
