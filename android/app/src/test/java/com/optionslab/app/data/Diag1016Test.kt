@@ -103,7 +103,8 @@ class Diag1016Test : RobolectricTest() {
         assertTrue(PositionsFirst.slowest.orEmpty(), PositionsFirst.slowest.orEmpty().matches(Regex("book \\d \\d+ ms")))
         // Nothing open anywhere: false; one book that cannot be read: true (the watch decides).
         assertFalse(PositionsFirst.readAll(listOf("a" to (suspend { false }), "b" to (suspend { false }))))
-        assertTrue(PositionsFirst.readAll(listOf("a" to (suspend { false }), "b" to (suspend<Boolean> { error("unreadable") }))))
+        val unreadable: suspend () -> Boolean = { error("unreadable") }
+        assertTrue(PositionsFirst.readAll(listOf("a" to (suspend { false }), "b" to unreadable)))
         PositionsFirst.resetForTest(started = false)
     }
 }
