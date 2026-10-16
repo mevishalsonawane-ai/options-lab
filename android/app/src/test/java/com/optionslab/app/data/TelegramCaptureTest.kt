@@ -93,9 +93,10 @@ class TelegramCaptureTest : RobolectricTest() {
     private fun login() {
         assertEquals("The api_hash is 32 letters and digits (0-9, a-f).", TelegramCapture.saveKeys("12345", "nothex"))
         assertEquals("The api_id is a number (my.telegram.org → API development tools).", TelegramCapture.saveKeys("abc", hash))
-        assertTrue(TelegramCapture.saveKeys("12345", hash).startsWith("Saved on this phone only"))
-        assertTrue(TelegramCapture.startLogin().startsWith("Starting"))
+        // 16 Oct: saved keys start the login at once (no second tap).
+        assertEquals("Saved on this phone only (encrypted). Starting Telegram…", TelegramCapture.saveKeys("12345", hash))
         waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        assertEquals("Telegram is waiting for your phone number.", TelegramCapture.startLogin())
         TelegramCapture.phone("+91 99999 00000")
         waitFor("the code step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_CODE }
         TelegramCapture.code("12345")
@@ -285,7 +286,181 @@ class TelegramCaptureTest : RobolectricTest() {
     @Test fun notInABuildWithoutTheLibrary() {
         TelegramCapture.resetForTest()
         assertFalse(TelegramCapture.available())
-        assertEquals("Telegram login is not in this build.", TelegramCapture.startLogin())
-        assertEquals("Not in this build", TelegramCapture.refresh().line)
+        // The library is not in the tests' build: "not in this build", or (a non-arm64 host) the plain reason - said in the dialog too.
+        val why = TelegramCapture.view.value.why
+        assertEquals(why?.let { "$it." } ?: "Telegram login is not in this build.", TelegramCapture.startLogin())
+        assertEquals(TelegramCapture.view.value.said, why?.let { "$it." } ?: "Telegram login is not in this build.")
+        assertEquals(why ?: "Not in this build", TelegramCapture.refresh().line)
+    }
+
+    // ---- 16 Oct, Boss: "Telegram login button not working" -----------------------------------------------------------------
+
+    @Test fun theLibrarysAbsenceSaysWhyInPlainWords() {
+        assertEquals("Not on this phone: the Telegram login needs a 64-bit ARM phone (arm64-v8a); this one is armeabi-v7a, armeabi",
+            TelegramCapture.unavailableWhy(packaged = false, abis = listOf("armeabi-v7a", "armeabi"), error = "UnsatisfiedLinkError"))
+        assertEquals("Not on this phone: the Telegram login needs a 64-bit ARM phone (arm64-v8a); this one is unknown",
+            TelegramCapture.unavailableWhy(packaged = true, abis = emptyList(), error = "UnsatisfiedLinkError"))
+        assertEquals("Telegram's library is in the app but did not load on this phone (UnsatisfiedLinkError)",
+            TelegramCapture.unavailableWhy(packaged = true, abis = listOf("arm64-v8a", "armeabi-v7a"), error = "UnsatisfiedLinkError"))
+        assertNull(TelegramCapture.unavailableWhy(packaged = false, abis = listOf("arm64-v8a"), error = "UnsatisfiedLinkError"))
+        assertEquals("Not on this phone: the Telegram login needs a 64-bit ARM phone (arm64-v8a); this one is armeabi-v7a",
+            TelegramCapture.View(why = TelegramCapture.unavailableWhy(false, listOf("armeabi-v7a"), "x")).line)
+    }
+
+    @Test fun withoutKeysTheLoginSaysSoInTheDialog() {
+        assertEquals("Enter your api_id and api_hash first.", TelegramCapture.startLogin())
+        assertEquals("Enter your api_id and api_hash first.", TelegramCapture.view.value.said)
+        assertFalse(TelegramCapture.view.value.running)
+        // Bad keys: refused before anything is saved or started, the reason in the dialog.
+        assertEquals("The api_hash is 32 letters and digits (0-9, a-f).", TelegramCapture.saveKeys("12345", "nothex"))
+        assertEquals("The api_hash is 32 letters and digits (0-9, a-f).", TelegramCapture.view.value.said)
+        assertEquals("The api_id is a number (my.telegram.org → API development tools).", TelegramCapture.saveKeys("0", hash))
+        assertFalse(TelegramCapture.view.value.keys)
+        assertNull(SecurePrefs.getString(TelegramCapture.K_API_HASH))
+        assertFalse(TelegramCapture.view.value.running)
+        assertEquals("Tap \"Log in to Telegram\" first.", TelegramCapture.phone("+91 99999 00000"))
+    }
+
+    /** A stand-in that answers as TDLib 1.8.67 does: the update AND the kick's own answer, each with its client id. */
+    private inner class Real(val onSend: (String) -> List<String> = { emptyList() }) : TelegramCapture.Transport {
+        override val clientId: Int get() = 1
+        override fun send(json: String) {
+            sent += json
+            val c = ""","@client_id":1}"""
+            when {
+                json.contains("\"setLogStream\"") -> { inbox += """{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateWaitTdlibParameters"}$c"""; inbox += """{"@type":"ok"$c""" }
+                json.contains("\"getAuthorizationState\"") -> inbox += """{"@type":"authorizationStateWaitTdlibParameters"$c"""
+                json.contains("\"setTdlibParameters\"") && sent.count { it.contains("\"setTdlibParameters\"") } > 1 ->
+                    inbox += """{"@type":"error","code":400,"message":"Unexpected setTdlibParameters"$c"""
+                json.contains("\"close\"") || json.contains("\"logOut\"") -> inbox += """{"@type":"updateAuthorizationState","authorization_state":{"@type":"authorizationStateClosed"}$c"""
+            }
+            for (x in onSend(json)) inbox += x
+        }
+        override fun receive(timeoutSec: Double): String? = inbox.poll((timeoutSec * 1000).toLong(), TimeUnit.MILLISECONDS)
+    }
+    private fun st(t: String, more: String = "") = """{"@type":"updateAuthorizationState","authorization_state":{"@type":"$t"$more},"@client_id":1}"""
+
+    @Test fun theWholeLoginAsTdlibAnswersItEveryStepToldInTheDialog() {
+        TelegramCapture.testTransport = { Real { json -> when {
+            json.contains("\"setTdlibParameters\"") -> listOf("""{"@type":"ok","@client_id":1}""", st("authorizationStateWaitPhoneNumber"))
+            json.contains("\"setAuthenticationPhoneNumber\"") ->
+                listOf(st("authorizationStateWaitCode", ""","code_info":{"@type":"authenticationCodeInfo","phone_number":"x","type":{"@type":"authenticationCodeTypeTelegramMessage","length":5},"timeout":0}"""))
+            json.contains("\"checkAuthenticationCode\"") && json.contains("\"11111\"") -> listOf("""{"@type":"error","code":400,"message":"PHONE_CODE_INVALID","@client_id":1}""")
+            json.contains("\"checkAuthenticationCode\"") -> listOf(st("authorizationStateWaitPassword", ""","password_hint":"pet","has_recovery_email_address":false"""))
+            json.contains("\"checkAuthenticationPassword\"") && json.contains("\"wrong\"") -> listOf("""{"@type":"error","code":400,"message":"PASSWORD_HASH_INVALID","@client_id":1}""")
+            json.contains("\"checkAuthenticationPassword\"") -> listOf(st("authorizationStateReady"))
+            else -> emptyList()
+        } } }
+        assertEquals("Saved on this phone only (encrypted). Starting Telegram…", TelegramCapture.saveKeys("12345", hash))
+        waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        val v = TelegramCapture.view.value
+        assertEquals("Telegram started. Enter your phone number with the country code (+91…), then Send.", v.said)
+        assertTrue(v.line, v.line.endsWith("· waiting for your phone number"))
+        // TDLib asked twice for its parameters (its update and the kick's answer): sent once, so no "Unexpected" error.
+        Thread.sleep(300)
+        assertEquals(1, sent.count { it.contains("\"setTdlibParameters\"") })
+        assertFalse(TelegramCapture.view.value.said.orEmpty().contains("Unexpected"))
+        TelegramCapture.phone("+91 99999 00000")
+        waitFor("the code step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_CODE }
+        assertEquals("Telegram sent you a login code in the Telegram app. Enter it, then Send.", TelegramCapture.view.value.said)
+        // A wrong code: TDLib's error, in plain words, in the dialog; still at the code step.
+        TelegramCapture.code("11111")
+        waitFor("the error") { TelegramCapture.view.value.said == "That login code is not right: enter the newest code Telegram sent." }
+        assertEquals(TdSession.Auth.NEED_CODE, TelegramCapture.view.value.auth)
+        TelegramCapture.code("12345")
+        waitFor("the 2-step password") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PASSWORD }
+        assertEquals("pet", TelegramCapture.view.value.hint)
+        assertEquals("Your account has 2-step verification: enter its password, then Send.", TelegramCapture.view.value.said)
+        TelegramCapture.password("wrong")
+        waitFor("the wrong password") { TelegramCapture.view.value.said == "That 2-step verification password is not right." }
+        TelegramCapture.password("right")
+        waitFor("logged in") { TelegramCapture.view.value.loggedIn }
+        assertEquals("Logged in (read-only). Next: Choose channels.", TelegramCapture.view.value.said)
+        // Nothing secret in what is shown: never the phone number, the code or the password.
+        val shown = TelegramCapture.view.value.toString() + TelegramCapture.diagLine()
+        for (x in listOf("9999900000", "12345", "right", hash)) assertFalse(x, shown.contains(x))
+        // Every request read-only.
+        assertTrue(sent.all { Regex("\"@type\":\"(\\w+)\"").find(it)!!.groupValues[1] in TdSession.ALLOWED })
+    }
+
+    @Test fun badKeysAreToldWhenTelegramRefusesThem() {
+        TelegramCapture.testTransport = { Real { json -> when {
+            json.contains("\"setTdlibParameters\"") -> listOf(st("authorizationStateWaitPhoneNumber"))
+            json.contains("\"setAuthenticationPhoneNumber\"") -> listOf("""{"@type":"error","code":400,"message":"API_ID_INVALID","@client_id":1}""")
+            else -> emptyList()
+        } } }
+        TelegramCapture.saveKeys("12345", hash)
+        waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        TelegramCapture.phone("+91 99999 00000")
+        waitFor("the refusal") { TelegramCapture.view.value.said.orEmpty().contains("api_id / api_hash are not valid") }
+        assertTrue(TelegramCapture.view.value.said!!.contains("Log out of Telegram"))
+    }
+
+    @Test fun aStartThatStaysStartingSaysWhatToCheckAndTriesAgain() {
+        TelegramCapture.stuckMs = 300
+        // TDLib that never answers (no network, say).
+        TelegramCapture.testTransport = { object : TelegramCapture.Transport {
+            override fun send(json: String) { sent += json; if (json.contains("\"close\"")) inbox += state("authorizationStateClosed") }
+            override fun receive(timeoutSec: Double): String? = inbox.poll(minOf(200L, (timeoutSec * 1000).toLong()), TimeUnit.MILLISECONDS)
+        } }
+        TelegramCapture.saveKeys("12345", hash)
+        val v0 = TelegramCapture.view.value
+        assertTrue(v0.busy); assertEquals(TdSession.Auth.STARTING, v0.auth); assertTrue(v0.line, v0.line.endsWith("· starting"))
+        waitFor("the stuck message") { TelegramCapture.view.value.stuck }
+        assertEquals(TelegramCapture.STUCK_WORDS, TelegramCapture.view.value.said)
+        assertTrue(TelegramCapture.STUCK_WORDS.contains("Try again"))
+        // "Try again": closed and started afresh, against a TDLib that answers this time.
+        TelegramCapture.testTransport = { Fake() }
+        TelegramCapture.stuckMs = TelegramCapture.STUCK_MS
+        assertEquals("Starting Telegram…", runBlocking { TelegramCapture.retryLogin() })
+        waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        assertFalse(TelegramCapture.view.value.stuck)
+    }
+
+    @Test fun aStepOnlyTheTelegramAppCanDoIsTriedAfreshOnTheNextTap() {
+        var starts = 0
+        TelegramCapture.testTransport = { starts++; Real { json -> if (json.contains("\"setTdlibParameters\""))
+            listOf(if (starts == 1) st("authorizationStateWaitEmailAddress", ""","allow_apple_id":false,"allow_google_id":false""") else st("authorizationStateWaitPhoneNumber"))
+            else emptyList() } }
+        TelegramCapture.saveKeys("12345", hash)
+        waitFor("the unsupported step") { TelegramCapture.view.value.auth == TdSession.Auth.UNSUPPORTED }
+        assertTrue(TelegramCapture.view.value.said.orEmpty().contains("only the Telegram app can do"))
+        // Boss finishes it in the Telegram app, then taps "Log in to Telegram" again: closed and started afresh.
+        assertEquals("Starting Telegram…", TelegramCapture.startLogin())
+        waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        assertEquals(2, starts)
+    }
+
+    @Test fun tdlibsErrorWhileStartingStaysInFrontOfTheStuckWords() {
+        TelegramCapture.stuckMs = 300
+        TelegramCapture.testTransport = { Real { json -> if (json.contains("\"setTdlibParameters\""))
+            listOf("""{"@type":"error","code":400,"message":"Valid api_id must be provided. Can be obtained at https://my.telegram.org","@client_id":1}""") else emptyList() } }
+        TelegramCapture.saveKeys("12345", hash)
+        waitFor("the stuck message") { TelegramCapture.view.value.stuck }
+        val said = TelegramCapture.view.value.said.orEmpty()
+        assertTrue(said, said.startsWith("Telegram says the api_id / api_hash are not valid"))
+        assertTrue(said, said.endsWith(TelegramCapture.STUCK_WORDS))
+    }
+
+    @Test fun aBackgroundTrimKeepsALoginInProgressRealShortageClosesIt() {
+        TelegramCapture.saveKeys("12345", hash)
+        waitFor("the phone step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_PHONE }
+        TelegramCapture.phone("+91 99999 00000")
+        waitFor("the code step") { TelegramCapture.view.value.auth == TdSession.Auth.NEED_CODE }
+        // Boss leaves the app to read the code in Telegram: a background trim. The login stays; the rest is still let go.
+        val bg = com.optionslab.ira.MemoryPlan.BACKGROUND
+        val done = MemoryTrim.release(com.optionslab.ira.MemoryPlan.releases(bg), bg)
+        assertFalse(com.optionslab.ira.MemoryPlan.Item.TELEGRAM in done)
+        assertTrue(com.optionslab.ira.MemoryPlan.Item.MODEL in done)
+        assertTrue(MemoryTrim.lastLine.orEmpty().endsWith("the position watch untouched"))
+        Thread.sleep(200)
+        assertTrue(TelegramCapture.view.value.running)
+        assertEquals(TdSession.Auth.NEED_CODE, TelegramCapture.view.value.auth)
+        // Real shortage while showing: closed, and the dialog says how to carry on.
+        val low = com.optionslab.ira.MemoryPlan.RUNNING_LOW
+        assertTrue(com.optionslab.ira.MemoryPlan.Item.TELEGRAM in MemoryTrim.release(com.optionslab.ira.MemoryPlan.releases(low), low))
+        waitFor("closed") { !TelegramCapture.view.value.running }
+        assertTrue(TelegramCapture.view.value.said.orEmpty().startsWith("Telegram was closed to free memory"))
+        MemoryTrim.resetForTest()
     }
 }
