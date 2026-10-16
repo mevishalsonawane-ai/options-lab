@@ -384,7 +384,7 @@ object TrendWatchHost {
 
     private suspend fun liveFills(now: LocalDateTime, symbols: Set<String>): Map<String, Pair<LocalDateTime?, String?>> {
         if (liveFillDay != now.toLocalDate()) { liveFillCache.clear(); liveFillDay = now.toLocalDate() }
-        if (symbols.any { it !in liveFillCache }) runCatching {
+        if (symbols.any { !liveFillCache.containsKey(it) }) runCatching {
             val trades = Broker.trades()
             val orders = Broker.orders().associateBy { it.id }
             val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
