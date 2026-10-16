@@ -339,6 +339,11 @@ object Broker {
     private suspend fun callInner(method: String, path: String, body: String?, auth: Boolean, raw: Boolean,
                                   json: Boolean, viaRelay: Boolean, readOnly: Boolean = false): Any {
         var attempt = 0
+        // 16 Oct (Boss's diagnostics: "GET /portfolio/positions -> FAILED ... (105388 ms)"): a read had only per-socket limits
+        // (20 s connect, 60 s read), which the HTTP stack's own silent retries and the 429 retries each started afresh. A read
+        // now has one budget for the whole call ([readBudgetMs]); past it the connection is cut, and no 429 retry starts.
+        val budget = readBudgetMs(method, path, readOnly, viaRelay)
+        val began = System.currentTimeMillis()
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
             // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
@@ -363,10 +368,13 @@ object Broker {
             // Any failure closes it. A POST is never re-sent on a pooled connection: its body is streamed at
             // a fixed length (below), which the stack cannot replay, and a non-GET gets a health check first.
             var reusable = false
+            // The read's budget left: the connection is cut when it runs out (writes are never cut: an order is never half-sent).
+            val left = budget?.let { (it - (System.currentTimeMillis() - began)).coerceAtLeast(1L) }
+            val cut = left?.let { ms -> runCatching { cutter.schedule(Runnable { runCatching { c.disconnect() } }, ms, java.util.concurrent.TimeUnit.MILLISECONDS) }.getOrNull() }
             try {
                 c.requestMethod = method
-                c.connectTimeout = if (quick) FAST_READ_MS else 20_000
-                c.readTimeout = if (quick) FAST_READ_MS else 60_000
+                c.connectTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else 20_000
+                c.readTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else 60_000
                 c.instanceFollowRedirects = false
                 c.useCaches = false
                 c.setRequestProperty("X-Kite-Version", "3")
@@ -381,8 +389,16 @@ object Broker {
                     c.setFixedLengthStreamingMode(bytes.size)
                     c.outputStream.use { it.write(bytes) }
                 }
+                val askedAt = System.currentTimeMillis()
                 val code = c.responseCode
-                if (code == 429 && attempt < 3) { SmartWorkers.restLimited(); attempt++; delay(1_000L * attempt); continue }
+                // 16 Oct: the phone clock's offset against Zerodha's server, NTP-style (the round trip's middle vs the Date header).
+                if (method == "GET" && code in 200..299) {
+                    val gotAt = System.currentTimeMillis()
+                    runCatching { c.getHeaderFieldDate("Date", 0L).takeIf { it > 0 }?.let { OrderTiming.serverClock(askedAt, gotAt, it / 1000) } }
+                }
+                if (code == 429 && attempt < 3 && retryFits(budget, System.currentTimeMillis() - began, 1_000L * (attempt + 1))) {
+                    SmartWorkers.restLimited(); attempt++; delay(1_000L * attempt); continue
+                }
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
                 val text = stream?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
                 reusable = true
@@ -430,11 +446,37 @@ object Broker {
                         "check api.kite.trade in a browser, then re-trust it under More → Security.")
                 throw IOException("Could not reach Zerodha")
             } finally {
+                cut?.cancel(false)
                 if (!reusable) c.disconnect()
                 if (relay != null) relayUsedAt = System.currentTimeMillis()
             }
         }
     }
+
+    /** A read's whole budget (16 Oct): connect, wait, retries and reply together. */
+    const val READ_BUDGET_MS = 5_000L
+    /** Each socket step of a budgeted read (connect, each read) gives up after this. */
+    const val READ_SOCKET_MS = 5_000
+    /** The big downloads keep their old limits: the instrument list (megabytes) and the historical candles. */
+    private val UNBUDGETED = listOf("/instruments")
+
+    /**
+     * The budget of one call (null: not cut - every write, which must never be half-sent, the big downloads, and a read that
+     * warms the order route through the relay, whose SSH connect alone can take seconds). A plain read, or a POST that only
+     * reads, gets [READ_BUDGET_MS]. The event-driven reads keep their own 3 s socket limits inside it.
+     */
+    internal fun readBudgetMs(method: String, path: String, readOnly: Boolean, viaRelay: Boolean = false): Long? {
+        if (method != "GET" && !readOnly) return null
+        if (viaRelay) return null
+        if (UNBUDGETED.any { path.startsWith(it) }) return null
+        return READ_BUDGET_MS
+    }
+
+    /** A 429 retry after [waitMs] fits the read's budget (no budget: always, as before). */
+    internal fun retryFits(budget: Long?, spentMs: Long, waitMs: Long): Boolean = budget == null || spentMs + waitMs < budget
+
+    /** Cuts a read's connection when its budget is spent (one small thread for the whole app). */
+    private val cutter = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "zerodha-cut").apply { isDaemon = true } }
 
     @Volatile private var warmedAt = 0L
     private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
@@ -797,6 +839,9 @@ object Broker {
         if (rest.isEmpty()) return streamed
         return streamed + quotesRest(rest)
     }
+
+    /** Zerodha's quote call itself, never the stream's memory (a paper fill's re-read when no stream tick is 2 s fresh, 16 Oct). */
+    suspend fun quotesFresh(keys: List<String>): Map<String, Quote> = if (keys.isEmpty()) emptyMap() else quotesRest(keys)
 
     private suspend fun quotesRest(keys: List<String>): Map<String, Quote> {
         val data = call("GET", "/quote?" + keys.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject

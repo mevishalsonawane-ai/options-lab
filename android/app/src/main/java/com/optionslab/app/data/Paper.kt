@@ -433,6 +433,28 @@ object Paper {
             t.depth?.bidQty, t.depth?.askQty, (nowMs - seen.at).coerceAtLeast(0L))
     }.getOrNull()
 
+    /** A paper fill's quote may be this old at most when a newer one can be had ([place], 16 Oct). */
+    const val FILL_FRESH_MS = 2_000L
+
+    private fun quoteOf(t: com.optionslab.engine.KiteTicks.Tick): Quote = Quote(t.last, bid = t.bid ?: 0.0, ask = t.ask ?: 0.0, high = t.high,
+        low = t.low, open = t.open, prevClose = t.close, volume = t.volume, bidQty = t.bidQty ?: 0L, askQty = t.askQty ?: 0L)
+
+    /** Zerodha's quote for [c] read now, waited [FILL_FRESH_MS] at most (null: none in time, or not listed). */
+    private suspend fun restQuote(c: Contract): Quote? {
+        val key = zerodhaKey(c) ?: return null
+        val q = Broker.within(FILL_FRESH_MS) { Broker.quotesFresh(listOf(key))[key] } ?: return null
+        if (q.last <= 0) return null
+        return Quote(q.last, bid = q.bid ?: 0.0, ask = q.ask ?: 0.0, open = q.open, volume = q.volume)
+    }
+
+    /** Zerodha's "EXCHANGE:TRADINGSYMBOL" for an NSE or BSE option (the day's lists in memory only; null: not known, or MCX). */
+    private fun zerodhaKey(c: Contract): String? {
+        kiteKeys[c.symbol]?.let { return it }
+        val list = when (c.exchange) { "NFO" -> Broker.cachedInstruments(); "BFO" -> Broker.cachedBfoOptions(); else -> null } ?: return null
+        return Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.let { "${c.exchange}:${it.tradingSymbol}" }?.also { kiteKeys[c.symbol] = it }
+    }
+    private val kiteKeys = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     /**
      * The live tick from Zerodha's stream, if there is a fresh one; asking also keeps the contract subscribed. [kept]: the
      * token only from those already looked up (memory only; never the instruments file or the session).
@@ -703,11 +725,18 @@ object Paper {
                       known: Quote? = null): Result {
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
-        val stamp = runCatching { kiteToken(c)?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
+        // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than
+        // [FILL_FRESH_MS] when a newer one can be had - a stream tick that came in in the last 2 s first, else (logged in to
+        // Zerodha) Zerodha's own quote, waited [FILL_FRESH_MS] at most; only then the caller's [known] quote or the reads below.
+        // The price age is the exchange stamp of the tick actually used (none for a REST quote, read just now).
+        val token = runCatching { kiteToken(c) }.getOrNull()
+        val freshTick = token?.let { tok -> runCatching { KiteStream.touch(listOf(tok)); KiteStream.freshTick(tok) }.getOrNull() }?.takeIf { it.last > 0 }
+        val fresh = freshTick?.let { quoteOf(it) } ?: if (Broker.loggedIn && token != null) restQuote(c) else null
+        val stamp = if (fresh != null) freshTick?.exchangeTime else runCatching { token?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
         // 12 Oct: the stream's tick, else a price read in the last [PLACE_REUSE_MS] (the candle feed moves once a minute and
         // the honest-paper checks below still judge its age), else a fresh read - not a download of the day's candles per order.
-        val read = known ?: runCatching { recentQuote(c, PLACE_REUSE_MS) }.getOrNull()
+        val read = fresh?.also { remember(c.symbol, it) } ?: known ?: runCatching { recentQuote(c, PLACE_REUSE_MS) }.getOrNull()
         // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed.
         staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
         // Honest paper (08 Oct): no fill on a price over a minute old. An exit fills on Zerodha's quote or the stale minute's
@@ -1047,6 +1076,6 @@ object Paper {
         synchronized(writeLock) { synchronized(this) {
             pending = null; cache = null; savedAtMs = 0L; file.delete()
         } }
-        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear()
+        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear()
     }
 }

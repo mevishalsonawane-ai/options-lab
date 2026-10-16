@@ -707,10 +707,17 @@ object Tasks {
      * it; null (asleep) outside it.
      */
     internal fun wordsDelay(context: Context?): Long? {
-        if (!(Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose())) return null
+        // 16 Oct (R63's note: "Jarvis's background round sleeps after 15:40, so MCX evening positions are not watched"): the
+        // words round also runs in MCX's hours while something is held or working there. Words only; the exits themselves
+        // are the MCX pass's, at its full 15 s.
+        val mcxHeld = { runCatching { com.optionslab.app.data.McxMarket.isOpen() && com.optionslab.app.data.McxMarket.heldQuick() }.getOrDefault(false) }
+        if (!wordsDue(Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose(), mcxHeld)) return null
         val every = if (WatchWorkers.saver(context)) 120_000L else 60_000L
         return (every - (System.currentTimeMillis() - wordsRoundAt)).coerceIn(0L, every)
     }
+
+    /** The words round is due: NSE's session, or (asked only outside it) MCX open with something held or working there. */
+    internal fun wordsDue(nseSession: Boolean, mcxHeld: () -> Boolean): Boolean = nseSession || mcxHeld()
 
     /** One round of Jarvis's words-only checks as the lowest-priority worker: its Zerodha reads go last in the budget. */
     internal suspend fun wordsRound() {
@@ -1271,7 +1278,9 @@ class WatchService : Service() {
         val byAndroid = intent == null
         // On the main thread: from memory and the plain MCX hint only (ANR fix, 9 Oct; [Jobs.watchDueQuick]), never a vault
         // decryption before the foreground. Unknown is not resumed here: the dead-man alarm (off the main thread) brings it back.
-        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDueQuick() == true) Jobs.Kind.LIVE
+        // 16 Oct: "not known from memory" (a new process, the books not read yet) is resumed too - the watch's own loop, off
+        // the main thread, ends at once when nothing is due. Dropping it left MCX's evening unwatched after Android ended the app.
+        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDueQuick() != false) Jobs.Kind.LIVE
             else runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (byAndroid && k == null && running.isEmpty()) {
             // Past the watch's hours: nothing to resume. Not a foreground start (it would be refused from the background
@@ -1553,8 +1562,10 @@ class WatchService : Service() {
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
                     Heartbeat.stepBegin("bar-close entry check")
-                    // Order speed: an order this check leads to is timed from the bar's close (the wake is 3 s after it).
-                    val closedAt = wake - com.optionslab.engine.orb.BarClose.AFTER_MS
+                    // Order speed: an order this check leads to is timed from this check (16 Oct: it was timed from the bar's
+                    // close, so every bar-close entry started 3 s "late" - the wait for the bar to finish at the feed, which is
+                    // by design - against a 1 s warning line). The exchange's own price age is still measured from its stamp.
+                    val closedAt = wake
                     try { kotlinx.coroutines.withContext(com.optionslab.app.data.OrderTiming.Trigger(closedAt, null)) {
                         try {
                             com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this@WatchService, it) }

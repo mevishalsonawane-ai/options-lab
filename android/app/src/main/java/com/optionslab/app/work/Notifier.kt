@@ -282,11 +282,13 @@ object Notifier {
     fun post(context: Context, id: Int, channel: String, title: String, text: String, tab: String? = null,
              /** A Settings row this notice is about ([NoticeCards.SETTINGS]): the tap opens it, highlighted. */ setting: String? = null,
              /** A strategy of Jarvis's waiting for Approve: the tap's banner shows the chat's own buttons for it. */ proposal: Long? = null,
-             /** An entry waiting on Home ("orb" / "strategy"): the tap's banner shows Home's own rows for it. */ approve: String? = null) {
+             /** An entry waiting on Home ("orb" / "strategy"): the tap's banner shows Home's own rows for it. */ approve: String? = null,
+             /** The in-app banner's colour when the channel's own would be wrong (16 Oct: an alerts-only signal is not an error). */
+             banner: Alerts.Kind? = null) {
         // IraGoldAlgo notifies buys and sells only (the owner's choice, 2026-10-02); anything else is never posted there.
         if (com.optionslab.app.BuildConfig.GOLD && channel != BUY && channel != SELL) return
         // Everything notified also drops in at the top of the app when it is open (green / red).
-        Alerts.post(text, when (channel) {
+        Alerts.post(text, banner ?: when (channel) {
             BUY, SELL -> Alerts.Kind.SUCCESS
             RISK -> Alerts.Kind.ERROR
             APPROVAL -> if (Alerts.classify("$title $text") == Alerts.Kind.ERROR) Alerts.Kind.ERROR else Alerts.Kind.INFO

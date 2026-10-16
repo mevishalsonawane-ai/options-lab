@@ -112,7 +112,7 @@ internal fun SignalTesterCard() {
             window = { f, t -> tio { TelegramCapture.setWindow(f, t) } }, channels = { tio { TelegramCapture.loadChannels() } },
             check = { id -> tio { TelegramCapture.check(id) } }, select = { m -> tio { TelegramCapture.select(m) } },
             history = { id -> tio { TelegramCapture.fetchHistory(id) } }, logOut = { tio { TelegramCapture.logOut() } },
-            retry = { tio { TelegramCapture.retryLogin() } },
+            retry = { tio { TelegramCapture.retryLogin() } }, notListed = { tio { TelegramCapture.notListed() } },
         ),
     ))
     picking?.let { (src, seen) ->
@@ -157,6 +157,8 @@ internal class TelegramActions(
     val password: (String) -> Unit = {}, val capture: (Boolean) -> Unit = {}, val window: (LocalTime, LocalTime) -> Unit = { _, _ -> },
     val channels: () -> Unit = {}, val check: (Long) -> Unit = {}, val select: (Map<Long, String>) -> Unit = {}, val history: (Long) -> Unit = {},
     val logOut: () -> Unit = {}, val retry: () -> Unit = {},
+    /** OK tapped before any channel was listed (16 Oct): nothing changes, and Boss is told why. */
+    val notListed: () -> Unit = {},
 )
 
 private fun rs(x: Double) = ChannelScore.rs(x)
@@ -269,7 +271,7 @@ internal fun SignalPanel(v: SignalTesterHost.View, pv: SignalPaperArm.View, said
  */
 @Composable
 internal fun ChatPickerDialog(seen: List<SignalTesterHost.Seen>, followed: List<String>, onCheck: ((String) -> Unit)? = null,
-                              onOk: (Set<String>) -> Unit, close: () -> Unit) {
+                              onOk: (Set<String>) -> Unit, empty: String = "No chats seen yet: import a Telegram Desktop export.", close: () -> Unit) {
     // Ticked by name (normalised), so a chat followed before stays ticked when the list fills in later; nothing else is ticked.
     var ticked by remember { mutableStateOf(followed.map { SignalTesterHost.norm(it) }.toSet()) }
     fun on(t: String) = SignalTesterHost.norm(t) in ticked
@@ -279,7 +281,7 @@ internal fun ChatPickerDialog(seen: List<SignalTesterHost.Seen>, followed: List<
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
                 Text(READS_ONLY, style = Type.bodySmall)
-                if (seen.isEmpty()) Text("No chats seen yet: import a Telegram Desktop export.", style = Type.bodySmall)
+                if (seen.isEmpty()) Text(empty, style = Type.bodySmall)
                 seen.sortedByDescending { it.stats?.share ?: -1.0 }.forEach { c ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Checkbox) {
                         val n = SignalTesterHost.norm(c.title)
@@ -600,6 +602,10 @@ internal fun TelegramDialog(tv: TelegramCapture.View, v: SignalTesterHost.View, 
             !tv.loggedIn -> if (!tv.busy) TextButton(a.login, Modifier.heightIn(min = 48.dp)) { Text("Log in to Telegram") }
             else -> {
                 TextButton({ a.channels(); picking = true }, Modifier.heightIn(min = 48.dp)) { Text("Choose channels (${selected.size} selected)") }
+                // 16 Oct: what is selected now, in words (the diagnostics read the same store).
+                Text(keepNumbersWhole(if (selected.isEmpty()) "No channel selected yet: nothing is read until you tick one and tap OK."
+                    else "Selected (read on arrival): " + selected.values.joinToString(", ") + "."), style = Type.bodySmall,
+                    modifier = Modifier.padding(bottom = 4.dp).semantics { contentDescription = "Selected channels" })
                 selected.forEach { (id, title) ->
                     TextButton({ a.history(id) }, Modifier.heightIn(min = 48.dp).semantics { contentDescription = "History of $title" }) {
                         Text(keepNumbersWhole("Read $title's history since 20 Nov 2024"))
@@ -619,10 +625,24 @@ internal fun TelegramDialog(tv: TelegramCapture.View, v: SignalTesterHost.View, 
     }, onClose = close)
     if (picking) {
         // Titles only; nothing ticked but what Boss selected before. "Check this chat" counts one chat's recent posts, on his tap.
-        val seen = tv.channels.map { c -> v.seen.firstOrNull { SignalTesterHost.norm(it.title) == SignalTesterHost.norm(c.title) && it.stats != null }
-            ?: SignalTesterHost.Seen(c.title, null, SignalTesterHost.TELEGRAM) }
-        ChatPickerDialog(seen, selected.values.toList(), onCheck = { title -> tv.channels.firstOrNull { it.title == title }?.let { a.check(it.id) } },
-            // OK before the list has come in changes nothing (it would otherwise clear the selection).
-            onOk = { chosen -> picking = false; if (tv.channels.isNotEmpty()) a.select(tv.channels.filter { it.title in chosen }.associate { it.id to it.title }) }) { picking = false }
+        // 16 Oct (Boss: channels chosen but "0 channels selected"): rows by id - the list as it comes in, plus every channel
+        // selected before that is not in it (still loading, archived, renamed) - so OK never drops a selected channel, and OK
+        // before anything is listed says so in plain words instead of silently changing nothing.
+        val rows = telegramRows(tv.channels, selected)
+        val seen = rows.values.map { t -> v.seen.firstOrNull { SignalTesterHost.norm(it.title) == SignalTesterHost.norm(t) && it.stats != null }
+            ?: SignalTesterHost.Seen(t, null, SignalTesterHost.TELEGRAM) }
+        ChatPickerDialog(seen, selected.values.toList(), onCheck = { title -> rows.entries.firstOrNull { it.value == title }?.let { a.check(it.key) } },
+            onOk = { chosen -> picking = false; val m = telegramChosen(rows, chosen); if (m == null) a.notListed() else a.select(m) },
+            empty = "Your channel list is still coming in from Telegram (a few seconds). Wait for it here, or close and tap Choose channels again.") { picking = false }
     }
 }
+
+/** The picker's rows: the channels listed now, and the ones selected before that are not listed (16 Oct). */
+internal fun telegramRows(listed: List<com.optionslab.engine.signals.TdSession.Channel>, selected: Map<Long, String>): Map<Long, String> {
+    val now = listed.associate { it.id to it.title }
+    return now + selected.filterKeys { it !in now }
+}
+
+/** The ticked rows by id; null when there was nothing to pick from (the list not in yet: nothing changes, Boss is told). */
+internal fun telegramChosen(rows: Map<Long, String>, chosen: Set<String>): Map<Long, String>? =
+    if (rows.isEmpty()) null else rows.filterValues { it in chosen }

@@ -290,7 +290,7 @@ object TelegramCapture {
                     if (!SecurePrefs.getBoolean(K_LOGGED_IN, false)) SecurePrefs.put(K_LOGGED_IN, true)
                     upd { it.copy(loggedIn = true) }
                     s.loadChats()
-                    scope.launch { delay(3_000); upd { it.copy(channels = s.channels()) } }
+                    followChannels(s)
                 }
             }
             is TdSession.Event.NewMessage -> SignalTesterHost.telegram(e.chat.id, e.msg, history = false)
@@ -441,14 +441,43 @@ object TelegramCapture {
         if (!openForJob()) return tell("Telegram could not start.")
         val s = session ?: return tell("Telegram could not start.")
         tell("Reading your channel list (titles only)…")
-        if (s.auth == TdSession.Auth.READY) { s.loadChats(); scope.launch { delay(3_000); upd { it.copy(channels = s.channels()) } } }
+        if (s.auth == TdSession.Auth.READY) { s.loadChats(); followChannels(s) }
         return "Reading your channel list (titles only)…"
     }
 
-    /** Boss's selection (ids and titles): only these are read; the reader is told at once. */
+    /**
+     * 16 Oct (Boss: channels chosen, diagnostics "0 channels selected"): the channel list was copied once, 3 s after asking.
+     * Telegram sends the chats as they load, so on a slow start that one copy was empty or partial and never refreshed - and
+     * OK on an empty list changed nothing, silently. Now copied every second for [LIST_FOLLOW_S] seconds (while this session
+     * is the open one), so the picker fills in as Telegram answers.
+     */
+    private fun followChannels(s: TdSession) {
+        scope.launch {
+            repeat(LIST_FOLLOW_S) {
+                delay(1_000)
+                if (session !== s) return@launch
+                val now = runCatching { s.channels() }.getOrNull() ?: return@repeat
+                if (now != _view.value.channels) upd { it.copy(channels = now) }
+            }
+        }
+    }
+    private const val LIST_FOLLOW_S = 20
+
+    /** OK in the picker before any channel was listed: nothing changes, said in plain words (16 Oct). */
+    fun notListed(): String = tell("Nothing was saved: your channel list had not come in from Telegram yet. Tap Choose channels again in a few seconds.")
+
+    /**
+     * Boss's selection (ids and titles): only these are read; the reader is told at once. 16 Oct: read back from the store
+     * after saving, so a selection that did not stick is said plainly, never shown as saved.
+     */
     fun select(chosen: Map<Long, String>): String {
-        val r = SignalTesterHost.telegramSelect(chosen)
-        session?.selected = chosen.keys
+        val r = runCatching { SignalTesterHost.telegramSelect(chosen) }.getOrElse {
+            return tell("The selection could not be saved (${it.javaClass.simpleName}): nothing changed. Try again.")
+        }
+        val stored = SignalTesterHost.telegramSelected()
+        session?.selected = stored.keys
+        runCatching { Diag.record("signals", "Telegram: ${stored.size} channel${if (stored.size == 1) "" else "s"} selected") }
+        if (stored.keys != chosen.keys) return tell("Only ${stored.size} of the ${chosen.size} channels were saved: try again.")
         return tell(r)
     }
 

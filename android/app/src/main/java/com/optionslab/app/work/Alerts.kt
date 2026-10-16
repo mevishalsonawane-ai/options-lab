@@ -56,7 +56,9 @@ object Alerts {
     fun dismiss(id: Long) = _queue.update { q -> q.filter { it.id != id } }
 
     private val FAILURE = Regex(
-        "(?i)(^not |\\bnot (sent|placed|modified|moved|closed|cancelled|deleted|saved|allowed)\\b|\\bfail|\\berror\\b|\\brefus|\\breject|" +
+        // 16 Oct: "fail" is not a failure in an arm's own description ("it fades a failed break of the opening range": ORB
+        // Sweep's and Range Fade's arming lines were red and counted as errors by the order review).
+        "(?i)(^not |\\bnot (sent|placed|modified|moved|closed|cancelled|deleted|saved|allowed)\\b|(?<!break )\\bfail(?!ed break)|\\berror\\b|\\brefus|\\breject|" +
             "could not|cannot|can't|couldn't|\\bblocked\\b|\\bdenied\\b|\\binvalid\\b|insufficient|\\bexpired\\b|\\blapsed\\b|" +
             "\\bno (quote|price|contract|session|bars|data)\\b|\\bkill switch is on\\b|\\blimit reached\\b|\\bcompromise|\\bmissing\\b|\\bstopped by android\\b)")
 

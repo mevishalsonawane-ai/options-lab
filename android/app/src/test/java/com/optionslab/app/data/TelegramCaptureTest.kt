@@ -224,6 +224,46 @@ class TelegramCaptureTest : RobolectricTest() {
         assertTrue(SignalTesterHost.telegramSelected().isEmpty())
     }
 
+    /**
+     * 16 Oct (Boss: channels chosen in Choose channels, diagnostics "0 channels selected", "4 chats followed, 0 seen"): login,
+     * the list, two channels selected, then a new process - the selection is read back from the phone, the diagnostics say 2,
+     * and both channels' posts are read.
+     */
+    @Test fun twoChannelsSelectedStaySelectedAfterARestartAndTheirPostsAreRead() {
+        MemoryTrim.resetForTest()   // no memory pressure left over from another test (it would keep the reader closed)
+        login()
+        assertEquals("Reading only: Sensex Kings, Other Calls.", TelegramCapture.select(mapOf(kings to "Sensex Kings", other to "Other Calls")))
+        assertTrue(TelegramCapture.diagLine(), TelegramCapture.diagLine().endsWith("· 2 channels selected"))
+        // A new process: everything in memory forgotten; the vault file and the settings stay.
+        TelegramCapture.resetForTest(); SignalTesterHost.resetForTest()
+        TelegramCapture.testTransport = { Fake() }
+        SignalTesterHost.testBars = { _, _ -> emptyList() }; SignalTesterHost.testContracts = emptyList()
+        SignalTesterHost.testModelMissing = true; SignalTesterHost.testHolding = false
+        assertEquals(setOf(kings, other), SignalTesterHost.telegramSelected().keys)
+        TelegramCapture.refresh()
+        assertTrue(TelegramCapture.setCapture(true).startsWith("Capture on"))
+        TelegramCapture.ensure(day.atTime(10, 0))
+        assertTrue(TelegramCapture.view.value.running)
+        assertTrue(TelegramCapture.diagLine(), TelegramCapture.diagLine().endsWith("· running · 2 channels selected"))
+        push(kings, 1L shl 20, "#sensex 73100 CE\nAbove 280\nTarget 310", day.atTime(10, 0, 5))
+        push(other, 2L shl 20, "NIFTY 25000 PE above 90 target 120", day.atTime(10, 0, 9))
+        push(group, 3L shl 20, "NIFTY 25100 CE above 100 FAMILYGROUP", day.atTime(10, 0, 9))
+        waitFor("both selected channels read") { SignalTesterHost.view.value.recs.map { it.channel }.toSet() == setOf("Sensex Kings", "Other Calls") }
+        assertFalse(SignalTesterHost.view.value.recs.any { "FAMILYGROUP" in it.text.orEmpty() })
+    }
+
+    @Test fun okBeforeTheListCameInChangesNothingAndSaysSoAndASelectionIsReadBack() {
+        login()
+        TelegramCapture.select(mapOf(kings to "Sensex Kings"))
+        // OK with nothing listed: nothing saved, said in plain words (it was silent).
+        assertTrue(TelegramCapture.notListed().startsWith("Nothing was saved: your channel list had not come in from Telegram yet."))
+        assertEquals(TelegramCapture.notListed(), TelegramCapture.view.value.said)
+        assertEquals(mapOf(kings to "Sensex Kings"), SignalTesterHost.telegramSelected())
+        // An empty selection is a choice Boss can make, and said as such.
+        assertEquals("No channel selected: Telegram is not read.", TelegramCapture.select(emptyMap()))
+        assertTrue(TelegramCapture.diagLine().endsWith("· 0 channels selected"))
+    }
+
     @Test fun captureRunsOnlyInItsWindowAndClosesUnderMemoryPressure() {
         val v = TelegramCapture.View(available = true, loggedIn = true, capture = true)
         val d = day

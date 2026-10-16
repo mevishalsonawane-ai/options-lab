@@ -34,7 +34,8 @@ import java.time.LocalDateTime
  *    in memory - and a stop tick right after the harshest trim still sells within 300 ms;
  *  - after a restart (a low-memory kill) the open position and its stop are restored and the watch started FIRST, the
  *    stream next, and the shared knowledge loads only after both (it waits even when started first);
- *  - nothing open: the watch is not started for it; a book that cannot be read counts as open (the watch decides).
+ *  - nothing open: the watch is still asked to start (16 Oct: Jobs.ensureWatch decides from the clock and the armed MCX arms,
+ *    a no-op when nothing is due); a book that cannot be read counts as open.
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class PositionsFirstTest : RobolectricTest() {
@@ -200,20 +201,23 @@ class PositionsFirstTest : RobolectricTest() {
         assertTrue(PositionsFirst.diagLine(), PositionsFirst.diagLine().startsWith("Start-up: positions +") && "open positions found and watched first" in PositionsFirst.diagLine())
     }
 
-    @Test fun nothingOpenStartsNoWatchForItAndAnUnreadableBookCountsAsOpen() {
+    @Test fun nothingOpenStillAsksTheWatchAndAnUnreadableBookCountsAsOpen() {
         AutomationSupport.orbState(context, JSONObject().put("positions", JSONArray()))
         PositionsFirst.resetForTest(started = true)
         PositionsFirst.appReady()
         var watched = 0
+        // 16 Oct: asked even with nothing open - an MCX arm armed in its evening needs the watch with nothing held yet (the
+        // watch's own start rule decides; it is a no-op when nothing is due).
         runBlocking { PositionsFirst.steps(PositionsFirst::restore, watch = { watched++ }, stream = {}) }
-        assertEquals(0, watched)
+        assertEquals(1, watched)
+        assertTrue(PositionsFirst.diagLine(), PositionsFirst.diagLine().endsWith("; nothing open"))
         assertEquals(false, PositionsFirst.foundOpen)
         assertTrue(PositionsFirst.order.isDone(StartOrder.Step.STREAM))
         // A failing read: the watch is started (it decides for itself).
         PositionsFirst.resetForTest(started = true)
         PositionsFirst.appReady()
         runBlocking { PositionsFirst.steps({ throw IllegalStateException("unreadable") }, watch = { watched++ }, stream = {}) }
-        assertEquals(1, watched)
+        assertEquals(2, watched)
         assertEquals(true, PositionsFirst.foundOpen)
     }
 

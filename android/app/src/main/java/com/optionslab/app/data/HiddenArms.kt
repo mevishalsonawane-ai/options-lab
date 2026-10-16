@@ -78,7 +78,22 @@ object HiddenArms {
     fun visible(key: String): Boolean = ArmsCleanup.visible(_state.value, key)
 
     /** May [key] be switched on by its switch, a voice command or an automation? Not while hidden (restore it first). */
-    fun mayArm(key: String): Boolean = ArmsCleanup.mayArm(_state.value, key)
+    fun mayArm(key: String): Boolean {
+        // 16 Oct (the order review: "ORB Sweep armed on paper" 4 times, hidden since 15 Oct): while the cleanup's file could not
+        // be read its state is empty, so a hidden arm read as "may arm" and its switch, Jarvis's day plan or a voice command
+        // armed it. Until it reads, the cleanup's arms are not switched on (nothing is switched off: risk only lowered).
+        if (unread && ArmsCleanup.HIDDEN.any { it.key == key }) return false
+        return ArmsCleanup.mayArm(_state.value, key)
+    }
+
+    /** The cleanup's file is there but could not be read yet (a Keystore hiccup): its arms stay as they are, none armed. */
+    @Volatile var unread = false
+        private set
+
+    /** Why [key] (named [label]) may not be armed now, in plain words. */
+    fun refusal(label: String): String =
+        if (unread) "$label can't be switched on right now: the hidden-arms list could not be read yet (it is tried again shortly)."
+        else ArmsCleanup.refusal(label)
 
     /**
      * May [key] take no NEW entry (or host or offer a new idea, or start a scheduled run) now? True from the moment the cleanup
@@ -101,7 +116,8 @@ object HiddenArms {
         val o = text?.let { runCatching { JSONObject(it) }.getOrNull() }
         // Saved but unreadable (a Keystore hiccup): never start over - that would hide again what Boss restored and lose the
         // members to restore. Nothing is switched or hidden until it reads (arms stay as they are: no risk added).
-        if (exists && o == null) error("hidden arms' file unreadable")
+        if (exists && o == null) { unread = true; error("hidden arms' file unreadable") }
+        unread = false
         _state.value = ArmsCleanup.decode(o?.optString("state"))
         ids.clear()
         o?.optJSONObject("ids")?.let { m -> m.keys().forEach { k -> m.optJSONArray(k)?.let { a -> ids[k] = (0 until a.length()).map { a.getString(it) } } } }
@@ -291,7 +307,10 @@ object HiddenArms {
     )
 
     /** TEST ONLY: as after a restart - the state read again from its file on the next pass. */
-    internal fun reloadForTest() { loaded = false; _state.value = ArmsCleanup.State(); ids.clear() }
+    internal fun reloadForTest() { loaded = false; unread = false; _state.value = ArmsCleanup.State(); ids.clear() }
+
+    /** TEST ONLY: the file read now, as the start does (a failure leaves [unread] set). */
+    internal fun loadForTest() { runCatching { load() } }
 
     /** TEST ONLY: the arms the app uses. */
     internal fun defaultArmsForTest(): List<Arm> = defaultArms()
@@ -300,7 +319,7 @@ object HiddenArms {
     internal fun resetForTest(context: Context) {
         file = File(context.applicationContext.filesDir, "hidden_arms.vault")
         file.delete(); written.forget()
-        _state.value = ArmsCleanup.State(); ids.clear(); loaded = false
+        _state.value = ArmsCleanup.State(); ids.clear(); loaded = false; unread = false
         arms = defaultArms()
     }
 }

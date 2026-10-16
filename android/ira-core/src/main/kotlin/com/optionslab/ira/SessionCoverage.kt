@@ -38,4 +38,28 @@ object SessionCoverage {
             else -> null
         }
     }
+
+    /**
+     * 16 Oct (Boss's diagnostics: "MCX is open with 2 armed, but the market watch is not running" at 09:01 and 17:56): the
+     * dead-man check that found the gap is also what starts the watch (MCX's 09:00 open, a restart after Android ended the
+     * app), and it judged the gap from the "alive" it read before that start, so every such start was reported as a SERIOUS
+     * problem. A gap is now told only when it is still there [GRACE_MS] after it was first seen (the start takes seconds;
+     * Boss's restarts took about 16 s); the check looks again once the grace is over.
+     */
+    const val GRACE_MS = 2 * 60_000L
+
+    /** When a gap was first seen; [report] is true only once it has lasted [graceMs]. Thread-safe; memory only. */
+    class GapTimer(private val graceMs: Long = GRACE_MS) {
+        private var since = 0L
+
+        /** [gap] seen at [now]: true when it was first seen at least [graceMs] ago (no gap clears it). */
+        @Synchronized fun report(gap: Boolean, now: Long): Boolean {
+            if (!gap) { since = 0L; return false }
+            if (since == 0L || now < since) { since = now; return false }
+            return now - since >= graceMs
+        }
+
+        /** A gap is waiting for its grace to end (the check should look again). */
+        @Synchronized fun pending(): Boolean = since != 0L
+    }
 }

@@ -19,6 +19,7 @@ import com.optionslab.engine.sandbox.SandboxEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -502,14 +503,22 @@ object PassedArmsHost {
     private suspend fun reads(now: LocalDateTime, v: View): Reads {
         val want = SOURCES.filter { v.on(it) }.flatMap { underlyings(it) }.distinct()
         val minute = now.withSecond(0).withNano(0)
-        val out = HashMap<String, List<Bar>?>()
-        for (u in want) {
-            val kept = lastRead[u]?.takeIf { it.first == minute }
-            if (kept != null) { out[u] = kept.second; continue }
-            out[u] = runCatching { minutes(upKey(u), now) }.getOrNull()?.also { lastRead[u] = minute to it }
+        // 16 Oct ("Signal to order took up to 6.5 s"): the underlyings' minutes and the VIX are read side by side, not one
+        // after another (each read was a network wait the entry stood behind). Same reads, same bars.
+        return kotlinx.coroutines.coroutineScope {
+            val reads = want.map { u ->
+                u to async(kotlinx.coroutines.Dispatchers.IO) {
+                    lastRead[u]?.takeIf { it.first == minute }?.second
+                        ?: runCatching { minutes(upKey(u), now) }.getOrNull()?.also { lastRead[u] = minute to it }
+                }
+            }
+            val vix = async(kotlinx.coroutines.Dispatchers.IO) {
+                if (v.on(Solo2.SOURCE)) runCatching { minutes(Upstox.INDEX_KEYS.getValue("INDIAVIX"), now) }.getOrNull() else null
+            }
+            val out = HashMap<String, List<Bar>?>()
+            for ((u, d) in reads) out[u] = d.await()
+            Reads(out, vix.await())
         }
-        val vix = if (v.on(Solo2.SOURCE)) runCatching { minutes(Upstox.INDEX_KEYS.getValue("INDIAVIX"), now) }.getOrNull() else null
-        return Reads(out, vix)
     }
 
     // ---- the passes ----------------------------------------------------------------------------------------------------
@@ -688,7 +697,9 @@ object PassedArmsHost {
             if (c.symbol in _view.value.open.map { it.symbol }) { why = "${c.symbol} is held by these arms"; return null to why }
             val q = runCatching { Paper.quote(c) }.getOrNull()
             val ref = q?.ltp?.takeIf { it > 0 } ?: run { why = "${c.symbol}: no fresh price"; null } ?: continue
-            val snap = runCatching { Paper.snapshot() }.getOrNull()
+            // 16 Oct: the account guard's view shares prices read in the last [Paper.SHARED_QUOTE_MS] (it re-read every held
+            // symbol before each entry); the fill itself is priced fresh in Paper.place (2 s at most).
+            val snap = runCatching { Paper.snapshot(reuseQuotesMs = Paper.SHARED_QUOTE_MS) }.getOrNull()
             val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref), snap?.let { Guard.paperAccount(it) }, paper = true)
             if (refusals.isNotEmpty()) return null to "refused by the account guard: " + refusals.joinToString(" ")
             runCatching { LiveRecorder.signal(label(arm), c.symbol, u, right.name, ref, paper = true) }

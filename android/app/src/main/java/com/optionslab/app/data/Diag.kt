@@ -177,6 +177,7 @@ object Diag {
         append(runCatching { AppHealth.diagLine() }.getOrElse { "Health: could not read" }).append('\n')
         // Memory audit (14 Oct): the start-up's order (positions first) and what the last memory trim let go.
         append(runCatching { PositionsFirst.diagLine() }.getOrElse { "Start-up: could not read" }).append('\n')
+        append(runCatching { com.optionslab.app.work.ProcessExits.diagLine() }.getOrElse { "Last process end: could not read" }).append('\n')
         append("Memory: ").append(runCatching { MemoryTrim.lastLine ?: "no trim in this run" }.getOrDefault("could not read"))
             .append(runCatching { KiteStream.keptCounts().let { (p, c) -> " · stream memory: $p paths, $c instruments' candles" } }.getOrDefault(""))
             .append(runCatching { " · research index ${com.optionslab.app.ira.KnowledgeLibrary.madeFrom?.let { "open ($it)" } ?: "not open"}" }.getOrDefault(""))

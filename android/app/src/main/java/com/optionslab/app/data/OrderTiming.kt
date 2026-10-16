@@ -151,6 +151,19 @@ object OrderTiming {
         add(OrderSpeed.Step.CLOCK_OFFSET, false, atMs - (exchSec * 1000 + 500), keep = false)
     }
 
+    @Volatile private var serverClockAt = 0L
+
+    /**
+     * Zerodha's reply to a read sent at [sentMs], answered at [gotMs], dated [dateSec] (its Date header): the phone clock's
+     * offset against Zerodha's server ([OrderSpeed.offsetFromDate]), sampled every 30 s at most, memory only (16 Oct).
+     */
+    fun serverClock(sentMs: Long, gotMs: Long, dateSec: Long) {
+        if (gotMs - serverClockAt < 30_000) return
+        val off = OrderSpeed.offsetFromDate(sentMs, gotMs, dateSec) ?: return
+        serverClockAt = gotMs
+        add(OrderSpeed.Step.CLOCK_SERVER, false, off, keep = false)
+    }
+
     /** The card's lines, its warnings, and the relay's typical round trip (null: none timed today). */
     data class Card(val lines: List<String>, val warnings: List<String>, val relayMedianMs: Long?)
 
