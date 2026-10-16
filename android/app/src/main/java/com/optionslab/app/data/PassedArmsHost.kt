@@ -99,10 +99,7 @@ object PassedArmsHost {
         val orderId: String?, val setup: String? = null, val entryRef: Double? = null, val idx: Double? = null, val atr: Double? = null,
         val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null, val charges: Double = 0.0, val exitRef: Double? = null,
         val paperFill: Double? = null,
-        /**
-         * 16 Oct: taken back by the safety net ([adopt]) after it was found held with no record here: [ADOPT_FILL] its real fill
-         * and fill time (its arm's own exits), [ADOPT_UNKNOWN] its fill time unknown (its stop and target, then the square-off).
-         */
+        /** 16 Oct: taken back by the safety net ([adopt]) after it was found held with no record here ([ADOPT_FILL]: from its real fill). */
         val adopted: String? = null,
     ) {
         val open: Boolean get() = exit == null
@@ -513,7 +510,6 @@ object PassedArmsHost {
     private val inFlight: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     internal const val ADOPT_FILL = "fill"
-    internal const val ADOPT_UNKNOWN = "unknown"
 
     /** The options these arms hold or are buying now (memory only): the safety net's ([OrphanWatch]) "watched here". */
     fun claims(): Set<String> = _view.value.open.map { it.symbol }.toSet() + inFlight
@@ -686,7 +682,7 @@ object PassedArmsHost {
         DonchianArm.SOURCE -> DonchianArm.EXITS
         OovArm.SOURCE -> OovArm.EXITS
         else -> Solo2.exits(Solo2.Setup.entries.firstOrNull { it.key == p.setup } ?: Solo2.Setup.S2)
-    }.let { if (p.adopted == ADOPT_UNKNOWN) com.optionslab.engine.orb.OrphanAudit.unknownTime(it) else it }
+    }
 
     /** The continuous 5-minute series of [u]: the earlier sessions' (history, when read) and today's. */
     private fun series(u: String, today: PassedArms.DayBars): List<PassedArms.Bar5> {
@@ -947,8 +943,8 @@ object PassedArmsHost {
 
     /**
      * Takes back [o], a paper long one of these arms opened that has no open record here ([OrphanWatch] found it unwatched):
-     * booked as its arm's trade from its real fill and fill time, so its stop, target and time exit run from the next look
-     * (fill time unknown: its stop and target, then the square-off). Said plainly to Boss (a notice, the log, Diag). The words,
+     * booked as its arm's trade from its real fill and fill time, so its stop, target and time exit run from the next look.
+     * Said plainly to Boss (a notice, the log, Diag). The words,
      * or null when it is not taken (not these arms', already held here, being bought now, or the contract unknown).
      */
     suspend fun adopt(o: com.optionslab.engine.orb.OrphanAudit.Orphan): String? {
@@ -961,11 +957,11 @@ object PassedArmsHost {
             if (b.positions.any { it.open && it.symbol == o.symbol }) return@withLock null
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
-                adopted = if (o.known) ADOPT_FILL else ADOPT_UNKNOWN)
+                adopted = ADOPT_FILL)
             b.positions += p
             b.marks[p.symbol] = p.entry
             val words = "${label(arm)}: ${p.symbol} ${p.qty} was held on paper with no record here, so its exits were not running; " +
-                "taken back as its trade" + (if (o.known) " (filled @ ${px(p.entry)} at ${p.entryTime.toLocalTime()})" else " (fill time unknown: @ ${px(p.entry)}, no time exit)") +
+                "taken back as its trade (filled @ ${px(p.entry)} at ${p.entryTime.toLocalTime()})" +
                 ". ${exitWords(p)}"
             b.status["$arm|${p.index}"] = "taken back ${p.symbol} (safety net)"
             note(b, words)

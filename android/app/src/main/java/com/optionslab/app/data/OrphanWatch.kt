@@ -3,7 +3,6 @@ package com.optionslab.app.data
 import android.content.Context
 import com.optionslab.app.work.Notifier
 import com.optionslab.engine.orb.HeroTicketRules
-import com.optionslab.engine.orb.NightRules
 import com.optionslab.engine.orb.OrphanAudit
 import com.optionslab.engine.orb.VixDivRules
 import com.optionslab.engine.signals.SignalPaperRules
@@ -20,11 +19,13 @@ import java.util.Locale
  * 20 s apart:
  *  - the passed-research arms' (R51, R52, Solo 2.0): taken back by their host as its trade, from its real fill and fill
  *    time, with its arm's own exits ([PassedArmsHost.adopt]);
- *  - the Hero ₹1,000 ticket's, Night (R3)'s, VIX divergence's and the Signal tester's: a protection rests on it at once (a
+ *  - the Hero ₹1,000 ticket's, VIX divergence's and the Signal tester's: a protection rests on it at once (a
  *    stop at -15% and a target at +30% of its fill, [OrphanAudit.netStop] / [OrphanAudit.netTarget]); the paper account's own
  *    square-off still closes an MIS one; one already beyond a level is sold at market.
  * Each is said plainly to Boss (a notice) and in Diag. The other automatic arms (ORB, Liquidity, the Hero ORB, MCX, Forge,
- * Pine) rest a stop with every entry, which this treats as watched.
+ * Pine) rest a stop with every entry, which this treats as watched. Not Night (R3): it holds overnight on NRML by design
+ * (its 09:16 sale) and books each entry only when its whole decision loop ends, so a lone look could mistake it for one.
+ * One look at a time ([busy]): two lanes never act on the same orphan.
  *
  * Paper only: it never places a Zerodha order (live arms' stops rest at the broker as SL / GTT). Memory reads, then at most
  * one quote and the protection's own orders for an orphan: never on the order or tick path, never on the main thread.
@@ -33,7 +34,10 @@ object OrphanWatch {
     private val pending = OrphanAudit.Pending()
 
     /** The arms whose orphans get a protection (their open records are read from memory, [claims]). */
-    private val NET_OWNERS = setOf(HeroTicketRules.OWNER, NightRules.LABEL, VixDivRules.LABEL, SignalPaperRules.OWNER)
+    private val NET_OWNERS = setOf(HeroTicketRules.OWNER, VixDivRules.LABEL, SignalPaperRules.OWNER)
+
+    /** One look at a time (the 15-second check, the minute lane and the full pass can overlap): a second one returns at once. */
+    private val busy = kotlinx.coroutines.sync.Mutex()
 
     /** Its notices: 8200 .. 8219 (no other part of the app uses 82xx). */
     private const val NOTICE = 8200
@@ -44,7 +48,6 @@ object OrphanWatch {
     /** The options the arms above hold or are buying now (memory only). */
     private fun claims(): Set<String> = runCatching { PassedArmsHost.claims() }.getOrDefault(emptySet()) +
         runCatching { HeroTicketArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
-        runCatching { NightArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { VixDivArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { SignalPaperArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList())
 
@@ -72,6 +75,11 @@ object OrphanWatch {
 
     /** One look: the orphans seen twice are taken back or protected. Each in its own try. */
     suspend fun run(context: Context) {
+        if (!busy.tryLock()) return
+        try { look(context) } finally { busy.unlock() }
+    }
+
+    private suspend fun look(context: Context) {
         val found = runCatching { find() }.getOrElse { runCatching { Diag.record("orphans", "the safety net's look failed: ${it.javaClass.simpleName}") }; return }
         for (o in pending.confirm(found, nowMs())) {
             try {

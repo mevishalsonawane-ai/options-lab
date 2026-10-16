@@ -61,6 +61,17 @@ class OrphanAuditTest {
         assertTrue(OrphanAudit.find(listOf(OrphanAudit.Held(sym, 65, 99.0, emptyList())), emptySet(), owners::get, auto).isEmpty())
     }
 
+    @Test fun aLotBossAddedByHandIsNeverAnArmsOrphan() {
+        // R51 buys 65, Boss adds 65 by hand, R51 sells its 65: what is left is Boss's - no single owner, never adopted.
+        val h = OrphanAudit.Held(sym, 65, 100.0, listOf(OrphanAudit.Fill("p1", true, 65, 95.0, t(9, 40)),
+            OrphanAudit.Fill("m1", true, 65, 100.0, t(9, 45)), OrphanAudit.Fill("p2", false, 65, 110.0, t(9, 50))))
+        assertNull(OrphanAudit.opened(h, owners::get).owner)
+        assertTrue(OrphanAudit.find(listOf(h), emptySet(), owners::get, auto).isEmpty())
+        // The same arm adding to its own trade stays its own.
+        val own = OrphanAudit.Held(sym, 130, 100.0, listOf(OrphanAudit.Fill("p1", true, 65, 95.0, t(9, 40)), OrphanAudit.Fill("p3", true, 65, 105.0, t(9, 45))))
+        assertEquals("R51 Donchian 20", OrphanAudit.opened(own, owners::get).owner)
+    }
+
     @Test fun twoSightingsBeforeActingAndOnceOnly() {
         val p = OrphanAudit.Pending()
         val o = OrphanAudit.find(listOf(reEntry()), emptySet(), owners::get, auto)
@@ -77,12 +88,10 @@ class OrphanAuditTest {
         assertTrue(p.confirm(o, 0L).isEmpty())
     }
 
-    @Test fun theNetsOwnLevelsAndAnUnknownTimeHasNoTimeExit() {
+    @Test fun theNetsOwnLevels() {
         assertEquals(103.85, OrphanAudit.netStop(122.20), 1e-9)
         assertEquals(158.90, OrphanAudit.netTarget(122.20), 1e-9)
         assertEquals(85.0, OrphanAudit.netStop(100.0), 1e-9); assertEquals(130.0, OrphanAudit.netTarget(100.0), 1e-9)
-        val x = OrphanAudit.unknownTime(DonchianArm.EXITS)
-        assertNull(x.tmaxMinutes); assertEquals(DonchianArm.EXITS.stop, x.stop); assertEquals(DonchianArm.EXITS.squareOff, x.squareOff)
         assertFalse(OrphanAudit.Orphan(sym, 65, "a", null, 1.0, null).known)
         assertEquals("$sym|?|65", OrphanAudit.Orphan(sym, 65, "a", null, 1.0, null).key)
     }

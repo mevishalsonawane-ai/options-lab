@@ -47,24 +47,26 @@ object OrphanAudit {
     /**
      * What opened the long [h]: the fills are walked oldest first; the buy that took it from flat (or short) opens the trade, and
      * the buys after it (until the next flat) add to it. The price is their quantity-weighted average. [ownerOf] names an order.
+     * A trade another owner added to (Boss's hand lot on an arm's buy) has no single owner: null, never taken for an arm's.
      */
     fun opened(h: Held, ownerOf: (String) -> String?): Opened {
         var running = 0
         var opener: Fill? = null
         var cost = 0.0
         var bought = 0
+        var mixed = false
         for (f in h.fills) {
             if (f.qty <= 0) continue
             val before = running
             running += if (f.buy) f.qty else -f.qty
-            if (f.buy && before <= 0 && running > 0) { opener = f; cost = 0.0; bought = 0 }
-            if (f.buy && running > 0) { cost += f.price * f.qty; bought += f.qty }
-            if (running <= 0) { opener = null; cost = 0.0; bought = 0 }
+            if (f.buy && before <= 0 && running > 0) { opener = f; cost = 0.0; bought = 0; mixed = false }
+            if (f.buy && running > 0) { cost += f.price * f.qty; bought += f.qty; if (opener != null && f !== opener && ownerOf(f.orderId) != ownerOf(opener.orderId)) mixed = true }
+            if (running <= 0) { opener = null; cost = 0.0; bought = 0; mixed = false }
         }
         // The fills today do not explain all of what is held (a carry from an earlier session): unknown.
         if (opener == null || running != h.qty) return Opened(null, null, h.average, null)
         val avg = if (bought > 0 && cost > 0) cost / bought else h.average
-        return Opened(opener.orderId, ownerOf(opener.orderId), avg, opener.at)
+        return Opened(opener.orderId, if (mixed) null else ownerOf(opener.orderId), avg, opener.at)
     }
 
     /**
@@ -77,9 +79,6 @@ object OrphanAudit {
             val owner = o.owner?.takeIf(automatic) ?: return@mapNotNull null
             Orphan(h.symbol, h.qty, owner, o.orderId, o.fill, o.at)
         }
-
-    /** The arm's exits for an adopted position whose fill time is unknown: its stop and target, no time exit (the square-off). */
-    fun unknownTime(x: PassedArms.PremiumExits): PassedArms.PremiumExits = x.copy(tmaxMinutes = null)
 
     /** The net's own stop for a long filled at [fill]: -[NET_STOP], down to the 0.05 tick. */
     fun netStop(fill: Double): Double = Math.round(floor(fill * (1 - NET_STOP) / 0.05 + 1e-6) * 0.05 * 100) / 100.0

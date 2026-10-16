@@ -348,7 +348,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only("none")
         minutes(niftyKey, LocalTime.of(10, 0)) { 25_000.0 }; minutes(ce, LocalTime.of(10, 0)) { 100.0 }
         at(LocalTime.of(10, 0))
-        orphanBuy(com.optionslab.engine.orb.NightRules.LABEL)
+        orphanBuy(com.optionslab.engine.orb.HeroTicketRules.OWNER)
         at(LocalTime.of(10, 1), 0); runBlocking { OrphanWatch.run(context) }
         at(LocalTime.of(10, 1), 30); runBlocking { OrphanWatch.run(context) }
         val prot = runBlocking { Protections.active() }.single()
