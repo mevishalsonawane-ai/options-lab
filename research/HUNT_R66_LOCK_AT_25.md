@@ -88,3 +88,14 @@ L25 is listed as an `inconclusive` idea that Boss may choose.
 `research/hunt/r66/`: `PREREG.md`, `r66cfg.py` (variants), `r66entries.py`, `test_r66.py`, `results/` (summary.json,
 report.md, per-group JSON, FINAL_READ). `research/experiments/entries/r66-*.yaml`: 15 entries. The study and report are
 `research/hunt/r65/r65study.py` and `r65report.py`, now reading `HUNT_CFG` (default `r65cfg`, so R65 is unchanged).
+
+## Boss's choice (16 Oct 2026, after R67 - R69)
+
+After R67 (-10% once +25%), R68 (the staircase in three readings) and R69 (+1 point per +1 point) were all no better,
+Boss said: *"Select the best."* The best of the 96 tests run on 16 Oct is **L25: stop to +5% once the option has been
++25%**, on top of A4. It was the only rule at least as good as A4 in design, walk-forward and final across the three arms
+(+Rs 8,042 / +Rs 18,050 / +Rs 5,396), with the same worst day and drawdown. It did not pass the pre-registered bar (the
+random-exit check), so it is Boss's choice, not a proven rule. Under CLAUDE.md it may act on the **paper** arms only:
+logged in the Autopilot change timeline, undoable in one tap, never carried to live by itself. It is applied in the app
+by the parent session, not here (this branch is research only). Liquidity BANKNIFTY and the other arms are tested
+separately in R70 before anything there changes.

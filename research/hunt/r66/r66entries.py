@@ -39,6 +39,9 @@ def main():
                         "Boss may still choose it.")
             else:
                 verdict, note = "rejected", "Failed the gates."
+            if v == "L25":
+                note += (" Boss's choice on 16 Oct (\"Select the best\", after R67 - R69): the best of the day's 96 tests; "
+                         "for the paper arms only, applied by the parent session, logged and undoable.")
             pb = r.get("paired", {})
             vs = "".join(f" Versus {b[3:]}: design {rs(x['design']['diff'])} (bootstrap p {x['design']['p']}), final "
                          f"{rs(x['final']['diff'])} (p {x['final']['p']})." for b, x in pb.items())

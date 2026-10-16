@@ -38,5 +38,6 @@ results:
 holdout_read: true
 verdict: inconclusive
 notes: 'Passed R51''s gates but not recommended (PREREG section 3): it must also beat both B0 and A4 in design, walk-forward
-  and final and beat random early exits; exit-twin q 0.499. Boss may still choose it. Signal on the underlying; research only,
-  nothing changes paper or live.'
+  and final and beat random early exits; exit-twin q 0.499. Boss may still choose it. Boss''s choice on 16 Oct ("Select the
+  best", after R67 - R69): the best of the day''s 96 tests; for the paper arms only, applied by the parent session, logged
+  and undoable. Signal on the underlying; research only, nothing changes paper or live.'
