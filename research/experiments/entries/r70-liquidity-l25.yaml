@@ -1,0 +1,36 @@
+id: r70-liquidity-l25
+title: 'R70 Liquidity: own exits + stop to +5% once +25% (Boss''s selected lock)'
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R70_LOCK_OTHER_ARMS.md
+hypothesis: 'Boss (16 Oct): the day''s best lock (R66 L25, stop to +5% once the option has been +25%) also helps the other
+  arms. This variant: own exits + stop to +5% once +25% (Boss''s selected lock); recommended only if its net is at least B0''s
+  in design, walk-forward and final and it beats random early exits (q <= 0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Liquidity)
+  / R57 stores (Solo midday), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R57 / R63 (weak)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: index bars (liquidity levels) (unchanged); only the option exit differs'
+model_or_rule: 'Liquidity 15+5 (index level breaks on 15/5-min bars BANKNIFTY and MIDCPNIFTY, 30/5 FINNIFTY; 1-ITM); exits:
+  own exits + stop to +5% once +25% (Boss''s selected lock)'
+settings: research/hunt/r70/r70study.py; PREREG.md
+prereg: research/hunt/r70/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Design: 881 trades, win 44%, net Rs 254,018 (Rs 288/trade), worst day -Rs 8,416, max DD Rs 28,137, stops 26. Walk-forward:
+    657 trades, win 45%, net Rs 232,137 (Rs 353/trade), worst day -Rs 6,363, max DD Rs 22,314, stops 21. Final: 357 trades,
+    win 38%, net Rs 13,091 (Rs 37/trade), worst day -Rs 11,405, max DD Rs 61,062, stops 12. L25 changed 18 design / 4 final
+    trades; versus B0: design -Rs 3,232 (bootstrap p 0.582), final Rs 1,936 (p 0.3115); exit-twin p 0.2595 (q 0.477). Not
+    at least B0''s net in every period, so not recommended and not ''harmless'' on this arm.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; research only, nothing changes paper or live. Liquidity BANKNIFTY's plain-rules record for
+  the 26 Oct decision is untouched.
