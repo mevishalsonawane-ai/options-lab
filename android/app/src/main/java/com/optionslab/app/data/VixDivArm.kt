@@ -167,7 +167,7 @@ object VixDivArm {
     suspend fun setArmed(on: Boolean): String {
         if (!ready()) return "${VixDivRules.LABEL} is not ready yet."
         // 15 Oct (Boss's cleanup): hidden, it is switched on only by its restore from the Hidden arms list.
-        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)) return com.optionslab.engine.orb.ArmsCleanup.refusal(VixDivRules.LABEL)
+        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)) return HiddenArms.refusal(VixDivRules.LABEL)
         return lock.withLock {
             val b = book()
             if (b.armed == on) return@withLock "${VixDivRules.LABEL} is already ${if (on) "on" else "off"} (paper only)."

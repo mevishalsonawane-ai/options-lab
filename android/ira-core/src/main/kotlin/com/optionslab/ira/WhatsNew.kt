@@ -58,6 +58,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-16-diagnostics-fixes", OCT16, "MCX evenings watched and Telegram channels kept",
+            "After Android closes the app in MCX's evening, the watch comes straight back for your armed MCX arms. " +
+                "The open positions are read back side by side at a restart, and diagnostics name why Android closed the app. " +
+                "Your Telegram channels now stay selected, and the window says which ones are read. " +
+                "The clock warning now checks Zerodha's server time and allows for the network delay. " +
+                "Paper fills use a price at most 2 seconds old, and a slow Zerodha read waits 5 seconds at most. " +
+                "The fingerprint unlock no longer freezes the screen.",
+            "Copy diagnostics (Settings → Zerodha); Home → Strategies → tap Signal tester's name → Telegram login"),
         Entry("2026-10-16-passed-arms-lock", OCT16, "The 30-60-100 lock on three paper arms (your choice)",
             "New paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 have no fixed target now. " +
                 "Each keeps its own stop and time exit. " +

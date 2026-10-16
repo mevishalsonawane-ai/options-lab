@@ -352,7 +352,7 @@ object PineAuto {
         // 15 Oct (Boss's cleanup): Pine auto-trading hidden - a script places orders again only after its restore (Hidden arms).
         // Alerts-only scripts never trade and are not hidden.
         if (on && item.auto.mode == "trade" && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.PINE))
-            return@withLock com.optionslab.engine.orb.ArmsCleanup.refusal("Pine auto-trading")
+            return@withLock HiddenArms.refusal("Pine auto-trading")
         // Boss's 06 Oct rule: a script that places orders switches on only with a stop-loss and a target.
         if (on) com.optionslab.ira.PineProtection.armRefusal(item.auto.mode, item.auto.stopPts, item.auto.targetPts)?.let { return@withLock it }
         // 14 Oct (Boss): the signal is read on the index chart, then the option is bought. An option's own chart, an MCX
@@ -583,9 +583,11 @@ object PineAuto {
         }
         note(b, id, "Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
         if (a.mode == "alert" && entries) {
-            // Alerts only: tell the owner, place nothing.
+            // Alerts only: tell the owner, place nothing. 16 Oct: the banner (and so the diary) as information, not an error -
+            // "jarvis: breakout above ... flat" was counted among the day's errors by the order review.
             Notifier.post(app, 5000 + (id % 1000).toInt(), Notifier.RISK, "${item.name}: ${describe(target)}",
-                "${a.symbol} ${a.interval} at ${"%,.2f".format(java.util.Locale.ENGLISH, last.close)} · Pine signal (alerts only, no order placed)", "pine")
+                "${a.symbol} ${a.interval} at ${"%,.2f".format(java.util.Locale.ENGLISH, last.close)} · Pine signal (alerts only, no order placed)", "pine",
+                banner = com.optionslab.app.work.Alerts.Kind.INFO)
             return
         }
         if (h?.right == want) return

@@ -370,9 +370,12 @@ fun SecurityPage(model: AppModel) {
                     if (on) {
                         // The PIN, never a finger: a finger added by someone else must not be able to trust itself.
                         guard("Enter your app PIN to switch the fingerprint on. Every finger on this phone can then approve orders.", pinOnly = true) {
-                            runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                                .onFailure { model.say("Could not enable the fingerprint: ${it.message}") }
-                                .onSuccess { model.update { it.copy(biometric = kind != BiometricGate.Kind.NONE, allowWeakFace = false) } }
+                            // The key is made on the fingerprint's background thread (16 Oct: Keystore calls off the screen's thread).
+                            val done: (Throwable?) -> Unit = { e ->
+                                if (e != null) model.say("Could not enable the fingerprint: ${e.message}")
+                                else model.update { it.copy(biometric = kind != BiometricGate.Kind.NONE, allowWeakFace = false) }
+                            }
+                            if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrolOffMain(done) else done(null)
                         }
                     } else {
                         BiometricGate.forget()

@@ -80,14 +80,32 @@ object Speed {
     }
 
     /** The main thread's first frames: the code running (class.method), the app's own frame named if it is deeper. */
-    private fun runningOnMain(): String {
-        val st = Looper.getMainLooper().thread.stackTrace
+    private fun runningOnMain(): String = where(Looper.getMainLooper().thread.stackTrace)
+
+    /**
+     * [runningOnMain] from a stack: the top frame, the app's first frame, and (16 Oct) who called it - up to two more of the
+     * app's own frames outside its storage and security code ("BinderProxy.transactNative in Vault.encrypt from
+     * SecurePrefs.put < AppModel.save"). Boss's diagnostics named only "Vault.encrypt", which every save goes through, so the
+     * screen code that wrote on the screen's thread could not be found. Class and method names only.
+     */
+    internal fun where(st: Array<StackTraceElement>): String {
         if (st.isEmpty()) return "?"
-        fun f(e: StackTraceElement) = "${e.className.substringAfterLast('.')}.${e.methodName}"
+        fun f(e: StackTraceElement) = "${e.className.substringAfterLast('.').substringBefore('$')}.${e.methodName}"
         val top = f(st[0])
-        val ours = st.firstOrNull { it.className.startsWith("com.optionslab.") }
-        return if (ours == null || ours === st[0]) top else "$top in ${f(ours)}"
+        val i = st.indexOfFirst { it.className.startsWith("com.optionslab.") }
+        if (i < 0) return top
+        val head = if (i == 0) top else "$top in ${f(st[i])}"
+        val callers = st.drop(i + 1).filter { it.className.startsWith("com.optionslab.") }.map { f(it) }
+            .filter { it != f(st[i]) }.distinct()
+        // The storage layers first named as they come, then the first frame of the code that asked for them.
+        val store = callers.takeWhile { STORE.any { p -> it.startsWith(p) } }
+        val asker = callers.drop(store.size).firstOrNull()
+        val chain = (store.takeLast(1) + listOfNotNull(asker)).distinct()
+        return if (chain.isEmpty()) head else head + " from " + chain.joinToString(" < ")
     }
+
+    /** The storage and security layers every save passes through (named, but the caller beyond them is the useful frame). */
+    private val STORE = listOf("Vault.", "SecurePrefs.", "SecureBlobs.", "SecretBox.", "Diag.")
 
     private fun note(lag: Long, what: String?) {
         val now = LocalTime.now(com.optionslab.engine.IST).withNano(0)

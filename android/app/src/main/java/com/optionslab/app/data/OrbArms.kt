@@ -1463,7 +1463,7 @@ object OrbArms {
             else "${LiquidityRules.ARM.label} disarmed." + if (holding) " Its open position is still managed to its exit." else ""
         }
         // 15 Oct (Boss's cleanup): a hidden arm is switched on only from the Hidden arms list (its restore), never here.
-        if (on && !HiddenArms.mayArm(source)) return@withLock ArmsCleanup.refusal(armOf(source).label)
+        if (on && !HiddenArms.mayArm(source)) return@withLock HiddenArms.refusal(armOf(source).label)
         val paperOnly = armOf(source).paperOnly
         val live = liveNow() && !paperOnly
         if (on && live && !pinConfirmed) return@withLock "The app is in Live: arm it with your PIN or fingerprint."

@@ -215,8 +215,8 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
             error = offerError,
             onUse = {
                 // Prove it works on this phone before switching it on.
-                runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                BiometricGate.authenticate(activity, allowWeakFace = false) { out ->
+                // The key is made on the fingerprint's background thread, not here (16 Oct: Keystore calls off the screen's thread).
+                BiometricGate.authenticate(activity, allowWeakFace = false, enrolFirst = kind == BiometricGate.Kind.STRONG) { out ->
                     when (out) {
                         BiometricGate.Outcome.Success -> {
                             model.update { it.copy(biometric = true, allowWeakFace = false) }

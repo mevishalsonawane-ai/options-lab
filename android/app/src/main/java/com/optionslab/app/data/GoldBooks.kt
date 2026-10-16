@@ -27,6 +27,8 @@ object GoldBooks {
         synchronized(this) { gate = g; _ready.value = false }
         Thread({
             try {
+                // 16 Oct: after the open positions are restored (their Keystore reads go first; at most 20 s, at once in tests).
+                runCatching { kotlinx.coroutines.runBlocking { PositionsFirst.awaitPositions() } }
                 // A later init (tests start the app again in one process) replaces this read: its result is dropped.
                 if (gate === g) GoldPaper.load()
                 if (gate === g) GoldTrendPaper.load()

@@ -159,7 +159,7 @@ object NightArm {
     suspend fun setArmed(on: Boolean): String {
         if (!ready()) return "Night (R3) is not ready yet."
         // 15 Oct (Boss's cleanup): hidden, it is switched on only by its restore from the Hidden arms list.
-        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.NIGHT)) return com.optionslab.engine.orb.ArmsCleanup.refusal(NightRules.LABEL)
+        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.NIGHT)) return HiddenArms.refusal(NightRules.LABEL)
         return lock.withLock {
             val b = book()
             if (b.armed == on) return@withLock "${NightRules.LABEL} is already ${if (on) "on" else "off"}."

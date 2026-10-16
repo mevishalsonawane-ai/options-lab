@@ -343,7 +343,11 @@ object McxMarket {
         // The books themselves when this process has read them, else what their last write left in the hint file.
         val paper = runCatching { Paper.mcxExposureIfLoaded() }.getOrNull() ?: hint(H_PAPER)
         if (paper == true) return true
-        val arms = runCatching { McxPaperArms.wantsWatchIfLoaded() }.getOrNull() ?: hint(H_ARMS)?.let { armed -> if (armed) null else false }
+        // 16 Oct: an armed arm's hint is a yes. Since 12 Oct an armed arm needs the watch for MCX's whole session
+        // ([McxPaperArms.wantsWatch]), and MCX is open here. It was "unknown", so a restart of the watch by Android in MCX's
+        // evening (after Android ended the app) with the arms armed and nothing held was dropped as "after the market hours",
+        // and nothing watched the arms until the next dead-man check minutes later ("Session coverage", 15 Oct 17:56).
+        val arms = runCatching { McxPaperArms.wantsWatchIfLoaded() }.getOrNull() ?: hint(H_ARMS)
         if (arms == true) return true
         return if (paper == null || arms == null) null else false
     }

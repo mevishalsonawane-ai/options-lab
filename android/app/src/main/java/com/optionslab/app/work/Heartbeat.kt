@@ -166,13 +166,39 @@ object Heartbeat {
         val held = if (open && runCatching { mcx.exposure() }.getOrDefault(false)) 1 else 0
         // The price stream may rest by design (Paper mode, nothing needing live prices): only the watch's own absence is a gap here.
         val gaps = com.optionslab.ira.SessionCoverage.gaps(listOf(com.optionslab.ira.SessionCoverage.Market("MCX", open, held, armed)), alive, null)
-        for (g in gaps) com.optionslab.app.data.ProblemsHost.report(g.key, "Session coverage", com.optionslab.ira.OpenProblems.Severity.SERIOUS, g.text,
-            "the watch was started again; if this repeats, it needs a developer fix", notify = true)
         if (gaps.any { it.watch }) runCatching { Jobs.ensureWatch(context) }
+        // 16 Oct: told only when the gap outlasts the grace (this check is often the very start of the watch: MCX's open, a
+        // restart after Android ended the app); else looked at again once the grace is over, with the watch's pulse then.
+        if (coverageGap.report(gaps.isNotEmpty(), System.currentTimeMillis())) {
+            for (g in gaps) com.optionslab.app.data.ProblemsHost.report(g.key, "Session coverage", com.optionslab.ira.OpenProblems.Severity.SERIOUS, g.text,
+                "the watch was started again and was still not running after ${com.optionslab.ira.SessionCoverage.GRACE_MS / 60_000} minutes; if this repeats, it needs a developer fix", notify = true)
+        } else if (gaps.isNotEmpty()) recheckCoverage(context)
+
         // The live recording (Data Brain L8): nothing written while NSE is open and the watch runs is an open problem.
         runCatching { com.optionslab.app.data.LiveRecorder.healthCheck(alive) }
         runCatching { com.optionslab.app.data.ProblemsHost.policySweep(com.optionslab.app.data.AppSettings.load().let { it.live && it.allowRealOrders }) }
     }
+
+    /** When a coverage gap was first seen (memory: a new process starts its grace again). */
+    private val coverageGap = com.optionslab.ira.SessionCoverage.GapTimer()
+    @Volatile private var recheckAt = 0L
+
+    /** The coverage looked at again just after its grace ends (once per gap; off the alarm receiver, on IO). */
+    private fun recheckCoverage(context: Context) {
+        val now = System.currentTimeMillis()
+        if (recheckAt > now) return
+        recheckAt = now + com.optionslab.ira.SessionCoverage.GRACE_MS + RECHECK_SLACK_MS
+        val app = context.applicationContext ?: context
+        tellScope.launch {
+            kotlinx.coroutines.delay(com.optionslab.ira.SessionCoverage.GRACE_MS + RECHECK_SLACK_MS)
+            recheckAt = 0L
+            if (watched()) runCatching { coverage(app, aliveNow()) }
+        }
+    }
+    private const val RECHECK_SLACK_MS = 5_000L
+
+    /** The watch's own pulse in this process is fresh. */
+    private fun aliveNow(): Boolean = alivePulse > 0L && System.currentTimeMillis() - alivePulse in 0L until WatchHealth.ALIVE_MS
 
     /** The alarm fired: re-arm, and if the watch is silent, restart it and say so once. */
     fun check(context: Context) {
@@ -180,7 +206,7 @@ object Heartbeat {
         // MCX's evening (9 Oct): with an MCX position or order open the watch is brought back if Android stopped it.
         // Only when the watch is not alive in this process (its own pulse): every start of a running watch is a foreground
         // service start, run on the main thread with a binder call to Android and the notification posted again (ANR fix, 9 Oct).
-        val alive = alivePulse > 0L && System.currentTimeMillis() - alivePulse in 0L until WatchHealth.ALIVE_MS
+        val alive = aliveNow()
         if (!alive && watched() && runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)) runCatching { Jobs.ensureWatch(context) }
         // 12 Oct, 16:30: an independent look at coverage - the watch's own "should I run?" rule was the wrong one that day, and
         // this check and the health monitor (inside the watch) both leaned on it.

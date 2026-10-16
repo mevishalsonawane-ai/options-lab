@@ -48,7 +48,10 @@ object LossBreaker {
         // The paper day AFTER charges (Paper.Snapshot.dayPnl), never the before-charges figure the screens show: the limit
         // keeps the safer, net figure (Boss, 5 Oct). Zerodha's is its own m2m, as it always was.
         val paper = runCatching { Paper.snapshot() }.getOrNull()?.dayPnl
-        val live = if (Broker.loggedIn) runCatching { Broker.positionBook().m2m }.getOrNull() else null
+        // 16 Oct: waited 5 s at most - this runs before the arms' exits and entries in each pass, and one hung read of
+        // Zerodha's positions held all of them for up to 105 s. Not read in time: this pass decides on paper's figure; the
+        // next pass reads again.
+        val live = if (Broker.loggedIn) Broker.within(Broker.READ_BUDGET_MS) { Broker.positionBook().m2m } else null
         // The day lock on the same figures (08 Oct): an account up by the Bot settings amount makes no new automatic entry today.
         runCatching { DayLockGuard.update(context, paper, live) }
         val hit = when {

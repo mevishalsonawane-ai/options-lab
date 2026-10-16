@@ -3,6 +3,7 @@ package com.optionslab.app.data
 import android.content.Context
 import com.optionslab.ira.StartOrder
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -54,6 +55,8 @@ object PositionsFirst {
         Thread({
             runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_FOREGROUND) }
             runBlocking { steps(::restore, { runCatching { com.optionslab.app.work.Jobs.ensureWatch(app) } }, { runCatching { KiteStream.ensure() } }) }
+            // 16 Oct: why Android ended the process last time (its own record), after the positions are watched.
+            runCatching { com.optionslab.app.work.ProcessExits.read(app) }
         // The nice level only (review, 14 Oct: Java's MAX_PRIORITY would be inherited by every thread this one creates).
         }, "positions-first").apply { isDaemon = true }.start()
     }
@@ -68,11 +71,12 @@ object PositionsFirst {
     internal suspend fun steps(restore: suspend () -> Boolean, watch: () -> Unit, stream: () -> Unit, clock: () -> Long = { android.os.SystemClock.uptimeMillis() }) {
         val open = runCatching { restore() }.getOrDefault(true)
         foundOpen = open
-        if (open) {
-            // The restore-disarm step of the app's start runs before any watch can tick (a few ms). Not done in time (a start
-            // that took longer than [WAIT_MS]): this thread does not start the watch; the start's own alarms and the screens do.
-            if (withTimeoutOrNull(WAIT_MS) { appReady.await() } != null) watch()
-        }
+        // The restore-disarm step of the app's start runs before any watch can tick (a few ms). Not done in time (a start
+        // that took longer than [WAIT_MS]): this thread does not start the watch; the start's own alarms and the screens do.
+        // 16 Oct: asked whether anything is open or not - [watch] (Jobs.ensureWatch) decides itself, and is a no-op when the
+        // watch is not due. With nothing open it was never asked, so an MCX arm armed in its evening (nothing held yet) stayed
+        // unwatched after Android ended the app, until the next dead-man check ("Session coverage", 15 Oct 17:56).
+        if (withTimeoutOrNull(WAIT_MS) { appReady.await() } != null) watch()
         order.done(StartOrder.Step.POSITIONS, clock())
         runCatching { Diag.record("start", "positions first: ${if (open) "open positions or orders found, watch started" else "nothing open"} " +
             "${order.positionsWatchedAfter(startedAt)?.let { "($it ms after the start)" } ?: ""}".trimEnd()) }
@@ -85,31 +89,59 @@ object PositionsFirst {
      * order, protection or running strategy is open - or when a book could not be read (then the watch decides).
      */
     internal suspend fun restore(): Boolean {
-        var open = false
-        var failed = false
-        suspend fun one(f: suspend () -> Boolean) { runCatching { if (f()) open = true }.onFailure { failed = true } }
+        val books = ArrayList<Pair<String, suspend () -> Boolean>>()
+        fun one(name: String, f: suspend () -> Boolean) { books += name to f }
         // The paper account first (NSE and MCX paper positions and resting orders: the fast exits' STREAM lane).
-        one { Paper.watching() }
-        one { OrbArms.holding() }
-        one { Protections.active().isNotEmpty() }
-        one { PineAuto.load(); PineAuto.holding() }
-        one { Strategies.anyRunning() }
-        one { McxPaperArms.refresh().open.isNotEmpty() }
-        one { NightArm.refresh().open.isNotEmpty() }
-        one { VixDivArm.refresh().open.isNotEmpty() }
+        one("paper") { Paper.watching() }
+        one("ORB") { OrbArms.holding() }
+        one("protections") { Protections.active().isNotEmpty() }
+        one("Pine") { PineAuto.load(); PineAuto.holding() }
+        one("strategies") { Strategies.anyRunning() }
+        one("MCX arms") { McxPaperArms.refresh().open.isNotEmpty() }
+        one("night") { NightArm.refresh().open.isNotEmpty() }
+        one("VIX") { VixDivArm.refresh().open.isNotEmpty() }
         // 15 Oct: the Hero ₹1,000 ticket's paper tickets (its own book) - restored here, before any other start-up work.
-        one { HeroTicketArm.refresh().open.isNotEmpty() }
+        one("Hero ticket") { HeroTicketArm.refresh().open.isNotEmpty() }
         // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0; their own book) - restored here, with their stops, first.
-        one { PassedArmsHost.refresh().open.isNotEmpty() }
+        one("passed arms") { PassedArmsHost.refresh().open.isNotEmpty() }
         // 15 Oct: a Telegram chat's calls on paper (Boss's choice; its own book) - restored here, with their stops, first.
-        one { SignalPaperArm.refresh().open.isNotEmpty() }
-        one { GrammarArm.refresh(); false }
-        one { Ledger.openTicket() != null }
-        one { McxMarket.liveExposureOrThrow() }
+        one("Telegram calls") { SignalPaperArm.refresh().open.isNotEmpty() }
+        one("grammar") { GrammarArm.refresh(); false }
+        one("ticket") { Ledger.openTicket() != null }
+        one("MCX live") { McxMarket.liveExposureOrThrow() }
         // Jarvis's own paper trades (review, 14 Oct; the fast exits' minute lane counts them).
-        if (com.optionslab.app.BuildConfig.JARVIS) one { com.optionslab.app.ira.IraSolo.holdingOrThrow() }
-        return open || failed
+        if (com.optionslab.app.BuildConfig.JARVIS) one("Jarvis") { com.optionslab.app.ira.IraSolo.holdingOrThrow() }
+        return readAll(books)
     }
+
+    /**
+     * 16 Oct (Boss's diagnostics: "positions +15640 ms" after each restart): the books were read one after another, each a
+     * Keystore decryption, so the last one waited for all the others. They are read side by side now ([PARALLEL] at a time,
+     * each book under its own lock as before), and the slowest one is named in the diagnostics ([slowest]). True when any
+     * book holds something open, or when any book could not be read (then the watch decides).
+     */
+    internal suspend fun readAll(books: List<Pair<String, suspend () -> Boolean>>, clock: () -> Long = { android.os.SystemClock.uptimeMillis() }): Boolean {
+        val open = java.util.concurrent.atomic.AtomicBoolean(false)
+        val failed = java.util.concurrent.atomic.AtomicBoolean(false)
+        val times = java.util.concurrent.ConcurrentHashMap<String, Long>()
+        val gate = kotlinx.coroutines.sync.Semaphore(PARALLEL)
+        kotlinx.coroutines.coroutineScope {
+            for ((name, f) in books) launch(kotlinx.coroutines.Dispatchers.IO) {
+                gate.acquire()
+                val at = clock()
+                try { if (f()) open.set(true) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { failed.set(true) }
+                finally { times[name] = clock() - at; gate.release() }
+            }
+        }
+        slowest = times.maxByOrNull { it.value }?.let { "${it.key} ${it.value} ms" }
+        return open.get() || failed.get()
+    }
+
+    /** Books read at once at the restore (the Keystore does little in parallel; this keeps the queue short). */
+    private const val PARALLEL = 4
+    /** The slowest book at the last restore ("paper 812 ms"), for the diagnostics. */
+    @Volatile var slowest: String? = null
+        private set
 
     /**
      * Suspends until step 1 is done (at most [WAIT_MS]); at once when this process never ran it (the unit tests' app) or it
@@ -131,12 +163,13 @@ object PositionsFirst {
         val s = startedAt
         if (s == 0L) return "Start-up: not run in this process"
         val steps = order.log().joinToString(", ") { (step, at) -> "${step.name.lowercase()} +${at - s} ms" }
-        return "Start-up: ${steps.ifEmpty { "running" }}" + (foundOpen?.let { if (it) "; open positions found and watched first" else "; nothing open" } ?: "")
+        return "Start-up: ${steps.ifEmpty { "running" }}" + (slowest?.let { " (slowest book: $it)" } ?: "") +
+            (foundOpen?.let { if (it) "; open positions found and watched first" else "; nothing open" } ?: "")
     }
 
     /** TEST ONLY: a fresh start ([startedAt] set as if the app had just started). */
     internal fun resetForTest(started: Boolean) {
-        order = StartOrder(); appReady = CompletableDeferred(); foundOpen = null
+        order = StartOrder(); appReady = CompletableDeferred(); foundOpen = null; slowest = null
         startedAt = if (started) android.os.SystemClock.uptimeMillis().coerceAtLeast(1L) else 0L
     }
 }

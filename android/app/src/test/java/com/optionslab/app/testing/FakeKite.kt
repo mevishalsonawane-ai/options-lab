@@ -94,6 +94,9 @@ class FakeKite : Closeable {
     /** Paths that answer TokenException while the session itself is still good (one endpoint's glitch). */
     val tokenRefused = HashSet<String>()
 
+    /** Paths never answered (16 Oct: Zerodha's positions read that waited 105 s). */
+    val hang: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     fun nextPlace(s: Scenario) = synchronized(lock) { scenarios.addLast(s) }
     fun nextPlace(reply: Reply = Reply.OK, outcome: Outcome = Outcome.FILL, partialQty: Int = 0, message: String = "") =
         nextPlace(Scenario(reply, outcome, partialQty, message))
@@ -168,6 +171,8 @@ class FakeKite : Closeable {
         requests += Req(r.method!!, path, q, parseForm(body), body, r.getHeader("Authorization"))
         if (throttle > 0) { throttle--; return error(429, "NetworkException", "Too many requests").addHeader("Retry-After", "1") }
         if (path in down) return error(503, "NetworkException", "Gateway timed out")
+        // No answer at all until the client gives up (released when the client closes the connection).
+        if (path in hang) return MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE)
         if (path in tokenRefused) return error(403, "TokenException", "Incorrect `api_key` or `access_token`.")
         if (path != "/session/token" && sessionExpired) return error(403, "TokenException", "Incorrect `api_key` or `access_token`.")
         val m = r.method!!

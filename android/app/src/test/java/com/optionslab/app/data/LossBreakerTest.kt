@@ -61,6 +61,36 @@ class LossBreakerTest : RobolectricTest() {
         assertTrue("the breaker only stops the bots: it sends nothing for a hand-made position", kite.writes.isEmpty())
     }
 
+    /**
+     * 16 Oct (Boss's diagnostics: "GET /portfolio/positions -> FAILED ... (105388 ms)"): the breaker runs before the arms' exits
+     * and entries in every pass. A hung read of Zerodha's positions holds it 5 s at most, and the read itself gives up within
+     * its budget; the paper limit is still checked meanwhile.
+     */
+    @Test fun aHungPositionsReadHoldsThePassFiveSecondsAtMost() {
+        kite.login()
+        kite.hang += "/portfolio/positions"
+        val t0 = System.currentTimeMillis()
+        check()
+        val held = System.currentTimeMillis() - t0
+        assertTrue("held $held ms", held < Broker.READ_BUDGET_MS + 2_500)
+        assertFalse(LossBreaker.trippedToday())
+        // The read on its own: cut at its budget, never the old 20 s + 60 s per try.
+        val t1 = System.currentTimeMillis()
+        val r = runCatching { runBlocking { Broker.positionBook() } }
+        assertTrue(r.isFailure)
+        assertTrue("took ${System.currentTimeMillis() - t1} ms", System.currentTimeMillis() - t1 < Broker.READ_BUDGET_MS + 2_500)
+        // An order is never cut by the read budget; the big downloads keep their limits; a 429 retry only within the budget.
+        assertEquals(null, Broker.readBudgetMs("POST", "/orders/regular", readOnly = false))
+        assertEquals(null, Broker.readBudgetMs("GET", "/instruments", readOnly = false))
+        assertEquals(null, Broker.readBudgetMs("GET", "/instruments/historical/256265/minute", readOnly = false))
+        assertEquals(Broker.READ_BUDGET_MS, Broker.readBudgetMs("GET", "/portfolio/positions", readOnly = false))
+        assertEquals(Broker.READ_BUDGET_MS, Broker.readBudgetMs("POST", "/charges/orders", readOnly = true))
+        assertEquals(null, Broker.readBudgetMs("GET", "/user/profile", readOnly = false, viaRelay = true))
+        assertTrue(Broker.retryFits(Broker.READ_BUDGET_MS, 1_000, 1_000))
+        assertFalse(Broker.retryFits(Broker.READ_BUDGET_MS, 3_500, 2_000))
+        assertTrue(Broker.retryFits(null, 60_000, 3_000))
+    }
+
     @Test fun aLossShortOfTheLimitChangesNothing() {
         kite.login()
         AutomationSupport.liveSettings()

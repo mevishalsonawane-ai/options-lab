@@ -255,7 +255,7 @@ object Strategies {
         // 15 Oct (Boss's cleanup): scheduled strategies hidden - armed again only after their restore (Hidden arms). Starting
         // one by hand (Research → Strategies) is not arming and is unchanged.
         if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.BASKETS))
-            return@withLock com.optionslab.engine.orb.ArmsCleanup.refusal("Scheduled strategies")
+            return@withLock HiddenArms.refusal("Scheduled strategies")
         if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Research → Strategies) before arming it live."
         val base = d.scheduler ?: com.optionslab.engine.strategy.SchedulerConfig(
             days = listOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,

@@ -76,6 +76,15 @@ object BiometricGate {
 
     fun forget() { runCatching { keyStore().deleteEntry(BIO_KEY) } }
 
+    /** [enrol] on the fingerprint's background thread; [onDone] on the screen's thread with the failure, or null (16 Oct). */
+    fun enrolOffMain(onDone: (Throwable?) -> Unit) {
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        keyWork.execute {
+            val e = runCatching { enrol() }.exceptionOrNull()
+            main.post { onDone(e) }
+        }
+    }
+
     /** The phone has a sensor but no fingerprint added yet. */
     fun notEnrolled(activity: FragmentActivity): Boolean =
         BiometricManager.from(activity).canAuthenticate(BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
@@ -138,10 +147,12 @@ object BiometricGate {
     /** Seal [plain] under the fingerprint-only key; [onDone] gets the blob, or null and why (null why = cancelled). */
     fun sealWithFingerprint(activity: FragmentActivity, plain: String, onDone: (String?, String?) -> Unit) {
         if (available(activity) != Kind.STRONG) { onDone(null, "This phone has no fingerprint Android trusts to guard a key"); return }
-        val c = secretCipher(null) ?: run { onDone(null, "The fingerprint key could not be made"); return }
-        prompt(activity, c, "Seal the API secret", "Your fingerprint will open it at each Zerodha login") { ok, why ->
-            val blob = ok?.let { runCatching { "b1:${hex(it.iv)}:${hex(it.doFinal(plain.toByteArray(Charsets.UTF_8)))}" }.getOrNull() }
-            onDone(blob, if (blob == null && ok != null) "The secret could not be sealed" else why)
+        offMain(activity, { secretCipher(null) }) { c ->
+            if (c == null) { onDone(null, "The fingerprint key could not be made"); return@offMain }
+            prompt(activity, c, "Seal the API secret", "Your fingerprint will open it at each Zerodha login") { ok, why ->
+                val blob = ok?.let { runCatching { "b1:${hex(it.iv)}:${hex(it.doFinal(plain.toByteArray(Charsets.UTF_8)))}" }.getOrNull() }
+                onDone(blob, if (blob == null && ok != null) "The secret could not be sealed" else why)
+            }
         }
     }
 
@@ -149,10 +160,31 @@ object BiometricGate {
     fun openWithFingerprint(activity: FragmentActivity, blob: String, onDone: (String?, String?) -> Unit) {
         val parts = blob.split(":")
         if (parts.size != 3 || parts[0] != "b1") { onDone(null, "invalid"); return }
-        val c = secretCipher(unhex(parts[1])) ?: run { onDone(null, "invalid"); return }
-        prompt(activity, c, "Log in to Zerodha", "Your fingerprint opens the API secret for this login") { ok, why ->
-            val plain = ok?.let { runCatching { String(it.doFinal(unhex(parts[2])), Charsets.UTF_8) }.getOrNull() }
-            onDone(plain, if (plain == null && ok != null) "invalid" else why)
+        val iv = runCatching { unhex(parts[1]) }.getOrNull() ?: run { onDone(null, "invalid"); return }
+        offMain(activity, { secretCipher(iv) }) { c ->
+            if (c == null) { onDone(null, "invalid"); return@offMain }
+            prompt(activity, c, "Log in to Zerodha", "Your fingerprint opens the API secret for this login") { ok, why ->
+                val plain = ok?.let { runCatching { String(it.doFinal(unhex(parts[2])), Charsets.UTF_8) }.getOrNull() }
+                onDone(plain, if (plain == null && ok != null) "invalid" else why)
+            }
+        }
+    }
+
+    /**
+     * 16 Oct (Boss's diagnostics: "the screen froze 1.5 s in Cipher.createCipher" at the fingerprint unlock): the Keystore's
+     * key lookups, key creation and the cipher's init are binder calls into the Keystore, which does one operation at a time
+     * (StrongBox on a Pixel) and can be busy with a vault write. They run on this one background thread; the prompt is then
+     * shown on the screen's thread, unless the screen went away meanwhile. The keys and the prompt are exactly as before.
+     */
+    private val keyWork: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "fingerprint-key").apply { isDaemon = true }
+    }
+
+    /** [work] on [keyWork], then [then] with its result on the screen's thread (skipped if [activity] is finishing). */
+    internal fun <T> offMain(activity: FragmentActivity, work: () -> T, then: (T) -> Unit) {
+        keyWork.execute {
+            val r = work()
+            activity.runOnUiThread { if (!activity.isFinishing && !activity.isDestroyed) then(r) }
         }
     }
 
@@ -163,16 +195,24 @@ object BiometricGate {
         data class Failed(val why: String) : Outcome
     }
 
-    fun authenticate(activity: FragmentActivity, allowWeakFace: Boolean, onDone: (Outcome) -> Unit) {
+    /**
+     * [enrolFirst]: make the match-gated key afresh first (switching fingerprint on), on the background thread with the
+     * cipher - never on the screen's thread.
+     */
+    fun authenticate(activity: FragmentActivity, allowWeakFace: Boolean, enrolFirst: Boolean = false, onDone: (Outcome) -> Unit) {
         val kind = available(activity)
         // With face unlock accepted, any enrolled fingerprint or face works (no key gate, as weak
         // biometrics cannot guard a key). Otherwise only strong biometrics, bound to the Keystore key.
         // Fingerprint only, always through the hardware-bound key; [allowWeakFace] is kept for callers but ignored.
         val useStrong = kind == Kind.STRONG
         if (!useStrong) { onDone(Outcome.UsePin); return }
+        offMain(activity, { if (enrolFirst) runCatching { enrol() }; gatedCipher() }) { cipher -> prompted(activity, cipher, onDone) }
+    }
 
-        val cipher = if (useStrong) gatedCipher() else null
-        if (useStrong && cipher == null) {
+    /** The prompt, on the screen's thread, with the cipher made off it ([authenticate]). */
+    private fun prompted(activity: FragmentActivity, cipher: Cipher?, onDone: (Outcome) -> Unit) {
+        val useStrong = true
+        if (cipher == null) {
             onDone(Outcome.Invalidated("A fingerprint was added or removed on this phone. Unlock with your PIN, then re-enable biometrics."))
             return
         }
@@ -202,6 +242,6 @@ object BiometricGate {
             .setConfirmationRequired(false)
             .build()
 
-        if (useStrong) prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher!!)) else prompt.authenticate(info)
+        if (useStrong) prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher)) else prompt.authenticate(info)
     }
 }

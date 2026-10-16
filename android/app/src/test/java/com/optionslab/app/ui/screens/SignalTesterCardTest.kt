@@ -213,6 +213,48 @@ class SignalTesterCardTest {
         assertEquals("closed", log.last())
     }
 
+    /**
+     * 16 Oct (Boss: channels chosen, "0 channels selected"): the picker lists the channels as they come in plus every channel
+     * selected before that is not listed (yet), so OK never drops one; OK with nothing listed changes nothing and says so; the
+     * dialog says what is selected.
+     */
+    @Test fun thePickerKeepsSelectedChannelsNotListedAndOkWithNothingListedIsSaid() {
+        val log = ArrayList<String>()
+        val step = androidx.compose.runtime.mutableStateOf(com.optionslab.app.data.TelegramCapture.View(available = true, keys = true, loggedIn = true,
+            auth = com.optionslab.engine.signals.TdSession.Auth.READY, channels = listOf(com.optionslab.engine.signals.TdSession.Channel(-1002, "Other Calls"))))
+        val v = androidx.compose.runtime.mutableStateOf(SignalTesterHost.View(on = true, tg = mapOf(-1001L to "Sensex Kings")))
+        compose.setContent { IraAlgoTheme("light") { TelegramDialog(step.value, v.value, TelegramActions(channels = { log += "channels" },
+            select = { log += "select ${it.toSortedMap()}" }, notListed = { log += "not listed" })) { log += "closed" } } }
+        compose.waitForIdle()
+        compose.onNodeWithText("Selected (read on arrival): Sensex Kings.").assertExists()
+        tapText("Choose channels (1 selected)")
+        assertEquals("channels", log.last())
+        // Sensex Kings is not in the list that came in, but stays shown and ticked; Other Calls is ticked by Boss.
+        tap("Follow Other Calls")
+        tap("Follow the ticked chats")
+        assertEquals("select {-1002=Other Calls, -1001=Sensex Kings}", log.last())
+        // Nothing listed and nothing selected: OK changes nothing, and Boss is told.
+        v.value = SignalTesterHost.View(on = true)
+        step.value = step.value.copy(channels = emptyList())
+        compose.waitForIdle()
+        compose.onNodeWithText("No channel selected yet: nothing is read until you tick one and tap OK.").assertExists()
+        tapText("Choose channels (0 selected)")
+        compose.onNodeWithText("Your channel list is still coming in from Telegram (a few seconds). Wait for it here, or close and tap Choose channels again.").assertExists()
+        tap("Follow the ticked chats")
+        assertEquals("not listed", log.last())
+        assertTrue(log.none { it == "select {}" })
+    }
+
+    @Test fun theRowsAreByIdWithSelectedOnesKept() {
+        val listed = listOf(com.optionslab.engine.signals.TdSession.Channel(-1002, "Other Calls"), com.optionslab.engine.signals.TdSession.Channel(-1001, "Sensex Kings (new name)"))
+        // A renamed channel keeps its listed title; a selected one not listed is kept by id.
+        assertEquals(mapOf(-1002L to "Other Calls", -1001L to "Sensex Kings (new name)", -1003L to "Archived"),
+            telegramRows(listed, mapOf(-1001L to "Sensex Kings", -1003L to "Archived")))
+        assertEquals(mapOf(-1002L to "Other Calls"), telegramChosen(telegramRows(listed, emptyMap()), setOf("Other Calls")))
+        assertEquals(emptyMap<Long, String>(), telegramChosen(telegramRows(listed, emptyMap()), emptySet()))
+        assertEquals(null, telegramChosen(emptyMap(), setOf("Other Calls")))
+    }
+
     @Test fun aChatsDialogShowsItsMonthCheckAndItsClaims() {
         val pv = com.optionslab.app.data.SignalPaperArm.View(on = mapOf(com.optionslab.app.data.SignalPaperArm.chatId("Sensex Kings") to true),
             since = mapOf(com.optionslab.app.data.SignalPaperArm.chatId("Sensex Kings") to java.time.LocalDate.of(2026, 10, 15)))
