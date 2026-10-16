@@ -87,7 +87,7 @@ class DonchianArmTest {
     }
     // ---- R73 T7: Supertrend (10, 3) agrees with the break (16 Oct, Boss) -------------------------------------------------
 
-    /** 300 bars of a deterministic wave over 3 days (the same formula as the R73 parity run in Python). */
+    /** 300 bars of a deterministic wave over 4 days (the same formula as the R73 parity run in Python). */
     private fun wave(): List<PassedArms.Bar5> = (0 until 300).map { i ->
         val c = 100 + 5 * kotlin.math.sin(i / 7.0) + 3 * kotlin.math.sin(i / 3.1) + 0.02 * i
         b5(day.minusDays(4L - i / 75), i % 75, c, c + 1 + 0.5 * kotlin.math.abs(kotlin.math.sin(i.toDouble())),
@@ -131,7 +131,11 @@ class DonchianArmTest {
         val todayOnly = w.filter { it.date == w[299].date }
         assertNull(DonchianArm.supertrendAgrees(todayOnly, DonchianArm.Signal("NIFTY", 1, todayOnly[40], 1)), "no earlier session")
         assertNull(DonchianArm.supertrendAgrees(w, DonchianArm.Signal("NIFTY", 1, b5(day.plusDays(9), 3, 1.0, 1.0, 1.0, 1.0), 1)), "bar not in the series")
-        assertNull(DonchianArm.supertrendAgrees(w.take(5), DonchianArm.Signal("NIFTY", 1, w[4], 1)), "no direction yet")
+        assertNull(DonchianArm.supertrendAgrees(w.take(5), DonchianArm.Signal("NIFTY", 1, w[4], 1)), "no earlier session in the first 5")
+        // One earlier session's last bar, then 4 of today's: an earlier session is in, but under 10 bars, no ATR: no direction yet.
+        val short = listOf(w[74]) + w.subList(75, 79)
+        assertNull(DonchianArm.supertrendAgrees(short, DonchianArm.Signal("NIFTY", 1, short.last(), 1)), "no direction yet")
+        assertTrue(DonchianArm.supertrend(short).all { it == 0 })
         assertTrue(DonchianArm.ST_RULE.contains("Supertrend (10, 3)") && DonchianArm.ST_RULE.contains("R73 T7"))
         assertTrue("1,670 trades" in DonchianArm.ST_RECORD && "+₹1,34,743" in DonchianArm.ST_RECORD && "+₹81,845" in DonchianArm.ST_RECORD)
     }

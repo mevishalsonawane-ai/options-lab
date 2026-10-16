@@ -62,7 +62,8 @@ object DonchianArm {
     const val ST_MULT = 3.0
     const val ST_RESEARCH = "R73 T7"
     /** Earlier sessions the series must hold for Supertrend to be judged (R73 checked: with 1 the research's direction is matched
-     *  on 99.98% of 21,804 signals, with 2 on all of them; the host keeps 2). Fewer: not judged, so the break is not taken. */
+     *  on 99.98% of 21,804 signals, with 2 on all of them; the host's series holds the latest 2, and 1 is enough to judge).
+     *  Fewer: not judged, so the break is not taken. */
     const val ST_MIN_SESSIONS = 1
     const val ST_RULE = "a break is taken only when Supertrend (10, 3) on the same 5-minute index bars points the same way at the " +
         "signal bar's close (R73 T7)"

@@ -650,9 +650,8 @@ class PassedArmsHostTest : RobolectricTest() {
             Bar(d.atTime(9, 15).plusMinutes(i.toLong()), c, c + 1, c - 1, c) }
     }
 
-    private val ce25000 = "NSE_FO|PA25000CE"
+    private val ce24950 = "NSE_FO|PA24950CE"
 
-    /** The falling yesterday read in, and the 25,000 CE listed too (a 25,030 break buys the 1-ITM 25,000 CE), priced at 100. */
     /** Today's history read again from [h] (the day's earlier read dropped first). */
     private fun historyNow(h: (String) -> List<Bar>) {
         PassedArmsHost.testHistory = h
@@ -660,15 +659,19 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.prefetchNow(day) }
     }
 
+    /**
+     * After [fallingYesterday]: a 25,010 break at 09:19 (above the last 20 bars' 25,001 high; Supertrend stays down - it would
+     * flip only above about 25,031), with the 24,950 CE listed too (the 1-ITM call of 25,010), priced at 100.
+     */
     private fun fallingMarket(until: LocalTime) {
         val exp = day.plusDays(7)
         AutomationSupport.contracts(context, listOf(
             Upstox.Contract("NIFTY", exp, 25_050.0, Right.CE, 65, ce, "NIFTY-PA-25050CE"),
-            Upstox.Contract("NIFTY", exp, 25_000.0, Right.CE, 65, ce25000, "NIFTY-PA-25000CE"),
+            Upstox.Contract("NIFTY", exp, 24_950.0, Right.CE, 65, ce24950, "NIFTY-PA-24950CE"),
             Upstox.Contract("NIFTY", exp, 25_150.0, Right.PE, 65, pe, "NIFTY-PA-25150PE"),
             Upstox.Contract("NIFTY", exp.plusDays(7), 25_000.0, Right.CE, 65, "NSE_FO|PANEXT", "NIFTY-PA-NEXT")))
-        market(until, open = 25_030.0)
-        minutes(ce25000, until) { 100.0 }
+        market(until, open = 25_010.0)
+        minutes(ce24950, until) { 100.0 }
     }
 
     @Test fun theUpdateSwitchesTheSupertrendFilterOnOnceAndItsOwnUndoSwitchesItOff() {
@@ -730,7 +733,7 @@ class PassedArmsHostTest : RobolectricTest() {
         fallingMarket(LocalTime.of(9, 20))
         tick(LocalTime.of(9, 20))
         val p = PassedArmsHost.view.value.open.single()
-        assertEquals("CE", p.right); assertTrue(p.symbol, p.symbol.contains("25000")); assertFalse("a plain-rules trade", p.st)
+        assertEquals("CE", p.right); assertTrue(p.symbol, p.symbol.contains("24950")); assertFalse("a plain-rules trade", p.st)
         assertNothingAtZerodha()
     }
 
