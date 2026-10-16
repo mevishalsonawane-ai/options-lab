@@ -129,7 +129,13 @@ object VixDivArm {
         _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(20), b.log.takeLast(30),
             closed.map { it.net ?: 0.0 }, closed.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) })
         // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own exits stay authoritative.
-        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }, owner = "vixdiv") }
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
+        // 16 Oct: each open position's exits for the position popup's "Exits" line (memory only); NIFTY's minutes rule said.
+        runCatching { com.optionslab.ira.ArmExits.set("vixdiv", b.positions.filter { it.open }.map { p ->
+            val note = if (!VixDivRules.liquidityExit(p.index)) null else params(p.entryDay).minutes.let { m ->
+                p.entryTime.plusMinutes(m.toLong()).let { "out at %02d:%02d unless +5%%".format(Locale.ENGLISH, it.hour, it.minute) } }
+            TradeManagerHost.exitsOf("vixdiv", managed(p), note)
+        }) }
     }
 
     /** [p]'s id for the trade manager. */

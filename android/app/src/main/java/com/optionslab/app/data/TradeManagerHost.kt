@@ -288,6 +288,15 @@ object TradeManagerHost {
      * [stop] / [target] on that price where it has them (null: none there), its last exit time [squareOffMs], [live], when it
      * was bought, and - once closed - its [exit] price and [exitWhy].
      */
+    data class ArmTrade(
+        val family: String, val tradeId: String, val label: String, val underlying: String, val side: Int, val symbol: String,
+        val entry: Double, val qty: Int, val stop: Double?, val target: Double?, val squareOffMs: Long, val live: Boolean, val entryMs: Long,
+        val exit: Double? = null, val exitWhy: String? = null, val exitMs: Long? = null, val kite: String? = null,
+        val shortFuture: Boolean = false, val tick: Double = 0.05,
+        /** The arm's own profit lock for a best price (its ladder), so the original rules are followed honestly; null: none. */
+        val lockAt: ((Double) -> Double?)? = null,
+    )
+
     /**
      * [a]'s exits as the position popup words them: its stop and target where it has them on its own price, and its last exit
      * time ([ArmTrade.squareOffMs]), dated when that is after the day it was bought (an overnight hold).
@@ -301,15 +310,6 @@ object TradeManagerHost {
         return com.optionslab.ira.ArmExits.Entry(owner, a.label, a.live, if (a.live) a.kite ?: a.symbol else a.symbol, a.stop, a.target, off.toLocalTime(),
             listOfNotNull(note, later).joinToString(" · ").ifEmpty { null })
     }
-
-    data class ArmTrade(
-        val family: String, val tradeId: String, val label: String, val underlying: String, val side: Int, val symbol: String,
-        val entry: Double, val qty: Int, val stop: Double?, val target: Double?, val squareOffMs: Long, val live: Boolean, val entryMs: Long,
-        val exit: Double? = null, val exitWhy: String? = null, val exitMs: Long? = null, val kite: String? = null,
-        val shortFuture: Boolean = false, val tick: Double = 0.05,
-        /** The arm's own profit lock for a best price (its ladder), so the original rules are followed honestly; null: none. */
-        val lockAt: ((Double) -> Double?)? = null,
-    )
 
     /**
      * An arm's positions handed over in ONE call, from its book's publish (never on its order path; a contract's Zerodha token

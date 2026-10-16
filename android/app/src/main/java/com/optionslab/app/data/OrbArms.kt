@@ -884,9 +884,10 @@ object OrbArms {
                 target = if (p.sold > 0) HeroRules.target2(p.entry) else HeroRules.target1(p.entry)),
                 if (p.sold > 0) "half sold at 5×, stop on a 1-minute close" else "half at 5×, the rest at 20×, stop on a 1-minute close")
             arm.liquidity -> {
-                val check = if (p.timed) null else (p.liq ?: com.optionslab.engine.orb.LiquidityParams.DEFAULT).timeStopMinutes.let { mins ->
+                val lp = liqParams(p)
+                val check = if (p.timed) null else lp.timeStopMinutes.let { mins ->
                     p.entryTime.plusMinutes(mins).let { "%d-minute check at %02d:%02d".format(java.util.Locale.ENGLISH, mins, it.hour, it.minute) } }
-                TradeManagerHost.exitsOf("orb", m, listOfNotNull(p.target?.let { "target on the index at %.2f".format(java.util.Locale.ENGLISH, it) }, check)
+                TradeManagerHost.exitsOf("orb", m, listOfNotNull(p.target?.takeIf { lp.nextLevelTarget }?.let { "target on the index at %.2f".format(java.util.Locale.ENGLISH, it) }, check)
                     .joinToString(" · ").ifEmpty { null })
             }
             else -> TradeManagerHost.exitsOf("orb", m)

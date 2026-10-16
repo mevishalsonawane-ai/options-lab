@@ -69,6 +69,7 @@ internal fun openTradeLines(live: Boolean, symbol: String, qty: Int, avg: Double
         com.optionslab.ira.ArmExits.line(live, symbol)?.let { "Exits" to it },
     )
 }
+
 private val PAPER_WORKING = setOf("open", "trigger pending", "pending")
 
 /**

@@ -91,6 +91,7 @@ class OrbArmsDayTest : RobolectricTest() {
     }
 
     @After fun down() {
+        com.optionslab.ira.ArmExits.clear()
         AutomationSupport.realClocks()
         Market.testClock = null
         upstox.close()

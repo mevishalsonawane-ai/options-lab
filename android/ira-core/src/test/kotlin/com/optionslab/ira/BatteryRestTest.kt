@@ -219,9 +219,9 @@ class BatteryRestTest {
     @Test fun whatsNewSaysItInPlainEnglishFirst() {
         // 14 Oct: the gamma line's entry, the signal-on-the-index entry, then the memory fix's, sit above it (the same day,
         // after it); the battery's is the one right below them. The SILVERM morning call's switch-off (14 Oct, R42) is newest.
-        // (15 Oct: the Hero ₹1,000 ticket's entry, then the passed arms' and the Watchlist's, sit above them all; the market concepts' on top.)
+        // (15 Oct: the Hero ₹1,000 ticket's entry, then the passed arms' and the Watchlist's, sit above them all; the market concepts' and the open trade change's on top.)
         val o = WhatsNew.ENTRIES.indexOfFirst { it.id == "2026-10-14-silverm-morning-off" }
-        assertEquals(6, o)
+        assertEquals(7, o)
         assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
         assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
         assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)

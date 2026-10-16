@@ -91,6 +91,7 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     @After fun down() {
+        com.optionslab.ira.ArmExits.clear()
         Market.testClock = null
         PassedArmsHost.testNoAutoOn = true
         if (Autopilot.enabled()) Autopilot.resetForTest()
