@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import pickle
 import sys
-from collections import defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 

@@ -55,7 +55,7 @@ def write():
         L += [f"## {base}: {R.BASE_NAMES[base]}", ""]
         if fin:
             L += ["### Final period", "",
-                  HEAD[:-1] + " design net | quarters better | affected | losers avoided / winners missed | halved "
+                  HEAD + " design net | quarters better | affected | losers avoided / winners missed | halved "
                   "(losers) | twin p (BH q) | 2x slip net | verdict |",
                   "|" + "---|" * 18]
             b = fin["base"][base]
@@ -74,7 +74,7 @@ def write():
                               f"{r['p']} ({r['q']})", rs(r["slip2_net"]), v]))
             L.append("")
         L += ["### Design period (20 Nov 2024 - 31 Mar 2026; L2 picks its indices in-sample here)", "",
-              HEAD[:-1] + " better | quarters better (Q1 / Q2 / Q3 / Q4 net) |", "|" + "---|" * 11]
+              HEAD + " better | quarters better (Q1 / Q2 / Q3 / Q4 net) |", "|" + "---|" * 11]
         bd = des["base"][base]
         L.append(row("**baseline**", bd["design"], ["-", " / ".join(rs(q["net"]) for q in bd["quarters"])]))
         for lv in R.LEVERS:

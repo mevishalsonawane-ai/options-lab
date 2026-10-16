@@ -1,0 +1,46 @@
+id: r75-c-l2-neg
+title: R75 L2-NEG drop indices with a negative net on earlier data on Breadth Donchian (C1, 4 of 5 indices) (paper exits)
+family: daily-filters
+date: '2026-10-16'
+doc: research/HUNT_R75_DONCHIAN_LESS_LOSS.md
+hypothesis: 'Boss (16 Oct: "make Donchian more powerful, less loss"): drop indices with a negative net on earlier data lowers
+  the loss / drawdown of Breadth Donchian (C1, 4 of 5 indices) without materially lowering its P&L, in design, in >= 3 of
+  4 walk-forward quarters and in the final, beats a random-skip twin (p < 0.05), survives BH over R75''s 40 tests (q <= 0.10),
+  affects >= 40 trades and holds at 2x slippage.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK), R51 Amendment A clean
+  stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R75 (16 Oct); the window was already read by R51-R73 (Donchian chosen on it),
+    so weak evidence
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Donchian 20 on 5-minute index bars; the lever reads the index, India VIX, the arm''s own closed
+  trades or the calendar); no option chart'
+model_or_rule: 'Breadth Donchian (C1, 4 of 5 indices) + L2-NEG: drop indices with a negative net on earlier data; 1-ITM unless
+  L5; exits P (-15%, A4 ladder + L25, 30 min)'
+settings: research/hunt/r75/r75cfg.py, research/hunt/r75/r75levers.py; PREREG.md
+prereg: research/hunt/r75/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 3071 trades, net Rs 2,16,929, win 47%, avg win Rs 1,715 / loss -Rs 1,374, worst day -Rs 58,613, max DD
+    Rs 1,99,077, green days 46%, months < -13k 5, DD > 40k episodes 5; baseline design: 3071 trades, net Rs 2,16,929, win
+    47%, avg win Rs 1,715 / loss -Rs 1,374, worst day -Rs 58,613, max DD Rs 1,99,077, green days 46%, months < -13k 5, DD
+    > 40k episodes 5; design better: True; better in 1 of 4 walk-forward quarters. Final: 1202 trades, net Rs 1,71,366, win
+    46%, avg win Rs 1,748 / loss -Rs 1,217, worst day -Rs 22,571, max DD Rs 61,884, green days 52%, months < -13k 2, DD >
+    40k episodes 2; baseline final: 1202 trades, net Rs 1,71,366, win 46%, avg win Rs 1,748 / loss -Rs 1,217, worst day -Rs
+    22,571, max DD Rs 61,884, green days 52%, months < -13k 2, DD > 40k episodes 2; final better: True. Affected 0 trades:
+    0 losers avoided (Rs 0), 0 winners missed (Rs 0), 0 halved, 0 new. Twin p 1.0 (BH q 1.0). 2x slippage: final Rs 1,37,648
+    (baseline Rs 1,37,648). Verdict: FAIL (better in 1 of 4 quarters; random twin p >= 0.05; BH q > 0.10; fewer than 40 trades
+    affected).'
+  costs: 'dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, one held
+    contract, 1 lot in force (half size: charges at half quantity)'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the index). Research only; nothing changes paper or live unless Boss switches it on (paper
+  only). Donchian frozen after R75.
