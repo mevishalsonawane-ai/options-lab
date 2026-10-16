@@ -14,6 +14,7 @@ import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.PassedArms
 import com.optionslab.engine.orb.ProfitLock
 import com.optionslab.engine.orb.ShadowRules
+import com.optionslab.engine.orb.SharedSales
 import com.optionslab.engine.orb.Solo2
 import com.optionslab.engine.orb.SoloMidday
 import com.optionslab.engine.sandbox.SandboxEvent
@@ -97,7 +98,7 @@ object PassedArmsHost {
     /** 16 Oct (Boss: "Okay add it"): R72 Breadth Donchian switched on once ([BreadthDonchianArm]); the day kept in [Book.breadthSince]. */
     internal const val BREADTH_ON = "breadth_on_2026-10-16"
     /** Its change-log words: Boss's choice, and the note with its risk line. */
-    private const val BREADTH_CHOICE = "your \"Okay add it\" (16 Oct, after R72)"
+    private val BREADTH_CHOICE = com.optionslab.ira.AutoChange.passedArmChoice(BreadthDonchianArm.SOURCE)
     private val BREADTH_NOTE = "the 16 Oct update (your \"Okay add it\"), beside ${DonchianArm.LABEL} to compare on the same days. " +
         "${BreadthDonchianArm.RISK} - never live"
 
@@ -137,6 +138,12 @@ object PassedArmsHost {
          * that bar): true / false; null for the other arms and older trades. Labels only (Boss's comparison); never changes a trade.
          */
         val breadth: Boolean? = null,
+        /**
+         * 16 Oct (R72 review): the SELL fills this trade's exit took, "orderId:qty,..." ([SharedSales.write]): its own exit's, or the
+         * outside sales booked to it ("closed_elsewhere"). So a sale is booked once, and another arm's own exit is never taken for
+         * a sale elsewhere, when R51 and R72 hold the same option. Null: none (an older trade, or nothing explained it).
+         */
+        val soldBy: String? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -319,7 +326,7 @@ object PassedArmsHost {
             LocalDateTime.parse(p.getString("entryTime")), p.optString("orderId").ifEmpty { null }, p.optString("setup").ifEmpty { null },
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
-            p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null)
+            p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null })
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -331,6 +338,7 @@ object PassedArmsHost {
             if (p.lock) put("lock", true)
             if (p.l25) put("l25", true)
             p.breadth?.let { put("breadth", it) }
+            p.soldBy?.let { put("soldBy", it) }
         }
 
     private val written = Vault.LastWrite()
@@ -1094,6 +1102,7 @@ object PassedArmsHost {
     private suspend fun exits(b: Book, now: LocalDateTime): Boolean {
         var changed = false
         val stopped = stoppedToday()
+        if (sharedSoldElsewhere(b, now)) changed = true
         for ((i, p) in b.positions.withIndex().toList()) {
             if (!p.open) continue
             try {
@@ -1120,14 +1129,19 @@ object PassedArmsHost {
             val done = p.copy(exit = p.entry, exitTime = now, why = "closed_elsewhere")
             b.positions[i] = done; closed(b, done); return true
         }
-        // Gone from the paper book without this host selling it (the loss limit, Boss, a square-off): closed there.
+        // Gone from the paper book without this host selling it (the loss limit, Boss, a square-off): closed there. (An option
+        // two arms hold is settled before this, by [sharedSoldElsewhere]; a trade alone on its option is judged here as before.)
         val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
         if (held <= 0) {
-            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            // 16 Oct (R72 review): a sale another trade's record already took wholly (another arm's own exit) is never this one's.
+            val took = taken(b)
+            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) &&
+                (took[it.orderId] ?: 0) < it.quantity }
             // 16 Oct (R72): one sale may have closed R51's and R72's lots of the same option together: each books only its share.
             val share = t?.let { (p.qty.toDouble() / it.quantity.coerceAtLeast(1)).coerceAtMost(1.0) } ?: 0.0
             val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
-                charges = p.charges + (t?.charges?.toDouble() ?: 0.0) * share)
+                charges = p.charges + (t?.charges?.toDouble() ?: 0.0) * share,
+                soldBy = t?.let { SharedSales.write(mapOf(it.orderId to minOf(p.qty, it.quantity - (took[it.orderId] ?: 0)))) })
             b.positions[i] = done; closed(b, done); return true
         }
         val overnight = p.day.isBefore(now.toLocalDate())
@@ -1161,6 +1175,51 @@ object PassedArmsHost {
         return false
     }
 
+    /** What every trade in [b] took of each SELL fill, by order id ([Pos.soldBy]; memory only). */
+    private fun taken(b: Book): Map<String, Int> {
+        val out = HashMap<String, Int>()
+        for (p in b.positions) for ((id, q) in SharedSales.read(p.soldBy)) out[id] = (out[id] ?: 0) + q
+        return out
+    }
+
+    /**
+     * 16 Oct (R72 review): an option two open trades here hold (R51 Donchian 20's and R72 Breadth Donchian's lots, [mayShare]) that
+     * the paper account now holds less of than they add up to was partly or wholly sold elsewhere (Boss, the loss limit, a
+     * square-off): the trades it closed are booked "closed_elsewhere" OLDEST FIRST, each at the sales it took and with its share
+     * of their charges ([SharedSales]: each sale's charges booked once; another arm's own exit never taken for a sale elsewhere).
+     * A sale of only part of the oldest trade closes nothing (as for a trade alone). Memory only (the paper book in hand), no
+     * order. True when [b] changed.
+     */
+    private fun sharedSoldElsewhere(b: Book, now: LocalDateTime): Boolean {
+        var changed = false
+        val groups = b.positions.withIndex().filter { it.value.open }.groupBy { it.value.symbol }.filterValues { it.size > 1 }
+        if (groups.isEmpty()) return false
+        val state = Paper.state
+        for ((symbol, rows) in groups) {
+            try {
+                val held = state.positions.filter { it.symbol == symbol }.sumOf { it.quantity }
+                if (held >= rows.sumOf { it.value.qty }) continue
+                val took = taken(b)
+                val sales = state.trades.filter { it.symbol == symbol && it.action == "SELL" }.map {
+                    SharedSales.Sale(it.orderId, it.quantity, it.quantity - (took[it.orderId] ?: 0), it.price.toDouble(), it.charges.toDouble(), it.timestamp)
+                }
+                for (c in SharedSales.closedElsewhere(rows.map { SharedSales.Open(it.index, it.value.qty, it.value.entry, it.value.entryTime) }, held, sales)) {
+                    val p = b.positions[c.key]
+                    val done = p.copy(exit = c.price, exitTime = c.at ?: now, why = "closed_elsewhere", charges = p.charges + c.charges,
+                        soldBy = SharedSales.write(c.took))
+                    b.positions[c.key] = done; closed(b, done); changed = true
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                val w = "closed-elsewhere check failed on $symbol: ${e.javaClass.simpleName}; tried again next look"
+                val k = "${rows.first().value.arm}|exit"
+                if (b.status[k] != w) { b.status[k] = w; note(b, w); changed = true }
+            }
+        }
+        return changed
+    }
+
     /** Sells all of [p] at market on paper (a target is booked at the target at most). */
     private suspend fun sell(b: Book, p: Pos, c: Paper.Contract, why: String, ltp: Double?): Pos {
         val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
@@ -1177,7 +1236,7 @@ object PassedArmsHost {
         val target = PassedArms.targetLevel(p.entry, exitsOf(p))
         val booked = if (why == PassedArms.ExitKind.TARGET.why) PassedArms.booked(PassedArms.ExitKind.TARGET, fill.price, target) else fill.price
         val done = p.copy(exit = booked, exitTime = now0(), why = why, charges = p.charges + chargesOf(r.orderId), exitRef = ltp,
-            paperFill = fill.price.takeIf { kotlin.math.abs(it - booked) > 1e-9 })
+            paperFill = fill.price.takeIf { kotlin.math.abs(it - booked) > 1e-9 }, soldBy = r.orderId?.let { SharedSales.write(mapOf(it to p.qty)) })
         forget(b, p)
         closed(b, done)
         return done
@@ -1230,6 +1289,11 @@ object PassedArmsHost {
         val c = Paper.contractOf(o.symbol) ?: return null
         return lock.withLock {
             val b = book()
+            // 16 Oct (R72 review): an R72 lot with no record here that shares its option with an open R51 trade is not taken back
+            // (nor even found: R51's open record keeps the symbol "watched", and two owners' buys read as no owner in OrphanAudit).
+            // Left so on purpose, paper only: it needs a crash between the fill and [record] (which books the fill at once), the
+            // option stays watched with R51's stop, target and time exit while R51 holds it, and the paper account's own 15:15 MIS
+            // square-off sells whatever is left. Splitting one symbol's quantity between owners would change the net for every arm.
             if (b.positions.any { it.open && it.symbol == o.symbol }) return@withLock null
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),

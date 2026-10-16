@@ -85,6 +85,18 @@ class PassedArmsTalkTest {
         assertEquals(AutoChange.Scope.PAPER, on.scope); assertFalse(AutoChange.undoNeedsPin(on)); assertTrue(AutoChange.bossOwn(on.kind))
     }
 
+    /** 16 Oct (R72 review): Boss switching R72 back on from its row says his "Okay add it", never the 15 Oct "Both". */
+    @Test fun eachArmsSwitchOnNamesItsOwnChoice() {
+        val r72 = AutoChange.passedArmOn(BreadthDonchianArm.SOURCE, BreadthDonchianArm.LABEL, BreadthDonchianArm.RESEARCH_ID)
+        assertTrue(r72.reason.startsWith("your \"Okay add it\" (16 Oct, after R72): "), r72.reason)
+        assertFalse("Both" in r72.reason, r72.reason)
+        assertEquals(AutoChange.CHOICE_BREADTH, AutoChange.passedArmChoice(BreadthDonchianArm.SOURCE))
+        for (s in listOf(DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE)) {
+            assertEquals(AutoChange.CHOICE_BOTH, AutoChange.passedArmChoice(s))
+            assertTrue(AutoChange.passedArmOn(s, "x", "R").reason.startsWith("your \"Both\" (15 Oct): "))
+        }
+    }
+
     @Test fun theWatchlistIsSaidAsShadowWithC4MarkedNonDefault() {
         val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.WATCHLIST, PassedArmsTalk.Facts(emptyList(), listOf("R52 R4-8 Gann swing break: 2 shadow trades"), false))
         assertTrue(w.startsWith("The Watchlist (shadow, not traded; information only, not a trade signal), switched off: "), w)

@@ -837,7 +837,7 @@ internal object Autopilot {
      */
     fun logPassedArmOn(source: String, label: String, research: String, choice: String? = null, note: String? = null) {
         if (!enabled()) return
-        val c = if (choice == null) AutoChange.passedArmOn(source, label, research) else AutoChange.passedArmOn(source, label, research, choice)
+        val c = AutoChange.passedArmOn(source, label, research, choice ?: AutoChange.passedArmChoice(source))
         logBossOwnOnce(c, note ?: "the 15 Oct update (your \"Both\"); paper only - never live")
     }
 
@@ -911,6 +911,7 @@ internal object Autopilot {
     /**
      * Boss switched the passed-research paper arm [source] from its row: off closes the newest kept entry of that arm (so its Undo
      * can never flip it later); on records "off → on" as Boss's (kept, undone in one tap). One lane, in the order Boss flipped it.
+     * 16 Oct (R72 review): its words name the arm's own choice ([AutoChange.passedArmChoice]: R72's "Okay add it", not "Both").
      */
     fun passedArmSwitchedByBoss(source: String, label: String, research: String, on: Boolean) {
         if (!enabled()) return
@@ -924,7 +925,7 @@ internal object Autopilot {
                     val target = AutoChange.PAPER_ARM + source
                     val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
                     if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
-                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.passedArmOn(source, label, research), AutoChange.Status.KEPT,
+                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.passedArmOn(source, label, research, AutoChange.passedArmChoice(source)), AutoChange.Status.KEPT,
                         System.currentTimeMillis(), today, by = "your choice", note = "switched on from its row; paper only - never live").first
                     save()
                 }

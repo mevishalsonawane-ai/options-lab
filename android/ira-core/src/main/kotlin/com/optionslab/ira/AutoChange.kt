@@ -423,10 +423,21 @@ object AutoChange {
      * the timeline and undone in one tap (the arm off; paper only, no PIN). It never carries over to live by itself. [choice]: Boss's
      * words that asked for it (16 Oct: R72 Breadth Donchian's "Okay add it").
      */
-    fun passedArmOn(source: String, label: String, research: String, choice: String = "your \"Both\" (15 Oct)"): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, SWITCHED_OFF, ON,
+    fun passedArmOn(source: String, label: String, research: String, choice: String = passedArmChoice(source)): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, SWITCHED_OFF, ON,
         "$choice: $label passed every research gate ($research), so under the PAPER rule it trades on paper at once - " +
             "1 lot, its own record, never live; it never carries over to live by itself",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** The 15 Oct update's words: Boss's "Both" (R51, R52, Solo 2.0). */
+    const val CHOICE_BOTH = "your \"Both\" (15 Oct)"
+    /** 16 Oct: R72 Breadth Donchian's: Boss's "Okay add it". */
+    const val CHOICE_BREADTH = "your \"Okay add it\" (16 Oct, after R72)"
+
+    /**
+     * 16 Oct (R72 review): whose choice switched the paper arm [source] on, in the change log's words - the update's switch-on and
+     * Boss's own switch-on from its row alike, so R72's never reads as the 15 Oct "Both".
+     */
+    fun passedArmChoice(source: String): String = if (source == com.optionslab.engine.orb.BreadthDonchianArm.SOURCE) CHOICE_BREADTH else CHOICE_BOTH
 
     /**
      * The paper arm [source] ([label]) switched itself off on its forward-test bar, set in advance ([why]): "on → off" on paper,

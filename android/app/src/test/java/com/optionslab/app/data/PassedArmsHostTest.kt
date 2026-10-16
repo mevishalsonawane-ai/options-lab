@@ -789,6 +789,93 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** Both arms in the same option; one lot sold elsewhere at [t] (at the call's price then): that sale, as a paper trade. */
+    private fun sharedThenSold(t: LocalTime, call: Double = 100.0): Pair<List<PassedArmsHost.Pos>, com.optionslab.engine.sandbox.Trade> {
+        val open = PassedArmsHost.view.value.open.takeIf { it.size == 2 } ?: run {
+            bothDonchians()
+            breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+            market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+            PassedArmsHost.view.value.open
+        }
+        assertEquals(2, open.size)
+        val c = Paper.contractOf(open.first().symbol)!!
+        market(t.plusMinutes(1), call = { call }); at(t)
+        val r = runBlocking { Paper.place(c, "SELL", 1, "MARKET", "MIS", null, null) }
+        assertTrue(r.message, r.ok)
+        val sale = Paper.state.trades.last { it.symbol == c.symbol && it.action == "SELL" }
+        assertEquals(65, sale.quantity)
+        return open to sale
+    }
+
+    /**
+     * 16 Oct (R72 review): one lot of the two sold elsewhere is noticed at once and closes the OLDEST trade (entry, then book
+     * order) at that sale, with all its charges; the other's own stop later sells the last lot and is never taken for a sale
+     * elsewhere - each sale's charges booked once.
+     */
+    @Test fun oneLotOfASharedOptionSoldElsewhereClosesTheOldestTradeAndTheOthersOwnExitIsItsOwn() {
+        val (open, sale) = sharedThenSold(LocalTime.of(9, 22))
+        runBlocking { PassedArmsHost.manageOnly() }
+        val gone = view().closed.single()
+        assertEquals(open.first().arm, gone.arm)
+        assertEquals("closed_elsewhere", gone.why)
+        assertEquals(sale.price.toDouble(), gone.exit!!, 1e-9)
+        assertEquals(open.first().charges + sale.charges.toDouble(), gone.charges, 1e-6)
+        assertEquals("${sale.orderId}:65", gone.soldBy)
+        assertEquals(open.last().arm, view().open.single().arm)
+        // 09:24 trades at 84 (under -15%): the other's own stop sells the last lot.
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        assertEquals(2, closed.size)
+        val own = closed.single { it.arm == open.last().arm }
+        assertEquals("stop", own.why)
+        val exit = Paper.state.trades.last { it.symbol == sale.symbol && it.action == "SELL" }
+        assertTrue(exit.orderId != sale.orderId)
+        assertEquals(open.last().charges + exit.charges.toDouble(), own.charges, 1e-6)
+        assertEquals("the first is never re-booked", gone, closed.single { it.arm == open.first().arm })
+        assertEquals(0, Paper.state.positions.filter { it.symbol == sale.symbol }.sumOf { it.quantity })
+        // Kept in the book: read back, the next look books nothing more.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        at(LocalTime.of(9, 26)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(closed.toSet(), view().closed.toSet())
+        assertNothingAtZerodha()
+    }
+
+    /** 16 Oct (R72 review): two separate sales elsewhere, one lot each: each trade books its own sale's price and charges. */
+    @Test fun twoSalesElsewhereOfASharedOptionEachBookTheirOwnPriceAndCharges() {
+        val (open, first) = sharedThenSold(LocalTime.of(9, 22), call = 100.0)
+        // Not looked at in between (the app was asleep): the second sale, at another price, before the next look.
+        val (_, second) = sharedThenSold(LocalTime.of(9, 23), call = 120.0)
+        assertTrue(first.orderId != second.orderId)
+        runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        assertEquals(2, closed.size)
+        assertTrue(closed.all { it.why == "closed_elsewhere" })
+        val a = closed.single { it.arm == open.first().arm }
+        val b = closed.single { it.arm == open.last().arm }
+        assertEquals(first.price.toDouble(), a.exit!!, 1e-9); assertEquals(open.first().charges + first.charges.toDouble(), a.charges, 1e-6)
+        assertEquals(second.price.toDouble(), b.exit!!, 1e-9); assertEquals(open.last().charges + second.charges.toDouble(), b.charges, 1e-6)
+        // Each booked to its own sale (so the first sale is never lost, nor the second counted twice).
+        assertEquals("${first.orderId}:65", a.soldBy); assertEquals("${second.orderId}:65", b.soldBy)
+        assertNothingAtZerodha()
+    }
+
+    /** 16 Oct (R72 review): Boss switching R72 back on from its row is logged with his "Okay add it", never the 15 Oct "Both". */
+    @Test fun bossSwitchingBreadthBackOnFromItsRowIsLoggedAsHisOkayAddIt() {
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        bothDonchians()
+        assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
+        assertTrue(runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true) }.contains("paper only"))
+        fun kept() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON &&
+            it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" && it.status == AutoChange.Status.KEPT }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (kept().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val e = kept().single()
+        assertEquals("your choice", e.by)
+        assertTrue(e.change.reason, e.change.reason.startsWith("your \"Okay add it\" (16 Oct, after R72): "))
+        assertFalse(e.change.reason, "Both" in e.change.reason)
+    }
+
     @Test fun threeIndicesBreakingIsNoBreadthTradeButDonchiansAndAFeedDownCountsAsNotBreaking() {
         bothDonchians()
         // NIFTY, BANKNIFTY and FINNIFTY break: Donchian buys NIFTY's call, breadth nothing.
