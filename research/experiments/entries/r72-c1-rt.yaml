@@ -1,0 +1,40 @@
+id: r72-c1-rt
+title: 'R72 C1 Breadth breakout (re-tune): cross-index signal, 1-ITM'
+family: patterns-indicators
+date: '2026-10-16'
+doc: research/HUNT_R72_CROSS_INDEX.md
+hypothesis: 'Boss (16 Oct, "any more strategies/pattern", chose cross-index signals): a 5-min bar on which at least M of the
+  5 indices close beyond their own 20-bar Donchian channel; trade each index that broke, read from the five indices together,
+  buying the 1-ITM option and taken as Donchian takes its trades, earns after real costs and beats random entries on the same
+  days. Gates as R51 (BH over the 12 R72 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R72 (16 Oct); the window was already read for other ideas by R51-R71 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the five indices'' 5-min bars read together (underlying); no option-chain data, no option chart'
+model_or_rule: 'Breadth breakout: a 5-min bar on which at least M of the 5 indices close beyond their own 20-bar Donchian
+  channel; trade each index that broke; setting M=4, XI (re-tune (2 parameters x 3 exits; walk-forward picks 5|XL, 4|XB, 5|XL,
+  5|XL; final pick = best design net))'
+settings: research/hunt/r72/r72rules.py RULES, research/hunt/r71/r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r72/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design: 2910 trades on 323 days, win 47%, net Rs 225,481 (Rs 78/trade), avg win Rs 2,035 / loss -Rs 1,686, worst
+    day -Rs 37,973, max DD Rs 246,044, green days 47%. Walk-forward net Rs 183,268. Final: 1153 trades on 129 days, win 45%,
+    net Rs 173,315 (Rs 150/trade), avg win Rs 2,285 / loss -Rs 1,622, worst day -Rs 36,808, max DD Rs 80,262, green days 50%,
+    179.1 trades a month; random-entry twin p 0.6387 (twin mean Rs 200,025), BH q 0.9721. Verdict: FAIL (twin p >= 0.05, BH
+    q > 0.10). Donchian XB on the same final days: Rs 55,439 on 1787 trades; daily correlation 0.713, same trade as Donchian
+    0.7407.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the five indices); research only, nothing changes paper or live.

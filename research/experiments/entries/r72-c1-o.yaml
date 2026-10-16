@@ -1,0 +1,42 @@
+id: r72-c1-o
+title: 'R72 C1 Breadth breakout (original): cross-index signal, 1-ITM'
+family: patterns-indicators
+date: '2026-10-16'
+doc: research/HUNT_R72_CROSS_INDEX.md
+hypothesis: 'Boss (16 Oct, "any more strategies/pattern", chose cross-index signals): a 5-min bar on which at least M of the
+  5 indices close beyond their own 20-bar Donchian channel; trade each index that broke, read from the five indices together,
+  buying the 1-ITM option and taken as Donchian takes its trades, earns after real costs and beats random entries on the same
+  days. Gates as R51 (BH over the 12 R72 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R72 (16 Oct); the window was already read for other ideas by R51-R71 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the five indices'' 5-min bars read together (underlying); no option-chain data, no option chart'
+model_or_rule: 'Breadth breakout: a 5-min bar on which at least M of the 5 indices close beyond their own 20-bar Donchian
+  channel; trade each index that broke; setting M=4, XL (original (fixed before any result))'
+settings: research/hunt/r72/r72rules.py RULES, research/hunt/r71/r71cfg.py EXITS; PREREG.md
+prereg: research/hunt/r72/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 3071 trades on 323 days, win 47%, net Rs 216,929 (Rs 71/trade), avg win Rs 1,715 / loss -Rs 1,374, worst
+    day -Rs 58,613, max DD Rs 199,077, green days 46%. Walk-forward net Rs 216,929. Final: 1202 trades on 129 days, win 46%,
+    net Rs 171,366 (Rs 143/trade), avg win Rs 1,748 / loss -Rs 1,217, worst day -Rs 22,571, max DD Rs 61,884, green days 52%,
+    186.7 trades a month; random-entry twin p 0.008 (twin mean Rs 20,729), BH q 0.032. Verdict: PASS (all gates). At twice
+    the slippage: final Rs 137,648. Donchian XB on the same final days: Rs 55,439 on 1787 trades; daily correlation 0.795,
+    same trade as Donchian 0.7704.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: paper-only
+notes: 'Signal on the underlying (the five indices); research only, nothing changes paper or live. PASSED every gate; proposed
+  to Boss for PAPER only (not running until Boss switches it on). Labelled a duplicate of Donchian (daily correlation >= 0.6):
+  it is Donchian 20 kept only when at least 4 of the 5 indices break on the same bar, so it is proposed as a filter on / replacement
+  for the Donchian paper arm, not as an extra arm beside it.'

@@ -1,0 +1,801 @@
+{
+ "tests": {
+  "P1-O": {
+   "rule": "P1",
+   "kind": "O",
+   "setting": "3|XL",
+   "final": {
+    "trades": 1075,
+    "days": 132,
+    "net": -123667,
+    "per_trade": -115.0,
+    "win": 0.4233,
+    "avg_win": 1170,
+    "avg_loss": -1058,
+    "worst_day": -11375,
+    "best_day": 20973,
+    "max_dd": 142459,
+    "green_days": 0.303,
+    "ex_top5": -172538,
+    "per_month": 167.0,
+    "why": {
+     "time": 866,
+     "stop": 129,
+     "squareoff": 71,
+     "lock": 9
+    }
+   },
+   "p": 0.7166,
+   "twin_mean": -97876,
+   "design_net": -299782,
+   "wf_net": -299782,
+   "corr_donchian": 0.119,
+   "overlap_donchian": 0.306,
+   "with_donchian": {
+    "net": -68228,
+    "max_dd": 172711,
+    "worst_day": -23981
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P1-RT": {
+   "rule": "P1",
+   "kind": "RT",
+   "setting": "6|XB",
+   "final": {
+    "trades": 403,
+    "days": 124,
+    "net": -43603,
+    "per_trade": -108.2,
+    "win": 0.3896,
+    "avg_win": 1278,
+    "avg_loss": -993,
+    "worst_day": -8929,
+    "best_day": 17413,
+    "max_dd": 51685,
+    "green_days": 0.3629,
+    "ex_top5": -71763,
+    "per_month": 62.6,
+    "why": {
+     "time": 315,
+     "stop": 43,
+     "target": 20,
+     "squareoff": 25
+    }
+   },
+   "p": 0.8204,
+   "twin_mean": -14624,
+   "design_net": -74277,
+   "wf_net": -40963,
+   "corr_donchian": 0.134,
+   "overlap_donchian": 0.4491,
+   "with_donchian": {
+    "net": 11836,
+    "max_dd": 105606,
+    "worst_day": -24778
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P2-O": {
+   "rule": "P2",
+   "kind": "O",
+   "setting": "7|XL",
+   "final": {
+    "trades": 1341,
+    "days": 133,
+    "net": -168820,
+    "per_trade": -125.9,
+    "win": 0.3915,
+    "avg_win": 1291,
+    "avg_loss": -1037,
+    "worst_day": -21758,
+    "best_day": 63513,
+    "max_dd": 214246,
+    "green_days": 0.3233,
+    "ex_top5": -241529,
+    "per_month": 208.3,
+    "why": {
+     "stop": 135,
+     "time": 1133,
+     "squareoff": 67,
+     "lock": 6
+    }
+   },
+   "p": 0.5309,
+   "twin_mean": -168198,
+   "design_net": -650195,
+   "wf_net": -650195,
+   "corr_donchian": 0.309,
+   "overlap_donchian": 0.1924,
+   "with_donchian": {
+    "net": -113381,
+    "max_dd": 227667,
+    "worst_day": -33885
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P2-RT": {
+   "rule": "P2",
+   "kind": "RT",
+   "setting": "7|XI",
+   "final": {
+    "trades": 1286,
+    "days": 133,
+    "net": -49790,
+    "per_trade": -38.7,
+    "win": 0.353,
+    "avg_win": 1987,
+    "avg_loss": -1144,
+    "worst_day": -21694,
+    "best_day": 77494,
+    "max_dd": 151125,
+    "green_days": 0.3158,
+    "ex_top5": -133823,
+    "per_month": 199.7,
+    "why": {
+     "rule_exit": 557,
+     "time": 583,
+     "squareoff": 116,
+     "lock": 17,
+     "stop": 11,
+     "missing": 2
+    }
+   },
+   "p": 0.2635,
+   "twin_mean": -91813,
+   "design_net": -591344,
+   "wf_net": -375731,
+   "corr_donchian": 0.35,
+   "overlap_donchian": 0.1788,
+   "with_donchian": {
+    "net": 5649,
+    "max_dd": 194767,
+    "worst_day": -33821
+   },
+   "q": 0.8432,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P3-O": {
+   "rule": "P3",
+   "kind": "O",
+   "setting": "6|XL",
+   "final": {
+    "trades": 305,
+    "days": 111,
+    "net": -41281,
+    "per_trade": -135.3,
+    "win": 0.3967,
+    "avg_win": 1315,
+    "avg_loss": -1089,
+    "worst_day": -11394,
+    "best_day": 10806,
+    "max_dd": 65810,
+    "green_days": 0.3784,
+    "ex_top5": -68951,
+    "per_month": 47.4,
+    "why": {
+     "time": 216,
+     "stop": 46,
+     "squareoff": 42,
+     "lock": 1
+    }
+   },
+   "p": 0.9082,
+   "twin_mean": -11771,
+   "design_net": 57763,
+   "wf_net": 57763,
+   "corr_donchian": 0.286,
+   "overlap_donchian": 0.6689,
+   "with_donchian": {
+    "net": 14157,
+    "max_dd": 112638,
+    "worst_day": -23012
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net"
+   ],
+   "verdict": "FAIL"
+  },
+  "P3-RT": {
+   "rule": "P3",
+   "kind": "RT",
+   "setting": "12|XB",
+   "final": {
+    "trades": 152,
+    "days": 82,
+    "net": -39967,
+    "per_trade": -262.9,
+    "win": 0.3816,
+    "avg_win": 1198,
+    "avg_loss": -1164,
+    "worst_day": -9694,
+    "best_day": 5561,
+    "max_dd": 55958,
+    "green_days": 0.3902,
+    "ex_top5": -58343,
+    "per_month": 23.6,
+    "why": {
+     "target": 5,
+     "stop": 26,
+     "squareoff": 26,
+     "time": 95
+    }
+   },
+   "p": 0.982,
+   "twin_mean": -7829,
+   "design_net": 63228,
+   "wf_net": 59559,
+   "corr_donchian": 0.22,
+   "overlap_donchian": 0.6645,
+   "with_donchian": {
+    "net": 15472,
+    "max_dd": 108827,
+    "worst_day": -23012
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net"
+   ],
+   "verdict": "FAIL"
+  },
+  "P4-O": {
+   "rule": "P4",
+   "kind": "O",
+   "setting": "2.0|XL",
+   "final": {
+    "trades": 32,
+    "days": 28,
+    "net": -442,
+    "per_trade": -13.8,
+    "win": 0.4375,
+    "avg_win": 1147,
+    "avg_loss": -917,
+    "worst_day": -2618,
+    "best_day": 3200,
+    "max_dd": 8511,
+    "green_days": 0.4643,
+    "ex_top5": -11285,
+    "per_month": 5.0,
+    "why": {
+     "time": 25,
+     "stop": 3,
+     "squareoff": 4
+    }
+   },
+   "p": 0.7944,
+   "twin_mean": 7264,
+   "design_net": -27378,
+   "wf_net": -27378,
+   "corr_donchian": -0.063,
+   "overlap_donchian": 0.4375,
+   "with_donchian": {
+    "net": 54997,
+    "max_dd": 90141,
+    "worst_day": -23012
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "fewer than 40 trades",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P4-RT": {
+   "rule": "P4",
+   "kind": "RT",
+   "setting": "2.0|XI",
+   "final": {
+    "trades": 32,
+    "days": 28,
+    "net": 5805,
+    "per_trade": 181.4,
+    "win": 0.5312,
+    "avg_win": 1527,
+    "avg_loss": -1344,
+    "worst_day": -3946,
+    "best_day": 4610,
+    "max_dd": 8556,
+    "green_days": 0.5714,
+    "ex_top5": -11439,
+    "per_month": 5.0,
+    "why": {
+     "stop": 2,
+     "rule_exit": 6,
+     "time": 20,
+     "squareoff": 4
+    }
+   },
+   "p": 0.8224,
+   "twin_mean": 17798,
+   "design_net": -12110,
+   "wf_net": -3480,
+   "corr_donchian": -0.049,
+   "overlap_donchian": 0.4375,
+   "with_donchian": {
+    "net": 61244,
+    "max_dd": 90198,
+    "worst_day": -23012
+   },
+   "q": 0.986,
+   "fails": [
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "fewer than 40 trades",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P5-O": {
+   "rule": "P5",
+   "kind": "O",
+   "setting": "0.25|XL",
+   "final": {
+    "trades": 502,
+    "days": 129,
+    "net": -12091,
+    "per_trade": -24.1,
+    "win": 0.4203,
+    "avg_win": 1321,
+    "avg_loss": -1000,
+    "worst_day": -10553,
+    "best_day": 17046,
+    "max_dd": 59040,
+    "green_days": 0.4109,
+    "ex_top5": -44463,
+    "per_month": 78.0,
+    "why": {
+     "time": 396,
+     "squareoff": 42,
+     "lock": 5,
+     "stop": 59
+    }
+   },
+   "p": 0.2096,
+   "twin_mean": -39205,
+   "design_net": -94311,
+   "wf_net": -94311,
+   "corr_donchian": 0.049,
+   "overlap_donchian": 0.2849,
+   "with_donchian": {
+    "net": 43348,
+    "max_dd": 102615,
+    "worst_day": -23049
+   },
+   "q": 0.8432,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P5-RT": {
+   "rule": "P5",
+   "kind": "RT",
+   "setting": "0.25|XB",
+   "final": {
+    "trades": 502,
+    "days": 129,
+    "net": -20669,
+    "per_trade": -41.2,
+    "win": 0.4163,
+    "avg_win": 1301,
+    "avg_loss": -999,
+    "worst_day": -9030,
+    "best_day": 18303,
+    "max_dd": 70370,
+    "green_days": 0.4031,
+    "ex_top5": -48235,
+    "per_month": 78.0,
+    "why": {
+     "time": 380,
+     "target": 22,
+     "squareoff": 41,
+     "stop": 59
+    }
+   },
+   "p": 0.2535,
+   "twin_mean": -41962,
+   "design_net": -89511,
+   "wf_net": -49081,
+   "corr_donchian": 0.032,
+   "overlap_donchian": 0.2849,
+   "with_donchian": {
+    "net": 34770,
+    "max_dd": 102019,
+    "worst_day": -23049
+   },
+   "q": 0.8432,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P6-O": {
+   "rule": "P6",
+   "kind": "O",
+   "setting": "20|XL",
+   "final": {
+    "trades": 357,
+    "days": 110,
+    "net": -79173,
+    "per_trade": -221.8,
+    "win": 0.4426,
+    "avg_win": 1243,
+    "avg_loss": -1385,
+    "worst_day": -17305,
+    "best_day": 8335,
+    "max_dd": 88217,
+    "green_days": 0.4273,
+    "ex_top5": -108884,
+    "per_month": 55.4,
+    "why": {
+     "time": 297,
+     "stop": 44,
+     "lock": 3,
+     "squareoff": 13
+    }
+   },
+   "p": 0.8084,
+   "twin_mean": -50371,
+   "design_net": -8797,
+   "wf_net": -8797,
+   "corr_donchian": 0.328,
+   "overlap_donchian": 0.479,
+   "with_donchian": {
+    "net": -23734,
+    "max_dd": 174183,
+    "worst_day": -24739
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P6-RT": {
+   "rule": "P6",
+   "kind": "RT",
+   "setting": "50|XL",
+   "final": {
+    "trades": 323,
+    "days": 103,
+    "net": -78971,
+    "per_trade": -244.5,
+    "win": 0.4365,
+    "avg_win": 1240,
+    "avg_loss": -1395,
+    "worst_day": -26160,
+    "best_day": 12259,
+    "max_dd": 91454,
+    "green_days": 0.3981,
+    "ex_top5": -103750,
+    "per_month": 50.2,
+    "why": {
+     "time": 268,
+     "stop": 40,
+     "squareoff": 13,
+     "lock": 2
+    }
+   },
+   "p": 0.8244,
+   "twin_mean": -50143,
+   "design_net": -7772,
+   "wf_net": -10965,
+   "corr_donchian": 0.344,
+   "overlap_donchian": 0.4551,
+   "with_donchian": {
+    "net": -23532,
+    "max_dd": 183525,
+    "worst_day": -28274
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P7-O": {
+   "rule": "P7",
+   "kind": "O",
+   "setting": "6|XL",
+   "final": {
+    "trades": 855,
+    "days": 132,
+    "net": -167689,
+    "per_trade": -196.1,
+    "win": 0.3825,
+    "avg_win": 1085,
+    "avg_loss": -989,
+    "worst_day": -20918,
+    "best_day": 13756,
+    "max_dd": 182990,
+    "green_days": 0.3864,
+    "ex_top5": -202539,
+    "per_month": 132.8,
+    "why": {
+     "time": 719,
+     "stop": 81,
+     "lock": 7,
+     "squareoff": 48
+    }
+   },
+   "p": 0.002,
+   "twin_mean": -315898,
+   "design_net": -321930,
+   "wf_net": -321930,
+   "corr_donchian": -0.135,
+   "overlap_donchian": 0.0351,
+   "with_donchian": {
+    "net": -112250,
+    "max_dd": 178973,
+    "worst_day": -33045
+   },
+   "q": 0.016,
+   "fails": [
+    "final net <= 0",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P7-RT": {
+   "rule": "P7",
+   "kind": "RT",
+   "setting": "15|XI",
+   "final": {
+    "trades": 675,
+    "days": 128,
+    "net": -83990,
+    "per_trade": -124.4,
+    "win": 0.3481,
+    "avg_win": 1738,
+    "avg_loss": -1119,
+    "worst_day": -18038,
+    "best_day": 20322,
+    "max_dd": 102893,
+    "green_days": 0.4297,
+    "ex_top5": -140220,
+    "per_month": 104.8,
+    "why": {
+     "time": 320,
+     "rule_exit": 262,
+     "squareoff": 75,
+     "lock": 12,
+     "stop": 5,
+     "missing": 1
+    }
+   },
+   "p": 0.002,
+   "twin_mean": -353702,
+   "design_net": -111487,
+   "wf_net": -196420,
+   "corr_donchian": -0.023,
+   "overlap_donchian": 0.0474,
+   "with_donchian": {
+    "net": -28551,
+    "max_dd": 148145,
+    "worst_day": -29696
+   },
+   "q": 0.016,
+   "fails": [
+    "final net <= 0",
+    "top 5 >= net",
+    "design net <= 0",
+    "walk-forward net <= 0"
+   ],
+   "verdict": "FAIL"
+  },
+  "P8-O": {
+   "rule": "P8",
+   "kind": "O",
+   "setting": "2|XL",
+   "final": {
+    "trades": 374,
+    "days": 111,
+    "net": -40109,
+    "per_trade": -107.2,
+    "win": 0.4492,
+    "avg_win": 1260,
+    "avg_loss": -1223,
+    "worst_day": -13949,
+    "best_day": 35014,
+    "max_dd": 56346,
+    "green_days": 0.4054,
+    "ex_top5": -84740,
+    "per_month": 58.1,
+    "why": {
+     "stop": 50,
+     "squareoff": 26,
+     "time": 294,
+     "lock": 4
+    }
+   },
+   "p": 0.8842,
+   "twin_mean": -3988,
+   "design_net": 2320,
+   "wf_net": 2320,
+   "corr_donchian": 0.203,
+   "overlap_donchian": 0.4118,
+   "with_donchian": {
+    "net": 15330,
+    "max_dd": 128340,
+    "worst_day": -25685
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net"
+   ],
+   "verdict": "FAIL"
+  },
+  "P8-RT": {
+   "rule": "P8",
+   "kind": "RT",
+   "setting": "2|XI",
+   "final": {
+    "trades": 372,
+    "days": 111,
+    "net": -34242,
+    "per_trade": -92.0,
+    "win": 0.4086,
+    "avg_win": 1854,
+    "avg_loss": -1437,
+    "worst_day": -13045,
+    "best_day": 41694,
+    "max_dd": 75561,
+    "green_days": 0.3874,
+    "ex_top5": -88796,
+    "per_month": 57.8,
+    "why": {
+     "time": 275,
+     "squareoff": 52,
+     "rule_exit": 20,
+     "stop": 18,
+     "lock": 7
+    }
+   },
+   "p": 0.986,
+   "twin_mean": 41639,
+   "design_net": 104022,
+   "wf_net": 60676,
+   "corr_donchian": 0.239,
+   "overlap_donchian": 0.414,
+   "with_donchian": {
+    "net": 21197,
+    "max_dd": 111985,
+    "worst_day": -31842
+   },
+   "q": 0.986,
+   "fails": [
+    "final net <= 0",
+    "twin p >= 0.05",
+    "BH q > 0.10",
+    "top 5 >= net"
+   ],
+   "verdict": "FAIL"
+  }
+ },
+ "donchian": {
+  "XB": {
+   "trades": 1787,
+   "days": 133,
+   "net": 55439,
+   "per_trade": 31.0,
+   "win": 0.4426,
+   "avg_win": 1566,
+   "avg_loss": -1188,
+   "worst_day": -23012,
+   "best_day": 31849,
+   "max_dd": 92452,
+   "green_days": 0.4662,
+   "ex_top5": 13436,
+   "per_month": 277.5,
+   "why": {
+    "time": 1382,
+    "stop": 240,
+    "target": 94,
+    "squareoff": 71
+   }
+  },
+  "XL": {
+   "trades": 1781,
+   "days": 133,
+   "net": 81845,
+   "per_trade": 46.0,
+   "win": 0.4402,
+   "avg_win": 1609,
+   "avg_loss": -1183,
+   "worst_day": -23012,
+   "best_day": 37400,
+   "max_dd": 91626,
+   "green_days": 0.4737,
+   "ex_top5": 29590,
+   "per_month": 276.6,
+   "why": {
+    "time": 1454,
+    "stop": 239,
+    "squareoff": 71,
+    "lock": 17
+   }
+  }
+ },
+ "end": "2026-10-13",
+ "sessions": 133,
+ "read": "2026-10-16T13:55:02+00:00",
+ "donchian_alone": {
+  "net": 55439,
+  "max_dd": 92452,
+  "worst_day": -23012
+ }
+}
