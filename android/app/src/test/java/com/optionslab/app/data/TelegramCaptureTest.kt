@@ -460,7 +460,8 @@ class TelegramCaptureTest : RobolectricTest() {
 
     /**
      * 16 Oct: a session that is closing (its reader lives on) never writes into the view once a newer session started: its step
-     * arriving late (here the phone step, after the newer session was opened) leaves the newer login's words and step alone.
+     * arriving late (here the phone step, after the newer session was opened) and its own close leave the newer login's words and
+     * step alone (a guard: the reader's own session check already drops them).
      */
     @Test fun aClosingSessionsLateStepNeverLandsOverANewerLogin() {
         val first = LinkedBlockingQueue<String>()
@@ -488,9 +489,11 @@ class TelegramCaptureTest : RobolectricTest() {
         // The first session's late answer: the phone step and an error.
         first += state("authorizationStateWaitPhoneNumber")
         first += """{"@type":"error","code":400,"message":"PHONE_NUMBER_INVALID"}"""
+        first += state("authorizationStateClosed")
         gate.countDown()
-        waitFor("the late answers read", 3_000) { first.isEmpty() }
-        Thread.sleep(300)
+        // Its reader reads them, then ends on its own close (never left running into the next tests).
+        r.join(5_000)
+        assertFalse(r.isAlive)
         assertEquals(before.auth, TelegramCapture.view.value.auth)
         assertEquals(before.said, TelegramCapture.view.value.said)
         assertTrue(TelegramCapture.view.value.running)
