@@ -1,0 +1,41 @@
+id: r68-donchian-w
+title: R68 Donchian W Boss's staircase (-10% at +25%, +5 pts per +5%), no target
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R68_STAIRCASE.md
+hypothesis: 'Boss (16 Oct): a staircase stop (-10% at +25%, then +5 points of stop for every +5 points of gain), read on the
+  option''s profit, on progress toward the target, or with a target that moves up too, improves the paper arms after real
+  costs. This variant: W Boss''s staircase (-10% at +25%, +5 pts per +5%), no target; gates as R51 (BH over 21 tests); recommended
+  only if it also beats B0 and A4 everywhere and random early exits (q <= 0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Donchian,
+  OOV) / R57 stores (Solo 2.0), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026; Solo 2.0 Jul 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R52 / R57 / R64 - R67 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (Donchian 20) (unchanged); only the option exits differ (stops and locks on the premium)'
+model_or_rule: 'R51 Donchian 20 (5-min index Donchian-20 break, 1-ITM, 5 indices); exits: W Boss''s staircase (-10% at +25%,
+  +5 pts per +5%), no target'
+settings: research/hunt/r68/r68cfg.py exit_spec / TRIGGER; PREREG.md
+prereg: research/hunt/r68/PREREG.md
+variants_tried: 21
+results:
+  summary: 'Design: 4498 trades, win 44%, net Rs 5,617 (Rs 1/trade), worst day -Rs 56,647, max DD Rs 228,268, stops 816. Walk-forward:
+    3266 trades, win 45%, net Rs 176,424 (Rs 54/trade), worst day -Rs 31,959, max DD Rs 102,293, stops 524. Final: 1781 trades,
+    win 44%, net Rs 77,234 (Rs 43/trade), worst day -Rs 23,012, max DD Rs 97,952, stops 239; entry-twin p 0.002, BH q 0.0042,
+    exit-twin p 0.6607 (q 1.0). Verdict: PASS. Versus B0: design -Rs 2,664 (bootstrap p 0.5055), final Rs 21,795 (p 0.1155).
+    Versus A4: design -Rs 1,856 (bootstrap p 0.622), final -Rs 1,543 (p 0.795). Final: versus A4 the rule changed 7 trades;
+    it gave up Rs 2,500 and saved Rs 1,335 (net -Rs 1,165).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: inconclusive
+notes: 'Passed R51''s gates but not recommended (PREREG section 3): it must also beat both B0 and A4 in design, walk-forward
+  and final and beat random early exits; exit-twin q 1.0. Boss may still choose it. Signal on the underlying; research only,
+  nothing changes paper or live.'
