@@ -288,7 +288,12 @@ data class AppSettings(
          */
         fun saveChanged(from: AppSettings, to: AppSettings) {
             // Settings from before the guard's v2 defaults are read through a migration (see [load]): written whole once.
-            if (SecurePrefs.getInt("g.v", 1) < 2) { save(to); return }
+            // 18 Oct, review: a kill switch the guard turned on since [from] was read (this change did not touch it) is kept in that
+            // whole write too - CI's SettingsUpdateTest caught the first change on a fresh vault writing it back off.
+            if (SecurePrefs.getInt("g.v", 1) < 2) {
+                val guardOn = !from.guardKill && !to.guardKill && SecurePrefs.getBoolean(KILL_KEY, false)
+                save(if (guardOn) to.copy(guardKill = true) else to); return
+            }
             runCatching { SettingsLog.diff(from, to) }
             val was = keys(from)
             val changed = keys(to).filter { (k, v) -> was[k] != v }

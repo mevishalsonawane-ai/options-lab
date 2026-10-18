@@ -104,6 +104,23 @@ class GuardTest : RobolectricTest() {
         assertFalse(AppSettings.load().guardKill)
     }
 
+    /** 18 Oct, review (CI): the first change on a vault from before the guard's v2 defaults is written whole; it keeps the kill too. */
+    @Test fun aWholeWriteOfAnOldVaultNeverClearsTheGuardsKillSwitch() {
+        limits { it.copy(guardDrawdownPct = 10.0) }
+        SecurePrefs.put("g.v", null)                                   // as a vault written before the v2 defaults
+        val before = AppSettings.load()
+        assertFalse(before.guardKill)
+        Guard.onRefusal(listOf("Drawdown limit: 15.0% from the peak (limit 10%)"))   // between the read and the write
+        AppSettings.saveChanged(before, before.copy(theme = "dark"))
+        assertTrue("the kill switch the guard set is kept", AppSettings.load().guardKill)
+        assertEquals("dark", AppSettings.load().theme)
+        // Boss's own clear in that whole write is still a clear.
+        SecurePrefs.put("g.v", null)
+        val on = AppSettings.load()
+        AppSettings.saveChanged(on, on.copy(guardKill = false))
+        assertFalse(AppSettings.load().guardKill)
+    }
+
     @Test fun theGuardsKillSwitchReadsAtOnceTouchesNothingElseAndReachesDisk() {
         // 18 Oct, review: written behind (never a vault write on the order path or the screen's thread), only the one key.
         limits { it.copy(guardDrawdownPct = 10.0, guardDailyLoss = 0.0, theme = "dark", pnlLossAlert = 4_000.0) }
