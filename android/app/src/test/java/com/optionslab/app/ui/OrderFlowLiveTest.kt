@@ -422,15 +422,19 @@ class OrderFlowLiveTest : RobolectricTest() {
         assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
         assertEquals("priced again at the fresh bid", "89.95", post.form["price"])
         await("filled") { model.sending.value as? Load.Done }
+    }
+
+    @Test fun aDirectExitPricedOver30sBeforeThePinStillGoesWhenNoFreshQuoteCanBeRead() {
         // The fresh quote unreadable: the exit still goes at its price (never refused for its age).
         kite.position(sym, 75, 100.0)
+        val model = model()
         model.planSquareOff(position(75), "Square off", direct = true)
-        val p2 = await("the exit priced") { (model.plan.value as? Load.Done)?.value?.takeIf { model.sending.value !is Load.Done } }
+        val p2 = await("the exit priced") { (model.plan.value as? Load.Done)?.value }
         kite.down += "/quote"
         try {
             model.plan.value = Load.Done(p2.copy(pricedAt = System.currentTimeMillis() - 45_000))
             model.confirmDirect(model.directOrder.value)
-            val post2 = await("the exit at Zerodha", 20_000) { kite.placed.getOrNull(1) }
+            val post2 = await("the exit at Zerodha", 20_000) { kite.placed.firstOrNull() }
             assertEquals("SELL", post2.form["transaction_type"]); assertEquals("75", post2.form["quantity"])
             assertEquals("at its own price", "${"%.2f".format(java.util.Locale.ENGLISH, p2.legs.single().price!!)}", post2.form["price"])
         } finally { kite.down -= "/quote" }
