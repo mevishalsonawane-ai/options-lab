@@ -221,10 +221,11 @@ object NightArm {
             // Gone from the paper book without this arm selling it (Boss's close, an exit-all): booked as closed elsewhere at
             // that sale, never sold again - a SELL on a flat book opens a naked short nothing manages (18 Oct, review).
             val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
-            closedElsewhere(p, held, Paper.state.trades, now)?.let { done ->
-                b.positions[i] = done
+            val gone = closedElsewhere(p, held, Paper.state.trades, now)
+            if (gone != null) {
+                b.positions[i] = gone
                 b.status[p.index] = "closed elsewhere"
-                note(b, "${p.symbol}: no longer held on paper (closed elsewhere), %s after charges".format(Locale.ENGLISH, rs(done.net ?: 0.0)))
+                note(b, "${p.symbol}: no longer held on paper (closed elsewhere), %s after charges".format(Locale.ENGLISH, rs(gone.net ?: 0.0)))
                 changed = true
                 continue
             }
