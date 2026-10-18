@@ -108,8 +108,7 @@ class GoldPaperTest : RobolectricTest() {
                 decided = hours[day2 - 1].start.toString()))
             GoldPaper.setLots(0.10)
         }
-        // Kept through the file: the buy's own lots, the book's new ones.
-        GoldPaper.load()
+        // The buy keeps its own lots; the book has the new ones.
         assertEquals(0.01, GoldPaper.book.value.position!!.lots, 1e-12)
         assertEquals(0.10, GoldPaper.book.value.lots, 1e-12)
         val mid = target - 20
