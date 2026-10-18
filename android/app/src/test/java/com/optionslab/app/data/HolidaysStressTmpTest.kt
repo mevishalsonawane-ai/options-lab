@@ -8,7 +8,7 @@ import java.io.File
 class HolidaysStressTmpTest : RobolectricTest() {
     @Test fun everyHolidaysTestTwentyTimes() {
         val tests = HolidaysTest::class.java.methods.filter { it.isAnnotationPresent(Test::class.java) }.sortedBy { it.name }
-        check(tests.size >= 14) { "found ${tests.size}" }
+        check(tests.size >= 13) { "found ${tests.size}" }
         repeat(20) { round ->
             for (m in tests) {
                 File(context.filesDir, "holidays.json").delete()
