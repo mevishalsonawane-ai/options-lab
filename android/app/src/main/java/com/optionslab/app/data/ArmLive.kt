@@ -457,7 +457,8 @@ object ArmLive {
             b.positions += p
             b.refused.remove(a.key)
             line(b, "%s: %s %s %d @ %.2f live%s".format(Locale.ENGLISH, spec.label, if (p.side > 0) "bought" else "sold", ins.symbol, p.qty, fill,
-                p.stopTrigger?.let { " · stop %.2f at Zerodha".format(Locale.ENGLISH, it) } ?: " · no stop on the premium (the app follows its paper exits)"))
+                p.stopTrigger?.let { " · stop %.2f %s".format(Locale.ENGLISH, it, if (p.stopOrderId != null) "at Zerodha" else "watched by the app (not rested yet)") }
+                    ?: " · no stop on the premium (the app follows its paper exits)"))
             save(b)
         }
         runCatching { Diag.record("armlive", "${spec.label}: live entry ${ins.symbol} ${p.qty} @ %.2f".format(Locale.ENGLISH, fill)) }
@@ -485,6 +486,16 @@ object ArmLive {
         val trigger = at ?: return p
         if (!LiveMirror.mayRest(trigger, ltp, p.tick, p.side)) return p.copy(stopTrigger = trigger)
         val exitSide = if (p.side > 0) Kite.Side.SELL else Kite.Side.BUY
+        // Never more resting exits than Zerodha holds: the exits already working on this contract (another arm's stop, a fired GTT's
+        // order, Boss's own) plus this one must fit in what is held, or both could fill and turn it the other way. Unread: not now.
+        val covered = runCatching {
+            Broker.orders().filter { it.working && it.symbol == p.symbol && it.side == exitSide.name && it.product == p.product }
+                .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+        }.getOrNull() ?: return p.copy(stopTrigger = trigger)
+        val heldNow = runCatching {
+            Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty } * p.side
+        }.getOrNull() ?: return p.copy(stopTrigger = trigger)
+        if (covered + p.qty > heldNow) return p.copy(stopTrigger = trigger)
         if (spec.rest == LiveMirror.Rest.GTT) {
             val sp = Kite.Spec(p.exchange, p.symbol, 0L, p.lot, p.tick)
             val (gtt, why) = Kite.protect(sp, p.product, p.qty * p.side, ltp, trigger, null)
@@ -535,8 +546,9 @@ object ArmLive {
         p.gttId?.let { gid ->
             val g = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrElse { return null }
             if (g == null || g.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled")) return "CANCELLED" to null
-            // A GTT that has fired has put its own exit order in: that order is the exit (never a second sell beside it).
-            if (g.status.lowercase() == "triggered") return null
+            // A GTT that has fired cannot fire again: it is out. The order it put in, while it still works, is a working exit the sale
+            // below subtracts (never a second sell beside it); refused or cancelled, the sale goes.
+            if (g.status.lowercase() == "triggered") return "CANCELLED" to null
             runCatching { Broker.deleteGtt(gid) }
             val after = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrElse { return null }
             return if (after == null || after.status.lowercase() != "active" && after.status.lowercase() != "triggered") "CANCELLED" to null else null
@@ -546,6 +558,8 @@ object ArmLive {
         runCatching { Broker.cancel(id) }
         val st = runCatching { Broker.orderState(id) }.getOrNull()
         runCatching { OrderTiming.stopCancel(System.currentTimeMillis() - c0) }
+        // An SL order of an earlier session is gone with it (a DAY order): not in today's book, nothing of it can fill.
+        if (st == null && p.day.isBefore(now().toLocalDate())) return "CANCELLED" to null
         return when (st?.status) {
             "COMPLETE" -> "COMPLETE" to st
             "CANCELLED", "REJECTED" -> st.status to st
@@ -631,7 +645,9 @@ object ArmLive {
         val net = (if (stream) runCatching { Broker.positionsRecon().net } else runCatching { Broker.positionBook().net }).getOrNull() ?: return
         val keys = open.map { "${it.exchange}:${it.symbol}" }.distinct()
         val q = runCatching { quotes(keys, stream) }.getOrDefault(emptyMap())
-        val gtts = if (open.any { it.gttId != null }) runCatching { Broker.gtts().associateBy { it.id } }.getOrNull() else emptyMap()
+        // The GTT list: read on a regular look; a stream look (the live lane, every tick) uses the last one read within 15 s.
+        val gtts = if (open.none { it.gttId != null }) emptyMap() else gttsKept?.takeIf { stream && System.currentTimeMillis() - it.first < 15_000L }?.second
+            ?: runCatching { Broker.gtts().associateBy { it.id } }.getOrNull()?.also { gttsKept = System.currentTimeMillis() to it }
         val stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(false)
         val updates = ArrayList<Pair<Pos, List<Pos>>>()
         for (p0 in open) {
@@ -640,7 +656,8 @@ object ArmLive {
                 if (p0.unconfirmed) { updates += p0 to listOfNotNull(settle(p0)); continue }
                 var p = p0
                 // The paper trade: seen open now (from then on its absence closes this), and what it still holds.
-                val legs = spec?.let { hosts[it.family]?.open() }
+                // The paper books: read on a regular look; a stream look uses the last read (Solo's is in the settings vault).
+                val legs = spec?.let { sp -> if (stream) legsKept[sp.family] else hosts[sp.family]?.open()?.also { legsKept[sp.family] = it } }
                 val leg = legs?.firstOrNull { it.ref == p.ref }
                 if (leg != null && !p.seen) p = p.copy(seen = true)
                 val gone = closedRefs.containsKey(p.ref) || LiveMirror.paperGone(p.seen, legs?.let { leg != null }) || leg?.qty == 0
@@ -655,9 +672,17 @@ object ArmLive {
                     p = p.copy(stopOrderId = null)
                 }
                 if (p.gttId != null && gtts != null && (g == null || g.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled"))) p = p.copy(stopOrderId = null)
+                // An SL order of an earlier session (a DAY order) is gone: the stop is rested again today.
+                if (p.slId != null && so == null && p.day.isBefore(t.toLocalDate())) p = p.copy(stopOrderId = null)
                 val held = net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
+                // A fired GTT: its own order is the resting exit while it works; once it is refused or cancelled with the position
+                // still held, the stop is rested again (never while that order still works: two exits).
+                if (g?.status?.lowercase() == "triggered" && (if (p.side > 0) held else -held) > 0) {
+                    val exitSide = if (p.side > 0) "SELL" else "BUY"
+                    if (orders.values.none { it.working && it.symbol == p.symbol && it.side == exitSide }) p = p.copy(stopOrderId = null)
+                }
                 // A fired GTT whose order sold everything: that was the stop.
-                if (g?.status?.lowercase() == "triggered" && (if (p.side > 0) held else -held) <= 0) stopFilled = true
+                if (p.gttId != null && g?.status?.lowercase() == "triggered" && (if (p.side > 0) held else -held) <= 0) stopFilled = true
                 val key = "${p.exchange}:${p.symbol}"
                 val ltp = q[key]?.last?.takeIf { it > 0 }
                 val look = LiveMirror.Look(side = p.side, qty = p.qty, held = held, ltp = ltp, tick = p.tick, stopTrigger = p.stopTrigger,
@@ -714,6 +739,11 @@ object ArmLive {
         }
     }
 
+    /** The last GTT list read (when, by id), for the stream looks. */
+    @Volatile private var gttsKept: Pair<Long, Map<Long, Broker.GttRow>>? = null
+    /** Each paper book's legs as last read by a regular look, for the stream looks (memory only). */
+    private val legsKept = java.util.concurrent.ConcurrentHashMap<String, List<PaperLeg>>()
+
     /** The prices of [keys]: the stream's fresh ticks with [stream], the rest Zerodha's (a tick only while 2 s fresh). */
     private suspend fun quotes(keys: List<String>, stream: Boolean): Map<String, Broker.Quote> {
         if (!stream) return Broker.stopQuotes(keys)
@@ -731,8 +761,20 @@ object ArmLive {
     /** An entry Zerodha had not confirmed: settled from the order book (what filled, with its stop), or dropped (nothing filled). */
     private suspend fun settle(p: Pos): Pos? {
         if (p.day.isBefore(now().toLocalDate())) {
-            com.optionslab.app.work.Alerts.error("${p.label}: the live entry in ${p.symbol} on ${p.day} was never confirmed by Zerodha; check that day's contract note.", WHO)
-            return null
+            // An intraday entry of an earlier day is gone with Zerodha's square-off. A carried one may still be held: what Zerodha
+            // holds of it (never more than was asked) is adopted with its stop, so it is never left unmanaged.
+            val held = if (p.product == "MIS") 0 else runCatching {
+                Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty } * p.side
+            }.getOrElse { return p }
+            if (held <= 0) {
+                com.optionslab.app.work.Alerts.error("${p.label}: the live entry in ${p.symbol} on ${p.day} was never confirmed by Zerodha; check that day's contract note.", WHO)
+                return null
+            }
+            val q = minOf(held, p.qty)
+            val ltp = runCatching { Broker.stopQuotes(listOf("${p.exchange}:${p.symbol}"))["${p.exchange}:${p.symbol}"]?.last }.getOrNull()?.takeIf { it > 0 } ?: p.entry
+            com.optionslab.app.work.Alerts.error("${p.label}: the live entry in ${p.symbol} on ${p.day} was never confirmed, but Zerodha holds $q: it is managed as this arm's trade.", WHO)
+            val got = p.copy(qty = q, entryQty = q, unconfirmed = false)
+            return restStop(got, wanted(got), ltp)
         }
         val side = if (p.side > 0) "BUY" else "SELL"
         val oid = p.entryOrderId ?: run {
@@ -762,5 +804,5 @@ object ArmLive {
     }
 
     /** For tests: the book forgotten (its file goes with the test's directory) and the memory notes cleared. */
-    internal fun wipe() { cache = null; _view.value = View(); holdingHint = false; liveKeysHint = emptyList(); levels.clear(); closedRefs.clear() }
+    internal fun wipe() { cache = null; gttsKept = null; legsKept.clear(); _view.value = View(); holdingHint = false; liveKeysHint = emptyList(); levels.clear(); closedRefs.clear() }
 }

@@ -484,14 +484,24 @@ object Strategies {
                         val sid = rest.substringBefore('|')
                         runCatching { Broker.cancel(sid) }
                         val st = runCatching { Broker.orderState(sid) }.getOrNull()
-                        when (st?.status) {
+                        // A stop of an earlier session (a DAY order, gone with it): nothing of it can fill now.
+                        val stale = st == null && stopDay(rest)?.isBefore(Market.today()) == true
+                        when (if (stale) "CANCELLED" else st?.status) {
                             "COMPLETE" -> {
+                                val st = st ?: return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be read; tried again next look")
                                 b.legStops.remove(sk)
                                 b.owners["kite:$sid"] = ownerLabel(def, order)
                                 Notifier.orderFilled(app, side.name, st.filled, kiteSym, st.avgPrice, "Live", "${def.name} · leg ${order.legId} stop at Zerodha", sid)
                                 return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
                             }
-                            "CANCELLED", "REJECTED" -> b.legStops.remove(sk)
+                            "CANCELLED", "REJECTED" -> {
+                                b.legStops.remove(sk)
+                                // Part of it filled before it came out: that part is this exit's (the run asks again for the rest).
+                                if (st != null && st.filled > 0) {
+                                    b.owners["kite:$sid"] = ownerLabel(def, order)
+                                    return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", st.status, st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                                }
+                            }
                             else -> return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be confirmed out yet; tried again next look")
                         }
                     }
@@ -785,6 +795,7 @@ object Strategies {
             }
             tickOpenRun(b, def, now, compromised) { venueFor(it) }
         }
+        runCatching { cleanLegStops(b) }
         return notes
     }
 
@@ -804,6 +815,25 @@ object Strategies {
     }
 
     private fun legKey(runId: Long, legId: Int) = "$runId:$legId"
+
+    /** The day a leg's resting stop ("id|trigger|day") was placed; null for one saved without it. */
+    private fun stopDay(v: String): java.time.LocalDate? = v.split('|').getOrNull(2)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+
+    /**
+     * The resting stops of runs that are no longer running (finished, stopped, or replaced): cancelled, and forgotten once confirmed
+     * out (or gone with an earlier session), so none is ever left resting on a flat position. Each pass, logged in only.
+     */
+    private suspend fun cleanLegStops(b: Book) {
+        if (b.legStops.isEmpty() || !Broker.loggedIn) return
+        val running = b.defs.mapNotNull { d -> b.runs[d.id]?.takeIf { Entry(d, it).running }?.runId }.toSet()
+        for ((k, v) in b.legStops.toMap()) {
+            if (k.substringBefore(':').toLongOrNull() in running) continue
+            val sid = v.substringBefore('|')
+            runCatching { Broker.cancel(sid) }
+            val st = runCatching { Broker.orderState(sid)?.status }.getOrNull()
+            if (st in setOf("CANCELLED", "REJECTED", "COMPLETE") || (st == null && stopDay(v)?.isBefore(Market.today()) == true)) b.legStops.remove(k)
+        }
+    }
 
     /**
      * 18 Oct (Boss: stops at Zerodha, so a dead phone cannot miss them): each open leg of a LIVE run rests its stop at Zerodha as a
@@ -839,6 +869,8 @@ object Strategies {
             val cur = b.legStops[k]
             val sid = cur?.substringBefore('|')
             val so = sid?.let { orders[it] }
+            // A stop of an earlier session (a DAY order) is gone: rested again today.
+            if (cur != null && so == null && stopDay(cur)?.isBefore(Market.today()) == true) { b.legStops.remove(k); continue }
             if (so != null && so.status == "COMPLETE") {
                 // The stop filled at Zerodha: the run closes the leg (its exit books that fill; nothing new is sent).
                 val bid = b.brokerIds.getOrPut(run.runId) { HashMap() }
@@ -869,7 +901,7 @@ object Strategies {
                     record(b, def.name, Event("stop_not_rested", "Leg ${leg.legId}'s stop at %.2f could not rest at Zerodha; the run watches it itself".format(Locale.ENGLISH, want), "warn"), false)
                     null
                 } ?: continue
-                b.legStops[k] = "$id|$want"
+                b.legStops[k] = "$id|$want|${Market.today()}"
                 b.owners["kite:$id"] = "${def.name} · leg ${leg.legId} stop"
                 record(b, def.name, Event("stop_rested", "Leg ${leg.legId}'s stop rests at Zerodha at %.2f (SL order)".format(Locale.ENGLISH, want), "info"), false)
             } else {
@@ -878,7 +910,7 @@ object Strategies {
                 val row = so ?: continue
                 if (!row.working) continue
                 val r = runCatching { Broker.modify(row, row.qty, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(to, ref.tick, dir), to) }
-                if (r.isSuccess) b.legStops[k] = "$sid|$to"
+                if (r.isSuccess) b.legStops[k] = "$sid|$to|${stopDay(cur ?: "") ?: Market.today()}"
             }
         }
     }
@@ -898,6 +930,7 @@ object Strategies {
                 val now = Market.now()
                 val venues = HashMap<RunMode, Venue?>()
                 for (def in b.defs.toList()) tickOpenRun(b, def, now, compromised) { m -> venues.getOrPut(m) { runCatching { venue(m) }.getOrNull() } }
+                runCatching { cleanLegStops(b) }
             } finally {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { runCatching { save(b) } }
             }

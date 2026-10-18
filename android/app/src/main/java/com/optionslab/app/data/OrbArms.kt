@@ -1511,18 +1511,18 @@ object OrbArms {
         // constants unless the lab promoted a variant - then the same words with the variant's numbers). Memory only.
         val ap = runCatching { paramsOf(armOf(source), today(), live) }.getOrElse { com.optionslab.engine.orb.OrbParams.of(armOf(source)) }
         val (firstBar, _) = OrbRules.decisionBars(ap)
-        if (on && armOf(source).hero) "$label armed on paper (its live trade at Zerodha follows only by its own "Trade live" switch, in Live with AI trades on) - ${HeroRules.NOT_PROVEN}. Fully automatic, " +
+        if (on && armOf(source).hero) "$label armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on) - ${HeroRules.NOT_PROVEN}. Fully automatic, " +
             "NIFTY expiry days only (from the instrument master): from 13:30 to 14:45, when the ATM straddle is 15% above its low " +
             "since 12:00 and NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1-5 with a " +
             "LIMIT order, up to Rs 5,000 of premium, once a day. It sells half at 5x the price paid and the rest at 20x or " +
             "15:05 (the expiry square-off), with a stop at -60% of the premium on a minute's close. With the old exits it " +
             "lost on all 13 trades out of sample (-Rs 64,190). It disarms itself after ${HeroRules.MAX_LOSING_DAYS} losing expiry " +
             "days in a row or Rs 50,000 lost. ${HeroRules.SIGNAL_SOURCE}."
-        else if (on && armOf(source).fade) "$label armed on paper (its live trade at Zerodha follows only by its own "Trade live" switch, in Live with AI trades on), fully automatic: when a 5-minute bar " +
+        else if (on && armOf(source).fade) "$label armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on), fully automatic: when a 5-minute bar " +
             "reaches the outer ${if (kotlin.math.abs(ap.edge - 0.10) < 1e-9) "tenth" else pts(ap.edge * 100) + "%"} of the opening range and closes back inside, it buys the option toward the middle - 1 lot, " +
             "${pointsWith(ap.stopPoints)} stop, ${pointsWith(ap.targetPoints)} target and the 15:10 exit, at most ${RangeFadeRules.MAX_ENTRIES} a day, " +
             "from ${hhmm(RangeFadeRules.FIRST_BAR)}."
-        else if (on && paperOnly) "$label armed on paper (its live trade at Zerodha follows only by its own "Trade live" switch, in Live with AI trades on), fully automatic: it fades a failed break of the " +
+        else if (on && paperOnly) "$label armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on), fully automatic: it fades a failed break of the " +
             "opening range - a 5-minute bar through the range high or low that closes back inside - with 1 lot, ${pointsWith(ap.stopPoints)} stop, " +
             "${pointsWith(ap.targetPoints)} target and the 15:10 exit, at most ${SweepRules.MAX_ENTRIES} a day, from ${hhmm(firstBar)}."
         else if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +

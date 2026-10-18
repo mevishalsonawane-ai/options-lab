@@ -261,6 +261,52 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(0, nrmlHeld())
     }
 
+    @Test fun aFiredGttThatSoldEverythingWasTheStop() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "fired"))
+        val gid = kite.gtts.keys.single()
+        watch()
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)
+        val oid = kite.triggerGtt(gid)                              // its LIMIT 161.50 is under the bid: it fills
+        assertEquals("COMPLETE", kite.order(oid).status)
+        watch()
+        assertEquals("stop", view().closed.single().why)
+        assertEquals("no sell beside it", 1, kite.placed.size)
+        assertEquals("flat, never short", 0, nrmlHeld())
+    }
+
+    @Test fun aFiredGttsWorkingOrderIsTheOnlyExitAndOnceRefusedTheAppSells() {
+        val ref = "fired2"
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, ref))
+        val gid = kite.gtts.keys.single()
+        watch()
+        kite.quote("NFO:$sym", 120.0, 119.95, 120.05)
+        val oid = kite.triggerGtt(gid)                              // a fast fall: its LIMIT 161.50 rests unfilled
+        assertEquals("OPEN", kite.order(oid).status)
+        legs[ref] = legs.getValue(ref).first to 0                 // the paper trade sold
+        watch(); watch()
+        assertEquals("its working order covers it: nothing more sent, no new stop", 1, kite.placed.size)
+        assertEquals(30, nrmlHeld())
+        kite.reject(oid)
+        watch()
+        assertEquals(0, nrmlHeld())
+        assertEquals("paper_exit", view().closed.single().why)
+    }
+
+    @Test fun twoArmsOnOneOptionEachRestTheirOwnStopNeverMoreThanHeld() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "d"))
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "b"))
+        assertEquals(60, held())
+        val stops = kite.orders.values.filter { it.type == "SL" && it.working }
+        assertEquals(2, stops.size)
+        assertEquals("exactly what is held", 60, stops.sumOf { it.qty })
+        // A third resting exit would pass what is held: an arm's stop that went missing is not rested beside Boss's own sell.
+        kite.orders.getValue(stops.first().id).status = "CANCELLED"
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "LIMIT", 260.0, 0.05,
+            "NFO", "manual"), exit = true) }
+        watch()
+        assertEquals("never more resting sells than held", 60, kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty })
+    }
+
     // ---- restart, record ---------------------------------------------------------------------------------------------------
 
     @Test fun aRestartRestoresTheLiveTradeAndItsWatchFirst() {
