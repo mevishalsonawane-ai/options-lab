@@ -445,4 +445,60 @@ class OrderPathRound2Test : RobolectricTest() {
         assertTrue("never closer than 250 ms: $v", v.zipWithNext().all { (a, b) -> b - a >= 250 })
         assertTrue("the last tick shown within 300 ms: ${v.last() - last}", v.last() >= last - 250 && v.last() - last <= 300)
     }
+
+    /** 18 Oct (review): the paper-only period is read again inside the entry door too: memory only, nothing from the vault. */
+    @Test fun theDoorItselfRefusesAnEntryInThePaperOnlyPeriodReadingNothingFromTheVault() {
+        val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        assertNull("warm: the kept kill switch read once", Broker.entryRecheck(o, "orb"))
+        val today = Market.today()
+        val p = com.optionslab.ira.PaperOnlyPeriod.Period(today.plusDays(8), "10 days on paper", today.minusDays(1))
+        PaperOnly.resetForTest(p)
+        try {
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            assertEquals(PaperOnly.entryWhy(p), Broker.entryRecheck(o, "orb"))
+            // Known as the period's own refusal: the door types and tells it as at its front ("paper_only", Boss told once a day).
+            assertTrue(PaperOnly.isRefusal(Broker.entryRecheck(o, "orb")!!))
+            assertTrue(PaperOnly.isRefusal(PaperOnly.ENTRY_UNREAD))
+            assertFalse(PaperOnly.isRefusal("refused: the kill switch is on"))
+            assertEquals("Boss's own entry too", PaperOnly.entryWhy(p), Broker.entryRecheck(o.copy(tag = "iraalgo")))
+            SecurePrefs.countedThread = null
+            assertEquals("settings reads at the door", 0L, SecurePrefs.readsForTest.get())
+            PaperOnly.unreadForTest()
+            assertEquals("it fails closed before the period is read", PaperOnly.ENTRY_UNREAD, Broker.entryRecheck(o))
+        } finally { SecurePrefs.countedThread = null; PaperOnly.resetForTest(null) }
+        assertNull(Broker.entryRecheck(o, "orb"))
+    }
+
+    /** 18 Oct (review): a period the start could not read is tried again with a growing wait, never given up after ten minutes. */
+    @Test fun theUnreadPeriodIsTriedAgainWithAGrowingWaitUntilItIsRead() {
+        assertEquals(listOf(20_000L, 40_000L, 80_000L, 160_000L, 300_000L, 300_000L),
+            (0..5).map { PaperOnly.retryWaitMs(it) })
+        assertEquals(300_000L, PaperOnly.retryWaitMs(10_000))
+        assertEquals(1L, PaperOnly.retryWaitMs(0, everyMs = 0, maxWaitMs = 10))
+        val realRead = PaperOnly.readRaw
+        try {
+            // Unreadable at the start, readable a moment later: read by the background retry (no screen opened).
+            val failing = java.util.concurrent.atomic.AtomicInteger(4)
+            PaperOnly.readRaw = { if (failing.getAndDecrement() > 0) throw java.io.IOException("simulated: the vault is busy") else realRead() }
+            PaperOnly.unreadForTest()
+            PaperOnly.loadSoon(everyMs = 5, maxWaitMs = 20, until = { true })
+            val end = System.currentTimeMillis() + 10_000
+            while (!PaperOnly.isLoaded && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertTrue("read in the background after the failed tries", PaperOnly.isLoaded)
+            assertNull(PaperOnly.entryRefusal())
+            // Its stop rule (tests only; the app's retry runs until the period is read): the retry ends, and new live entries stay
+            // refused until the morning check or a Zerodha login reads it.
+            PaperOnly.readRaw = { throw java.io.IOException("simulated: the vault is unreadable") }
+            PaperOnly.unreadForTest()
+            val asked = java.util.concurrent.atomic.AtomicInteger()
+            PaperOnly.loadSoon(everyMs = 5, maxWaitMs = 5, until = { asked.incrementAndGet() < 3 })
+            val stop = System.currentTimeMillis() + 5_000
+            while (asked.get() < 3 && System.currentTimeMillis() < stop) Thread.sleep(10)
+            Thread.sleep(200)
+            assertEquals("asked until told to stop, then stopped", 3, asked.get())
+            assertFalse(PaperOnly.isLoaded)
+            assertEquals(PaperOnly.ENTRY_UNREAD, PaperOnly.entryRefusal())
+        } finally { PaperOnly.readRaw = realRead; PaperOnly.resetForTest(null) }
+    }
 }

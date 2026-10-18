@@ -226,6 +226,9 @@ object DailyReports {
 
     /** 09:00: is everything in place for the day? */
     suspend fun morning(context: Context): Pair<String, List<String>> {
+        // 18 Oct (review): the paper-only period read now if the start could not (a worker thread): until it is read the order
+        // door refuses every new live entry, so a failed read at the start no longer lasts the day.
+        runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() }
         if (com.optionslab.app.BuildConfig.JARVIS && !Market.isTradingDay()) return closedMorning(context)
         val s = AppSettings.load()
         val lines = ArrayList<String>()

@@ -67,7 +67,8 @@ object WhatsNew {
                 "Each arm keeps its own live choice, and Jarvis's own ideas stay on paper. " +
                 "During your paper-only period no new live entry goes out, but exits, stops and square-offs always do. " +
                 "In Paper you can still close a real Zerodha position with your PIN. " +
-                "Orders Zerodha took despite an error reply are now found and protected, never left without a stop.",
+                "Orders Zerodha took despite an error reply are now found and protected, never left without a stop. " +
+                "Live orders without PIN was switched off by this update; turn it on again only if you want it.",
             "Settings → Zerodha for the Live switch; Trade tab for Still open at Zerodha"),
         Entry("2026-10-18-whole-app-review", OCT18, "Kill switch needs your PIN; Jarvis quiet when locked",
             "The kill switch can no longer be cleared by mistake, and clearing it asks for your PIN. " +

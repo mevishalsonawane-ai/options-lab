@@ -743,6 +743,16 @@ class JobsTest : RobolectricTest() {
         assertEquals("a failure keeps the cached list", WED.minusDays(30), com.optionslab.app.data.Holidays.book().fetched)
     } }
 
+    /** 18 Oct (review): a paper-only period the start could not read is read by the 09:00 check (a worker thread). */
+    @Test fun theMorningCheckReadsAPaperOnlyPeriodTheStartCouldNot() = com.optionslab.app.testing.bounded("theMorningCheckReadsAPaperOnlyPeriodTheStartCouldNot") { runBlocking {
+        battery(true)
+        com.optionslab.app.data.PaperOnly.unreadForTest()
+        assertEquals(com.optionslab.app.data.PaperOnly.ENTRY_UNREAD, com.optionslab.app.data.PaperOnly.entryRefusal())
+        DailyReports.morning(context)
+        assertTrue("read by the morning check", com.optionslab.app.data.PaperOnly.isLoaded)
+        assertNull("no period set: entries may go", com.optionslab.app.data.PaperOnly.entryRefusal())
+    } }
+
     @Test fun aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow() = com.optionslab.app.testing.bounded("aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow") { runBlocking {
         battery(false)
         val lines = DailyReports.morning(context).second

@@ -46,8 +46,13 @@ class WhatsNewChangelogTest {
         assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
         assertEquals(LocalDate.of(2026, 10, 18), x.date)
         for (w in listOf("after your PIN", "no review card", "Every check still runs", "turns on AI trades too", "Jarvis's own ideas stay on paper",
-            "paper-only period no new live entry", "exits, stops and square-offs always do", "close a real Zerodha position with your PIN"))
+            "paper-only period no new live entry", "exits, stops and square-offs always do", "close a real Zerodha position with your PIN",
+            "Live orders without PIN was switched off by this update"))
             assertTrue(w in x.what, "$w: ${x.what}")
+        // 18 Oct review: eight short sentences at most, each of 20 words or fewer.
+        val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
+        assertEquals(8, sentences.size, x.what)
+        for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
     }
 
     /** 18 Oct (the whole-app review): the newest entry, in plain words; the kill switch's PIN and the locked phone said first. */

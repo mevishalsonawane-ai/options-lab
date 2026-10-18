@@ -32,31 +32,51 @@ object PaperOnly {
         if (loaded) return
         synchronized(this) {
             if (loaded) return
-            val raw = runCatching { SecurePrefs.getString(KEY) }.getOrElse { return }
+            val raw = runCatching { readRaw() }.getOrElse { return }
             // An unreadable vault reads as empty: that is not "no period" (it stays unread, so the Live switch asks the PIN).
-            if (SecurePrefs.unreadable) return
+            if (vaultUnreadable()) return
             _period.value = runCatching { PaperOnlyPeriod.decode(raw) }.getOrNull()
             loaded = true
         }
     }
 
+    /** How the period is read from the vault, and whether the vault could not be read (tests make a read fail). */
+    @Volatile internal var readRaw: () -> String? = { SecurePrefs.getString(KEY) }
+    @Volatile internal var vaultUnreadable: () -> Boolean = { SecurePrefs.unreadable }
+
     /** Read yet (memory only). */
     val isLoaded: Boolean get() = loaded
 
     /**
-     * 18 Oct review: a period the start could not read (the vault unreadable for a moment) is tried again on a background thread
-     * every 20 s for ten minutes, so the bots' live entries are not refused all day for want of a screen opening it. Exits never
-     * wait for it. Nothing when already read.
+     * 18 Oct review: a period the start could not read (the vault unreadable for a moment) is tried again on a background thread,
+     * so the bots' live entries are not refused all day for want of a screen opening it. Exits never wait for it. Nothing when
+     * already read. 18 Oct (second review): no longer given up after ten minutes - tried again with a growing wait
+     * ([retryWaitMs]: 20 s, doubling, at most 5 min) until it is read (one sleeping daemon thread; [until] only for tests); the
+     * 09:00 morning check and each Zerodha login read it too ([ensureLoaded], worker threads).
      */
-    fun loadSoon(everyMs: Long = 20_000L, tries: Int = 30) {
+    fun loadSoon(everyMs: Long = 20_000L, maxWaitMs: Long = 5 * 60_000L, until: (() -> Boolean)? = null) {
         if (loaded) return
+        val keepOn = until ?: { true }
         Thread({
-            for (i in 0 until tries) {
+            var i = 0
+            while (true) {
                 runCatching { ensureLoaded() }
                 if (loaded) { runCatching { Diag.record("mode", "paper-only period read after ${i + 1} tries") }; return@Thread }
-                try { Thread.sleep(everyMs) } catch (_: InterruptedException) { return@Thread }
+                if (!runCatching(keepOn).getOrDefault(false)) {
+                    runCatching { Diag.record("mode", "paper-only period still unread: new live entries stay refused until it is read") }
+                    return@Thread
+                }
+                try { Thread.sleep(retryWaitMs(i, everyMs, maxWaitMs)) } catch (_: InterruptedException) { return@Thread }
+                i++
             }
         }, "paper-only").apply { isDaemon = true }.start()
+    }
+
+    /** The wait before try [i] + 2 of [loadSoon]: [everyMs], doubling each time, at most [maxWaitMs]. */
+    internal fun retryWaitMs(i: Int, everyMs: Long = 20_000L, maxWaitMs: Long = 5 * 60_000L): Long {
+        var w = everyMs.coerceAtLeast(1L)
+        repeat(i.coerceIn(0, 40)) { if (w < maxWaitMs) w *= 2 }
+        return w.coerceAtMost(maxWaitMs)
     }
 
     /** What the Live switch says while the period is not read yet (or could not be read): it asks the PIN, never goes Live without. */
@@ -77,11 +97,15 @@ object PaperOnly {
      */
     fun entryRefusal(): String? = if (!loaded) ENTRY_UNREAD else activeNow()?.let { entryWhy(it) }
 
+    /** True when [why] is one of this period's entry refusals ([ENTRY_UNREAD] or [entryWhy]). */
+    fun isRefusal(why: String): Boolean = why == ENTRY_UNREAD || why.startsWith(WHY_START)
+    private const val WHY_START = "You set a paper-only period until "
+
     /** The refusal while the period has not been read yet. */
     const val ENTRY_UNREAD = "Your paper-only period could not be checked yet, so no new live entry goes to Zerodha. Exits, stops and square-offs still go."
 
     /** The refusal inside the period: its end date and reason. */
-    fun entryWhy(p: PaperOnlyPeriod.Period): String = "You set a paper-only period until ${PaperOnlyPeriod.day(p.until)}" +
+    fun entryWhy(p: PaperOnlyPeriod.Period): String = WHY_START + PaperOnlyPeriod.day(p.until) +
         (if (p.reason.isNotBlank()) " (\"${p.reason}\")" else "") + ", so no new live entry goes to Zerodha. Exits, stops and square-offs still go."
 
     /** [liveAskNow] after reading the period if it is not read yet. A worker thread (the vault read). */

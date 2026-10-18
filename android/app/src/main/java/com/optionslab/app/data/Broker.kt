@@ -151,6 +151,9 @@ object Broker {
         // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
         // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
         if (killOn()) return "refused: the kill switch is on"
+        // 18 Oct (review): the paper-only period read again inside the door too (memory only), so a period set while this entry
+        // waited its turn still refuses it. [placeOrder] asks it first; this is the door's own look.
+        PaperOnly.entryRefusal()?.let { return it }
         if (o.tag in BOT_TAGS) {
             if (LossBreaker.trippedToday()) return "refused: the daily loss limit was reached today"
             if (Strategies.stopHint() != null) return "stopped_for_today"
@@ -621,6 +624,9 @@ object Broker {
         SecurePrefs.putAll(mapOf(K_TOKEN to token, K_LOGIN_AT to System.currentTimeMillis(),
             K_USER to data.optString("user_name"), K_UID to data.optString("user_id")))
         dropCreds(); dropKept()
+        // 18 Oct (review): a paper-only period the start could not read is read now (this is a worker thread, never the order
+        // path), so the day's live entries are not refused for want of it.
+        runCatching { PaperOnly.ensureLoaded() }
         return data.optString("user_name", "you")
     }
 
@@ -1281,6 +1287,8 @@ object Broker {
             com.optionslab.app.work.TradingBusy.during { sendChecked(o, false, arm, intended) } }) {
             is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
             is com.optionslab.ira.EntryGate.Outcome.Refused -> {
+                // The paper-only period's refusal inside the door: told and typed as at the door's front ([paperOnlyRefused]).
+                if (PaperOnly.isRefusal(r.why)) { paperOnlyRefused(o, r.why); throw KiteError("paper_only", r.why) }
                 runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): ${r.why}") }
                 throw KiteError("entry_gate", r.why)
             }
@@ -1306,7 +1314,7 @@ object Broker {
         send(o, exit, arm, intended)
     } catch (e: KiteError) {
         if (e.type !in UNSURE) throw e
-        val found = try { findRecentRetrying(o, emptyList()) } catch (x: kotlinx.coroutines.CancellationException) { throw x
+        val found = try { findRecentRetrying(o, emptyList(), afterError = true) } catch (x: kotlinx.coroutines.CancellationException) { throw x
         } catch (_: Exception) { throw IOException("${e.message} (Zerodha's ${e.type}); its order book could not be read, so the order may exist") }
         runCatching { Diag.record("zerodha", "${o.tradingSymbol}: Zerodha answered ${e.type} (${e.message}); " +
             (found?.let { "the order is in the book: $it" } ?: "no such order in the book: refused")) }
@@ -1402,8 +1410,11 @@ object Broker {
      * After a POST whose answer was lost (timeout, dropped connection), find the
      * order Kite may have placed anyway: same symbol, side, quantity, tag and order type,
      * placed in the last three minutes, and not one of [known] nor one this phone already has the id of.
+     * [afterError] (18 Oct review: Kite answered DataException or GeneralException, [sendChecked]): stricter, as the order
+     * is adopted only when it is surely this one - a LIMIT's price must match too (to half a tick), and an order the
+     * exchange REJECTED, or CANCELLED with nothing filled, is never taken for it (that is no live order; the error stands).
      */
-    suspend fun findRecent(o: Kite.Order, known: Collection<String>): String? {
+    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -1416,8 +1427,27 @@ object Broker {
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
                 // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
                 it.optString("order_type") == o.orderType &&
-                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false
+                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false &&
+                (!afterError || adoptableAfterError(o, it))
         }?.optString("order_id")?.also { countSent(); noteSent(it) }
+    }
+
+    /**
+     * [findRecent] after Kite's error: the row's prices and its status as described there - a LIMIT's or an SL's price, and an
+     * SL's or an SL-M's trigger too (a resting stop at another level is never taken for a new one).
+     */
+    internal fun adoptableAfterError(o: Kite.Order, r: JSONObject): Boolean {
+        fun same(want: Double?, field: String): Boolean {
+            val w = want ?: return false
+            val got = r.optDouble(field, Double.NaN)
+            return got.isFinite() && kotlin.math.abs(got - w) <= o.tickSize / 2 + 1e-9
+        }
+        if (o.hasPrice && !same(o.price, "price")) return false
+        if (o.hasTrigger && !same(o.triggerPrice, "trigger_price")) return false
+        val status = r.optString("status").uppercase()
+        if (status == "REJECTED") return false
+        if (status == "CANCELLED" && r.optInt("filled_quantity", 0) <= 0) return false
+        return true
     }
 
     /**
@@ -1433,13 +1463,13 @@ object Broker {
      * trail the POST by a moment). The order id; null when the book was read and holds no such order;
      * throws when the book could not be read at all, so the caller knows the order's fate is unknown.
      */
-    suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000): String? {
+    suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000, afterError: Boolean = false): String? {
         var read = false
         var err: Exception? = null
         for (i in 0 until tries) {
             if (i > 0) delay(waitMs)
             try {
-                findRecent(o, known)?.let { return it }
+                findRecent(o, known, afterError)?.let { return it }
                 read = true
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e

@@ -166,6 +166,58 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         try { Broker.placeOrder(exit, exit = true); fail("nothing was placed") } catch (e: Broker.KiteError) { assertTrue(Broker.definite(e)) }
     }
 
+    /**
+     * 18 Oct (review): after Kite's DataException or GeneralException the order is adopted only when it is surely this one: a
+     * LIMIT's price matches too, and an order the exchange rejected, or cancelled with nothing filled, is never taken for it.
+     */
+    @Test fun afterKitesErrorOnlyTheSameLimitPriceIsTakenAndNeverARejectedOrUnfilledCancelledOrder() = runBlocking {
+        val lim = order(type = "LIMIT", price = 199.0)
+        // Already in the book, not this phone's (as after a restart): one at another price, one rejected, one cancelled unfilled.
+        kite.orders["250926000000701"] = FakeKite.Order("250926000000701", sym, "NFO", "SELL", 30, "MIS", "LIMIT", 198.0, 0.0, "irae2e", "OPEN")
+        kite.orders["250926000000702"] = FakeKite.Order("250926000000702", sym, "NFO", "SELL", 30, "MIS", "LIMIT", 199.0, 0.0, "irae2e", "REJECTED")
+        kite.orders["250926000000703"] = FakeKite.Order("250926000000703", sym, "NFO", "SELL", 30, "MIS", "LIMIT", 199.0, 0.0, "irae2e", "CANCELLED")
+        kite.nextPlace(reply = Reply.GENERAL_EXCEPTION)
+        try { Broker.placeOrder(lim, exit = true); fail("nothing was placed") } catch (e: Broker.KiteError) {
+            assertEquals("GeneralException", e.type)
+            assertTrue("the refusal it was, none of those taken for it", Broker.definite(e))
+        }
+        // Kite took the LIMIT at that price and answered DataException: that order is found.
+        val before = kite.orders.keys.toList()
+        kite.nextPlace(reply = Reply.DATA_EXCEPTION_AFTER_ACCEPT)
+        val id = Broker.placeOrder(lim, exit = true)
+        assertEquals(kite.orders.keys.single { it !in before }, id)
+        // The rule itself: a part-filled order the exchange cancelled the rest of is a live fill (taken); a MARKET has no price.
+        fun row(price: Double, status: String, filled: Int = 0) = JSONObject().put("price", price).put("status", status).put("filled_quantity", filled)
+        assertTrue(Broker.adoptableAfterError(lim, row(199.0, "COMPLETE")))
+        assertTrue("half a tick", Broker.adoptableAfterError(lim, row(199.02, "OPEN")))
+        assertFalse(Broker.adoptableAfterError(lim, row(199.05, "OPEN")))
+        assertFalse(Broker.adoptableAfterError(lim, row(199.0, "REJECTED")))
+        assertFalse(Broker.adoptableAfterError(lim, row(199.0, "CANCELLED")))
+        assertTrue(Broker.adoptableAfterError(lim, row(199.0, "CANCELLED", filled = 15)))
+        assertTrue(Broker.adoptableAfterError(order(), row(0.0, "COMPLETE")))
+        assertFalse(Broker.adoptableAfterError(order(), row(0.0, "REJECTED")))
+        assertFalse("a LIMIT with no price of its own", Broker.adoptableAfterError(lim.copy(price = null), row(199.0, "OPEN")))
+        // A stop: its trigger too (a resting stop at another level is never taken for a new one).
+        val sl = order(type = "SL", price = 152.0, trigger = 160.0)
+        assertTrue(Broker.adoptableAfterError(sl, row(152.0, "TRIGGER PENDING").put("trigger_price", 160.0)))
+        assertFalse(Broker.adoptableAfterError(sl, row(152.0, "TRIGGER PENDING").put("trigger_price", 165.0)))
+        assertFalse(Broker.adoptableAfterError(sl, row(150.0, "TRIGGER PENDING").put("trigger_price", 160.0)))
+        val slm = order(type = "SL-M", trigger = 160.0)
+        assertTrue(Broker.adoptableAfterError(slm, row(0.0, "TRIGGER PENDING").put("trigger_price", 160.0)))
+        assertFalse(Broker.adoptableAfterError(slm, row(0.0, "TRIGGER PENDING").put("trigger_price", 159.0)))
+    }
+
+    /** 18 Oct (review): a Zerodha login reads a paper-only period the start could not (the login is a worker thread). */
+    @Test fun aZerodhaLoginReadsAPaperOnlyPeriodTheStartCouldNot() = runBlocking {
+        SecurePrefs.put(PaperOnly.KEY, com.optionslab.ira.PaperOnlyPeriod.encode(period()))
+        PaperOnly.unreadForTest()
+        assertEquals(PaperOnly.ENTRY_UNREAD, PaperOnly.entryRefusal())
+        Broker.completeLogin("request-token-not-real", "secret-not-real")
+        assertTrue(PaperOnly.isLoaded)
+        assertTrue(PaperOnly.entryRefusal()!!.contains("paper-only period until"))
+        PaperOnly.resetForTest(null)
+    }
+
     @Test fun kitesOwnRefusalsStayDefiniteAndPlaceNothing() = runBlocking {
         for (reply in listOf(Reply.ORDER_EXCEPTION, Reply.INPUT_EXCEPTION)) {
             kite.nextPlace(reply = reply)

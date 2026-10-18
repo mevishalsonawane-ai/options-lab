@@ -139,4 +139,27 @@ class SettingsUpdateTest : RobolectricTest() {
         assertTrue(AppSettings.load().guardKill)
         await("the screen shows it") { model.settings.value.guardKill }
     }
+
+    /**
+     * 18 Oct (review): "Live orders without PIN" now means one tap sends a real order with no PIN and no review, a stronger
+     * meaning than Boss turned on. It reads off once with this update (the old key is never read again), and is on again only
+     * when he turns it on (the switch asks his PIN), kept from then on.
+     */
+    @Test fun liveOrdersWithoutPinIsResetToOffOnceAndStaysOnOnlyWhenTurnedOnAgain() {
+        SecurePrefs.put("k.oneTap", true)                           // on, from before this update
+        assertFalse("reset to off with this update", AppSettings.load().oneTapOrders)
+        val model = model()
+        await("the screen's copy") { true }
+        assertFalse(model.settings.value.oneTapOrders)
+        // A save of anything else never turns it back on, nor writes the old key's "on" back.
+        model.update { it.copy(theme = "dark") }
+        await("saved") { AppSettings.load().theme == "dark" }
+        assertFalse(AppSettings.load().oneTapOrders)
+        // Boss turns it on again (after his PIN): kept.
+        model.update { it.copy(oneTapOrders = true) }
+        await("saved on") { AppSettings.load().oneTapOrders }
+        assertEquals(true, SecurePrefs.getBoolean(AppSettings.ONE_TAP_KEY, false))
+        model.update { it.copy(oneTapOrders = false) }
+        await("saved off") { !AppSettings.load().oneTapOrders }
+    }
 }

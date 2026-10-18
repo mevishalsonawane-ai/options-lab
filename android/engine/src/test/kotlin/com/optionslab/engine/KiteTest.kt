@@ -238,4 +238,35 @@ class KiteTest {
         assertEquals(Kite.Side.SELL, g.orders.single().side)
         assertEquals(1330.0, g.orders.single().price!!, 1e-9)
     }
+
+    // ---- 18 Oct (review): the price's age at the PIN, and an exit priced again ----------------------------------------
+
+    @Test fun `a price older than 30 s at the PIN is too old, and a clock that went back counts as old`() {
+        val t = 1_000_000L
+        assertEquals(false, Kite.priceTooOld(t, t))
+        assertEquals(false, Kite.priceTooOld(t, t + 30_000))
+        assertEquals(true, Kite.priceTooOld(t, t + 30_001))
+        assertEquals(false, Kite.priceTooOld(t, t - 4_000), "a small clock step back is not old")
+        assertEquals(true, Kite.priceTooOld(t, t - 6_000), "a clock that went back: no age can be trusted")
+        assertEquals(true, Kite.priceTooOld(t, t + 11_000, maxAgeMs = 10_000))
+    }
+
+    @Test fun `an exit is priced again from a fresh quote at the side that fills, on the tick`() {
+        val sell = Kite.Order("NIFTY26OCT24500CE", Kite.Side.SELL, 75, 75, "NRML", "LIMIT", 100.0, 0.05)
+        assertEquals(91.25, Kite.repriced(sell, 91.27, 91.4, 91.3).price!!, 1e-9)     // the bid, rounded down to the tick
+        val buy = sell.copy(side = Kite.Side.BUY)
+        assertEquals(91.4, Kite.repriced(buy, 91.27, 91.36, 91.3).price!!, 1e-9)       // the offer, rounded up
+        // That side empty: the last price; nothing usable: as it was.
+        assertEquals(92.0, Kite.repriced(sell, null, 91.4, 92.0).price!!, 1e-9)
+        assertEquals(92.0, Kite.repriced(sell, 0.0, 91.4, 92.0).price!!, 1e-9)
+        assertEquals(sell, Kite.repriced(sell, null, null, null))
+        assertEquals(sell, Kite.repriced(sell, Double.NaN, null, 0.0))
+        // A MARKET or a stop order is never repriced here; only the price changes, never the size or side.
+        val market = sell.copy(orderType = "MARKET", price = null)
+        assertEquals(market, Kite.repriced(market, 90.0, 91.0, 90.5))
+        val sl = sell.copy(orderType = "SL", triggerPrice = 99.0)
+        assertEquals(sl, Kite.repriced(sl, 90.0, 91.0, 90.5))
+        val r = Kite.repriced(sell, 90.0, 91.0, 90.5)
+        assertEquals(sell.copy(price = 90.0), r)
+    }
 }

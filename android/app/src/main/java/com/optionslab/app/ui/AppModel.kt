@@ -99,6 +99,11 @@ data class OrderPlan(
     val marginNote: String? = null,
     /** Who is sending it, shown on its orders, trades, positions and fill notices ([com.optionslab.app.data.Origins]). */
     val source: String = com.optionslab.app.data.Origins.MANUAL,
+    /**
+     * 18 Oct (review): when its prices were read (the phone's clock, ms). The direct send checks it at the PIN: an entry priced
+     * more than [com.optionslab.engine.Kite.PRICE_MAX_AGE_MS] ago is not sent, an exit is priced again ([AppModel.confirmDirect]).
+     */
+    val pricedAt: Long = System.currentTimeMillis(),
 ) {
     val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() } && margin?.short != true
 }
@@ -117,6 +122,8 @@ internal const val PAPER_EXIT_PIN = "This is Paper mode: closing a real Zerodha 
  */
 internal const val LIVE_PIN_ASK = "Enter your PIN to switch to Live. Your own orders then go to Zerodha straight after your PIN, as on paper, and " +
     "\"AI trades go live\" turns on with it. Each arm keeps its own live choice: paper-only arms stay on paper."
+/** 18 Oct (review): an entry whose price is too old at the PIN ([AppModel.confirmDirect]). */
+internal val PRICE_TOO_OLD = "Not sent: its price is more than ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} seconds old. Tap Buy or Sell again for a fresh price."
 /** 18 Oct: a new position never goes to Zerodha in Paper mode. */
 internal const val PAPER_NO_ENTRY = "This is Paper mode: switch to Live with the badge at the top (and your PIN) to send real orders."
 
@@ -970,9 +977,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun planExits(title: String, positions: List<com.optionslab.app.data.Broker.Position>, source: String, direct: Boolean = false) {
-        startPlan(direct)
+        val g = startPlan(direct)
         plan.value = Load.Busy("Pricing the exit on Zerodha"); prewarm(entry = false)
-        val g = planGen.get()
         viewModelScope.launch(Dispatchers.IO) {
             publish(g, try {
                 val b = com.optionslab.app.data.Broker
@@ -990,9 +996,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** Sell (part of) a delivery holding. */
     fun planSellHolding(h: com.optionslab.app.data.Broker.Holding, quantity: Int, direct: Boolean = false) {
-        startPlan(direct)
+        val g = startPlan(direct)
         plan.value = Load.Busy("Pricing the sale on Zerodha"); prewarm(entry = false)
-        val g = planGen.get()
         viewModelScope.launch(Dispatchers.IO) {
             publish(g, try {
                 val b = com.optionslab.app.data.Broker
@@ -1122,6 +1127,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     // ---- changing a working order --------------------------------------------------------
 
+    /** A modify's price against the order's own (the book says 0 for none). */
+    private fun samePx(a: Double?, b: Double): Boolean = kotlin.math.abs((a ?: 0.0) - b) < 1e-6
+
     /** Modify a working order after the owner re-proved who they are. */
     fun modifyOrder(o: com.optionslab.app.data.Broker.OrderRow, quantity: Int, type: String, price: Double?, trigger: Double?) {
         com.optionslab.app.data.Diag.record("tap", "Modify order ${o.id}: qty $quantity $type price $price trigger $trigger")
@@ -1141,6 +1149,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val book = b.positionBook()
                 val open = book.net.firstOrNull { it.symbol == now.symbol && it.exchange == now.exchange && it.product == now.product }?.qty ?: 0
                 val exit = ((now.side == "BUY" && open < 0) || (now.side == "SELL" && open > 0)) && quantity <= kotlin.math.abs(open)
+                // 18 Oct (review): the paper-only period - a change to a working ENTRY could add live exposure (a bigger size, a
+                // price that fills), so it is refused; Cancel still works. A stop's or an exit's change always goes.
+                // Only making a working entry smaller (nothing else changed) lowers risk, and goes.
+                val smallerOnly = quantity < now.qty && type == now.type && samePx(price, now.price) && samePx(trigger, now.trigger)
+                if (!exit && !smallerOnly) com.optionslab.app.data.PaperOnly.entryRefusal()?.let { error(it) }
                 val acct = com.optionslab.app.data.Guard.liveAccount(book, runCatching { b.funds() }.getOrNull(), runCatching { b.orders().size }.getOrDefault(0))
                 val why = com.optionslab.engine.Kite.refusals(probe, s.limits(), 0, false, exit) +
                     com.optionslab.app.data.Guard.check(com.optionslab.app.data.Guard.liveOrder(probe), acct, exit)
@@ -1172,9 +1185,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** The strategy's ticket for [session], turned into Zerodha orders for review. */
     fun planTicket(e: Ledger.Entry) {
-        startPlan(false)
+        val g = startPlan(false)
         plan.value = Load.Busy("Looking up the contracts on Zerodha"); prewarm(entry = true)
-        val g = planGen.get()
         viewModelScope.launch(Dispatchers.IO) {
             publish(g, try {
                 val b = com.optionslab.app.data.Broker
@@ -1203,9 +1215,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun planMcx(m: com.optionslab.engine.mcx.McxContract, side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?,
                 protect: ProtectSpec? = null, area: String = "Commodities", direct: Boolean = false) {
         com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot ${m.tradingSymbol} $product ${limit?.let { "LIMIT $it" } ?: "MARKET"} ($area, ${if (_settings.value.live) "LIVE" else "Paper"})")
-        startPlan(direct)
+        val g = startPlan(direct)
         plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
-        val g = planGen.get()
         viewModelScope.launch(Dispatchers.IO) {
             publish(g, try {
                 com.optionslab.app.data.McxGuard.entryRefusal(m, side == com.optionslab.engine.Kite.Side.BUY)?.let { error(it) }
@@ -1234,10 +1245,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             startPlan(direct)
             plan.value = Load.Failed("$underlying ${com.optionslab.engine.fmtG(strike)} ${right.name} is not in today's MCX list"); return
         }
-        startPlan(direct)
+        val g = startPlan(direct)
         com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot $underlying $expiry ${com.optionslab.engine.fmtG(strike)} $right $product ${limit?.let { "LIMIT $it" } ?: "MARKET"}${protect?.let { " protect=$it" } ?: ""} ($area, ${if (_settings.value.live) "LIVE" else "Paper"})")
         plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
-        val g = planGen.get()
         viewModelScope.launch(Dispatchers.IO) {
             publish(g, try {
                 val b = com.optionslab.app.data.Broker
@@ -1263,7 +1273,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val direct = MutableStateFlow(false)
     /** The plan the PIN was given for (its generation), so a PIN can never send a later order ([confirmDirect]). */
     private val planGen = java.util.concurrent.atomic.AtomicLong()
-    /** Bumped for each new direct order: the dialog asks the PIN afresh for each one, even while it stays open. */
+    /** The newest generation a PIN was confirmed for: a second confirm of the same order (fingerprint and PIN both) sends nothing. */
+    private val confirmedGen = java.util.concurrent.atomic.AtomicLong()
+    /**
+     * The generation of the newest direct order (18 Oct review: the order the PIN prompt is for). The dialog asks the PIN afresh
+     * for each new one, even while it stays open, and passes the generation it was opened for to [confirmDirect].
+     */
     val directOrder = MutableStateFlow(0L)
 
     /**
@@ -1272,21 +1287,29 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     private fun publish(gen: Long, v: Load<OrderPlan>) { if (planGen.get() == gen) plan.value = v }
 
-    private fun startPlan(isDirect: Boolean) {
-        planGen.incrementAndGet()
+    /** A new order is being prepared: its generation (what [publish] and [confirmDirect] check it by). */
+    private fun startPlan(isDirect: Boolean): Long {
+        val gen = planGen.incrementAndGet()
         // An earlier send's outcome is not this order's (a send still under way keeps its state; a stuck leg stays tracked).
         sending.update { if (it is Load.Busy) it else Load.Idle }
         direct.value = isDirect
-        if (isDirect) directOrder.update { it + 1 }
+        if (isDirect) directOrder.value = gen
+        return gen
     }
 
     /**
-     * The PIN (or fingerprint) was right for the direct order being prepared: it goes as soon as it is priced and every check
-     * passes, with no review card. Refused or failed: said on the dialog ([sending]) and nothing is sent. A wrong PIN or a
-     * cancel never calls this. In Paper mode only an exit can go ([sendPlan]).
+     * The PIN (or fingerprint) was right for the direct order of generation [expectedGen] (the one the PIN prompt opened for,
+     * [directOrder]): it goes as soon as it is priced and every check passes, with no review card. Refused or failed: said on
+     * the dialog ([sending]) and nothing is sent. A wrong PIN or a cancel never calls this. In Paper mode only an exit can go
+     * ([sendPlan]). 18 Oct review: nothing at all when that order is no longer the one being prepared (closed, or another one
+     * started), or when it was confirmed already (a fingerprint's and a PIN's confirm both arriving): one PIN, one send.
+     * A price read more than [com.optionslab.engine.Kite.PRICE_MAX_AGE_MS] ago: an entry is not sent (tap again for a fresh
+     * price); an exit is priced again first, and goes even when the fresh price cannot be read (never refused for its age).
      */
-    fun confirmDirect() {
-        val gen = planGen.get()
+    fun confirmDirect(expectedGen: Long) {
+        val gen = expectedGen
+        if (planGen.get() != gen || !direct.value) { com.optionslab.app.data.Diag.record("tap", "PIN confirmed for an order no longer open: nothing sent"); return }
+        if (confirmedGen.getAndUpdate { maxOf(it, gen) } >= gen) { com.optionslab.app.data.Diag.record("tap", "PIN confirmed again for the same order: sent once only"); return }
         com.optionslab.app.data.Diag.record("tap", "PIN confirmed for the order")
         val checking = Load.Busy("Checking the order")
         sending.value = checking
@@ -1297,20 +1320,51 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             when (ready) {
                 null -> sending.value = Load.Failed("Not sent: Zerodha did not answer in time while the order was priced.")
                 is Load.Done -> {
-                    val cur = ready.value
+                    var cur = ready.value
                     if (!cur.sendable) {
                         val why = (cur.refusals.flatten() + listOfNotNull(cur.margin?.takeIf { it.short }?.let { m ->
                             "Short of margin by ${"%,.0f".format(java.util.Locale.ENGLISH, m.required - m.available)}." })).distinct().joinToString(" ")
                             .ifBlank { "the app's checks refused it" }
                         sending.value = Load.Failed("Not sent: $why")
-                    } else {
-                        sending.value = Load.Idle
-                        sendPlan(reauthed = true)?.let { why -> sending.value = Load.Failed("Not sent: $why") }
+                        return@launch
                     }
+                    if (com.optionslab.engine.Kite.priceTooOld(cur.pricedAt, System.currentTimeMillis())) {
+                        if (!cur.exit) {
+                            com.optionslab.app.data.Diag.record("tap", "Direct order not sent: its price was over ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} s old at the PIN (${cur.title})")
+                            sending.value = Load.Failed(PRICE_TOO_OLD)
+                            return@launch
+                        }
+                        cur = repricedExit(cur)
+                        // Closed, or another order started, while the fresh price was read: nothing goes.
+                        if (planGen.get() != gen || !direct.value) { sending.compareAndSet(checking, Load.Idle); return@launch }
+                        plan.value = Load.Done(cur)
+                    }
+                    sending.value = Load.Idle
+                    sendPlan(reauthed = true)?.let { why -> sending.value = Load.Failed("Not sent: $why") }
                 }
                 else -> sending.value = Load.Idle  // failed while pricing (the dialog says why) or closed
             }
         }
+    }
+
+    /**
+     * An exit's LIMIT legs priced again from a fresh quote ([com.optionslab.engine.Kite.repriced]), off the screen's thread and
+     * bounded. The quote unreadable: the exit as it was (an exit is never held back for its price's age).
+     */
+    private suspend fun repricedExit(p: OrderPlan): OrderPlan {
+        val keys = p.legs.map { "${it.exchange}:${it.tradingSymbol}" }.distinct()
+        val q = try {
+            kotlinx.coroutines.withTimeoutOrNull(5_000) { withContext(Dispatchers.IO) { com.optionslab.app.data.Broker.quotes(keys) } }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+        if (q == null) {
+            com.optionslab.app.data.Diag.record("tap", "Exit's price over ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} s old; the fresh quote could not be read: sent as priced (${p.title})")
+            return p
+        }
+        val legs = p.legs.map { l -> q["${l.exchange}:${l.tradingSymbol}"]?.let { qt -> com.optionslab.engine.Kite.repriced(l, qt.bid, qt.ask, qt.last) } ?: l }
+        val moved = legs.indices.count { legs[it].price != p.legs[it].price }
+        com.optionslab.app.data.Diag.record("tap", "Exit priced again at the PIN (its price was over ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} s old): " +
+            "$moved of ${legs.size} legs moved (${p.title})")
+        return p.copy(legs = legs, quotes = p.quotes + q, pricedAt = System.currentTimeMillis())
     }
 
     // ---- one switch for Live (18 Oct, Boss: "Live like paper, arms too") -----------------------------------------
@@ -1548,6 +1602,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (compromisedFresh()) error("this device shows signs of compromise")
                 val b = com.optionslab.app.data.Broker
                 val leg = st.plan.legs[st.index]
+                // 18 Oct (review): in the paper-only period a stuck ENTRY is not moved to a price that fills (Cancel still works);
+                // a stuck exit always is.
+                if (!st.plan.exit) com.optionslab.app.data.PaperOnly.entryRefusal()?.let { error(it) }
                 val key = "${leg.exchange}:${leg.tradingSymbol}"
                 val q = b.quotes(listOf(key))[key] ?: error("no quote for ${leg.tradingSymbol}")
                 val px = (if (leg.side == com.optionslab.engine.Kite.Side.SELL) q.bid else q.ask) ?: q.last
@@ -1903,9 +1960,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     fun planBasket(title: String, underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>,
                    area: String = "Strategy builder", direct: Boolean = false) {
-        startPlan(direct)
+        val g = startPlan(direct)
         plan.value = Load.Busy("Looking up the contracts on Zerodha"); prewarm(entry = true)
-        val g = planGen.get()
         viewModelScope.launch(Dispatchers.IO) {
             publish(g, try {
                 val b = com.optionslab.app.data.Broker

@@ -722,6 +722,32 @@ class BrokerScreensTest {
         assertTrue(shown("0 of 10"))
     }
 
+    /**
+     * 18 Oct (review): "Live orders without PIN" says plainly that one tap sends a real order with no PIN and no review (with
+     * the direct send that is the whole order); turning it on asks the PIN, turning it off never does.
+     */
+    @Test fun liveOrdersWithoutPinSaysOneTapSendsARealOrderAndTurningItOnAsksThePin() {
+        BrokerArea.saveKeys()
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
+        val m = model()
+        page(m)
+        assertTrue(ONE_TAP_SUB.contains("one tap sends a real order with no PIN and no review"))
+        node(ONE_TAP_SUB)
+        assertFalse(m.settings.value.oneTapOrders)
+        val row = { compose.onNode(isToggleable() and hasText("Live orders without PIN", substring = true)) }
+        row().performClick(); compose.waitForIdle()
+        until("the PIN asked") { shown("Confirm it is you") }
+        assertTrue(shown("one tap then sends a real order with no PIN and no review", substring = true))
+        assertFalse("not on before the PIN", m.settings.value.oneTapOrders)
+        field("PIN").performTextInput(BrokerArea.PIN)
+        compose.onNodeWithText("Confirm").performClick(); compose.waitForIdle()
+        until("on after the PIN") { m.settings.value.oneTapOrders }
+        until("the dialog closed") { !shown("Confirm it is you") }
+        row().performClick(); compose.waitForIdle()
+        until("off, with no PIN") { !m.settings.value.oneTapOrders }
+        assertFalse(shown("Confirm it is you"))
+    }
+
     // ---- static IP and the relay ------------------------------------------------------------------------
 
     private fun ipCard(m: AppModel) = show { StaticIpCard(m) { ipReads++; ipStatus } }
@@ -989,6 +1015,34 @@ class BrokerScreensTest {
         until("the spinner") { shown("Looking up the contract") }
         m.plan.value = Load.Idle
         until("gone") { !shown("Looking up the contract") }
+    }
+
+    /**
+     * 18 Oct (review): a direct order's PIN prompt is bound to that order. A second order started while it is open asks its own
+     * PIN afresh (what was typed is gone), and the PIN sends that order, once.
+     */
+    @Test fun aDirectOrdersPinPromptIsBoundToItsOrderAndSendsItOnce() {
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
+        kite.login()
+        BrokerArea.listNifty(kite, listOf(e1))
+        val sym = BrokerArea.symbol("NIFTY", e1, 24_500.0, "CE")
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        val m = model()
+        m.loadAccount(quiet = true)
+        BrokerArea.await("the account") { m.account.value as? Load.Done }
+        pausedShow { OrderReviewDialog(m) }
+        m.planManual("NIFTY", e1, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        until("the PIN asked") { shown("Confirm it is you") }
+        field("PIN").performTextInput(BrokerArea.PIN.take(2))                  // part typed for the first order
+        m.planManual("NIFTY", e1, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", 100.5, direct = true)
+        until("asked afresh for the second") { shown("Confirm it is you") && runCatching { editable("PIN").isEmpty() }.getOrDefault(false) }
+        until("priced") { m.plan.value is Load.Done }
+        field("PIN").performTextInput(BrokerArea.PIN)
+        compose.onNodeWithText("Confirm").performClick()
+        until("the order at Zerodha") { kite.placed.isNotEmpty() }
+        until("filled") { m.sending.value is Load.Done || m.plan.value == Load.Idle }
+        frames(30); Thread.sleep(300); frames(30)
+        assertEquals("one order, the second one", listOf("100.50"), kite.placed.map { it.form["price"] })
     }
 
     @Test fun inPaperModeTheReviewCannotSend() {

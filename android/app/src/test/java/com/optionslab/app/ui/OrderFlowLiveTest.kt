@@ -225,7 +225,7 @@ class OrderFlowLiveTest : RobolectricTest() {
             val model = model()
             model.planSquareOff(position(held), "Close (Paper mode)", direct = true)
             await("the exit priced") { model.plan.value as? Load.Done }
-            model.confirmDirect()                               // what the PIN's Confirm calls, after a right PIN
+            model.confirmDirect(model.directOrder.value)                               // what the PIN's Confirm calls, after a right PIN
             val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
             assertEquals(side, post.form["transaction_type"])
             assertEquals("exactly what is held", "${kotlin.math.abs(held)}", post.form["quantity"])
@@ -258,7 +258,7 @@ class OrderFlowLiveTest : RobolectricTest() {
         paperMode()
         val model = model()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
-        model.confirmDirect()
+        model.confirmDirect(model.directOrder.value)
         val failed = await("refused") { model.sending.value as? Load.Failed }
         assertTrue(failed.why, failed.why.contains("Paper mode"))
         // The review's own send with the PIN: refused the same way.
@@ -293,7 +293,7 @@ class OrderFlowLiveTest : RobolectricTest() {
             await("the exit priced") { model.plan.value as? Load.Done }
             shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
             assertTrue("never sent without the PIN", kite.placed.isEmpty())
-            model.confirmDirect()
+            model.confirmDirect(model.directOrder.value)
             val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
             assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
         }
@@ -323,7 +323,7 @@ class OrderFlowLiveTest : RobolectricTest() {
         val t0 = System.nanoTime()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
         assertTrue("the PIN is asked at once, while the order is priced", model.direct.value)
-        model.confirmDirect()                                   // the PIN typed while it was priced
+        model.confirmDirect(model.directOrder.value)                                   // the PIN typed while it was priced
         val post = await("the order at Zerodha") { kite.placed.firstOrNull() }
         println("LIVEFLOW direct live buy: tap -> POST ${(post.atNanos - t0) / 1_000_000} ms (PIN typed at once; taps: Buy, PIN, Confirm)")
         assertEquals("BUY", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
@@ -335,7 +335,7 @@ class OrderFlowLiveTest : RobolectricTest() {
         SecurePrefs.put("g.kill", true)
         val model = model()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
-        model.confirmDirect()
+        model.confirmDirect(model.directOrder.value)
         val failed = await("refused") { model.sending.value as? Load.Failed }
         assertTrue(failed.why, failed.why.startsWith("Not sent:"))
         shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
@@ -349,7 +349,7 @@ class OrderFlowLiveTest : RobolectricTest() {
         com.optionslab.app.data.PaperOnly.resetForTest(com.optionslab.ira.PaperOnlyPeriod.Period(today.plusDays(8), "10 days on paper", today.minusDays(1)))
         val model = model()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
-        model.confirmDirect()
+        model.confirmDirect(model.directOrder.value)
         val failed = await("refused") { model.sending.value as? Load.Failed }
         assertTrue(failed.why, failed.why.contains("paper-only period") && failed.why.contains("Exits, stops and square-offs still go"))
         assertTrue("no entry went, even in Live", kite.placed.isEmpty())
@@ -357,9 +357,83 @@ class OrderFlowLiveTest : RobolectricTest() {
         kite.position(sym, 75, 100.0)
         model.planSquareOff(position(75), "Square off", direct = true)
         await("the exit priced") { model.plan.value as? Load.Done }
-        model.confirmDirect()
+        model.confirmDirect(model.directOrder.value)
         val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
         assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
+    }
+
+    // ---- 18 Oct (review): the PIN is bound to its order; the price's age at the PIN ---------------------------------------
+
+    @Test fun aPinGivenForOneOrderNeverSendsALaterOneAndASecondConfirmSendsNothing() {
+        val model = model()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        val first = model.directOrder.value
+        await("priced") { model.plan.value as? Load.Done }
+        // Another order started while the PIN prompt for the first was open: the first's PIN sends nothing.
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", 100.5, direct = true)
+        val second = model.directOrder.value
+        assertTrue("$second after $first", second > first)
+        model.confirmDirect(first)
+        shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300); shadowOf(Looper.getMainLooper()).idle()
+        assertTrue("a PIN for an earlier order sent nothing: ${kite.placed}", kite.placed.isEmpty())
+        assertEquals(Load.Idle, model.sending.value)
+        // The fingerprint's and the PIN's confirm both arrive for the second: it goes once.
+        model.confirmDirect(second); model.confirmDirect(second)
+        val post = await("the order at Zerodha") { kite.placed.firstOrNull() }
+        assertEquals("the second order, as asked", "100.50", post.form["price"])
+        await("filled") { model.sending.value as? Load.Done }
+        shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(500); shadowOf(Looper.getMainLooper()).idle()
+        assertEquals("sent once", 1, kite.placed.size)
+        // Closed: a late confirm of it sends nothing either.
+        model.dismissPlan()
+        model.confirmDirect(second)
+        shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
+        assertEquals(1, kite.placed.size)
+    }
+
+    @Test fun aDirectEntryPricedOver30sBeforeThePinIsNotSent() {
+        val model = model()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        val p = await("priced") { (model.plan.value as? Load.Done)?.value }
+        model.plan.value = Load.Done(p.copy(pricedAt = System.currentTimeMillis() - 31_000))     // the PIN typed slowly
+        model.confirmDirect(model.directOrder.value)
+        val failed = await("refused") { model.sending.value as? Load.Failed }
+        assertEquals(PRICE_TOO_OLD, failed.why)
+        shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
+        assertTrue("nothing went to Zerodha", kite.placed.isEmpty())
+        // Priced just now: it goes.
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        await("priced") { model.plan.value as? Load.Done }
+        model.confirmDirect(model.directOrder.value)
+        await("the order at Zerodha") { kite.placed.firstOrNull() }
+        await("filled") { model.sending.value as? Load.Done }
+    }
+
+    @Test fun aDirectExitPricedOver30sBeforeThePinIsPricedAgainAndStillGoes() {
+        kite.position(sym, 75, 100.0)
+        val model = model()
+        model.planSquareOff(position(75), "Square off", direct = true)
+        val p = await("the exit priced") { (model.plan.value as? Load.Done)?.value }
+        assertEquals("priced at the bid", 99.95, p.legs.single().price!!, 1e-9)
+        kite.quote("NFO:$sym", 90.0, 89.95, 90.05)                                               // the market fell meanwhile
+        model.plan.value = Load.Done(p.copy(pricedAt = System.currentTimeMillis() - 45_000))
+        model.confirmDirect(model.directOrder.value)
+        val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
+        assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
+        assertEquals("priced again at the fresh bid", "89.95", post.form["price"])
+        await("filled") { model.sending.value as? Load.Done }
+        // The fresh quote unreadable: the exit still goes at its price (never refused for its age).
+        kite.position(sym, 75, 100.0)
+        model.planSquareOff(position(75), "Square off", direct = true)
+        val p2 = await("the exit priced") { (model.plan.value as? Load.Done)?.value?.takeIf { model.sending.value !is Load.Done } }
+        kite.down += "/quote"
+        try {
+            model.plan.value = Load.Done(p2.copy(pricedAt = System.currentTimeMillis() - 45_000))
+            model.confirmDirect(model.directOrder.value)
+            val post2 = await("the exit at Zerodha", 20_000) { kite.placed.getOrNull(1) }
+            assertEquals("SELL", post2.form["transaction_type"]); assertEquals("75", post2.form["quantity"])
+            assertEquals("at its own price", "${"%.2f".format(java.util.Locale.ENGLISH, p2.legs.single().price!!)}", post2.form["price"])
+        } finally { kite.down -= "/quote" }
     }
 }
 

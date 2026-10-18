@@ -350,6 +350,28 @@ object Kite {
     }
 
     /**
+     * 18 Oct (review): the oldest a price may be when Boss's PIN confirms an order sent straight after it. An entry priced
+     * earlier is not sent (he taps again for a fresh price); an exit is priced again ([repriced]), never refused for its age.
+     */
+    const val PRICE_MAX_AGE_MS = 30_000L
+
+    /** True when a price read at [pricedAtMs] is too old at [nowMs] to send on ([PRICE_MAX_AGE_MS]); a clock that went back counts as old. */
+    fun priceTooOld(pricedAtMs: Long, nowMs: Long, maxAgeMs: Long = PRICE_MAX_AGE_MS): Boolean {
+        val age = nowMs - pricedAtMs
+        return age > maxAgeMs || age < -5_000L
+    }
+
+    /**
+     * An exit's LIMIT [o] priced again from a fresh quote, as [squareOff] prices it: the bid when selling, the offer when buying,
+     * the last price when that side is empty. Any other order type, or no usable fresh price, comes back as it was.
+     */
+    fun repriced(o: Order, bid: Double?, ask: Double?, last: Double?): Order {
+        if (o.orderType != "LIMIT") return o
+        val px = (if (o.side == Side.SELL) bid else ask)?.takeIf { it > 0 && it.isFinite() } ?: last?.takeIf { it > 0 && it.isFinite() } ?: return o
+        return o.copy(price = onTick(px, o.tickSize, o.side))
+    }
+
+    /**
      * The same exit as [squareOff], split into orders the exchange accepts:
      * each at most the freeze quantity, rounded down to whole lots. A position
      * under the freeze quantity is one order, exactly as [squareOff].

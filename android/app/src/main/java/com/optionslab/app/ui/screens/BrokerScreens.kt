@@ -232,6 +232,14 @@ fun LoginPinDialog(model: AppModel) {
 // ---- confirming it is you ----------------------------------------------------------------
 
 /**
+ * "Live orders without PIN", as Settings → Zerodha says it (18 Oct review: plainly, since with the direct send one tap is the
+ * whole order, a basket too). It was reset to off once with that update; turning it on asks the PIN.
+ */
+internal const val ONE_TAP_SUB = "In Live, one tap sends a real order with no PIN and no review: Buy, Sell, Close or a whole basket go to " +
+    "Zerodha at once (also Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. " +
+    "Turning it on asks for your PIN."
+
+/**
  * A fresh proof of identity before a real order: the fingerprint when it is
  * enabled and strong, the PIN otherwise. Being unlocked is not enough - the
  * phone may have been handed over unlocked.
@@ -506,9 +514,13 @@ private fun DirectOrderBody(model: AppModel) {
     LaunchedEffect(sending, st) { if (sending is Load.Done && st == null) model.dismissPlan() }
     LaunchedEffect(plan) { if (plan is Load.Failed) model.dismissPlan() }
     // "Live orders without PIN" (the owner's setting) applies in Live only: a Paper-mode exit always asks the PIN.
-    if (asking) Reauth(model, onOk = { asking = false; model.confirmDirect() }, onCancel = { asking = false; model.dismissPlan() },
-        orderAction = live,
-        why = if (live) "Enter your app PIN to send this order to Zerodha." else "Enter your app PIN to close this real position at Zerodha.")
+    // 18 Oct review: the PIN is bound to the order it was asked for ([order], its generation): a PIN typed for one order never
+    // sends a later one (the prompt starts afresh for each), and a second confirm of it (fingerprint and PIN) sends nothing.
+    if (asking) androidx.compose.runtime.key(order) {
+        Reauth(model, onOk = { asking = false; model.confirmDirect(order) }, onCancel = { asking = false; model.dismissPlan() },
+            orderAction = live,
+            why = if (live) "Enter your app PIN to send this order to Zerodha." else "Enter your app PIN to close this real position at Zerodha.")
+    }
     stuckAction?.let { a ->
         Reauth(model, onOk = {
             stuckAction = null
@@ -835,7 +847,7 @@ fun BrokerPage(
     // switches do); switching it off is free.
     var noPinAuth by remember { mutableStateOf(false) }
     if (noPinAuth) Reauth(model, onOk = { noPinAuth = false; model.update { it.copy(oneTapOrders = true) } }, onCancel = { noPinAuth = false },
-        pinOnly = true, why = "Enter your app PIN to send live orders without a PIN.")
+        pinOnly = true, why = "Enter your app PIN to turn this on: in Live, one tap then sends a real order with no PIN and no review.")
     // 12 Oct: going Live inside Boss's paper-only period asks his PIN, its reason and end date said first.
     // 18 Oct, review: the reason asked (the period's, or "not read yet": it fails closed); null when not asked.
     var paperOnlyPin by remember { mutableStateOf<String?>(null) }
@@ -890,12 +902,12 @@ fun BrokerPage(
             com.optionslab.app.ui.SettingSpot("broker.orders") {
                 LedgerCard(title = "Real orders") {
                     Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
-                        if (s.oneTapOrders) " No PIN is on: in Live your order goes to Zerodha when you tap Buy or Sell; cancels and square-offs need no PIN either (closing in Paper mode still asks it)."
+                        if (s.oneTapOrders) " No PIN is on: in Live one tap sends a real order with no PIN and no review; cancels and square-offs need no PIN either (closing in Paper mode still asks it)."
                         else " As on paper: tap Buy or Sell (or Close), enter your PIN or fingerprint, and it goes at once, with no review step. Every check still runs first.")
                     ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
                         model.update { it.copy(prepareRealOrder = on) }
                     }
-                    ToggleRow("Live orders without PIN", "In Live, tapping Buy, Sell or Close sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders, keepSub = true) { on ->
+                    ToggleRow("Live orders without PIN", ONE_TAP_SUB, s.oneTapOrders, keepSub = true) { on ->
                         if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
                     }
                     ToggleRow("Keep a stop-loss order at the exchange for live positions",

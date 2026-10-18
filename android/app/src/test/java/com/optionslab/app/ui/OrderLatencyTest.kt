@@ -150,7 +150,7 @@ class OrderLatencyTest : RobolectricTest() {
             val d0 = System.nanoTime()
             m.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
             val before2 = k.placed.size
-            m.confirmDirect()
+            m.confirmDirect(m.directOrder.value)
             val dPost = await("the order") { k.placed.drop(before2).firstOrNull() }
             await("the fill") { (m.sending.value as? Load.Done)?.value ?: (m.sending.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
             m.dismissPlan()

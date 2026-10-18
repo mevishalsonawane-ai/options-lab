@@ -425,7 +425,7 @@ object SecurePrefs {
      */
     private fun durable(k: String): Boolean = k in HOT || k in GUARD || k in DURABLE || SecureBlobs.NEVER.any { k.startsWith(it) }
 
-    private val DURABLE = setOf("k.mode", "k.allow", "k.oneTap", "jarvis.trades.paper.v3", "restore.disarm", "sec.wipe", "sec.refuse")
+    private val DURABLE = setOf("k.mode", "k.allow", "k.oneTap", "k.oneTap2", "jarvis.trades.paper.v3", "restore.disarm", "sec.wipe", "sec.refuse")
 
     /** Whether a write on the screen's thread is moved to the background writer (true; [MainWrites.onMain] tells the thread). */
     @Volatile internal var deferOnMain: Boolean = true

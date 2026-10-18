@@ -159,7 +159,7 @@ object SettingsIndex {
             listOf("Zerodha", "Mode"), listOf("live", "paper", "live mode", "sandbox", "real money")),
         Entry("broker", "broker.orders", "Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it; never sent by itself.",
             ORDERS, listOf("expiry", "ticket", "real orders")),
-        Entry("broker", "broker.orders", "Live orders without PIN", "In Live, Buy, Sell or Close sends the order at once, no PIN or fingerprint. Turning it on asks for your PIN.",
+        Entry("broker", "broker.orders", "Live orders without PIN", "In Live, one tap sends a real order with no PIN and no review (a whole basket too). Turning it on asks for your PIN.",
             ORDERS, listOf("pin", "one tap", "fingerprint", "real orders"), guarded = true),
         Entry("broker", "broker.orders", "Product: NRML or MIS", "The product the app's orders use.", ORDERS, listOf("nrml", "mis", "intraday", "product")),
 
