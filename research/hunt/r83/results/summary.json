@@ -1,0 +1,295 @@
+{
+ "n_variants_bh": 32,
+ "rows": [
+  {
+   "idea": "E1",
+   "status": "not run"
+  },
+  {
+   "idea": "E2",
+   "status": "not run"
+  },
+  {
+   "idea": "E3",
+   "status": "not run"
+  },
+  {
+   "idea": "E4",
+   "status": "not run"
+  },
+  {
+   "idea": "E5",
+   "status": "final read",
+   "frozen": "hold5",
+   "final": {
+    "trades": 12,
+    "win_rate": 0.4166666666666667,
+    "net": -7599.976498799993,
+    "max_dd": 9427.8919828,
+    "top5_share": null
+   },
+   "twin_p": 0.736318407960199,
+   "top5_removed": -14133.671351999996,
+   "base_final_net": 0,
+   "wf_net": -18169.829911999972,
+   "base_wf_net": 0.0,
+   "mcx_real": null,
+   "design_variants": {
+    "hold3": {
+     "trades": 33,
+     "win_rate": 0.36363636363636365,
+     "net": -24826.84883679998,
+     "max_dd": 29655.430313999976,
+     "top5_share": null
+    },
+    "hold5": {
+     "trades": 33,
+     "win_rate": 0.48484848484848486,
+     "net": -21121.394039999963,
+     "max_dd": 30136.80097999998,
+     "top5_share": null
+    }
+   },
+   "bh_q": 1.0,
+   "gates": {
+    "final_pos_and_beats_base": false,
+    "wf_pos_and_beats_base": false,
+    "twin_p<0.10": false,
+    "bh_q<0.10": false,
+    "not_top5": false,
+    "trades>=30": false
+   },
+   "verdict": "fail"
+  },
+  {
+   "idea": "E6",
+   "status": "not run"
+  },
+  {
+   "idea": "E7",
+   "status": "not run"
+  },
+  {
+   "idea": "E8",
+   "status": "final read",
+   "frozen": "crude_st",
+   "final": {
+    "trades": 27,
+    "win_rate": 0.4444444444444444,
+    "net": 21751.127372400024,
+    "max_dd": 15999.327159999988,
+    "top5_share": 2.582590548703212
+   },
+   "twin_p": 0.23383084577114427,
+   "top5_removed": -34423.128603200006,
+   "base_final_net": -2695.400330799973,
+   "wf_net": 36863.132114399974,
+   "base_wf_net": 38033.51212319997,
+   "mcx_real": null,
+   "design_variants": {
+    "crude_st": {
+     "trades": 80,
+     "win_rate": 0.4125,
+     "net": 77181.65080039995,
+     "max_dd": 17928.664115599964,
+     "top5_share": 1.1029382518876993
+    },
+    "crude_breadth": {
+     "trades": 60,
+     "win_rate": 0.4666666666666667,
+     "net": 73538.11020439994,
+     "max_dd": 19232.55457519998,
+     "top5_share": 1.0569430313555908
+    },
+    "ng_st": {
+     "trades": 97,
+     "win_rate": 0.38144329896907214,
+     "net": -37898.00899900001,
+     "max_dd": 60271.47219900003,
+     "top5_share": null
+    },
+    "ng_breadth": {
+     "trades": 67,
+     "win_rate": 0.3880597014925373,
+     "net": 15561.407711000062,
+     "max_dd": 35672.19101000002,
+     "top5_share": 7.772297961032422
+    },
+    "cu_st": {
+     "trades": 104,
+     "win_rate": 0.3269230769230769,
+     "net": -1121404.6638030275,
+     "max_dd": 1131595.2271800183,
+     "top5_share": null
+    },
+    "cu_breadth": {
+     "trades": 76,
+     "win_rate": 0.34210526315789475,
+     "net": -829188.1038701205,
+     "max_dd": 872111.1838988757,
+     "top5_share": null
+    }
+   },
+   "bh_q": 1.0,
+   "gates": {
+    "final_pos_and_beats_base": true,
+    "wf_pos_and_beats_base": false,
+    "twin_p<0.10": false,
+    "bh_q<0.10": false,
+    "not_top5": false,
+    "trades>=30": false
+   },
+   "verdict": "fail"
+  },
+  {
+   "idea": "E9",
+   "status": "final read",
+   "frozen": "t15",
+   "final": {
+    "trades": 14,
+    "win_rate": 0.5,
+    "net": -37412.82222400001,
+    "max_dd": 59677.79132300001,
+    "top5_share": null
+   },
+   "twin_p": 0.746268656716418,
+   "top5_removed": -65663.89075,
+   "base_final_net": 14686.96037100001,
+   "wf_net": -16310.482167000031,
+   "base_wf_net": 45718.95232700004,
+   "mcx_real": null,
+   "design_variants": {
+    "t15": {
+     "trades": 26,
+     "win_rate": 0.38461538461538464,
+     "net": -37002.028309000016,
+     "max_dd": 47877.61772900003,
+     "top5_share": null
+    },
+    "all": {
+     "trades": 131,
+     "win_rate": 0.42748091603053434,
+     "net": -117701.34300400004,
+     "max_dd": 173689.797994,
+     "top5_share": null
+    }
+   },
+   "bh_q": 1.0,
+   "gates": {
+    "final_pos_and_beats_base": false,
+    "wf_pos_and_beats_base": false,
+    "twin_p<0.10": false,
+    "bh_q<0.10": false,
+    "not_top5": false,
+    "trades>=30": false
+   },
+   "verdict": "fail"
+  },
+  {
+   "idea": "E10",
+   "status": "not run"
+  },
+  {
+   "idea": "E11",
+   "status": "final read",
+   "frozen": "weekly",
+   "final": {
+    "trades": 132,
+    "win_rate": 0.5,
+    "net": -4465.417819200127,
+    "max_dd": 117614.1600530002,
+    "top5_share": null
+   },
+   "twin_p": 0.6766169154228856,
+   "top5_removed": -147101.11211090023,
+   "base_final_net": 53609.839403799946,
+   "wf_net": 14184.909450200052,
+   "base_wf_net": 13582.299530700013,
+   "mcx_real": null,
+   "design_variants": {
+    "chandelier": {
+     "trades": 243,
+     "win_rate": 0.4567901234567901,
+     "net": 5134.563873600015,
+     "max_dd": 94478.88705380003,
+     "top5_share": 28.14887198329147
+    },
+    "weekly": {
+     "trades": 306,
+     "win_rate": 0.4673202614379085,
+     "net": 26187.819870000083,
+     "max_dd": 116465.62373310012,
+     "top5_share": 5.857685013930094
+    }
+   },
+   "bh_q": 1.0,
+   "gates": {
+    "final_pos_and_beats_base": false,
+    "wf_pos_and_beats_base": true,
+    "twin_p<0.10": false,
+    "bh_q<0.10": false,
+    "not_top5": false,
+    "trades>=30": true
+   },
+   "verdict": "fail"
+  },
+  {
+   "idea": "E12",
+   "status": "final read",
+   "frozen": "crude_long",
+   "final": {
+    "trades": 45,
+    "win_rate": 0.6444444444444445,
+    "net": 6306.056110800028,
+    "max_dd": 10519.396573599997,
+    "top5_share": 4.478950058694722
+   },
+   "twin_p": 0.47761194029850745,
+   "top5_removed": -21938.45427679997,
+   "base_final_net": 0,
+   "wf_net": -37057.339570000026,
+   "base_wf_net": 0.0,
+   "mcx_real": null,
+   "design_variants": {
+    "crude_long": {
+     "trades": 127,
+     "win_rate": 0.5354330708661418,
+     "net": -177.60075960001177,
+     "max_dd": 26011.057476,
+     "top5_share": null
+    },
+    "crude_short": {
+     "trades": 127,
+     "win_rate": 0.4330708661417323,
+     "net": -30876.481739199997,
+     "max_dd": 42799.15112759998,
+     "top5_share": null
+    },
+    "ng_long": {
+     "trades": 127,
+     "win_rate": 0.4251968503937008,
+     "net": -14488.0349069999,
+     "max_dd": 73008.14311599995,
+     "top5_share": null
+    },
+    "ng_short": {
+     "trades": 127,
+     "win_rate": 0.5118110236220472,
+     "net": -13463.57921100009,
+     "max_dd": 76824.148484,
+     "top5_share": null
+    }
+   },
+   "bh_q": 1.0,
+   "gates": {
+    "final_pos_and_beats_base": true,
+    "wf_pos_and_beats_base": false,
+    "twin_p<0.10": false,
+    "bh_q<0.10": false,
+    "not_top5": false,
+    "trades>=30": true
+   },
+   "verdict": "fail"
+  }
+ ]
+}
