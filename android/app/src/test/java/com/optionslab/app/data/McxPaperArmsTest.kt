@@ -184,6 +184,31 @@ class McxPaperArmsTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 18 Oct, review D8: its paper trades reach the live path. The evening break's paper buy tells [ArmLive] it entered (its own
+     * arm key, its paper quantity) and its paper target exit tells it the trade closed; the registered MCX book shows it at 0.
+     */
+    @Test fun theEveningBreaksPaperTradeReachesTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        futureMinutes(LocalTime.of(19, 32)) { 311.0 }
+        optionMinutes(LocalTime.of(19, 32)) { 20.0 }
+        tick(LocalTime.of(19, 32))
+        val pos = McxPaperArms.view.value.open.single()
+        val ref = "mcx:${pos.arm}:${pos.orderId ?: pos.entryTime}"
+        assertTrue(heard.toString(), heard.any { it.startsWith("entered|${McxEveRules.SOURCE}|$ref|1250|") })
+        assertEquals(listOf(ArmLive.PaperLeg(ref, McxEveRules.SOURCE, 1250)), ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.MCX))
+        // The target (320) is reached at 19:35: the 19:36 pass sells on paper, and the live path hears it closed.
+        futureMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 312.0 else 321.0 }
+        optionMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 21.0 else 26.0 }
+        tick(LocalTime.of(19, 36))
+        assertEquals("target", McxPaperArms.view.value.closed.single().why)
+        assertTrue(heard.toString(), heard.any { it == "closed|$ref|target" })
+        assertEquals(listOf(ArmLive.PaperLeg(ref, McxEveRules.SOURCE, 0)), ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.MCX))
+        assertNothingAtZerodha()
+    }
+
     // ---- the trade manager in SHADOW (10 Oct; every leg hooked, SHADOW by default) ------------------------------------------
 
     /**

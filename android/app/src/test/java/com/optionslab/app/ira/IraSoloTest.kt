@@ -168,6 +168,34 @@ class IraSoloTest : RobolectricTest() {
         assertNotNull(IraSolo.provenWhy())
     }
 
+    /**
+     * 18 Oct, review D8: its paper trades reach the live path. The 12:01 paper buy tells [com.optionslab.app.data.ArmLive] it
+     * entered (Solo (midday)'s own key, 1 lot of 30) and the 12:31 index-stop exit tells it the trade closed; its paper legs show
+     * it at 0. (The SOLO family is registered only in Jarvis builds: its registered legs are checked there only.)
+     */
+    @Test fun aSoloPaperTradeReachesTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        com.optionslab.app.data.ArmLive.testHeard = heard
+        upstox.price(ceKey, 400.0)
+        IraSolo.on = true
+        pass(LocalTime.of(12, 1))
+        val t = IraSolo.all().single()
+        val ref = IraSolo.managerId(t)
+        val key = com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY
+        assertTrue(heard.toString(), heard.any { it.startsWith("entered|$key|$ref|30|") })
+        assertEquals(listOf(com.optionslab.app.data.ArmLive.PaperLeg(ref, key, 30)), IraSolo.mirrorLegs())
+        upstox.price(ceKey, 380.0)
+        pass(LocalTime.of(12, 31), seconds = 5)
+        assertTrue(IraSolo.all().single().closed)
+        assertTrue(heard.toString(), heard.any { it == "closed|$ref|paper_exit" })
+        assertEquals(listOf(com.optionslab.app.data.ArmLive.PaperLeg(ref, key, 0)), IraSolo.mirrorLegs())
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            assertEquals(listOf(com.optionslab.app.data.ArmLive.PaperLeg(ref, key, 0)),
+                com.optionslab.app.data.ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.SOLO))
+        }
+        assertNoKite()
+    }
+
     @Test fun aDrawdownBeyondTheBarSwitchesSoloOff() {
         // A 1,000 premium sold at 100: about -27,000 on one lot of 30 - beyond the -25,000 set in advance.
         upstox.price(ceKey, 1_000.0)

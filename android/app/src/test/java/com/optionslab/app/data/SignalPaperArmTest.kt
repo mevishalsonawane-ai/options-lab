@@ -129,6 +129,29 @@ class SignalPaperArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 18 Oct, review D8: its paper trades reach the live path. The call's paper buy tells [ArmLive] it entered (the Telegram calls'
+     * own key, 1 lot of 65, the call's stop 100) and T1's paper sale tells it the trade closed; the registered book shows it at 0.
+     */
+    @Test fun aCallsPaperTradeReachesTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        runBlocking { SignalPaperArm.setOn(chat, true) }
+        message()
+        tick(LocalTime.of(9, 30), 10)
+        val p = v().open.single()
+        val ref = "telegram:${p.chat}:${p.callId}"
+        val key = com.optionslab.engine.orb.LiveMirror.TELEGRAM_CALLS
+        assertTrue(heard.toString(), heard.any { it == "entered|$key|$ref|65|100.0" })
+        assertEquals(listOf(ArmLive.PaperLeg(ref, key, 65)), ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.TELEGRAM))
+        // 09:35 trades 141: T1 (140) sells it all on paper; the live path hears it closed.
+        at(LocalTime.of(9, 36)); market(LocalTime.of(9, 36), rally); runBlocking { SignalPaperArm.manageOnly() }
+        assertEquals("target", v().closed.single().why)
+        assertTrue(heard.toString(), heard.any { it == "closed|$ref|target" })
+        assertEquals(listOf(ArmLive.PaperLeg(ref, key, 0)), ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.TELEGRAM))
+        assertNothingAtZerodha()
+    }
+
     @Test fun notTriggeredNoOrder() {
         runBlocking { SignalPaperArm.setOn(chat, true) }
         message()
