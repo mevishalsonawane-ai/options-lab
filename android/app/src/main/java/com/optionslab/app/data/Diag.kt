@@ -188,6 +188,8 @@ object Diag {
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
         // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')
+        // The Live check (18 Oct): the last run's summary - counts and times only (each step's line is in the events below).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { LiveSelfTest.diagLine(synchronized(this@Diag) { diary().toList() }) }.getOrElse { "Live check: could not read" }).append('\n')
         // Round 4: each fill's slippage against the price it meant (live and the paper book's modelled, apart), and the app's
         // books against Zerodha's as last checked (report only).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FillSlippage.diagLine() }.getOrElse { "Slippage: could not read" }).append('\n')

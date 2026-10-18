@@ -3864,6 +3864,35 @@ object IraHub {
             }
             return true
         }
+        // "Run the live check", "live check karo", "do the self-test" (18 Oct, [com.optionslab.ira.LiveCheck]): the Live check of
+        // More → Zerodha run now, off the screen's thread, and its summary said with up to three failures by name - counts,
+        // times and pass / fail only (never an amount, a token or an order id). It never places an order; its one trade is on its
+        // own paper book. About his account and broker, so never on a locked phone. (Not in IraGoldAlgo.)
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.LiveCheck.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
+            // "What did the live check find?": the last result, counts and times only - a question never starts a run.
+            if (com.optionslab.ira.LiveCheck.resultAsked(q)) {
+                scope.launch(Dispatchers.IO) {
+                    reply(runCatching { com.optionslab.app.data.LiveSelfTest.lastAnswer(com.optionslab.app.data.Diag.lines()) }
+                        .getOrElse { "I could not read the live check's last result just now, Boss." })
+                }
+                return true
+            }
+            if (com.optionslab.app.data.LiveSelfTest.busy) { reply("The live check is already running, Boss: I'll have it on the card in a moment."); return true }
+            reply("Running the live check, Boss: about half a minute.")
+            scope.launch(Dispatchers.IO) {
+                val out = runCatching { com.optionslab.app.data.LiveSelfTest.run() }.getOrDefault(emptyList())
+                // Locked while it ran: nothing of the result is said (it names his account's books); the card has it.
+                reply(when {
+                    out.isEmpty() && com.optionslab.app.data.LiveSelfTest.busy -> "The live check is already running, Boss."
+                    phoneLocked() -> "The live check is done, Boss: unlock the phone and look at More → Zerodha → Live check."
+                    else -> com.optionslab.ira.LiveCheck.answer(out)
+                })
+            }
+            return true
+        }
         // "Why is live data dropping?", "why does the price stream keep disconnecting?", "stream kyun toot raha hai"
         // ([com.optionslab.ira.StreamHealth]): from the diagnostics diary's [stream] lines - today's drops of Zerodha's live price
         // stream, the last one's time and reason in plain words, the causes counted, and whether the order watch (which keeps

@@ -244,8 +244,8 @@ permission the app holds and what it can never do (read SMS, mail, contacts, fil
 About 10 minutes, costs nothing. Do it once after each new build, during market hours, with the relay connected.
 
 1. **More → Zerodha:** logged in for today; the top badge shows **LIVE**; kill switch off.
-2. **Live self-test:** **More → Zerodha → Live self-test → Run the self-test**. Every check must show ✓, "Static IP
-   for orders" included.
+2. **Live check:** **More → Zerodha → Live check → Run the live check**. Every check must show ✓, "Static IP for
+   orders" included (outside market hours the stream and paper steps show "market closed"). It sends no order.
 3. Place an order that cannot fill: a far out-of-the-money NIFTY option, BUY 1 lot, LIMIT ₹0.05, NRML. Review, hold
    to send, enter the PIN. It shows **OPEN** in the app and in Kite.
 4. Modify it to ₹0.10, then cancel it. It shows **CANCELLED** in both; funds unchanged.

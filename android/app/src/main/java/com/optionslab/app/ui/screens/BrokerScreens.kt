@@ -815,23 +815,43 @@ fun BrokerPage(
     )
 }
 
-/** Checks the real Zerodha connection with read-only calls: nothing it does can place an order. (`internal` for the JVM tests only.) */
+/**
+ * The Live check (18 Oct; it was the read-only self-test): every live piece and how fast it is - the account reads, the price
+ * stream, the option chain, the order the app would send (built and checked, never sent), the margins, a GTT payload, the
+ * positions and their stops, a paper round trip on live prices, the data feeds and the clock. Nothing it does can place,
+ * change or cancel an order. Grouped, each step with its time and a pass / slow / fail mark, and a one-line summary.
+ * (`internal` for the JVM tests only.)
+ */
 @Composable
 internal fun SelfTestCard() {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
-    var steps by remember { mutableStateOf<List<com.optionslab.app.data.LiveSelfTest.Step>>(emptyList()) }
+    // The last run of this session shows when the card opens (memory; the diary keeps older ones).
+    var steps by remember { mutableStateOf(com.optionslab.app.data.LiveSelfTest.last) }
     var running by remember { mutableStateOf(false) }
-    LedgerCard(title = "Live self-test") {
-        Note("Reads your session, funds, positions, orders, holdings, GTTs, a NIFTY quote and the contract list, and checks orders would leave from your static IP. It only reads: it cannot place, change or cancel anything.")
-        steps.forEach { st ->
-            LedgerLine((if (st.ok) "✓ " else "✗ ") + st.name, st.detail + " · ${st.ms} ms", if (st.ok) p.verdigris else p.oxblood)
+    var auto by remember { mutableStateOf(false) }
+    // The 09:20 switch is read from the settings vault off the screen's thread.
+    LaunchedEffect(Unit) { auto = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.LiveSelfTest.autoOn() } }
+    LedgerCard(title = "Live check") {
+        Note("Checks every live piece and how fast it is: your Zerodha account, the price stream, the option chain, the order the app would send " +
+            "(built and checked, never sent), Zerodha's margin checks, a GTT stop and target (built, never placed), your positions and their stops, " +
+            "a paper trade on live prices (on its own book: never in any result), the data feeds and the phone's clock. " +
+            "It cannot place, change or cancel anything. Run it in market hours (09:15-15:30); outside them the stream and paper steps say \"market closed\".")
+        for ((group, list) in com.optionslab.ira.LiveCheck.grouped(steps)) {
+            Text(com.optionslab.ira.LiveCheck.groupLine(group, list), style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                modifier = Modifier.padding(top = 8.dp))
+            list.forEach { st ->
+                val tone = when (st.verdict) {
+                    com.optionslab.ira.LiveCheck.Verdict.PASS -> p.verdigris
+                    com.optionslab.ira.LiveCheck.Verdict.WARN -> p.amber
+                    com.optionslab.ira.LiveCheck.Verdict.FAIL -> p.oxblood
+                    else -> p.inkSoft
+                }
+                LedgerLine("${st.mark} ${st.name}", st.detail + " · ${st.ms} ms", tone)
+            }
         }
-        if (steps.isNotEmpty() && !running) {
-            val bad = steps.count { !it.ok }
-            Note(if (bad == 0) "All ${steps.size} checks passed." else "$bad of ${steps.size} checks failed.")
-        }
-        // Diagnostics: the app's own diary (banners, self-test, bot notes), redacted, copied for the owner to paste to whoever helps.
+        if (steps.isNotEmpty() && !running) Note(com.optionslab.ira.LiveCheck.summary(steps) + ".", Modifier.padding(top = 6.dp))
+        // Diagnostics: the app's own diary (banners, the live check, bot notes), redacted, copied for the owner to paste to whoever helps.
         val ctx = androidx.compose.ui.platform.LocalContext.current
         androidx.compose.material3.TextButton({
             scope.launch(kotlinx.coroutines.Dispatchers.Main) {
@@ -842,13 +862,25 @@ internal fun SelfTestCard() {
             }
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
         Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
-        BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        ToggleRow("Run it by itself at 09:20", "Once on each trading day, in the background: the same check without the stream drop. " +
+            "It only reads, plus its own paper trade. Off unless you turn it on.", auto, keepSub = true) { on ->
+            auto = on
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.LiveSelfTest.setAuto(on) }
+        }
+        BrassButton(if (running) "Checking…" else "Run the live check", Modifier.fillMaxWidth().padding(top = 8.dp)) {
             if (running) return@BrassButton
             running = true; steps = emptyList()
-            // On the main dispatcher itself: each step hops to IO and back, and its result lands on the screen's thread.
             scope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                try { com.optionslab.app.data.LiveSelfTest.run { st -> steps = steps + st } }
-                finally { running = false }
+                try {
+                    // The check runs on a background thread and calls back from there: each step is put on the screen's thread.
+                    val out = com.optionslab.app.data.LiveSelfTest.run({ st -> scope.launch(kotlinx.coroutines.Dispatchers.Main) { steps = steps + st } })
+                    // A check already running (09:20's, or Jarvis's) gave nothing: the card waits for it ("Checking…") and then
+                    // shows its steps, never an older run's as if they were this one's.
+                    if (out.isEmpty()) {
+                        while (com.optionslab.app.data.LiveSelfTest.busy) kotlinx.coroutines.delay(250)
+                        steps = com.optionslab.app.data.LiveSelfTest.last
+                    } else steps = out
+                } finally { running = false }
             }
         }
     }

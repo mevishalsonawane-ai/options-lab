@@ -270,6 +270,13 @@ object Paper {
     fun contractOf(symbol: String): Contract? = book().contracts[symbol]
     fun engine(): Sandbox = book().let { engine(it.capital, it.contracts) }
 
+    /**
+     * The Live check's own paper book (18 Oct): the paper account's very engine - its fills, spreads, slippage, charges and
+     * rules - knowing only [c], for a state the caller keeps in memory and never saves. Nothing it does reaches this book,
+     * its trades, any arm's results, the P&L records or research: the self-test trade lives and ends inside the check.
+     */
+    internal fun scratchEngine(c: Contract, capital: BigDecimal = BigDecimal("1000000")): Sandbox = engine(capital, mapOf(c.symbol to c))
+
     // ---- prices -----------------------------------------------------------------
 
     /**
@@ -875,6 +882,8 @@ object Paper {
      */
     suspend fun tick(): List<SandboxEvent> {
         val events = tickLocked()
+        // The Live check's "last checked" for paper positions (a volatile stamp; nothing written anywhere).
+        WatchClock.paperChecked()
         // Resting paper orders that filled on this pass (stops, limits): the live recording's snapshot of each.
         events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
             runCatching { LiveRecorder.fill(f.symbol, f.action, f.action.equals("SELL", true), f.quantity, f.price, null, paper = true, arm = null, note = "resting") }

@@ -824,6 +824,7 @@ class CoverageTest {
         if (alone && Slippage.asked(q) != null) return "Slippage"
         if (alone && PositionSync.asked(q)) return "PositionSync"
         if (alone && RelayHealth.asked(q) != null) return "RelayHealth"
+        if (alone && LiveCheck.asked(q)) return "LiveCheck"
         if (alone && StreamHealth.asked(q)) return "StreamHealth"
         if (alone && BatteryUse.asked(q)) return "BatteryUse"
         if (alone && WatchAsk.asked(q) != null) return "WatchAsk"

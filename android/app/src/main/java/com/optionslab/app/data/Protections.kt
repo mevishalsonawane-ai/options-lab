@@ -311,7 +311,7 @@ object Protections {
      */
     suspend fun tick(fast: Boolean = false, stream: Boolean = false) = lock.withLock {
         streamLook = fast && stream
-        try { tickLocked(fast) } finally { streamLook = false }
+        try { tickLocked(fast); WatchClock.stopsChecked() } finally { streamLook = false }
     }
 
     private suspend fun tickLocked(fast: Boolean) {
