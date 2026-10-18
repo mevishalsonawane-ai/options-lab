@@ -105,8 +105,9 @@ object Sweeper {
         val orders = runCatching { Broker.orders() }.getOrNull()
         val stops = orders.orEmpty().filter { it.working && it.side == "SELL" && it.exchange in SWEPT && ours(it.tag) && (it.type == "SL" || it.type == "SL-M") }
         val keys = (held.map { "${it.exchange}:${it.symbol}" } + stops.map { "${it.exchange}:${it.symbol}" }).distinct()
-        // REST quotes, whatever the stream says (item 8): a silent stream never leaves the stops unread.
-        val ltp = if (keys.isEmpty()) emptyMap() else runCatching { Broker.quotes(keys) }.getOrDefault(emptyMap())
+        // REST quotes, whatever the stream says (item 8): a silent stream never leaves the stops unread. 18 Oct: a tick only
+        // while 2 s fresh ([Broker.stopQuotes]); [Broker.quotes] answered from one up to 5 s old.
+        val ltp = if (keys.isEmpty()) emptyMap() else runCatching { Broker.stopQuotes(keys) }.getOrDefault(emptyMap())
             .mapValues { it.value.last }.filterValues { it > 0 }
         // Item 7: a resting stop the price is already through is turned into a sell at a protected limit (the same order).
         for (so in stops) {

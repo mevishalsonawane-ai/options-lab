@@ -2647,11 +2647,11 @@ object OrbArms {
     }
 
     /**
-     * The prices of [keys] ("NFO:SYMBOL"): [stream] - each from its fresh stream tick (2 s), the rest from Zerodha's quote
-     * (the REST fallback, which itself answers from a tick up to 5 s old); else [Broker.quotes] as before.
+     * The prices of [keys] ("NFO:SYMBOL"): [stream] - each from its fresh stream tick (2 s), the rest from Zerodha's quote.
+     * 18 Oct: else [Broker.stopQuotes] (a tick only while 2 s fresh, else Zerodha's quote call), never a tick up to 5 s old.
      */
     private suspend fun liveQuotes(keys: List<String>, stream: Boolean): Map<String, Broker.Quote> {
-        if (!stream) return Broker.quotes(keys)
+        if (!stream) return Broker.stopQuotes(keys)
         val out = HashMap<String, Broker.Quote>()
         for (k in keys) {
             val tok = runCatching { Broker.tokenOf(k) }.getOrNull() ?: continue
@@ -2659,7 +2659,7 @@ object OrbArms {
             if (tk.last > 0) out[k] = Broker.Quote(tk.last, tk.bid, tk.ask, tk.open, tk.oi, tk.volume)
         }
         val rest = keys.filter { it !in out }
-        if (rest.isNotEmpty()) out.putAll(Broker.quotes(rest))
+        if (rest.isNotEmpty()) out.putAll(Broker.stopQuotes(rest))
         return out
     }
 

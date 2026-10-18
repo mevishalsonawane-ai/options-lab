@@ -72,49 +72,73 @@ object KiteTicks {
         else -> 100.0
     }
 
-    /** Every tick in one binary message; a heartbeat or anything malformed gives none. */
-    fun parse(message: ByteArray): List<Tick> {
-        if (message.size < 2) return emptyList()
-        val b = ByteBuffer.wrap(message).order(ByteOrder.BIG_ENDIAN)
-        val count = b.short.toInt() and 0xffff
+    /**
+     * Every tick in one binary message; a heartbeat or anything malformed gives none.
+     *
+     * 18 Oct (speed): each packet is read in place from the message (no copy of its bytes, no buffer of its own, its depth
+     * built straight into its lists): a full-mode tick allocates 775 bytes instead of 1,219 (TickSpeedTest).
+     */
+    fun parse(message: ByteArray): List<Tick> = parse(ByteBuffer.wrap(message))
+
+    /**
+     * [parse] of the bytes from [message]'s position to its limit, read in place (the socket's own read-only view of its
+     * frame: no copy per frame). [message]'s position and byte order are left as they were.
+     */
+    fun parse(message: ByteBuffer): List<Tick> {
+        val b = message.duplicate().order(ByteOrder.BIG_ENDIAN)
+        val end = b.limit()
+        var at = b.position()
+        if (end - at < 2) return emptyList()
+        val count = b.getShort(at).toInt() and 0xffff
+        at += 2
         val out = ArrayList<Tick>(count)
         repeat(count) {
-            if (b.remaining() < 2) return out
-            val len = b.short.toInt() and 0xffff
-            if (b.remaining() < len) return out
-            val packet = ByteArray(len).also { b.get(it) }
-            packet(packet)?.let(out::add)
+            if (end - at < 2) return out
+            val len = b.getShort(at).toInt() and 0xffff
+            at += 2
+            if (end - at < len) return out
+            packetAt(b, at, len)?.let(out::add)
+            at += len
         }
         return out
     }
 
-    fun packet(p: ByteArray): Tick? {
-        val b = ByteBuffer.wrap(p).order(ByteOrder.BIG_ENDIAN)
-        fun int(at: Int) = b.getInt(at).toLong() and 0xffffffffL
-        fun signed(at: Int) = b.getInt(at).toLong()
-        if (p.size < 8) return null
+    fun packet(p: ByteArray): Tick? = packetAt(ByteBuffer.wrap(p).order(ByteOrder.BIG_ENDIAN), 0, p.size)
+
+    /** One packet of [len] bytes starting at [off] in [b] (big-endian), read in place. */
+    private fun packetAt(b: ByteBuffer, off: Int, len: Int): Tick? {
+        fun int(at: Int) = b.getInt(off + at).toLong() and 0xffffffffL
+        fun signed(at: Int) = b.getInt(off + at).toLong()
+        if (len < 8) return null
         val token = int(0)
         val d = divisor(token)
         fun px(at: Int) = signed(at) / d
         val index = (token and 0xff).toInt() == SEG_INDICES
         return when {
-            p.size == 8 -> Tick(token, px(4), tradable = !index)
-            index && (p.size == 28 || p.size == 32) -> Tick(
+            len == 8 -> Tick(token, px(4), tradable = !index)
+            index && (len == 28 || len == 32) -> Tick(
                 token, last = px(4), high = px(8), low = px(12), open = px(16), close = px(20),
-                exchangeTime = if (p.size == 32) int(28) else null, tradable = false,
+                exchangeTime = if (len == 32) int(28) else null, tradable = false,
             )
-            p.size == 44 || p.size == 184 -> {
+            len == 44 || len == 184 -> {
                 var bid: Double? = null
                 var ask: Double? = null
                 var bidQty: Long? = null
                 var askQty: Long? = null
                 var depth: Depth? = null
-                if (p.size == 184) {
-                    // Each entry: qty (4), price (4), orders (2), padding (2).
-                    fun level(at: Int) = Level(px(at + 4), int(at), b.getShort(at + 8).toInt() and 0xffff)
-                    depth = Depth((0 until 5).map { level(64 + it * 12) }.filter { it.price > 0 },
-                        (0 until 5).map { level(64 + 60 + it * 12) }.filter { it.price > 0 })
-                    // Depth from byte 64: 5 bids then 5 offers, 12 bytes each (qty, price, orders, padding).
+                if (len == 184) {
+                    // Depth from byte 64: 5 bids then 5 offers, 12 bytes each (qty (4), price (4), orders (2), padding (2));
+                    // empty levels (price 0) left out.
+                    fun side(from: Int): List<Level> {
+                        val out = ArrayList<Level>(5)
+                        for (i in 0 until 5) {
+                            val at = from + i * 12
+                            val price = px(at + 4)
+                            if (price > 0) out.add(Level(price, int(at), b.getShort(off + at + 8).toInt() and 0xffff))
+                        }
+                        return out
+                    }
+                    depth = Depth(side(64), side(64 + 60))
                     bid = px(64 + 4).takeIf { it > 0 }
                     ask = px(64 + 5 * 12 + 4).takeIf { it > 0 }
                     bidQty = int(64).takeIf { bid != null }
@@ -122,10 +146,10 @@ object KiteTicks {
                 }
                 Tick(
                     token, last = px(4), volume = int(16), open = px(28), high = px(32), low = px(36), close = px(40),
-                    oi = if (p.size == 184) int(48) else 0, bid = bid, ask = ask,
-                    exchangeTime = if (p.size == 184) int(60) else null, bidQty = bidQty, askQty = askQty,
+                    oi = if (len == 184) int(48) else 0, bid = bid, ask = ask,
+                    exchangeTime = if (len == 184) int(60) else null, bidQty = bidQty, askQty = askQty,
                     buyQty = int(20), sellQty = int(24), lastQty = int(8),
-                    lastTradeTime = if (p.size == 184) int(44) else null, depth = depth, avgPrice = px(12).takeIf { it > 0 },
+                    lastTradeTime = if (len == 184) int(44) else null, depth = depth, avgPrice = px(12).takeIf { it > 0 },
                 )
             }
             else -> null

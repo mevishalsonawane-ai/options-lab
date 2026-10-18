@@ -150,9 +150,14 @@ object KiteStream {
     /** The 1-minute candle of [token] that started at [startMs] built from the stream's ticks (open, high, low, close), or null. */
     fun minuteBar(token: Long, startMs: Long): DoubleArray? = paths[token]?.minute(startMs)
 
-    /** The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). */
+    /**
+     * The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). 18 Oct: a tick that reached
+     * the phone "in the future" (the phone's clock stepped back since, e.g. a network time correction) is not fresh either -
+     * its age was negative, so it passed for fresh for as long as the step, however long the stream had been silent (as
+     * [com.optionslab.ira.LiveQuote.pick] already judged it): the caller reads Zerodha's quote instead.
+     */
     fun tick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
-        ticks[token]?.takeIf { System.currentTimeMillis() - it.at <= maxAgeMs }?.tick
+        ticks[token]?.takeIf { System.currentTimeMillis() - it.at in 0..maxAgeMs }?.tick
 
     /**
      * The last tick for [token] when it is fresh enough to DECIDE on ([com.optionslab.ira.LiveQuote.FRESH_MS], 2 s), else
@@ -338,7 +343,9 @@ object KiteStream {
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
             if (conn !== c) return
             c.lastFrame = System.currentTimeMillis()
-            onTicks(c, bytes.toByteArray())
+            // 18 Oct (speed): the frame is read through a read-only view of okio's bytes (in place when okio holds them in one
+            // piece, else the single copy it always cost). Each packet is then read in place, with no array of its own.
+            onTicks(c, bytes.asByteBuffer())
         }
         override fun onMessage(webSocket: WebSocket, text: String) { if (conn === c) onText(text) }
         // Zerodha's close frame: its code and reason are kept, and the close is answered (left unanswered, the socket
@@ -450,7 +457,7 @@ object KiteStream {
         }
     }
 
-    private fun onTicks(c: Conn, message: ByteArray) {
+    private fun onTicks(c: Conn, message: java.nio.ByteBuffer) {
         val now = System.currentTimeMillis()
         val got = runCatching { KiteTicks.parse(message) }.getOrDefault(emptyList())
         if (got.isEmpty()) return
