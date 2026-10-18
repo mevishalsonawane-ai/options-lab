@@ -201,6 +201,17 @@ object OrderTiming {
         add(OrderSpeed.Step.CLOCK_SERVER, false, off, keep = false)
     }
 
+    /**
+     * The phone clock's latest measured offset (ms, +: the phone ahead) and what it was measured against: Zerodha's server
+     * clock (NTP-style, [serverClock]) first, else the exchange's tick stamps (one way, so it includes the network's delay).
+     * Null: neither measured today. Reads no network (the Live check's clock step, on a background thread).
+     */
+    fun latestClockOffset(): Pair<Long, String>? = synchronized(lock) {
+        val b = bookLocked()
+        b.all(OrderSpeed.Step.CLOCK_SERVER).lastOrNull()?.let { return@synchronized it to "Zerodha's server clock" }
+        b.all(OrderSpeed.Step.CLOCK_OFFSET).lastOrNull()?.let { it to "the exchange's tick stamps, network delay included" }
+    }
+
     /** The card's lines, its warnings, and the relay's typical round trip (null: none timed today). */
     data class Card(val lines: List<String>, val warnings: List<String>, val relayMedianMs: Long?)
 
@@ -229,9 +240,9 @@ object OrderTiming {
     /** The diagnostics export's line. */
     fun diagLine(): String = synchronized(lock) { OrderSpeed.diagLine(withBook()) }
 
-    /** TEST ONLY (and a wipe): forget the in-memory book. */
+    /** TEST ONLY (and a wipe): forget the in-memory book, the queued figures, and when the clock was last sampled (18 Oct: the next reading counts). */
     internal fun forget() = synchronized(lock) {
-        book = null; fillsOnStream = 0; fillsKnown = 0; clockAt = 0L
+        book = null; fillsOnStream = 0; fillsKnown = 0; clockAt = 0L; serverClockAt = 0L
         pending.clear(); pendingCount.set(0)
     }
 }

@@ -1556,6 +1556,15 @@ object Broker {
     }
 
     /**
+     * POST /margins/orders (Kite Connect's order margin calculator): what Zerodha would block for each of [orders] on its own.
+     * A read - it places, changes and cancels nothing - sent as JSON like [basketMargin] and, like the contract note, direct
+     * and without a diary line unless it fails. The rows' totals, in order (the Live check, 18 Oct, shows only that each was
+     * priced and whether the free margin covers them, never the figures).
+     */
+    suspend fun orderMargins(orders: List<Kite.Order>): List<Double> =
+        rows(call("POST", "/margins/orders", Kite.basketJson(orders), json = true, readOnly = true) as? JSONArray).map { it.optDouble("total", Double.NaN) }
+
+    /**
      * POST /charges/orders (Kite Connect's virtual contract note): Zerodha's own charges for orders already executed,
      * [body] being [com.optionslab.ira.ExactCharges.requestJson]. A read - it places, changes and cancels nothing - sent
      * as JSON the way [basketMargin] is. Its data array, as text ([com.optionslab.ira.ExactCharges.total] reads it).

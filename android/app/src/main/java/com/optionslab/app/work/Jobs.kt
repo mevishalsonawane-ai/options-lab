@@ -1463,6 +1463,8 @@ class WatchService : Service() {
                 cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.SmartWorkers.refreshDelay(brainAt) },
                 restart = com.optionslab.ira.SelfHeal.Restart())) {
                 brainAt = System.currentTimeMillis()
+                // The Live check's 09:20 run (its switch off by default): starts on its own thread when due, returns at once.
+                runCatching { com.optionslab.app.data.LiveSelfTest.autoMaybe() }
                 com.optionslab.app.data.SmartWorkers.refresh(app)
             }
         }

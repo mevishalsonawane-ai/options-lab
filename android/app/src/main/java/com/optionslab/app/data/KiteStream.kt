@@ -192,6 +192,8 @@ object KiteStream {
         @Volatile var tokens = 0
         @Volatile var pausedSec: Long? = null
         @Volatile var network: String? = null
+        /** Closed on purpose by the Live check to time the reconnect ([dropForCheck]): not a drop of the stream's health. */
+        @Volatile var byCheck = false
     }
     @Volatile private var conn: Conn? = null
 
@@ -252,6 +254,31 @@ object KiteStream {
     fun following(): Int = synchronized(subscribed) { subscribed.size }
 
     /**
+     * Ticks the current connection has brought so far (0: none open). The Live check reads it twice to count ticks a second:
+     * the connection's own counter, read only - nothing is added to the socket thread for it.
+     */
+    fun ticksNow(): Long = conn?.ticks?.get() ?: 0L
+
+    /**
+     * The Live check (18 Oct) times the reconnect: the open connection is closed as if it had dropped, and the loop opens a
+     * new one after its first wait (0.5 s). Not counted as a drop ([Conn.byCheck]). False when no connection is open. The
+     * check never calls this while a position or order is open, nor in its automatic 09:20 run (open positions come first).
+     */
+    @Synchronized   // with start() and stop(): a stop landing mid-way can never leave the status RETRYING with no loop
+    fun dropForCheck(): Boolean {
+        if (loop?.isActive != true) return false
+        val c = conn ?: return false
+        val ws = socket ?: return false
+        if (!c.opened.get() || _status.value != Status.LIVE) return false
+        c.byCheck = true
+        c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.CLOSED, message = "closed by the live check"))
+        _status.value = Status.RETRYING
+        ws.cancel()
+        c.done.complete(Unit)
+        return true
+    }
+
+    /**
      * TEST ONLY: true keeps the stream from ever opening its socket (the fake Kite has no stream, and a connect the
      * test did not wait for would race its "no test may reach the internet" check). False in the app, always: the
      * setter throws unless BuildConfig.DEBUG, and only the test application sets it.
@@ -300,9 +327,12 @@ object KiteStream {
                     watch = watchRunning(), pausedSec = c.pausedSec, tries = if (opened) 1 else fails + 1,
                 )
                 val cause = StreamHealth.cause(d)
+                // 18 Oct: the Live check closed it on purpose ([dropForCheck]) - not counted as a drop anywhere (the order speed
+                // card, the app's health, today's drops in the diary), no "dropped" banner; tried again at once.
+                val check = c.byCheck
                 // Round 2: a drop of a live connection is counted for the order speed card, and the local candles' runs are
                 // broken (a minute that lost ticks is never decided on: the feed is read for it instead).
-                if (opened) {
+                if (opened && !check) {
                     if (downSince == 0L) downSince = now
                     runCatching { OrderTiming.streamDropped() }
                     // The app's own health record: a reconnect of the live stream (a counter; it reconnects by itself).
@@ -312,15 +342,16 @@ object KiteStream {
                 if (opened) fails = 0 else fails++
                 // A connection that never opened is noted once per kind of failure and every tenth try (offline for an hour
                 // is not 120 lines); every live connection lost is noted.
-                if (opened || fails == 1 || cause != lastCause || fails % 10 == 0)
+                if (check) runCatching { Diag.record(StreamHealth.AREA, "live check: closed the connection on purpose to time the reconnect") }
+                else if (opened || fails == 1 || cause != lastCause || fails % 10 == 0)
                     runCatching { Diag.record(StreamHealth.AREA, StreamHealth.diary(d, listOf(token, key))) }
                 lastCause = cause
-                if (opened) {
+                if (opened && !check) {
                     val why = StreamHealth.plain(cause, if (cause == StreamHealth.Cause.PAUSED) d.pausedSec ?: d.silentSec else d.silentSec)
                     com.optionslab.app.work.Alerts.post("Live price stream dropped ($why); reconnecting", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true)
                 }
                 _status.value = Status.RETRYING
-                wait = StreamHealth.wait(wait, d.upMs, cause)
+                wait = if (check) StreamHealth.FIRST_WAIT_MS else StreamHealth.wait(wait, d.upMs, cause)
                 delay(wait)
             }
             _status.value = Status.OFF

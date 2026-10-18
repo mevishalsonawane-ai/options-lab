@@ -146,6 +146,7 @@ class CollisionTest {
         "Slippage" to { q -> Slippage.asked(q) != null },
         "PositionSync" to { q -> PositionSync.asked(q) },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
+        "LiveCheck" to { q -> LiveCheck.asked(q) },
         "StreamHealth" to { q -> StreamHealth.asked(q) },
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
@@ -617,6 +618,9 @@ class CollisionTest {
         "paper slippage" to "Slippage", "how good are my fills" to "Slippage",
         "are my positions in sync" to "PositionSync", "do my positions match zerodha" to "PositionSync",
         "reconcile the app with zerodha" to "PositionSync",
+        // ---- LiveCheck (18 Oct): Boss starts the Live check by voice; it never places an order ----
+        "run the live check" to "LiveCheck", "live check karo" to "LiveCheck", "do the self-test" to "LiveCheck",
+        "check everything live" to "LiveCheck", "start the live check now" to "LiveCheck",
         // ---- The order review (12 Oct): questions only, never an order ----
         "review my orders" to "OrderReview", "what went wrong today" to "OrderReview", "flaws in orb today" to "OrderReview",
         "how much did slippage cost me" to "OrderReview", "any flaws in my orders today" to "OrderReview", "order review" to "OrderReview",
@@ -1636,7 +1640,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "SelfTalk", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SignalTalk", "TrendTalk", "PassedArmsTalk", "SoloDay", "HeroTicketTalk", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "GammaMorning", "OiWallBlast", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SignalTalk", "TrendTalk", "PassedArmsTalk", "SoloDay", "HeroTicketTalk", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "LiveCheck", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "GammaMorning", "OiWallBlast", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve", "Knowledge")
 

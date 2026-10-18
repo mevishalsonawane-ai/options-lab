@@ -51,7 +51,9 @@ class FakeKite : Closeable {
     val requests = CopyOnWriteArrayList<Req>()
 
     /** Requests that would change something at the broker (orders, GTTs, session); the margin and contract-note reads are POSTs too. */
-    val writes: List<Req> get() = requests.filter { it.method != "GET" && it.path != "/margins/basket" && it.path != "/charges/orders" }
+    val writes: List<Req> get() = requests.filter { it.method != "GET" && it.path !in READS }
+    /** The POSTs that only read: the basket and order margin calculators and the contract note. */
+    private val READS = setOf("/margins/basket", "/margins/orders", "/charges/orders")
     /** The virtual contract note asks (POST /charges/orders). */
     val contractNotes: List<Req> get() = requests.filter { it.method == "POST" && it.path == "/charges/orders" }
     val placed: List<Req> get() = requests.filter { it.method == "POST" && it.path == "/orders/regular" }
@@ -106,6 +108,8 @@ class FakeKite : Closeable {
     var marginPerOrder = 40_000.0
     /** What the contract note (POST /charges/orders) says each order cost, all in; [down] += "/charges/orders" fails it. */
     @Volatile var chargesPerOrder = 31.25
+    /** What GET /instruments/historical/... answers (rows of [time, o, h, l, c, volume, oi]); null: none. */
+    @Volatile var candles: JSONArray? = null
     /** GET /trades lists one trade for each order that filled (default: no trades at all, as before). */
     @Volatile var tradesFromFills = false
     private var seq = 250_926_000_000_000L
@@ -334,7 +338,7 @@ class FakeKite : Closeable {
                 path.substringAfterLast('/').let { ex -> ex == "NFO" || instruments.any { it.exchange == ex } } ->
                 MockResponse().setResponseCode(200).addHeader("Connection", "close").setBody(instrumentsCsv(path.substringAfterLast('/')))
             m == "POST" && path == "/margins/orders" -> orderMargins(body)
-            m == "GET" && path.startsWith("/instruments/historical/") -> ok(JSONObject().put("candles", JSONArray()))
+            m == "GET" && path.startsWith("/instruments/historical/") -> ok(JSONObject().put("candles", candles ?: JSONArray()))
             m == "POST" && path == "/margins/basket" -> basket(body)
             m == "POST" && path == "/charges/orders" -> contractNote(body)
             m == "GET" && path == "/gtt/triggers" -> ok(JSONArray().apply { gtts.values.forEach { put(it) } })
