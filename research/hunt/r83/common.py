@@ -38,7 +38,9 @@ STOP_SLIP = 0.0002
 LOT = {"CRUDE": 10.0, "NG": 250.0, "COPPER": 2500.0}
 FACTOR = {"CRUDE": 1.0, "NG": 1.0, "COPPER": 2.20462}
 PROXY = {"CRUDE": "LIGHTCMDUSD", "NG": "GASCMDUSD", "COPPER": "COPPERCMDUSD", "BRENT": "BRENTCMDUSD"}
-PROXY_SCALE = 1e3                     # Dukascopy integer prices / 1e3 (checked against Yahoo in test_r83.py data notes)
+# Dukascopy integer prices / scale. Checked against Yahoo daily closes (18 Oct): COPPER and GAS need 1e4 (1e3 gave 10x HG=F / NG=F);
+# WTI and gas are checked by the events worker. A symbol not listed uses 1e3.
+PROXY_SCALE = {"COPPERCMDUSD": 1e4, "GASCMDUSD": 1e4}
 
 summary = R53.summary
 twin_p = R53.twin_p
@@ -100,7 +102,7 @@ def load_proxy(key: str, data: Path | None = None) -> pd.DataFrame:
     df = pd.read_parquet(data / "proxy" / f"{PROXY[key]}.parquet")
     df = df.drop_duplicates("t").sort_values("t")
     for c in "ohlc":
-        df[c] = df[c] / PROXY_SCALE
+        df[c] = df[c] / PROXY_SCALE.get(PROXY[key], 1e3)
     ts = pd.to_datetime(df.t, unit="s", utc=True).dt.tz_convert("Asia/Kolkata").dt.tz_localize(None)
     out = pd.DataFrame({"ts": ts.values, "o": df.o.values, "h": df.h.values, "l": df.l.values, "c": df.c.values})
     out["day"] = out.ts.dt.date
