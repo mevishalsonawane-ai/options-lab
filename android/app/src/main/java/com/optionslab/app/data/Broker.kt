@@ -1548,7 +1548,7 @@ object Broker {
     suspend fun basketMargin(orders: List<Kite.Order>): Margin = kotlinx.coroutines.coroutineScope {
         // The free margin is read alongside the basket, not after it.
         val free = async { funds() }
-        val d = call("POST", "/margins/basket?consider_positions=true", Kite.basketJson(orders), json = true) as JSONObject
+        val d = call("POST", "/margins/basket?consider_positions=true", Kite.basketJson(orders), json = true, readOnly = true) as JSONObject
         val fin = d.optJSONObject("final")?.optDouble("total", Double.NaN) ?: Double.NaN
         val init = d.optJSONObject("initial")?.optDouble("total", Double.NaN) ?: Double.NaN
         val charges = rows(d.optJSONArray("orders")).sumOf { it.optJSONObject("charges")?.optDouble("total", 0.0) ?: 0.0 }

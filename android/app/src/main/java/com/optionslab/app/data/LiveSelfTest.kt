@@ -85,6 +85,8 @@ object LiveSelfTest {
          * passed arms, Telegram calls, the ticket, Jarvis's trades). True too when any of it could not be read. Reads only.
          */
         suspend fun booksOpen(): Boolean
+        /** Memory only, read again at the very moment before the drop (18 Oct, review: something may open during the reads). */
+        fun heldNow(): Boolean = false
     }
 
     object Real : Sources {
@@ -100,6 +102,10 @@ object LiveSelfTest {
         override fun clockOffset() = OrderTiming.latestClockOffset()
         override fun paperCheckedAt() = WatchClock.paperAt
         override fun stopsCheckedAt() = WatchClock.stopsAt
+        override fun heldNow(): Boolean = runCatching {
+            com.optionslab.app.work.WatchWorkers.heldQuick() || McxMarket.heldQuick() || Paper.watching() ||
+                com.optionslab.app.work.TradingBusy.active
+        }.getOrDefault(true)
         override suspend fun booksOpen(): Boolean = runCatching {
             // Memory first (the watch's own "anything held" and MCX's), then the books already in memory, then Zerodha afresh.
             com.optionslab.app.work.WatchWorkers.heldQuick() || McxMarket.heldQuick() || Paper.watching() ||
@@ -370,6 +376,7 @@ object LiveSelfTest {
                         else "a position or order is open, so the stream is not dropped")
                 }
                 if (held) return@step LiveCheck.skipped("an arm holds a position or order (or a book could not be read), so the stream is not dropped")
+                if (src.heldNow()) return@step LiveCheck.skipped("something opened just now, so the stream is not dropped")
                 val at = System.currentTimeMillis()
                 if (!src.dropForCheck()) return@step LiveCheck.fail("no open connection to drop")
                 val until = at + limits.reconnectTimeoutMs
