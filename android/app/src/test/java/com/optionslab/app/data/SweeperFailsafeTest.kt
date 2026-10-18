@@ -85,6 +85,34 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertEquals("said once for one silence", 1, warned().size)
     }
 
+    /** 18 Oct, review: a short live position (a sold leg) with no prices is warned of, as a long one is. */
+    @Test fun aShortLivePositionWithNoPriceIsSaidAndWithPricesIsNot() {
+        kite.position(nfo, -30, 200.0)                        // sold, no quote
+        pass(10, 0)
+        pass(10, 2, 1)
+        assertEquals(listOf(said("10:00")), warned())
+        // Priced again: quiet, and no stop is swept for it (it has none resting).
+        kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)
+        pass(10, 5); pass(10, 8)
+        assertEquals(1, warned().size)
+        assertTrue("nothing modified or placed for a short", kite.writes.isEmpty())
+    }
+
+    /** 18 Oct, review: a short MCX position priced in MCX's hours is no alarm (the short is priced, not left out). */
+    @Test fun aShortMcxPositionPricedIsNoAlarm() {
+        kite.position(gold, -1, 100.0, exchange = "MCX")
+        kite.quote("MCX:$gold", 100.0, 99.0, 101.0)
+        pass(10, 0); pass(10, 3); pass(10, 6)
+        assertTrue(warned().isEmpty())
+    }
+
+    /** A flat line in the book (quantity 0, a position closed today) is not held: no alarm without its price. */
+    @Test fun aClosedLineIsNotHeld() {
+        kite.position(nfo, 0, 200.0)
+        pass(10, 0); pass(10, 3)
+        assertTrue(warned().isEmpty())
+    }
+
     @Test fun openWithPricesIsNeverAnAlarm() {
         kite.position(nfo, 30, 200.0)
         kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)

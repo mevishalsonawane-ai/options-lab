@@ -99,7 +99,9 @@ object Sweeper {
      * still priced, and only the sweep and the backups wait for the next pass.
      */
     private suspend fun live(context: Context): Pair<List<PriceWatch.Held>, Set<String>>? {
-        val held = runCatching { Broker.positionBook().net.filter { it.exchange in SWEPT && it.qty > 0 } }.getOrNull() ?: return null
+        // Long and short alike (18 Oct, review): a sold leg at Zerodha with no prices was never warned of (it was qty > 0, while
+        // the paper side counts every quantity != 0). The sweep below still turns only SELL stops (a long's) into sells.
+        val held = runCatching { Broker.positionBook().net.filter { it.exchange in SWEPT && it.qty != 0 } }.getOrNull() ?: return null
         val orders = runCatching { Broker.orders() }.getOrNull()
         val stops = orders.orEmpty().filter { it.working && it.side == "SELL" && it.exchange in SWEPT && ours(it.tag) && (it.type == "SL" || it.type == "SL-M") }
         val keys = (held.map { "${it.exchange}:${it.symbol}" } + stops.map { "${it.exchange}:${it.symbol}" }).distinct()

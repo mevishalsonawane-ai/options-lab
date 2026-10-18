@@ -122,6 +122,67 @@ class HostTest {
         assertTrue(run.openLegs().isEmpty())
     }
 
+    // 18 Oct, review: a bought wing's own target, stop or trail never sells it while the short it covers is open.
+    private fun wingTarget(shortRight: OptionType) = def.copy(legs = listOf(
+        LegDef(1, Segment.OPTIONS, Position.B, 1, OptionType.PE, StrikeMode.ATM, "OTM2", expiry = "weekly", targetPts = 5.0, slPts = 5.0),
+        LegDef(2, Segment.OPTIONS, Position.S, 1, shortRight, StrikeMode.ATM, "ATM", expiry = "weekly"),
+    ))
+
+    @Test fun `a wing's own target is held back while the short it covers is open, then goes once that short is closed`() {
+        val host = StrategyHost()
+        val venue = FakeVenue(100.0)
+        val ids = HashMap<Long, String>()
+        val d = wingTarget(OptionType.PE)
+        var run = host.start(d, SymbolResolver.resolve(d, contract, 23590.0, monday), monday, 6, RunMode.SANDBOX, "manual", venue, ids)
+        assertEquals(listOf(Side.BUY, Side.SELL), venue.placed.map { it.side })
+        val wing = run.leg(1)!!.symbol
+        val short = run.leg(2)!!.symbol
+        // The wing is through its target: not sold, the spread stays hedged.
+        run = host.tick(run, d, listOf(Quote(wing, "NFO", 110.0), Quote(short, "NFO", 100.0)), monday.plusMinutes(1), 0.0, venue, ids)
+        assertEquals(2, venue.placed.size, "nothing sold while the short is open: ${venue.placed}")
+        assertEquals("open", run.leg(1)!!.status)
+        assertTrue(venue.events.any { it.message.contains("held back") }, venue.events.toString())
+        // Its own stop too.
+        run = host.tick(run, d, listOf(Quote(wing, "NFO", 90.0), Quote(short, "NFO", 100.0)), monday.plusMinutes(2), 0.0, venue, ids)
+        assertEquals(2, venue.placed.size)
+        // The short closed by hand: the wing's target now goes.
+        run = host.closeLeg(run, d, 2, monday.plusMinutes(3), venue, ids)
+        assertEquals(Side.BUY, venue.placed.last().side)
+        run = host.tick(run, d, listOf(Quote(wing, "NFO", 110.0)), monday.plusMinutes(4), 0.0, venue, ids)
+        assertEquals(Side.SELL, venue.placed.last().side)
+        assertEquals(wing, venue.placed.last().symbol)
+        assertTrue(run.openLegs().isEmpty(), "${run.legs.values.map { it.symbol + ":" + it.status }}")
+    }
+
+    @Test fun `a wing's own target goes when the open short is of the other option type`() {
+        val host = StrategyHost()
+        val venue = FakeVenue(100.0)
+        val ids = HashMap<Long, String>()
+        val d = wingTarget(OptionType.CE)
+        var run = host.start(d, SymbolResolver.resolve(d, contract, 23590.0, monday), monday, 8, RunMode.SANDBOX, "manual", venue, ids)
+        val wing = run.leg(1)!!.symbol
+        run = host.tick(run, d, listOf(Quote(wing, "NFO", 110.0)), monday.plusMinutes(1), 0.0, venue, ids)
+        assertEquals(wing, venue.placed.last().symbol)
+        assertEquals(Side.SELL, venue.placed.last().side)
+        assertEquals("open", run.leg(2)!!.status, "the CE short is left as it was")
+    }
+
+    @Test fun `a short leg's own stop still buys it back at once`() {
+        val host = StrategyHost()
+        val venue = FakeVenue(100.0)
+        val ids = HashMap<Long, String>()
+        val d = def.copy(legs = listOf(
+            LegDef(1, Segment.OPTIONS, Position.B, 1, OptionType.PE, StrikeMode.ATM, "OTM2", expiry = "weekly"),
+            LegDef(2, Segment.OPTIONS, Position.S, 1, OptionType.PE, StrikeMode.ATM, "ATM", expiry = "weekly", slPts = 5.0),
+        ))
+        var run = host.start(d, SymbolResolver.resolve(d, contract, 23590.0, monday), monday, 9, RunMode.SANDBOX, "manual", venue, ids)
+        val short = run.leg(2)!!.symbol
+        run = host.tick(run, d, listOf(Quote(short, "NFO", 110.0)), monday.plusMinutes(1), 0.0, venue, ids)
+        assertEquals(Side.BUY, venue.placed.last().side)
+        assertEquals(short, venue.placed.last().symbol)
+        assertEquals("open", run.leg(1)!!.status, "the wing stays")
+    }
+
     @Test fun `a stop buys back the short before it sells the wing, and retries a refused exit`() {
         val host = StrategyHost()
         val venue = FakeVenue(100.0)

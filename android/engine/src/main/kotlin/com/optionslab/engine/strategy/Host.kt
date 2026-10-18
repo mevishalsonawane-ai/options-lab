@@ -91,6 +91,11 @@ class StrategyHost(private val rt: StrategyRuntime = StrategyRuntime()) {
      *  - during a stop, a SELL that closes a long while any short of the run is
      *    still held: selling the wing first leaves the short naked. The stop
      *    stays pending and the SELL is retried once the short is closed.
+     *  - 18 Oct, review: a bought wing's own rule exit (its stop, target or trail)
+     *    while a short of the same option type (calls, or puts) is still open: the
+     *    spread would become a naked short. The wing stays on; its exit is looked at
+     *    again on the next tick, and goes once that short is closed. A manual close
+     *    of the leg and the basket's own exits are not held here.
      */
     private fun unhedged(run: RunState, a: Action.PlaceOrder): String? {
         if (a.side != Side.SELL) return null
@@ -103,7 +108,21 @@ class StrategyHost(private val rt: StrategyRuntime = StrategyRuntime()) {
             val shortOpen = run.legs.values.firstOrNull { it.position == "S" && it.status == "open" }
             if (shortOpen != null) return "held back: ${shortOpen.symbol} (short) is still open; the wing is sold once it is closed"
         }
+        if (a.kind in LEG_RULE_EXITS) {
+            val wing = run.leg(a.legId)?.takeIf { it.position == "B" } ?: return null
+            val right = rightOf(wing.symbol) ?: return null
+            val shortOpen = run.legs.values.firstOrNull { it.position == "S" && it.status == "open" && rightOf(it.symbol) == right }
+            if (shortOpen != null) return "held back: ${shortOpen.symbol} (short) is still open; selling its wing ${wing.symbol} now would leave it unhedged"
+        }
         return null
+    }
+
+    /** "CE" or "PE" from an option's trading symbol; null for anything else (a future). */
+    private fun rightOf(symbol: String): String? = symbol.uppercase().takeLast(2).takeIf { it == "CE" || it == "PE" }
+
+    private companion object {
+        /** A leg's own rule exits ([Engine.evaluateTick]): its stop, target and trail. */
+        val LEG_RULE_EXITS = setOf("exit_sl", "exit_target", "exit_trail")
     }
 
     /** Re-read every order the venue has not finished, and feed what changed back in. */

@@ -270,11 +270,16 @@ object McxMarket {
             st.orders.any { (it.status == "open" || it.status == "trigger pending") && it.exchange == Mcx.EXCHANGE }
     }
 
-    /** Zerodha showed an open MCX position at the last look (kept for the day, so a restart keeps watching). */
+    /**
+     * Zerodha showed an open MCX position at the last look (kept, so a restart keeps watching). 18 Oct, review: kept until a
+     * read of the positions shows MCX flat ([noteLive]), not only for the day it was seen: a live MCX position carried
+     * overnight in Paper mode stopped counting at midnight, and then nothing read Zerodha again for it (the MCX expiry exit
+     * and the evening watch skipped it). A day is still what is stored (the day it was first seen held); any day counts.
+     */
     fun liveExposure(): Boolean = runCatching { liveExposureOrThrow() }.getOrDefault(false)
 
     /** [liveExposure] with a failed read let through (the start-up's restore and the cadence count it as held; review, 14 Oct). */
-    internal fun liveExposureOrThrow(): Boolean = (SecurePrefs.getString(K_LIVE_HELD) == Market.today().toString())
+    internal fun liveExposureOrThrow(): Boolean = (!SecurePrefs.getString(K_LIVE_HELD).isNullOrBlank())
         .also { liveSeen = Market.today() to it }
 
     /** [liveExposure] as last read or written in this process (memory; null: not today, or not read yet). */

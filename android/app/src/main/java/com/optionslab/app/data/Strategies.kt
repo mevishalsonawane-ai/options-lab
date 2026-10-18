@@ -742,18 +742,44 @@ object Strategies {
                     b.runs[def.id] = next; finish(b, next)
                 }
             }
-            val run = b.runs[def.id] ?: continue
-            if (!Entry(def, run).running) continue
-            if (run.mode == RunMode.LIVE && !Broker.loggedIn) warnBlind(b, def, run, "the Zerodha session has ended (log in again)")
-            val v = venueFor(run.mode)
-            if (v == null) { warnBlind(b, def, run, "the contract list could not be loaded"); continue }
-            val q = quotes(run, v)
-            if (q.isEmpty() && run.subscribedSymbols().isNotEmpty() && Market.isOpen()) warnBlind(b, def, run, "no prices could be read")
-            val banked = StrategyRuntime.sessionBankedPnl(b.history, def.id, run.runId, now)
-            val next = host.tick(run, def, q, now, banked, exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, def.id))
-            b.runs[def.id] = next; finish(b, next)
+            tickOpenRun(b, def, now, compromised) { venueFor(it) }
         }
         return notes
+    }
+
+    /** One open run's prices, per-leg and basket risk and exits ([host] tick); nothing when [def] has no open run. */
+    private suspend fun tickOpenRun(b: Book, def: StrategyDef, now: ZonedDateTime, compromised: Boolean, venueFor: suspend (RunMode) -> Venue?) {
+        val run = b.runs[def.id] ?: return
+        if (!Entry(def, run).running) return
+        if (run.mode == RunMode.LIVE && !Broker.loggedIn) warnBlind(b, def, run, "the Zerodha session has ended (log in again)")
+        val v = venueFor(run.mode)
+        if (v == null) { warnBlind(b, def, run, "the contract list could not be loaded"); return }
+        val q = quotes(run, v)
+        if (q.isEmpty() && run.subscribedSymbols().isNotEmpty() && Market.isOpen()) warnBlind(b, def, run, "no prices could be read")
+        val banked = StrategyRuntime.sessionBankedPnl(b.history, def.id, run.runId, now)
+        val next = host.tick(run, def, q, now, banked, exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, def.id))
+        b.runs[def.id] = next; finish(b, next)
+    }
+
+    /**
+     * The 15-second stop check's part (18 Oct, review): only the open runs' prices, per-leg and basket stops, targets,
+     * trails and exits, as [tickAll] runs them - no scheduled start, approval or square-off (those stay in [tickAll]'s
+     * minute pass, and its record of the last check is left alone, so no scheduler slot is used up here). Without an open
+     * run ([runningHint], memory) it reads nothing at all. Before this a basket's own leg stops were checked only once a
+     * minute in the full pass, while the 15-second stop check ran every other arm's exits.
+     */
+    suspend fun manageOnly(compromised: Boolean) {
+        if (!runningHint) return
+        lock.withLock {
+            val b = book()
+            try {
+                val now = Market.now()
+                val venues = HashMap<RunMode, Venue?>()
+                for (def in b.defs.toList()) tickOpenRun(b, def, now, compromised) { m -> venues.getOrPut(m) { runCatching { venue(m) }.getOrNull() } }
+            } finally {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { runCatching { save(b) } }
+            }
+        }
     }
 
     /** True when any run is live or entering, so the watch keeps polling. */

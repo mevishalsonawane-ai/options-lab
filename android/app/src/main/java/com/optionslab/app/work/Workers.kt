@@ -32,6 +32,26 @@ object WatchWorkers {
     const val ARMS_WAIT_MS = 45_000L
     /** How long the 15-second stop check waits for the arms' exits. */
     const val EXITS_WAIT_MS = 20_000L
+    /**
+     * How long a full pass waits for each arms group while anything is held (18 Oct, review): the stops and targets after
+     * the first group, and the 15-second stop check after the pass, waited behind a slow arm's 45 s twice. A step still
+     * running then is left to finish by itself, as at [ARMS_WAIT_MS] (never cut mid-order).
+     */
+    const val ARMS_WAIT_HELD_MS = 10_000L
+
+    /** The full pass's wait for an arms group: [ARMS_WAIT_HELD_MS] while [held], else [ARMS_WAIT_MS]. */
+    fun armsWaitMs(held: Boolean): Long = if (held) ARMS_WAIT_HELD_MS else ARMS_WAIT_MS
+
+    /**
+     * Anything open the watch protects, from memory only (no lock, no vault, no network): the cards' positions, the arms'
+     * and strategies' holdings, a protection. Unknown counts as held.
+     */
+    fun heldQuick(): Boolean = runCatching {
+        PositionCards.anyOpen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.Strategies.runningHint ||
+            com.optionslab.app.data.Protections.activeHint != false || com.optionslab.app.data.PineAuto.holding() ||
+            com.optionslab.app.data.PassedArmsHost.holding() || com.optionslab.app.data.HeroTicketArm.holding() ||
+            com.optionslab.app.data.SignalPaperArm.holding()
+    }.getOrDefault(true)
 
     /** One watch run's workers: its supervisor and the job they all run under. */
     class Run internal constructor(val supervisor: Supervisor, internal val job: Job)

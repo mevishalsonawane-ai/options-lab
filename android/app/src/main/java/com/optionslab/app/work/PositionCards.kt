@@ -210,6 +210,12 @@ object PositionCards {
             if (p.qty != 0) { now[key] = Unit; card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl) }
             else if (shown.remove(key) != null) card(context, "Live", p.symbol, 0, p.avg, null, p.pnl)
         }
+        // 18 Oct, review: a Zerodha read that failed (a timeout, a network blip) is not "no positions": the Live cards stay as
+        // they were, and so does the watch's 15-second stop check (anyOpen), until a read that succeeds lacks them.
+        if (s.live && liveLoggedIn && liveBook == null) {
+            shown.keys.filter { it.startsWith("Live|") }.forEach { now[it] = Unit }
+            lastLive?.net?.filter { it.qty != 0 }?.forEach { now["Live|${it.symbol}"] = Unit }
+        }
         // A card whose position vanished from the book entirely (a new session): no longer ongoing.
         shown.keys.filter { it !in now }.forEach { k ->
             shown.remove(k); posted.remove(k)
