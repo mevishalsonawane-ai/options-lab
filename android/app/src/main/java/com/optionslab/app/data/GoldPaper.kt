@@ -355,7 +355,7 @@ object GoldPaper {
 
     private fun read(): Book? = Vault.readFileSteady(file)?.let { fromJson(JSONObject(String(it, Charsets.UTF_8))) }
 
-    private fun toJson(b: Book) = JSONObject().put("start", b.start).put("lots", b.lots).put("armed", b.armed).put("status", b.status)
+    internal fun toJson(b: Book) = JSONObject().put("start", b.start).put("lots", b.lots).put("armed", b.armed).put("status", b.status)
         .apply { b.decided?.let { put("decided", it) }; b.price?.let { put("price", it) }; b.priceAt?.let { put("priceAt", it.toString()) }
             b.lastSignal?.let { put("lastSignal", it) } }
         .apply {
@@ -367,7 +367,7 @@ object GoldPaper {
                 .put("out", t.exitTime.toString()).put("lots", t.lots).put("why", t.why).put("pnl", t.pnl)) }
         })
 
-    private fun fromJson(o: JSONObject): Book {
+    internal fun fromJson(o: JSONObject): Book {
         val pos = o.optJSONObject("pos")?.let { p ->
             Position(p.getDouble("entry"), LocalDateTime.parse(p.getString("at")), LocalDateTime.parse(p.getString("bar")), p.getDouble("level"),
                 if (p.has("target")) p.getDouble("target") else null,
