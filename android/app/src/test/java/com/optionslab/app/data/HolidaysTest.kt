@@ -1,6 +1,7 @@
 package com.optionslab.app.data
 
 import com.optionslab.app.testing.RobolectricTest
+import kotlinx.coroutines.cancelAndJoin
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -117,6 +118,26 @@ class HolidaysTest : RobolectricTest() {
         job.cancel()
         assertTrue("the read is stopped with it", interrupted.await(10, java.util.concurrent.TimeUnit.SECONDS))
         assertNull(Holidays.book().fetched)
+    }
+
+    @Test fun aRefreshCancelledAtOnceNeverReadsOn() {
+        // 18 Oct: cancelled before its wait had first run (CI, shard 2), the refresh's read went on: the read was stopped
+        // only from the wait's body, which a coroutine cancelled before it starts never runs.
+        val started = java.util.concurrent.CountDownLatch(1)
+        val stopped = java.util.concurrent.CountDownLatch(1)
+        Holidays.testList = {
+            started.countDown()
+            try { Thread.sleep(600_000) } catch (e: InterruptedException) { stopped.countDown(); throw e }
+            emptyMap()
+        }
+        // Cancelled at once, likely before its wait first ran; once the cancel is through, the refresh is over: the next one
+        // reads afresh instead of joining a read still going on.
+        kotlinx.coroutines.runBlocking { Holidays.refreshInBackground().cancelAndJoin() }
+        Holidays.testList = { mapOf(monday to "Test holiday") }
+        kotlinx.coroutines.runBlocking { Holidays.refreshInBackground().join() }
+        assertTrue(Holidays.isHoliday(monday))
+        // The first read either never began or was stopped.
+        assertTrue("the cancelled read went on", started.count == 1L || stopped.await(10, java.util.concurrent.TimeUnit.SECONDS))
     }
 
     @Test fun holidaysAddedByHandCloseTheMarketAndCanBeUndone() {
