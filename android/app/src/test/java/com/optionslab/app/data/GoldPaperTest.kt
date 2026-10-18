@@ -119,6 +119,25 @@ class GoldPaperTest : RobolectricTest() {
         assertEquals(GoldLiquidity.pnl(target - 30, tr.exit, 0.01), tr.pnl, 1e-9)
     }
 
+    @Test fun aBuysLotsAreSavedAndReadBackAndAnOldFileTakesTheBooksLots() {
+        // 18 Oct, review: the open buy's own lots go through the saved file; a file from before they were kept takes the book's.
+        val at = monday.atTime(11, 0)
+        val b = GoldPaper.Book(lots = 0.10, position = GoldPaper.Position(2390.15, at, at.minusHours(1), 2388.0, 2410.0, lots = 0.01))
+        val json = GoldPaper.toJson(b)
+        assertEquals(0.01, json.getJSONObject("pos").getDouble("lots"), 1e-12)
+        val back = GoldPaper.fromJson(JSONObject(json.toString()))
+        assertEquals(b.position, back.position)
+        assertEquals(0.10, back.lots, 1e-12)
+        // An old file: no lots on the buy - the book's lots (0.10).
+        val old = JSONObject(json.toString()).apply { getJSONObject("pos").remove("lots") }
+        assertEquals(0.10, GoldPaper.fromJson(old).position!!.lots, 1e-12)
+        // An old file with no lots at all: the default.
+        val older = JSONObject(old.toString()).apply { remove("lots") }
+        assertEquals(GoldPaper.DEFAULT_LOTS, GoldPaper.fromJson(older).position!!.lots, 1e-12)
+        // No buy: none read back.
+        assertNull(GoldPaper.fromJson(GoldPaper.toJson(GoldPaper.Book())).position)
+    }
+
     private fun at(t: LocalDateTime) { GoldPaper.testNow = t; runBlocking { GoldPaper.tick() } }
 
     @Test fun yahooChartJsonBecomesUtcBarsSkippingGaps() {
