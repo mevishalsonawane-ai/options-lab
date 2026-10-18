@@ -228,3 +228,11 @@ Left as is (noted for Boss):
 - Without a historical-data plan the minute candles cannot be read: a shadow stop is then judged on the stream's ticks when the
   contract streams, else on the price at each look (as before). After a failed read the candles are not asked again for 2 minutes.
 - The stream keeps 5 minutes of ticks: a look more than 5 minutes after the last one (a stalled phone) judges only those 5 minutes.
+
+CI on the final review fixes: the first run turned up a test still checking the go-live dialog's old wording, and the new
+hand-sale test entering 3 lots, more than the account guard allows. Both tests were fixed. One unrelated test
+(`LiveSelfTestTest.staleFeedsAndAFarClockFail`) failed once at 00:04 IST: its "10 minutes ago" bar fell on the previous day. It
+passed on the next run; it can fail again in the first 10 minutes after midnight.
+
+Final green SHA (App tests 0/4, 1/4, 2/4 and 3/4, Build APK, Engine parity with the PC, PC harness tests, all green in one run):
+a68f527cf11e40c0211ec099813c282ab3fbfb48
