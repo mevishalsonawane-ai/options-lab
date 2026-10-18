@@ -391,11 +391,13 @@ def strip(trs):
     return [{k: v for k, v in t.items() if k != "tpl"} for t in trs]
 
 
-def design():
+def design(only=None):
     books = _books()
     lo, hi = C.DESIGN
     out = {}
     for idea, spec in IDEAS.items():
+        if only and idea not in only:
+            continue
         book = books.get(spec["mkt"])
         if book is None or (spec.get("other") and books.get(spec["other"]) is None):
             out[idea] = {"status": "not tested (no data)"}
@@ -430,7 +432,7 @@ def design():
                      **{v: (r["trades"], round(r["net"]), round(r["twin_p"], 3)) for v, r in res["variants"].items()},
                      "base": (res["baseline"].get("trades"), round(res["baseline"]["net"]), round(res["baseline"]["wf_net"]))}
         print(idea, out[idea], flush=True)
-    C.save_json("events_design_summary.json", out)
+    C.save_json(f"events_design_summary_{'_'.join(only) if only else 'all'}.json", out)
     return out
 
 
@@ -488,12 +490,14 @@ def option_for(mk, mkt, t):
     return r
 
 
-def final():
+def final(only=None):
     books = _books()
     lo, hi = C.FINAL
     rb, rm = None, None
     out = {}
     for idea, spec in IDEAS.items():
+        if only and idea not in only:
+            continue
         dz = C.RESULTS / f"{idea}_design.json"
         if not dz.exists():
             out[idea] = "no design"
@@ -542,9 +546,9 @@ def final():
                          base_wf=round(bwf), real_fut=(len(rtr), round(res["mcx_real"]["futures"]["net"])),
                          real_opt=(len(ropt), round(res["mcx_real"]["option_1itm"]["net"])))
         print(idea, out[idea], flush=True)
-    C.save_json("events_final_summary.json", out)
+    C.save_json(f"events_final_summary_{'_'.join(only) if only else 'all'}.json", out)
     return out
 
 
 if __name__ == "__main__":
-    {"design": design, "final": final}[sys.argv[1]]()
+    {"design": design, "final": final}[sys.argv[1]](sys.argv[2:] or None)
