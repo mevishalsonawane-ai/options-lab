@@ -1265,16 +1265,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     private val WORKING = setOf("OPEN", "TRIGGER PENDING", "UNKNOWN", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING", "AMO REQ RECEIVED")
 
-    fun sendPlan() {
-        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: run { com.optionslab.app.data.Diag.record("tap", "Send pressed with no plan ready"); return }
+    /** Null when the send started; else why nothing was sent (18 Oct: Jarvis says it, never an earlier send's state). */
+    fun sendPlan(): String? {
+        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: run { com.optionslab.app.data.Diag.record("tap", "Send pressed with no plan ready"); return "no order was ready to send" }
         com.optionslab.app.data.Diag.record("tap", "Send (confirmed) ${cur.title}")
         val s = _settings.value
-        if (!s.live) { say("This is Paper mode: switch to Live with the badge at the top to send real orders."); return }
-        if (!s.allowRealOrders) { say("This is Paper mode: switch to Live with the badge at the top to send real orders."); return }
+        val paper = "This is Paper mode: switch to Live with the badge at the top to send real orders."
+        if (!s.live) { say(paper); return paper }
+        if (!s.allowRealOrders) { say(paper); return paper }
         val again = gate(cur.legs, cur.holdToSettlement, cur.exit)
-        if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return }
+        if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return again.flatten().joinToString(" ") }
         stuck.value = null
         sendFrom(cur, 0, emptyList(), checks = true)
+        return null
     }
 
     /**

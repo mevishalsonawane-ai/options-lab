@@ -272,6 +272,29 @@ object Broker {
     /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
     val sessionEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
 
+    /** The notification of a session Zerodha ended ([endedNotice]). */
+    internal const val ID_SESSION_ENDED = 2061
+
+    /**
+     * 18 Oct (live end-to-end tests): Zerodha ended the session mid-day (a token expired or a login elsewhere). Only the open
+     * app asked to log in again ([sessionEnded]); with the app in the background Boss was not told, while no order, stop or exit
+     * of the app's could go out. Now a notification says so (always shown, like an order's): the stops and GTTs resting at
+     * Zerodha still stand. No account figure in it. Posted off the caller's thread (the settings read is never on an order's path).
+     */
+    private fun endedNotice() {
+        runCatching {
+            val ctx = app
+            readScope.launch {
+                runCatching {
+                    com.optionslab.app.work.Notifier.post(ctx, ID_SESSION_ENDED, com.optionslab.app.work.Notifier.APPROVAL, "Zerodha session ended",
+                        "Zerodha ended today's session (it expired or you logged in elsewhere). Until you log in again the app cannot place, " +
+                            "change or exit any order; stops and GTTs resting at Zerodha still stand. Open Zerodha in the app and log in.",
+                        "broker", setting = "broker.login")
+                }
+            }
+        }
+    }
+
     // ---- HTTP ---------------------------------------------------------------------
 
     /**
@@ -423,7 +446,7 @@ object Broker {
                         Diag.record("info", "Zerodha TokenException on $method ${path.substringBefore('?')}: $msg" +
                             if (kept) " (the profile still answers: session kept)" else " (session ended)")
                         if (kept) throw KiteError(type, msg)
-                        if (loggedIn) { dropSession(); sessionEnded.value++ }
+                        if (loggedIn) { dropSession(); sessionEnded.value++; endedNotice() }
                         throw KiteError(type, "Zerodha session ended: $msg")
                     }
                     // SEBI's static-IP rule: Zerodha takes orders only from an IP listed in the Kite Connect app.
@@ -683,7 +706,7 @@ object Broker {
     private fun dropKept() { keptOrders = null; keptBook = null; fundsKept = null; killKept = null; writes.incrementAndGet() }
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
-    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null }
+    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear() }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -1222,17 +1245,57 @@ object Broker {
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.
-        if (exit) return com.optionslab.app.work.TradingBusy.during { send(o, true, arm, intended) }
+        if (exit) return com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) {
-            com.optionslab.app.work.TradingBusy.during { send(o, false, arm, intended) } }) {
+            com.optionslab.app.work.TradingBusy.during { sendChecked(o, false, arm, intended) } }) {
             is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
             is com.optionslab.ira.EntryGate.Outcome.Refused -> {
                 runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): ${r.why}") }
                 throw KiteError("entry_gate", r.why)
             }
         }
+    }
+
+    /**
+     * 18 Oct (live end-to-end tests): Kite's error types after which an order may still have been placed although Zerodha
+     * answered with an error, not a lost reply: DataException (502, the OMS answered but Kite could not read the answer) and
+     * GeneralException (500, unclassified). They were taken as refusals ([definite]): an ORB entry the exchange filled was left
+     * untracked with no stop, and an ORB exit that filled put the stop back on a flat position (a sell resting with nothing held).
+     */
+    private val UNSURE = setOf("DataException", "GeneralException")
+
+    /**
+     * [send], and after one of the [UNSURE] errors the order book is read for the order before anything is decided, as for a
+     * lost reply ([findRecentRetrying]: three looks two seconds apart, the book can trail the POST): found, it is the order placed
+     * (its id, as if Zerodha had answered); not there, the error stands as before (a refusal); the book unreadable, the order's
+     * fate is unknown (not definite, so the caller looks again). Only what really exists changes the outcome. An entry's look
+     * holds the entry door meanwhile: no other entry goes while this one's fate is unknown.
+     */
+    private suspend fun sendChecked(o: Kite.Order, exit: Boolean, arm: String?, intended: Double?): String = try {
+        send(o, exit, arm, intended)
+    } catch (e: KiteError) {
+        if (e.type !in UNSURE) throw e
+        val found = try { findRecentRetrying(o, emptyList()) } catch (x: kotlinx.coroutines.CancellationException) { throw x
+        } catch (_: Exception) { throw IOException("${e.message} (Zerodha's ${e.type}); its order book could not be read, so the order may exist") }
+        runCatching { Diag.record("zerodha", "${o.tradingSymbol}: Zerodha answered ${e.type} (${e.message}); " +
+            (found?.let { "the order is in the book: $it" } ?: "no such order in the book: refused")) }
+        found ?: throw e
+    }
+
+    /**
+     * Ids Zerodha gave this phone for its orders (and lost replies adopted since) in the last [SENT_KEEP_MS], memory only:
+     * [findRecent] never takes one of them for another order's lost reply (18 Oct: a second identical hand order refused at
+     * Kite's gateway was shown "Filled" with the first one's id). Only the last minutes matter: [findRecent] looks back three.
+     */
+    private val sentIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val SENT_KEEP_MS = 15 * 60_000L
+
+    private fun noteSent(id: String) {
+        val now = System.currentTimeMillis()
+        if (sentIds.size > 200) sentIds.entries.removeIf { now - it.value > SENT_KEEP_MS }
+        sentIds[id] = now
     }
 
     /**
@@ -1249,6 +1312,7 @@ object Broker {
         runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
         val id = data.getString("order_id")
+        noteSent(id)
         // Measuring never costs the order: the order is placed, so nothing here may throw past the id.
         runCatching { FillSlippage.sent(id, o, exit, arm, intended) }
         return id
@@ -1307,8 +1371,8 @@ object Broker {
 
     /**
      * After a POST whose answer was lost (timeout, dropped connection), find the
-     * order Kite may have placed anyway: same symbol, side, quantity and tag,
-     * placed in the last three minutes, and not one of [known].
+     * order Kite may have placed anyway: same symbol, side, quantity, tag and order type,
+     * placed in the last three minutes, and not one of [known] nor one this phone already has the id of.
      */
     suspend fun findRecent(o: Kite.Order, known: Collection<String>): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -1321,14 +1385,17 @@ object Broker {
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
-                it.optString("order_id") !in known && at(it)?.isBefore(since) == false
-        }?.optString("order_id")?.also { countSent() }
+                // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
+                it.optString("order_type") == o.orderType &&
+                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false
+        }?.optString("order_id")?.also { countSent(); noteSent(it) }
     }
 
     /**
      * True when [e] from [placeOrder] means the order was certainly NOT placed: Zerodha answered with a
      * refusal, or nothing was sent (not logged in). A lost reply (timeout, dropped connection, an
-     * unreadable answer, Kite's own NetworkException) is not definite: the order may exist.
+     * unreadable answer, Kite's own NetworkException) is not definite: the order may exist. Kite's DataException and
+     * GeneralException on an order are checked against the order book inside [placeOrder] first ([UNSURE]).
      */
     fun definite(e: Throwable): Boolean = e is NotLoggedIn || (e is KiteError && e.type != "NetworkException")
 

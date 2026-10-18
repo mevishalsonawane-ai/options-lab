@@ -202,7 +202,10 @@ internal object IraActions {
         if (plan is com.optionslab.app.ui.Load.Failed) return "Not sent: ${plan.why}"
         val p = (plan as com.optionslab.app.ui.Load.Done<com.optionslab.app.ui.OrderPlan>).value
         if (!p.sendable) { val why = p.refusals.flatten().joinToString(" ").ifBlank { "the app's checks refused it" }; m.dismissPlan(); return "Not sent: $why" }
-        m.sendPlan()
+        // 18 Oct (live end-to-end tests): a send the app refused at once (Paper mode, a check that failed again) left the send's
+        // state as it was, and Jarvis answered from it: an earlier order's fills as "Sent to Zerodha", or after a minute "Sent;
+        // Zerodha has not confirmed yet", for a close that never went. The send now says when it did not start, and why.
+        m.sendPlan()?.let { why -> return "Not sent: $why" }
         val sent = kotlinx.coroutines.withTimeoutOrNull(60_000) {
             m.sending.first { it is com.optionslab.app.ui.Load.Done || it is com.optionslab.app.ui.Load.Failed }
         }

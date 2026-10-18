@@ -147,4 +147,67 @@ class OrderFlowLiveTest : RobolectricTest() {
         assertTrue(why, why.startsWith("Leg 1 rejected") && why.contains("RMS:Margin Exceeds"))
         assertEquals(1, kite.placed.size)
     }
+
+    // ---- 18 Oct (live end-to-end tests): a reply lost on the order sheet's send ---------------------------------------------
+
+    private fun planned(model: AppModel): com.optionslab.app.ui.OrderPlan {
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
+        val plan = await("the plan") { (model.plan.value as? Load.Done)?.value ?: (model.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
+        assertTrue("refusals: ${plan.refusals}", plan.sendable)
+        return plan
+    }
+
+    private fun sent(model: AppModel): Load<List<com.optionslab.app.data.Broker.Fill>> =
+        await("the send") { model.sending.value.takeIf { it is Load.Done || it is Load.Failed } }
+
+    @Test fun aLostReplyOnTheSheetsSendIsFoundInTheBookAndShownFilledOnce() {
+        val model = model()
+        planned(model)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        val t0 = System.nanoTime()
+        model.sendPlan()
+        val done = sent(model)
+        println("E2E manual sheet, reply lost: send->fill shown ${(System.nanoTime() - t0) / 1_000_000} ms (the order book read before anything is said)")
+        assertTrue("shown as filled: $done", done is Load.Done)
+        assertEquals("COMPLETE", (done as Load.Done).value.single().status)
+        assertEquals("the order went once", 1, kite.placed.size)
+        assertEquals(kite.orders.keys.single(), done.value.single().orderId)
+    }
+
+    @Test fun aLostReplyWithNoNewOrderNeverTakesAnEarlierIdenticalOrderForIt() {
+        // 18 Oct: the second of two identical hand orders was refused by Kite's gateway (nothing placed); the book was read
+        // for a lost reply and the FIRST order (same contract, side, size and tag, a minute old) was taken for it: "Filled".
+        SecurePrefs.putAll(mapOf("g.trades" to 50))
+        val model = model()
+        planned(model)
+        model.sendPlan()
+        val first = (sent(model) as? Load.Done)?.value?.single()?.orderId ?: throw AssertionError("the first order did not fill: ${model.sending.value}")
+        model.dismissPlan()
+        kite.flat()
+        model.loadAccount(quiet = true)
+        await("the account again") { model.account.value as? Load.Done }
+        planned(model)
+        kite.nextPlace(reply = FakeKite.Reply.NETWORK_EXCEPTION)
+        model.sendPlan()
+        val why = (sent(model) as? Load.Failed)?.why ?: throw AssertionError("an earlier order was taken for this one: ${model.sending.value}")
+        assertTrue(why, why.startsWith("Not sent:") && why.contains("No matching order was found"))
+        assertEquals("only the first order exists", listOf(first), kite.orders.keys.toList())
+    }
+
+    @Test fun jarvissCloseOfAZerodhaPositionThatTheAppRefusedIsSaidAsNotSent() {
+        // 18 Oct: in Paper mode (Boss's paper-only days, Zerodha still logged in) the order sheet refuses the close at once, and
+        // Jarvis answered from the send's old state: an earlier order's fills as "Sent to Zerodha", or after a minute "Sent;
+        // Zerodha has not confirmed yet". Nothing had gone.
+        SecurePrefs.put("k.mode", "sandbox"); SecurePrefs.put("k.allow", false)
+        kite.position(sym, 75, 100.0)
+        val model = model()
+        com.optionslab.app.ira.IraActions.attach(model)
+        model.sending.value = Load.Done(listOf(com.optionslab.app.data.Broker.Fill("250926000000999", "COMPLETE", 99.0, 75, "")))
+        val said = java.util.concurrent.atomic.AtomicReference<String?>()
+        Thread { said.set(kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraActions.closeLiveSymbol(sym) }) }.start()
+        val answer = await("Jarvis's answer", 20_000) { said.get() }
+        assertTrue(answer, answer.startsWith("Not sent:") && answer.contains("Paper mode"))
+        assertTrue("nothing went to Zerodha", kite.placed.isEmpty())
+    }
 }
+
