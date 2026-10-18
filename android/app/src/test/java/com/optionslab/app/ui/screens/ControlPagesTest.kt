@@ -10,6 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -617,10 +620,18 @@ class ControlPagesTest {
         compose.waitForText("Delete harvested data?")
         tap("Keep")
         compose.waitForNoText("Delete harvested data?")
-        // The closing dialog can still hold the button's words for a frame: wait for the page's one button alone.
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Delete this phone's harvested data").fetchSemanticsNodes().size == 1 }
+        // The page's own button - never one inside a dialog. 18 Oct, review: it is the list's last item, and the cards above it
+        // fill in from I/O after it was first shown (the manifests, the recorder, the recordings, GitHub sync), which could
+        // push it out of the list's composed window - an exact count then never came, and waitUntil (which does not run
+        // the main looper) only timed out. Shown again, then waited for with the looper running.
+        val pageButton = hasText("Delete this phone's harvested data") and !hasAnyAncestor(isDialog())
+        compose.reveal("Delete this phone's harvested data")
+        compose.until(15_000, "the page's delete button") {
+            compose.onAllNodes(pageButton).fetchSemanticsNodes().isNotEmpty() &&
+                compose.onAllNodes(hasText("Delete this phone's harvested data") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isEmpty()
+        }
         // The scrolling list can briefly compose the same item twice (a prefetched copy): either copy is the page's button.
-        compose.onAllNodesWithText("Delete this phone's harvested data").onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.onAllNodes(pageButton).onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Delete harvested data?")
         tap("Delete")
         compose.until(15_000) { model.message.value == "Harvested data deleted." }

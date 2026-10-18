@@ -1161,10 +1161,12 @@ internal fun SoloCard() {
         // The forward test set in advance and the "not proven" label: in the name's dialog (COMPACT, 15 Oct), with its rules.
         // Its dialog's lines and the record line: read off the main thread, again on each switch (18 Oct, review: both read
         // Solo's trades from the vault, decrypted on a first read, during composition). Shown once read.
+        // (Set on the main thread, never from the I/O thread's continuation: as [SoloForwardGlance].)
         val solo by androidx.compose.runtime.produceState<Pair<List<String>, String>?>(null, on) {
-            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching { com.optionslab.app.ira.IraSolo.card() to com.optionslab.app.ira.IraSolo.record() }.getOrNull()
             }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { value = r }
         }
         val lines = solo?.first.orEmpty()
         Row(verticalAlignment = Alignment.CenterVertically) {
