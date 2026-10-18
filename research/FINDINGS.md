@@ -293,6 +293,17 @@ Full study: `HUNT_R15_DAILY_FILTERS.md` (pre-registered `hunt/r15/PREREG.md`); s
   A3 Night R3 BANKNIFTY leg. Judged at 300 Liquidity trades (A1/A2) / 100 nights (A3) with Holm; the shadow alone is
   too small to prove A1 (expected +Rs 30-40 a trade vs a Rs 55-60 standard error) - it mainly guards against harm.
 
+## Entry filters for Liquidity 15+5 (R80, 18 Oct 2026) - 0 of 10 pass; keep the plain entries
+Full study: `HUNT_R80_LIQUIDITY_ENTRIES.md` (pre-registered `hunt/r80/PREREG.md`; R51 clean stores; design 20 Nov 2024 -
+31 Mar 2026, final 1 Apr - 13 Oct 2026 read once (weak: already read by R51/R63/R70/R76); BH over 10; random-skip twins).
+- Signal: the index (Liquidity level breaks); every filter reads index bars only. BANKNIFTY B0: design +Rs 1,10,094 (336
+  trades), final +Rs 10,978 (131).
+- Older pools (V1), a 2-a-day cap (V9) and stop-after-first-loss (V10) led in design (+Rs 4.8k to +6.9k) and lost in the
+  final (-Rs 1.3k to -24.0k). Clean breaks (V4) won the final (+Rs 16.7k, twin p 0.03) after losing Rs 75k in design.
+  Displacement breaks (V8) were ahead in walk-forward and final but no better than random skipping (twin p 0.30). All q >= 0.31.
+- No entries before 10:15 (V6, V7) cost Rs 90-93k in design: the morning breaks carry the arm. Round numbers (V3), stacked
+  zones (V2) and beyond-yesterday's-range (V5) also fail. Volume surge: not tested (no futures minutes before 29 Jul 2026).
+
 ## Dealer gamma exposure, intraday (R28, 14 Oct 2026) - size of the day only; no arm filter
 Full study: `HUNT_R28_GEX.md` (pre-registered `hunt/r28/PREREG.md`; lake Aug 2021 - Oct 2026; holdout read once).
 - GEX = Rs of index delta the option market-makers must trade per 1% move (gamma x OI x spot^2 x 1%), built every

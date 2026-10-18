@@ -1,0 +1,37 @@
+id: r80-liq-entry-v4
+title: 'R80 Liquidity 15+5 entry filter V4: only clean breaks: the pool was not swept (wick through, close back) before the
+  break'
+family: liquidity
+date: '2026-10-18'
+doc: research/HUNT_R80_LIQUIDITY_ENTRIES.md
+hypothesis: 'Filtering Liquidity 15+5''s signals (only clean breaks: the pool was not swept (wick through, close back) before
+  the break) beats the plain rules in the walk-forward window and the final period, beats random skipping of as many signals
+  (twin p < 0.10, BH q < 0.10 over 10 filters) and is not carried by its top 5 trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once; already read by R51 / R63 / R70 / R76 (weak)
+instruments:
+- BANKNIFTY
+- NIFTY
+- SENSEX
+features:
+- 'signal: index bars (Liquidity level breaks, 15/5-min); filter: index bars only; option bought (1-ITM)'
+model_or_rule: 'Liquidity 15+5 (fam_liq, unchanged exits) + only clean breaks: the pool was not swept (wick through, close
+  back) before the break'
+settings: research/hunt/r80/r80rules.py, r80study.py; PREREG.md
+prereg: research/hunt/r80/PREREG.md
+variants_tried: 10
+results:
+  summary: 'BANKNIFTY design: 172 trades, win 41%, net Rs 35,066, worst day -Rs 4,757, max DD Rs 23,153 (-Rs 75,028 vs B0
+    Rs 110,094 on 336; walk-forward Apr 2025 - Mar 2026 -Rs 59,162 vs B0; design twin p 0.8084). Final (read once): 69 trades,
+    win 42%, net Rs 27,711, worst day -Rs 6,910, max DD Rs 16,726 (Rs 16,733 vs B0 Rs 10,978 on 131); random-skip twin p 0.0319,
+    BH q 0.3095 over 10; top-5 check Rs 16,733. Fails: walk-forward not above B0, BH q >= 0.10. Information only, NIFTY: design
+    Rs 589, final Rs 7,301 vs plain; SENSEX: design -Rs 19,699, final -Rs 10,511 vs plain.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, one held
+    contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; research only, nothing changes paper or live. Liquidity BANKNIFTY's plain-rules record for
+  the 26 Oct decision is untouched.
