@@ -314,6 +314,39 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     /**
+     * 18 Oct (speed review): the stream's socket thread is the tick path - a tick, even the day's first (the order-speed book
+     * not yet in memory), reads nothing from the settings vault there. It used to: the clock-offset figure read the day's
+     * book from the vault on the socket thread ([OrderTiming.clock]).
+     */
+    @Test fun aTickOnTheStreamsThreadReadsNothingFromTheSettingsVaultEvenTheDaysFirst() {
+        OrderTiming.forget()
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        try {
+            // feedForTest runs exactly what the socket's message runs, on this thread.
+            tick(201.0)
+            tick(201.5, tok = peToken)
+        } finally { SecurePrefs.countedThread = null }
+        assertEquals("settings reads on the stream's thread for a tick", 0L, SecurePrefs.readsForTest.get())
+        assertNotNull(KiteStream.freshTick(token))
+    }
+
+    /**
+     * 18 Oct: a tick whose arrival is "in the future" (the phone's clock stepped back since) is not fresh: the price read goes
+     * to Zerodha's quote, and the decisions' fresh tick is none. It used to pass for fresh for as long as the clock's step.
+     */
+    @Test fun aTickFromBeforeTheClockSteppedBackIsNotFresh() = runBlocking {
+        try {
+            tick(150.0, atMs = System.currentTimeMillis() + 60_000)
+            kite.requests.clear()
+            assertNull(KiteStream.tick(token))
+            assertNull(KiteStream.freshTick(token))
+            assertEquals("Zerodha's quote, not the stepped tick", 200.0, Broker.quotes(listOf("NFO:$sym")).getValue("NFO:$sym").last, 0.0)
+            assertTrue(kite.requests.any { it.path.startsWith("/quote") })
+        } finally { KiteStream.resetForTest() }
+    }
+
+    /**
      * Review R1: a BOT's entry (tag "iraorb") also asks the door's bot checks - the daily loss limit's day, the day stop, the
      * day lock (and its amount), the smart workers and the portfolio guard - and still reads nothing from the settings vault.
      * A trip written later is seen at once (kept in memory, refreshed on the write).

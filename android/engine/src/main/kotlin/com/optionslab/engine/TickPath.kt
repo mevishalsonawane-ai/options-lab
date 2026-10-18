@@ -26,21 +26,44 @@ class TickPath(private val keepMs: Long = 5 * 60_000L, private val bucketMs: Lon
         while (buckets.first().at < cut) buckets.removeFirst()
     }
 
-    /** The buckets that started after the one holding [sinceMs] (a price at that moment itself is the caller's own look). */
-    private fun after(sinceMs: Long): List<Bucket> {
-        val from = sinceMs - Math.floorMod(sinceMs, bucketMs)
-        return buckets.filter { it.at > from }
+    /**
+     * The index of the first bucket that starts at or after [atMs] ([buckets].size when none): the buckets are kept in
+     * strictly rising order, so a binary search. 18 Oct (speed): the looks below walk the deque from here in place - they
+     * used to copy the matching buckets into a new list on every look (each open position, every tick).
+     */
+    private fun firstFrom(atMs: Long): Int {
+        var lo = 0
+        var hi = buckets.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (buckets[mid].at < atMs) lo = mid + 1 else hi = mid
+        }
+        return lo
     }
 
+    /** The first bucket that started after the one holding [sinceMs] (a price at that moment itself is the caller's own look). */
+    private fun firstAfter(sinceMs: Long): Int = firstFrom(sinceMs - Math.floorMod(sinceMs, bucketMs) + 1)
+
     /** The highest price traded after [sinceMs], or null when none is kept. */
-    @Synchronized fun highSince(sinceMs: Long): Double? = after(sinceMs).maxOfOrNull { it.high }
+    @Synchronized fun highSince(sinceMs: Long): Double? {
+        val from = firstAfter(sinceMs)
+        if (from >= buckets.size) return null
+        var high = buckets[from].high
+        for (i in from + 1 until buckets.size) high = maxOf(high, buckets[i].high)
+        return high
+    }
 
     /**
      * Where a resting SELL stop at [trigger], resting since [sinceMs], filled: the first bucket after it that traded at or
      * under the trigger, at the trigger or at that bucket's first price when it was already under it. Null: not reached.
      */
-    @Synchronized fun sellStopFill(sinceMs: Long, trigger: Double): Double? =
-        after(sinceMs).firstOrNull { it.low <= trigger + 1e-9 }?.let { minOf(trigger, it.open) }
+    @Synchronized fun sellStopFill(sinceMs: Long, trigger: Double): Double? {
+        for (i in firstAfter(sinceMs) until buckets.size) {
+            val b = buckets[i]
+            if (b.low <= trigger + 1e-9) return minOf(trigger, b.open)
+        }
+        return null
+    }
 
     /**
      * The 1-minute candle that started at [startMs] (epoch ms), from the prices kept: open, high, low, close; null when
@@ -49,9 +72,13 @@ class TickPath(private val keepMs: Long = 5 * 60_000L, private val bucketMs: Lon
     @Synchronized fun minute(startMs: Long): DoubleArray? {
         // Only a whole minute: the prices kept must reach back to its start (else its open is not known).
         if (buckets.isEmpty() || buckets.first().at > startMs) return null
-        val inside = buckets.filter { it.at >= startMs && it.at < startMs + 60_000L }
-        if (inside.isEmpty()) return null
-        return doubleArrayOf(inside.first().open, inside.maxOf { it.high }, inside.minOf { it.low }, inside.last().close)
+        val from = firstFrom(startMs)
+        val end = firstFrom(startMs + 60_000L)
+        if (from >= end) return null
+        var high = buckets[from].high
+        var low = buckets[from].low
+        for (i in from + 1 until end) { high = maxOf(high, buckets[i].high); low = minOf(low, buckets[i].low) }
+        return doubleArrayOf(buckets[from].open, high, low, buckets[end - 1].close)
     }
 
     /** How many buckets are kept (tests). */
