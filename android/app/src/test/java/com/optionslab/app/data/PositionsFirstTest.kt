@@ -200,7 +200,7 @@ class PositionsFirstTest : RobolectricTest() {
         assertEquals(true, PositionsFirst.foundOpen)
         assertTrue(SharedKnowledgeHost.snapshot.size > 0)
         assertNotNull(PositionsFirst.order.positionsWatchedAfter(PositionsFirst.startedAt))
-        assertTrue(PositionsFirst.diagLine(), PositionsFirst.diagLine().startsWith("Start-up: positions +") && "open positions found and watched first" in PositionsFirst.diagLine())
+        assertTrue(PositionsFirst.diagLine(), PositionsFirst.diagLine().startsWith("Start-up: watch asked +") && ", positions +" in PositionsFirst.diagLine() && "open positions found and watched first" in PositionsFirst.diagLine())
     }
 
     @Test fun nothingOpenStillAsksTheWatchAndAnUnreadableBookCountsAsOpen() {
