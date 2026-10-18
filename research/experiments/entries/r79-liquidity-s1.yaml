@@ -1,0 +1,37 @@
+id: r79-liquidity-s1
+title: 'R79 Liquidity direction: take only when Supertrend(10,3) on the index''s 5-minute bars agrees with the side'
+family: liquidity
+date: '2026-10-18'
+doc: research/HUNT_R79_LIQUIDITY_DIRECTION.md
+hypothesis: 'Boss (18 Oct): ''should we use Supertrend or wait for 10 candles for getting accurate direction? Or like Breadth
+  Donchian, check all the other indices at once?'' This variant: take only when Supertrend(10,3) on the index''s 5-minute
+  bars agrees with the side. PASS only if it beats B0 in walk-forward AND final, BH q < 0.10 and random-skip p < 0.10.'
+data_version: 'GitHub release research-data: banknifty_prev_year_wide + banknifty_year_wide (BANKNIFTY index + options), nifty_prev
+  / nifty_year, finnifty_index, sensex_index (index minutes); 20 Nov 2024 - 23 Feb 2026 (PREREG Amendment 1: the Drive lake
+  was not reachable)'
+period:
+  design: 20 Nov 2024 - 31 Dec 2025 (walk-forward Apr - Dec 2025)
+  holdout: 1 Jan - 23 Feb 2026 (30 trading days with trades), read once; inside the design period of R51 / R63 / R70 / R76
+    (weak)
+instruments:
+- BANKNIFTY
+features:
+- 'signal: BANKNIFTY index bars; filter: Supertrend(10,3) on BANKNIFTY 5-min index bars'
+model_or_rule: Liquidity 15+5 BANKNIFTY (index level breaks on 15/5-min index bars; 1-ITM option bought); take only when Supertrend(10,3)
+  on the index's 5-minute bars agrees with the side
+settings: research/hunt/r79/r79study.py; PREREG.md Amendment 1
+prereg: research/hunt/r79/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design: 258 trades, win 43%, net Rs 76,010 (Rs 295/trade), worst day -Rs 4,944, max DD Rs 11,343, stops 7. Walk-forward:
+    167 trades, win 42%, net Rs 28,514 (Rs 171/trade), worst day -Rs 4,944, max DD Rs 10,805, stops 6. Final: 46 trades, win
+    33%, net Rs 16,288 (Rs 354/trade), worst day -Rs 1,985, max DD Rs 8,285, stops 1. Against B0: design -Rs 3,799 (bootstrap
+    p 0.8545), walk-forward -Rs 4,053, final Rs 74 (p 0.3905, BH q 0.8385 over 6 tests); random-skip p 0.5649. Design: skipped
+    9 B0 trades (B0 net on them Rs 3,799), kept 258 (change on them Rs 0). Verdict FAIL: walk-forward net not above B0; BH
+    q 0.8385 not < 0.1; random-skip p 0.5649 not < 0.1.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, one held
+    contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: 'Signal on the underlying; research only, nothing changes paper or live. Liquidity BANKNIFTY''s plain-rules record
+  for the 26 Oct decision is untouched. Partial study: one index, no Apr - Oct 2026 data.'
