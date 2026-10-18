@@ -64,6 +64,8 @@ object ArmLive {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.noBackupFilesDir, FILE)
+        // Solo (midday)'s paper book (Jarvis builds only): read by the watch, never at the start (its trades are in the settings vault).
+        if (com.optionslab.app.BuildConfig.JARVIS) register(LiveMirror.SOLO) { com.optionslab.app.ira.IraSolo.mirrorLegs() }
     }
 
     private const val FILE = "arm_live.vault"
