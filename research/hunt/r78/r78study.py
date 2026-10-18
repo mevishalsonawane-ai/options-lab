@@ -146,7 +146,7 @@ def final(path, trades_dir=None):
     if flag.exists():
         raise SystemExit("R78's final window was already read once (results/FINAL_READ). Refusing a second read.")
     des = json.loads((RES / "design.json").read_text())
-    flag.write_text(f"final window {FINAL[0]} .. {FINAL[1]} read on {pd.Timestamp.now("UTC"):%Y-%m-%d %H:%M} UTC\n")
+    flag.write_text(f"final window {FINAL[0]} .. {FINAL[1]} read on {pd.Timestamp.now('UTC'):%Y-%m-%d %H:%M} UTC\n")
     B = E.Bars(E.read_bid(path))
     T = {k: in_period(v, *FINAL) for k, v in all_trades(B).items()}
     lines = {}
