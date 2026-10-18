@@ -60,6 +60,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-18-arms-live", OCT18, "Every paper strategy can trade live, starting in Shadow",
+            "Every paper strategy now has its own Trade live switch, so it can trade live too. " +
+                "Each one starts in Shadow: it records what it would do and sends nothing to Zerodha. " +
+                "Turning Shadow off needs your PIN, and you can turn it back on any time. " +
+                "Shadow records use Zerodha's ask and bid, the app's measured slippage and the charges. " +
+                "Live stops rest at Zerodha, as a GTT for trades carried overnight. " +
+                "A strategy with no premium stop of its own gets a safety stop 30% below its fill. " +
+                "Every switch is checked again just before an order goes, and a check that fails blocks the entry. " +
+                "Exits, stops and square-offs always go.",
+            "Settings → Zerodha, beside the Live switch: each strategy's Trade live and Shadow"),
         Entry("2026-10-18-live-check", OCT18, "Live check: test Zerodha, prices and orders in one tap",
             "The Live check tests your Zerodha login, funds, prices, option chain and order margins, and never places an order. " +
                 "It times the price stream, its gaps and a reconnect, and checks each open position's stop is watched. " +
