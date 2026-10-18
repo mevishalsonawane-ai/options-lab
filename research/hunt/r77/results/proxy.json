@@ -1,0 +1,42 @@
+{
+ "NIFTY": {
+  "days": 53,
+  "minutes": 19874,
+  "spearman_pooled": 0.324,
+  "spearman_day_median": 0.42,
+  "proxy_flags": 1819,
+  "flags_in_futures_top10": 0.187
+ },
+ "BANKNIFTY": {
+  "days": 53,
+  "minutes": 19864,
+  "spearman_pooled": 0.381,
+  "spearman_day_median": 0.439,
+  "proxy_flags": 1879,
+  "flags_in_futures_top10": 0.136
+ },
+ "FINNIFTY": {
+  "days": 16,
+  "minutes": 5501,
+  "spearman_pooled": 0.178,
+  "spearman_day_median": 0.21,
+  "proxy_flags": 1190,
+  "flags_in_futures_top10": 0.482
+ },
+ "MIDCPNIFTY": {
+  "days": 52,
+  "minutes": 18864,
+  "spearman_pooled": 0.328,
+  "spearman_day_median": 0.196,
+  "proxy_flags": 2059,
+  "flags_in_futures_top10": 0.224
+ },
+ "SENSEX": {
+  "days": 51,
+  "minutes": 18511,
+  "spearman_pooled": 0.183,
+  "spearman_day_median": 0.152,
+  "proxy_flags": 1416,
+  "flags_in_futures_top10": 0.263
+ }
+}

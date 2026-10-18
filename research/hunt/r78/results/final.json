@@ -1,0 +1,1842 @@
+{
+ "period": [
+  "2026-04-01",
+  "2026-10-16"
+ ],
+ "lines": {
+  "V1 long": {
+   "variant": "V1",
+   "side": "long",
+   "final": {
+    "n": 45,
+    "per_month": 6.8834,
+    "win": 0.3111,
+    "avg_win": 847.8071,
+    "avg_loss": -637.2258,
+    "pf": 0.6009,
+    "net": -7884.7,
+    "per_trade": -175.2156,
+    "worst_day": -2683.0,
+    "max_dd": -12565.0,
+    "reasons": {
+     "stop": 31,
+     "target": 12,
+     "time 20:40": 2
+    }
+   },
+   "twin": {
+    "p": 0.6324,
+    "mean": -4954.4468,
+    "p90": 5159.49
+   },
+   "gates": {
+    "design_net": true,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-08-14 08:07:00",
+     "green_time": "2026-08-14 08:08:00",
+     "entry_time": "2026-08-14 08:10:00",
+     "exit_time": "2026-08-14 08:15:00",
+     "prev_level": 4343.365,
+     "entry_px": 4345.325,
+     "stop_px": 4342.925,
+     "target_px": 4347.945,
+     "exit_px": 4347.945,
+     "reason": "target",
+     "net": 255.0,
+     "r_mult": 1.0917
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-13 08:46:00",
+     "green_time": "2026-07-13 08:47:00",
+     "entry_time": "2026-07-13 08:49:00",
+     "exit_time": "2026-07-13 09:18:00",
+     "prev_level": 4072.585,
+     "entry_px": 4075.175,
+     "stop_px": 4071.905,
+     "target_px": 4080.535,
+     "exit_px": 4071.855,
+     "reason": "stop",
+     "net": -339.0,
+     "r_mult": -1.0153
+    },
+    {
+     "side": "long",
+     "break_time": "2026-09-21 14:03:00",
+     "green_time": "2026-09-21 14:06:00",
+     "entry_time": "2026-09-21 14:08:00",
+     "exit_time": "2026-09-21 20:40:00",
+     "prev_level": 4334.105,
+     "entry_px": 4332.665,
+     "stop_px": 4322.235,
+     "target_px": 4369.505,
+     "exit_px": 4341.645,
+     "reason": "time 20:40",
+     "net": 891.0,
+     "r_mult": 0.861
+    }
+   ]
+  },
+  "V1 short": {
+   "variant": "V1",
+   "side": "short",
+   "final": {
+    "n": 30,
+    "per_month": 4.5889,
+    "win": 0.3667,
+    "avg_win": 1088.2727,
+    "avg_loss": -778.7526,
+    "pf": 0.8091,
+    "net": -2825.3,
+    "per_trade": -94.1767,
+    "worst_day": -1735.0,
+    "max_dd": -6454.0,
+    "reasons": {
+     "stop": 19,
+     "target": 8,
+     "time 20:40": 3
+    }
+   },
+   "twin": {
+    "p": 0.6683,
+    "mean": 586.1438,
+    "p90": 9882.91
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-27 13:11:00",
+     "green_time": "2026-07-27 13:13:00",
+     "entry_time": "2026-07-27 13:15:00",
+     "exit_time": "2026-07-27 13:28:00",
+     "prev_level": 4081.895,
+     "entry_px": 4084.765,
+     "stop_px": 4088.015,
+     "target_px": 4080.915,
+     "exit_px": 4080.915,
+     "reason": "target",
+     "net": 378.0,
+     "r_mult": 1.1846
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-07 08:33:00",
+     "green_time": "2026-08-07 08:35:00",
+     "entry_time": "2026-08-07 08:37:00",
+     "exit_time": "2026-08-07 09:43:00",
+     "prev_level": 4303.745,
+     "entry_px": 4301.725,
+     "stop_px": 4316.975,
+     "target_px": 4283.035,
+     "exit_px": 4317.025,
+     "reason": "stop",
+     "net": -1537.0,
+     "r_mult": -1.0033
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4066.535,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 38.0,
+     "r_mult": 0.0347
+    }
+   ]
+  },
+  "V1 combined": {
+   "variant": "V1",
+   "side": "combined",
+   "final": {
+    "n": 75,
+    "per_month": 11.4724,
+    "win": 0.3333,
+    "avg_win": 953.612,
+    "avg_loss": -691.006,
+    "pf": 0.69,
+    "net": -10710.0,
+    "per_trade": -142.8,
+    "worst_day": -2683.0,
+    "max_dd": -12722.0,
+    "reasons": {
+     "stop": 50,
+     "target": 20,
+     "time 20:40": 5
+    }
+   },
+   "twin": {
+    "p": 0.7133,
+    "mean": -4771.9355,
+    "p90": 8651.35
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-08-06 09:21:00",
+     "green_time": "2026-08-06 09:24:00",
+     "entry_time": "2026-08-06 09:26:00",
+     "exit_time": "2026-08-06 11:22:00",
+     "prev_level": 4281.795,
+     "entry_px": 4281.415,
+     "stop_px": 4284.955,
+     "target_px": 4263.675,
+     "exit_px": 4263.675,
+     "reason": "target",
+     "net": 1767.0,
+     "r_mult": 5.0113
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-29 15:34:00",
+     "green_time": "2026-07-29 15:35:00",
+     "entry_time": "2026-07-29 15:37:00",
+     "exit_time": "2026-07-29 15:38:00",
+     "prev_level": 4011.335,
+     "entry_px": 4012.155,
+     "stop_px": 4009.585,
+     "target_px": 4013.385,
+     "exit_px": 4009.535,
+     "reason": "stop",
+     "net": -269.0,
+     "r_mult": -1.0195
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4066.535,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 38.0,
+     "r_mult": 0.0347
+    }
+   ]
+  },
+  "V2 long": {
+   "variant": "V2",
+   "side": "long",
+   "final": {
+    "n": 33,
+    "per_month": 5.0478,
+    "win": 0.2727,
+    "avg_win": 699.4778,
+    "avg_loss": -582.125,
+    "pf": 0.4506,
+    "net": -7675.7,
+    "per_trade": -232.597,
+    "worst_day": -1506.0,
+    "max_dd": -8505.0,
+    "reasons": {
+     "stop": 24,
+     "target": 9
+    }
+   },
+   "twin": {
+    "p": 0.7722,
+    "mean": -3656.8886,
+    "p90": 3603.6
+   },
+   "gates": {
+    "design_net": true,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-08-14 08:07:00",
+     "green_time": "2026-08-14 08:08:00",
+     "entry_time": "2026-08-14 08:10:00",
+     "exit_time": "2026-08-14 08:15:00",
+     "prev_level": 4343.365,
+     "entry_px": 4345.325,
+     "stop_px": 4342.925,
+     "target_px": 4347.945,
+     "exit_px": 4347.945,
+     "reason": "target",
+     "net": 255.0,
+     "r_mult": 1.0917
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-23 12:17:00",
+     "green_time": "2026-07-23 12:18:00",
+     "entry_time": "2026-07-23 12:20:00",
+     "exit_time": "2026-07-23 12:20:00",
+     "prev_level": 4076.325,
+     "entry_px": 4077.755,
+     "stop_px": 4074.385,
+     "target_px": 4088.955,
+     "exit_px": 4074.335,
+     "reason": "stop",
+     "net": -349.0,
+     "r_mult": -1.0148
+    }
+   ]
+  },
+  "V2 short": {
+   "variant": "V2",
+   "side": "short",
+   "final": {
+    "n": 22,
+    "per_month": 3.3652,
+    "win": 0.3182,
+    "avg_win": 991.0,
+    "avg_loss": -488.4867,
+    "pf": 0.9467,
+    "net": -390.3,
+    "per_trade": -17.7409,
+    "worst_day": -1735.0,
+    "max_dd": -2754.0,
+    "reasons": {
+     "stop": 15,
+     "target": 6,
+     "time 20:40": 1
+    }
+   },
+   "twin": {
+    "p": 0.4466,
+    "mean": -676.1612,
+    "p90": 4747.6
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-09-17 14:34:00",
+     "green_time": "2026-09-17 14:35:00",
+     "entry_time": "2026-09-17 14:37:00",
+     "exit_time": "2026-09-17 14:55:00",
+     "prev_level": 4366.525,
+     "entry_px": 4365.675,
+     "stop_px": 4368.055,
+     "target_px": 4355.485,
+     "exit_px": 4355.485,
+     "reason": "target",
+     "net": 1012.0,
+     "r_mult": 4.2815
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-04 14:40:00",
+     "green_time": "2026-08-04 14:41:00",
+     "entry_time": "2026-08-04 14:43:00",
+     "exit_time": "2026-08-04 14:46:00",
+     "prev_level": 4079.155,
+     "entry_px": 4077.305,
+     "stop_px": 4081.045,
+     "target_px": 4074.515,
+     "exit_px": 4081.095,
+     "reason": "stop",
+     "net": -386.0,
+     "r_mult": -1.0134
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-12 12:59:00",
+     "green_time": "2026-08-12 13:00:00",
+     "entry_time": "2026-08-12 13:02:00",
+     "exit_time": "2026-08-12 20:40:00",
+     "prev_level": 4434.965,
+     "entry_px": 4427.595,
+     "stop_px": 4441.645,
+     "target_px": 4381.595,
+     "exit_px": 4408.185,
+     "reason": "time 20:40",
+     "net": 1934.0,
+     "r_mult": 1.3815
+    }
+   ]
+  },
+  "V2 combined": {
+   "variant": "V2",
+   "side": "combined",
+   "final": {
+    "n": 55,
+    "per_month": 8.4131,
+    "win": 0.2909,
+    "avg_win": 827.0187,
+    "avg_loss": -546.1103,
+    "pf": 0.6213,
+    "net": -8066.0,
+    "per_trade": -146.6545,
+    "worst_day": -1735.0,
+    "max_dd": -8980.0,
+    "reasons": {
+     "stop": 39,
+     "target": 15,
+     "time 20:40": 1
+    }
+   },
+   "twin": {
+    "p": 0.6833,
+    "mean": -4201.2964,
+    "p90": 5354.44
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-08-14 08:07:00",
+     "green_time": "2026-08-14 08:08:00",
+     "entry_time": "2026-08-14 08:10:00",
+     "exit_time": "2026-08-14 08:15:00",
+     "prev_level": 4343.365,
+     "entry_px": 4345.325,
+     "stop_px": 4342.925,
+     "target_px": 4347.945,
+     "exit_px": 4347.945,
+     "reason": "target",
+     "net": 255.0,
+     "r_mult": 1.0917
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-27 16:22:00",
+     "green_time": "2026-07-27 16:23:00",
+     "entry_time": "2026-07-27 16:25:00",
+     "exit_time": "2026-07-27 16:25:00",
+     "prev_level": 4081.895,
+     "entry_px": 4080.605,
+     "stop_px": 4082.835,
+     "target_px": 4072.695,
+     "exit_px": 4082.885,
+     "reason": "stop",
+     "net": -235.0,
+     "r_mult": -1.0224
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-12 12:59:00",
+     "green_time": "2026-08-12 13:00:00",
+     "entry_time": "2026-08-12 13:02:00",
+     "exit_time": "2026-08-12 20:40:00",
+     "prev_level": 4434.965,
+     "entry_px": 4427.595,
+     "stop_px": 4441.645,
+     "target_px": 4381.595,
+     "exit_px": 4408.185,
+     "reason": "time 20:40",
+     "net": 1934.0,
+     "r_mult": 1.3815
+    }
+   ]
+  },
+  "V3 long": {
+   "variant": "V3",
+   "side": "long",
+   "final": {
+    "n": 51,
+    "per_month": 7.8012,
+    "win": 0.2157,
+    "avg_win": 1091.1818,
+    "avg_loss": -769.8,
+    "pf": 0.3898,
+    "net": -18789.0,
+    "per_trade": -368.4118,
+    "worst_day": -2683.0,
+    "max_dd": -21825.5,
+    "reasons": {
+     "stop": 39,
+     "target": 9,
+     "time 20:40": 3
+    }
+   },
+   "twin": {
+    "p": 0.9271,
+    "mean": -6950.2849,
+    "p90": 3728.02
+   },
+   "gates": {
+    "design_net": true,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-06-03 07:00:00",
+     "green_time": "2026-06-03 07:02:00",
+     "entry_time": "2026-06-03 07:04:00",
+     "exit_time": "2026-06-03 07:10:00",
+     "prev_level": 4461.905,
+     "entry_px": 4466.715,
+     "stop_px": 4459.685,
+     "target_px": 4470.705,
+     "exit_px": 4470.705,
+     "reason": "target",
+     "net": 392.0,
+     "r_mult": 0.5676
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-23 11:40:00",
+     "green_time": "2026-07-23 11:44:00",
+     "entry_time": "2026-07-23 11:46:00",
+     "exit_time": "2026-07-23 12:16:00",
+     "prev_level": 4076.325,
+     "entry_px": 4081.185,
+     "stop_px": 4072.655,
+     "target_px": 4095.185,
+     "exit_px": 4072.605,
+     "reason": "stop",
+     "net": -865.0,
+     "r_mult": -1.0059
+    },
+    {
+     "side": "long",
+     "break_time": "2026-05-19 13:31:00",
+     "green_time": "2026-05-19 13:36:00",
+     "entry_time": "2026-05-19 13:38:00",
+     "exit_time": "2026-05-19 20:40:00",
+     "prev_level": 4480.065,
+     "entry_px": 4485.245,
+     "stop_px": 4464.515,
+     "target_px": 4547.025,
+     "exit_px": 4483.098,
+     "reason": "time 20:40",
+     "net": -221.7,
+     "r_mult": -0.1036
+    }
+   ]
+  },
+  "V3 short": {
+   "variant": "V3",
+   "side": "short",
+   "final": {
+    "n": 34,
+    "per_month": 5.2008,
+    "win": 0.3235,
+    "avg_win": 1407.1818,
+    "avg_loss": -784.5565,
+    "pf": 0.8578,
+    "net": -2565.8,
+    "per_trade": -75.4647,
+    "worst_day": -1735.0,
+    "max_dd": -6165.2,
+    "reasons": {
+     "stop": 23,
+     "target": 6,
+     "time 20:40": 5
+    }
+   },
+   "twin": {
+    "p": 0.5954,
+    "mean": -450.7439,
+    "p90": 9615.41
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-08-06 09:15:00",
+     "green_time": "2026-08-06 09:24:00",
+     "entry_time": "2026-08-06 09:26:00",
+     "exit_time": "2026-08-06 11:22:00",
+     "prev_level": 4281.795,
+     "entry_px": 4281.415,
+     "stop_px": 4284.955,
+     "target_px": 4263.675,
+     "exit_px": 4263.675,
+     "reason": "target",
+     "net": 1767.0,
+     "r_mult": 5.0113
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-29 18:00:00",
+     "green_time": "2026-07-29 18:02:00",
+     "entry_time": "2026-07-29 18:04:00",
+     "exit_time": "2026-07-29 18:12:00",
+     "prev_level": 4073.855,
+     "entry_px": 4068.125,
+     "stop_px": 4085.065,
+     "target_px": 4030.275,
+     "exit_px": 4085.115,
+     "reason": "stop",
+     "net": -1706.0,
+     "r_mult": -1.003
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4066.535,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 38.0,
+     "r_mult": 0.0347
+    }
+   ]
+  },
+  "V3 combined": {
+   "variant": "V3",
+   "side": "combined",
+   "final": {
+    "n": 85,
+    "per_month": 13.002,
+    "win": 0.2588,
+    "avg_win": 1249.1818,
+    "avg_loss": -775.1873,
+    "pf": 0.5627,
+    "net": -21354.8,
+    "per_trade": -251.2329,
+    "worst_day": -2683.0,
+    "max_dd": -23852.1,
+    "reasons": {
+     "stop": 62,
+     "target": 15,
+     "time 20:40": 8
+    }
+   },
+   "twin": {
+    "p": 0.8931,
+    "mean": -7115.4259,
+    "p90": 7738.64
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-27 13:11:00",
+     "green_time": "2026-07-27 13:13:00",
+     "entry_time": "2026-07-27 13:15:00",
+     "exit_time": "2026-07-27 13:28:00",
+     "prev_level": 4081.895,
+     "entry_px": 4084.765,
+     "stop_px": 4088.015,
+     "target_px": 4080.915,
+     "exit_px": 4080.915,
+     "reason": "target",
+     "net": 378.0,
+     "r_mult": 1.1846
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-29 13:50:00",
+     "green_time": "2026-07-29 13:57:00",
+     "entry_time": "2026-07-29 13:59:00",
+     "exit_time": "2026-07-29 14:00:00",
+     "prev_level": 4011.335,
+     "entry_px": 4007.785,
+     "stop_px": 4003.605,
+     "target_px": 4026.265,
+     "exit_px": 4003.555,
+     "reason": "stop",
+     "net": -430.0,
+     "r_mult": -1.012
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4066.535,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 38.0,
+     "r_mult": 0.0347
+    }
+   ]
+  },
+  "V4 long": {
+   "variant": "V4",
+   "side": "long",
+   "final": {
+    "n": 46,
+    "per_month": 7.0364,
+    "win": 0.2826,
+    "avg_win": 1199.6154,
+    "avg_loss": -648.7636,
+    "pf": 0.7284,
+    "net": -5814.2,
+    "per_trade": -126.3957,
+    "worst_day": -2737.0,
+    "max_dd": -16022.3,
+    "reasons": {
+     "stop": 33,
+     "target": 10,
+     "time 20:40": 3
+    }
+   },
+   "twin": {
+    "p": 0.5125,
+    "mean": -5365.6858,
+    "p90": 3917.86
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-09-14 10:31:00",
+     "green_time": "2026-09-14 10:32:00",
+     "entry_time": "2026-09-14 10:34:00",
+     "exit_time": "2026-09-14 10:34:00",
+     "prev_level": 4291.951,
+     "entry_px": 4292.175,
+     "stop_px": 4289.005,
+     "target_px": 4292.445,
+     "exit_px": 4292.445,
+     "reason": "target",
+     "net": 20.0,
+     "r_mult": 0.0852
+    },
+    {
+     "side": "long",
+     "break_time": "2026-06-24 07:35:00",
+     "green_time": "2026-06-24 07:38:00",
+     "entry_time": "2026-06-24 07:40:00",
+     "exit_time": "2026-06-24 07:53:00",
+     "prev_level": 4080.495,
+     "entry_px": 4078.935,
+     "stop_px": 4075.815,
+     "target_px": 4094.295,
+     "exit_px": 4075.765,
+     "reason": "stop",
+     "net": -324.0,
+     "r_mult": -1.016
+    },
+    {
+     "side": "long",
+     "break_time": "2026-09-04 13:00:00",
+     "green_time": "2026-09-04 13:01:00",
+     "entry_time": "2026-09-04 13:03:00",
+     "exit_time": "2026-09-04 20:40:00",
+     "prev_level": 4382.145,
+     "entry_px": 4385.445,
+     "stop_px": 4365.205,
+     "target_px": 4475.625,
+     "exit_px": 4430.245,
+     "reason": "time 20:40",
+     "net": 4473.0,
+     "r_mult": 2.2134
+    }
+   ]
+  },
+  "V4 short": {
+   "variant": "V4",
+   "side": "short",
+   "final": {
+    "n": 33,
+    "per_month": 5.0478,
+    "win": 0.4242,
+    "avg_win": 893.2143,
+    "avg_loss": -801.9632,
+    "pf": 0.8207,
+    "net": -2732.3,
+    "per_trade": -82.797,
+    "worst_day": -1735.0,
+    "max_dd": -7509.0,
+    "reasons": {
+     "stop": 19,
+     "target": 11,
+     "time 20:40": 3
+    }
+   },
+   "twin": {
+    "p": 0.6374,
+    "mean": 92.5962,
+    "p90": 9065.73
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-08-06 09:23:00",
+     "green_time": "2026-08-06 09:24:00",
+     "entry_time": "2026-08-06 09:26:00",
+     "exit_time": "2026-08-06 11:22:00",
+     "prev_level": 4281.795,
+     "entry_px": 4281.415,
+     "stop_px": 4284.955,
+     "target_px": 4263.675,
+     "exit_px": 4263.675,
+     "reason": "target",
+     "net": 1767.0,
+     "r_mult": 5.0113
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-29 18:00:00",
+     "green_time": "2026-07-29 18:02:00",
+     "entry_time": "2026-07-29 18:04:00",
+     "exit_time": "2026-07-29 18:12:00",
+     "prev_level": 4073.855,
+     "entry_px": 4068.125,
+     "stop_px": 4085.065,
+     "target_px": 4030.275,
+     "exit_px": 4085.115,
+     "reason": "stop",
+     "net": -1706.0,
+     "r_mult": -1.003
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4066.535,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 38.0,
+     "r_mult": 0.0347
+    }
+   ]
+  },
+  "V4 combined": {
+   "variant": "V4",
+   "side": "combined",
+   "final": {
+    "n": 79,
+    "per_month": 12.0842,
+    "win": 0.3418,
+    "avg_win": 1040.7407,
+    "avg_loss": -704.7404,
+    "pf": 0.7668,
+    "net": -8546.5,
+    "per_trade": -108.1835,
+    "worst_day": -3135.0,
+    "max_dd": -16488.6,
+    "reasons": {
+     "stop": 52,
+     "target": 21,
+     "time 20:40": 6
+    }
+   },
+   "twin": {
+    "p": 0.5814,
+    "mean": -5792.0696,
+    "p90": 7607.06
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-09-11 12:30:00",
+     "green_time": "2026-09-11 12:31:00",
+     "entry_time": "2026-09-11 12:33:00",
+     "exit_time": "2026-09-11 12:39:00",
+     "prev_level": 4310.999,
+     "entry_px": 4321.855,
+     "stop_px": 4291.851,
+     "target_px": 4347.675,
+     "exit_px": 4347.675,
+     "reason": "target",
+     "net": 2575.0,
+     "r_mult": 0.8606
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-13 09:50:00",
+     "green_time": "2026-07-13 09:53:00",
+     "entry_time": "2026-07-13 09:55:00",
+     "exit_time": "2026-07-13 09:56:00",
+     "prev_level": 4072.585,
+     "entry_px": 4071.175,
+     "stop_px": 4069.415,
+     "target_px": 4078.355,
+     "exit_px": 4069.365,
+     "reason": "stop",
+     "net": -188.0,
+     "r_mult": -1.0284
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-12 12:59:00",
+     "green_time": "2026-08-12 13:00:00",
+     "entry_time": "2026-08-12 13:02:00",
+     "exit_time": "2026-08-12 20:40:00",
+     "prev_level": 4434.965,
+     "entry_px": 4427.595,
+     "stop_px": 4441.645,
+     "target_px": 4381.595,
+     "exit_px": 4408.185,
+     "reason": "time 20:40",
+     "net": 1934.0,
+     "r_mult": 1.3815
+    }
+   ]
+  },
+  "V5 long": {
+   "variant": "V5",
+   "side": "long",
+   "final": {
+    "n": 45,
+    "per_month": 6.8834,
+    "win": 0.2889,
+    "avg_win": 1232.7038,
+    "avg_loss": -631.1688,
+    "pf": 0.7934,
+    "net": -4172.25,
+    "per_trade": -92.7167,
+    "worst_day": -2683.0,
+    "max_dd": -11188.5,
+    "reasons": {
+     "stop": 32,
+     "target": 13
+    }
+   },
+   "twin": {
+    "p": 0.4985,
+    "mean": -4084.6234,
+    "p90": 3877.665
+   },
+   "gates": {
+    "design_net": true,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-06-01 09:32:00",
+     "green_time": "2026-06-01 09:35:00",
+     "entry_time": "2026-06-01 09:37:00",
+     "exit_time": "2026-06-01 10:47:00",
+     "prev_level": 4491.695,
+     "entry_px": 4496.725,
+     "stop_px": 4488.865,
+     "target_px": 4508.515,
+     "exit_px": 4508.515,
+     "reason": "target",
+     "net": 1172.0,
+     "r_mult": 1.5
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-23 12:17:00",
+     "green_time": "2026-07-23 12:18:00",
+     "entry_time": "2026-07-23 12:20:00",
+     "exit_time": "2026-07-23 12:20:00",
+     "prev_level": 4076.325,
+     "entry_px": 4077.755,
+     "stop_px": 4074.385,
+     "target_px": 4082.81,
+     "exit_px": 4074.335,
+     "reason": "stop",
+     "net": -349.0,
+     "r_mult": -1.0148
+    }
+   ]
+  },
+  "V5 short": {
+   "variant": "V5",
+   "side": "short",
+   "final": {
+    "n": 30,
+    "per_month": 4.5889,
+    "win": 0.3667,
+    "avg_win": 1213.7545,
+    "avg_loss": -768.4895,
+    "pf": 0.9144,
+    "net": -1250.0,
+    "per_trade": -41.6667,
+    "worst_day": -1735.0,
+    "max_dd": -5251.0,
+    "reasons": {
+     "stop": 19,
+     "target": 11
+    }
+   },
+   "twin": {
+    "p": 0.6254,
+    "mean": 776.8441,
+    "p90": 8259.225
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 14:20:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4088.1725,
+     "exit_px": 4088.1725,
+     "reason": "target",
+     "net": 1936.25,
+     "r_mult": 1.5
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-04 11:51:00",
+     "green_time": "2026-08-04 11:54:00",
+     "entry_time": "2026-08-04 11:56:00",
+     "exit_time": "2026-08-04 12:40:00",
+     "prev_level": 4079.155,
+     "entry_px": 4071.245,
+     "stop_px": 4084.515,
+     "target_px": 4051.34,
+     "exit_px": 4084.565,
+     "reason": "stop",
+     "net": -1339.0,
+     "r_mult": -1.0038
+    }
+   ]
+  },
+  "V5 combined": {
+   "variant": "V5",
+   "side": "combined",
+   "final": {
+    "n": 75,
+    "per_month": 11.4724,
+    "win": 0.32,
+    "avg_win": 1224.0188,
+    "avg_loss": -682.3275,
+    "pf": 0.8442,
+    "net": -5422.25,
+    "per_trade": -72.2967,
+    "worst_day": -2683.0,
+    "max_dd": -9766.8,
+    "reasons": {
+     "stop": 51,
+     "target": 24
+    }
+   },
+   "twin": {
+    "p": 0.5814,
+    "mean": -3374.1235,
+    "p90": 7883.595
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 14:20:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4088.1725,
+     "exit_px": 4088.1725,
+     "reason": "target",
+     "net": 1936.25,
+     "r_mult": 1.5
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-29 15:34:00",
+     "green_time": "2026-07-29 15:35:00",
+     "entry_time": "2026-07-29 15:37:00",
+     "exit_time": "2026-07-29 15:38:00",
+     "prev_level": 4011.335,
+     "entry_px": 4012.155,
+     "stop_px": 4009.585,
+     "target_px": 4016.01,
+     "exit_px": 4009.535,
+     "reason": "stop",
+     "net": -269.0,
+     "r_mult": -1.0195
+    }
+   ]
+  },
+  "V6 long": {
+   "variant": "V6",
+   "side": "long",
+   "final": {
+    "n": 45,
+    "per_month": 6.8834,
+    "win": 0.2222,
+    "avg_win": 1626.58,
+    "avg_loss": -611.5257,
+    "pf": 0.76,
+    "net": -5137.6,
+    "per_trade": -114.1689,
+    "worst_day": -2683.0,
+    "max_dd": -11432.0,
+    "reasons": {
+     "stop": 35,
+     "target": 9,
+     "time 20:40": 1
+    }
+   },
+   "twin": {
+    "p": 0.5255,
+    "mean": -4589.7746,
+    "p90": 4290.54
+   },
+   "gates": {
+    "design_net": true,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-08-13 08:09:00",
+     "green_time": "2026-08-13 08:12:00",
+     "entry_time": "2026-08-13 08:14:00",
+     "exit_time": "2026-08-13 08:34:00",
+     "prev_level": 4366.065,
+     "entry_px": 4367.305,
+     "stop_px": 4363.805,
+     "target_px": 4374.305,
+     "exit_px": 4374.305,
+     "reason": "target",
+     "net": 693.0,
+     "r_mult": 2.0
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-17 12:54:00",
+     "green_time": "2026-07-17 12:55:00",
+     "entry_time": "2026-07-17 12:57:00",
+     "exit_time": "2026-07-17 12:58:00",
+     "prev_level": 3969.045,
+     "entry_px": 3971.175,
+     "stop_px": 3968.065,
+     "target_px": 3977.395,
+     "exit_px": 3968.015,
+     "reason": "stop",
+     "net": -323.0,
+     "r_mult": -1.0161
+    },
+    {
+     "side": "long",
+     "break_time": "2026-04-16 14:40:00",
+     "green_time": "2026-04-16 14:43:00",
+     "entry_time": "2026-04-16 14:45:00",
+     "exit_time": "2026-04-16 20:40:00",
+     "prev_level": 4785.885,
+     "entry_px": 4787.695,
+     "stop_px": 4772.798,
+     "target_px": 4817.489,
+     "exit_px": 4789.365,
+     "reason": "time 20:40",
+     "net": 160.0,
+     "r_mult": 0.1121
+    }
+   ]
+  },
+  "V6 short": {
+   "variant": "V6",
+   "side": "short",
+   "final": {
+    "n": 30,
+    "per_month": 4.5889,
+    "win": 0.2667,
+    "avg_win": 1579.875,
+    "avg_loss": -725.8636,
+    "pf": 0.7915,
+    "net": -3330.0,
+    "per_trade": -111.0,
+    "worst_day": -1735.0,
+    "max_dd": -6505.0,
+    "reasons": {
+     "stop": 22,
+     "target": 7,
+     "time 20:40": 1
+    }
+   },
+   "twin": {
+    "p": 0.7333,
+    "mean": 857.197,
+    "p90": 9139.26
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-08-06 09:21:00",
+     "green_time": "2026-08-06 09:24:00",
+     "entry_time": "2026-08-06 09:26:00",
+     "exit_time": "2026-08-06 09:43:00",
+     "prev_level": 4281.795,
+     "entry_px": 4281.415,
+     "stop_px": 4284.955,
+     "target_px": 4274.335,
+     "exit_px": 4274.335,
+     "reason": "target",
+     "net": 701.0,
+     "r_mult": 2.0
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-04 11:51:00",
+     "green_time": "2026-08-04 11:54:00",
+     "entry_time": "2026-08-04 11:56:00",
+     "exit_time": "2026-08-04 12:40:00",
+     "prev_level": 4079.155,
+     "entry_px": 4071.245,
+     "stop_px": 4084.515,
+     "target_px": 4044.705,
+     "exit_px": 4084.565,
+     "reason": "stop",
+     "net": -1339.0,
+     "r_mult": -1.0038
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4081.695,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 38.0,
+     "r_mult": 0.0347
+    }
+   ]
+  },
+  "V6 combined": {
+   "variant": "V6",
+   "side": "combined",
+   "final": {
+    "n": 75,
+    "per_month": 11.4724,
+    "win": 0.24,
+    "avg_win": 1605.8222,
+    "avg_loss": -655.6561,
+    "pf": 0.7734,
+    "net": -8467.6,
+    "per_trade": -112.9013,
+    "worst_day": -2683.0,
+    "max_dd": -12467.0,
+    "reasons": {
+     "stop": 57,
+     "target": 16,
+     "time 20:40": 2
+    }
+   },
+   "twin": {
+    "p": 0.6883,
+    "mean": -3552.3303,
+    "p90": 8952.85
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-08-12 12:59:00",
+     "green_time": "2026-08-12 13:00:00",
+     "entry_time": "2026-08-12 13:02:00",
+     "exit_time": "2026-08-12 16:56:00",
+     "prev_level": 4434.965,
+     "entry_px": 4427.595,
+     "stop_px": 4441.645,
+     "target_px": 4399.495,
+     "exit_px": 4399.495,
+     "reason": "target",
+     "net": 2803.0,
+     "r_mult": 2.0
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-23 12:17:00",
+     "green_time": "2026-07-23 12:18:00",
+     "entry_time": "2026-07-23 12:20:00",
+     "exit_time": "2026-07-23 12:20:00",
+     "prev_level": 4076.325,
+     "entry_px": 4077.755,
+     "stop_px": 4074.385,
+     "target_px": 4084.495,
+     "exit_px": 4074.335,
+     "reason": "stop",
+     "net": -349.0,
+     "r_mult": -1.0148
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:03:00",
+     "entry_time": "2026-07-30 14:05:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4107.605,
+     "stop_px": 4120.56,
+     "target_px": 4081.695,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 38.0,
+     "r_mult": 0.0347
+    }
+   ]
+  },
+  "V7 long": {
+   "variant": "V7",
+   "side": "long",
+   "final": {
+    "n": 45,
+    "per_month": 6.8834,
+    "win": 0.3778,
+    "avg_win": 752.8324,
+    "avg_loss": -598.1786,
+    "pf": 0.7641,
+    "net": -3950.85,
+    "per_trade": -87.7967,
+    "worst_day": -2683.0,
+    "max_dd": -10127.5,
+    "reasons": {
+     "stop": 34,
+     "target": 11
+    }
+   },
+   "twin": {
+    "p": 0.5005,
+    "mean": -3737.9454,
+    "p90": 4296.65
+   },
+   "gates": {
+    "design_net": true,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-08-14 08:07:00",
+     "green_time": "2026-08-14 08:08:00",
+     "entry_time": "2026-08-14 08:10:00",
+     "exit_time": "2026-08-14 08:15:00",
+     "prev_level": 4343.365,
+     "entry_px": 4345.325,
+     "stop_px": 4342.925,
+     "target_px": 4347.945,
+     "exit_px": 4347.945,
+     "reason": "target",
+     "net": 255.0,
+     "r_mult": 1.0917
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-13 08:46:00",
+     "green_time": "2026-07-13 08:47:00",
+     "entry_time": "2026-07-13 08:49:00",
+     "exit_time": "2026-07-13 09:18:00",
+     "prev_level": 4072.585,
+     "entry_px": 4075.175,
+     "stop_px": 4071.905,
+     "target_px": 4080.535,
+     "exit_px": 4071.855,
+     "reason": "stop",
+     "net": -339.0,
+     "r_mult": -1.0153
+    }
+   ]
+  },
+  "V7 short": {
+   "variant": "V7",
+   "side": "short",
+   "final": {
+    "n": 30,
+    "per_month": 4.5889,
+    "win": 0.3333,
+    "avg_win": 504.575,
+    "avg_loss": -692.065,
+    "pf": 0.3645,
+    "net": -8795.55,
+    "per_trade": -293.185,
+    "worst_day": -1735.0,
+    "max_dd": -9628.55,
+    "reasons": {
+     "stop": 24,
+     "target": 6
+    }
+   },
+   "twin": {
+    "p": 0.956,
+    "mean": 540.5065,
+    "p90": 7753.075
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-01 18:37:00",
+     "green_time": "2026-07-01 18:39:00",
+     "entry_time": "2026-07-01 18:41:00",
+     "exit_time": "2026-07-01 18:48:00",
+     "prev_level": 4063.205,
+     "entry_px": 4062.185,
+     "stop_px": 4065.325,
+     "target_px": 4061.095,
+     "exit_px": 4061.095,
+     "reason": "target",
+     "net": 102.0,
+     "r_mult": 0.3471
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-07 08:33:00",
+     "green_time": "2026-08-07 08:35:00",
+     "entry_time": "2026-08-07 08:37:00",
+     "exit_time": "2026-08-07 09:43:00",
+     "prev_level": 4303.745,
+     "entry_px": 4301.725,
+     "stop_px": 4316.975,
+     "target_px": 4283.035,
+     "exit_px": 4317.025,
+     "reason": "stop",
+     "net": -1537.0,
+     "r_mult": -1.0033
+    }
+   ]
+  },
+  "V7 combined": {
+   "variant": "V7",
+   "side": "combined",
+   "final": {
+    "n": 75,
+    "per_month": 11.4724,
+    "win": 0.36,
+    "avg_win": 660.8852,
+    "avg_loss": -637.2979,
+    "pf": 0.5833,
+    "net": -12746.4,
+    "per_trade": -169.952,
+    "worst_day": -2683.0,
+    "max_dd": -16385.25,
+    "reasons": {
+     "stop": 58,
+     "target": 17
+    }
+   },
+   "twin": {
+    "p": 0.8861,
+    "mean": -2958.3199,
+    "p90": 7957.85
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-27 13:11:00",
+     "green_time": "2026-07-27 13:13:00",
+     "entry_time": "2026-07-27 13:15:00",
+     "exit_time": "2026-07-27 13:28:00",
+     "prev_level": 4081.895,
+     "entry_px": 4084.765,
+     "stop_px": 4088.015,
+     "target_px": 4080.915,
+     "exit_px": 4080.915,
+     "reason": "target",
+     "net": 378.0,
+     "r_mult": 1.1846
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-29 18:00:00",
+     "green_time": "2026-07-29 18:02:00",
+     "entry_time": "2026-07-29 18:04:00",
+     "exit_time": "2026-07-29 18:12:00",
+     "prev_level": 4073.855,
+     "entry_px": 4068.125,
+     "stop_px": 4085.065,
+     "target_px": 4030.275,
+     "exit_px": 4085.115,
+     "reason": "stop",
+     "net": -1706.0,
+     "r_mult": -1.003
+    }
+   ]
+  },
+  "V8 long": {
+   "variant": "V8",
+   "side": "long",
+   "final": {
+    "n": 50,
+    "per_month": 7.6482,
+    "win": 0.3,
+    "avg_win": 616.3733,
+    "avg_loss": -518.7086,
+    "pf": 0.5093,
+    "net": -8909.2,
+    "per_trade": -178.184,
+    "worst_day": -1560.0,
+    "max_dd": -12637.2,
+    "reasons": {
+     "stop": 35,
+     "target": 12,
+     "time 20:40": 3
+    }
+   },
+   "twin": {
+    "p": 0.6863,
+    "mean": -4912.022,
+    "p90": 5255.17
+   },
+   "gates": {
+    "design_net": true,
+    "wf_net": true,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2026-08-13 08:09:00",
+     "green_time": "2026-08-13 08:12:00",
+     "entry_time": "2026-08-13 08:13:00",
+     "exit_time": "2026-08-13 08:49:00",
+     "prev_level": 4366.065,
+     "entry_px": 4366.505,
+     "stop_px": 4363.805,
+     "target_px": 4378.775,
+     "exit_px": 4378.775,
+     "reason": "target",
+     "net": 1220.0,
+     "r_mult": 4.5444
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-23 12:17:00",
+     "green_time": "2026-07-23 12:18:00",
+     "entry_time": "2026-07-23 12:19:00",
+     "exit_time": "2026-07-23 12:20:00",
+     "prev_level": 4076.325,
+     "entry_px": 4076.725,
+     "stop_px": 4074.385,
+     "target_px": 4088.955,
+     "exit_px": 4074.335,
+     "reason": "stop",
+     "net": -246.0,
+     "r_mult": -1.0214
+    },
+    {
+     "side": "long",
+     "break_time": "2026-05-19 13:31:00",
+     "green_time": "2026-05-19 13:32:00",
+     "entry_time": "2026-05-19 13:33:00",
+     "exit_time": "2026-05-19 20:40:00",
+     "prev_level": 4480.065,
+     "entry_px": 4482.905,
+     "stop_px": 4464.515,
+     "target_px": 4547.025,
+     "exit_px": 4483.098,
+     "reason": "time 20:40",
+     "net": 12.3,
+     "r_mult": 0.0105
+    }
+   ]
+  },
+  "V8 short": {
+   "variant": "V8",
+   "side": "short",
+   "final": {
+    "n": 34,
+    "per_month": 5.2008,
+    "win": 0.2353,
+    "avg_win": 1425.6125,
+    "avg_loss": -587.6538,
+    "pf": 0.7464,
+    "net": -3874.1,
+    "per_trade": -113.9441,
+    "worst_day": -1569.0,
+    "max_dd": -7429.0,
+    "reasons": {
+     "stop": 26,
+     "time 20:40": 4,
+     "target": 4
+    }
+   },
+   "twin": {
+    "p": 0.6883,
+    "mean": 161.453,
+    "p90": 10122.26
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-27 13:11:00",
+     "green_time": "2026-07-27 13:13:00",
+     "entry_time": "2026-07-27 13:14:00",
+     "exit_time": "2026-07-27 13:28:00",
+     "prev_level": 4081.895,
+     "entry_px": 4085.095,
+     "stop_px": 4088.015,
+     "target_px": 4080.915,
+     "exit_px": 4080.915,
+     "reason": "target",
+     "net": 411.0,
+     "r_mult": 1.4315
+    },
+    {
+     "side": "short",
+     "break_time": "2026-08-07 08:33:00",
+     "green_time": "2026-08-07 08:35:00",
+     "entry_time": "2026-08-07 08:36:00",
+     "exit_time": "2026-08-07 09:43:00",
+     "prev_level": 4303.745,
+     "entry_px": 4307.855,
+     "stop_px": 4316.975,
+     "target_px": 4283.035,
+     "exit_px": 4317.025,
+     "reason": "stop",
+     "net": -924.0,
+     "r_mult": -1.0055
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-30 14:00:00",
+     "green_time": "2026-07-30 14:01:00",
+     "entry_time": "2026-07-30 14:02:00",
+     "exit_time": "2026-07-30 20:40:00",
+     "prev_level": 4116.105,
+     "entry_px": 4109.315,
+     "stop_px": 4120.56,
+     "target_px": 4066.535,
+     "exit_px": 4107.155,
+     "reason": "time 20:40",
+     "net": 209.0,
+     "r_mult": 0.1921
+    }
+   ]
+  },
+  "V8 combined": {
+   "variant": "V8",
+   "side": "combined",
+   "final": {
+    "n": 84,
+    "per_month": 12.849,
+    "win": 0.2738,
+    "avg_win": 897.8478,
+    "avg_loss": -548.0951,
+    "pf": 0.6177,
+    "net": -12783.3,
+    "per_trade": -152.1821,
+    "worst_day": -1837.0,
+    "max_dd": -14868.3,
+    "reasons": {
+     "stop": 61,
+     "target": 16,
+     "time 20:40": 7
+    }
+   },
+   "twin": {
+    "p": 0.7702,
+    "mean": -4906.1005,
+    "p90": 8084.15
+   },
+   "gates": {
+    "design_net": false,
+    "wf_net": false,
+    "final_net": false,
+    "bh_q": false,
+    "design_trades": true
+   },
+   "passed": false,
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2026-07-27 13:11:00",
+     "green_time": "2026-07-27 13:13:00",
+     "entry_time": "2026-07-27 13:14:00",
+     "exit_time": "2026-07-27 13:28:00",
+     "prev_level": 4081.895,
+     "entry_px": 4085.095,
+     "stop_px": 4088.015,
+     "target_px": 4080.915,
+     "exit_px": 4080.915,
+     "reason": "target",
+     "net": 411.0,
+     "r_mult": 1.4315
+    },
+    {
+     "side": "long",
+     "break_time": "2026-07-31 13:39:00",
+     "green_time": "2026-07-31 13:40:00",
+     "entry_time": "2026-07-31 13:41:00",
+     "exit_time": "2026-07-31 13:42:00",
+     "prev_level": 4028.155,
+     "entry_px": 4029.945,
+     "stop_px": 4026.245,
+     "target_px": 4046.815,
+     "exit_px": 4026.195,
+     "reason": "stop",
+     "net": -382.0,
+     "r_mult": -1.0135
+    },
+    {
+     "side": "short",
+     "break_time": "2026-07-14 12:32:00",
+     "green_time": "2026-07-14 12:35:00",
+     "entry_time": "2026-07-14 12:36:00",
+     "exit_time": "2026-07-14 20:40:00",
+     "prev_level": 4090.805,
+     "entry_px": 4088.757,
+     "stop_px": 4101.185,
+     "target_px": 4023.235,
+     "exit_px": 4050.365,
+     "reason": "time 20:40",
+     "net": 3832.2,
+     "r_mult": 3.0892
+    }
+   ]
+  }
+ },
+ "bars": 191686,
+ "last_bar": "2026-10-16T20:59"
+}

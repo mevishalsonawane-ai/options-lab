@@ -1,0 +1,2924 @@
+{
+ "period": [
+  "2023-10-02",
+  "2026-03-31"
+ ],
+ "wf_quarters": [
+  [
+   "2024-04-01",
+   "2024-06-30"
+  ],
+  [
+   "2024-07-01",
+   "2024-09-30"
+  ],
+  [
+   "2024-10-01",
+   "2024-12-31"
+  ],
+  [
+   "2025-01-01",
+   "2025-03-31"
+  ],
+  [
+   "2025-04-01",
+   "2025-06-30"
+  ],
+  [
+   "2025-07-01",
+   "2025-09-30"
+  ],
+  [
+   "2025-10-01",
+   "2025-12-31"
+  ],
+  [
+   "2026-01-01",
+   "2026-03-31"
+  ]
+ ],
+ "n_twins": 1000,
+ "lines": {
+  "V1 long": {
+   "variant": "V1",
+   "label": "Boss as written: close break, K 3, swing target",
+   "side": "long",
+   "design": {
+    "n": 154,
+    "per_month": 5.1401,
+    "win": 0.3506,
+    "avg_win": 926.5759,
+    "avg_loss": -474.574,
+    "pf": 1.0543,
+    "net": 2577.7,
+    "per_trade": 16.7383,
+    "worst_day": -3158.0,
+    "max_dd": -12453.4,
+    "reasons": {
+     "stop": 99,
+     "target": 45,
+     "time 20:40": 10
+    }
+   },
+   "wf": {
+    "n": 120,
+    "per_month": 5.0038,
+    "win": 0.375,
+    "avg_win": 1017.3489,
+    "avg_loss": -569.0373,
+    "pf": 1.0727,
+    "net": 3102.9,
+    "per_trade": 25.8575,
+    "worst_day": -3158.0,
+    "max_dd": -12453.4,
+    "reasons": {
+     "stop": 75,
+     "target": 38,
+     "time 20:40": 7
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     3765.6,
+     -571.9,
+     2720.1,
+     748.6,
+     3680.0,
+     89.6,
+     -6904.7,
+     -424.4
+    ],
+    "trades": [
+     15,
+     16,
+     17,
+     9,
+     16,
+     17,
+     14,
+     16
+    ],
+    "positive": 5
+   },
+   "twin": {
+    "p": 0.2408,
+    "mean": -3839.1226,
+    "p90": 7787.25,
+    "q_bh": 0.5778
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-12-30 08:52:00",
+     "green_time": "2024-12-30 08:53:00",
+     "entry_time": "2024-12-30 08:55:00",
+     "exit_time": "2024-12-30 09:30:00",
+     "prev_level": 2611.285,
+     "entry_px": 2611.698,
+     "stop_px": 2609.025,
+     "target_px": 2617.225,
+     "exit_px": 2617.225,
+     "reason": "target",
+     "net": 545.7,
+     "r_mult": 2.0677
+    },
+    {
+     "side": "long",
+     "break_time": "2024-12-05 15:42:00",
+     "green_time": "2024-12-05 15:43:00",
+     "entry_time": "2024-12-05 15:45:00",
+     "exit_time": "2024-12-05 17:12:00",
+     "prev_level": 2632.315,
+     "entry_px": 2633.925,
+     "stop_px": 2631.785,
+     "target_px": 2647.425,
+     "exit_px": 2631.735,
+     "reason": "stop",
+     "net": -226.0,
+     "r_mult": -1.0234
+    },
+    {
+     "side": "long",
+     "break_time": "2024-06-25 15:31:00",
+     "green_time": "2024-06-25 15:34:00",
+     "entry_time": "2024-06-25 15:36:00",
+     "exit_time": "2024-06-25 20:40:00",
+     "prev_level": 2317.818,
+     "entry_px": 2318.975,
+     "stop_px": 2315.355,
+     "target_px": 2327.618,
+     "exit_px": 2319.258,
+     "reason": "time 20:40",
+     "net": 21.3,
+     "r_mult": 0.0782
+    }
+   ]
+  },
+  "V1 short": {
+   "variant": "V1",
+   "label": "Boss as written: close break, K 3, swing target",
+   "side": "short",
+   "design": {
+    "n": 199,
+    "per_month": 6.6421,
+    "win": 0.2613,
+    "avg_win": 584.7212,
+    "avg_loss": -287.2252,
+    "pf": 0.7201,
+    "net": -11816.6,
+    "per_trade": -59.3799,
+    "worst_day": -945.0,
+    "max_dd": -20538.6,
+    "reasons": {
+     "stop": 145,
+     "target": 50,
+     "time 20:40": 4
+    }
+   },
+   "wf": {
+    "n": 152,
+    "per_month": 6.3382,
+    "win": 0.2961,
+    "avg_win": 607.5289,
+    "avg_loss": -327.3645,
+    "pf": 0.7805,
+    "net": -7689.2,
+    "per_trade": -50.5868,
+    "worst_day": -945.0,
+    "max_dd": -15504.5,
+    "reasons": {
+     "stop": 106,
+     "target": 44,
+     "time 20:40": 2
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -3808.6,
+     -2893.7,
+     -1763.2,
+     -914.8,
+     -2603.9,
+     2180.3,
+     -2196.4,
+     4311.1
+    ],
+    "trades": [
+     23,
+     24,
+     18,
+     18,
+     11,
+     22,
+     20,
+     16
+    ],
+    "positive": 2
+   },
+   "twin": {
+    "p": 0.6703,
+    "mean": -9087.7423,
+    "p90": -935.06,
+    "q_bh": 0.8467
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2024-11-27 15:06:00",
+     "green_time": "2024-11-27 15:08:00",
+     "entry_time": "2024-11-27 15:10:00",
+     "exit_time": "2024-11-27 15:12:00",
+     "prev_level": 2641.774,
+     "entry_px": 2643.205,
+     "stop_px": 2646.155,
+     "target_px": 2640.254,
+     "exit_px": 2640.254,
+     "reason": "target",
+     "net": 288.1,
+     "r_mult": 1.0003
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-10 13:04:00",
+     "green_time": "2024-10-10 13:05:00",
+     "entry_time": "2024-10-10 13:07:00",
+     "exit_time": "2024-10-10 13:57:00",
+     "prev_level": 2624.165,
+     "entry_px": 2623.034,
+     "stop_px": 2628.004,
+     "target_px": 2602.034,
+     "exit_px": 2628.054,
+     "reason": "stop",
+     "net": -509.0,
+     "r_mult": -1.0101
+    },
+    {
+     "side": "short",
+     "break_time": "2025-11-07 16:43:00",
+     "green_time": "2025-11-07 16:45:00",
+     "entry_time": "2025-11-07 16:47:00",
+     "exit_time": "2025-11-07 20:40:00",
+     "prev_level": 4019.275,
+     "entry_px": 4015.935,
+     "stop_px": 4022.275,
+     "target_px": 3984.155,
+     "exit_px": 4002.765,
+     "reason": "time 20:40",
+     "net": 1310.0,
+     "r_mult": 2.0773
+    }
+   ]
+  },
+  "V1 combined": {
+   "variant": "V1",
+   "label": "Boss as written: close break, K 3, swing target",
+   "side": "combined",
+   "design": {
+    "n": 353,
+    "per_month": 11.7821,
+    "win": 0.3003,
+    "avg_win": 758.8736,
+    "avg_loss": -363.0749,
+    "pf": 0.897,
+    "net": -9238.9,
+    "per_trade": -26.1725,
+    "worst_day": -3158.0,
+    "max_dd": -13719.8,
+    "reasons": {
+     "stop": 244,
+     "target": 95,
+     "time 20:40": 14
+    }
+   },
+   "wf": {
+    "n": 272,
+    "per_month": 11.342,
+    "win": 0.3309,
+    "avg_win": 812.4389,
+    "avg_loss": -426.9549,
+    "pf": 0.941,
+    "net": -4586.3,
+    "per_trade": -16.8614,
+    "worst_day": -3158.0,
+    "max_dd": -12020.9,
+    "reasons": {
+     "stop": 181,
+     "target": 82,
+     "time 20:40": 9
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -43.0,
+     -3465.6,
+     956.9,
+     -166.2,
+     1076.1,
+     2269.9,
+     -9101.1,
+     3886.7
+    ],
+    "trades": [
+     38,
+     40,
+     35,
+     27,
+     27,
+     39,
+     34,
+     32
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.3766,
+    "mean": -12133.0938,
+    "p90": 1987.65,
+    "q_bh": 0.6026
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2024-12-03 14:41:00",
+     "green_time": "2024-12-03 14:42:00",
+     "entry_time": "2024-12-03 14:44:00",
+     "exit_time": "2024-12-03 14:53:00",
+     "prev_level": 2651.648,
+     "entry_px": 2649.874,
+     "stop_px": 2652.515,
+     "target_px": 2646.758,
+     "exit_px": 2646.758,
+     "reason": "target",
+     "net": 304.6,
+     "r_mult": 1.1799
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-25 17:53:00",
+     "green_time": "2024-10-25 17:55:00",
+     "entry_time": "2024-10-25 17:57:00",
+     "exit_time": "2024-10-25 20:33:00",
+     "prev_level": 2743.175,
+     "entry_px": 2743.555,
+     "stop_px": 2745.305,
+     "target_px": 2738.245,
+     "exit_px": 2745.355,
+     "reason": "stop",
+     "net": -187.0,
+     "r_mult": -1.0286
+    },
+    {
+     "side": "long",
+     "break_time": "2024-06-25 15:31:00",
+     "green_time": "2024-06-25 15:34:00",
+     "entry_time": "2024-06-25 15:36:00",
+     "exit_time": "2024-06-25 20:40:00",
+     "prev_level": 2317.818,
+     "entry_px": 2318.975,
+     "stop_px": 2315.355,
+     "target_px": 2327.618,
+     "exit_px": 2319.258,
+     "reason": "time 20:40",
+     "net": 21.3,
+     "r_mult": 0.0782
+    }
+   ]
+  },
+  "V2 long": {
+   "variant": "V2",
+   "label": "green candle right after (K 1)",
+   "side": "long",
+   "design": {
+    "n": 122,
+    "per_month": 4.072,
+    "win": 0.3115,
+    "avg_win": 1160.8,
+    "avg_loss": -390.3607,
+    "pf": 1.3452,
+    "net": 11320.1,
+    "per_trade": 92.7877,
+    "worst_day": -2049.7,
+    "max_dd": -5769.1,
+    "reasons": {
+     "stop": 84,
+     "target": 33,
+     "time 20:40": 5
+    }
+   },
+   "wf": {
+    "n": 97,
+    "per_month": 4.0448,
+    "win": 0.3608,
+    "avg_win": 1216.4686,
+    "avg_loss": -466.9935,
+    "pf": 1.4705,
+    "net": 13622.8,
+    "per_trade": 140.4412,
+    "worst_day": -2049.7,
+    "max_dd": -5769.1,
+    "reasons": {
+     "stop": 62,
+     "target": 30,
+     "time 20:40": 5
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     1439.6,
+     -1736.4,
+     467.1,
+     -876.0,
+     2886.7,
+     1562.6,
+     -4679.1,
+     14558.3
+    ],
+    "trades": [
+     13,
+     11,
+     15,
+     5,
+     14,
+     13,
+     12,
+     14
+    ],
+    "positive": 5
+   },
+   "twin": {
+    "p": 0.029,
+    "mean": -3064.6425,
+    "p90": 6036.03,
+    "q_bh": 0.1738
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2025-06-20 08:12:00",
+     "green_time": "2025-06-20 08:13:00",
+     "entry_time": "2025-06-20 08:15:00",
+     "exit_time": "2025-06-20 09:25:00",
+     "prev_level": 3347.265,
+     "entry_px": 3348.835,
+     "stop_px": 3346.795,
+     "target_px": 3355.115,
+     "exit_px": 3355.115,
+     "reason": "target",
+     "net": 621.0,
+     "r_mult": 3.0784
+    },
+    {
+     "side": "long",
+     "break_time": "2024-10-25 09:28:00",
+     "green_time": "2024-10-25 09:29:00",
+     "entry_time": "2024-10-25 09:31:00",
+     "exit_time": "2024-10-25 09:38:00",
+     "prev_level": 2717.704,
+     "entry_px": 2718.915,
+     "stop_px": 2717.085,
+     "target_px": 2722.735,
+     "exit_px": 2717.035,
+     "reason": "stop",
+     "net": -195.0,
+     "r_mult": -1.0273
+    },
+    {
+     "side": "long",
+     "break_time": "2025-05-22 14:00:00",
+     "green_time": "2025-05-22 14:01:00",
+     "entry_time": "2025-05-22 14:03:00",
+     "exit_time": "2025-05-22 20:40:00",
+     "prev_level": 3285.105,
+     "entry_px": 3286.185,
+     "stop_px": 3278.689,
+     "target_px": 3315.535,
+     "exit_px": 3293.515,
+     "reason": "time 20:40",
+     "net": 726.0,
+     "r_mult": 0.9779
+    }
+   ]
+  },
+  "V2 short": {
+   "variant": "V2",
+   "label": "green candle right after (K 1)",
+   "side": "short",
+   "design": {
+    "n": 137,
+    "per_month": 4.5727,
+    "win": 0.2336,
+    "avg_win": 517.3812,
+    "avg_loss": -271.2867,
+    "pf": 0.5812,
+    "net": -11928.9,
+    "per_trade": -87.0723,
+    "worst_day": -826.0,
+    "max_dd": -15113.5,
+    "reasons": {
+     "stop": 103,
+     "target": 31,
+     "time 20:40": 3
+    }
+   },
+   "wf": {
+    "n": 109,
+    "per_month": 4.5452,
+    "win": 0.2477,
+    "avg_win": 569.1259,
+    "avg_loss": -305.9756,
+    "pf": 0.6125,
+    "net": -9723.6,
+    "per_trade": -89.2073,
+    "worst_day": -826.0,
+    "max_dd": -12830.2,
+    "reasons": {
+     "stop": 81,
+     "target": 27,
+     "time 20:40": 1
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -2495.4,
+     -1570.9,
+     -1872.9,
+     -1843.6,
+     -1181.6,
+     534.2,
+     -4386.7,
+     3093.3
+    ],
+    "trades": [
+     15,
+     18,
+     11,
+     14,
+     6,
+     22,
+     14,
+     9
+    ],
+    "positive": 2
+   },
+   "twin": {
+    "p": 0.8621,
+    "mean": -6545.7904,
+    "p90": 380.81,
+    "q_bh": 0.8621
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2024-10-04 07:28:00",
+     "green_time": "2024-10-04 07:29:00",
+     "entry_time": "2024-10-04 07:31:00",
+     "exit_time": "2024-10-04 09:00:00",
+     "prev_level": 2662.775,
+     "entry_px": 2661.414,
+     "stop_px": 2663.344,
+     "target_px": 2658.905,
+     "exit_px": 2658.905,
+     "reason": "target",
+     "net": 243.9,
+     "r_mult": 1.3
+    },
+    {
+     "side": "short",
+     "break_time": "2024-12-20 17:17:00",
+     "green_time": "2024-12-20 17:18:00",
+     "entry_time": "2024-12-20 17:20:00",
+     "exit_time": "2024-12-20 17:21:00",
+     "prev_level": 2626.325,
+     "entry_px": 2626.585,
+     "stop_px": 2627.548,
+     "target_px": 2622.398,
+     "exit_px": 2627.598,
+     "reason": "stop",
+     "net": -108.3,
+     "r_mult": -1.0519
+    },
+    {
+     "side": "short",
+     "break_time": "2023-12-21 13:41:00",
+     "green_time": "2023-12-21 13:42:00",
+     "entry_time": "2023-12-21 13:44:00",
+     "exit_time": "2023-12-21 20:40:00",
+     "prev_level": 2043.375,
+     "entry_px": 2043.198,
+     "stop_px": 2046.265,
+     "target_px": 2032.328,
+     "exit_px": 2044.655,
+     "reason": "time 20:40",
+     "net": -152.7,
+     "r_mult": -0.4751
+    }
+   ]
+  },
+  "V2 combined": {
+   "variant": "V2",
+   "label": "green candle right after (K 1)",
+   "side": "combined",
+   "design": {
+    "n": 259,
+    "per_month": 8.6447,
+    "win": 0.2703,
+    "avg_win": 866.6657,
+    "avg_loss": -324.2085,
+    "pf": 0.9901,
+    "net": -608.8,
+    "per_trade": -2.3506,
+    "worst_day": -2049.7,
+    "max_dd": -18507.4,
+    "reasons": {
+     "stop": 187,
+     "target": 64,
+     "time 20:40": 8
+    }
+   },
+   "wf": {
+    "n": 206,
+    "per_month": 8.5899,
+    "win": 0.301,
+    "avg_win": 934.5613,
+    "avg_loss": -375.3028,
+    "pf": 1.0721,
+    "net": 3899.2,
+    "per_trade": 18.9282,
+    "worst_day": -2049.7,
+    "max_dd": -15226.4,
+    "reasons": {
+     "stop": 143,
+     "target": 57,
+     "time 20:40": 6
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -1055.8,
+     -3307.3,
+     -1405.8,
+     -2719.6,
+     1705.1,
+     2096.8,
+     -9065.8,
+     17651.6
+    ],
+    "trades": [
+     28,
+     29,
+     26,
+     19,
+     20,
+     35,
+     26,
+     23
+    ],
+    "positive": 3
+   },
+   "twin": {
+    "p": 0.1489,
+    "mean": -9637.4258,
+    "p90": 1426.82,
+    "q_bh": 0.4715
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2025-03-14 10:41:00",
+     "green_time": "2025-03-14 10:42:00",
+     "entry_time": "2025-03-14 10:44:00",
+     "exit_time": "2025-03-14 10:48:00",
+     "prev_level": 2989.785,
+     "entry_px": 2989.165,
+     "stop_px": 2994.315,
+     "target_px": 2987.528,
+     "exit_px": 2987.528,
+     "reason": "target",
+     "net": 156.7,
+     "r_mult": 0.3179
+    },
+    {
+     "side": "long",
+     "break_time": "2024-11-13 16:34:00",
+     "green_time": "2024-11-13 16:35:00",
+     "entry_time": "2024-11-13 16:37:00",
+     "exit_time": "2024-11-13 16:55:00",
+     "prev_level": 2589.508,
+     "entry_px": 2591.175,
+     "stop_px": 2587.235,
+     "target_px": 2606.658,
+     "exit_px": 2587.185,
+     "reason": "stop",
+     "net": -406.0,
+     "r_mult": -1.0127
+    },
+    {
+     "side": "long",
+     "break_time": "2025-05-22 14:00:00",
+     "green_time": "2025-05-22 14:01:00",
+     "entry_time": "2025-05-22 14:03:00",
+     "exit_time": "2025-05-22 20:40:00",
+     "prev_level": 3285.105,
+     "entry_px": 3286.185,
+     "stop_px": 3278.689,
+     "target_px": 3315.535,
+     "exit_px": 3293.515,
+     "reason": "time 20:40",
+     "net": 726.0,
+     "r_mult": 0.9779
+    }
+   ]
+  },
+  "V3 long": {
+   "variant": "V3",
+   "label": "green candle within 10 bars (K 10)",
+   "side": "long",
+   "design": {
+    "n": 174,
+    "per_month": 5.8076,
+    "win": 0.3391,
+    "avg_win": 1012.978,
+    "avg_loss": -516.3965,
+    "pf": 1.0064,
+    "net": 380.1,
+    "per_trade": 2.1845,
+    "worst_day": -3158.0,
+    "max_dd": -17003.4,
+    "reasons": {
+     "stop": 113,
+     "target": 48,
+     "time 20:40": 13
+    }
+   },
+   "wf": {
+    "n": 134,
+    "per_month": 5.5876,
+    "win": 0.3433,
+    "avg_win": 1149.9826,
+    "avg_loss": -606.0591,
+    "pf": 0.9919,
+    "net": -434.0,
+    "per_trade": -3.2388,
+    "worst_day": -3158.0,
+    "max_dd": -17003.4,
+    "reasons": {
+     "stop": 87,
+     "target": 36,
+     "time 20:40": 11
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     3441.8,
+     -704.2,
+     2252.5,
+     -1041.1,
+     3735.3,
+     -1058.9,
+     -7935.0,
+     875.6
+    ],
+    "trades": [
+     16,
+     18,
+     18,
+     11,
+     17,
+     19,
+     16,
+     19
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.3167,
+    "mean": -4329.8072,
+    "p90": 8780.47,
+    "q_bh": 0.6026
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-11-14 15:37:00",
+     "green_time": "2024-11-14 15:46:00",
+     "entry_time": "2024-11-14 15:48:00",
+     "exit_time": "2024-11-14 16:18:00",
+     "prev_level": 2569.175,
+     "entry_px": 2569.225,
+     "stop_px": 2565.605,
+     "target_px": 2572.905,
+     "exit_px": 2572.905,
+     "reason": "target",
+     "net": 361.0,
+     "r_mult": 1.0166
+    },
+    {
+     "side": "long",
+     "break_time": "2024-12-13 08:57:00",
+     "green_time": "2024-12-13 09:04:00",
+     "entry_time": "2024-12-13 09:06:00",
+     "exit_time": "2024-12-13 09:21:00",
+     "prev_level": 2675.055,
+     "entry_px": 2672.785,
+     "stop_px": 2670.755,
+     "target_px": 2684.615,
+     "exit_px": 2670.705,
+     "reason": "stop",
+     "net": -215.0,
+     "r_mult": -1.0246
+    },
+    {
+     "side": "long",
+     "break_time": "2025-06-16 13:54:00",
+     "green_time": "2025-06-16 14:00:00",
+     "entry_time": "2025-06-16 14:02:00",
+     "exit_time": "2025-06-16 20:40:00",
+     "prev_level": 3391.465,
+     "entry_px": 3392.648,
+     "stop_px": 3382.425,
+     "target_px": 3417.725,
+     "exit_px": 3385.275,
+     "reason": "time 20:40",
+     "net": -744.3,
+     "r_mult": -0.7212
+    }
+   ]
+  },
+  "V3 short": {
+   "variant": "V3",
+   "label": "green candle within 10 bars (K 10)",
+   "side": "short",
+   "design": {
+    "n": 239,
+    "per_month": 7.9771,
+    "win": 0.2343,
+    "avg_win": 868.5589,
+    "avg_loss": -311.8361,
+    "pf": 0.8523,
+    "net": -8426.7,
+    "per_trade": -35.2582,
+    "worst_day": -1275.0,
+    "max_dd": -18217.1,
+    "reasons": {
+     "stop": 182,
+     "target": 51,
+     "time 20:40": 6
+    }
+   },
+   "wf": {
+    "n": 187,
+    "per_month": 7.7976,
+    "win": 0.2567,
+    "avg_win": 931.0958,
+    "avg_loss": -349.0691,
+    "pf": 0.9211,
+    "net": -3828.0,
+    "per_trade": -20.4706,
+    "worst_day": -1275.0,
+    "max_dd": -14748.4,
+    "reasons": {
+     "stop": 139,
+     "target": 44,
+     "time 20:40": 4
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -406.1,
+     -5552.8,
+     -1055.0,
+     -860.5,
+     1315.9,
+     -1723.6,
+     -3397.6,
+     7851.7
+    ],
+    "trades": [
+     29,
+     29,
+     21,
+     26,
+     14,
+     28,
+     22,
+     18
+    ],
+    "positive": 2
+   },
+   "twin": {
+    "p": 0.3546,
+    "mean": -11315.3915,
+    "p90": -127.81,
+    "q_bh": 0.6026
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2025-01-10 07:29:00",
+     "green_time": "2025-01-10 07:31:00",
+     "entry_time": "2025-01-10 07:33:00",
+     "exit_time": "2025-01-10 07:42:00",
+     "prev_level": 2678.395,
+     "entry_px": 2675.465,
+     "stop_px": 2678.975,
+     "target_px": 2674.625,
+     "exit_px": 2674.625,
+     "reason": "target",
+     "net": 77.0,
+     "r_mult": 0.2393
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-14 07:36:00",
+     "green_time": "2024-10-14 07:38:00",
+     "entry_time": "2024-10-14 07:40:00",
+     "exit_time": "2024-10-14 07:43:00",
+     "prev_level": 2661.258,
+     "entry_px": 2662.605,
+     "stop_px": 2663.495,
+     "target_px": 2659.305,
+     "exit_px": 2663.545,
+     "reason": "stop",
+     "net": -101.0,
+     "r_mult": -1.0562
+    },
+    {
+     "side": "short",
+     "break_time": "2025-05-29 16:26:00",
+     "green_time": "2025-05-29 16:34:00",
+     "entry_time": "2025-05-29 16:36:00",
+     "exit_time": "2025-05-29 20:40:00",
+     "prev_level": 3325.318,
+     "entry_px": 3325.098,
+     "stop_px": 3327.398,
+     "target_px": 3314.875,
+     "exit_px": 3316.655,
+     "reason": "time 20:40",
+     "net": 837.3,
+     "r_mult": 3.6709
+    }
+   ]
+  },
+  "V3 combined": {
+   "variant": "V3",
+   "label": "green candle within 10 bars (K 10)",
+   "side": "combined",
+   "design": {
+    "n": 413,
+    "per_month": 13.7848,
+    "win": 0.2785,
+    "avg_win": 942.6522,
+    "avg_loss": -390.7772,
+    "pf": 0.9309,
+    "net": -8046.6,
+    "per_trade": -19.4833,
+    "worst_day": -3158.0,
+    "max_dd": -19773.8,
+    "reasons": {
+     "stop": 295,
+     "target": 99,
+     "time 20:40": 19
+    }
+   },
+   "wf": {
+    "n": 321,
+    "per_month": 13.3853,
+    "win": 0.2928,
+    "avg_win": 1038.2106,
+    "avg_loss": -448.6952,
+    "pf": 0.9582,
+    "net": -4262.0,
+    "per_trade": -13.2773,
+    "worst_day": -3158.0,
+    "max_dd": -19773.8,
+    "reasons": {
+     "stop": 226,
+     "target": 80,
+     "time 20:40": 15
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     3035.7,
+     -6257.0,
+     1197.5,
+     -1901.6,
+     5051.2,
+     -2782.5,
+     -11332.6,
+     8727.3
+    ],
+    "trades": [
+     45,
+     47,
+     39,
+     37,
+     31,
+     47,
+     38,
+     37
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.3057,
+    "mean": -14951.5968,
+    "p90": 2009.07,
+    "q_bh": 0.6026
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-12-02 09:45:00",
+     "green_time": "2024-12-02 09:48:00",
+     "entry_time": "2024-12-02 09:50:00",
+     "exit_time": "2024-12-02 10:11:00",
+     "prev_level": 2633.925,
+     "entry_px": 2634.435,
+     "stop_px": 2632.395,
+     "target_px": 2636.785,
+     "exit_px": 2636.785,
+     "reason": "target",
+     "net": 228.0,
+     "r_mult": 1.152
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-30 13:41:00",
+     "green_time": "2024-10-30 13:42:00",
+     "entry_time": "2024-10-30 13:44:00",
+     "exit_time": "2024-10-30 13:55:00",
+     "prev_level": 2775.265,
+     "entry_px": 2774.984,
+     "stop_px": 2778.255,
+     "target_px": 2771.095,
+     "exit_px": 2778.305,
+     "reason": "stop",
+     "net": -339.1,
+     "r_mult": -1.0153
+    },
+    {
+     "side": "long",
+     "break_time": "2025-06-05 15:54:00",
+     "green_time": "2025-06-05 15:57:00",
+     "entry_time": "2025-06-05 15:59:00",
+     "exit_time": "2025-06-05 20:40:00",
+     "prev_level": 3343.448,
+     "entry_px": 3345.495,
+     "stop_px": 3338.948,
+     "target_px": 3372.765,
+     "exit_px": 3354.075,
+     "reason": "time 20:40",
+     "net": 851.0,
+     "r_mult": 1.3105
+    }
+   ]
+  },
+  "V4 long": {
+   "variant": "V4",
+   "label": "break by 0.03% beyond the level",
+   "side": "long",
+   "design": {
+    "n": 141,
+    "per_month": 4.7062,
+    "win": 0.3333,
+    "avg_win": 970.1106,
+    "avg_loss": -498.1415,
+    "pf": 0.9737,
+    "net": -1230.1,
+    "per_trade": -8.7241,
+    "worst_day": -3158.0,
+    "max_dd": -13157.4,
+    "reasons": {
+     "stop": 93,
+     "target": 39,
+     "time 20:40": 9
+    }
+   },
+   "wf": {
+    "n": 107,
+    "per_month": 4.4618,
+    "win": 0.3271,
+    "avg_win": 1158.2029,
+    "avg_loss": -589.8528,
+    "pf": 0.9545,
+    "net": -1932.3,
+    "per_trade": -18.0589,
+    "worst_day": -3158.0,
+    "max_dd": -13157.4,
+    "reasons": {
+     "stop": 71,
+     "target": 29,
+     "time 20:40": 7
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     2075.9,
+     -348.6,
+     4995.2,
+     634.3,
+     520.4,
+     -2581.4,
+     -8302.7,
+     1074.6
+    ],
+    "trades": [
+     14,
+     11,
+     12,
+     10,
+     12,
+     15,
+     16,
+     17
+    ],
+    "positive": 5
+   },
+   "twin": {
+    "p": 0.4096,
+    "mean": -2963.5803,
+    "p90": 7952.28,
+    "q_bh": 0.6144
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-11-04 08:53:00",
+     "green_time": "2024-11-04 08:54:00",
+     "entry_time": "2024-11-04 08:56:00",
+     "exit_time": "2024-11-04 09:21:00",
+     "prev_level": 2733.095,
+     "entry_px": 2734.515,
+     "stop_px": 2731.665,
+     "target_px": 2738.388,
+     "exit_px": 2738.388,
+     "reason": "target",
+     "net": 380.3,
+     "r_mult": 1.3589
+    },
+    {
+     "side": "long",
+     "break_time": "2025-02-27 07:43:00",
+     "green_time": "2025-02-27 07:44:00",
+     "entry_time": "2025-02-27 07:46:00",
+     "exit_time": "2025-02-27 08:09:00",
+     "prev_level": 2890.588,
+     "entry_px": 2892.715,
+     "stop_px": 2887.755,
+     "target_px": 2897.655,
+     "exit_px": 2887.705,
+     "reason": "stop",
+     "net": -508.0,
+     "r_mult": -1.0101
+    },
+    {
+     "side": "long",
+     "break_time": "2025-06-05 15:54:00",
+     "green_time": "2025-06-05 15:57:00",
+     "entry_time": "2025-06-05 15:59:00",
+     "exit_time": "2025-06-05 20:40:00",
+     "prev_level": 3343.448,
+     "entry_px": 3345.495,
+     "stop_px": 3338.948,
+     "target_px": 3372.765,
+     "exit_px": 3354.075,
+     "reason": "time 20:40",
+     "net": 851.0,
+     "r_mult": 1.3105
+    }
+   ]
+  },
+  "V4 short": {
+   "variant": "V4",
+   "label": "break by 0.03% beyond the level",
+   "side": "short",
+   "design": {
+    "n": 197,
+    "per_month": 6.5753,
+    "win": 0.2487,
+    "avg_win": 609.0653,
+    "avg_loss": -280.523,
+    "pf": 0.7188,
+    "net": -11673.2,
+    "per_trade": -59.2548,
+    "worst_day": -1275.0,
+    "max_dd": -21227.6,
+    "reasons": {
+     "stop": 146,
+     "target": 46,
+     "time 20:40": 5
+    }
+   },
+   "wf": {
+    "n": 157,
+    "per_month": 6.5467,
+    "win": 0.2739,
+    "avg_win": 664.0953,
+    "avg_loss": -304.5974,
+    "pf": 0.8224,
+    "net": -6168.0,
+    "per_trade": -39.2866,
+    "worst_day": -1275.0,
+    "max_dd": -15722.4,
+    "reasons": {
+     "stop": 113,
+     "target": 42,
+     "time 20:40": 2
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -3009.3,
+     -5928.1,
+     -1975.3,
+     -49.2,
+     -1852.3,
+     3215.5,
+     532.0,
+     2898.7
+    ],
+    "trades": [
+     24,
+     25,
+     15,
+     26,
+     12,
+     23,
+     17,
+     15
+    ],
+    "positive": 3
+   },
+   "twin": {
+    "p": 0.6374,
+    "mean": -9229.5326,
+    "p90": -903.27,
+    "q_bh": 0.8467
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2025-03-12 09:00:00",
+     "green_time": "2025-03-12 09:02:00",
+     "entry_time": "2025-03-12 09:04:00",
+     "exit_time": "2025-03-12 09:48:00",
+     "prev_level": 2922.048,
+     "entry_px": 2921.235,
+     "stop_px": 2925.535,
+     "target_px": 2914.865,
+     "exit_px": 2914.865,
+     "reason": "target",
+     "net": 630.0,
+     "r_mult": 1.4814
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-01 13:37:00",
+     "green_time": "2024-10-01 13:38:00",
+     "entry_time": "2024-10-01 13:40:00",
+     "exit_time": "2024-10-01 13:50:00",
+     "prev_level": 2665.858,
+     "entry_px": 2661.678,
+     "stop_px": 2668.585,
+     "target_px": 2648.165,
+     "exit_px": 2668.635,
+     "reason": "stop",
+     "net": -702.7,
+     "r_mult": -1.0072
+    },
+    {
+     "side": "short",
+     "break_time": "2023-12-21 13:41:00",
+     "green_time": "2023-12-21 13:42:00",
+     "entry_time": "2023-12-21 13:44:00",
+     "exit_time": "2023-12-21 20:40:00",
+     "prev_level": 2043.375,
+     "entry_px": 2043.198,
+     "stop_px": 2046.265,
+     "target_px": 2032.328,
+     "exit_px": 2044.655,
+     "reason": "time 20:40",
+     "net": -152.7,
+     "r_mult": -0.4751
+    }
+   ]
+  },
+  "V4 combined": {
+   "variant": "V4",
+   "label": "break by 0.03% beyond the level",
+   "side": "combined",
+   "design": {
+    "n": 338,
+    "per_month": 11.2815,
+    "win": 0.284,
+    "avg_win": 785.8271,
+    "avg_loss": -365.0525,
+    "pf": 0.8539,
+    "net": -12903.3,
+    "per_trade": -38.1754,
+    "worst_day": -3158.0,
+    "max_dd": -18451.0,
+    "reasons": {
+     "stop": 239,
+     "target": 85,
+     "time 20:40": 14
+    }
+   },
+   "wf": {
+    "n": 264,
+    "per_month": 11.0084,
+    "win": 0.2955,
+    "avg_win": 885.8103,
+    "avg_loss": -415.0188,
+    "pf": 0.8951,
+    "net": -8100.3,
+    "per_trade": -30.683,
+    "worst_day": -3158.0,
+    "max_dd": -13504.3,
+    "reasons": {
+     "stop": 184,
+     "target": 71,
+     "time 20:40": 9
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -933.4,
+     -6276.7,
+     3019.9,
+     585.1,
+     -1331.9,
+     634.1,
+     -7770.7,
+     3973.3
+    ],
+    "trades": [
+     38,
+     36,
+     27,
+     36,
+     24,
+     38,
+     33,
+     32
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.5155,
+    "mean": -12248.972,
+    "p90": 2815.93,
+    "q_bh": 0.7277
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-12-27 16:41:00",
+     "green_time": "2024-12-27 16:44:00",
+     "entry_time": "2024-12-27 16:46:00",
+     "exit_time": "2024-12-27 16:50:00",
+     "prev_level": 2618.205,
+     "entry_px": 2618.348,
+     "stop_px": 2616.448,
+     "target_px": 2619.395,
+     "exit_px": 2619.395,
+     "reason": "target",
+     "net": 97.7,
+     "r_mult": 0.5511
+    },
+    {
+     "side": "short",
+     "break_time": "2024-12-03 13:59:00",
+     "green_time": "2024-12-03 14:02:00",
+     "entry_time": "2024-12-03 14:04:00",
+     "exit_time": "2024-12-03 14:31:00",
+     "prev_level": 2651.648,
+     "entry_px": 2653.274,
+     "stop_px": 2654.808,
+     "target_px": 2637.915,
+     "exit_px": 2654.858,
+     "reason": "stop",
+     "net": -165.4,
+     "r_mult": -1.0326
+    },
+    {
+     "side": "long",
+     "break_time": "2025-06-05 15:54:00",
+     "green_time": "2025-06-05 15:57:00",
+     "entry_time": "2025-06-05 15:59:00",
+     "exit_time": "2025-06-05 20:40:00",
+     "prev_level": 3343.448,
+     "entry_px": 3345.495,
+     "stop_px": 3338.948,
+     "target_px": 3372.765,
+     "exit_px": 3354.075,
+     "reason": "time 20:40",
+     "net": 851.0,
+     "r_mult": 1.3105
+    }
+   ]
+  },
+  "V5 long": {
+   "variant": "V5",
+   "label": "1.5 R target",
+   "side": "long",
+   "design": {
+    "n": 156,
+    "per_month": 5.2068,
+    "win": 0.3974,
+    "avg_win": 871.0895,
+    "avg_loss": -432.3,
+    "pf": 1.3291,
+    "net": 13371.35,
+    "per_trade": 85.7138,
+    "worst_day": -2757.0,
+    "max_dd": -8050.15,
+    "reasons": {
+     "stop": 94,
+     "target": 60,
+     "time 20:40": 2
+    }
+   },
+   "wf": {
+    "n": 121,
+    "per_month": 5.0455,
+    "win": 0.405,
+    "avg_win": 1008.052,
+    "avg_loss": -501.2403,
+    "pf": 1.3687,
+    "net": 13305.25,
+    "per_trade": 109.9607,
+    "worst_day": -2757.0,
+    "max_dd": -8050.15,
+    "reasons": {
+     "stop": 72,
+     "target": 47,
+     "time 20:40": 2
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     1484.6,
+     -1403.35,
+     -221.7,
+     -337.1,
+     1997.35,
+     2423.3,
+     958.8,
+     8403.35
+    ],
+    "trades": [
+     16,
+     16,
+     17,
+     9,
+     16,
+     17,
+     14,
+     16
+    ],
+    "positive": 5
+   },
+   "twin": {
+    "p": 0.008,
+    "mean": -4340.2685,
+    "p90": 4934.895,
+    "q_bh": 0.1738
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2025-01-23 09:35:00",
+     "green_time": "2025-01-23 09:37:00",
+     "entry_time": "2025-01-23 09:39:00",
+     "exit_time": "2025-01-23 09:56:00",
+     "prev_level": 2742.455,
+     "entry_px": 2743.075,
+     "stop_px": 2740.798,
+     "target_px": 2746.4905,
+     "exit_px": 2746.4905,
+     "reason": "target",
+     "net": 334.55,
+     "r_mult": 1.5
+    },
+    {
+     "side": "long",
+     "break_time": "2024-11-06 07:23:00",
+     "green_time": "2024-11-06 07:24:00",
+     "entry_time": "2024-11-06 07:26:00",
+     "exit_time": "2024-11-06 07:42:00",
+     "prev_level": 2724.695,
+     "entry_px": 2727.145,
+     "stop_px": 2723.385,
+     "target_px": 2732.785,
+     "exit_px": 2723.335,
+     "reason": "stop",
+     "net": -388.0,
+     "r_mult": -1.0133
+    },
+    {
+     "side": "long",
+     "break_time": "2026-03-20 18:55:00",
+     "green_time": "2026-03-20 18:57:00",
+     "entry_time": "2026-03-20 18:59:00",
+     "exit_time": "2026-03-20 20:40:00",
+     "prev_level": 4502.108,
+     "entry_px": 4493.645,
+     "stop_px": 4477.025,
+     "target_px": 4518.575,
+     "exit_px": 4501.715,
+     "reason": "time 20:40",
+     "net": 800.0,
+     "r_mult": 0.4856
+    }
+   ]
+  },
+  "V5 short": {
+   "variant": "V5",
+   "label": "1.5 R target",
+   "side": "short",
+   "design": {
+    "n": 201,
+    "per_month": 6.7088,
+    "win": 0.2786,
+    "avg_win": 497.6589,
+    "avg_loss": -294.3462,
+    "pf": 0.653,
+    "net": -14811.3,
+    "per_trade": -73.6881,
+    "worst_day": -945.0,
+    "max_dd": -18884.4,
+    "reasons": {
+     "stop": 144,
+     "target": 56,
+     "time 20:40": 1
+    }
+   },
+   "wf": {
+    "n": 154,
+    "per_month": 6.4216,
+    "win": 0.2922,
+    "avg_win": 542.18,
+    "avg_loss": -331.6009,
+    "pf": 0.675,
+    "net": -11746.4,
+    "per_trade": -76.2753,
+    "worst_day": -945.0,
+    "max_dd": -15458.25,
+    "reasons": {
+     "stop": 108,
+     "target": 45,
+     "time 20:40": 1
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -1311.8,
+     -3468.75,
+     354.5,
+     -2909.1,
+     -2427.4,
+     -2101.8,
+     -2045.95,
+     2163.9
+    ],
+    "trades": [
+     24,
+     24,
+     19,
+     18,
+     11,
+     22,
+     20,
+     16
+    ],
+    "positive": 2
+   },
+   "twin": {
+    "p": 0.8412,
+    "mean": -9127.2432,
+    "p90": -1996.565,
+    "q_bh": 0.8621
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2024-10-25 17:53:00",
+     "green_time": "2024-10-25 17:55:00",
+     "entry_time": "2024-10-25 17:57:00",
+     "exit_time": "2024-10-25 19:00:00",
+     "prev_level": 2743.175,
+     "entry_px": 2743.555,
+     "stop_px": 2745.305,
+     "target_px": 2740.93,
+     "exit_px": 2740.93,
+     "reason": "target",
+     "net": 255.5,
+     "r_mult": 1.5
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-10 13:04:00",
+     "green_time": "2024-10-10 13:05:00",
+     "entry_time": "2024-10-10 13:07:00",
+     "exit_time": "2024-10-10 13:57:00",
+     "prev_level": 2624.165,
+     "entry_px": 2623.034,
+     "stop_px": 2628.004,
+     "target_px": 2615.579,
+     "exit_px": 2628.054,
+     "reason": "stop",
+     "net": -509.0,
+     "r_mult": -1.0101
+    },
+    {
+     "side": "short",
+     "break_time": "2025-02-03 15:26:00",
+     "green_time": "2025-02-03 15:29:00",
+     "entry_time": "2025-02-03 15:31:00",
+     "exit_time": "2025-02-03 20:40:00",
+     "prev_level": 2816.935,
+     "entry_px": 2816.808,
+     "stop_px": 2825.875,
+     "target_px": 2803.2075,
+     "exit_px": 2817.608,
+     "reason": "time 20:40",
+     "net": -87.0,
+     "r_mult": -0.0882
+    }
+   ]
+  },
+  "V5 combined": {
+   "variant": "V5",
+   "label": "1.5 R target",
+   "side": "combined",
+   "design": {
+    "n": 357,
+    "per_month": 11.9157,
+    "win": 0.3305,
+    "avg_win": 693.8682,
+    "avg_loss": -348.6042,
+    "pf": 0.9827,
+    "net": -1439.95,
+    "per_trade": -4.0335,
+    "worst_day": -2757.0,
+    "max_dd": -14165.2,
+    "reasons": {
+     "stop": 238,
+     "target": 116,
+     "time 20:40": 3
+    }
+   },
+   "wf": {
+    "n": 275,
+    "per_month": 11.4671,
+    "win": 0.3418,
+    "avg_win": 785.0282,
+    "avg_loss": -399.0818,
+    "pf": 1.0216,
+    "net": 1558.85,
+    "per_trade": 5.6685,
+    "worst_day": -2757.0,
+    "max_dd": -13515.65,
+    "reasons": {
+     "stop": 180,
+     "target": 92,
+     "time 20:40": 3
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     172.8,
+     -4872.1,
+     132.8,
+     -3246.2,
+     -430.05,
+     321.5,
+     -1087.15,
+     10567.25
+    ],
+    "trades": [
+     40,
+     40,
+     36,
+     27,
+     27,
+     39,
+     34,
+     32
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.1089,
+    "mean": -13667.255,
+    "p90": -994.095,
+    "q_bh": 0.4715
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-12-04 13:04:00",
+     "green_time": "2024-12-04 13:05:00",
+     "entry_time": "2024-12-04 13:07:00",
+     "exit_time": "2024-12-04 13:26:00",
+     "prev_level": 2633.965,
+     "entry_px": 2637.415,
+     "stop_px": 2632.215,
+     "target_px": 2645.215,
+     "exit_px": 2645.215,
+     "reason": "target",
+     "net": 773.0,
+     "r_mult": 1.5
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-16 15:04:00",
+     "green_time": "2024-10-16 15:06:00",
+     "entry_time": "2024-10-16 15:08:00",
+     "exit_time": "2024-10-16 15:10:00",
+     "prev_level": 2668.805,
+     "entry_px": 2668.495,
+     "stop_px": 2670.078,
+     "target_px": 2666.1205,
+     "exit_px": 2670.128,
+     "reason": "stop",
+     "net": -170.3,
+     "r_mult": -1.0316
+    },
+    {
+     "side": "long",
+     "break_time": "2026-01-29 15:27:00",
+     "green_time": "2026-01-29 15:29:00",
+     "entry_time": "2026-01-29 15:31:00",
+     "exit_time": "2026-01-29 20:40:00",
+     "prev_level": 5157.115,
+     "entry_px": 5227.455,
+     "stop_px": 5098.665,
+     "target_px": 5420.64,
+     "exit_px": 5347.015,
+     "reason": "time 20:40",
+     "net": 11949.0,
+     "r_mult": 0.9283
+    }
+   ]
+  },
+  "V6 long": {
+   "variant": "V6",
+   "label": "2 R target",
+   "side": "long",
+   "design": {
+    "n": 156,
+    "per_month": 5.2068,
+    "win": 0.3654,
+    "avg_win": 909.7737,
+    "avg_loss": -480.6889,
+    "pf": 1.0897,
+    "net": 4268.9,
+    "per_trade": 27.3647,
+    "worst_day": -3158.0,
+    "max_dd": -9766.3,
+    "reasons": {
+     "stop": 99,
+     "target": 51,
+     "time 20:40": 6
+    }
+   },
+   "wf": {
+    "n": 121,
+    "per_month": 5.0455,
+    "win": 0.3636,
+    "avg_win": 1065.1886,
+    "avg_loss": -558.9779,
+    "pf": 1.0889,
+    "net": 3827.0,
+    "per_trade": 31.6281,
+    "worst_day": -3158.0,
+    "max_dd": -9766.3,
+    "reasons": {
+     "stop": 77,
+     "target": 40,
+     "time 20:40": 4
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     1834.7,
+     -581.3,
+     748.3,
+     166.1,
+     2452.9,
+     3879.3,
+     -6854.7,
+     2181.7
+    ],
+    "trades": [
+     16,
+     16,
+     17,
+     9,
+     16,
+     17,
+     14,
+     16
+    ],
+    "positive": 6
+   },
+   "twin": {
+    "p": 0.1608,
+    "mean": -3798.0953,
+    "p90": 7217.21,
+    "q_bh": 0.4715
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2025-01-06 16:17:00",
+     "green_time": "2025-01-06 16:20:00",
+     "entry_time": "2025-01-06 16:22:00",
+     "exit_time": "2025-01-06 16:31:00",
+     "prev_level": 2636.625,
+     "entry_px": 2636.985,
+     "stop_px": 2635.608,
+     "target_px": 2639.739,
+     "exit_px": 2639.739,
+     "reason": "target",
+     "net": 268.4,
+     "r_mult": 2.0
+    },
+    {
+     "side": "long",
+     "break_time": "2024-11-13 16:34:00",
+     "green_time": "2024-11-13 16:35:00",
+     "entry_time": "2024-11-13 16:37:00",
+     "exit_time": "2024-11-13 16:55:00",
+     "prev_level": 2589.508,
+     "entry_px": 2591.175,
+     "stop_px": 2587.235,
+     "target_px": 2599.055,
+     "exit_px": 2587.185,
+     "reason": "stop",
+     "net": -406.0,
+     "r_mult": -1.0127
+    },
+    {
+     "side": "long",
+     "break_time": "2024-06-25 15:31:00",
+     "green_time": "2024-06-25 15:34:00",
+     "entry_time": "2024-06-25 15:36:00",
+     "exit_time": "2024-06-25 20:40:00",
+     "prev_level": 2317.818,
+     "entry_px": 2318.975,
+     "stop_px": 2315.355,
+     "target_px": 2326.215,
+     "exit_px": 2319.258,
+     "reason": "time 20:40",
+     "net": 21.3,
+     "r_mult": 0.0782
+    }
+   ]
+  },
+  "V6 short": {
+   "variant": "V6",
+   "label": "2 R target",
+   "side": "short",
+   "design": {
+    "n": 201,
+    "per_month": 6.7088,
+    "win": 0.2388,
+    "avg_win": 665.7042,
+    "avg_loss": -295.751,
+    "pf": 0.7062,
+    "net": -13296.1,
+    "per_trade": -66.1498,
+    "worst_day": -945.0,
+    "max_dd": -20197.5,
+    "reasons": {
+     "stop": 151,
+     "target": 48,
+     "time 20:40": 2
+    }
+   },
+   "wf": {
+    "n": 154,
+    "per_month": 6.4216,
+    "win": 0.2468,
+    "avg_win": 731.9316,
+    "avg_loss": -331.3983,
+    "pf": 0.7235,
+    "net": -10628.8,
+    "per_trade": -69.0182,
+    "worst_day": -945.0,
+    "max_dd": -16281.5,
+    "reasons": {
+     "stop": 114,
+     "target": 38,
+     "time 20:40": 2
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -2514.3,
+     -4346.5,
+     94.9,
+     -2606.1,
+     -2135.9,
+     -1782.8,
+     -1926.7,
+     4588.6
+    ],
+    "trades": [
+     24,
+     24,
+     19,
+     18,
+     11,
+     22,
+     20,
+     16
+    ],
+    "positive": 2
+   },
+   "twin": {
+    "p": 0.7532,
+    "mean": -9024.2472,
+    "p90": -338.34,
+    "q_bh": 0.8621
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2024-11-27 15:06:00",
+     "green_time": "2024-11-27 15:08:00",
+     "entry_time": "2024-11-27 15:10:00",
+     "exit_time": "2024-11-27 15:16:00",
+     "prev_level": 2641.774,
+     "entry_px": 2643.205,
+     "stop_px": 2646.155,
+     "target_px": 2637.305,
+     "exit_px": 2637.305,
+     "reason": "target",
+     "net": 583.0,
+     "r_mult": 2.0
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-10 13:04:00",
+     "green_time": "2024-10-10 13:05:00",
+     "entry_time": "2024-10-10 13:07:00",
+     "exit_time": "2024-10-10 13:57:00",
+     "prev_level": 2624.165,
+     "entry_px": 2623.034,
+     "stop_px": 2628.004,
+     "target_px": 2613.094,
+     "exit_px": 2628.054,
+     "reason": "stop",
+     "net": -509.0,
+     "r_mult": -1.0101
+    },
+    {
+     "side": "short",
+     "break_time": "2025-02-03 15:26:00",
+     "green_time": "2025-02-03 15:29:00",
+     "entry_time": "2025-02-03 15:31:00",
+     "exit_time": "2025-02-03 20:40:00",
+     "prev_level": 2816.935,
+     "entry_px": 2816.808,
+     "stop_px": 2825.875,
+     "target_px": 2798.674,
+     "exit_px": 2817.608,
+     "reason": "time 20:40",
+     "net": -87.0,
+     "r_mult": -0.0882
+    }
+   ]
+  },
+  "V6 combined": {
+   "variant": "V6",
+   "label": "2 R target",
+   "side": "combined",
+   "design": {
+    "n": 357,
+    "per_month": 11.9157,
+    "win": 0.2941,
+    "avg_win": 798.199,
+    "avg_loss": -368.4052,
+    "pf": 0.9028,
+    "net": -9027.2,
+    "per_trade": -25.2863,
+    "worst_day": -3158.0,
+    "max_dd": -17719.1,
+    "reasons": {
+     "stop": 250,
+     "target": 99,
+     "time 20:40": 8
+    }
+   },
+   "wf": {
+    "n": 275,
+    "per_month": 11.4671,
+    "win": 0.2982,
+    "avg_win": 910.7524,
+    "avg_loss": -422.1943,
+    "pf": 0.9165,
+    "net": -6801.8,
+    "per_trade": -24.7338,
+    "worst_day": -3158.0,
+    "max_dd": -17628.3,
+    "reasons": {
+     "stop": 191,
+     "target": 78,
+     "time 20:40": 6
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -679.6,
+     -4927.8,
+     843.2,
+     -2440.0,
+     317.0,
+     2096.5,
+     -8781.4,
+     6770.3
+    ],
+    "trades": [
+     40,
+     40,
+     36,
+     27,
+     27,
+     39,
+     34,
+     32
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.3696,
+    "mean": -12582.6428,
+    "p90": 1290.9,
+    "q_bh": 0.6026
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-12-05 15:42:00",
+     "green_time": "2024-12-05 15:43:00",
+     "entry_time": "2024-12-05 15:45:00",
+     "exit_time": "2024-12-05 15:51:00",
+     "prev_level": 2632.315,
+     "entry_px": 2633.925,
+     "stop_px": 2631.785,
+     "target_px": 2638.205,
+     "exit_px": 2638.205,
+     "reason": "target",
+     "net": 421.0,
+     "r_mult": 2.0
+    },
+    {
+     "side": "long",
+     "break_time": "2024-10-23 16:01:00",
+     "green_time": "2024-10-23 16:02:00",
+     "entry_time": "2024-10-23 16:04:00",
+     "exit_time": "2024-10-23 16:06:00",
+     "prev_level": 2720.505,
+     "entry_px": 2720.925,
+     "stop_px": 2719.635,
+     "target_px": 2723.505,
+     "exit_px": 2719.585,
+     "reason": "stop",
+     "net": -141.0,
+     "r_mult": -1.0388
+    },
+    {
+     "side": "long",
+     "break_time": "2024-06-25 15:31:00",
+     "green_time": "2024-06-25 15:34:00",
+     "entry_time": "2024-06-25 15:36:00",
+     "exit_time": "2024-06-25 20:40:00",
+     "prev_level": 2317.818,
+     "entry_px": 2318.975,
+     "stop_px": 2315.355,
+     "target_px": 2326.215,
+     "exit_px": 2319.258,
+     "reason": "time 20:40",
+     "net": 21.3,
+     "r_mult": 0.0782
+    }
+   ]
+  },
+  "V7 long": {
+   "variant": "V7",
+   "label": "swing target + step profit lock",
+   "side": "long",
+   "design": {
+    "n": 154,
+    "per_month": 5.1401,
+    "win": 0.3571,
+    "avg_win": 795.9355,
+    "avg_loss": -322.6818,
+    "pf": 1.3703,
+    "net": 11830.95,
+    "per_trade": 76.8244,
+    "worst_day": -1701.7,
+    "max_dd": -4550.7,
+    "reasons": {
+     "stop": 123,
+     "target": 30,
+     "time 20:40": 1
+    }
+   },
+   "wf": {
+    "n": 120,
+    "per_month": 5.0038,
+    "win": 0.4,
+    "avg_win": 858.3719,
+    "avg_loss": -386.5403,
+    "pf": 1.4804,
+    "net": 13370.95,
+    "per_trade": 111.4246,
+    "worst_day": -1701.7,
+    "max_dd": -4550.7,
+    "reasons": {
+     "stop": 93,
+     "target": 26,
+     "time 20:40": 1
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     2164.15,
+     -1353.1,
+     2232.1,
+     22.25,
+     988.85,
+     853.35,
+     -1943.5,
+     10406.85
+    ],
+    "trades": [
+     15,
+     16,
+     17,
+     9,
+     16,
+     17,
+     14,
+     16
+    ],
+    "positive": 6
+   },
+   "twin": {
+    "p": 0.02,
+    "mean": -4195.0841,
+    "p90": 5426.02,
+    "q_bh": 0.1738
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2025-04-25 07:09:00",
+     "green_time": "2025-04-25 07:12:00",
+     "entry_time": "2025-04-25 07:14:00",
+     "exit_time": "2025-04-25 07:14:00",
+     "prev_level": 3306.245,
+     "entry_px": 3307.355,
+     "stop_px": 3302.755,
+     "target_px": 3308.615,
+     "exit_px": 3308.615,
+     "reason": "target",
+     "net": 119.0,
+     "r_mult": 0.2739
+    },
+    {
+     "side": "long",
+     "break_time": "2024-11-13 16:34:00",
+     "green_time": "2024-11-13 16:35:00",
+     "entry_time": "2024-11-13 16:37:00",
+     "exit_time": "2024-11-13 16:55:00",
+     "prev_level": 2589.508,
+     "entry_px": 2591.175,
+     "stop_px": 2587.235,
+     "target_px": 2606.658,
+     "exit_px": 2587.185,
+     "reason": "stop",
+     "net": -406.0,
+     "r_mult": -1.0127
+    },
+    {
+     "side": "long",
+     "break_time": "2026-01-29 15:27:00",
+     "green_time": "2026-01-29 15:29:00",
+     "entry_time": "2026-01-29 15:31:00",
+     "exit_time": "2026-01-29 20:40:00",
+     "prev_level": 5157.115,
+     "entry_px": 5227.455,
+     "stop_px": 5098.665,
+     "target_px": 5549.335,
+     "exit_px": 5347.015,
+     "reason": "time 20:40",
+     "net": 11949.0,
+     "r_mult": 0.9283
+    }
+   ]
+  },
+  "V7 short": {
+   "variant": "V7",
+   "label": "swing target + step profit lock",
+   "side": "short",
+   "design": {
+    "n": 199,
+    "per_month": 6.6421,
+    "win": 0.3317,
+    "avg_win": 332.3788,
+    "avg_loss": -267.5714,
+    "pf": 0.6164,
+    "net": -13650.0,
+    "per_trade": -68.593,
+    "worst_day": -945.0,
+    "max_dd": -15850.25,
+    "reasons": {
+     "stop": 159,
+     "target": 40
+    }
+   },
+   "wf": {
+    "n": 152,
+    "per_month": 6.3382,
+    "win": 0.3553,
+    "avg_win": 337.3796,
+    "avg_loss": -298.4418,
+    "pf": 0.6229,
+    "net": -11028.8,
+    "per_trade": -72.5579,
+    "worst_day": -945.0,
+    "max_dd": -11748.65,
+    "reasons": {
+     "stop": 117,
+     "target": 35
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -2098.85,
+     -2564.55,
+     474.35,
+     -2171.8,
+     -1777.9,
+     -224.0,
+     -1020.85,
+     -1645.2
+    ],
+    "trades": [
+     23,
+     24,
+     18,
+     18,
+     11,
+     22,
+     20,
+     16
+    ],
+    "positive": 1
+   },
+   "twin": {
+    "p": 0.8272,
+    "mean": -8788.7511,
+    "p90": -2136.78,
+    "q_bh": 0.8621
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2024-10-23 12:11:00",
+     "green_time": "2024-10-23 12:13:00",
+     "entry_time": "2024-10-23 12:15:00",
+     "exit_time": "2024-10-23 12:17:00",
+     "prev_level": 2748.775,
+     "entry_px": 2748.105,
+     "stop_px": 2749.638,
+     "target_px": 2747.545,
+     "exit_px": 2747.545,
+     "reason": "target",
+     "net": 49.0,
+     "r_mult": 0.3653
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-14 07:36:00",
+     "green_time": "2024-10-14 07:38:00",
+     "entry_time": "2024-10-14 07:40:00",
+     "exit_time": "2024-10-14 07:43:00",
+     "prev_level": 2661.258,
+     "entry_px": 2662.605,
+     "stop_px": 2663.495,
+     "target_px": 2659.305,
+     "exit_px": 2663.545,
+     "reason": "stop",
+     "net": -101.0,
+     "r_mult": -1.0562
+    }
+   ]
+  },
+  "V7 combined": {
+   "variant": "V7",
+   "label": "swing target + step profit lock",
+   "side": "combined",
+   "design": {
+    "n": 353,
+    "per_month": 11.7821,
+    "win": 0.3428,
+    "avg_win": 543.0864,
+    "avg_loss": -291.0884,
+    "pf": 0.9731,
+    "net": -1819.05,
+    "per_trade": -5.1531,
+    "worst_day": -1701.7,
+    "max_dd": -12805.6,
+    "reasons": {
+     "stop": 282,
+     "target": 70,
+     "time 20:40": 1
+    }
+   },
+   "wf": {
+    "n": 272,
+    "per_month": 11.342,
+    "win": 0.375,
+    "avg_win": 582.5525,
+    "avg_loss": -335.7541,
+    "pf": 1.041,
+    "net": 2342.15,
+    "per_trade": 8.6108,
+    "worst_day": -1701.7,
+    "max_dd": -10488.0,
+    "reasons": {
+     "stop": 210,
+     "target": 61,
+     "time 20:40": 1
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     65.3,
+     -3917.65,
+     2706.45,
+     -2149.55,
+     -789.05,
+     629.35,
+     -2964.35,
+     8761.65
+    ],
+    "trades": [
+     38,
+     40,
+     35,
+     27,
+     27,
+     39,
+     34,
+     32
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.1229,
+    "mean": -13081.8171,
+    "p90": -355.19,
+    "q_bh": 0.4715
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-12-04 13:04:00",
+     "green_time": "2024-12-04 13:05:00",
+     "entry_time": "2024-12-04 13:07:00",
+     "exit_time": "2024-12-04 13:30:00",
+     "prev_level": 2633.965,
+     "entry_px": 2637.415,
+     "stop_px": 2632.215,
+     "target_px": 2646.195,
+     "exit_px": 2646.195,
+     "reason": "target",
+     "net": 871.0,
+     "r_mult": 1.6885
+    },
+    {
+     "side": "long",
+     "break_time": "2024-10-25 09:05:00",
+     "green_time": "2024-10-25 09:08:00",
+     "entry_time": "2024-10-25 09:10:00",
+     "exit_time": "2024-10-25 09:28:00",
+     "prev_level": 2717.704,
+     "entry_px": 2720.025,
+     "stop_px": 2717.465,
+     "target_px": 2726.418,
+     "exit_px": 2717.415,
+     "reason": "stop",
+     "net": -268.0,
+     "r_mult": -1.0195
+    },
+    {
+     "side": "long",
+     "break_time": "2026-01-29 15:27:00",
+     "green_time": "2026-01-29 15:29:00",
+     "entry_time": "2026-01-29 15:31:00",
+     "exit_time": "2026-01-29 20:40:00",
+     "prev_level": 5157.115,
+     "entry_px": 5227.455,
+     "stop_px": 5098.665,
+     "target_px": 5549.335,
+     "exit_px": 5347.015,
+     "reason": "time 20:40",
+     "net": 11949.0,
+     "r_mult": 0.9283
+    }
+   ]
+  },
+  "V8 long": {
+   "variant": "V8",
+   "label": "buy-stop entry at the green high (no close needed)",
+   "side": "long",
+   "design": {
+    "n": 170,
+    "per_month": 5.6741,
+    "win": 0.3,
+    "avg_win": 1104.902,
+    "avg_loss": -369.5429,
+    "pf": 1.2814,
+    "net": 12374.4,
+    "per_trade": 72.7906,
+    "worst_day": -2943.0,
+    "max_dd": -10463.7,
+    "reasons": {
+     "stop": 118,
+     "target": 43,
+     "time 20:40": 9
+    }
+   },
+   "wf": {
+    "n": 130,
+    "per_month": 5.4208,
+    "win": 0.3077,
+    "avg_win": 1263.4175,
+    "avg_loss": -428.7311,
+    "pf": 1.3097,
+    "net": 11950.9,
+    "per_trade": 91.93,
+    "worst_day": -2943.0,
+    "max_dd": -10463.7,
+    "reasons": {
+     "stop": 90,
+     "target": 34,
+     "time 20:40": 6
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     1599.5,
+     302.1,
+     3370.9,
+     -438.4,
+     6126.0,
+     726.0,
+     -6421.5,
+     6686.3
+    ],
+    "trades": [
+     16,
+     17,
+     18,
+     10,
+     16,
+     18,
+     17,
+     18
+    ],
+    "positive": 6
+   },
+   "twin": {
+    "p": 0.024,
+    "mean": -5124.0617,
+    "p90": 5946.77,
+    "q_bh": 0.1738
+   },
+   "examples": [
+    {
+     "side": "long",
+     "break_time": "2024-12-04 13:04:00",
+     "green_time": "2024-12-04 13:05:00",
+     "entry_time": "2024-12-04 13:06:00",
+     "exit_time": "2024-12-04 13:30:00",
+     "prev_level": 2633.965,
+     "entry_px": 2636.015,
+     "stop_px": 2632.215,
+     "target_px": 2646.195,
+     "exit_px": 2646.195,
+     "reason": "target",
+     "net": 1011.0,
+     "r_mult": 2.6789
+    },
+    {
+     "side": "long",
+     "break_time": "2024-12-05 15:42:00",
+     "green_time": "2024-12-05 15:43:00",
+     "entry_time": "2024-12-05 15:44:00",
+     "exit_time": "2024-12-05 17:12:00",
+     "prev_level": 2632.315,
+     "entry_px": 2633.225,
+     "stop_px": 2631.785,
+     "target_px": 2647.425,
+     "exit_px": 2631.735,
+     "reason": "stop",
+     "net": -156.0,
+     "r_mult": -1.0347
+    },
+    {
+     "side": "long",
+     "break_time": "2024-06-25 15:31:00",
+     "green_time": "2024-06-25 15:32:00",
+     "entry_time": "2024-06-25 15:33:00",
+     "exit_time": "2024-06-25 20:40:00",
+     "prev_level": 2317.818,
+     "entry_px": 2317.818,
+     "stop_px": 2315.355,
+     "target_px": 2327.618,
+     "exit_px": 2319.258,
+     "reason": "time 20:40",
+     "net": 137.0,
+     "r_mult": 0.5847
+    }
+   ]
+  },
+  "V8 short": {
+   "variant": "V8",
+   "label": "buy-stop entry at the green high (no close needed)",
+   "side": "short",
+   "design": {
+    "n": 231,
+    "per_month": 7.7101,
+    "win": 0.1991,
+    "avg_win": 590.0587,
+    "avg_loss": -251.7746,
+    "pf": 0.5827,
+    "net": -19435.6,
+    "per_trade": -84.1368,
+    "worst_day": -2784.7,
+    "max_dd": -19435.6,
+    "reasons": {
+     "stop": 183,
+     "target": 46,
+     "time 20:40": 2
+    }
+   },
+   "wf": {
+    "n": 179,
+    "per_month": 7.4641,
+    "win": 0.2346,
+    "avg_win": 594.4762,
+    "avg_loss": -283.2307,
+    "pf": 0.6435,
+    "net": -13834.6,
+    "per_trade": -77.2883,
+    "worst_day": -2784.7,
+    "max_dd": -14092.7,
+    "reasons": {
+     "stop": 137,
+     "target": 41,
+     "time 20:40": 1
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -2347.3,
+     -4118.9,
+     720.9,
+     676.1,
+     -915.2,
+     1466.5,
+     499.4,
+     -9816.1
+    ],
+    "trades": [
+     30,
+     28,
+     20,
+     25,
+     12,
+     25,
+     20,
+     19
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.8611,
+    "mean": -11996.3513,
+    "p90": -2885.01,
+    "q_bh": 0.8621
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2025-01-10 07:29:00",
+     "green_time": "2025-01-10 07:31:00",
+     "entry_time": "2025-01-10 07:32:00",
+     "exit_time": "2025-01-10 07:42:00",
+     "prev_level": 2678.395,
+     "entry_px": 2675.974,
+     "stop_px": 2678.975,
+     "target_px": 2674.625,
+     "exit_px": 2674.625,
+     "reason": "target",
+     "net": 127.9,
+     "r_mult": 0.4495
+    },
+    {
+     "side": "short",
+     "break_time": "2024-09-23 12:52:00",
+     "green_time": "2024-09-23 12:54:00",
+     "entry_time": "2024-09-23 12:55:00",
+     "exit_time": "2024-09-23 12:56:00",
+     "prev_level": 2625.574,
+     "entry_px": 2625.425,
+     "stop_px": 2626.268,
+     "target_px": 2620.194,
+     "exit_px": 2626.318,
+     "reason": "stop",
+     "net": -96.3,
+     "r_mult": -1.0593
+    },
+    {
+     "side": "short",
+     "break_time": "2025-11-07 16:43:00",
+     "green_time": "2025-11-07 16:45:00",
+     "entry_time": "2025-11-07 16:46:00",
+     "exit_time": "2025-11-07 20:40:00",
+     "prev_level": 4019.275,
+     "entry_px": 4018.735,
+     "stop_px": 4022.275,
+     "target_px": 3984.155,
+     "exit_px": 4002.765,
+     "reason": "time 20:40",
+     "net": 1590.0,
+     "r_mult": 4.5113
+    }
+   ]
+  },
+  "V8 combined": {
+   "variant": "V8",
+   "label": "buy-stop entry at the green high (no close needed)",
+   "side": "combined",
+   "design": {
+    "n": 401,
+    "per_month": 13.3843,
+    "win": 0.2419,
+    "avg_win": 860.7495,
+    "avg_loss": -297.8747,
+    "pf": 0.922,
+    "net": -7061.2,
+    "per_trade": -17.609,
+    "worst_day": -2943.0,
+    "max_dd": -16515.8,
+    "reasons": {
+     "stop": 301,
+     "target": 89,
+     "time 20:40": 11
+    }
+   },
+   "wf": {
+    "n": 309,
+    "per_month": 12.8849,
+    "win": 0.2654,
+    "avg_win": 920.789,
+    "avg_loss": -340.9181,
+    "pf": 0.9757,
+    "net": -1883.7,
+    "per_trade": -6.0961,
+    "worst_day": -2943.0,
+    "max_dd": -16515.8,
+    "reasons": {
+     "stop": 227,
+     "target": 75,
+     "time 20:40": 7
+    }
+   },
+   "wf_quarters": {
+    "nets": [
+     -747.8,
+     -3816.8,
+     4091.8,
+     237.7,
+     5210.8,
+     2192.5,
+     -5922.1,
+     -3129.8
+    ],
+    "trades": [
+     46,
+     45,
+     38,
+     35,
+     28,
+     43,
+     37,
+     37
+    ],
+    "positive": 4
+   },
+   "twin": {
+    "p": 0.1768,
+    "mean": -17235.4603,
+    "p90": -2819.65,
+    "q_bh": 0.4715
+   },
+   "examples": [
+    {
+     "side": "short",
+     "break_time": "2024-12-23 07:07:00",
+     "green_time": "2024-12-23 07:10:00",
+     "entry_time": "2024-12-23 07:11:00",
+     "exit_time": "2024-12-23 10:16:00",
+     "prev_level": 2631.698,
+     "entry_px": 2631.785,
+     "stop_px": 2633.535,
+     "target_px": 2624.625,
+     "exit_px": 2624.625,
+     "reason": "target",
+     "net": 709.0,
+     "r_mult": 4.0914
+    },
+    {
+     "side": "short",
+     "break_time": "2024-10-14 07:36:00",
+     "green_time": "2024-10-14 07:38:00",
+     "entry_time": "2024-10-14 07:39:00",
+     "exit_time": "2024-10-14 07:43:00",
+     "prev_level": 2661.258,
+     "entry_px": 2662.625,
+     "stop_px": 2663.495,
+     "target_px": 2659.305,
+     "exit_px": 2663.545,
+     "reason": "stop",
+     "net": -99.0,
+     "r_mult": -1.0575
+    },
+    {
+     "side": "long",
+     "break_time": "2024-06-25 15:31:00",
+     "green_time": "2024-06-25 15:32:00",
+     "entry_time": "2024-06-25 15:33:00",
+     "exit_time": "2024-06-25 20:40:00",
+     "prev_level": 2317.818,
+     "entry_px": 2317.818,
+     "stop_px": 2315.355,
+     "target_px": 2327.618,
+     "exit_px": 2319.258,
+     "reason": "time 20:40",
+     "net": 137.0,
+     "r_mult": 0.5847
+    }
+   ]
+  }
+ },
+ "retune": {
+  "long": {
+   "net": 7135.6,
+   "picks": [
+    [
+     "2024-04-01",
+     "V3",
+     3441.8
+    ],
+    [
+     "2024-07-01",
+     "V3",
+     -704.2
+    ],
+    [
+     "2024-10-01",
+     "V3",
+     2252.5
+    ],
+    [
+     "2025-01-01",
+     "V4",
+     634.3
+    ],
+    [
+     "2025-04-01",
+     "V4",
+     520.4
+    ],
+    [
+     "2025-07-01",
+     "V8",
+     726.0
+    ],
+    [
+     "2025-10-01",
+     "V8",
+     -6421.5
+    ],
+    [
+     "2026-01-01",
+     "V8",
+     6686.3
+    ]
+   ]
+  },
+  "short": {
+   "net": -21327.45,
+   "picks": [
+    [
+     "2024-04-01",
+     "V2",
+     -2495.4
+    ],
+    [
+     "2024-07-01",
+     "V5",
+     -3468.75
+    ],
+    [
+     "2024-10-01",
+     "V2",
+     -1872.9
+    ],
+    [
+     "2025-01-01",
+     "V7",
+     -2171.8
+    ],
+    [
+     "2025-04-01",
+     "V7",
+     -1777.9
+    ],
+    [
+     "2025-07-01",
+     "V7",
+     -224.0
+    ],
+    [
+     "2025-10-01",
+     "V8",
+     499.4
+    ],
+    [
+     "2026-01-01",
+     "V8",
+     -9816.1
+    ]
+   ]
+  },
+  "combined": {
+   "net": -9537.25,
+   "picks": [
+    [
+     "2024-04-01",
+     "V6",
+     -679.6
+    ],
+    [
+     "2024-07-01",
+     "V3",
+     -6257.0
+    ],
+    [
+     "2024-10-01",
+     "V3",
+     1197.5
+    ],
+    [
+     "2025-01-01",
+     "V7",
+     -2149.55
+    ],
+    [
+     "2025-04-01",
+     "V8",
+     5210.8
+    ],
+    [
+     "2025-07-01",
+     "V8",
+     2192.5
+    ],
+    [
+     "2025-10-01",
+     "V8",
+     -5922.1
+    ],
+    [
+     "2026-01-01",
+     "V8",
+     -3129.8
+    ]
+   ]
+  }
+ },
+ "bars": 872575
+}

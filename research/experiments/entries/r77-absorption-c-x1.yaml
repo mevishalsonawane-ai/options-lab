@@ -1,0 +1,41 @@
+id: r77-absorption-c-x1
+title: 'R77 absorption-bubble proxy C-X1: volume >= 95th pct, range <= 25th pct; exits X1'
+family: flow-oi
+date: '2026-10-18'
+doc: research/HUNT_R77_ABSORPTION_PROXY.md
+hypothesis: 'Boss (18 Oct): a 1-minute index bar with high volume (nearest-expiry option volume, a proxy) and a small range
+  at a new 20-bar extreme, confirmed by the next bar, marks absorption; buying the 1-ITM option for the reversal makes money
+  after costs (net > 0 in design, walk-forward and final, >= 100 design trades, beats same-time-of-day random-entry twins
+  with BH q <= 0.10 over 8 tests).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK; fut_1m_live_index for the proxy check
+  only), R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (events from about 19 Dec 2024 after the 20-session warm-up; walk-forward quarters Apr
+    2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once; already read by R51 / R63 / R70 / R71 / R76 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal: index 1-minute bars (range, 20-bar swing, confirmation bar); volume condition: the index''s nearest-expiry option
+  volume (proxy, no futures history); trade: the 1-ITM option'
+model_or_rule: 'detector C (volume >= 95th pct, range <= 25th pct of the same minute over the previous 20 sessions), new 20-bar
+  low / high, next bar confirms; long CE after a downside event, PE after an upside one; exits X1: index stop beyond the absorption
+  bar, next-swing index target, -25% premium stop, 30 min, 15:15'
+settings: research/hunt/r77/r77rules.py, r77study.py
+prereg: research/hunt/r77/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design: 208 trades, win 31%, net -Rs 9,722 (-Rs 47/trade), worst day -Rs 3,699, max DD Rs 18,042. Walk-forward
+    quarters: 139 trades, win 33%, net Rs 4,926 (Rs 35/trade), worst day -Rs 3,699, max DD Rs 13,975. Final: 102 trades, win
+    28%, net -Rs 10,869 (-Rs 107/trade), worst day -Rs 5,891, max DD Rs 14,132; twin p 0.3413, BH q 0.998: FAIL (design net
+    <= 0; final net <= 0; twin q > 0.10).'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, stops on the minute low with gap fills
+    at the worse open, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: 'A proxy: true absorption needs tick and book data (the phone''s recordings, R10 section 4.2 test 4). Research only;
+  nothing changes paper or live.'

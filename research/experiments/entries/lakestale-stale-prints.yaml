@@ -1,0 +1,51 @@
+id: lakestale-stale-prints
+title: 'Lake stale repeated prints: lakeclean step 3 measured across the lake, and R51 / R72 / R73 / R76 / R77 re-priced'
+family: diagnosis
+date: '2026-10-18'
+doc: research/HUNT_LAKE_STALE_PRINTS.md
+hypothesis: 'A flat zero-volume option price repeated for 5+ minutes (the lake carrying a last price forward) and more
+  than 50% (and 2 ticks) outside the no-arbitrage band of its neighbouring strikes (their latest real trades, at most 15
+  minutes old) is a fake price (R77: FINNIFTY 24650 CE at Rs 1,855.85 for 13 minutes on 28 Sep 2026, real price about
+  Rs 192). Count how often the lake has them, and whether removing them changes any verdict or headline number of
+  R51 (Amendment A), R72, R73, R76 and R77.'
+data_version: Drive lake gdrive:IraAlgo-data-lake as uploaded 14-15 Oct 2026 (index_1m, options_rolling_1m WEEK), R51
+  Amendment A stores rebuilt (drop counts reproduced exactly) and rebuilt again with lakeclean step 3 (R51_CLEAN=1
+  R51_STALE=1), 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (each study's own design and walk-forward spans)
+  holdout: '2026-04-01 - 2026-10-13: already read once by each study; re-priced here with the same rules, picks, seeds and
+    gates, not re-selected'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'option minute: flat (O = H = L = C), volume 0, run length, price'
+- neighbouring strikes' latest traded closes (no-arbitrage band)
+- 'signal source of every re-run rule: the index (unchanged)'
+model_or_rule: 'lakeclean step 3 (frozen in research/hunt/lakestale/PREREG.md before any measurement): STALE_MIN_RUN 5,
+  STALE_TOL 0.50, STALE_AGE 15 min, 2 ticks; two-sided run length (offline repair), causal version counted for information'
+settings: research/hunt/lakeclean.py, research/hunt/lakestale/{measure,rerun,compare}.py (results/measure.json,
+  results/compare.json)
+prereg: research/hunt/lakestale/PREREG.md
+variants_tried: null
+results:
+  summary: 'Flagged 9,646 of 35,402,471 option minutes (0.03%; 9,666 with duplicate rows) in 544 runs, 271 contracts, 159
+    index-days: FINNIFTY 5,099, MIDCPNIFTY 4,437, BANKNIFTY 92, SENSEX 18, NIFTY 0; 481 of the 544 runs in 2026. 4.78 million
+    minutes sit in a stale run and 99.8% are kept (consistent with neighbours, or no neighbour to judge). Causal version 9,078.
+    Sanity read: of 351 runs with a later real trade that day, 321 (91%) traded inside the band, 28 (201 minutes, 2.1%) near
+    the flagged price (possible false positives, mostly days with mutually inconsistent neighbouring strikes). All 74 headline
+    rows reproduced the committed results exactly before step 3. With step 3 no verdict changes and no passed rule moves: R51
+    Donchian 20 RT 1,787 final trades +Rs 55,439 q 0.025; R72 C1 1,202 trades +Rs 1,71,366 q 0.032; R73 T7-P 1,670 trades
+    +Rs 1,34,743 q 0.013, decision unchanged. R77 A/B tests lose about Rs 99,700 less in the final (A-X1 -Rs 1,13,096 ->
+    -Rs 13,383, twin p 0.996 -> 0.198; all 8 still FAIL, BH q 0.59-0.70). R76 B0 design Rs 2,57,249 -> Rs 2,66,643 (one
+    Budget-day trade), final unchanged; nothing recommended. 19 other rows move only in twin p (0.002-0.062). Misses errors
+    under 50% (Budget day 1 Feb 2026 FINNIFTY puts).'
+  costs: each study's own (dated charges, R17 liq fills, next-minute fills, gap fills at the worse price, lots in force)
+holdout_read: true
+verdict: not-a-test
+notes: 'A data repair, not a strategy. Step 3 stays opt-in (R51_STALE=1); committed results keep their stores. Nothing
+  changes paper or live. A tighter rule (smaller margin, the missing P(K) >= P(K_hi) - (K_hi - K) bound) would be a new
+  pre-registered idea.'
