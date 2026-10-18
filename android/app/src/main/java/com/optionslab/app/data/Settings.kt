@@ -224,6 +224,38 @@ data class AppSettings(
             savesFlow.value = saveCount.incrementAndGet()
             // In the diary, on its own thread (the screen's own switch writes the same line through AppModel.update).
             runCatching { Diag.record("mode", "kill switch ON (the guard: a live drawdown)") }
+            // 18 Oct, review: made sure it reaches disk, as PinLock does with its failure count - on a thread of its own (the
+            // caller is the order path, which never waits on a vault write): the background write is waited for, and if it
+            // failed the key is written directly, tried again a few times. A process death or a failed write no longer loses it.
+            runCatching { killWriter.execute { persistKill() } }
+        }
+
+        /** The kill switch's own disk writer (one daemon thread; never the order path's or the screen's). */
+        private val killWriter = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "kill-writer").apply { isDaemon = true } }
+
+        /** Tests: wait until the kill switch's writer has nothing queued. */
+        internal fun awaitKillWriter() { runCatching { killWriter.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) } }
+
+        /** How the kill switch is waited for and written (tests swap them to make a write fail). */
+        @Volatile internal var killFlush: () -> Boolean = { SecurePrefs.flush() }
+        // The settings as they are in memory now, written on this thread: the kill switch with them, or Boss's clear if they
+        // cleared it meanwhile (never a stale "on" written over it).
+        @Volatile internal var killPut: () -> Unit = { check(SecurePrefs.writeNow()) { "the settings could not be written" } }
+        @Volatile internal var killRetryMs: Long = 2_000L
+
+        /**
+         * The kill switch on disk: true once [killFlush] says the background write landed, or a direct [killPut] did not throw.
+         * Tried [attempts] times, [killRetryMs] apart. What is written is what memory holds then, so a kill switch Boss
+         * cleared meanwhile stays cleared.
+         */
+        internal fun persistKill(attempts: Int = 4): Boolean {
+            repeat(attempts) { n ->
+                if (runCatching { killFlush() }.getOrDefault(false)) return true
+                if (runCatching { killPut() }.isSuccess) return true
+                if (n < attempts - 1) runCatching { Thread.sleep(killRetryMs) }
+            }
+            runCatching { Diag.record("mode", "kill switch: the vault write failed ${attempts}x; it is on in memory, written again at the next save") }
+            return false
         }
 
         /** Every setting's vault key and value. */

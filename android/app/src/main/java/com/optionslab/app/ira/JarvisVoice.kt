@@ -239,11 +239,21 @@ class JarvisVoice : Service() {
         }
 
         /**
+         * A confirmed request's result as said (18 Oct, review): the lock read again at the moment it is said (the phone can
+         * lock while the order goes), the way [askWords] reads it - unknown counts as locked. Locked: only that it is ready.
+         */
+        internal fun resultWords(r: String): String =
+            com.optionslab.ira.LockRule.resultAloud(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), lockedSafe())
+
+        /** The phone is locked now, as [askWords] reads it (unknown counts as locked). */
+        internal fun lockedSafe(): Boolean = runCatching { IraHub.appContext() == null || IraHub.locked() }.getOrDefault(true)
+
+        /**
          * A request's yes-or-no question [text] as it may be said now (18 Oct, review): the lock as it is this moment
          * (unknown counts as locked, as for an announcement); locked, only how many requests wait.
          */
         internal fun askWords(text: String): String = com.optionslab.ira.Requests.askAloud(text,
-            runCatching { IraHub.locked() }.getOrDefault(true),
+            lockedSafe(),
             runCatching { IraHub.pendingRequests().value.count { it.voiced } }.getOrDefault(1))
 
         /** Pauses listening while the owner teaches Jarvis their voice (the microphone is needed for that). */
@@ -2253,8 +2263,10 @@ class JarvisVoice : Service() {
                         // no from anyone still cancels.)
                         // (Off the main thread, as the yes is: the no's vault writes - 18 Oct, review.)
                         else { withContext(Dispatchers.IO) { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }, by = com.optionslab.ira.Requests.By.VOICE) }; "Rejected. Nothing was placed." }
-                    // An order's result is read back as it is: its prices exact, never rounded for the ear.
-                    say(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
+                    // An order's result is read back as it is: its prices exact, never rounded for the ear - on a phone still
+                    // unlocked when it is said (18 Oct, review: it may have locked while the order went).
+                    // A "no" works on a locked phone and its line holds nothing of the account: said as it is.
+                    say(if (yes) resultWords(r) else com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
                 }
                 return
             }
@@ -2507,6 +2519,8 @@ class JarvisVoice : Service() {
         // Speed, round 4: this question's stages timed from Boss's last word ([com.optionslab.ira.AskStages]; durations only).
         val timed = IraHub.askStages.begin(heardAt, voice = true)
         askTimed = timed
+        // The lock as the question was asked (18 Oct, review): an answer ready after the phone locked is said without the account.
+        val lockedAsked = lockedSafe()
         answerJob = scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
             // only with no prices at all is the first answer held for a refresh.
@@ -2608,7 +2622,11 @@ class JarvisVoice : Service() {
                     shaped = r.shaped && !usualLed
                     if (usualLed) usualSpoken else r.spoken
                 }
-            }.let { text ->
+            }.let { whole ->
+                // Asked unlocked, ready after the phone locked (a slow account read, a late answer): no amount, P&L or symbol
+                // aloud, and nothing kept for "go on" (18 Oct, review). Asked locked: judged by the lock rule when asked.
+                val text = com.optionslab.ira.LockRule.answerAloud(whole, lockedAsked, lockedSafe())
+                if (text != whole) { full = null; shaped = false; note("the answer was ready after the phone locked: not said in full") }
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
                 // follow-up window closes instead, so one answer can never repeat itself in a loop.
                 val prev = lastAnswer

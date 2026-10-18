@@ -713,8 +713,7 @@ private fun GuardCard(model: AppModel) {
     var guarded by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
     guarded?.let { (why, action) -> Reauth(model, onOk = { guarded = null; action() }, onCancel = { guarded = null }, why = why) }
     fun loosen(looser: Boolean, why: String, action: () -> Unit) {
-        val ask = looser && PinLock.isSet && (s.live || com.optionslab.app.data.Broker.configured)
-        if (ask) guarded = why to action else action()
+        if (com.optionslab.app.security.GuardPin.asks(looser, s.live)) guarded = why to action else action()
     }
     // A limit of 0 (or a cut-off below 0) is off: any limit is tighter than off; off, or a higher one, is looser.
     fun looser(cur: Double, next: Double) = cur > 0 && (next <= 0 || next > cur)
@@ -727,7 +726,7 @@ private fun GuardCard(model: AppModel) {
             text = { Text(if (turnOn) "No new position is opened until you clear it. Exits and the expiry square-off still go through." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
             confirmButton = { TextButton({
                 confirmKill = null
-                loosen(!turnOn, "Enter your app PIN to clear the kill switch on Zerodha.") { model.update { it.copy(guardKill = turnOn) } }
+                loosen(!turnOn, com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) { model.update { it.copy(guardKill = turnOn) } }
             }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
             dismissButton = { TextButton({ confirmKill = null }) { Text("Cancel") } },
         )

@@ -303,6 +303,47 @@ object McxMarket {
 
     fun exposure(): Boolean = paperExposure() || liveExposure()
 
+    // ---- 18 Oct, review: a live MCX position kept as held with no Zerodha session to confirm it ---------------------------
+
+    /**
+     * The live MCX flag stays on until a logged-in read of Zerodha's positions shows MCX flat, so with no session the MCX
+     * watch (and its wake lock) keeps running every MCX day. That is right - an open position comes first, and is never
+     * dropped on a guess - but Boss is told once a day that a Zerodha login is needed to confirm it.
+     */
+    private const val K_LOGIN_TOLD = "mcx.liveLoginTold"
+    const val LOGIN_NOTICE_ID = 2052
+    const val LOGIN_TITLE = "MCX: log in to Zerodha"
+    const val LOGIN_TEXT = "The app last saw an open MCX position on Zerodha and keeps watching it. There is no Zerodha login " +
+        "now, so it cannot check whether the position is still open. Log in to Zerodha once so the app can confirm it; if " +
+        "the position is closed, the MCX watch then stops on its own."
+    @Volatile private var loginToldOn: LocalDate? = null
+
+    /**
+     * Boss is told today ([LOGIN_TEXT]): [stored] is the live flag's day (the day the position was first seen), [toldOn] the
+     * day Boss was last told. Only with no session and a flag from before today (seen today, a read is due anyway). Pure.
+     */
+    internal fun loginNoticeDue(stored: String?, today: LocalDate, loggedIn: Boolean, toldOn: LocalDate?): Boolean {
+        if (loggedIn || stored.isNullOrBlank() || toldOn == today) return false
+        // A flag that is not a day (an older version's) counts as older than today.
+        val seen = runCatching { LocalDate.parse(stored) }.getOrNull() ?: return true
+        return seen.isBefore(today)
+    }
+
+    /** Once a day at most (kept across restarts): the notification and the diary's line. Off the order path; never throws. */
+    fun loginNoticeIfDue(context: Context, loggedIn: Boolean = runCatching { Broker.loggedIn }.getOrDefault(false)): Boolean = runCatching {
+        val today = Market.today()
+        val told = loginToldOn ?: SecurePrefs.getString(K_LOGIN_TOLD)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        if (!loginNoticeDue(SecurePrefs.getString(K_LIVE_HELD), today, loggedIn, told)) return@runCatching false
+        loginToldOn = today
+        SecurePrefs.putAllSoon(mapOf(K_LOGIN_TOLD to today.toString()))
+        runCatching { Diag.record("risk", "MCX: a live MCX position is kept as held (seen ${SecurePrefs.getString(K_LIVE_HELD)}); no Zerodha login to confirm it - Boss told") }
+        runCatching { com.optionslab.app.work.Notifier.post(context, LOGIN_NOTICE_ID, com.optionslab.app.work.Notifier.RISK, LOGIN_TITLE, LOGIN_TEXT, "trade") }
+        true
+    }.getOrDefault(false)
+
+    /** Tests: forget today's notice (memory only). */
+    internal fun resetLoginNoticeForTest() { loginToldOn = null }
+
     // ---- Battery (14 Oct): how often the MCX pass runs, and what it keeps awake ([com.optionslab.ira.McxRest]) ------------
 
     /** Something is held or working on MCX: a paper position or order, a live one, or a position in an MCX arm's book. */

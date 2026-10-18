@@ -1,6 +1,7 @@
 package com.optionslab.app.security
 
 import android.content.Context
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
 
@@ -183,6 +184,11 @@ object SecurePrefs {
         touched(values.keys)
         val m = map()
         for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
+        queueWrite()
+    }
+
+    /** The whole map queued for the background writer, once (under this object's lock). */
+    private fun queueWrite() {
         if (pending) return
         pending = true
         val gen = generation
@@ -191,6 +197,32 @@ object SecurePrefs {
             runCatching { write(snap) }
         }
     }
+
+    /**
+     * 18 Oct, review: every write still in memory (the screen's deferred ones, the lazily kept figures) put on disk now, on a
+     * background thread of its own - the screen going away ([com.optionslab.app.MainActivity.onStop]) and Android asking for
+     * memory back ([com.optionslab.app.IraAlgoApp.onTrimMemory]) call it, so a process killed soon after loses none of them.
+     * A failed write is queued once more. Never waits on the caller's thread; never throws.
+     */
+    fun flushSoon(): kotlinx.coroutines.Job = flushScope.launch {
+        flushSoonRuns.incrementAndGet()
+        runCatching { if (!flush()) { synchronized(this@SecurePrefs) { if (!unreadable) queueWrite() }; flush() } }
+    }
+
+    /**
+     * The whole map as it is in memory written now, on the caller's thread (18 Oct, review: the kill switch's own writer
+     * after a failed background write). Never on the screen's thread or the order path. False: an unreadable vault (never
+     * written over); throws when the write fails.
+     */
+    fun writeNow(): Boolean {
+        val snap = synchronized(this) { if (unreadable) null else copyOut() } ?: return false
+        write(snap)
+        return true
+    }
+
+    private val flushScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** How many [flushSoon]s ran (the tests: the screen's stop and the memory trim are wired to it). */
+    internal val flushSoonRuns = java.util.concurrent.atomic.AtomicInteger()
 
     // ---- coalesced writes, for figures that move with every price (ANR fix, 9 Oct) --------------------------------------
 

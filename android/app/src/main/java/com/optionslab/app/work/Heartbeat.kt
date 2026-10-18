@@ -60,6 +60,7 @@ object Heartbeat {
         val now = System.currentTimeMillis()
         val el = android.os.SystemClock.elapsedRealtime()
         memBeat = now
+        progressAt = el
         val due = persistedAt == 0L || el < persistedAt || el - persistedAt >= PERSIST_MS
         // The wall-clock checks stay: a clock moved by more than the minute since the write is written at once, so the
         // stored beat never sits in the future or looks a stall old after a clock change.
@@ -92,8 +93,19 @@ object Heartbeat {
     fun pulse() { alivePulse = System.currentTimeMillis() }
     fun pulseStopped() { alivePulse = 0L; busy = null; busySince = 0L }
 
-    fun stepBegin(name: String) { busy = name; busySince = System.currentTimeMillis() }
-    fun stepEnd() { busy = null; busySince = 0L }
+    fun stepBegin(name: String) { busy = name; busySince = System.currentTimeMillis(); progressAt = android.os.SystemClock.elapsedRealtime() }
+    fun stepEnd() { busy = null; busySince = 0L; progressAt = android.os.SystemClock.elapsedRealtime() }
+
+    /**
+     * 18 Oct, review (battery): when (SystemClock.elapsedRealtime, 0 = never) the watch loop last made progress - a pass's
+     * beat, a step begun or ended. Memory only. The pulse renews the processor's hold only while it is recent
+     * ([com.optionslab.ira.WatchHealth.keepAwake]), so a hung pass can no longer keep the phone awake for ever.
+     */
+    @Volatile var progressAt: Long = 0L
+
+    /** The pulse may renew the processor's hold now ([runStartEl]: the watch run's start, same clock). */
+    fun keepsAwake(runStartEl: Long, nowEl: Long = android.os.SystemClock.elapsedRealtime()): Boolean =
+        com.optionslab.ira.WatchHealth.keepAwake(nowEl, progressAt, runStartEl)
 
     /** Is the app battery-optimized (Android may stop the watch)? Null when it cannot be told. */
     fun batteryRestricted(context: Context): Boolean? =

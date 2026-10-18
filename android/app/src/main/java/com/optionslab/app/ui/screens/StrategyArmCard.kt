@@ -78,12 +78,15 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             override fun importText(text: String) = model.importStrategies(text)
             override fun say(text: String) = model.say(text)
             override fun clearKill() = model.update { it.copy(guardKill = false) }
+            // 18 Oct, review: clearing the kill switch here asks for the PIN as the Account guard page does ([GuardPin]).
+            override fun clearKillNeedsPin() = com.optionslab.app.security.GuardPin.clearKillAsks(s.live)
             override fun startBot() { model.startBotAgain() }
             override fun stopBot(alsoRunning: Boolean) { model.stopBotForToday(alsoRunning) }
         },
         onManage = onManage,
         orbRows = { OrbRows(model) },
         reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
+        reauthClearKill = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) },
         stopWhy = botStopWhy,
         dayLock = dayLock,
         paperSince = paperSince,
@@ -120,6 +123,8 @@ internal interface StrategyArmActions {
     fun importText(text: String)
     fun say(text: String)
     fun clearKill()
+    /** Clearing the kill switch asks for the PIN or fingerprint first ([com.optionslab.app.security.GuardPin]). */
+    fun clearKillNeedsPin(): Boolean
     fun startBot()
     fun stopBot(alsoRunning: Boolean)
 }
@@ -135,6 +140,8 @@ internal fun StrategyArmContent(
     pending: Map<Long, RunMode>, botStopped: Boolean, actions: StrategyArmActions, onManage: () -> Unit,
     orbRows: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
     stopWhy: com.optionslab.ira.DayStop.Why? = null,
+    /** The PIN prompt for clearing the kill switch (18 Oct, review: its own words; [reauth] when not given). */
+    reauthClearKill: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit = reauth,
     /** The account day lock's line when reached today ("Day lock (paper): reached +Rs 8,000 at 14:11, no new entries"). */
     dayLock: String? = null,
     /** The paper account's running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days ..."). */
@@ -259,9 +266,12 @@ internal fun StrategyArmContent(
     }
     reauthArm?.let { (id, automatic) -> reauth({ reauthArm = null; actions.arm(id, true, automatic) }, { reauthArm = null }) }
     reauthApprove?.let { id -> reauth({ reauthApprove = null; actions.approve(id) }, { reauthApprove = null }) }
+    var reauthKill by remember { mutableStateOf(false) }
+    if (reauthKill) reauthClearKill({ reauthKill = false; actions.clearKill() }, { reauthKill = false })
     if (importing) ImportDialog(actions) { importing = false }
     if (confirmBot) BotDialog(actions, killOn = killOn, stopped = botStopped, anyRunning = list.any { it.running },
-        lossStop = botStopped && stopWhy == com.optionslab.ira.DayStop.Why.LOSS) { confirmBot = false }
+        lossStop = botStopped && stopWhy == com.optionslab.ira.DayStop.Why.LOSS,
+        onClearKill = { if (actions.clearKillNeedsPin()) { reauthKill = true } else { actions.clearKill() } }) { confirmBot = false }
 }
 
 /** The desktop app's local API lists strategies and returns each one in full; this is the command that collects them. */
@@ -337,7 +347,8 @@ private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
 
 /** The confirmation behind Home's single bot button. */
 @Composable
-private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, lossStop: Boolean = false, onClose: () -> Unit) {
+private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, lossStop: Boolean = false,
+                      onClearKill: () -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
     var alsoStop by remember { mutableStateOf(false) }
     AlertDialog(
@@ -366,7 +377,7 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
         confirmButton = {
             TextButton({
                 when {
-                    killOn -> actions.clearKill()
+                    killOn -> onClearKill()
                     stopped && lossStop -> Unit
                     stopped -> actions.startBot()
                     else -> actions.stopBot(alsoStop)

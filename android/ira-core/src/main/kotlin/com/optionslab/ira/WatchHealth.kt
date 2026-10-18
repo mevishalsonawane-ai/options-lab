@@ -34,6 +34,20 @@ object WatchHealth {
     /** ...so a pulse older than this means the service (or the app's process) is gone. */
     const val ALIVE_MS = 3 * PULSE_MS
 
+    /**
+     * 18 Oct, review (battery): the pulse renews the processor's hold only while the watch loop is making progress - a pass
+     * begun or finished, or a step begun or ended - within this long (or the run started within it). A slow pass still makes
+     * progress step by step and keeps it; a pass hung on one call stops renewing, and the hold lapses by itself.
+     */
+    const val AWAKE_PROGRESS_MS = 5 * 60_000L
+
+    /** Keep the processor awake at [nowEl]: the loop's last progress or the run's start under [AWAKE_PROGRESS_MS] ago. Monotonic clocks. */
+    fun keepAwake(nowEl: Long, progressEl: Long, runStartEl: Long): Boolean {
+        val last = maxOf(progressEl, runStartEl)
+        // A clock that reads earlier than the last progress (should not happen on a monotonic clock): kept, never let go on a guess.
+        return nowEl < last || nowEl - last < AWAKE_PROGRESS_MS
+    }
+
     /** The relay warm-up after a failed connect: 2, 4, 8 then 10 minutes between tries (the server is down). */
     const val WARM_FIRST_MS = 2 * 60_000L
     const val WARM_MAX_MS = 10 * 60_000L

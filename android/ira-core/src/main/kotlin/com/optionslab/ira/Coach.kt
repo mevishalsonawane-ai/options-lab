@@ -176,4 +176,21 @@ object LockRule {
         account && !boss -> "Unlock the phone to hear your account."
         else -> null
     }
+
+    /**
+     * 18 Oct, review: what a confirmed request's result (an order placed or closed, a command done) is said as, checked
+     * at the moment it is said - the phone can lock while the request runs. Locked (unknown counts as locked): only that
+     * there is a result, never the order, its prices or fills.
+     */
+    const val RESULT_LOCKED = "Boss, I have the result. Unlock the phone to see it."
+    fun resultAloud(result: String, lockedNow: Boolean): String = if (lockedNow) RESULT_LOCKED else result
+
+    /**
+     * 18 Oct, review: an answer asked on an unlocked phone and ready after it locked (a slow account read, a late answer)
+     * is said without amounts, P&L or symbols ([Overheard.holdsAccount]). One asked on a locked phone was already judged
+     * by [refuse] when asked (the account only in Boss's own voice), so it is left as it is.
+     */
+    const val ANSWER_LOCKED = "Your answer is ready, Boss. Unlock the phone to see it."
+    fun answerAloud(text: String, lockedAsked: Boolean, lockedNow: Boolean): String =
+        if (lockedNow && !lockedAsked) Overheard.said(text, true, ANSWER_LOCKED) else text
 }

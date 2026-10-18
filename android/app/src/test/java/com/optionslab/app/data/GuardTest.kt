@@ -122,6 +122,68 @@ class GuardTest : RobolectricTest() {
         assertEquals("dark", s.theme); assertEquals(4_000.0, s.pnlLossAlert, 0.0)
     }
 
+    // ---- 18 Oct, review: the guard's kill switch is made sure to reach disk, off the order path -----------------------------
+
+    private val realFlush = AppSettings.killFlush
+    private val realPut = AppSettings.killPut
+    private val realRetry = AppSettings.killRetryMs
+    @org.junit.Before fun drainKillWriter() { AppSettings.awaitKillWriter() }
+    @org.junit.After fun restoreKillWriter() { AppSettings.awaitKillWriter(); AppSettings.killFlush = realFlush; AppSettings.killPut = realPut; AppSettings.killRetryMs = realRetry }
+
+    @Test fun theGuardsKillSwitchIsFlushedByItsOwnWriterAndSurvivesAReload() {
+        limits { it.copy(guardDrawdownPct = 10.0) }
+        val flushedOn = java.util.concurrent.atomic.AtomicReference<String?>(null)
+        val done = java.util.concurrent.CountDownLatch(1)
+        AppSettings.killFlush = { flushedOn.set(Thread.currentThread().name); realFlush().also { done.countDown() } }
+        val caller = Thread.currentThread().name
+        Guard.onRefusal(listOf("Drawdown limit: 15.0% from the peak (limit 10%)"))
+        assertTrue("the kill switch's writer ran", done.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        assertTrue("never on the caller's (order path's) thread", flushedOn.get() != caller)
+        assertEquals("kill-writer", flushedOn.get())
+        assertTrue(SecurePrefs.reload())
+        assertTrue("on disk after a reload", AppSettings.load().guardKill)
+    }
+
+    @Test fun aFailedKillSwitchWriteIsWrittenDirectlyAndRetried() {
+        limits { it.copy(guardDrawdownPct = 10.0) }
+        SecurePrefs.putAllSoon(mapOf(AppSettings.KILL_KEY to true))
+        val tries = java.util.concurrent.atomic.AtomicInteger()
+        AppSettings.killRetryMs = 1
+        AppSettings.killFlush = { false }                                         // the background write failed
+        AppSettings.killPut = { if (tries.incrementAndGet() < 3) error("Keystore busy") else realPut() }
+        assertTrue(AppSettings.persistKill())
+        assertEquals("written directly, the third try landed", 3, tries.get())
+        assertTrue(SecurePrefs.reload())
+        assertTrue("on disk after a reload", AppSettings.load().guardKill)
+    }
+
+    @Test fun aKillSwitchWriteThatNeverLandsSaysSoAndNeverClearsIt() {
+        limits { it }
+        SecurePrefs.putAllSoon(mapOf(AppSettings.KILL_KEY to true))
+        val tries = java.util.concurrent.atomic.AtomicInteger()
+        AppSettings.killRetryMs = 1
+        AppSettings.killFlush = { false }
+        AppSettings.killPut = { tries.incrementAndGet(); error("disk full") }
+        assertFalse(AppSettings.persistKill(attempts = 4))
+        assertEquals(4, tries.get())
+        assertTrue("still on in memory", AppSettings.load().guardKill)
+    }
+
+    @Test fun aKillSwitchBossClearedMeanwhileIsNeverWrittenBackOn() {
+        limits { it.copy(guardDrawdownPct = 10.0) }
+        Guard.onRefusal(listOf("Drawdown limit: 15.0% from the peak (limit 10%)"))
+        AppSettings.awaitKillWriter()
+        // The background write failed, and Boss cleared the switch before the direct write: what is written is the clear.
+        AppSettings.saveChanged(AppSettings.load(), AppSettings.load().copy(guardKill = false))
+        val tries = java.util.concurrent.atomic.AtomicInteger()
+        AppSettings.killFlush = { false }
+        AppSettings.killPut = { tries.incrementAndGet(); realPut() }
+        assertTrue(AppSettings.persistKill())
+        assertEquals(1, tries.get())
+        assertTrue(SecurePrefs.reload())
+        assertFalse("Boss's clear is kept, never written back on", AppSettings.load().guardKill)
+    }
+
     @Test fun anExitIsCheckedAgainstNothingButStillCountsAsAnOrder() {
         limits { it.copy(guardDailyLoss = 1_000.0, guardMaxTrades = 1) }
         val held = account(dayPnl = -9_000.0, orders = 3, holdings = listOf(AccountGuard.Holding(order().symbol, 150, 75, "NIFTY", expiry, "PE")))

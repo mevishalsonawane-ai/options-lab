@@ -190,6 +190,8 @@ class IraAlgoApp : Application() {
         // Memory audit (14 Oct): counted, and what [com.optionslab.ira.MemoryPlan] lists for the level freed on a background
         // thread - never the position watch, its prices, its checks or their cadence.
         runCatching { com.optionslab.app.data.AppHealth.trim(level) }
+        // 18 Oct, review: the settings still in memory go to disk first, on a background thread (a low-memory kill may follow).
+        runCatching { SecurePrefs.flushSoon() }
     }
 
     /**

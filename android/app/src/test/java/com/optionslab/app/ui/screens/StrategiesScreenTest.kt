@@ -172,6 +172,8 @@ internal class RecordingStrategyActions(var saveError: String? = null) : Strateg
     override fun importText(text: String) { calls += "import ${text.length}" }
     override fun say(text: String) { calls += "say $text" }
     override fun clearKill() { calls += "clearKill" }
+    var killPin = false
+    override fun clearKillNeedsPin() = killPin
     override fun startBot() { calls += "startBot" }
     override fun stopBot(alsoRunning: Boolean) { calls += "stopBot also=$alsoRunning" }
     override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { calls += "orb arm $source on=$on auto=$automatic pin=$pinConfirmed" }
@@ -431,6 +433,19 @@ class StrategyArmCardTest {
         card(emptyList(), kill = true)
         assertTrue(shown("Kill switch ON: Zerodha orders blocked"))
         tap("Clear kill switch"); tap("Clear")
+        assertEquals(listOf("clearKill"), rec.calls)
+    }
+
+    /** 18 Oct, review: with a PIN set and Live on (or Zerodha set up), the card's Clear asks for the PIN first. */
+    @Test fun clearingTheKillSwitchFromTheCardAsksForThePinFirst() {
+        rec.killPin = true
+        card(emptyList(), kill = true)
+        tap("Clear kill switch"); tap("Clear")
+        assertTrue("nothing cleared before the PIN", rec.calls.isEmpty())
+        tap("PIN cancel")
+        assertTrue("a cancelled PIN clears nothing", rec.calls.isEmpty())
+        tap("Clear kill switch"); tap("Clear")
+        tap("PIN OK")
         assertEquals(listOf("clearKill"), rec.calls)
     }
 

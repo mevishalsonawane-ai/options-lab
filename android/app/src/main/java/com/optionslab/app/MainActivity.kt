@@ -74,8 +74,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         runCatching { com.optionslab.app.data.Speed.stop() }
-        // The day's P&L figures kept in memory between writes ([SecurePrefs.putAllLazy]) go to disk now, in the background.
-        runCatching { com.optionslab.app.security.SecurePrefs.saveSoon() }
+        // The day's P&L figures kept in memory between writes ([SecurePrefs.putAllLazy]) and the screen's deferred writes go
+        // to disk now, waited for on a background thread (18 Oct, review: a process killed after the screen went away lost them).
+        runCatching { com.optionslab.app.security.SecurePrefs.flushSoon() }
         super.onStop()
     }
 

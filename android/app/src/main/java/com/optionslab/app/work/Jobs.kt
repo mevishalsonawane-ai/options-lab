@@ -1421,11 +1421,22 @@ class WatchService : Service() {
         // 17 Oct: each pulse also keeps the processor awake for the watch ([WatchWake]; a foreground service alone does not, and
         // the evening's passes slept with the screen off) and closes a coverage gap told while the watch was away.
         val me = this@WatchService
+        val runStartEl = android.os.SystemClock.elapsedRealtime()
         val pulse = launch {
+            var hungTold = false
             while (true) {
                 Heartbeat.pulse()
                 // Not under the run lock (the screen's thread takes it at a start; this is a binder call): the newest run only.
-                if (run == watchRun) WatchWake.hold(me)
+                // 18 Oct, review (battery): renewed only while the watch loop makes progress (a pass or a step in the last 5
+                // minutes): a pass hung on one call with nothing open no longer keeps the processor awake for ever - the hold
+                // lapses by itself, and the dead-man alarm finds the watch stuck. A slow pass moves step by step and keeps it.
+                // With a position or order open it is renewed whatever the loop is doing: open positions come first.
+                val progressing = Heartbeat.keepsAwake(runStartEl) || holdingAny()
+                if (run == watchRun && progressing) { WatchWake.hold(me); hungTold = false }
+                else if (run == watchRun && !hungTold) {
+                    hungTold = true
+                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): the processor's hold is not renewed")
+                }
                 Heartbeat.watchRunning()
                 delay(com.optionslab.ira.WatchHealth.PULSE_MS)
             }
@@ -1533,6 +1544,8 @@ class WatchService : Service() {
         val started = System.currentTimeMillis()
         Heartbeat.beat(this)
         val t = Tasks.mcxTick(this, AppSettings.load())
+        // 18 Oct, review: a live MCX position kept as held with no Zerodha login to confirm it: Boss told once a day.
+        runCatching { com.optionslab.app.data.McxMarket.loginNoticeIfDue(this) }
         Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))
         show(t.title, t.lines.joinToString("\n"), t.progress, t.dest)
         // The wait also ends at NSE's open, so the first NSE pass is not held back by a 60 s MCX wait.
@@ -1540,6 +1553,35 @@ class WatchService : Service() {
         if (Market.minuteNow() >= Market.foClose())
             runCatching { BatteryMeter.meter.add(com.optionslab.ira.LoopMeter.WATCH_EVENING, System.currentTimeMillis() - started) }
     }
+
+    /** Something the NSE pass sells by itself is open (the books as the loop reads them): its stops, targets and exits are checked every 15 s. */
+    private suspend fun holdingNse(): Boolean =
+        PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
+            com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
+            com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
+            com.optionslab.app.data.Strategies.runningHint ||       // 18 Oct, review: a strategy run's leg stops too
+            (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
+
+    /**
+     * 18 Oct, review: an open position or order anywhere (NSE or MCX, paper or live; memory only, unknown counts as held).
+     * The pulse keeps the processor awake for it even when a pass is slow to finish (open positions come first).
+     */
+    private fun holdingAny(): Boolean = runCatching {
+        // Never a lock or a vault read here (a hung pass may hold one): memory copies only - the arms' own hints, the paper
+        // book as loaded (positions and working orders; not loaded yet counts as held), the NSE pass's last answer (Solo's
+        // book is in the vault: read by the loop, never by the pulse), MCX only while it trades.
+        val paper = com.optionslab.app.data.Paper.stateIfLoaded()?.let { st ->
+            st.positions.any { it.quantity != 0 } || st.orders.any { it.status == "open" || it.status == "trigger pending" }
+        } ?: true
+        PositionCards.anyOpen || paper || nseHeldSeen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.OrbArms.liveHint ||
+            com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
+            com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
+            com.optionslab.app.data.Strategies.runningHint ||
+            (com.optionslab.app.data.McxMarket.isOpen() && com.optionslab.app.data.McxMarket.heldQuick())
+    }.getOrDefault(true)
+
+    /** The NSE pass's last [holdingNse] (memory; for the pulse, which never reads the books itself). */
+    @Volatile private var nseHeldSeen = false
 
     /** One pass of the watch loop and the wait until the next one. */
     private suspend fun watchPass(fired: HashSet<String>) {
@@ -1570,11 +1612,8 @@ class WatchService : Service() {
             while (System.currentTimeMillis() < next) {
                 // 16 Oct: the paper arms that sell from the app (the passed-research arms, the Hero ticket, the Signal tester) count
                 // too, so their stops, targets and time exits are looked at every 15 s even without the stream's minute lane.
-                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
-                    com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
-                    com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
-                    com.optionslab.app.data.Strategies.runningHint ||       // 18 Oct, review: a strategy run's leg stops too
-                    (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
+                val holding = holdingNse()
+                nseHeldSeen = holding
                 stepSec = if (holding) 15 else 60
                 // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
                 // the next full pass a minute or more later. The same pass as the full one (paper fills, then the arms), so

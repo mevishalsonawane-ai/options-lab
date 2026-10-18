@@ -55,10 +55,21 @@ object WhatsNew {
     private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
     private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
     private val OCT17: LocalDate = LocalDate.of(2026, 10, 17)
+    private val OCT18: LocalDate = LocalDate.of(2026, 10, 18)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-18-whole-app-review", OCT18, "Kill switch needs your PIN; Jarvis quiet when locked",
+            "The kill switch can no longer be cleared by mistake, and clearing it asks for your PIN. " +
+                "Jarvis never says a request or an order's result aloud on a locked phone. " +
+                "The MCX expiry exit reads your positions fresh before it sells. " +
+                "Stops are now checked for strategy legs and for short positions too. " +
+                "Live cards keep their last figures when a read fails, instead of going blank. " +
+                "Paper arm fixes: Night, Gold lots, Signal tester stops and sandbox MIS orders. " +
+                "Screens never wait on reading or saving data, so they stay smooth. " +
+                "Login tokens are hidden in the app's logs.",
+            "Home → Strategies card and Settings → Account guard for the kill switch"),
         Entry("2026-10-17-diagnostics-fixes", OCT17, "No screen freezes on saves; MCX evenings kept awake",
             "A switch or setting saved on a screen no longer freezes it: the save finishes in the background. " +
                 "While the watch runs for a market, it keeps the phone awake, so evening MCX checks never sleep. " +
