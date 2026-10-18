@@ -1,0 +1,31 @@
+id: r82-t1
+title: 'R82 T1: MCX 12-month trend (gold + silver legs) with a 3-ATR trailing stop'
+family: mcx-crypto
+date: '2026-10-18'
+doc: research/HUNT_R82_MCX_PRECIOUS.md
+hypothesis: 'Boss, 18 Oct: enhance the MCX precious-metal strategies. MCX 12-month trend (gold + silver legs) with a 3-ATR
+  trailing stop beats its baseline (T0) in walk-forward and final, after the app''s MCX costs.'
+data_version: Dukascopy XAUUSD / XAGUSD daily BID (2003-2026) x Yahoo INR=X x duty factor (rupee proxy of the MCX future);
+  Yahoo DX-Y.NYB
+period:
+  design: 1 Jan 2005 - 31 Dec 2022 (walk-forward 2-year blocks 2009-2022)
+  holdout: 1 Jan 2023 - 30 Sep 2026 (the daily data end), read once (R82 final)
+instruments:
+- GOLDM
+- SILVERM
+features:
+- 'signal source: own proxy price, daily; trade the future (no option chart)'
+model_or_rule: MCX 12-month trend (gold + silver legs) with a 3-ATR trailing stop
+settings: research/hunt/r82/PREREG.md section 4; research/hunt/r82/daily.py
+prereg: research/hunt/r82/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 251 trades, win 0.394, net +Rs 122,725, max DD -Rs 300,017; walk-forward net +Rs 203,099 (4/7 blocks green);
+    design twin p 0.263, BH q 0.422 (16 tests). Final: 45 trades, win 0.467, net +Rs 1,120,729, max DD -Rs 879,363, twin p
+    0.098, net without the top 5 -Rs 464,156; baseline T0: design +Rs 333,266, walk-forward +Rs 239,965, final +Rs 1,104,268
+    on 6 trades. Money: Rs per 1 lot of GOLDM and 1 lot of SILVERM (rupee proxies). Verdict: fail (beats_baseline, design_twin,
+    not_top5).'
+  costs: McxCosts futures charges, 0.03% slippage a fill, 0.10% on stops, 6%/yr carry on held daily futures (longs pay)
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing changes paper or live. Prices are proxies (spot / COMEX x USDINR), not MCX prints.

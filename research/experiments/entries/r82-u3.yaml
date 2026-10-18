@@ -1,0 +1,31 @@
+id: r82-u3
+title: 'R82 U3: First US-cash hour with gold+silver agreement, on US CPI / NFP / FOMC days only'
+family: mcx-crypto
+date: '2026-10-18'
+doc: research/HUNT_R82_MCX_PRECIOUS.md
+hypothesis: 'Boss, 18 Oct: enhance the MCX precious-metal strategies. First US-cash hour with gold+silver agreement, on US
+  CPI / NFP / FOMC days only beats its baseline (U2) in walk-forward and final, after the app''s MCX costs.'
+data_version: 'Yahoo GC=F / SI=F 1-hour (20 Oct 2024 - 16 Oct 2026) x INR=X x duty factor (rupee proxy of the MCX future).
+  No real MCX price: the Drive lake was unreachable'
+period:
+  design: 21 Oct 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 16 Oct 2026, read once (R82 final)
+instruments:
+- GOLDM
+- SILVERM
+features:
+- 'signal source: COMEX gold and silver first US hour on CPI/NFP/FOMC days; trade the future (no option chart)'
+model_or_rule: First US-cash hour with gold+silver agreement, on US CPI / NFP / FOMC days only
+settings: research/hunt/r82/PREREG.md section 4; research/hunt/r82/intraday.py
+prereg: research/hunt/r82/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 68 trades, win 0.426, net -Rs 146,685, max DD -Rs 152,547; walk-forward net -Rs 117,181 (1/4 blocks green);
+    design twin p 0.884, BH q 0.884 (16 tests). Final: 32 trades, win 0.5, net -Rs 59,083, max DD -Rs 126,130, twin p 0.659,
+    net without the top 5 -Rs 137,370; baseline U2: design +Rs 134,590, walk-forward +Rs 231,191, final -Rs 584,415 on 234
+    trades. Money: Rs per 1 lot of GOLDM and 1 lot of SILVERM (rupee proxies). Verdict: fail (positive, beats_baseline, design_twin,
+    final_twin, not_top5).'
+  costs: McxCosts futures charges, 0.03% slippage a fill, 0.10% on stops; flat daily
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing changes paper or live. Prices are proxies (spot / COMEX x USDINR), not MCX prints.

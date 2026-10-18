@@ -1,0 +1,24 @@
+id: r82-nt-real-yield
+title: 'R82 (not tested): US real-yield direction as context for MCX gold'
+family: mcx-crypto
+date: '2026-10-18'
+doc: research/HUNT_R82_MCX_PRECIOUS.md
+hypothesis: 'Pre-registered in R82 as an idea; not tested: FRED DFII10 unreachable; Yahoo has no real-yield series.'
+data_version: none
+period:
+  design: n/a
+  holdout: n/a
+instruments:
+- GOLDM
+- SILVERM
+features:
+- not tested
+model_or_rule: US real-yield direction as context for MCX gold
+settings: research/hunt/r82/PREREG.md section 4
+prereg: research/hunt/r82/PREREG.md
+variants_tried: null
+results:
+  summary: 'Not tested: FRED DFII10 unreachable; Yahoo has no real-yield series.'
+  costs: n/a
+holdout_read: false
+verdict: not-a-test

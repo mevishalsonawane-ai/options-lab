@@ -1077,6 +1077,43 @@ of every rule: the underlying (MCX near future, US future + USD/INR, XAUUSD, BTC
   tax in design and final. Nearest: RC2 R8 day-high/low break on Delta options, +Rs 16.9k before tax, -Rs 28.9k after
   (313 trades). Buy-and-hold made +Rs 13-15k per Rs 1 lakh after tax over the same final window.
 
+## MCX precious metals: 16 enhancement ideas on GOLDM / SILVERM proxies (R82, 18 Oct 2026) - 0 of 16 pass; the arms stay as they are
+
+Full study: `HUNT_R82_MCX_PRECIOUS.md`. Pre-registered in `hunt/r82/PREREG.md` (commit d37b9b5); the final was read once.
+
+**Data.** Proxies only, because the Drive lake (real MCX) was not reachable:
+- Daily: spot gold / silver × USDINR × duty, 2005-2022 design, 2023 - Sep 2026 final.
+- Hourly: COMEX gold / silver, Oct 2024 - Mar 2026 design, Apr - 16 Oct 2026 final.
+
+The app's MCX costs and paper slippage apply. BH is across all 16 tests. Every rule has a stop, and every signal is on
+the underlying.
+
+**12-month trend with a stop** (T1-T4).
+- Final +Rs 10.1-11.4 lakh a GOLDM + SILVERM lot-pair on 34-45 trades.
+- The app's stop-less rule made +Rs 11.0 lakh on 6 trades (two longs held 2023-2026), so nothing beat it clearly.
+- Design q 0.33; not significant.
+- The lowest-risk version (T4: 3-ATR trail, no entry in the top 20% of volatility) kept 92% of the profit with a
+  -Rs 1.9 lakh drawdown, against T0's -Rs 13.4 lakh open drawdown. It is a note for a future real-MCX re-test, not a
+  pass.
+
+**Other ideas.**
+- Gold+silver agreement ("breadth") and Supertrend agreement (R72 / R73's lessons) did not carry over:
+  - Donchian D0-D2 lost in design (-Rs 1.4 to -1.9 lakh on 134-139 trades).
+  - The ratio regime and the DXY filter failed.
+- The first US-cash hour with both metals agreeing (U2) was the only design pass: q 0.032 on 564 trades. In the final
+  it lost **-Rs 5.84 lakh on 234 trades**; its design profit was silver's Jan-Mar 2026 run.
+- Also lost: the overnight COMEX move (O1: final -Rs 1.29 lakh on 180), the US hour on CPI / NFP / FOMC days, and
+  Liquidity 1h on MCX hours (buys, both sides, agreement, event skip).
+
+**Not tested:**
+- MCX options versus futures (no option history here);
+- roll timing;
+- real yields;
+- USDINR alone;
+- silver 15m.
+
+**App:** nothing changes; nothing goes on paper.
+
 ## The other AI's stock-option "S2 Mean Reversion Dip Buy" (R59, 15 Oct 2026) - the +Rs 1,695 a trade is strike switches and expiry rolls; 0 of 84 pass
 Full study: `HUNT_R59_STOCK_DIP_AUDIT.md` (pre-registered `hunt/r59/PREREG.md`, commit 8db2c18; design frozen 68e9ef6).
 Claim: on the lake's rolling ATM stock options (10 stocks, 15-minute bars), buy CE / PE after the premium fell 20%+ in a bar,
