@@ -508,20 +508,20 @@ object Strategies {
                     }
                     val net = runCatching { Broker.positionBook().net }.getOrNull()
                         ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
-                    val held = net.filter { it.symbol == kiteSym && it.exchange == "NFO" && it.product == order.product }.sumOf { it.qty }
+                    val held = net.filter { it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product }.sumOf { it.qty }
                     val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
                     if (!closes) return@runBlocking StrategyHost.Placed.Refused(
                         "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} would not close it; not sent")
                     val working = runCatching { Broker.orders() }.getOrNull()
                         ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
-                    val busy = working.filter { it.working && it.symbol == kiteSym && it.exchange == "NFO" && it.product == order.product && it.side == side.name }
+                    val busy = working.filter { it.working && it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product && it.side == side.name }
                         .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
                     qty = com.optionslab.engine.risk.ExitQty.sendable(held, busy, order.quantity, ref.lot)
                     if (qty <= 0) return@runBlocking StrategyHost.Placed.Refused(
                         "Zerodha shows $kiteSym ${order.product} net $held with $busy already on its way out; nothing more sent")
                 }
-                val last = runCatching { Broker.quotes(listOf("NFO:$kiteSym"))["NFO:$kiteSym"]?.last }.getOrNull()
-                val o = Kite.Order(kiteSym, side, qty, ref.lot, order.product, "MARKET", null, ref.tick, "NFO", "iraalgostrat")
+                val last = runCatching { Broker.quotes(listOf("${ref.exchange}:$kiteSym"))["${ref.exchange}:$kiteSym"]?.last }.getOrNull()
+                val o = Kite.Order(kiteSym, side, qty, ref.lot, order.product, "MARKET", null, ref.tick, ref.exchange, "iraalgostrat")
                 // The account-wide guard, on a fresh read of the account.
                 val acct = Broker.accountNow()      // positions, funds and orders read in parallel
                 Guard.check(Guard.liveOrder(o).copy(price = last ?: 0.0), acct, exit).takeIf { it.isNotEmpty() }
@@ -937,7 +937,8 @@ object Strategies {
             // run's stop on the same option): shrunk to what is left, in whole lots, or taken out - never a stop that sells into a short.
             val gttOrders = g?.orderIds.orEmpty().toSet()
             val others = orders.values.filter { it.working && it.symbol == kiteSym && it.exchange == ex && it.product == product &&
-                it.side == exitSide.name && it.id != sid && it.id !in gttOrders }.sumOf { working[it.id] ?: 0 }
+                it.side == exitSide.name && it.id != sid && it.id !in gttOrders }.sumOf { working[it.id] ?: 0 } +
+                gtts.values.filter { it.id != gid && it.symbol == kiteSym && it.exchange == ex }.sumOf { it.covers(exitSide.name, product) }
             val room = (held - others).coerceAtLeast(0) / ref.lot.coerceAtLeast(1) * ref.lot.coerceAtLeast(1)
             val covers = when {
                 so != null && so.working -> working[so.id] ?: 0
@@ -969,7 +970,8 @@ object Strategies {
                 val id: String? = if (product != "MIS") {
                     // A carried (NRML) leg: a single-leg GTT, the only broker-side stop that outlives the session (review C7).
                     val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null)
-                    gtt?.let { x -> runCatching { "gtt:" + Broker.placeGtt(x) }.getOrNull() }
+                    // A lost reply never leaves a second GTT ([Broker.placeGttOnce] adopts the one that went through).
+                    gtt?.let { x -> Broker.placeGttOnce(x, b.legStops.values.mapNotNull(::gttOf).toSet())?.let { "gtt:$it" } }
                 } else {
                     val o = Kite.Order(kiteSym, exitSide, qty, ref.lot, product, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(want, ref.tick, dir), ref.tick,
                         ex, "iraalgostrat", triggerPrice = want)

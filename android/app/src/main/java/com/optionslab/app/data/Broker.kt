@@ -1529,7 +1529,14 @@ object Broker {
     /** [orderIds]: the orders a fired GTT placed (its legs' results), so a fired stop's own exit order can be found (18 Oct). */
     data class GttRow(val id: Long, val type: String, val status: String, val exchange: String, val symbol: String,
                       val triggers: List<Double>, val lastPrice: Double, val orders: String, val created: String,
-                      val orderIds: List<String> = emptyList(), val legPrices: List<Double> = emptyList())
+                      val orderIds: List<String> = emptyList(), val legPrices: List<Double> = emptyList(),
+                      /** 18 Oct review: each leg's side, quantity and product (what an active GTT would sell or buy). */
+                      val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList()) {
+        val active: Boolean get() = status.lowercase() == "active"
+        /** The quantity this GTT, while active, would send on [side] in [product] (its first leg: a single-leg stop). */
+        fun covers(side: String, product: String): Int =
+            if (!active || legSides.isEmpty()) 0 else if (legSides[0] == side && legProducts.getOrNull(0)?.let { it == product } != false) legQtys.getOrElse(0) { 0 } else 0
+    }
 
     suspend fun gtts(): List<GttRow> = rows(call("GET", "/gtt/triggers") as? JSONArray).map { g ->
         val c = g.optJSONObject("condition") ?: JSONObject()
@@ -1538,10 +1545,29 @@ object Broker {
         GttRow(g.optLong("id"), g.optString("type"), g.optString("status"), c.optString("exchange"), c.optString("tradingsymbol"),
             (0 until tv.length()).map { tv.getDouble(it) }, c.optDouble("last_price", 0.0), os, g.optString("created_at"),
             rows(g.optJSONArray("orders")).mapNotNull { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.optString("order_id")?.takeIf { it.isNotBlank() } },
-            rows(g.optJSONArray("orders")).map { it.optDouble("price", 0.0) })
+            rows(g.optJSONArray("orders")).map { it.optDouble("price", 0.0) },
+            rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
+            rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
+            rows(g.optJSONArray("orders")).map { it.optString("product") })
     }.sortedByDescending { it.created }
 
     /** Places a GTT. Callers must have had the owner confirm it. */
+    /**
+     * 18 Oct review: [placeGtt] where a lost reply never leaves a second GTT: on an answer that is not a definite refusal, the GTT
+     * list is read and an active GTT on the same contract with the same trigger and quantity, not one of [known], is adopted (the
+     * POST went through). Null when refused or not found (the caller rests it on a later look).
+     */
+    suspend fun placeGttOnce(g: Kite.Gtt, known: Set<Long>): Long? {
+        return try { placeGtt(g) } catch (e: Exception) {
+            if (definite(e)) return null
+            val q = g.orders.firstOrNull()?.quantity ?: return null
+            runCatching {
+                gtts().firstOrNull { r -> r.active && r.id !in known && r.symbol == g.tradingSymbol && r.exchange == g.exchange &&
+                    r.legQtys.firstOrNull() == q && r.triggers.zip(g.triggers).all { (a, b) -> kotlin.math.abs(a - b) < 1e-6 } && r.triggers.size == g.triggers.size }?.id
+            }.getOrNull()
+        }
+    }
+
     suspend fun placeGtt(g: Kite.Gtt): Long = (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id")
 
     suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id") }

@@ -153,7 +153,7 @@ object FastPath {
         val jarvis = com.optionslab.app.BuildConfig.JARVIS
         val anyLive = runCatching { com.optionslab.app.work.PositionCards.anyOpen }.getOrDefault(false)
         // 18 Oct: the paper strategies' live trades ([ArmLive]) are real-money positions too: the LIVE lane runs for them.
-        val liveHolding = orbLive || PineAuto.holding() || Protections.activeHint != false || ArmLive.holdingHint
+        val liveHolding = orbLive || PineAuto.holding() || Protections.activeHint != false || ArmLive.holdingHint || ArmLive.recoverHint
         val holding = cover.any || OrbArms.holdingHint
         val minuteArms = NightArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
             VixDivArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
@@ -294,7 +294,7 @@ object FastPath {
                     if (PineAuto.holding()) step("Pine scripts") { PineAuto.watchOnly(fast = true, stream = stream) }
                     if (Protections.activeHint != false) step("stops and targets") { Protections.tick(fast = true, stream = stream) }
                     // 18 Oct: the paper strategies' live trades ([ArmLive]): their stops, the paper exits they follow, 15:15.
-                    if (ArmLive.holdingHint) step(ARMS_LIVE) { ArmLive.watch(stream = stream) }
+                    if (ArmLive.holdingHint || ArmLive.recoverHint) step(ARMS_LIVE) { ArmLive.watch(stream = stream) }
                     // The trade manager after the exits (R4): nothing runs before a real-money exit; an exit it decides here wakes
                     // the strategy's own look at once. Never waits on another lane's look ([TradeManagerHost.onLook]).
                     runCatching { TradeManagerHost.onLook() }
@@ -319,7 +319,8 @@ object FastPath {
                     // 15 Oct: a Telegram chat's calls on paper (Boss's choice): their stops, targets and square-off every minute (exits only).
                     step(SIGNAL_PAPER) { SignalPaperArm.manageOnly() }
                     // 18 Oct: after the paper exits above, their live trades follow at once ([ArmLive]; nothing held: returns at once).
-                    if (ArmLive.holdingHint) step(ARMS_LIVE) { ArmLive.watch() }
+                    // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
+                    if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
                     // Smart scheduling (10 Oct): these looked at this minute; the watch's passes need not look again for it.
                     runCatching { SmartWorkers.ranByLane(MINUTE_ARMS) }
                 }

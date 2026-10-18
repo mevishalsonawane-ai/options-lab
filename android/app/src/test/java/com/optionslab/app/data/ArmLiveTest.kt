@@ -484,8 +484,11 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.wipe()
         runBlocking { ArmLive.refresh() }
         assertFalse("its switches from the second copy", view().on(breadth))
-        assertTrue("recovered on the next look", view().openReal.isEmpty())
-        watch()
+        assertTrue(view().openReal.isEmpty())
+        assertTrue("the watch is due for it although nothing is held in the book", ArmLive.recoverHint && ArmLive.lookDue && !ArmLive.holdingHint)
+        // Positions first at the start: taken back before any other work (review: no scheduled look ran for it before).
+        assertTrue(runBlocking { ArmLive.holding() })
+        assertFalse(ArmLive.recoverHint)
         val p = view().openReal.single()
         assertEquals(donchian, p.key)
         assertEquals(30, p.qty)
@@ -620,5 +623,110 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(a, a.contains("Live (real orders): no live trade yet"))
         assertNull(ArmLive.talk("how is the weather in shadow"))
         assertFalse(LiveMirror.shadowAsked("turn shadow off for $night"))
+    }
+
+    // ---- review fixes of the review (18 Oct) ------------------------------------------------------------------------------
+
+    @Test fun aDamagedBooksCarriedTradeKeepsItsOwnGttAndGetsNoSecond() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "dmgn"))
+        val gid = kite.gtts.keys.single()
+        java.io.File(context.noBackupFilesDir, "arm_live.vault").writeBytes(ByteArray(64) { 9 })
+        ArmLive.wipe()
+        runBlocking { ArmLive.refresh(); ArmLive.holding() }
+        assertEquals("gtt:$gid", view().openReal.single().stopOrderId)
+        assertEquals("one GTT, never two", 1, kite.gtts.values.count { it.optString("status", "active") == "active" })
+    }
+
+    @Test fun aGttAlreadyRestingOnTheContractCountsSoNoSecondOneRestsBesideIt() {
+        // Boss's own GTT already protects the whole 30 held: the arm's stop is watched by the app, never a second GTT.
+        kite.positions["NFO:$sym:NRML"] = 30 to 200.0
+        runBlocking { Broker.placeGtt(com.optionslab.engine.Kite.protect(com.optionslab.engine.Kite.Spec("NFO", sym, 0L, 30, 0.05), "NRML", 30, 200.0, 150.0, null).first!!) }
+        kite.requests.clear()
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "cov"))
+        assertEquals(60, nrmlHeld())
+        assertEquals("each GTT for its own 30", listOf(30, 30), kite.gtts.values.map { it.getJSONArray("orders").getJSONObject(0).getInt("quantity") }.sorted())
+        assertTrue(kite.gtts.values.sumOf { it.getJSONArray("orders").getJSONObject(0).getInt("quantity") } <= nrmlHeld())
+    }
+
+    @Test fun aPositionBookLaggingASecondFillNeverClosesTheOlderTrade() {
+        ArmLive.entered(ask(donchian, "a1"))
+        watch()
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "b1"))
+        assertEquals(60, held())
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0             // the book still shows only the first fill
+        watch()
+        assertTrue("nothing booked closed", view().closed.isEmpty())
+        assertEquals(2, view().openReal.size)
+        kite.positions["NFO:$sym:MIS"] = 60 to 200.0
+        watch()
+        assertEquals(2, view().openReal.size)
+        assertTrue(view().openReal.all { it.heldSeen })
+    }
+
+    @Test fun aHandSaleOfOneTradesShareLeavesTheSiblingsStopResting() {
+        ArmLive.entered(ask(donchian, "a2"))
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "b2"))
+        watch()
+        val bStop = view().openReal.single { it.ref == "b2" }.stopOrderId!!
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0             // Boss sold 30 by hand: the oldest trade's (the paper rule)
+        watch()
+        assertEquals("closed_at_zerodha", view().closed.single().why)
+        assertEquals("a2", view().closed.single().ref)
+        assertTrue("the sibling keeps its stop", kite.order(bStop).working)
+        assertEquals(30, kite.order(bStop).qty)
+        assertEquals("never more resting than held", 30, kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
+    }
+
+    @Test fun aShadowStopReachedIsBookedBeforeThePaperExitAndNothingIsBookedWithoutAPrice() {
+        runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        ArmLive.entered(ask(donchian, "shs"))
+        watch()
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)
+        legs["shs"] = donchian to 0                                // the paper trade closed in the same minute
+        watch()
+        assertEquals("stop", view().shadowClosed.single().why)
+        assertEquals(170.0, view().shadowClosed.single().exit!!, 1e-9)
+        // No price at all (not logged in, nothing seen): nothing booked, never at the price paid.
+        ArmLive.entered(ask(donchian, "shn"))
+        SecurePrefs.put("kite.accessToken", null)                   // logged out of Zerodha
+        ArmLive.forgetMemoryForTest()
+        legs["shn"] = donchian to 0
+        watch()
+        assertEquals(1, view().openShadow.size)
+    }
+
+    @Test fun aPartPaperSaleAgainstAFiredGttCancelsItsOrderSellsThePartAndRestsANewStopForTheRest() {
+        val ref = "pfired"
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, ref, qty = 60))
+        val gid = kite.gtts.keys.single()
+        watch()
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)
+        val oid = kite.triggerGtt(gid)                              // fired, its LIMIT 161.50 above the bid: unfilled
+        assertEquals("OPEN", kite.order(oid).status)
+        kite.quote("NFO:$sym", 163.0, 162.95, 163.05)              // back above its limit (not through it)
+        legs[ref] = legs.getValue(ref).first to 30                  // the paper trade sold half
+        watch()
+        assertEquals("CANCELLED", kite.order(oid).status)
+        assertEquals("the part sold, never blocked by the fired order", 30, nrmlHeld())
+        assertEquals(30, view().open.single().qty)
+        // The price (163) is under its stop (170): no stop can rest there, so the rest is sold as stopped on the next look.
+        assertNull(view().open.single().stopOrderId)
+        watch()
+        assertEquals(0, nrmlHeld())
+        assertTrue(view().open.isEmpty())
+        assertEquals(setOf("paper_part", "stop"), view().closed.map { it.why }.toSet())
+    }
+
+    @Test fun aWholeExitWhoseStopPartFilledSellsTheRestInTheSameLook() {
+        ArmLive.entered(ask(donchian, "pf", qty = 60))
+        val sid = view().open.single().stopOrderId!!
+        watch()
+        kite.fillPart(sid, 30, 170.0)                              // half the stop filled at the exchange
+        legs["pf"] = donchian to 0
+        watch()
+        assertEquals("flat in one look", 0, held())
+        assertEquals(setOf("stop", "paper_exit"), view().closed.map { it.why }.toSet())
+        assertEquals(60, view().closed.sumOf { it.qty })
+        assertTrue(view().open.isEmpty())
     }
 }
