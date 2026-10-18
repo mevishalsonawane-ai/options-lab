@@ -40,3 +40,7 @@ Code:
 3. **Intraday twins** hold for the real trade's bar count (counting the exit bar). They exit at the stop or the flat
    time if earlier.
 4. **The design runner computed a T0 line for comparison.** It is not a test and is not in the BH count.
+5. Self-review finding (before the final read; not changed, to keep design and final on one code version): when the
+   flat-time bar is missing from Yahoo's data, an intraday trade exits at the previous bar's close (the right price), but
+   its recorded exit time is the next bar in the data (possibly the next day), and its bar count is one or more too high.
+   P&L is unaffected; only the label and the twins' holding cap are. Yahoo rarely misses the 17:00 / 18:00 UTC bar.
