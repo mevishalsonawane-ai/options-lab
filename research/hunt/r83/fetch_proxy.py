@@ -6,6 +6,7 @@ COMEX copper CFDs), decoded as research/hunt/r53/fetch_xau_tail.py does. Raw byt
 """
 import datetime as dt
 import lzma
+import os
 import struct
 import sys
 import time
@@ -18,8 +19,6 @@ import pandas as pd
 URL = "https://datafeed.dukascopy.com/datafeed/{s}/{y}/{m:02d}/{d:02d}/BID_candles_min_1.bi5"
 SYMS = ["LIGHTCMDUSD", "GASCMDUSD", "COPPERCMDUSD", "BRENTCMDUSD"]
 FIRST, LAST = dt.date(2016, 1, 1), dt.date(2026, 10, 16)
-# Dukascopy commodity CFD prices are quoted with 3 decimals (WTI 71.234) like XAUUSD; checked against known levels below.
-SCALE = 1e3
 
 
 def get(url, tries=12):
@@ -58,7 +57,7 @@ def main(out, syms):
         days = [FIRST + dt.timedelta(n) for n in range((LAST - FIRST).days + 1)]
         days = [d for d in days if d.weekday() != 5]
         rows, failed = [], []
-        with ThreadPoolExecutor(12) as ex:
+        with ThreadPoolExecutor(int(os.environ.get("R83_THREADS", "12"))) as ex:
             for day, r in ex.map(lambda d: one(sym, d), days):
                 if r is None:
                     failed.append(day)
