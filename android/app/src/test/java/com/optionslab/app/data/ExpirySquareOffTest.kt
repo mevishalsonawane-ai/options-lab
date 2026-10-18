@@ -119,8 +119,11 @@ class ExpirySquareOffTest : RobolectricTest() {
     /** 18 Oct, review: no Zerodha session at 15:05 is a book not read: not done for the day, and a 15:10 login still closes it. */
     @Test fun noSessionAt1505IsNotDoneAndALaterLoginStillClosesIt() {
         kite.position(ce, 75, 20.0)
-        SecurePrefs.putAll(mapOf("kite.accessToken" to null))
-        assertTrue(!Broker.loggedIn && Broker.linked)
+        // A linked account as on Boss's phone (the key and its secret saved, a login once; made-up values, as
+        // Background.linkZerodha): the fake Kite's login saves no secret, so it would not count as linked. Then no session today.
+        SecurePrefs.putAll(mapOf("kite.apiSecret" to "test-secret-not-real", "kite.accessToken" to null))
+        assertTrue("no session", !Broker.loggedIn)
+        assertTrue("linked", Broker.linked)
         pass()
         assertTrue("nothing can be sent without a session", kite.requests.isEmpty())
         assertTrue("the live book was not read: not done", !done())
@@ -135,8 +138,9 @@ class ExpirySquareOffTest : RobolectricTest() {
 
     /** No Zerodha account linked at all (paper only): an empty paper book is done for the day, as before. */
     @Test fun noLinkedAccountAndNothingExpiringOnPaperIsDone() {
-        SecurePrefs.putAll(mapOf("kite.accessToken" to null, "kite.userId" to null))
-        assertTrue(!Broker.loggedIn && !Broker.linked)
+        SecurePrefs.putAll(mapOf("kite.apiSecret" to "test-secret-not-real", "kite.accessToken" to null, "kite.userId" to null))
+        assertTrue("no session", !Broker.loggedIn)
+        assertTrue("never logged in: not linked", !Broker.linked)
         pass()
         assertTrue(done())
         assertTrue(kite.requests.isEmpty())
