@@ -427,7 +427,16 @@ internal object Autopilot {
                 if (!c.target.startsWith(AutoChange.ARM_LIVE) || com.optionslab.engine.orb.LiveMirror.spec(key) == null ||
                     (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.ArmLive.setLive(key, c.to == AutoChange.ON, pinConfirmed, log = false) }
-                    .takeIf { !it.contains("needs your PIN") && !it.contains("Not ready") && !it.contains("No such arm") }
+                    .takeIf { com.optionslab.app.data.ArmLive.done(it) }
+            }
+            // 18 Oct (Boss: "add a shadow button"): an arm's own Shadow switch ([logArmShadow]). Its Undo flips it back: into shadow is
+            // free; out of shadow sends real live orders, so it goes only with the PIN (checked above and in the setter).
+            AutoChange.Kind.ARM_SHADOW -> {
+                val key = c.target.removePrefix(AutoChange.ARM_SHADOW)
+                if (!c.target.startsWith(AutoChange.ARM_SHADOW) || com.optionslab.engine.orb.LiveMirror.spec(key) == null ||
+                    (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.ArmLive.setShadow(key, c.to == AutoChange.ON, pinConfirmed, log = false) }
+                    .takeIf { com.optionslab.app.data.ArmLive.done(it) }
             }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
@@ -903,6 +912,28 @@ internal object Autopilot {
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, AutoChange.armLive(key, label, on), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "your choice", note = if (on) "live only in Live with AI trades on, never in the paper-only period" else "paper only from now on").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * 18 Oct (Boss: "add a shadow button, so that even i move to live, until is on, it will not trade, but when i see thats making money,
+     * i will make it off"): Boss switched [label]'s own Shadow [on] or off ([com.optionslab.app.data.ArmLive.setShadow]). Logged as
+     * Boss's (kept); one tap undoes it (an undo that takes it out of shadow asks the PIN). In the background, on Autopilot's worker.
+     */
+    fun logArmShadow(key: String, label: String, on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): $label's shadow switch") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, AutoChange.armShadow(key, label, on), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "your choice", note = if (on) "records what it would trade live, sends nothing" else "real live orders in Live with AI trades and its Trade live on").first
                     save()
                 }
             }

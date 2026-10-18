@@ -64,8 +64,16 @@ object ShadowArms {
     /** A paper trade's reference for its live path: its variant and its paper order (or its entry time). */
     private fun mirrorRef(t: Trade): String = "shadow:${t.variant}:${t.orderId ?: t.entryTime}"
 
-    /** The variants whose rule is the ORB family's -40 premium stop (their descriptions): it rests at Zerodha; the others' stops are on the index. */
-    private val POINT_STOPS = setOf("orb_v43", "sweep_s17", "fade_r20")
+    /**
+     * 18 Oct review fix: the live path's stop and lock come from each variant's own rule ([ShadowRules.premiumStop], every -40 variant,
+     * and [ShadowRules.lockLevel]); the stop only ever moves up.
+     */
+    private fun mirrorLevel(p: Trade) {
+        if (!p.paper || !p.open) return
+        val stop = ShadowRules.premiumStop(p.variant, p.entry)
+        val lock = ShadowRules.lockLevel(p.variant, p.entry, p.peak)
+        listOfNotNull(stop, lock).maxOrNull()?.let { runCatching { ArmLive.level(mirrorRef(p), it) } }
+    }
 
     // ---- state ----------------------------------------------------------------------------------------------------
 
@@ -339,6 +347,7 @@ object ShadowArms {
                 if (opt != null) {
                     val s = ShadowStudy.walk(rule, ShadowStudy.Walk(p.entry, p.entryTime.withSecond(0).withNano(0), p.peak, p.mfe, p.mae, p.walked), opt, t)
                     p = p.copy(peak = s.walk.peak, mfe = s.walk.mfe, mae = s.walk.mae, walked = s.walk.last)
+                    mirrorLevel(p)
                     val why = s.why
                     val fill = s.exit
                     if (why != null && fill != null) {
@@ -360,6 +369,7 @@ object ShadowArms {
                 // The LTP's best and worst (a study shadow's peak is its candles' highs: only its last price is kept).
                 val seen = if (ltp == null) p else if (rule != null) p.copy(last = ltp)
                     else p.copy(last = ltp, peak = maxOf(p.peak, ltp), trough = minOf(p.trough ?: p.entry, ltp))
+                if (seen.peak != p0.peak) mirrorLevel(seen)
                 if (seen != p0) { b.trades[i] = seen; changed = true }
                 continue
             }
@@ -674,7 +684,7 @@ object ShadowArms {
             charges = Paper.state.trades.filter { it.orderId == buy.orderId }.sumOf { it.charges.toDouble() })
         // 18 Oct: its live path ([ArmLive]): the same option and lot; the -40 stop rests at Zerodha where the variant's rule has it.
         runCatching { ArmLive.entered(ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED, mirrorRef(t), c, 1, qty, px,
-            stop = if (v.id in POINT_STOPS) px - 40.0 else null)) }
+            stop = ShadowRules.premiumStop(v.id, px))) }
         return t
     }
 
@@ -714,7 +724,8 @@ object ShadowArms {
         val b = book()
         b.promoted[id] = today().toString(); b.armed[id] = true
         save(b)
-        val msg = "${ShadowRules.armName(v)} re-armed with ${v.name} on paper only (Boss's yes): ${v.description}. It never trades on Zerodha."
+        val msg = "${ShadowRules.armName(v)} re-armed with ${v.name} on paper (Boss's yes): ${v.description}. " +
+            "Its live copy goes by the \"Shadow variants re-armed\" switches (Trade live, Shadow): " + ArmLive.stateOf(com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED) + "."
         runCatching { Diag.record("orb", msg) }
         msg
     }

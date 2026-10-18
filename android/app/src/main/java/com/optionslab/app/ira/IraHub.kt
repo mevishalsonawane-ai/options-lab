@@ -3417,6 +3417,19 @@ object IraHub {
         // 16 Oct (Boss: "if the trend changes, sell the orders"; research R63): "has the trend turned on my trades?", "trend watch"
         // ([com.optionslab.ira.TrendTalk], [com.optionslab.app.data.TrendWatchHost.talk]): each turn today and what is watched now,
         // from the Trend watch's own log - positions and premiums, so never on a locked phone. Read only: nothing is sold here.
+        // 18 Oct (Boss: "add a shadow button ... when i see thats making money, i will make it off"): "how is Night doing in shadow?",
+        // "R51 Donchian's live record" ([com.optionslab.app.data.ArmLive.talk]): that arm's SHADOW record and its LIVE record, labelled
+        // apart, and its switches now. Questions only (nothing is switched: that is Boss's, with the PIN, on the screen). Account
+        // words, so never on a locked phone. (Not in IraGoldAlgo.)
+        val armShadowAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+                runCatching { com.optionslab.engine.orb.LiveMirror.shadowAsked(q) }.getOrDefault(false))
+            runCatching { com.optionslab.app.data.ArmLive.talk(q) }.getOrNull() else null
+        if (armShadowAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.PassedArmsTalk.LOCKED); return true }
+            reply(armShadowAsk)
+            return true
+        }
         val trendAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null &&
             parsed.command == null && runCatching { com.optionslab.ira.TrendTalk.asked(q) }.getOrDefault(false)
         if (trendAsk) {
@@ -3429,7 +3442,7 @@ object IraHub {
         }
         // 15 Oct (Boss: "Both"): "how is the Donchian arm doing", "how is Solo 2.0 doing", "what's on the watchlist", "how are the
         // passed arms doing" ([com.optionslab.ira.PassedArmsTalk], [com.optionslab.app.data.PassedArmsHost.talk]): the paper arms
-        // that passed research (always "Passed research (R51/R52/R57/R72) — paper only") and the shadow Watchlist (always "shadow, not
+        // that passed research (always [com.optionslab.engine.orb.PassedArms.PASSED]) and the shadow Watchlist (always "shadow, not
         // traded; information only, not a trade signal"), from their own books. Before SoloDay ("solo 2.0" is this one's; plain
         // "solo" stays Solo's). Its paper trades are in it, so never on a locked phone; reads only - nothing is switched, bought,
         // sold or promoted. (Not in IraGoldAlgo.)
@@ -3456,7 +3469,7 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.SoloDay.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { IraSolo.day(soloDayAsk) }.getOrElse { "I could not read Solo's day just now, Boss." })
+                reply(runCatching { IraSolo.day(soloDayAsk) }.getOrElse { "I could not read Solo's day just now, Boss." } + liveLine(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY))
             }
             return true
         }
@@ -3470,7 +3483,7 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.HeroTicketTalk.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { IraHero.ticket() }.getOrElse { "I could not read the Hero ₹1,000 ticket just now, Boss." })
+                reply(runCatching { IraHero.ticket() }.getOrElse { "I could not read the Hero ₹1,000 ticket just now, Boss." } + liveLine(com.optionslab.engine.orb.HeroTicketRules.SOURCE))
             }
             return true
         }
@@ -3487,7 +3500,7 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.HeroDay.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { IraHero.day(heroDayAsk) }.getOrElse { "I could not read Hero's day just now, Boss." })
+                reply(runCatching { IraHero.day(heroDayAsk) }.getOrElse { "I could not read Hero's day just now, Boss." } + liveLine(com.optionslab.engine.orb.HeroRules.ARM.source))
             }
             return true
         }
@@ -5385,6 +5398,9 @@ object IraHub {
 
     /** The phone is locked now (Boss's account and words are then not said aloud). */
     internal fun locked(): Boolean = phoneLocked()
+
+    /** 18 Oct (review D6): an arm's shadow and live records, labelled apart from its paper book, after its own answer (memory only). */
+    private fun liveLine(key: String): String = runCatching { " " + com.optionslab.app.data.ArmLive.armLine(key) }.getOrDefault("")
 
     private fun phoneLocked(): Boolean {
         val c = app ?: return false

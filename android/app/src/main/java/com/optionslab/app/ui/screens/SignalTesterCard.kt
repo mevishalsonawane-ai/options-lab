@@ -174,8 +174,8 @@ internal fun signalStatusLine(v: SignalTesterHost.View, pv: SignalPaperArm.View 
 internal fun signalExplanation(): List<String> = listOf(
     "The Signal tester records the option calls of the Telegram chats you follow and scores each chat honestly, in shadow - it never " +
         "places, changes or skips an order by itself.",
-    "Paper trading a chat's calls is your choice per chat (its switch, off by default): ${SignalPaperRules.BOSS_CHOICE}. Never live; " +
-        "the shadow scorecard keeps running beside it.",
+    "Paper trading a chat's calls is your choice per chat (its switch, off by default): ${SignalPaperRules.BOSS_CHOICE}. Its live copy (\"Telegram calls\") " +
+        "starts off and in shadow - your choice, with the PIN; the shadow scorecard keeps running beside it.",
     "Signal source: the chat's call, its entry read on the option's own premium - NOT the default (the app's own rules signal on the " +
         "underlying); reported apart.",
     "How a call is tested: bought (in shadow) when the premium trades at or above the entry within the window, after your reaction " +

@@ -66,8 +66,9 @@ class StrategiesLiveTest : RobolectricTest() {
     }
 
     /** Save [def] live-enabled and return its id. */
-    private fun saved(vararg legs: Pair<Position, OptionType>, lots: Int = 1, sl: Double? = 30.0): Long = runBlocking {
-        assertNull(Strategies.save(AutomationSupport.strategy("Test basket", *legs, lots = lots, sl = sl)))
+    private fun saved(vararg legs: Pair<Position, OptionType>, lots: Int = 1, sl: Double? = 30.0,
+                      product: com.optionslab.engine.strategy.Product = com.optionslab.engine.strategy.Product.NRML): Long = runBlocking {
+        assertNull(Strategies.save(AutomationSupport.strategy("Test basket", *legs, lots = lots, sl = sl, product = product)))
         val id = Strategies.all().single { it.def.name == "Test basket" }.def.id
         Strategies.setLiveEnabled(id, true)
         id
@@ -80,6 +81,9 @@ class StrategiesLiveTest : RobolectricTest() {
     /** The exits sent (18 Oct: a leg's stop resting at Zerodha, an SL order, is not an exit sent: [restingStops]). */
     private fun sells() = kite.placed.filter { it.form["transaction_type"] == "SELL" && it.form["order_type"] != "SL" }
     private fun restingStops() = kite.placed.filter { it.form["order_type"] == "SL" }
+    /** 18 Oct (review C7): an NRML leg's stop rests as a single-leg GTT (it outlives the session), never a DAY SL order. */
+    private fun gttTrigger(g: org.json.JSONObject) = g.getJSONObject("condition").getJSONArray("trigger_values").getDouble(0)
+    private fun gttQty(g: org.json.JSONObject) = g.getJSONArray("orders").getJSONObject(0).getInt("quantity")
     private fun buys() = kite.placed.filter { it.form["transaction_type"] == "BUY" }
 
     // ---- live start --------------------------------------------------------------------------
@@ -287,17 +291,33 @@ class StrategiesLiveTest : RobolectricTest() {
 
     /** A live run's leg rests its stop at Zerodha as a real SL order (its run's own stop), so a dead phone cannot miss it. */
     @Test fun aLiveLegsStopRestsAtZerodhaAsAnSlOrder() {
+        // An intraday (MIS) leg: a real SL order with its limit.
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val sl = restingStops().single()
+        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "trigger_price" to "70.00", "price" to "66.50", "quantity" to "75",
+            "tag" to "iraalgostrat", "product" to "MIS"), sl.form.filterKeys { it in setOf("transaction_type", "order_type", "trigger_price", "price", "quantity", "tag", "product") })
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("one stop, not two", 1, restingStops().size)
+        assertEquals("TRIGGER PENDING", kite.order(kite.orders.keys.last()).status)
+        assertTrue("no GTT beside it", kite.gtts.isEmpty())
+    }
+
+    @Test fun aCarriedLegsStopRestsAtZerodhaAsOneGttNeverADaySlOrder() {
         live()
         midSession()
         val id = saved(Position.B to OptionType.CE)
         startLive(id)
         runBlocking { Strategies.manageOnly(compromised = false) }
-        val sl = restingStops().single()
-        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "trigger_price" to "70.00", "price" to "66.50", "quantity" to "75",
-            "tag" to "iraalgostrat"), sl.form.filterKeys { it in setOf("transaction_type", "order_type", "trigger_price", "price", "quantity", "tag") })
+        val g = kite.gtts.values.single()
+        assertEquals(70.0, gttTrigger(g), 1e-9)
+        assertEquals(75, gttQty(g))
+        assertTrue("no DAY SL order", restingStops().isEmpty())
         runBlocking { Strategies.manageOnly(compromised = false) }
-        assertEquals("one stop, not two", 1, restingStops().size)
-        assertEquals("TRIGGER PENDING", kite.order(kite.orders.keys.last()).status)
+        assertEquals("one stop, not two", 1, kite.gtts.size)
     }
 
     /** The run's own exit takes the resting stop out first (confirmed), then sells: the two never both fill. */
@@ -307,46 +327,77 @@ class StrategiesLiveTest : RobolectricTest() {
         val id = saved(Position.B to OptionType.CE)
         startLive(id)
         runBlocking { Strategies.manageOnly(compromised = false) }
-        val sid = kite.orders.values.single { it.type == "SL" }.id
+        val gid = kite.gtts.keys.single()
         kite.requests.clear()
         runBlocking { Strategies.stop(id, "manual", compromised = false) }
-        val cancel = kite.requests.indexOfFirst { it.method == "DELETE" && it.path.endsWith("/$sid") }
+        val cancel = kite.requests.indexOfFirst { it.method == "DELETE" && it.path == "/gtt/triggers/$gid" }
         val sell = kite.requests.indexOfFirst { it.method == "POST" && it.path == "/orders/regular" }
         assertTrue("the stop out before the sell", cancel in 0 until sell)
-        assertEquals("CANCELLED", kite.order(sid).status)
+        assertTrue(kite.gtts.isEmpty())
         assertEquals(1, sells().size)
         assertEquals("flat, never short", 0, kite.positions["NFO:$NIFTY_CE:NRML"]?.first ?: 0)
     }
 
-    /** A stop that filled at Zerodha (the phone asleep) closes the leg with that fill: no second sell is sent. */
     @Test fun aStopFilledAtZerodhaClosesTheLegWithNoSecondSell() {
         live()
         midSession()
         val id = saved(Position.B to OptionType.CE)
         startLive(id)
         runBlocking { Strategies.manageOnly(compromised = false) }
-        val sid = kite.orders.values.single { it.type == "SL" }.id
-        kite.trigger(sid, 70.0)
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 66.95, 67.05)
+        val oid = kite.triggerGtt(gid)                                 // its LIMIT at 66.50 is under the bid: it fills
+        assertEquals("COMPLETE", kite.order(oid).status)
         kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)             // and back above the stop
         runBlocking { Strategies.manageOnly(compromised = false) }
         runBlocking { Strategies.tickAll(compromised = false) }
-        assertTrue("no sell beside the stop", sells().isEmpty())
+        assertTrue("no sell beside the stop", sells().none { it.form["tag"] != "gtt" })
         assertEquals("flat, never short", 0, kite.positions["NFO:$NIFTY_CE:NRML"]?.first ?: 0)
         assertFalse("the leg is closed", entry(id).run!!.openLegs().any())
     }
 
-    /** A leg closed by hand at Zerodha: its resting stop comes out (it would sell into a short). */
+    @Test fun anIntradayStopFilledAtZerodhaClosesTheLegWithNoSecondSell() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val sid = kite.orders.values.single { it.type == "SL" }.id
+        kite.trigger(sid, 70.0)
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertTrue("no sell beside the stop", sells().isEmpty())
+        assertEquals("flat, never short", 0, kite.positions["NFO:$NIFTY_CE:MIS"]?.first ?: 0)
+        assertFalse("the leg is closed", entry(id).run!!.openLegs().any())
+    }
+
     @Test fun aStopIsNeverLeftRestingOnALegClosedByHand() {
         live()
         midSession()
         val id = saved(Position.B to OptionType.CE)
         startLive(id)
         runBlocking { Strategies.manageOnly(compromised = false) }
-        val sid = kite.orders.values.single { it.type == "SL" }.id
+        assertEquals(1, kite.gtts.size)
         kite.position(NIFTY_CE, 0, 0.0)
         runBlocking { Strategies.manageOnly(compromised = false) }
-        assertEquals("CANCELLED", kite.order(sid).status)
+        assertTrue("its GTT deleted", kite.gtts.isEmpty())
         assertTrue(sells().isEmpty())
+    }
+
+    /** Review C2: part sold by hand in Kite - the resting stop shrinks to what is left, so it can never sell into a short. */
+    @Test fun aPartSoldByHandShrinksTheLegsRestingStop() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, lots = 2, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val sid = kite.orders.values.single { it.type == "SL" }.id
+        assertEquals(150, kite.order(sid).qty)
+        kite.position(NIFTY_CE, 75, 100.0, product = "MIS")
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(75, kite.order(sid).qty)
+        assertTrue(kite.order(sid).working)
     }
 
     // ---- the weekday scheduler (on a fixed clock: Market.testClock) --------------------------------

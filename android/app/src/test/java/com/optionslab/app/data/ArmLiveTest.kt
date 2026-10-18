@@ -50,6 +50,9 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testSync = true
         ArmLive.testDefaultOff = false                        // each arm's switch as in the app: on until Boss turns it off
         ArmLive.testNow = AutomationSupport.earlierToday()
+        if (com.optionslab.app.ira.Autopilot.enabled()) { com.optionslab.app.ira.Autopilot.resetForTest(); com.optionslab.app.ira.Autopilot.init(context); com.optionslab.app.ira.Autopilot.testLive = false }
+        // Every arm out of shadow (Boss's PIN), so these tests are about the live orders; Solo (midday) cannot leave it (not proven).
+        for (a in LiveMirror.ARMS) if (a.key != LiveMirror.SOLO_MIDDAY) runBlocking { ArmLive.setShadow(a.key, false, pinConfirmed = true, log = false) }
         for (f in LiveMirror.ARMS.map { it.family }.distinct())
             ArmLive.register(f) { legs.entries.filter { e -> LiveMirror.spec(e.value.first)?.family == f }.map { ArmLive.PaperLeg(it.key, it.value.first, it.value.second) } }
         kite.requests.clear()
@@ -87,8 +90,9 @@ class ArmLiveTest : RobolectricTest() {
     @Test fun everyIntradayArmsLiveEntryBuysItsPaperLotsThenRestsItsStopAtZerodha() {
         runBlocking { ArmLive.setLive(LiveMirror.TELEGRAM_CALLS, true, pinConfirmed = true) }   // its switch starts off (Boss's own)
         SecurePrefs.putAll(mapOf("g.trades" to 0, "k.maxOrders" to 500))          // every arm once in one day: no day caps in this test
-        val intraday = LiveMirror.ARMS.filter { it.exchange == "NFO" && it.product == "MIS" }
-        assertTrue(intraday.size >= 12)
+        // Solo (midday) stays in shadow (Jarvis's Solo, not proven): its own test below.
+        val intraday = LiveMirror.ARMS.filter { it.exchange == "NFO" && it.product == "MIS" && it.key != LiveMirror.SOLO_MIDDAY }
+        assertTrue(intraday.size >= 11)
         val cs = intraday.indices.map { other(it + 1) }
         java.io.File(context.filesDir, "kite_instruments.json").delete()          // the day's list read again, with them
         runBlocking { Broker.instruments() }
@@ -99,9 +103,11 @@ class ArmLiveTest : RobolectricTest() {
             val (buy, stop) = kite.placed.also { assertEquals(spec.key + " " + view().refused[spec.key], 2, it.size) }
             assertEquals(spec.key, mapOf("tradingsymbol" to s, "transaction_type" to "BUY", "order_type" to "MARKET", "quantity" to "30",
                 "product" to "MIS", "tag" to "iraarm"), form(buy, "tradingsymbol", "transaction_type", "order_type", "quantity", "product", "tag"))
-            // -15% of the paper fill on the live fill (the same points for the ORB family: 200 -> 170 both ways), SL with its limit.
-            assertEquals(spec.key, mapOf("transaction_type" to "SELL", "order_type" to "SL", "trigger_price" to "170.00", "price" to "161.50", "quantity" to "30"),
-                form(stop, "transaction_type", "order_type", "trigger_price", "price", "quantity"))
+            // -15% of the paper fill on the live fill (the same points for the ORB family: 200 -> 170 both ways), SL with its limit; a
+            // close-judged arm (Hero, the Hero ticket) rests only its -80% disaster stop (40, limit 2 under it).
+            val want = if (spec.closeStop) mapOf("transaction_type" to "SELL", "order_type" to "SL", "trigger_price" to "40.00", "price" to "38.00", "quantity" to "30")
+                else mapOf("transaction_type" to "SELL", "order_type" to "SL", "trigger_price" to "170.00", "price" to "161.50", "quantity" to "30")
+            assertEquals(spec.key, want, form(stop, "transaction_type", "order_type", "trigger_price", "price", "quantity"))
             // (The account guard allows 3 open positions: the next arm's starts from a flat account.)
             kite.flat(); kite.orders.values.filter { it.working }.forEach { it.status = "CANCELLED" }
         }
@@ -128,7 +134,7 @@ class ArmLiveTest : RobolectricTest() {
         runBlocking { ArmLive.setLive(key, false, pinConfirmed = false) }
         ArmLive.entered(ask(key, "p3"))
         assertTrue(kite.placed.isEmpty()); assertEquals(true, view().refused[key]?.contains("Trade live"))
-        assertEquals("on again only with the PIN", "Turning ${LiveMirror.spec(key)!!.label}'s live trading on needs your PIN.",
+        assertEquals("on again only with the PIN", "Turning ${LiveMirror.spec(key)!!.label}'s live trading on needs your PIN. Nothing changed.",
             runBlocking { ArmLive.setLive(key, true, pinConfirmed = false) })
         runBlocking { ArmLive.setLive(key, true, pinConfirmed = true) }
         val today = Market.today()
@@ -147,12 +153,16 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     @Test fun jarvisOwnIdeasHaveNoLivePath() {
-        for (k in listOf("jarvis", "news", "forge")) ArmLive.entered(ArmLive.Ask(k, "j:$k", contract, 1, 30, 200.0))
+        // Behaviour (review D8): whatever key Jarvis's own ideas would carry - its news picks, the forge's, the grammar arm's - the
+        // live path sends nothing, records no shadow trade and notes nothing; no mirrored arm is one of them.
+        for (k in listOf("jarvis", "news", "forge", "grammar", com.optionslab.app.ira.IraNewsTrades::class.java.simpleName)) {
+            ArmLive.entered(ArmLive.Ask(k, "j:$k", contract, 1, 30, 200.0))
+            assertNull(LiveMirror.spec(k))
+        }
         assertTrue(kite.requests.isEmpty())
-        // The hosts of Jarvis's own ideas never call the live path.
+        assertTrue(view().open.isEmpty() && view().notMirrored.isEmpty() && view().refused.isEmpty())
+        assertTrue(LiveMirror.ARMS.none { it.family in setOf("jarvis", "news", "forge") })
         fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
-        assertFalse(src("ira/IraNewsTrades.kt").contains("ArmLive"))
-        assertFalse(src("data/GrammarArm.kt").contains("ArmLive"))
         // Every mirrored host does: its entry, and its close or its book for the exits.
         for (f in listOf("data/PassedArmsHost.kt", "data/OrbArms.kt", "data/HeroTicketArm.kt", "data/VixDivArm.kt", "data/NightArm.kt",
                 "data/SignalPaperArm.kt", "data/McxPaperArms.kt", "data/ShadowArms.kt", "ira/IraSolo.kt")) {
@@ -234,6 +244,11 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(30, held())
         assertEquals(30, view().open.single().qty)
         assertNotNull("the rest keeps a stop", view().open.single().let { it.stopOrderId ?: it.stopTrigger })
+        // Review C4: the stop is MODIFIED down to what is left (never cancelled and left bare), and it is the same order.
+        val sid = view().open.single().stopOrderId!!
+        assertEquals(30, kite.order(sid).qty)
+        assertTrue(kite.order(sid).working)
+        assertEquals("never more resting than held", 30, kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
     }
 
     @Test fun anIntradayTradeIsSquaredOffAt1515() {
@@ -283,13 +298,15 @@ class ArmLiveTest : RobolectricTest() {
         val oid = kite.triggerGtt(gid)                              // a fast fall: its LIMIT 161.50 rests unfilled
         assertEquals("OPEN", kite.order(oid).status)
         legs[ref] = legs.getValue(ref).first to 0                 // the paper trade sold
-        watch(); watch()
-        assertEquals("its working order covers it: nothing more sent, no new stop", 1, kite.placed.size)
-        assertEquals(30, nrmlHeld())
-        kite.reject(oid)
         watch()
-        assertEquals(0, nrmlHeld())
+        // Review C1: a fired GTT whose order did not fill never blocks the exit - its order is cancelled first, then a MARKET sell.
+        assertEquals("CANCELLED", kite.order(oid).status)
+        val sell = kite.placed.last()
+        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "MARKET", "quantity" to "30"), form(sell, "transaction_type", "order_type", "quantity"))
+        assertEquals("flat, never short", 0, nrmlHeld())
         assertEquals("paper_exit", view().closed.single().why)
+        watch()
+        assertEquals("nothing more", 2, kite.placed.size)
     }
 
     @Test fun twoArmsOnOneOptionEachRestTheirOwnStopNeverMoreThanHeld() {
@@ -335,5 +352,273 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue("its paper book holds nothing of it", PassedArmsHost.view.value.all.isEmpty())
         assertTrue("its orders are labelled live", runBlocking { Strategies.owners() }.values.any { it == "R51 Donchian 20 · live entry" })
         assertTrue(ArmLive.diagLine().startsWith("Arms live: 0 open"))
+    }
+
+    // ---- the Shadow switch (18 Oct, Boss: "add a shadow button, so that even i move to live, until is on, it will not trade") ----
+
+    private val donchian = com.optionslab.engine.orb.DonchianArm.SOURCE
+
+    @Test fun everyArmStartsInShadowAndAFreshBookSendsNothing() {
+        ArmLive.wipe(); java.io.File(context.noBackupFilesDir, "arm_live.vault").delete()
+        SecurePrefs.put(ArmLive.K_SHADOW, null)
+        runBlocking { ArmLive.refresh() }
+        for (a in LiveMirror.ARMS) assertTrue(a.key, view().shadowOn(a.key))
+        ArmLive.entered(ask(donchian, "fresh"))
+        assertTrue("nothing sent in shadow, with Live, AI trades and Trade live all on", kite.placed.isEmpty())
+        assertEquals(1, view().openShadow.size)
+    }
+
+    @Test fun inShadowNothingIsSentAndEachWouldBeTradeIsRecordedWithItsShadowPnl() {
+        assertTrue(ArmLive.done(runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }))   // on: no PIN
+        assertTrue(view().shadowOn(donchian))
+        ArmLive.entered(ask(donchian, "sh"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        val p = view().openShadow.single()
+        assertEquals(200.0, p.entry, 1e-9)
+        assertEquals(170.0, p.stopTrigger!!, 1e-9)
+        assertTrue(view().openReal.isEmpty())
+        watch()                                                    // seen open on paper
+        kite.quote("NFO:$sym", 168.0, 167.95, 168.05)              // through its stop, not through its SL's limit (161.50)
+        watch()
+        val c = view().shadowClosed.single()
+        assertEquals("stop", c.why)
+        assertEquals("filled as the resting SL would: at its trigger", 170.0, c.exit!!, 1e-9)
+        assertTrue("still nothing sent", kite.placed.isEmpty())
+        val r = view().shadowRecord(donchian)
+        assertEquals(1, r.trades)
+        assertTrue("-900 and the charges: ${r.net}", r.net < -900 && r.net > -1_000)
+        assertEquals(0.0, r.winRate, 1e-9)
+        assertEquals("its live record stays apart", 0 to 0.0, view().record(donchian))
+        assertTrue(ArmLive.armLine(donchian).contains("in shadow: 1 trade"))
+    }
+
+    @Test fun aShadowTradeFollowsItsPaperExitAtTheMarket() {
+        runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        ArmLive.entered(ask(donchian, "sx"))
+        watch()
+        kite.quote("NFO:$sym", 230.0, 229.95, 230.05)
+        legs["sx"] = donchian to 0
+        watch()
+        val c = view().shadowClosed.single()
+        assertEquals("paper_exit", c.why); assertEquals(230.0, c.exit!!, 1e-9)
+        assertEquals(1.0, view().shadowRecord(donchian).winRate, 1e-9)
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    @Test fun shadowOffNeedsThePinOnIsFreeAndSoloStaysInShadow() {
+        val key = com.optionslab.engine.orb.OovArm.SOURCE
+        runBlocking { ArmLive.setShadow(key, true, pinConfirmed = false) }
+        val said = runBlocking { ArmLive.setShadow(key, false, pinConfirmed = false) }
+        assertFalse(said, ArmLive.done(said)); assertTrue(said, said.contains("PIN"))
+        assertTrue(view().shadowOn(key))
+        assertTrue(ArmLive.done(runBlocking { ArmLive.setShadow(key, false, pinConfirmed = true) }))
+        assertFalse(view().shadowOn(key))
+        val solo = runBlocking { ArmLive.setShadow(LiveMirror.SOLO_MIDDAY, false, pinConfirmed = true) }
+        assertFalse(solo, ArmLive.done(solo)); assertTrue(solo, solo.contains("stays in shadow"))
+        assertNotNull("the reason is shown", ArmLive.soloWhy())
+        assertTrue(view().shadowOn(LiveMirror.SOLO_MIDDAY))
+        val log = view().log.joinToString("\n")
+        assertTrue(log, log.contains("Shadow ON (you)") && log.contains("Shadow OFF (you)"))
+    }
+
+    @Test fun eachShadowChangeIsInTheChangeLogAndAnUndoThatLeavesShadowNeedsThePin() {
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", com.optionslab.app.ira.Autopilot.enabled())
+        val key = com.optionslab.engine.orb.OovArm.SOURCE
+        runBlocking { ArmLive.setShadow(key, true, pinConfirmed = false) }
+        fun entries() = com.optionslab.app.ira.Autopilot.book.value.entries.filter { it.change.kind == com.optionslab.ira.AutoChange.Kind.ARM_SHADOW &&
+            it.change.target == "armshadow:$key" }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (entries().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val on = entries().single()
+        assertTrue(com.optionslab.app.ira.Autopilot.undoNeedsPin(on.id))
+        assertEquals(com.optionslab.app.ira.Autopilot.PIN_UNDO, com.optionslab.app.ira.Autopilot.undo(on.id))
+        assertTrue("nothing changed without the PIN", view().shadowOn(key))
+        assertTrue(com.optionslab.app.ira.Autopilot.undo(on.id, pinConfirmed = true).startsWith("Undone"))
+        assertFalse(view().shadowOn(key))
+        // Trade live's own entry is logged too.
+        runBlocking { ArmLive.setLive(key, false, pinConfirmed = false) }
+        val d2 = System.currentTimeMillis() + 10_000
+        fun live() = com.optionslab.app.ira.Autopilot.book.value.entries.filter { it.change.kind == com.optionslab.ira.AutoChange.Kind.ARM_LIVE && it.change.target == "armlive:$key" }
+        while (live().isEmpty() && System.currentTimeMillis() < d2) Thread.sleep(20)
+        assertEquals(1, live().size)
+    }
+
+    @Test fun shadowOrTradeLiveTurnedOnOrOffWithALiveTradeOpenLeavesItsStopAndExitsRunning() {
+        ArmLive.entered(ask(donchian, "op"))
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false); ArmLive.setLive(donchian, false, pinConfirmed = false) }
+        ArmLive.level("op", 190.0)
+        watch()
+        assertEquals("its stop still moves with the lock", 190.0, kite.order(sid).trigger, 1e-9)
+        legs["op"] = donchian to 0
+        watch()
+        assertEquals("paper_exit", view().closed.single().why)
+        assertEquals("flat, never short", 0, held())
+        assertEquals("CANCELLED", kite.order(sid).status)
+    }
+
+    @Test fun switchesAndShadowSurviveARestartAndALostBookFile() {
+        val oov = com.optionslab.engine.orb.OovArm.SOURCE
+        val breadth = com.optionslab.engine.orb.BreadthDonchianArm.SOURCE
+        runBlocking { ArmLive.setLive(oov, false, pinConfirmed = false); ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        fun same() {
+            assertFalse(view().on(oov)); assertTrue(view().on(donchian))
+            assertTrue(view().shadowOn(donchian)); assertFalse(view().shadowOn(breadth))
+        }
+        ArmLive.wipe()
+        assertFalse("loading until read", view().loaded)
+        runBlocking { ArmLive.refresh() }
+        same()
+        // The file gone (a reinstall's restore, a damaged disk): the second copy in the settings, never fresh defaults.
+        java.io.File(context.noBackupFilesDir, "arm_live.vault").delete()
+        ArmLive.wipe(); runBlocking { ArmLive.refresh() }
+        same()
+    }
+
+    @Test fun aDamagedBookIsSetAsideItsSwitchesKeptAndItsOpenLiveTradeTakenBackFromZerodha() {
+        val breadth = com.optionslab.engine.orb.BreadthDonchianArm.SOURCE
+        runBlocking { ArmLive.setLive(breadth, false, pinConfirmed = false) }
+        ArmLive.entered(ask(donchian, "dmg"))
+        val sid = view().openReal.single().stopOrderId!!
+        java.io.File(context.noBackupFilesDir, "arm_live.vault").writeBytes(ByteArray(64) { 7 })
+        ArmLive.wipe()
+        runBlocking { ArmLive.refresh() }
+        assertFalse("its switches from the second copy", view().on(breadth))
+        assertTrue("recovered on the next look", view().openReal.isEmpty())
+        watch()
+        val p = view().openReal.single()
+        assertEquals(donchian, p.key)
+        assertEquals(30, p.qty)
+        assertEquals("its own stop still resting is kept", sid, p.stopOrderId)
+        assertTrue(ArmLive.holdingHint)
+        assertEquals("no second stop", 1, kite.orders.values.count { it.working && it.type == "SL" })
+    }
+
+    // ---- the safety and disaster stops -------------------------------------------------------------------------------------
+
+    @Test fun aCarriedArmWithNoPremiumStopRestsASafetyGtt30PercentBelowTheFillThatNeverMovesDown() {
+        val ref = "nsafe"
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, ref, stop = null))
+        val g = kite.gtts.values.single()
+        assertEquals(140.0, g.getJSONObject("condition").getJSONArray("trigger_values").getDouble(0), 1e-9)
+        assertEquals(ArmLive.SAFETY, view().open.single().stopKind)
+        assertTrue(view().log.joinToString().contains("safety stop"))
+        assertEquals("no SL order beside the GTT", 1, kite.placed.size)
+        ArmLive.level(ref, 120.0)                                  // a lower paper level: never down
+        watch()
+        assertTrue(kite.requests.none { it.method == "PUT" })
+        ArmLive.level(ref, 175.0)                                  // the arm's own level above it: up, and labelled the arm's stop
+        watch()
+        assertEquals(175.0, view().open.single().stopTrigger!!, 1e-9)
+        assertEquals(ArmLive.OWN, view().open.single().stopKind)
+    }
+
+    @Test fun anIntradayArmWithNoPremiumStopRestsASafetySlOrder() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.Solo2.SOURCE, "s2safe", stop = null))
+        val stop = kite.placed.last()
+        assertEquals(mapOf("order_type" to "SL", "trigger_price" to "140.00", "transaction_type" to "SELL"), form(stop, "order_type", "trigger_price", "transaction_type"))
+        // Its own exit takes it out first: never two resting exits.
+        watch(); legs["s2safe"] = legs.getValue("s2safe").first to 0; watch()
+        assertEquals(0, held()); assertEquals("paper_exit", view().closed.single().why)
+    }
+
+    @Test fun aCloseJudgedArmRestsOnlyItsDisasterStopAndIgnoresItsPaperLevels() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.HeroRules.ARM.source, "hero", stop = 80.0))
+        val stop = kite.placed.last()
+        assertEquals(mapOf("order_type" to "SL", "trigger_price" to "40.00"), form(stop, "order_type", "trigger_price"))
+        assertEquals(ArmLive.DISASTER, view().open.single().stopKind)
+        ArmLive.level("hero", 150.0)
+        watch()
+        assertTrue("its close-judged trail never becomes a tick stop", kite.requests.none { it.method == "PUT" })
+    }
+
+    // ---- order-safety review fixes ----------------------------------------------------------------------------------------
+
+    @Test fun aFiredGttThroughItsLegPriceIsCancelledAndSoldAtMarket() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "run"))
+        val gid = kite.gtts.keys.single()
+        watch()
+        kite.quote("NFO:$sym", 120.0, 119.95, 120.05)
+        val oid = kite.triggerGtt(gid)
+        assertEquals("OPEN", kite.order(oid).status)
+        watch()
+        assertEquals("CANCELLED", kite.order(oid).status)
+        assertEquals("stop_run_through", view().closed.single().why)
+        assertEquals(0, nrmlHeld())
+    }
+
+    @Test fun aPartSoldByHandShrinksTheRestingStopSoItNeverTurnsTheLongShort() {
+        ArmLive.entered(ask(donchian, "hand", qty = 60))
+        val sid = view().open.single().stopOrderId!!
+        assertEquals(60, kite.order(sid).qty)
+        watch()
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0               // Boss sold one of the two lots in Kite
+        watch()
+        assertEquals(30, kite.order(sid).qty)
+        assertTrue(kite.order(sid).working)
+        assertEquals(30, view().open.single().qty)
+        assertEquals("closed_at_zerodha", view().closed.single().why)
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                  // and then the rest
+        watch()
+        assertFalse("taken out on a flat position", kite.order(sid).working)
+        assertTrue(view().open.isEmpty())
+    }
+
+    @Test fun noLiveEntryAgainstWhatZerodhaHoldsTheOtherWay() {
+        kite.positions["NFO:$sym:MIS"] = -30 to 200.0
+        ArmLive.entered(ask(donchian, "against"))
+        assertTrue(kite.placed.isEmpty())
+        assertEquals(true, view().refused[donchian]?.contains("other way"))
+    }
+
+    @Test fun noLiveEntryAt1515OrForAPaperTradeAlreadyClosed() {
+        ArmLive.testNow = Market.today().atTime(15, 15).atZone(com.optionslab.engine.IST)
+        ArmLive.entered(ask(donchian, "late"))
+        assertTrue(kite.placed.isEmpty()); assertEquals(true, view().refused[donchian]?.contains("too late"))
+        ArmLive.testNow = AutomationSupport.earlierToday()
+        ArmLive.closed("gone", "stop")
+        ArmLive.entered(ask(donchian, "gone"))
+        assertTrue(kite.placed.isEmpty()); assertEquals(true, view().refused[donchian]?.contains("already closed"))
+        val (n, why) = view().notMirroredToday(donchian, Market.today())
+        assertEquals(2, n); assertTrue(why!!.contains("already closed"))
+    }
+
+    @Test fun aCarriedOptionIsSquaredOffAt1505OnItsExpiryDay() {
+        val today = Market.today()
+        val s = "BANKNIFTY26OCTX52000CE"
+        kite.instruments += FakeKite.Ins(22_000_900, s, "BANKNIFTY", today, 52_000.0, "CE", 30)
+        kite.quote("NFO:$s", 200.0, 199.95, 200.05)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        val c = Paper.Contract("BANKNIFTY-TEST-X", "BANKNIFTY", today, 52_000.0, Right.CE, 30, "NSE_FO|X")
+        ArmLive.testNow = today.atTime(10, 0).atZone(com.optionslab.engine.IST)
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "exp", c = c))
+        assertEquals(1, view().openReal.size)
+        ArmLive.testNow = today.atTime(15, 5).atZone(com.optionslab.engine.IST)
+        watch()
+        assertEquals("square_off", view().closed.single().why)
+        assertEquals(0, kite.positions["NFO:$s:NRML"]?.first ?: 0)
+        assertTrue("its GTT went first", kite.gtts.values.none { it.optString("status", "active") == "active" })
+    }
+
+    @Test fun aPaperTradeTheGuardRefusesIsRecordedAsNotMirroredOnItsRow() {
+        // The account guard's open-positions cap (not raised): three positions already open.
+        for (i in 1..3) kite.position("OTHER$i", 30, 100.0, "MIS")
+        ArmLive.entered(ask(donchian, "capped"))
+        assertTrue(kite.placed.isEmpty())
+        val (n, why) = view().notMirroredToday(donchian, Market.today())
+        assertEquals(1, n); assertTrue(why!!, why.contains("account guard"))
+    }
+
+    // ---- Jarvis -------------------------------------------------------------------------------------------------------------
+
+    @Test fun jarvisSaysHowAnArmIsDoingInShadowAndLiveLabelledApart() {
+        val night = LiveMirror.spec(com.optionslab.engine.orb.NightRules.SOURCE)!!.label
+        val q = "how is $night doing in shadow?"
+        assertTrue(LiveMirror.shadowAsked(q))
+        val a = ArmLive.talk(q)!!
+        assertTrue(a, a.startsWith("$night in shadow:"))
+        assertTrue(a, a.contains("Live (real orders): no live trade yet"))
+        assertNull(ArmLive.talk("how is the weather in shadow"))
+        assertFalse(LiveMirror.shadowAsked("turn shadow off for $night"))
     }
 }

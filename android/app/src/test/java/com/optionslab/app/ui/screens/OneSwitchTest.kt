@@ -78,8 +78,8 @@ class OneSwitchTest {
         }
     }
 
-    private fun exists(text: String, substring: Boolean = false) =
-        compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
+    private fun exists(text: String, substring: Boolean = false, desc: Boolean = false) =
+        (if (desc) compose.onAllNodes(hasContentDescription(text)) else compose.onAllNodesWithText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
 
     private fun enterPin(value: String) {
         pump { exists("Confirm it is you") }
@@ -157,7 +157,16 @@ class OneSwitchTest {
         pump { exists(label) }
         assertTrue("on by default", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE))
         assertFalse("Jarvis's own ideas are not listed", exists("Forge ideas", substring = true))
-        assertTrue("an option-price rule starts off", exists("Telegram calls"))
+        assertTrue(exists("Telegram calls"))
+        assertFalse("an option-price rule starts off", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.LiveMirror.TELEGRAM_CALLS))
+        // Every arm's row renders with both switches (Solo (midday) only in Jarvis builds).
+        for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
+            if (spec.key == com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) {
+                assertFalse("Solo (midday) is Jarvis's", exists("Trade live: ${spec.label}", desc = true)); continue
+            }
+            assertTrue(spec.label, exists("Trade live: ${spec.label}", desc = true))
+            assertTrue(spec.label, exists("Shadow: ${spec.label}", desc = true))
+        }
         compose.onNode(hasContentDescription("Trade live: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
         pump { !com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE) }
         assertFalse("off with no PIN", exists("Confirm it is you"))
@@ -166,6 +175,31 @@ class OneSwitchTest {
         pump { com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE) }
         val log = com.optionslab.app.data.ArmLive.view.value.log.joinToString("\n")
         assertTrue(log, log.contains("Trade live OFF (you)") && log.contains("Trade live ON (you)"))
+    }
+
+    /**
+     * 18 Oct (Boss: "add a shadow button, so that even i move to live, until is on, it will not trade, but when i see thats making money,
+     * i will make it off"): each arm's Shadow switch - on by default, off only with the PIN, on again with one tap; its record shown.
+     */
+    @Test fun eachArmHasItsShadowSwitchOnByDefaultOffWithThePin() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        PinLock.setPin(pin.toCharArray())
+        AutomationSupport.liveSettings(live = true)
+        val m = holder.model
+        compose.setContent { IraAlgoTheme("light") { ArmsLiveList(m) } }
+        compose.waitForIdle()
+        val key = com.optionslab.engine.orb.DonchianArm.SOURCE
+        val label = com.optionslab.engine.orb.DonchianArm.LABEL
+        pump { exists("Shadow: $label", desc = true) }
+        assertTrue("in shadow by default", com.optionslab.app.data.ArmLive.view.value.shadowOn(key))
+        assertTrue(exists("no shadow trade yet", substring = true))
+        compose.onNode(hasContentDescription("Shadow: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
+        enterPin(pin)                                              // off asks the PIN
+        pump { !com.optionslab.app.data.ArmLive.view.value.shadowOn(key) }
+        compose.onNode(hasContentDescription("Shadow: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
+        pump { com.optionslab.app.data.ArmLive.view.value.shadowOn(key) }
+        val log = com.optionslab.app.data.ArmLive.view.value.log.joinToString("\n")
+        assertTrue(log, log.contains("Shadow OFF (you)") && log.contains("Shadow ON (you)"))
     }
 
     @Test fun eachArmKeepsItsOwnLiveChoiceAndJarvissOwnTradesStayOnPaper() {

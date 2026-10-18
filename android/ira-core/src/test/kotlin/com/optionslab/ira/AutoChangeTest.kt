@@ -583,4 +583,27 @@ class AutoChangeTest {
         assertTrue(A.superseded(b, b.entries.first()))
         assertFalse(A.superseded(b, b.entries.last()))
     }
+
+    /** 18 Oct (Boss: "add a shadow button ... when i see thats making money, i will make it off"): an arm's Shadow, LIVE scope. */
+    @Test fun anArmsShadowIsBossesAndAnUndoThatLeavesShadowNeedsThePin() {
+        val on = A.armShadow("r51_donchian20", "R51 Donchian 20", on = true)
+        val off = A.armShadow("r51_donchian20", "R51 Donchian 20", on = false)
+        assertEquals(AutoChange.Kind.ARM_SHADOW, on.kind)
+        assertEquals("armshadow:r51_donchian20", on.target)
+        assertEquals(AutoChange.Scope.LIVE, on.scope)
+        assertEquals(AutoChange.ON, on.to); assertEquals(AutoChange.SWITCHED_OFF, on.from)
+        assertEquals(AutoChange.Risk.LOWER, A.riskOf(on), "in shadow nothing is sent")
+        assertEquals(AutoChange.Risk.RAISE, A.riskOf(off), "out of shadow real orders may go")
+        assertTrue(A.undoNeedsPin(on), "undoing an on leaves shadow: the PIN")
+        assertFalse(A.undoNeedsPin(off), "undoing an off puts it back in shadow: free")
+        assertTrue(A.bossOwn(AutoChange.Kind.ARM_SHADOW))
+        assertFalse(A.never(on)); assertFalse(A.never(off))
+        assertFalse(AutoChange.Kind.ARM_SHADOW.never)
+        var b = AutoChange.Book()
+        b = A.record(b, on, AutoChange.Status.KEPT, 1L, java.time.LocalDate.of(2026, 10, 18)).first
+        b = A.record(b, off, AutoChange.Status.KEPT, 2L, java.time.LocalDate.of(2026, 10, 18)).first
+        assertTrue(A.superseded(b, b.entries.first()), "only the newest flip undoes")
+        assertFalse(A.superseded(b, b.entries.last()))
+        assertNull(A.lastUndoable(b), "Boss's own change is never Autopilot's last change")
+    }
 }

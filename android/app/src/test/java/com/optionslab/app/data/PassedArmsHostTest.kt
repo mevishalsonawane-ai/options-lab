@@ -185,6 +185,8 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun inLiveWithTradeLiveOnTheBreakAlsoTradesAtZerodhaAndThePaperStopSellsItThere() {
         com.optionslab.app.data.ArmLive.testDefaultOff = false
         com.optionslab.app.data.ArmLive.testSync = true
+        // Out of shadow with Boss's PIN (every arm starts in shadow).
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false) }
         val sym = "NIFTY26OCT25050CE"
         kite.instruments += FakeKite.Ins(26_000_001, sym, "NIFTY", day.plusDays(7), 25_050.0, "CE", 65)
         kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
@@ -213,6 +215,35 @@ class PassedArmsHostTest : RobolectricTest() {
         // Its paper record is the paper book's alone; the live one is the live path's.
         assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
         assertTrue(p.symbol != sym)
+    }
+
+    /**
+     * 18 Oct (Boss: "add a shadow button"): end to end, in Live with AI trades and Trade live on but R51 in SHADOW (its default), the
+     * same break sends nothing to Zerodha: its live path records a shadow trade, which closes with the paper stop.
+     */
+    @Test fun inShadowTheBreakSendsNothingAndItsShadowTradeFollowsThePaperStop() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        com.optionslab.app.data.ArmLive.testSync = true
+        val sym = "NIFTY26OCT25050CE"
+        kite.instruments += FakeKite.Ins(26_000_001, sym, "NIFTY", day.plusDays(7), 25_050.0, "CE", 65)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        File(context.filesDir, "kite_instruments.json").delete()
+        runBlocking { Broker.instruments() }
+        kite.requests.clear()
+        only(DonchianArm.SOURCE)
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertTrue("nothing sent in shadow", kite.placed.isEmpty())
+        val sh = com.optionslab.app.data.ArmLive.view.value.openShadow.single()
+        assertEquals(DonchianArm.SOURCE, sh.key); assertEquals(65, sh.qty)
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        val c = com.optionslab.app.data.ArmLive.view.value.shadowClosed.single()
+        assertEquals("stop", c.why)
+        assertTrue("still nothing sent", kite.placed.isEmpty())
+        assertEquals(1, com.optionslab.app.data.ArmLive.view.value.shadowRecord(DonchianArm.SOURCE).trades)
     }
 
     /** 16 Oct (Boss: "+50% profit, still not selling"): the position popup's Exits line is the arm's own stop, target and time. */

@@ -1,5 +1,6 @@
 package com.optionslab.engine.orb
 
+import com.optionslab.engine.mcx.McxTrendRules
 import com.optionslab.engine.orb.LiveMirror.Decision
 import com.optionslab.engine.orb.LiveMirror.Gate
 import com.optionslab.engine.orb.LiveMirror.Look
@@ -263,7 +264,7 @@ class LiveMirrorTest {
         assertEquals(140.0, LiveMirror.safetyLevel(200.0, 1, 0.05)!!, 1e-9)
         assertEquals(260.0, LiveMirror.safetyLevel(200.0, -1, 0.05)!!, 1e-9)
         assertNull(LiveMirror.safetyLevel(0.0, 1, 0.05))
-        assertEquals(setOf(NightRules.SOURCE, LiveMirror.SOLO_MIDDAY, Solo2.SOURCE, VixDivRules.SOURCE, "mcx_trend12"),
+        assertEquals(setOf(NightRules.SOURCE, LiveMirror.SOLO_MIDDAY, Solo2.SOURCE, VixDivRules.SOURCE, McxTrendRules.SOURCE, LiveMirror.SHADOW_PROMOTED),
             LiveMirror.ARMS.filter { it.safety }.map { it.key }.toSet())
         assertEquals(0.30, LiveMirror.SAFETY_PCT, 1e-9)
     }

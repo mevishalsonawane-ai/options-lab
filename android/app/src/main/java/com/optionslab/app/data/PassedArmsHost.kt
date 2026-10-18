@@ -44,7 +44,7 @@ import java.util.Locale
  *  - "R72 Breadth Donchian" ([BreadthDonchianArm], 16 Oct, Boss: "Okay add it"): Donchian's break taken only when at least 4 of
  *    the five indices break together, BESIDE R51 Donchian 20 (both run, compared on the same days: [comparison]); it reads the
  *    same five 5-minute series Donchian builds (no extra read), its trades in its own rows with Donchian's exits.
- * Every row, notice and answer says "Passed research (R51/R52/R57/R72) — paper only".
+ * Every row, notice and answer says [PassedArms.PASSED].
  *
  * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
  * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
@@ -120,7 +120,7 @@ object PassedArmsHost {
     /** Its change-log words: Boss's choice, and the note with its risk line. */
     private val BREADTH_CHOICE = com.optionslab.ira.AutoChange.passedArmChoice(BreadthDonchianArm.SOURCE)
     private val BREADTH_NOTE = "the 16 Oct update (your \"Okay add it\"), beside ${DonchianArm.LABEL} to compare on the same days. " +
-        "${BreadthDonchianArm.RISK} - never live"
+        "${BreadthDonchianArm.RISK} - its paper book never live; its live copy goes by its own Trade live and Shadow switches"
     /** 16 Oct (Boss: "Update normal Donchian ... T7 supertrend agree"): R73 T7 switched on once for R51 Donchian 20's new entries ([setSupertrend]). */
     internal const val ST_ON = "donchian_st_2026-10-16"
     /** A filtered break Supertrend could not judge (skipped): its status words, counted on the row and in the diagnostics. */
@@ -1443,7 +1443,8 @@ object PassedArmsHost {
             com.optionslab.ira.PassedArmsTalk.Arm(s, v.armed[s] ?: false, v.todayOf(s).map { tradeLine(it, v.marks) }, c.size, c.sumOf { it.net ?: 0.0 },
                 c.count { (it.net ?: 0.0) > 0 }, ap.size, ap.sumOf { it.net ?: 0.0 }, v.forwardLine(s), v.paused[s],
                 if (s == Solo2.SOURCE) v.scores else emptyList(), stOn = s == DonchianArm.SOURCE && v.stOn,
-                stUnjudged = if (s == DonchianArm.SOURCE) v.stUnjudged else 0)
+                stUnjudged = if (s == DonchianArm.SOURCE) v.stUnjudged else 0,
+                live = runCatching { ArmLive.armLine(s) }.getOrNull())
         }
         val w = runCatching { WatchlistHost.cards() }.getOrDefault(emptyList()).map { com.optionslab.engine.orb.Watchlist.line(it) }
         return com.optionslab.ira.PassedArmsTalk.Facts(arms, w, runCatching { WatchlistHost.on() }.getOrNull(), v.modelLoaded,

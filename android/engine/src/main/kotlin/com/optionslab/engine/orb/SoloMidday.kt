@@ -367,7 +367,7 @@ object SoloMidday {
 
     /** What Solo's card shows: the label, the record since [since], "x of 60", the bar and the research line. */
     fun card(r: Record, since: LocalDate?): List<String> = listOf(
-        "Not proven: paper only, never Zerodha.",
+        "Not proven: paper only; its live copy stays in shadow (records, never sends) until it is.",
         "Trades since start" + (since?.let { " (${it.format(DAY)})" } ?: "") + ": ${r.trades}, net ${rs(r.net)}, " +
             (r.perTrade?.let { "${rs(it)} a trade" } ?: "no ₹/trade yet") + ", drawdown ${rs(r.drawdown)}.",
         "${minOf(r.trades, FORWARD_TRADES)} of $FORWARD_TRADES trades of the forward test.",

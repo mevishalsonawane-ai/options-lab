@@ -268,9 +268,9 @@ object ArmLive {
      * Logged in the diagnostics and the Autopilot change timeline (one tap undoes it; undoing an "off" asks the PIN). What to say.
      */
     suspend fun setLive(key: String, on: Boolean, pinConfirmed: Boolean, log: Boolean = true): String {
-        val spec = LiveMirror.spec(key) ?: return "No such arm."
-        if (!ready()) return "Not ready yet."
-        if (on && !pinConfirmed) return "Turning ${spec.label}'s live trading on needs your PIN."
+        val spec = LiveMirror.spec(key) ?: return "No such arm. $UNCHANGED"
+        if (!ready()) return "Not ready yet. $UNCHANGED"
+        if (on && !pinConfirmed) return "Turning ${spec.label}'s live trading on needs your PIN. $UNCHANGED"
         val was = runCatching {
             lock.withLock {
                 val b = book()
@@ -278,9 +278,10 @@ object ArmLive {
                 b.switches[key] = on
                 line(b, "${spec.label}: Trade live ${if (on) "ON" else "OFF"} (you)")
                 save(b)
+                backupSwitches(b)
                 w
             }
-        }.getOrElse { return "Its book could not be read just now; nothing changed." }
+        }.getOrElse { return "Its book could not be read just now. $UNCHANGED" }
         if (was != on) {
             runCatching { Diag.record("armlive", "${spec.label}: Trade live ${if (on) "on (PIN)" else "off"} by you") }
             if (log) runCatching { com.optionslab.app.ira.Autopilot.logArmLive(key, spec.label, on) }
@@ -293,14 +294,14 @@ object ArmLive {
      * 18 Oct (Boss: "add a shadow button, so that even i move to live, until is on, it will not trade, but when i see thats making money,
      * i will make it off"): [key]'s Shadow. ON at any time with no PIN (each new live entry is recorded as a shadow trade; an open live
      * trade still runs to its own exits and stops); OFF - real live entries - only with [pinConfirmed], and for Solo (midday), Jarvis's
-     * Solo, only once its forward test has passed ([com.optionslab.app.ira.IraSolo.liveWhy]). Logged in the diagnostics and the
+     * Solo, only once its forward test has passed ([com.optionslab.app.ira.IraSolo.provenWhy]). Logged in the diagnostics and the
      * Autopilot change timeline (one tap undoes it; an undo that leaves shadow asks the PIN). What to say.
      */
     suspend fun setShadow(key: String, on: Boolean, pinConfirmed: Boolean, log: Boolean = true): String {
-        val spec = LiveMirror.spec(key) ?: return "No such arm."
-        if (!ready()) return "Not ready yet."
-        if (!on && !pinConfirmed) return "Taking ${spec.label} out of shadow (real live orders) needs your PIN."
-        if (!on && key == LiveMirror.SOLO_MIDDAY) soloWhy()?.let { return "${spec.label} stays in shadow: $it" }
+        val spec = LiveMirror.spec(key) ?: return "No such arm. $UNCHANGED"
+        if (!ready()) return "Not ready yet. $UNCHANGED"
+        if (!on && !pinConfirmed) return "Taking ${spec.label} out of shadow (real live orders) needs your PIN. $UNCHANGED"
+        if (!on && key == LiveMirror.SOLO_MIDDAY) soloWhy()?.let { return "${spec.label} stays in shadow: ${it.trimEnd('.')}. $UNCHANGED" }
         val was = runCatching {
             lock.withLock {
                 val b = book()
@@ -309,9 +310,10 @@ object ArmLive {
                 if (on && !w) b.shadowSince[key] = now()
                 line(b, "${spec.label}: Shadow ${if (on) "ON" else "OFF"} (you)")
                 save(b)
+                backupSwitches(b)
                 w
             }
-        }.getOrElse { return "Its book could not be read just now; nothing changed." }
+        }.getOrElse { return "Its book could not be read just now. $UNCHANGED" }
         if (was != on) {
             runCatching { Diag.record("armlive", "${spec.label}: Shadow ${if (on) "on" else "off (PIN)"} by you") }
             if (log) runCatching { com.optionslab.app.ira.Autopilot.logArmShadow(key, spec.label, on) }
@@ -320,9 +322,18 @@ object ArmLive {
         else "${spec.label} is out of shadow: it trades live in Live with \"AI trades go live\" on and its Trade live switch on."
     }
 
-    /** Why Solo (midday) may not leave shadow (Jarvis's Solo: only once its own forward test passed), or null. */
-    private fun soloWhy(): String? = if (!com.optionslab.app.BuildConfig.JARVIS) "Solo runs in Jarvis builds only."
-        else runCatching { com.optionslab.app.ira.IraSolo.liveWhy() }.getOrElse { "its record could not be read just now." }
+    /** The end of every refusal of [setLive] and [setShadow]: nothing was changed ([done]). */
+    const val UNCHANGED = "Nothing changed."
+
+    /** Whether [said] (what [setLive] or [setShadow] answered) is a change made, not a refusal. */
+    fun done(said: String): Boolean = !said.endsWith(UNCHANGED)
+
+    /**
+     * Why Solo (midday) may not leave shadow, or null: it is Jarvis's Solo, so only once [com.optionslab.app.ira.IraSolo.provenWhy]
+     * passes (review C5) - and never in a build without Jarvis.
+     */
+    internal fun soloWhy(): String? = if (!com.optionslab.app.BuildConfig.JARVIS) "Solo runs in Jarvis builds only."
+        else runCatching { com.optionslab.app.ira.IraSolo.provenWhy() }.getOrElse { "its record could not be read just now." }
 
     // ---- the book ------------------------------------------------------------------------------------------------------------
 
@@ -643,7 +654,8 @@ object ArmLive {
         if (f.filled <= 0) { notMirrored(a, "Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")); return@withLock }
         val fill = f.avgPrice.takeIf { it > 0 } ?: last
         runCatching { Notifier.orderFilled(app, side.name, f.filled, ins.symbol, fill, "Live", "${spec.label} · live entry", f.orderId) }
-        var p = base.copy(entryOrderId = id, qty = f.filled, entryQty = f.filled, entry = fill, heldSeen = true,
+        // Seen held only once Zerodha's position book shows it (review C3): a book that lags the fill never closes the trade.
+        var p = base.copy(entryOrderId = id, qty = f.filled, entryQty = f.filled, entry = fill, heldSeen = false,
             charges = charge(side.name, fill, f.filled, ins.exchange, ins.symbol, ins.multiplier))
         val (stop, kind) = firstStop(spec, p)
         p = p.copy(stopKind = kind)
@@ -720,22 +732,25 @@ object ArmLive {
         if (covered == null || heldNow == null) { stopFailed(p, trigger, "Zerodha's books could not be read"); return p.copy(stopTrigger = trigger) }
         val room = ((heldNow - covered).coerceAtLeast(0) / p.lot.coerceAtLeast(1)) * p.lot.coerceAtLeast(1)
         val q = minOf(p.qty, room)
-        if (q <= 0) { if (heldNow <= 0) stopFailed(p, trigger, "Zerodha does not show it held yet") ; return p.copy(stopTrigger = trigger) }
+        val seen = if (heldNow > 0) p.copy(heldSeen = true, zeroSinceMs = null) else p
+        // Not held yet (the position book lags) or another exit already covers it: watched by the app, rested on a later look - and
+        // said (throttled) when it is not yet held.
+        if (q <= 0) { if (heldNow <= 0) stopFailed(p, trigger, "Zerodha does not show it held yet") ; return seen.copy(stopTrigger = trigger) }
         if (spec.rest == LiveMirror.Rest.GTT) {
             val sp = Kite.Spec(p.exchange, p.symbol, 0L, p.lot, p.tick)
             val (gtt, why) = Kite.protect(sp, p.product, q * p.side, ltp, trigger, null)
-            if (gtt == null) { stopFailed(p, trigger, why.joinToString("; ")); return p.copy(stopTrigger = trigger) }
-            val id = runCatching { Broker.placeGtt(gtt) }.getOrElse { e -> stopFailed(p, trigger, e.message?.take(160) ?: "an error"); return p.copy(stopTrigger = trigger) }
-            return p.copy(stopOrderId = GTT + id, stopTrigger = trigger, stopQty = q)
+            if (gtt == null) { stopFailed(p, trigger, why.joinToString("; ")); return seen.copy(stopTrigger = trigger) }
+            val id = runCatching { Broker.placeGtt(gtt) }.getOrElse { e -> stopFailed(p, trigger, e.message?.take(160) ?: "an error"); return seen.copy(stopTrigger = trigger) }
+            return seen.copy(stopOrderId = GTT + id, stopTrigger = trigger, stopQty = q)
         }
         val o = Kite.Order(p.symbol, exitSide, q, p.lot, p.product, "SL", LiveMirror.stopLimit(trigger, p.tick, p.side), p.tick, p.exchange,
             LiveMirror.TAG, triggerPrice = trigger, multiplier = p.multiplier)
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known()) }.getOrNull()
         }
-        if (id == null) { stopFailed(p, trigger, "Zerodha refused it"); return p.copy(stopTrigger = trigger) }
+        if (id == null) { stopFailed(p, trigger, "Zerodha refused it"); return seen.copy(stopTrigger = trigger) }
         runCatching { Strategies.tagOwner("kite:$id", "${spec.label} · live ${stopWords(p)}") }
-        return p.copy(stopOrderId = id, stopTrigger = trigger, stopQty = q)
+        return seen.copy(stopOrderId = id, stopTrigger = trigger, stopQty = q)
     }
 
     private fun stopFailed(p: Pos, trigger: Double, why: String) {
@@ -756,7 +771,8 @@ object ArmLive {
                 Broker.modify(o, o.qty, "SL", LiveMirror.stopLimit(to, p.tick, p.side), to)
             }
         }
-        if (r.isSuccess) return p.copy(stopTrigger = to)
+        // Moved to the paper trade's own level: it is the arm's stop now (a safety stop that moved up is labelled as the arm's).
+        if (r.isSuccess) return p.copy(stopTrigger = to, stopKind = if (p.stopKind == DISASTER) DISASTER else OWN)
         com.optionslab.app.work.Alerts.post("${p.label}: Zerodha did not move the live stop on ${p.symbol} to %.2f (%s); it stays at %s and is tried again."
             .format(Locale.ENGLISH, to, r.exceptionOrNull()?.message?.take(160) ?: "an error", p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"),
             com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
@@ -959,13 +975,16 @@ object ArmLive {
         val stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(false)
         val updates = LinkedHashMap<Pos, List<Pos>>()
         fun cur(p: Pos): Pos? = updates[p]?.let { it.firstOrNull { x -> x.open } } ?: if (p in updates) null else p
+        // What [p0] became this look: the parts already closed earlier in the look are kept (a part sold by hand, a part-filled stop),
+        // the open part replaced by [next].
+        fun set(p0: Pos, next: List<Pos>) { updates[p0] = updates[p0].orEmpty().filter { !it.open } + next }
         fun ltpOf(p: Pos) = q["${p.exchange}:${p.symbol}"]?.last?.takeIf { it > 0 }
         fun heldOf(p: Pos) = net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty } * p.side
 
         // 1. Each trade's own news: an unconfirmed entry settled; its stop filled, refused or gone.
         for (p0 in open) {
             try {
-                if (p0.unconfirmed) { updates[p0] = listOfNotNull(settle(p0)); continue }
+                if (p0.unconfirmed) { set(p0, listOfNotNull(settle(p0))); continue }
                 var p = p0
                 val so = p.slId?.let { orders[it] }
                 val g = p.gttId?.let { gtts?.get(it) }
@@ -975,7 +994,7 @@ object ArmLive {
                     val sold = minOf(so.filled.takeIf { it > 0 } ?: p.qty, p.qty)
                     runCatching { Notifier.orderFilled(app, side, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", p.slId) }
                     val (done, rest) = closePart(p, sold, px, p.stopWord, side)
-                    updates[p0] = listOfNotNull(done, rest); continue
+                    set(p0, listOfNotNull(done, rest)); continue
                 }
                 if (so != null && so.status in setOf("REJECTED", "CANCELLED")) {
                     com.optionslab.app.work.Alerts.post("${p.label}: the live stop at Zerodha was ${so.status.lowercase()} (${so.message.ifBlank { "no reason given" }}); " +
@@ -994,11 +1013,11 @@ object ArmLive {
                         val sold = minOf(st.sumOf { it.filled }.takeIf { it > 0 } ?: p.qty, p.qty)
                         runCatching { Notifier.orderFilled(app, side, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", st.first().id) }
                         val (done, rest) = closePart(p, sold, px, p.stopWord, side)
-                        updates[p0] = listOfNotNull(done, rest); continue
+                        set(p0, listOfNotNull(done, rest)); continue
                     }
                     if (st.isNotEmpty() && st.none { it.working }) p = p.copy(stopOrderId = null, stopQty = null)
                 }
-                if (p != p0) updates[p0] = listOf(p)
+                if (p != p0) set(p0, listOf(p))
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Throwable) { note(p0.key, "live look failed on ${p0.symbol}: ${e.javaClass.simpleName}") }
         }
@@ -1012,7 +1031,7 @@ object ArmLive {
             for ((p0, p) in live) {
                 val seen = if (held > 0) p.copy(heldSeen = true, zeroSinceMs = null)
                     else if (!p.heldSeen && p.zeroSinceMs == null) p.copy(zeroSinceMs = ms) else p
-                if (seen != p) updates[p0] = listOf(seen)
+                if (seen != p) set(p0, listOf(seen))
             }
             var excess = live.sumOf { (cur(it.first) ?: it.second).qty } - held.coerceAtLeast(0)
             if (excess <= 0) continue
@@ -1029,10 +1048,10 @@ object ArmLive {
                     val filled = out.first == "COMPLETE"
                     val px = (if (filled) out.second?.avgPrice?.takeIf { it > 0 } ?: p.stopTrigger else null) ?: ltpOf(p) ?: p.entry
                     if (filled) runCatching { Notifier.orderFilled(app, side, p.qty, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", p.slId) }
-                    updates[p0] = listOf(closePart(p, p.qty, px, if (filled) p.stopWord else "closed_at_zerodha", side).first)
+                    set(p0, listOf(closePart(p, p.qty, px, if (filled) p.stopWord else "closed_at_zerodha", side).first))
                 } else {
                     val (done, rest) = closePart(p, take, ltpOf(p) ?: p.entry, "closed_at_zerodha", if (p.side > 0) "SELL" else "BUY")
-                    updates[p0] = listOfNotNull(done, rest)
+                    set(p0, listOfNotNull(done, rest))
                 }
                 excess -= take
             }
@@ -1073,7 +1092,11 @@ object ArmLive {
                             val why = if (d.why == "stop" || d.why == "stop_run_through") (if (p.stopKind == OWN) d.why!! else p.stopWord) else d.why ?: "exit"
                             exitLive(p, d.qty, why, ltp).toList().filterNotNull()
                         }
-                        LiveMirror.Step.PLACE_STOP -> listOf(restStop(p, d.to, ltp ?: continue))
+                        LiveMirror.Step.PLACE_STOP -> {
+                            val w = wanted(p)
+                            val kind = if (w != null && d.to == w && p.stopKind != DISASTER) OWN else p.stopKind
+                            listOf(restStop(p.copy(stopKind = kind), d.to, ltp ?: continue))
+                        }
                         LiveMirror.Step.MOVE_STOP -> listOf(moveStop(p, so, d.to ?: continue, ltp ?: continue))
                         LiveMirror.Step.SHRINK_STOP -> {
                             val s2 = shrinkStop(p, so, d.qty, ltp)
@@ -1082,7 +1105,7 @@ object ArmLive {
                         }
                         else -> null
                     }
-                    if (next != null) updates[p0] = next else if (p != p1) updates[p0] = listOf(p)
+                    if (next != null) set(p0, next) else if (p != p1) set(p0, listOf(p))
                 } catch (e: kotlinx.coroutines.CancellationException) { throw e
                 } catch (e: Throwable) { note(p0.key, "live look failed on ${p0.symbol}: ${e.javaClass.simpleName}; tried again next look") }
             }
@@ -1208,7 +1231,7 @@ object ArmLive {
         val have = lock.withLock { book().positions.filter { it.open && !it.shadow }.map { it.contract }.toSet() }
         val adopted = ArrayList<Pos>()
         for (pos in net.filter { it.qty != 0 && it.exchange in setOf("NFO", "BFO", "MCX") }) {
-            val entry = orders.values.filter { it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
+            val entry = orders.filter { it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 it.status == "COMPLETE" && it.side == (if (pos.qty > 0) "BUY" else "SELL") }.maxByOrNull { it.placedAt } ?: continue
             if ("${pos.exchange}|${pos.symbol}|${pos.product}" in have) continue
             val label = owners["kite:${entry.id}"]?.substringBefore(" · ") ?: continue
@@ -1220,7 +1243,7 @@ object ArmLive {
                 pos.multiplier.toInt().coerceAtLeast(1), pos.avg.takeIf { it > 0 } ?: entry.avg, now(), pos.avg, kotlin.math.abs(pos.qty), null, entry.id,
                 seen = false, heldSeen = true, stopKind = SAFETY)
             // A stop of this path's own still resting on it is kept as its stop; else the safety stop rests.
-            val so = orders.values.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
+            val so = orders.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 (it.type == "SL" || it.type == "SL-M") }.singleOrNull()
             adopted += if (so != null) p.copy(stopOrderId = so.id, stopTrigger = so.trigger, stopQty = ExitQty.remaining(so.qty, so.filled, so.pending), stopKind = OWN)
                 else restStop(p, LiveMirror.safetyLevel(p.entry, side, tick), pos.last.takeIf { it > 0 } ?: p.entry)
@@ -1234,6 +1257,52 @@ object ArmLive {
         recoverDue = false
         if (adopted.isNotEmpty()) com.optionslab.app.work.Alerts.error("Arms live: ${adopted.size} open live trade(s) taken back from Zerodha after the " +
             "book was damaged; each has a safety stop and its square-off. Check them in Trade.", WHO)
+    }
+
+    /**
+     * An arm's live state in words, from its "Trade live" [on] and its [shadow] (review D6: every line about an arm's live path is
+     * built from these, never fixed text): what it does when the app is in Live with AI trades on.
+     */
+    fun stateWords(on: Boolean, shadow: Boolean): String = when {
+        !on -> "Trade live: off (paper only)"
+        shadow -> "Trade live: on, in shadow (records, sends nothing)"
+        else -> "Trade live: on, out of shadow (real orders in Live)"
+    }
+
+    /** [key]'s live state in words from the book now (memory only); with the app in Paper it says so. */
+    fun stateOf(key: String): String {
+        val v = _view.value
+        if (!v.loaded) return "live state not read yet"
+        val live = runCatching { AppSettings.load().let { it.live && it.allowRealOrders } }.getOrDefault(false)
+        return stateWords(v.on(key), v.shadowOn(key)) + if (live) "" else "; the app is in Paper, so nothing is sent or shadowed"
+    }
+
+    /**
+     * Jarvis's answer to "how is <arm> doing in shadow?" (or live): its shadow record and its live record, labelled apart, and its
+     * state. [query]: the arm's name as said; null when no arm matches. Memory only (never on a locked phone: the caller checks).
+     */
+    fun talk(query: String): String? {
+        val q = query.lowercase(Locale.ENGLISH)
+        val spec = LiveMirror.ARMS.filter { it.key != LiveMirror.SOLO_MIDDAY || com.optionslab.app.BuildConfig.JARVIS }
+            .sortedByDescending { it.label.length }
+            .firstOrNull { s -> q.contains(s.label.lowercase(Locale.ENGLISH)) || q.contains(s.key.lowercase(Locale.ENGLISH).replace('_', ' ')) ||
+                s.label.lowercase(Locale.ENGLISH).split(' ', '(', ')').filter { it.length >= 4 && it !in TALK_STOP }.any { w -> Regex("\\b${Regex.escape(w)}\\b").containsMatchIn(q) } }
+            ?: return null
+        return armLine(spec.key)
+    }
+
+    private val TALK_STOP = setOf("shadow", "variants", "re-armed", "live", "trade", "calls", "doing")
+
+    /** One arm's records for Jarvis and the talk files: SHADOW record and LIVE record, labelled apart, then its state. Memory only. */
+    fun armLine(key: String): String {
+        val spec = LiveMirror.spec(key) ?: return "No such arm."
+        val v = _view.value
+        val sr = v.shadowRecord(key)
+        val (n, net) = v.record(key)
+        val (skipped, why) = v.notMirroredToday(key, runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() })
+        return "${spec.label} in shadow: ${LiveMirror.recordWords(sr)}" + (v.shadowSince[key]?.let { " since ${it.toLocalDate()}" } ?: "") +
+            ". Live (real orders): " + (if (n == 0) "no live trade yet" else "$n trade${if (n == 1) "" else "s"}, ${LiveMirror.rs(net)} after charges") +
+            ". Now: ${stateOf(key)}." + (if (skipped > 0) " Not mirrored today: $skipped (last: $why)." else "")
     }
 
     /** The diagnostics' line. Memory only. */

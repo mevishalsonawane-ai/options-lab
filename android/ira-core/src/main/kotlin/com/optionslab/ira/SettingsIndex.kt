@@ -93,7 +93,7 @@ object SettingsIndex {
             listOf("voice print", "enroll", "train")),
         Entry("jarvis", "jarvis.voice", "Copy diagnostics (for help)", "Everything the app knows about Jarvis's ears, to paste in the chat.",
             listOf(JARVIS, "Voice"), listOf("diagnostics", "help", "support", "debug")),
-        Entry("jarvis", "jarvis.solo", "Solo: Jarvis trades by himself (paper)", "Solo (midday)'s switch, its forward test and record. Paper only, never Zerodha.",
+        Entry("jarvis", "jarvis.solo", "Solo: Jarvis trades by himself (paper)", "Solo (midday)'s switch, its forward test and record. Paper; its live copy stays in shadow until proven.",
             listOf(JARVIS, "Solo"), listOf("solo", "midday", "paper", "self trade")),
         Entry("jarvis", "jarvis.ailive", "AI trades go live", "Off: Jarvis's trades go on paper even in Live. On: in Live, each one asked first and approved with your fingerprint. It turns on with the switch to Live (PIN) and off with Paper.",
             AUTO, listOf("zerodha", "real money", "live", "fingerprint", "ai trades"), guarded = true),

@@ -122,8 +122,9 @@ object AutomationSupport {
 
     /** A saved-strategy definition: one leg per (position, CE/PE) at the 24500 strike, weekly expiry, a 30-point stop. */
     fun strategy(name: String = "Test basket", vararg legs: Pair<com.optionslab.engine.strategy.Position, com.optionslab.engine.strategy.OptionType>,
-                 lots: Int = 1, sl: Double? = 30.0) = com.optionslab.engine.strategy.StrategyDef(
-        name = name, underlying = "NIFTY", underlyingExchange = "NSE_INDEX",
+                 lots: Int = 1, sl: Double? = 30.0, product: com.optionslab.engine.strategy.Product = com.optionslab.engine.strategy.Product.NRML) =
+        com.optionslab.engine.strategy.StrategyDef(
+        name = name, underlying = "NIFTY", underlyingExchange = "NSE_INDEX", product = product,
         entryTime = LocalTime.of(9, 20), exitTime = LocalTime.of(15, 15),
         legs = legs.mapIndexed { i, (pos, t) ->
             com.optionslab.engine.strategy.LegDef(i + 1, com.optionslab.engine.strategy.Segment.OPTIONS, pos, lots, t,

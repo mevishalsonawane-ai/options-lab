@@ -351,7 +351,8 @@ object Strategies {
     private val DASHED = DateTimeFormatter.ofPattern("dd-MMM-yy", Locale.ENGLISH)
 
     /** Where an IraAlgo symbol trades: its Kite trading symbol (LIVE) or Upstox contract (SANDBOX). */
-    private class Ref(val lot: Int, val tick: Double, val kite: String?, val upstox: Upstox.Contract?)
+    /** [exchange]: Zerodha's segment of [kite] (NFO; BFO for SENSEX and BANKEX contracts - review C7, 18 Oct). */
+    private class Ref(val lot: Int, val tick: Double, val kite: String?, val upstox: Upstox.Contract?, val exchange: String = "NFO")
 
     private class Venue(val master: MasterContract, val refs: Map<String, Ref>)
 
@@ -481,12 +482,12 @@ object Strategies {
                     val sk = b.runs[def.id]?.runId?.let { legKey(it, order.legId) }
                     val rest = sk?.let { b.legStops[it] }
                     if (sk != null && rest != null) {
-                        val sid = rest.substringBefore('|')
-                        runCatching { Broker.cancel(sid) }
-                        val st = runCatching { Broker.orderState(sid) }.getOrNull()
-                        // A stop of an earlier session (a DAY order, gone with it): nothing of it can fill now.
-                        val stale = st == null && stopDay(rest)?.isBefore(Market.today()) == true
-                        when (if (stale) "CANCELLED" else st?.status) {
+                        // Taken out and confirmed out: an SL order cancelled (one of an earlier session is gone with it), a GTT
+                        // deleted (a fired one's own orders cancelled). Its state, and its fill when it filled meanwhile.
+                        val out = legStopOut(rest)
+                        val st = out?.second
+                        val sid = out?.second?.orderId ?: rest.substringBefore('|')
+                        when (out?.first) {
                             "COMPLETE" -> {
                                 val st = st ?: return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be read; tried again next look")
                                 b.legStops.remove(sk)
@@ -816,6 +817,47 @@ object Strategies {
 
     private fun legKey(runId: Long, legId: Int) = "$runId:$legId"
 
+    /** A leg stop resting as a GTT ("gtt:<id>|trigger|day": an NRML leg's, review C7) - its id, else null (an SL order's). */
+    private fun gttOf(v: String): Long? = v.substringBefore('|').takeIf { it.startsWith("gtt:") }?.removePrefix("gtt:")?.toLongOrNull()
+
+    private val GTT_GONE = setOf("deleted", "cancelled", "expired", "rejected", "disabled")
+
+    /**
+     * The leg's resting stop [rest] taken out and confirmed out: (state, fill) - "COMPLETE" with its fill when it filled meanwhile,
+     * "CANCELLED"/"REJECTED" (with any part filled) when out; null when it could not be confirmed out (nothing else may be sent: both
+     * could fill). An SL order is cancelled (one of an earlier session is gone with it); a GTT deleted, and a fired GTT's own working
+     * orders cancelled.
+     */
+    private suspend fun legStopOut(rest: String): Pair<String, Broker.Fill?>? {
+        val gid = gttOf(rest)
+        if (gid != null) {
+            var g = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrElse { return null }
+            if (g != null && g.status.lowercase() == "active") {
+                runCatching { Broker.deleteGtt(gid) }
+                g = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrElse { return null }
+            }
+            if (g == null || g.status.lowercase() in GTT_GONE) return "CANCELLED" to null
+            if (g.status.lowercase() != "triggered") return null
+            for (oid in g.orderIds) {
+                var st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return null
+                if (st.status !in setOf("COMPLETE", "CANCELLED", "REJECTED")) { runCatching { Broker.cancel(oid) }; st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return null }
+                if (st.status == "COMPLETE" || st.filled > 0) return (if (st.status == "COMPLETE") "COMPLETE" else st.status) to st
+                if (st.status !in setOf("CANCELLED", "REJECTED")) return null
+            }
+            return "CANCELLED" to null
+        }
+        val sid = rest.substringBefore('|')
+        runCatching { Broker.cancel(sid) }
+        val st = runCatching { Broker.orderState(sid) }.getOrNull()
+        // A stop of an earlier session (a DAY order, gone with it): nothing of it can fill now.
+        if (st == null && stopDay(rest)?.isBefore(Market.today()) == true) return "CANCELLED" to null
+        return when (st?.status) { "COMPLETE", "CANCELLED", "REJECTED" -> st.status to st; else -> null }
+    }
+
+    /** When each leg's "stop not rested" was last told (memory): told at most once in [NOT_RESTED_EVERY_MS] (review C7). */
+    private val notRestedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val NOT_RESTED_EVERY_MS = 10 * 60_000L
+
     /** The day a leg's resting stop ("id|trigger|day") was placed; null for one saved without it. */
     private fun stopDay(v: String): java.time.LocalDate? = v.split('|').getOrNull(2)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
 
@@ -828,10 +870,7 @@ object Strategies {
         val running = b.defs.mapNotNull { d -> b.runs[d.id]?.takeIf { Entry(d, it).running }?.runId }.toSet()
         for ((k, v) in b.legStops.toMap()) {
             if (k.substringBefore(':').toLongOrNull() in running) continue
-            val sid = v.substringBefore('|')
-            runCatching { Broker.cancel(sid) }
-            val st = runCatching { Broker.orderState(sid)?.status }.getOrNull()
-            if (st in setOf("CANCELLED", "REJECTED", "COMPLETE") || (st == null && stopDay(v)?.isBefore(Market.today()) == true)) b.legStops.remove(k)
+            if (legStopOut(v) != null) b.legStops.remove(k)
         }
     }
 
@@ -850,28 +889,38 @@ object Strategies {
         if (open.isEmpty() && mine.isEmpty()) return
         val orders = runCatching { Broker.orders().associateBy { it.id } }.getOrNull() ?: return
         val net = runCatching { Broker.positionBook().net }.getOrNull() ?: return
+        val gtts = if (mine.any { b.legStops[it]?.let(::gttOf) != null } || open.any { legProduct(run, def, it) != "MIS" })
+            runCatching { Broker.gtts().associateBy { it.id } }.getOrNull() ?: return else emptyMap()
         // Stops of legs that are no longer open (closed by the run, or gone): out.
         for (k in mine) {
             val legId = k.substringAfter(':').toIntOrNull()
             if (open.any { it.legId == legId }) continue
-            val sid = b.legStops[k]?.substringBefore('|') ?: continue
-            val o = orders[sid]
-            if (o == null || o.working) runCatching { Broker.cancel(sid) }
-            if (runCatching { Broker.orderState(sid)?.status }.getOrNull() in setOf("CANCELLED", "REJECTED", "COMPLETE")) b.legStops.remove(k)
+            val v0 = b.legStops[k] ?: continue
+            if (legStopOut(v0) != null) b.legStops.remove(k)
         }
-        for (leg in open) {
+        // The exits working at Zerodha, by order id (kept up to date as stops shrink): what each leg's stop may cover.
+        val working = HashMap<String, Int>()
+        for (o in orders.values) if (o.working) working[o.id] = com.optionslab.engine.risk.ExitQty.remaining(o.qty, o.filled, o.pending)
+        // Newest legs first: when Zerodha holds less than the stops cover, the newest stop shrinks first (review C2).
+        for (leg in open.sortedByDescending { it.legId }) {
             val k = legKey(run.runId, leg.legId)
             val ref = v.refs[leg.symbol] ?: continue
             val kiteSym = ref.kite ?: continue
-            val product = leg.entryOrderId?.let { run.orders[it]?.product } ?: def.product.wire.uppercase(Locale.ENGLISH)
+            val ex = ref.exchange
+            val product = legProduct(run, def, leg)
             val dir = if (leg.position == "B") 1 else -1
-            val held = net.filter { it.symbol == kiteSym && it.exchange == "NFO" && it.product == product }.sumOf { it.qty } * dir
+            val exitSide = if (dir > 0) Kite.Side.SELL else Kite.Side.BUY
+            val held = net.filter { it.symbol == kiteSym && it.exchange == ex && it.product == product }.sumOf { it.qty } * dir
             val cur = b.legStops[k]
+            val gid = cur?.let(::gttOf)
             val sid = cur?.substringBefore('|')
-            val so = sid?.let { orders[it] }
-            // A stop of an earlier session (a DAY order) is gone: rested again today.
-            if (cur != null && so == null && stopDay(cur)?.isBefore(Market.today()) == true) { b.legStops.remove(k); continue }
-            if (so != null && so.status == "COMPLETE") {
+            val so = if (gid == null) sid?.let { orders[it] } else null
+            val g = gid?.let { gtts[it] }
+            // A stop of an earlier session (a DAY order) is gone: rested again today. A GTT gone at Zerodha likewise.
+            if (cur != null && gid == null && so == null && stopDay(cur)?.isBefore(Market.today()) == true) { b.legStops.remove(k); continue }
+            if (gid != null && (g == null || g.status.lowercase() in GTT_GONE)) { b.legStops.remove(k); continue }
+            val gttFilled = g?.status?.lowercase() == "triggered" && g.orderIds.isNotEmpty() && g.orderIds.all { orders[it]?.status == "COMPLETE" }
+            if ((so != null && so.status == "COMPLETE") || gttFilled) {
                 // The stop filled at Zerodha: the run closes the leg (its exit books that fill; nothing new is sent).
                 val bid = b.brokerIds.getOrPut(run.runId) { HashMap() }
                 val next = host.closeLeg(run, def, leg.legId, now, exec(b, def, v, run.mode, compromised), bid, checkpoint(b, def.id))
@@ -881,39 +930,96 @@ object Strategies {
             if (so != null && so.status in setOf("CANCELLED", "REJECTED")) { b.legStops.remove(k) }
             // Held no more at Zerodha (closed by hand): its stop must not rest on a flat position.
             if (held <= 0) {
-                if (sid != null && b.legStops.containsKey(k)) {
-                    runCatching { Broker.cancel(sid) }
-                    if (runCatching { Broker.orderState(sid)?.status }.getOrNull() in setOf("CANCELLED", "REJECTED")) b.legStops.remove(k)
+                if (cur != null && b.legStops.containsKey(k) && legStopOut(cur) != null) b.legStops.remove(k)
+                continue
+            }
+            // Zerodha holds less than this stop covers beside the other exits working on it (part sold by hand in Kite, or another
+            // run's stop on the same option): shrunk to what is left, in whole lots, or taken out - never a stop that sells into a short.
+            val gttOrders = g?.orderIds.orEmpty().toSet()
+            val others = orders.values.filter { it.working && it.symbol == kiteSym && it.exchange == ex && it.product == product &&
+                it.side == exitSide.name && it.id != sid && it.id !in gttOrders }.sumOf { working[it.id] ?: 0 }
+            val room = (held - others).coerceAtLeast(0) / ref.lot.coerceAtLeast(1) * ref.lot.coerceAtLeast(1)
+            val covers = when {
+                so != null && so.working -> working[so.id] ?: 0
+                g != null && g.status.lowercase() == "active" -> stopQty(cur)
+                else -> null
+            }
+            if (cur != null && covers != null && covers > room) {
+                if (room <= 0) { if (legStopOut(cur) != null) b.legStops.remove(k); continue }
+                val r = runCatching {
+                    if (gid != null) {
+                        val px = q.firstOrNull { it.symbol == leg.symbol }?.ltp ?: error("no price")
+                        val trig = cur.split('|').getOrNull(1)?.toDoubleOrNull() ?: error("no trigger")
+                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, room * dir, px, trig, null)
+                        Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") })
+                    } else if (so != null) Broker.modify(so, so.filled + room, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 })
+                }
+                if (r.isSuccess) {
+                    if (so != null) working[so.id] = room
+                    b.legStops[k] = withQty(cur, room)
+                    record(b, def.name, Event("stop_shrunk", "Leg ${leg.legId}'s stop at Zerodha shrunk to $room (Zerodha holds less)", "info"), false)
                 }
                 continue
             }
             val want = leg.effectiveSl?.let { Kite.onTick(it, ref.tick, if (dir > 0) Kite.Side.SELL else Kite.Side.BUY) }?.takeIf { it > ref.tick } ?: continue
             val ltp = q.firstOrNull { it.symbol == leg.symbol }?.ltp ?: continue
-            val exitSide = if (dir > 0) Kite.Side.SELL else Kite.Side.BUY
-            val qty = minOf(leg.entryFilledQty.takeIf { it > 0 } ?: leg.qty, held)
+            val qty = minOf(leg.entryFilledQty.takeIf { it > 0 } ?: leg.qty, room)
             if (!b.legStops.containsKey(k)) {
-                if (!com.optionslab.engine.orb.LiveMirror.mayRest(want, ltp, ref.tick, dir) || leg.exitInFlight) continue
-                val o = Kite.Order(kiteSym, exitSide, qty, ref.lot, product, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(want, ref.tick, dir), ref.tick,
-                    "NFO", "iraalgostrat", triggerPrice = want)
-                val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-                    if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }) }.getOrNull()
-                } ?: run {
-                    record(b, def.name, Event("stop_not_rested", "Leg ${leg.legId}'s stop at %.2f could not rest at Zerodha; the run watches it itself".format(Locale.ENGLISH, want), "warn"), false)
-                    null
-                } ?: continue
-                b.legStops[k] = "$id|$want|${Market.today()}"
-                b.owners["kite:$id"] = "${def.name} · leg ${leg.legId} stop"
-                record(b, def.name, Event("stop_rested", "Leg ${leg.legId}'s stop rests at Zerodha at %.2f (SL order)".format(Locale.ENGLISH, want), "info"), false)
+                if (!com.optionslab.engine.orb.LiveMirror.mayRest(want, ltp, ref.tick, dir) || leg.exitInFlight || qty <= 0) continue
+                val id: String? = if (product != "MIS") {
+                    // A carried (NRML) leg: a single-leg GTT, the only broker-side stop that outlives the session (review C7).
+                    val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null)
+                    gtt?.let { x -> runCatching { "gtt:" + Broker.placeGtt(x) }.getOrNull() }
+                } else {
+                    val o = Kite.Order(kiteSym, exitSide, qty, ref.lot, product, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(want, ref.tick, dir), ref.tick,
+                        ex, "iraalgostrat", triggerPrice = want)
+                    try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+                        if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }) }.getOrNull()
+                    }
+                }
+                if (id == null) {
+                    // Told once in ten minutes per leg (each 15-second look tries again).
+                    val nowMs = System.currentTimeMillis()
+                    if (nowMs - (notRestedAt[k] ?: 0L) >= NOT_RESTED_EVERY_MS) {
+                        notRestedAt[k] = nowMs
+                        record(b, def.name, Event("stop_not_rested", "Leg ${leg.legId}'s stop at %.2f could not rest at Zerodha; the run watches it itself".format(Locale.ENGLISH, want), "warn"), false)
+                    }
+                    continue
+                }
+                notRestedAt.remove(k)
+                b.legStops[k] = "$id|$want|${Market.today()}|$qty"
+                if (!id.startsWith("gtt:")) { b.owners["kite:$id"] = "${def.name} · leg ${leg.legId} stop"; working[id] = qty }
+                record(b, def.name, Event("stop_rested", "Leg ${leg.legId}'s stop rests at Zerodha at %.2f (%s)".format(Locale.ENGLISH, want,
+                    if (id.startsWith("gtt:")) "GTT" else "SL order"), "info"), false)
             } else {
-                val at = cur?.substringAfter('|')?.toDoubleOrNull()
+                val at = cur?.split('|')?.getOrNull(1)?.toDoubleOrNull()
                 val to = com.optionslab.engine.orb.LiveMirror.move(at, want, ltp, ref.tick, dir) ?: continue
-                val row = so ?: continue
-                if (!row.working) continue
-                val r = runCatching { Broker.modify(row, row.qty, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(to, ref.tick, dir), to) }
-                if (r.isSuccess) b.legStops[k] = "$sid|$to|${stopDay(cur ?: "") ?: Market.today()}"
+                val r = if (gid != null) {
+                    if (g?.status?.lowercase() != "active") continue
+                    runCatching {
+                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, (stopQty(cur) ?: qty) * dir, ltp, to, null)
+                        Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") })
+                    }
+                } else {
+                    val row = so ?: continue
+                    if (!row.working) continue
+                    runCatching { Broker.modify(row, row.qty, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(to, ref.tick, dir), to) }
+                }
+                if (r.isSuccess) b.legStops[k] = listOf(sid ?: continue, to.toString(), (stopDay(cur ?: "") ?: Market.today()).toString()).joinToString("|") +
+                    (stopQty(cur)?.let { "|$it" } ?: "")
             }
         }
     }
+
+    /** A leg's product as its entry was sent (else its strategy's). */
+    private fun legProduct(run: RunState, def: StrategyDef, leg: com.optionslab.engine.strategy.LegState): String =
+        leg.entryOrderId?.let { run.orders[it]?.product } ?: def.product.wire.uppercase(Locale.ENGLISH)
+
+    /** The quantity a leg stop ("id|trigger|day|qty") covers, when saved. */
+    private fun stopQty(v: String?): Int? = v?.split('|')?.getOrNull(3)?.toIntOrNull()
+
+    /** [v] with its covered quantity set to [qty]. */
+    private fun withQty(v: String, qty: Int): String = v.split('|').let { p -> (p.take(3) + List(maxOf(0, 3 - p.size)) { "" } + qty.toString()).joinToString("|") }
 
     /**
      * The 15-second stop check's part (18 Oct, review): only the open runs' prices, per-leg and basket stops, targets,

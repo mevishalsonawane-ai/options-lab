@@ -25,7 +25,11 @@ import kotlin.math.floor
  */
 object PassedArms {
     /** What every row, notice and Jarvis answer of these arms says first. */
-    const val PASSED = "Passed research (R51/R52/R57/R72) — paper only"
+    /**
+     * 18 Oct (review D6): no longer "paper only" - each arm's paper book is paper, and its live copy (ArmLive) goes by its own Trade
+     * live and Shadow switches; the live state itself is said from those switches wherever it is shown.
+     */
+    const val PASSED = "Passed research (R51/R52/R57/R72) — paper book; its live copy follows its own Trade live and Shadow switches"
     /** Signal source (CLAUDE.md, 14 Oct: stated for every rule). */
     const val SIGNAL_INDEX = "Signal: the index's own bars (the default); the option is only what is bought"
 

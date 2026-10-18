@@ -64,7 +64,7 @@ class PassedArmsTalkTest {
 
     @Test fun eachArmIsSaidWithItsLabelRulesRecordAndBar() {
         val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm), emptyList(), true))
-        assertTrue(w.startsWith("R51 Donchian 20: on, paper only. Passed research (R51/R52/R57/R72) — paper only. "), w)
+        assertTrue(w.startsWith("R51 Donchian 20: on (paper book). Passed research (R51/R52/R57/R72) — paper book; its live copy follows its own Trade live and Shadow switches. "), w)
         for (x in listOf(DonchianArm.RULES, "Signal: the index's own bars", "Today: NIFTY26OCT25150CE", "3 trades, 2 won, +₹2,500 after charges",
             "FINNIFTY apart: 1 trade, +₹1,200", "Forward test: 3 of 40", "40 paper trades", DonchianArm.RECORD)) assertTrue(x in w, x)
         val oov = arm.copy(source = OovArm.SOURCE, on = false, todayLines = emptyList(), closed = 0, pausedWhy = "net −₹500 at 40 trades")
@@ -86,7 +86,7 @@ class PassedArmsTalkTest {
         val b = arm.copy(source = BreadthDonchianArm.SOURCE, todayLines = emptyList(), closed = 0)
         val cmp = BreadthDonchianArm.comparison(java.time.LocalDate.of(2026, 10, 16), listOf(900.0), listOf(-300.0, 500.0), listOf(-300.0))
         val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.BREADTH, PassedArmsTalk.Facts(listOf(arm, b), emptyList(), true, comparison = cmp))
-        assertTrue(w.startsWith("R72 Breadth Donchian: on, paper only. Passed research (R51/R52/R57/R72) — paper only. "), w)
+        assertTrue(w.startsWith("R72 Breadth Donchian: on (paper book). Passed research (R51/R52/R57/R72) — paper book; its live copy follows its own Trade live and Shadow switches. "), w)
         for (x in listOf(BreadthDonchianArm.RULES, BreadthDonchianArm.RISK, BreadthDonchianArm.RECORD, "Signal: the index's own bars", "FINNIFTY apart",
             "Forward test", "since 16 Oct: R72 Breadth Donchian 1 trade, +₹900; R51 Donchian 20 2 trades, +₹200",
             "Donchian's trades breadth did not confirm: 1 trade, −₹300")) assertTrue(x in w, x)
@@ -94,7 +94,7 @@ class PassedArmsTalkTest {
         assertTrue(PassedArmsTalk.answer(PassedArmsTalk.Topic.BREADTH, PassedArmsTalk.Facts(listOf(arm), emptyList(), true)).contains("could not read"))
         // The round-up carries the comparison once; plain Donchian's answer never.
         val all = PassedArmsTalk.answer(PassedArmsTalk.Topic.ALL, PassedArmsTalk.Facts(listOf(arm, b), emptyList(), true, comparison = cmp))
-        assertTrue("R72 Breadth Donchian: on, paper only" in all && cmp in all, all)
+        assertTrue("R72 Breadth Donchian: on (paper book)" in all && cmp in all, all)
         assertFalse(cmp in PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(arm, b), emptyList(), true, comparison = cmp)))
         // Its change-log entry says Boss's words, paper only, no PIN.
         val on = AutoChange.passedArmOn(BreadthDonchianArm.SOURCE, BreadthDonchianArm.LABEL, BreadthDonchianArm.RESEARCH_ID, "your \"Okay add it\" (16 Oct, after R72)")
@@ -122,7 +122,7 @@ class PassedArmsTalkTest {
             "net > 0", "M4", "MA2")) assertTrue(x in w, x)
         assertTrue(PassedArmsTalk.answer(PassedArmsTalk.Topic.WATCHLIST, PassedArmsTalk.Facts(emptyList(), emptyList(), true)).contains("No shadow trade yet."))
         val all = PassedArmsTalk.answer(PassedArmsTalk.Topic.ALL, PassedArmsTalk.Facts(listOf(arm), emptyList(), true))
-        assertTrue(all.contains("R51 Donchian 20: on, paper only") && all.contains("The Watchlist (") && !all.contains(DonchianArm.RULES))
+        assertTrue(all.contains("R51 Donchian 20: on (paper book)") && all.contains("The Watchlist (") && !all.contains(DonchianArm.RULES))
         assertEquals("Unlock the phone for that, Boss.", PassedArmsTalk.LOCKED)
     }
 

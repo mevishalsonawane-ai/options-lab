@@ -44,8 +44,9 @@ import com.optionslab.ira.Market as IraMarket
  * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
  * period and past every guard - so the words below about Zerodha describe this book, not that live path.
  *
- * Never live: Solo has no path to Zerodha - its orders go to the paper account only, and it never offers its setups as
- * trade ideas for approval.
+ * Its own orders: this book's go to the paper account only, and it never offers its setups as trade ideas for approval. Its live
+ * path ([com.optionslab.app.data.ArmLive]) starts in Shadow - it records what it would have sent and sends nothing - and, Solo being
+ * Jarvis's, its Shadow cannot be turned off until [provenWhy] passes (review C5, 18 Oct); today it never does.
  */
 internal object IraSolo {
     private const val KEY_ON = "jarvis.solo"
@@ -812,8 +813,12 @@ internal object IraSolo {
     /** Solo's record as Jarvis's graduation reads it: none - Solo (midday) never graduates to real money from here. */
     fun closedRecord(): List<com.optionslab.ira.JarvisTrades.Closed> = emptyList()
 
-    /** Why Solo's trades do not go live: always - Solo is paper only, with no path to Zerodha. */
-    fun provenWhy(): String? = "Solo's trades stay on paper always: Solo (midday) is a paper-only test, not proven, and never reaches Zerodha."
+    /**
+     * Why Solo's trades do not go live: always - Solo (midday) is not proven. Its live path stays in Shadow (it records, never sends)
+     * while this is not null ([com.optionslab.app.data.ArmLive.setShadow]).
+     */
+    fun provenWhy(): String? = "Solo's trades stay on paper always: Solo (midday) is a paper-only test, not proven, so its live path stays in shadow " +
+        "(it records what it would trade and never sends an order to Zerodha)."
 
     /** Solo's paper record in one line: Solo (midday)'s, then the retired rules' (kept readable). */
     fun record(list: List<T> = all()): String {

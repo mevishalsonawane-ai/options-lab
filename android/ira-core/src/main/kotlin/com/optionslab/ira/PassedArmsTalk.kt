@@ -14,7 +14,7 @@ import java.util.Locale
  * arms doing", "solo 2.0 kaisa chal raha hai", and (16 Oct) "how is breadth donchian doing" - with Boss's comparison of R72
  * Breadth Donchian and R51 Donchian 20 on the same days, and R72's risk line. Answered from the arms' own book and the Watchlist's log: each arm's switch
  * (paper only), its rules and signal source, today's trades, its record (the index the research said to report apart, apart),
- * its forward-test bar - always with "Passed research (R51/R52/R57/R72) — paper only"; the Watchlist's scorecard always with
+ * its forward-test bar - always with [PassedArms.PASSED]; the Watchlist's scorecard always with
  * "shadow, not traded; information only, not a trade signal" (and C4 marked NON-DEFAULT: an option-chain signal). Read only:
  * a sentence with something to do ("switch off the donchian arm") is not read here, and nothing is switched, bought, sold or
  * promoted. Pure.
@@ -68,6 +68,11 @@ object PassedArmsTalk {
         val stOn: Boolean = false,
         /** 16 Oct (R73 review): today's breaks the filter skipped because Supertrend could not judge them (no earlier session in). */
         val stUnjudged: Int = 0,
+        /**
+         * 18 Oct (review D6): its live copy's records - the SHADOW record and the LIVE (real orders) record, labelled apart from this
+         * paper book - and its Trade live / Shadow switches, in words; null when not read.
+         */
+        val live: String? = null,
     )
 
     data class Facts(val arms: List<Arm>, val watch: List<String>, val watchOn: Boolean?, val modelLoaded: Boolean? = null,
@@ -134,7 +139,7 @@ object PassedArmsTalk {
     /** One arm, plain: the label, the switch, the rules, today, the record, the bar. */
     fun armWords(a: Arm, full: Boolean = true): String = buildString {
         append("${label(a.source)}: ")
-        append(when (a.on) { true -> "on, paper only"; false -> "off"; null -> "its switch could not be read just now" })
+        append(when (a.on) { true -> "on (paper book)"; false -> "off"; null -> "its switch could not be read just now" })
         a.pausedWhy?.let { append(" (it switched itself off: $it)") }
         append(". ${PassedArms.PASSED}. ")
         // 16 Oct (R73 review): R51's rules with its Supertrend filter when on; the short answer still says the filter is on, and
@@ -152,6 +157,7 @@ object PassedArmsTalk {
         if (full) append(bar(a.source)).append(". ").append(record(a.source)).append(".")
         if (full && a.stOn && a.source == DonchianArm.SOURCE) append(" ").append(DonchianArm.ST_RECORD).append(".")
         if (full && a.source == Solo2.SOURCE) append(" ").append(Solo2.RETRAIN_TODO).append(".")
+        a.live?.let { append(" Its live copy, apart from this paper record: ").append(it) }
     }
 
     /** The Watchlist: the note, the written rule, each rule's scorecard (C4 marked NON-DEFAULT), what was left out. */

@@ -277,7 +277,8 @@ internal fun OrbRowsContent(
             title = { Text("Arm Hero (expiry) (paper)", style = Type.title) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(com.optionslab.engine.orb.HeroRules.NOT_PROVEN + ". It never trades on Zerodha.",
+                    Text(com.optionslab.engine.orb.HeroRules.NOT_PROVEN + ". Arming it here is paper; its live copy goes by its own " +
+                        "Trade live and Shadow switches (" + com.optionslab.app.data.ArmLive.stateOf(com.optionslab.engine.orb.HeroRules.ARM.source) + ").",
                         style = Type.body.copy(color = p.oxblood, fontWeight = FontWeight.SemiBold))
                     Text("On NIFTY expiry days only, from 13:30 to 14:45: when the ATM straddle is 15% above its low since 12:00 and " +
                         "NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1–5 with a LIMIT " +

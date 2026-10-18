@@ -375,7 +375,7 @@ class PassedArmsTest {
         assertEquals(0.0, PassedArms.spreadPaid(10, 99.0, 100.0, 121.0, 120.0, 0.002), 1e-9)
         assertEquals("−₹1,235", PassedArms.rs(-1234.6)); assertEquals("₹5", PassedArms.rs(5.0))
         assertEquals(15.35, PassedArms.floorTick(15.38), 1e-9)
-        assertTrue(PassedArms.PASSED.startsWith("Passed research") && PassedArms.PASSED.endsWith("paper only"))
+        assertTrue(PassedArms.PASSED.startsWith("Passed research") && PassedArms.PASSED.contains("paper book") && PassedArms.PASSED.contains("Shadow"))
         assertNotNull(PassedArms.SIGNAL_INDEX)
     }
 }

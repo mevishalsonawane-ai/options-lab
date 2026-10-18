@@ -2297,7 +2297,8 @@ object OrbArms {
             charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
         b.positions += pos
         marks[c.symbol] = fill.price
-        // 18 Oct: its live path ([ArmLive]): the same option and lots, a LIMIT at the same limit, its -60% stop resting at Zerodha.
+        // 18 Oct: its live path ([ArmLive]): the same option and lots, a LIMIT at the same limit. Its -60% stop is judged on a minute's
+        // close on paper, so the paper exit sells the live trade; only a labelled -80% disaster stop rests at Zerodha (review D2).
         mirror(pos, c, HeroRules.stopLevel(fill.price), limit)
         runCatching { PreTradeShadow.hero(HeroRules.ARM, spotBars, c, fill.price, fill.quantity, day, at) }  // R17 shadow (memory only)
         return kept("entered", pick, limit, lots)

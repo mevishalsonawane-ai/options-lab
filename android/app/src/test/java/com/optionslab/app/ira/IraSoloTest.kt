@@ -158,7 +158,7 @@ class IraSoloTest : RobolectricTest() {
         reload()
         assertEquals(done, IraSolo.all().single())
         val card = IraSolo.card()
-        assertEquals("Not proven: paper only, never Zerodha.", card[0])
+        assertEquals("Not proven: paper only; its live copy stays in shadow (records, never sends) until it is.", card[0])
         assertTrue(card[1], card[1].startsWith("Trades since start ("))
         assertEquals("1 of 60 trades of the forward test.", card[2])
         assertEquals(SoloMidday.RESEARCH, card[4])

@@ -363,13 +363,21 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
  * option's own price starts off). Off with one tap, no PIN (it lowers risk); on asks the PIN. It acts only with the app in Live and
  * "AI trades go live" on, and never in the paper-only period. Each arm's live record is shown apart from its paper record; Jarvis's
  * own ideas are not listed (they stay on paper). Every change is logged in the diagnostics and Autopilot's change log.
+ *
+ * 18 Oct (Boss: "add a shadow button, so that even i move to live, until is on, it will not trade, but when i see thats making money,
+ * i will make it off"): beside it each arm's Shadow switch, ON by default: in shadow nothing is sent, each would-be live trade is
+ * recorded with its shadow record (trades, net after charges, win rate) shown here. On with one tap; off asks the PIN (Solo (midday),
+ * Jarvis's Solo, stays in shadow until it is proven - the reason is shown). Paper trades the live path did not copy are counted with
+ * the last reason. Shows "loading" until the book is read; Solo (midday) only in Jarvis builds; none of it in a GOLD build.
  */
 @Composable
 internal fun ArmsLiveList(model: AppModel) {
+    if (com.optionslab.app.BuildConfig.GOLD) return
     val p = LocalPalette.current
     val v by com.optionslab.app.data.ArmLive.view.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var askOn by remember { mutableStateOf<String?>(null) }
+    var askShadowOff by remember { mutableStateOf<String?>(null) }
     var said by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.ArmLive.refresh() } } }
     askOn?.let { key ->
@@ -379,26 +387,62 @@ internal fun ArmsLiveList(model: AppModel) {
             scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setLive(key, true, pinConfirmed = true) } }
         }, onCancel = { askOn = null }, pinOnly = true, why = "Enter your app PIN to let $label trade live (only in Live with AI trades on; never in the paper-only period).")
     }
+    askShadowOff?.let { key ->
+        val label = com.optionslab.engine.orb.LiveMirror.spec(key)?.label ?: key
+        Reauth(model, onOk = {
+            askShadowOff = null
+            scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setShadow(key, false, pinConfirmed = true) } }
+        }, onCancel = { askShadowOff = null }, pinOnly = true,
+            why = "Enter your app PIN to take $label out of shadow: it may then send real orders (in Live with AI trades and its Trade live on).")
+    }
+    val today = com.optionslab.app.data.Market.today()
     Column(Modifier.padding(top = 8.dp)) {
         Text("Paper strategies, live", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
         Note("Each follows its own paper trade at Zerodha: the same option and lots, the same exits; its stop rests at Zerodha and moves " +
-            "with its lock. Live only in Live with AI trades on; the paper-only period blocks every live entry.")
+            "with its lock. Live only in Live with AI trades on; the paper-only period blocks every live entry. Shadow (on until you " +
+            "turn it off with your PIN) sends nothing and records what it would have traded.")
+        if (!v.loaded) { Note("Loading the arms' live choices…"); return@Column }
+        if (v.unreadable) Note("The arms' live book could not be read: no live entry goes until it is. Open live trades are still watched.")
         for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
+            if (spec.key == com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) continue
             val on = v.on(spec.key)
+            val shadow = v.shadowOn(spec.key)
             val (n, net) = v.record(spec.key)
-            val open = v.open.count { it.key == spec.key }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(spec.label, style = Type.label.copy(color = if (on) p.oxblood else p.ink, fontSize = 13.sp))
-                    Text((if (on) "Trade live: on" else "Trade live: off (paper only)") +
-                        (if (open > 0) " · $open open live" else "") + (if (n > 0) " · live record $n, ${com.optionslab.engine.orb.LiveMirror.rs(net)}" else "") +
-                        (v.refused[spec.key]?.let { " · last not sent: $it" } ?: ""),
-                        style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+            val sr = v.shadowRecord(spec.key)
+            val open = v.openReal.count { it.key == spec.key }
+            val openShadow = v.openShadow.count { it.key == spec.key }
+            val (skipped, skipWhy) = v.notMirroredToday(spec.key, today)
+            Column(Modifier.padding(top = 6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(spec.label, style = Type.label.copy(color = if (on && !shadow) p.oxblood else p.ink, fontSize = 13.sp))
+                        Text(com.optionslab.app.data.ArmLive.stateWords(on, shadow) +
+                            (if (open > 0) " · $open open live" else "") + (if (n > 0) " · live record $n, ${com.optionslab.engine.orb.LiveMirror.rs(net)}" else ""),
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                    }
+                    androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
+                        if (want) askOn = spec.key
+                        else scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setLive(spec.key, false, pinConfirmed = false) } }
+                    }, modifier = Modifier.semantics { contentDescription = "Trade live: ${spec.label}" })
                 }
-                androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
-                    if (want) askOn = spec.key
-                    else scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setLive(spec.key, false, pinConfirmed = false) } }
-                }, modifier = Modifier.semantics { contentDescription = "Trade live: ${spec.label}" })
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Shadow: " + (if (shadow) "on" else "off") + " · " + com.optionslab.engine.orb.LiveMirror.recordWords(sr) +
+                            (if (openShadow > 0) " · $openShadow open in shadow" else ""),
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                        if (skipped > 0) Text("Not mirrored today: $skipped" + (skipWhy?.let { " (last: $it)" } ?: ""),
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                    }
+                    androidx.compose.material3.Switch(checked = shadow, onCheckedChange = { want ->
+                        if (want) scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setShadow(spec.key, true, pinConfirmed = false) } }
+                        // Jarvis's Solo leaves shadow only once proven: the reason is said, and no PIN is asked for nothing.
+                        else scope.launch {
+                            val why = if (spec.key != com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY) null
+                                else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.soloWhy() }
+                            if (why != null) said = "${spec.label} stays in shadow: $why" else askShadowOff = spec.key
+                        }
+                    }, modifier = Modifier.semantics { contentDescription = "Shadow: ${spec.label}" })
+                }
             }
         }
         said?.let { Note(it) }

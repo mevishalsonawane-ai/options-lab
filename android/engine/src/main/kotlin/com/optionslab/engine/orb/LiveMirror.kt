@@ -415,6 +415,15 @@ object LiveMirror {
      */
     fun paperGone(seen: Boolean, paperOpen: Boolean?): Boolean = seen && paperOpen == false
 
+    private val SHADOW_ASK = Regex("(?i)\\b(in|on) shadow\\b|\\bshadow (record|trades?|p&?l|net)\\b|\\blive (record|trades?|copy|path)\\b|\\bdoing live\\b")
+    private val SHADOW_ACT = Regex("(?i)\\b(turn|switch|put|take|make|set)\\b.*\\b(on|off|out|into)\\b")
+
+    /**
+     * Whether [text] asks how an arm is doing in shadow or live ("how is Night doing in shadow?", "R51's live record"): a question only -
+     * anything that would switch something ("turn shadow off") is never one (switches are Boss's, on the screen, with the PIN).
+     */
+    fun shadowAsked(text: String): Boolean = SHADOW_ASK.containsMatchIn(text) && !SHADOW_ACT.containsMatchIn(text)
+
     /** "Rs 1,234" / "-Rs 1,234" (a live record's words; never on a locked phone). */
     fun rs(x: Double): String = (if (x < 0) "-Rs " else "Rs ") + "%,.0f".format(java.util.Locale.ENGLISH, abs(x))
 

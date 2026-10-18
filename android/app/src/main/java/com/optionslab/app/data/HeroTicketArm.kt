@@ -553,8 +553,9 @@ object HeroTicketArm {
             trailStart = b.trailStart.key)
         b.positions += pos
         b.marks[c.symbol] = price
-        // 18 Oct: its live path ([ArmLive]): the same option and lot, a LIMIT at the paper fill (it never chases); the 25% trail rests at
-        // Zerodha as the stop once it is armed (from the fill, or after 2x / 3x as Boss set); the 2x / 3x target stays the app's.
+        // 18 Oct: its live path ([ArmLive]): the same option and lot, a LIMIT at the paper fill (it never chases). Its 25% trail is judged
+        // on minute closes on paper, so the paper exit sells the live trade; only a labelled -80% disaster stop rests at Zerodha (review
+        // D2: a tick stop at the trail would sell on a wick the paper ticket holds through). The 2x / 3x target stays the app's.
         runCatching { ArmLive.entered(ArmLive.Ask(HeroTicketRules.SOURCE, mirrorRef(pos), c, 1, qty, price,
             stop = if (b.trailStart.mult == null) price * (1 - HeroTicketRules.TRAIL) else null, limit = price)) }
         val exits = HeroTicketRules.targetLevel(price, b.target)?.let { "target %s (%s) or the 25%% trail, else 15:05".format(Locale.ENGLISH, px(it), b.target.words) }
@@ -604,7 +605,8 @@ object HeroTicketArm {
             val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.maxByOrNull { it.key }?.value?.close
             ltp?.let { b.marks[p.symbol] = it }
             val trail = HeroTicketRules.trail(p.entry, p.entryTime.toLocalTime(), bars.mapValues { it.value.close }, HeroTicketRules.TrailStart.of(p.trailStart))
-            // 18 Oct: the trail's level once armed, for its live trade's Zerodha stop ([ArmLive]; memory only).
+            // 18 Oct: the trail's level once armed, told to its live path ([ArmLive]; memory only) - which, the ticket being close-judged,
+            // follows the paper exit rather than resting this level at Zerodha.
             HeroTicketRules.TrailStart.of(p.trailStart).mult.let { m -> if (m == null || trail.peak >= m * p.entry - 1e-9) ArmLive.level(mirrorRef(p), trail.level) }
             // A resting target is the paper book's to fill; the pure check below covers a target that could not be placed.
             val target = if (p.targetOrderId != null) HeroTicketRules.Target.TRAIL_ONLY else HeroTicketRules.Target.of(p.target)
