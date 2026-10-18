@@ -347,6 +347,36 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     /**
+     * 18 Oct (speed review): a stop is judged on a tick only while it is 2 s fresh, else on Zerodha's quote call. The pass's
+     * "fallback" used to be [Broker.quotes], which answers from a tick up to 5 s old - a stream gone quiet (called stalled
+     * only after 10 s) had the stop judged on its last price, with no REST read.
+     */
+    @Test fun aStopIsNeverJudgedOnATickOlderThanTwoSecondsWithoutAskingZerodha() = runBlocking {
+        try {
+            // Fresh: answered from the stream, no quote call.
+            tick(201.0)
+            kite.requests.clear()
+            assertEquals(201.0, Broker.stopQuotes(listOf("NFO:$sym")).getValue("NFO:$sym").last, 0.0)
+            assertFalse("a fresh tick needs no quote call", kite.requests.any { it.path.startsWith("/quote") })
+            // 3.5 s old (still answered by the screens' 5-s read): the stop read asks Zerodha.
+            tick(201.0, atMs = System.currentTimeMillis() - 3_500)
+            assertNotNull("the screens' read still takes it", KiteStream.tick(token))
+            kite.quote("NFO:$sym", 150.0, 149.95, 150.05)
+            kite.requests.clear()
+            assertEquals("Zerodha's quote, not the 3.5-s tick", 150.0, Broker.stopQuotes(listOf("NFO:$sym")).getValue("NFO:$sym").last, 0.0)
+            assertTrue(kite.requests.any { it.path.startsWith("/quote") })
+            assertTrue("kept followed on the stream", token in KiteStream.touchedForTest())
+            // The ORB pass with the app's own 160 stop: the stream's last price says 201, Zerodha's says 150 - it sells.
+            state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
+            kite.position(sym, 30, 200.0, product = "MIS")
+            tick(201.0, atMs = System.currentTimeMillis() - 3_500)
+            pass()
+            awaitTrue("the sell at the stop, judged on Zerodha's 150") { sells.isNotEmpty() }
+            assertEquals("stop", arm().today.single().why)
+        } finally { KiteStream.resetForTest() }
+    }
+
+    /**
      * Review R1: a BOT's entry (tag "iraorb") also asks the door's bot checks - the daily loss limit's day, the day stop, the
      * day lock (and its amount), the smart workers and the portfolio guard - and still reads nothing from the settings vault.
      * A trip written later is seen at once (kept in memory, refreshed on the write).

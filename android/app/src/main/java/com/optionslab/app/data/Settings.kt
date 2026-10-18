@@ -290,10 +290,10 @@ data class AppSettings(
             // Settings from before the guard's v2 defaults are read through a migration (see [load]): written whole once.
             // 18 Oct, review: a kill switch the guard turned on since [from] was read (this change did not touch it) is kept in that
             // whole write too - CI's SettingsUpdateTest caught the first change on a fresh vault writing it back off.
-            if (SecurePrefs.getInt("g.v", 1) < 2) {
-                val guardOn = !from.guardKill && !to.guardKill && SecurePrefs.getBoolean(KILL_KEY, false)
-                save(if (guardOn) to.copy(guardKill = true) else to); return
-            }
+            // 18 Oct (CI, again): a kill switch this change did not touch is left out of that whole write altogether. Checked and
+            // then written whole, the guard's write could still land in between (the save's own history read sits there) and be
+            // written back off; and a switch Boss cleared since [from] was read was written back on.
+            if (SecurePrefs.getInt("g.v", 1) < 2) { save(to, keepKill = from.guardKill == to.guardKill); return }
             runCatching { SettingsLog.diff(from, to) }
             val was = keys(from)
             val changed = keys(to).filter { (k, v) -> was[k] != v }
@@ -302,10 +302,11 @@ data class AppSettings(
             savesFlow.value = saveCount.incrementAndGet()
         }
 
-        fun save(s: AppSettings) {
+        /** Every setting written ([keepKill]: all but the kill switch, which keeps what the vault holds). */
+        fun save(s: AppSettings, keepKill: Boolean = false) {
             // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
             runCatching { SettingsLog.diff(load(), s) }
-            SecurePrefs.putAll(keys(s))
+            SecurePrefs.putAll(if (keepKill) keys(s) - KILL_KEY else keys(s))
             // The entry path reads the danger meter's switch from memory only: kept in step with every save (13 Oct).
             DangerToday.halfSize = s.dangerHalfSize
             savesFlow.value = saveCount.incrementAndGet()

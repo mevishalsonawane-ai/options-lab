@@ -844,6 +844,23 @@ object Broker {
         return streamed + quotesRest(rest)
     }
 
+    /**
+     * 18 Oct (speed review): the prices a stop, target or profit lock is judged on. Each from the stream's tick while it is
+     * [com.optionslab.ira.LiveQuote.FRESH_MS] (2 s) fresh, the rest from Zerodha's quote call itself. [quotes] answers from
+     * a tick up to 5 s old, and a stream gone quiet is called stalled only after 10 s: a stop was judged on a price 2-5 s
+     * old, with no REST read, as the "fallback" of a look whose ticks were not fresh. Kept followed on the stream.
+     */
+    suspend fun stopQuotes(keys: List<String>): Map<String, Quote> {
+        if (keys.isEmpty()) return emptyMap()
+        val tokens = keys.associateWith { tokenOf(it) }
+        KiteStream.touch(tokens.values.filterNotNull())
+        val streamed = keys.mapNotNull { k ->
+            tokens[k]?.let { KiteStream.freshTick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) }
+        }.toMap()
+        val rest = keys.filter { it !in streamed }
+        return if (rest.isEmpty()) streamed else streamed + quotesRest(rest)
+    }
+
     /** Zerodha's quote call itself, never the stream's memory (a paper fill's re-read when no stream tick is 2 s fresh, 16 Oct). */
     suspend fun quotesFresh(keys: List<String>): Map<String, Quote> = if (keys.isEmpty()) emptyMap() else quotesRest(keys)
 

@@ -121,6 +121,32 @@ class GuardTest : RobolectricTest() {
         assertFalse(AppSettings.load().guardKill)
     }
 
+    /**
+     * 18 Oct (CI: SettingsUpdateTest.aGuardWriteDuringQueuedChangesIsKeptByAll): the whole write of an old vault leaves a kill
+     * switch the change did not touch out altogether. It used to check the vault, then write every key whole - a guard write
+     * in between went back off, and a switch cleared since the read (here, deterministically) went back on.
+     */
+    @Test fun aWholeWriteOfAnOldVaultLeavesAnUntouchedKillSwitchAsTheVaultHoldsIt() {
+        limits { it.copy(guardDrawdownPct = 10.0) }
+        SecurePrefs.put(AppSettings.KILL_KEY, true)
+        SecurePrefs.put("g.v", null)                                   // as a vault written before the v2 defaults
+        val before = AppSettings.load()
+        assertTrue(before.guardKill)
+        SecurePrefs.put(AppSettings.KILL_KEY, false)                   // cleared between the read and the write
+        AppSettings.saveChanged(before, before.copy(theme = "dark"))
+        assertFalse("a clear made meanwhile is never written back on", AppSettings.load().guardKill)
+        assertEquals("dark", AppSettings.load().theme)
+        assertEquals("the vault is migrated all the same", 2, SecurePrefs.getInt("g.v", 1))
+        // And the guard's own write made after the read is kept (the stale-off case).
+        SecurePrefs.put("g.v", null)
+        val off = AppSettings.load()
+        assertFalse(off.guardKill)
+        SecurePrefs.put(AppSettings.KILL_KEY, true)
+        AppSettings.saveChanged(off, off.copy(theme = "light"))
+        assertTrue(AppSettings.load().guardKill)
+        assertEquals("light", AppSettings.load().theme)
+    }
+
     @Test fun theGuardsKillSwitchReadsAtOnceTouchesNothingElseAndReachesDisk() {
         // 18 Oct, review: written behind (never a vault write on the order path or the screen's thread), only the one key.
         limits { it.copy(guardDrawdownPct = 10.0, guardDailyLoss = 0.0, theme = "dark", pnlLossAlert = 4_000.0) }

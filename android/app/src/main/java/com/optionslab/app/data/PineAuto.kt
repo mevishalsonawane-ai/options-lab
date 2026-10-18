@@ -654,7 +654,7 @@ object PineAuto {
         else h.kite?.let { sym ->
             if (!Broker.loggedIn) null
             else (if (streamLook) Broker.tokenOf("NFO:$sym")?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } else null)
-                ?: Broker.quotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 }
+                ?: Broker.stopQuotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 }
         }
 
     // ---- the stop-loss and the profit lock as a resting stop (08 Oct, research/PROFIT_LOCK_8OCT.md fixes 1 and 3) ----------

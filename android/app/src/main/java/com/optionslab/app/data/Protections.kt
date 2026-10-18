@@ -461,7 +461,8 @@ object Protections {
         if (cur.trail == null || so == null || !so.working) return cur
         val key = "${p.exchange}:${p.symbol}"
         val streamed = if (stream) runCatching { Broker.tokenOf(key)?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } }.getOrNull() else null
-        val ltp = streamed ?: Broker.quotes(listOf(key))[key]?.last ?: return cur
+        // 18 Oct: the fallback is Zerodha's quote unless a tick is 2 s fresh ([Broker.stopQuotes]), never a tick up to 5 s old.
+        val ltp = streamed ?: Broker.stopQuotes(listOf(key))[key]?.last ?: return cur
         val n = Protection.next(cur.spec(), ltp)
         val ns = n.stop   // a local: the engine's property cannot be smart-cast across modules
         if (ns != null && ns != cur.stop && abs(ns - (cur.stop ?: 0.0)) >= p.tick - 1e-9) {
