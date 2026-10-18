@@ -1,6 +1,8 @@
 # All arms live: shadow, safety stop and review fixes (18 Oct 2026)
 
-Branch `claude/all-live-1018-wip`. Final SHA: see the last line of this file. Not merged; no PR (the parent session merges).
+Branch `claude/all-live-1018-wip`. Final code SHA: **8cb69bca6de17bb6698001bd97ec92a03781beaa**. CI was green on it in one run:
+App tests 0/4, 1/4, 2/4 and 3/4, Build APK, Engine parity with the PC, PC harness tests (run 39148842969). This file's own commit
+follows it (documentation only). Not merged; no PR (the parent session merges).
 
 The work-in-progress commit c03c5f02 was reviewed, finished and partly reworked. A separate reviewer agent then reviewed the whole
 diff twice; every confirmed finding was fixed and re-tested (listed under "Second review" below).
@@ -104,6 +106,22 @@ Also fixed from its "plausible" list:
 - Shadow is re-read just before an order is sent.
 - An exit refused by the order gates no longer cancels and re-rests the stop every look.
 - Strategies' exit path uses the contract's exchange.
+
+## Third pass (the reviewer re-checked the fixes): 3 more, all fixed
+
+1. A stop that filled for less than the trade kept its id, so the rest never got a new stop. It is now cleared, and the next
+   look rests a stop for the rest.
+2. A fired GTT that filled for less than the trade was booked twice. It is now booked once, and the rest gets a new GTT.
+3. A GTT deleted earlier in a look still counted against a sibling's stop. GTTs are now read again with the books.
+
+Also from this pass:
+- Recovery prefers a GTT whose quantity matches the position.
+- Recovered trades now get their contract's expiry, so the 15:05 expiry square-off applies to them.
+
+Left as is (low risk, noted for Boss):
+- On a lost reply, ArmLive and Strategies could adopt each other's identical GTT. This needs the same symbol, trigger and
+  quantity, so it is rare.
+- After a damaged book, the "could not match" alert also lists Boss's own positions.
 
 ## Tests added
 
