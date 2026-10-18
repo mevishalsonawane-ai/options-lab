@@ -28,7 +28,10 @@ import com.optionslab.app.testing.UpstoxStub.Companion.status
 import com.optionslab.engine.IST
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
@@ -90,11 +93,25 @@ class JobsTest : RobolectricTest() {
     @After fun down() {
         services.forEach { runCatching { it.destroy() } }
         FakeAndroidKeyStore.failing.clear()
-        upstox.close(); Background.reset()
+        // 18 Oct: each destroyed service's jobs are waited for BEFORE the fake Upstox closes and the calendar is cleared.
+        // Destroying only cancels them; a job still in its blocking start (the start note) ran on after teardown into the
+        // holiday check, saw the calendar Background.reset() had just cleared as stale, and fetched it from Upstox and NSE.
+        try {
+            services.forEach { awaitJobsEnded(it) }
+        } finally {
+            upstox.close(); Background.reset()
+        }
         assertEquals("a test reached the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
     // ---- helpers ---------------------------------------------------------------------------------
+
+    /** A destroyed service's jobs (destroying cancels them), waited for; one still running after 30 s fails the test. */
+    private fun awaitJobsEnded(c: ServiceController<WatchService>) {
+        val scope = WatchService::class.java.getDeclaredField("scope").apply { isAccessible = true }.get(c.get()) as CoroutineScope
+        val job = scope.coroutineContext[Job]!!
+        if (runBlocking { withTimeoutOrNull(30_000) { job.join() } } == null) fail("a watch job was still running 30 s after its service was destroyed")
+    }
 
     private fun alarms(action: String) = am.scheduledAlarms.filter { shadowOf(it.operation).savedIntent.action == action }
     private fun alarm(action: String) = alarms(action).single()
@@ -334,6 +351,21 @@ class JobsTest : RobolectricTest() {
         SecurePrefs.put("watch.run.day", WED.toString())     // a watch was running today and never ended: the process died
         startService(Jobs.Kind.LIVE)
         Background.await("the restart in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] restarted: the app's process had ended") } }
+    }
+
+    @Test fun aWatchDestroyedDuringItsStartFetchesNothing() {
+        // A stale calendar: a live watch would refresh it from Upstox and NSE before its first pass.
+        Background.calendar(null)
+        Background.at(WED, 10, 0)
+        val lock = WatchService::class.java.getDeclaredField("runDayLock").apply { isAccessible = true }.get(null)!!
+        val c = synchronized(lock) {
+            // The start note waits on this lock, so the service is destroyed while its watch is still starting.
+            val i = Intent(context, WatchService::class.java).putExtra(Jobs.EXTRA_KIND, Jobs.Kind.LIVE.name)
+            Robolectric.buildService(WatchService::class.java, i).create().also { services += it; it.startCommand(0, 1); it.destroy() }
+        }
+        awaitJobsEnded(c)
+        assertEquals("no holiday refresh after the stop", emptyList<String>(), NetworkGuard.blocked.toList())
+        Background.await("its end in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] ended") } }
     }
 
     @Test fun androidsRestartAfterHoursEndsQuietly() {

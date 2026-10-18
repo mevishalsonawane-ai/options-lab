@@ -39,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
@@ -1316,6 +1317,8 @@ class WatchService : Service() {
                 // ANR fix (9 Oct): the watch's start note - a settings read and a vault WRITE (a Keystore encryption and two
                 // disk syncs, queued behind any other vault work), the battery question to Android - off the main thread.
                 if (k == Jobs.Kind.LIVE) noteStart(run, byAndroid)
+                // 18 Oct: stopped or destroyed while the start note ran (blocking vault work): no further start-up.
+                ensureActive()
                 val s = AppSettings.load()
                 when (k) {
                     Jobs.Kind.LIVE -> { watch(s, run); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
@@ -1456,6 +1459,9 @@ class WatchService : Service() {
 
     private suspend fun watchLoop(s: AppSettings, workers: WatchWorkers.Run) {
         val fired = HashSet<String>()
+        // 18 Oct: a watch already stopped or destroyed (its job cancelled while its start note ran) goes no further: the
+        // holiday refresh below is blocking network (Upstox, then NSE) that no cancellation can interrupt.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
