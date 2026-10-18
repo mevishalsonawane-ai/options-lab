@@ -1,0 +1,39 @@
+id: r81-liquidity-x4
+title: 'R81 Liquidity 15+5: index no-progress time stop: sell after 10 minutes if the index has not moved 0.25 ATR our way'
+family: trade-management
+date: '2026-10-18'
+doc: research/HUNT_R81_LIQUIDITY_EXITS.md
+hypothesis: 'Added to (or replacing part of) Liquidity''s own exits, ''index no-progress time stop: sell after 10 minutes if the
+  index has not moved 0.25 ATR our way'' makes more than the plain rules in walk-forward and final, beats its random twin (p <
+  0.10), BH q < 0.10 across 66 tests, and is not carried by its top 5 trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores rebuilt 18
+  Oct, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once; already read by R51 / R63 / R70 / R76 (weak)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- NIFTY
+- SENSEX
+features:
+- 'signal: index level breaks (15/30/5-min); exit: index'
+model_or_rule: 'Liquidity 15+5, 1-ITM; index no-progress time stop: sell after 10 minutes if the index has not moved 0.25 ATR our
+  way'
+settings: research/hunt/r81/r81study.py; r81rules.py
+prereg: research/hunt/r81/PREREG.md
+variants_tried: 66
+results:
+  summary: 'Pooled arm (BANKNIFTY 15+5, FINNIFTY 30+5, MIDCPNIFTY 15+5): design 881 trades Rs 172,147 vs B0 Rs 257,249; walk-forward
+    Rs 155,772 vs Rs 238,064; final 357 trades Rs 4,121 vs Rs 11,155. Changed 227 / 98 trades, added 0 / 0; gain over B0 with its
+    top 5 removed: design -Rs 98,500, final -Rs 17,903. Twin p 0.9501 (exit), BH q 1.0 over 66 tests. Fails: not ahead of B0 in
+    design / walk-forward / final, twin p >= 0.10, BH q >= 0.10, carried by its top 5 trades. Per index: BANKNIFTY final Rs 11,279
+    vs Rs 10,978 (q 1.0); FINNIFTY final Rs 9,326 vs Rs 4,852 (q 0.7661); MIDCPNIFTY final -Rs 16,485 vs -Rs 4,674 (q 1.0); NIFTY
+    final -Rs 11,568 vs -Rs 23,134 (q 0.8712); SENSEX final Rs 10,489 vs Rs 5,263 (q 0.7245).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks from
+    the next minute, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying index; research only, nothing changes paper or live. Liquidity BANKNIFTY plain-rules record for
+  the 26 Oct decision untouched.
