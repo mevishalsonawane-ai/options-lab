@@ -161,6 +161,14 @@ def test_account_is_positional():
         S.account([t(1.0)], [])
 
 
+def test_lock_split():
+    b0 = [t(100.0), t(-500.0), t(200.0), t(10.0)]
+    v = [t(100.0), dict(t(-50.0, -0.01, "lock"), E=100.0, X=99.0), dict(t(150.0, 0.05, "lock"), E=100.0, X=105.0),
+         dict(t(20.0, 0.0, "time"), E=100.0, X=100.0)]
+    s = S.lock_split(b0, v)
+    assert s == dict(below=dict(n=1, rs=450), at5=dict(n=1, rs=-50), other=dict(n=1, rs=10))
+
+
 def _res(b, v, q):
     mk = lambda xs: {ph: dict(net=x) for ph, x in zip(S.PHASES, xs)}
     return {"B0": mk(b), "T35": dict(mk(v), exit_q=q)}

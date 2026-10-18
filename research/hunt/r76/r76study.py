@@ -77,6 +77,20 @@ def account(b0: list, v: list) -> dict:
                 best_example=ex(max(better, key=lambda z: z[0]) if better else None))
 
 
+def lock_split(b0: list, v: list) -> dict:
+    """The changed trades split by how the +5% lock sold them: 'below' = the lock was armed while the option was still
+    under +5%, so the stop sat above the market and sold at the next open below +5% (a real SL above the price fires at
+    once); 'at5' = sold at +5% after the option had been above it; 'other' = changed another way. Count and Rs effect
+    against B0 for each. Descriptive only (18 Oct 2026). Pure."""
+    out = {k: [0, 0.0] for k in ("below", "at5", "other")}
+    for i in changed(b0, v):
+        y = v[i]
+        k = "other" if y["why"] != "lock" else ("below" if y["X"] < y["E"] * (1 + KEEP) - 1e-9 else "at5")
+        out[k][0] += 1
+        out[k][1] += y["net"] - b0[i]["net"]
+    return {k: dict(n=n, rs=round(r)) for k, (n, r) in out.items()}
+
+
 def decide(res: dict, v: str) -> dict:
     """PREREG section 3: recommended only if net >= B0's in design, walk-forward and final and exit-twin q <= 0.10;
     'harmless' if it never made less than B0 in any of the three."""
@@ -233,6 +247,7 @@ def summarise() -> dict:
                      triggered=dict(design=a["triggered"], final=b["triggered"]), exit_p=b["exit_p"],
                      exit_k=b["exit_k"])
             A["trail"] = {ph: account(T["B0"][ph], T[v][ph]) for ph in ("design", "final")}
+            A["lock_split"] = {ph: lock_split(T["B0"][ph], T[v][ph]) for ph in ("design", "final")}
             A["paired"] = {ph: dict(zip(("p", "diff"), P.paired_boot(T["B0"][ph], T[v][ph], BOOT, SEED)))
                            for ph in ("design", "final")}
     qs = P.bh([out["res"][v]["exit_p"] for v in TESTS])
