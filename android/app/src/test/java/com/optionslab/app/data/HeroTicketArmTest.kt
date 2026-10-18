@@ -216,6 +216,38 @@ class HeroTicketArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 18 Oct (review D8): its paper tickets reach the live path ([ArmLive]) - each buy under its own LiveMirror key with the
+     * paper quantity, the trail's level as it moves, and the close, all by the same reference; its book shows the sold leg at 0.
+     */
+    @Test fun itsPaperTicketsReachTheLivePathEntryTrailAndClose() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        assertTrue(view().armed)
+        assertTrue(runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }.contains("from the fill"))
+        // 12:30: both tickets bought on paper (65 each); each is told to the live path under the ticket's own key.
+        market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
+        val put = HeroTicketArm.view.value.open.single { it.right == "PE" }
+        assertEquals(65, put.qty)
+        val ref = "hero_ticket:${put.index}:${put.orderId ?: put.entryTime}"
+        val entered = heard.toList().filter { it.startsWith("entered|") }
+        assertEquals(heard.toString(), 2, entered.size)
+        assertTrue(heard.toString(), entered.all { it.split("|")[1] == HeroTicketRules.SOURCE })
+        assertTrue(heard.toString(), entered.any { it.startsWith("entered|${HeroTicketRules.SOURCE}|$ref|${put.qty}|") })
+        assertTrue(ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.HERO_TICKET).orEmpty()
+            .contains(ArmLive.PaperLeg(ref, HeroTicketRules.SOURCE, 65)))
+        // The put falls to 8.0 (more than 25% under its fill): the trail's level was told, then the trail sells it on paper.
+        market(LocalTime.of(13, 0), call = { 12.0 }, put = { t -> if (t.isBefore(LocalTime.of(12, 40))) 10.0 else 8.0 })
+        tick(LocalTime.of(13, 0))
+        assertEquals("ticket_trail", HeroTicketArm.view.value.closed.single { it.right == "PE" }.why)
+        assertTrue(heard.toString(), heard.toList().any { it.startsWith("level|$ref|") })
+        assertTrue(heard.toString(), heard.toList().contains("closed|$ref|ticket_trail"))
+        assertTrue(heard.toString(), heard.indexOfFirst { it.startsWith("entered|${HeroTicketRules.SOURCE}|$ref|") } < heard.indexOf("closed|$ref|ticket_trail"))
+        assertTrue(ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.HERO_TICKET).orEmpty()
+            .contains(ArmLive.PaperLeg(ref, HeroTicketRules.SOURCE, 0)))
+        assertNothingAtZerodha()
+    }
+
     @Test fun aTwoTimesTargetBossPickedSellsAtTheTargetAndAGapThroughIsBookedThere() {
         assertTrue(runBlocking { HeroTicketArm.setTarget(HeroTicketRules.Target.X2) }.contains("2× target"))
         // The setting is kept (a restart reads it back).

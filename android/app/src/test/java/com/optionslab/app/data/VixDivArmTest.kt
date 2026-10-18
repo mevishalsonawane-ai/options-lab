@@ -160,6 +160,34 @@ class VixDivArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 18 Oct (review D8): its paper trades reach the live path ([ArmLive]) - the 10:30 buy under its own LiveMirror key with the
+     * paper quantity, and the 20-minute sale by the same reference; its book shows the sold trade at 0.
+     */
+    @Test fun itsPaperTradesReachTheLivePathEntryAndClose() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        assertTrue(runBlocking { VixDivArm.setArmed(true) }.contains("paper only"))
+        market(LocalTime.of(10, 30))
+        tick(LocalTime.of(10, 30))
+        val pos = VixDivArm.view.value.open.single()
+        assertEquals(65, pos.qty)
+        val ref = "vix:${pos.index}:${pos.orderId ?: pos.entryTime}"
+        val entered = heard.toList().filter { it.startsWith("entered|") }
+        assertEquals(heard.toString(), 1, entered.size)
+        assertTrue(heard.toString(), entered.single().startsWith("entered|${VixDivRules.SOURCE}|$ref|${pos.qty}|"))
+        assertTrue(ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.VIX).orEmpty()
+            .contains(ArmLive.PaperLeg(ref, VixDivRules.SOURCE, 65)))
+        // The 20th minute closes under +5% of the fill: sold at the 10:50 pass on paper, and the live path is told.
+        market(LocalTime.of(10, 50))
+        tick(LocalTime.of(10, 50))
+        assertEquals("not_up_5_in_20", VixDivArm.view.value.closed.single().why)
+        assertTrue(heard.toString(), heard.toList().contains("closed|$ref|not_up_5_in_20"))
+        assertTrue(ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.VIX).orEmpty()
+            .contains(ArmLive.PaperLeg(ref, VixDivRules.SOURCE, 0)))
+        assertNothingAtZerodha()
+    }
+
     /** The day's trade from the 10:30 buy to the 20-minute sale, [look] after each pass: what the book holds and made. */
     private fun dayOfTrading(look: () -> Unit): List<String> {
         assertTrue(runBlocking { VixDivArm.setArmed(true) }.contains("paper only"))
