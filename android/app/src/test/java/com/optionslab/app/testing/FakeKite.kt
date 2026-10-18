@@ -82,6 +82,8 @@ class FakeKite : Closeable {
         val at: LocalDateTime = LocalDateTime.now(IST),
         /** The rest is cancelled (not filled) when [pollsLeft] runs out ([Outcome.PARTIAL_THEN_CANCEL]). */
         var cancelRest: Boolean = false,
+        /** 18 Oct: the price GET /trades shows for its fill when it is not [avg] (a trade book and an order book that differ). */
+        val tradePrice: Double? = null,
     ) {
         val working: Boolean get() = status in setOf("OPEN", "TRIGGER PENDING", "MODIFY PENDING")
     }
@@ -544,7 +546,7 @@ class FakeKite : Closeable {
     private fun tradesJson(): JSONArray = JSONArray().apply {
         if (tradesFromFills) orders.values.filter { it.filled > 0 }.forEach { o ->
             put(JSONObject().put("trade_id", "T${o.id}").put("order_id", o.id).put("tradingsymbol", o.symbol).put("exchange", o.exchange)
-                .put("transaction_type", o.side).put("quantity", o.filled).put("average_price", o.avg).put("product", o.product)
+                .put("transaction_type", o.side).put("quantity", o.filled).put("average_price", o.tradePrice ?: o.avg).put("product", o.product)
                 .put("fill_timestamp", o.at.format(TS)))
         }
     }

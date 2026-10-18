@@ -893,23 +893,34 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(1, view().openShadow.count { it.key == LiveMirror.SOLO_MIDDAY })
     }
 
-    /** F6: a part closed by hand is booked at what Zerodha's trade book (else its order book) says it sold for. */
+    /**
+     * F6: a part closed by hand is booked at what Zerodha's trade book (else its order book) says it sold for.
+     * 18 Oct: two lots, not three - the account guard's 2-lot cap on one option refused a 3-lot entry, so nothing was ever
+     * bought and nothing could be booked. The first lot sold by hand is a part (the trade book's price, though the order book
+     * says otherwise); the last one closes the trade (the order book's average), so both kinds of outside close are covered.
+     */
     @Test fun aPartClosedByHandIsBookedAtWhatZerodhaSaysItSoldFor() {
-        ArmLive.entered(ask(donchian, "byhand", qty = 90))
+        ArmLive.entered(ask(donchian, "byhand", qty = 60))
+        assertEquals("bought live", 60, held())
         watch()
         kite.tradesFromFills = true
-        kite.orders["H1"] = FakeKite.Order("H1", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 214.0)
-        kite.positions["NFO:$sym:MIS"] = 60 to 200.0               // Boss sold one lot in Kite at 214 (the price now is 200)
+        // The trade book says 214 and the order book 216: the trade book comes first.
+        kite.orders["H1"] = FakeKite.Order("H1", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 216.0,
+            tradePrice = 214.0)
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0               // Boss sold one lot in Kite at 214 (the price now is 200)
         watch()
         assertEquals("closed_at_zerodha", view().closed.single().why)
         assertEquals("the trade book's price", 214.0, view().closed.single().exit!!, 1e-9)
+        assertEquals(30, view().open.single().qty)
         kite.tradesFromFills = false                               // the trade book shows nothing: the order book's average
         kite.orders["H2"] = FakeKite.Order("H2", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 221.0,
             at = java.time.LocalDateTime.now(com.optionslab.engine.IST).plusMinutes(1))
-        kite.positions["NFO:$sym:MIS"] = 30 to 200.0
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                  // and then the last lot at 221
         watch()
         assertEquals(listOf(214.0, 221.0), view().closed.map { it.exit!! })
-        assertEquals(30, view().open.single().qty)
+        assertTrue(view().closed.all { it.why == "closed_at_zerodha" })
+        assertTrue(view().open.isEmpty())
+        assertTrue("no stop left resting on a flat position", kite.orders.values.none { it.working && it.side == "SELL" })
     }
 
     /** F6 (its review): parts closed outside in one look each take the next fill, never the same one twice. */

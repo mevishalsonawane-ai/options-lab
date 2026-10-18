@@ -228,7 +228,9 @@ class RootNavigationTest {
         compose.onNodeWithText("with real money", substring = true).assertExists()
         // 18 Oct: one switch - the dialog says the AI trades switch on with it, and that the paper strategies' own Trade live switches act.
         compose.onNodeWithText("\"AI trades go live\" turns on too", substring = true).assertExists()
-        compose.onNodeWithText("whose own \"Trade live\" is on", substring = true).assertExists()
+        // 18 Oct (final review): a paper strategy trades live only once out of Shadow with the PIN and with its own Trade live on.
+        compose.onNodeWithText("its own \"Trade live\" is on", substring = true).assertExists()
+        compose.onNodeWithText("out of Shadow with your PIN", substring = true).assertExists()
         compose.onNodeWithText("Stay on paper").performClick()
         compose.waitForNoText("Switch to live trading?")
         assertEquals(emptyList<Boolean>(), calls)
