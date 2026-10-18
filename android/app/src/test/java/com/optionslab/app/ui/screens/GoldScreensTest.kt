@@ -155,6 +155,29 @@ class GoldScreensTest {
         compose.waitForText("$1,024.79")
     }
 
+    /**
+     * 18 Oct, review: the Trades tab counts a trade on India's date, as the P&L calendar does: closed at 20:00 UTC on Sunday
+     * the 27th is Monday 01:30 in India, so it is "Today" on Monday; one closed at 18:29 UTC on the 27th stays on the 27th.
+     */
+    @Test fun tradesTabCountsTodayOnIndiasDateAsTheCalendarDoes() {
+        assertEquals(LocalDate.of(2026, 9, 28), goldIstDay(LocalDateTime.of(2026, 9, 27, 18, 30)))
+        assertEquals(LocalDate.of(2026, 9, 27), goldIstDay(LocalDateTime.of(2026, 9, 27, 18, 29)))
+        // Month edge: 30 Sep 19:00 UTC is 1 Oct in India.
+        assertEquals(LocalDate.of(2026, 10, 1), goldIstDay(LocalDateTime.of(2026, 9, 30, 19, 0)))
+        val trades = listOf(
+            GoldPaper.Trade(2400.0, 2410.0, monday.minusDays(1).atTime(19, 0), monday.minusDays(1).atTime(20, 0), 0.01, "next_liquidity", 9.93),
+            GoldPaper.Trade(2400.0, 2395.0, monday.minusDays(1).atTime(17, 0), monday.minusDays(1).atTime(18, 0), 0.01, "failed_break", -5.07),
+        )
+        runBlocking { GoldPaper.replaceForTest(GoldPaper.Book(trades = trades)) }
+        assertEquals(setOf(monday, monday.minusDays(1)), goldDays(trades).keys)
+        show()
+        tap("Trades")
+        compose.waitForText("Closed trades")
+        assertTrue(compose.has("Today · 1 trades · 100% won"))
+        assertTrue(compose.has("This month · 2 trades · 50% won"))
+        assertTrue("the closed trade is dated in India", compose.has("$monday · 2400.00 → 2410.00"))
+    }
+
     @Test fun settingsChangeTheLotStartAgainAndTheTheme() {
         runBlocking { GoldPaper.replaceForTest(GoldPaper.Book(trades = listOf(
             GoldPaper.Trade(2400.0, 2410.0, monday.atTime(9, 0), monday.atTime(10, 0), 0.01, "next_liquidity", 9.93)))) }

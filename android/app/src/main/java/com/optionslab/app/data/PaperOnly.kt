@@ -26,15 +26,31 @@ object PaperOnly {
     val period: StateFlow<PaperOnlyPeriod.Period?> = _period
     @Volatile private var loaded = false
 
-    /** Read once from the settings vault (a worker thread). */
+    /** Read once from the settings vault (a worker thread). 18 Oct, review: a failed read stays unread (tried again next time). */
     fun ensureLoaded() {
         if (loaded) return
         synchronized(this) {
             if (loaded) return
-            _period.value = runCatching { PaperOnlyPeriod.decode(SecurePrefs.getString(KEY)) }.getOrNull()
+            val raw = runCatching { SecurePrefs.getString(KEY) }.getOrElse { return }
+            // An unreadable vault reads as empty: that is not "no period" (it stays unread, so the Live switch asks the PIN).
+            if (SecurePrefs.unreadable) return
+            _period.value = runCatching { PaperOnlyPeriod.decode(raw) }.getOrNull()
             loaded = true
         }
     }
+
+    /** What the Live switch says while the period is not read yet (or could not be read): it asks the PIN, never goes Live without. */
+    const val UNREAD_ASK = "Your paper-only period could not be checked yet. Enter your PIN to switch to Live. Exits and square-offs are never blocked."
+
+    /**
+     * 18 Oct, review: why switching to Live asks the PIN now, or null when it need not. It fails closed: before the period has
+     * been read from the vault (the first moments after a cold start, or a failed read) the answer is [UNREAD_ASK], never null.
+     * Memory only.
+     */
+    fun liveAskNow(): String? = if (!loaded) UNREAD_ASK else activeNow()?.let { PaperOnlyPeriod.liveAsk(it) }
+
+    /** [liveAskNow] after reading the period if it is not read yet. A worker thread (the vault read). */
+    fun liveAskRead(): String? { runCatching { ensureLoaded() }; return liveAskNow() }
 
     private fun today(): LocalDate = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
 
@@ -71,4 +87,6 @@ object PaperOnly {
 
     /** TEST ONLY. */
     internal fun resetForTest(p: PaperOnlyPeriod.Period? = null) { _period.value = p; loaded = true }
+    /** TEST ONLY: as at a cold start, before the period is read. */
+    internal fun unreadForTest() { _period.value = null; loaded = false }
 }

@@ -26,4 +26,20 @@ class MainThreadBinderTest {
         assertFalse(s.contains("scope.launch { IraHub.approve("))
         assertTrue(s.contains("scope.launch(kotlinx.coroutines.Dispatchers.IO) { IraHub.approve("))
     }
+
+    /** 18 Oct, review: the Replay page's harvested days (asset and folder listings) are read on the IO threads, not in composition. */
+    @Test fun theReplayDaysAreReadOffTheMainThread() {
+        val s = src("com/optionslab/app/ui/screens/PresetsReplay.kt") ?: return
+        assertFalse(s.contains("daysFor = model::replayDays"))
+        assertTrue(s.contains("withContext(kotlinx.coroutines.Dispatchers.IO) { UNDERLYINGS.associateWith { model.replayDays(it) } }"))
+    }
+
+    /** 18 Oct, review: the P&L calendar's and Pine's CSV exports write through a document provider's stream on the IO threads. */
+    @Test fun csvExportsWriteOffTheMainThread() {
+        for (f in listOf("PnlCalendarScreen.kt", "PineScreen.kt")) {
+            val s = src("com/optionslab/app/ui/screens/$f") ?: continue
+            assertFalse(f, s.contains("ctx.contentResolver.openOutputStream(uri)"))
+            assertTrue(f, Regex("withContext\\(kotlinx\\.coroutines\\.Dispatchers\\.IO\\)\\s*\\{\\s*runCatching\\s*\\{\\s*resolver\\.openOutputStream\\(uri\\)").containsMatchIn(s))
+        }
+    }
 }

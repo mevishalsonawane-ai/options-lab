@@ -455,14 +455,25 @@ fun SecurityPage(model: AppModel) {
                   pinScope.launch(kotlinx.coroutines.Dispatchers.Main) {
                     val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
                     when (r) {
-                        PinLock.Result.Ok -> try {
+                        PinLock.Result.Ok -> {
+                          // The verifier as it was: changed after a failure means the new PIN is in the vault's memory, not on disk.
+                          val was = PinLock.verifierStamp()
+                          try {
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                                PinLock.setPin(next.toCharArray())
-                                // The Zerodha API secret is sealed with the PIN: re-seal it under the new one.
-                                com.optionslab.app.data.Broker.resealSecret(cur.toCharArray(), next.toCharArray())
+                                // The Zerodha API secret is sealed with the PIN: re-sealed under the new one first, then written
+                                // in the same vault write as the new PIN (18 Oct, review), so a failure before it changes neither.
+                                val sealed = com.optionslab.app.data.Broker.resealedSecret(cur.toCharArray(), next.toCharArray())
+                                PinLock.setPin(next.toCharArray(), also = sealed)
                             }
                             changing = false; model.say("PIN changed.")
-                        } catch (e: IllegalArgumentException) { err = e.message }
+                          } catch (e: IllegalArgumentException) { err = e.message
+                          } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                          } catch (e: Exception) {
+                            val why = e.message ?: e.javaClass.simpleName
+                            err = if (PinLock.verifierStamp() != was) "The new PIN could not be saved to the phone ($why). It works until the app closes; change it again."
+                                else "The PIN was not changed ($why). Try again."
+                          }
+                        }
                         is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
                         PinLock.Result.Wiped -> { changing = false; eraseEverything() }
                         else -> err = "The current PIN is not right."
@@ -695,13 +706,29 @@ private fun GuardCard(model: AppModel) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var confirmKill by remember { mutableStateOf<Boolean?>(null) }
+    // 18 Oct, review: a change that loosens the Zerodha guard (the kill switch cleared, a limit raised or switched off, a
+    // protection switched off, the drawdown peak restarted) asks for the PIN or fingerprint first, as the Security page's
+    // switches do - in Live, and in Paper too once Zerodha is set up (else it is loosened on Paper, then Live is one tap
+    // away). Tightening is at once; with no app PIN set there is nothing to ask.
+    var guarded by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    guarded?.let { (why, action) -> Reauth(model, onOk = { guarded = null; action() }, onCancel = { guarded = null }, why = why) }
+    fun loosen(looser: Boolean, why: String, action: () -> Unit) {
+        val ask = looser && PinLock.isSet && (s.live || com.optionslab.app.data.Broker.configured)
+        if (ask) guarded = why to action else action()
+    }
+    // A limit of 0 (or a cut-off below 0) is off: any limit is tighter than off; off, or a higher one, is looser.
+    fun looser(cur: Double, next: Double) = cur > 0 && (next <= 0 || next > cur)
+    val askLimit = "Enter your app PIN to loosen the account guard on Zerodha."
     confirmKill?.let { turnOn ->
         AlertDialog(
             onDismissRequest = { confirmKill = null },
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text(if (turnOn) "Turn the kill switch on?" else "Clear the kill switch?", style = Type.title) },
             text = { Text(if (turnOn) "No new position is opened until you clear it. Exits and the expiry square-off still go through." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
-            confirmButton = { TextButton({ model.update { it.copy(guardKill = turnOn) }; confirmKill = null }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
+            confirmButton = { TextButton({
+                confirmKill = null
+                loosen(!turnOn, "Enter your app PIN to clear the kill switch on Zerodha.") { model.update { it.copy(guardKill = turnOn) } }
+            }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
             dismissButton = { TextButton({ confirmKill = null }) { Text("Cancel") } },
         )
     }
@@ -710,25 +737,28 @@ private fun GuardCard(model: AppModel) {
         Note("Checked on every Zerodha order, from a strategy or by hand (paper is never refused). Closing a position is never blocked, not even by the kill switch.")
         ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill, keepSub = true) { on -> confirmKill = on }
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
-        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> model.update { it.copy(guardDailyLoss = loss[i]) } }
+        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> loosen(looser(s.guardDailyLoss, loss[i]), askLimit) { model.update { it.copy(guardDailyLoss = loss[i]) } } }
         val dd = listOf(5.0, 10.0, 20.0, 0.0)
-        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> model.update { it.copy(guardDrawdownPct = dd[i]) } }
+        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> loosen(looser(s.guardDrawdownPct, dd[i]), askLimit) { model.update { it.copy(guardDrawdownPct = dd[i]) } } }
         val open = listOf(1, 2, 3, 5, 0)
-        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> model.update { it.copy(guardMaxOpen = open[i]) } }
+        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> loosen(looser(s.guardMaxOpen.toDouble(), open[i].toDouble()), askLimit) { model.update { it.copy(guardMaxOpen = open[i]) } } }
         val trades = listOf(5, 10, 20, 0)
-        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> model.update { it.copy(guardMaxTrades = trades[i]) } }
+        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> loosen(looser(s.guardMaxTrades.toDouble(), trades[i].toDouble()), askLimit) { model.update { it.copy(guardMaxTrades = trades[i]) } } }
         val value = listOf(100_000.0, 200_000.0, 500_000.0, 1_000_000.0, 0.0)
-        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> model.update { it.copy(guardMaxValue = value[i]) } }
+        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> loosen(looser(s.guardMaxValue, value[i]), askLimit) { model.update { it.copy(guardMaxValue = value[i]) } } }
         val lots = listOf(1, 2, 5, 0)
-        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> model.update { it.copy(guardMaxLots = lots[i]) } }
+        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> loosen(looser(s.guardMaxLots.toDouble(), lots[i].toDouble()), askLimit) { model.update { it.copy(guardMaxLots = lots[i]) } } }
         val expo = listOf(100_000.0, 200_000.0, 500_000.0, 0.0)
-        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> model.update { it.copy(guardMaxExposure = expo[i]) } }
+        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> loosen(looser(s.guardMaxExposure, expo[i]), askLimit) { model.update { it.copy(guardMaxExposure = expo[i]) } } }
         val cut = listOf(14 * 60, 14 * 60 + 30, 14 * 60 + 55, 15 * 60, -1)
-        ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i -> model.update { it.copy(guardCutoff = cut[i]) } }
+        ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i ->
+            // The cut-off: -1 is off; a later time is looser.
+            loosen(s.guardCutoff >= 0 && (cut[i] < 0 || cut[i] > s.guardCutoff), askLimit) { model.update { it.copy(guardCutoff = cut[i]) } }
+        }
         // The day lock (08 Oct): only ever stops new automatic entries; set here alone (never by voice or a backup).
         val dayLocks = com.optionslab.engine.risk.DayLock.CHOICES
         ParamTokens("Day lock: no new automatic entries once the day is up by", dayLocks.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.dayLock) }) { i ->
-            model.update { it.copy(dayLock = dayLocks[i]) }
+            loosen(looser(s.dayLock, dayLocks[i]), askLimit) { model.update { it.copy(dayLock = dayLocks[i]) } }
         }
         val dayLockNow = remember(s) { com.optionslab.app.data.DayLockGuard.statusLine() }
         Note(dayLockNow ?: "Paper and Zerodha are locked separately (the paper day after charges). Bots, Pine, Solo and Jarvis's trades " +
@@ -748,20 +778,25 @@ private fun GuardCard(model: AppModel) {
                 "${since.year} (change the date)", style = Type.label.copy(color = p.inkSoft))
         }
         ToggleRow("Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live, MIS and NRML", s.expirySquareOff) { on ->
-            model.update { it.copy(expirySquareOff = on) }
+            loosen(!on, askLimit) { model.update { it.copy(expirySquareOff = on) } }
         }
         if (s.expirySquareOff) ToggleRow("Keep the Expiry Put to settlement", "Its legs are left for the 15:30 settlement, as the strategy intends", s.keepExpiryPut) { on ->
-            model.update { it.copy(keepExpiryPut = on) }
+            loosen(on, askLimit) { model.update { it.copy(keepExpiryPut = on) } }
         }
         // MCX (9 Oct): an MCX option at expiry turns into a future (far more margin than the account has); delivery futures.
         ToggleRow("MCX expiry exit", "Closes MCX options by %02d:%02d the day before expiry, and gold, silver and metal futures %d trading days before expiry, paper and live"
             .format(java.util.Locale.ENGLISH, s.mcxOptionExitMinute / 60, s.mcxOptionExitMinute % 60, s.mcxFutureExitDays), s.mcxExpiryExit) { on ->
-            model.update { it.copy(mcxExpiryExit = on) }
+            loosen(!on, askLimit) { model.update { it.copy(mcxExpiryExit = on) } }
         }
         ToggleRow("Block naked option shorts", "Selling an option to open needs a bought option of the same index, expiry and type held first", s.guardNakedShort) { on ->
-            model.update { it.copy(guardNakedShort = on) }
+            loosen(!on, askLimit) { model.update { it.copy(guardNakedShort = on) } }
         }
-        TextButton({ com.optionslab.app.data.Guard.resetPeak(s.live); model.say("Drawdown peak restarts from today's equity.") }) {
+        TextButton({
+            val live = s.live
+            loosen(live, "Enter your app PIN to restart the Zerodha drawdown peak.") {
+                com.optionslab.app.data.Guard.resetPeak(live); model.say("Drawdown peak restarts from today's equity.")
+            }
+        }) {
             Text("Restart the drawdown peak (${if (s.live) "Zerodha" else "paper"})", style = Type.label.copy(color = p.inkSoft))
         }
     }

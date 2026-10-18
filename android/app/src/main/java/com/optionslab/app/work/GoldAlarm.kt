@@ -78,8 +78,9 @@ class GoldService : android.app.Service() {
         /** Is there anything for the service to do now? An arm armed or a trade held, while gold trades. */
         fun needed(now: LocalDateTime = GoldPaper.now()): Boolean {
             // The saved books, not the empty ones of the first moment. Not read yet: the service starts anyway (each pass
-            // waits for them itself), so an armed arm or an open buy is never left unwatched.
-            if (!com.optionslab.app.data.GoldBooks.awaitBlocking()) return true
+            // waits for them itself), so an armed arm or an open buy is never left unwatched. 18 Oct, review: on the main
+            // thread (the screen, the boot receiver) it never waits for them.
+            if (!com.optionslab.app.data.GoldBooks.awaitOffMain()) return true
             val liq = GoldPaper.book.value
             val tr = com.optionslab.app.data.GoldTrendPaper.book.value
             val dp = com.optionslab.app.data.GoldDipPaper.book.value
@@ -120,7 +121,9 @@ class GoldService : android.app.Service() {
     override fun onBind(intent: Intent?): android.os.IBinder? = null
 
     private fun text(): Pair<String, String> {
-        com.optionslab.app.data.GoldBooks.awaitBlocking()   // at most a few seconds; what there is shows otherwise
+        // At most a few seconds off the main thread; on it (the service's start) never a wait (18 Oct, review): until the
+        // books are read the notice says so, and the pass loop (IO) shows the full text once they are.
+        if (!com.optionslab.app.data.GoldBooks.awaitOffMain()) return "IraGoldAlgo running" to "Reading the paper books · paper"
         val b = GoldPaper.book.value
         val tr = com.optionslab.app.data.GoldTrendPaper.book.value
         val dp = com.optionslab.app.data.GoldDipPaper.book.value

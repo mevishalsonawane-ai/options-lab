@@ -169,7 +169,12 @@ private fun PresetResult(r: Presets.Result) {
 @Composable
 fun ReplayLab(model: AppModel) {
     val loaded by model.replay.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    ReplayContent(loaded, daysFor = model::replayDays, onLoad = model::loadReplay)
+    // 18 Oct, review: the harvested days (the APK's assets, the bundled manifest and the bars folder listed) are read on the
+    // IO threads, never in composition on the main thread; none are shown until they arrive.
+    var known by remember { mutableStateOf<Map<String, List<java.time.LocalDate>>>(emptyMap()) }
+    LaunchedEffect(Unit) { known = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { UNDERLYINGS.associateWith { model.replayDays(it) } } }
+    val daysFor = remember(known) { { u: String -> known[u].orEmpty() } }
+    ReplayContent(loaded, daysFor = daysFor, onLoad = model::loadReplay)
 }
 
 /** The Replay page from the loaded session and callbacks (what [ReplayLab] shows; tests drive it without an [AppModel]). */
@@ -178,7 +183,8 @@ fun ReplayLab(model: AppModel) {
 internal fun ReplayContent(loaded: Load<com.optionslab.engine.Session>, daysFor: (String) -> List<java.time.LocalDate>, onLoad: (String, java.time.LocalDate) -> Unit) {
     val p = LocalPalette.current
     var u by remember { mutableStateOf("NIFTY") }
-    val days = remember(u) { daysFor(u).sortedDescending() }
+    // Keyed on [daysFor] too: the days read off the main thread arrive as a new one ([ReplayLab]).
+    val days = remember(u, daysFor) { daysFor(u).sortedDescending() }
     var di by remember(u) { mutableIntStateOf(0) }
     var what by remember { mutableStateOf("Index") }
     var cursor by remember { mutableIntStateOf(5) }

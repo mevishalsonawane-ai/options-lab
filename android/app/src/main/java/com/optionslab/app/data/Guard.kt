@@ -112,8 +112,9 @@ object Guard {
      */
     fun onRefusal(refusals: List<String>) {
         if (refusals.none { it.startsWith("Drawdown limit") }) return
-        val s = AppSettings.load()
-        if (!s.guardKill) AppSettings.save(s.copy(guardKill = true))
+        // 18 Oct, review: only the kill switch is written, readable at once and put on disk by the vault's background
+        // writer - this runs on the order path and on the review's keystrokes (the screen's thread), so never a vault write here.
+        if (!AppSettings.load().guardKill) AppSettings.killSoon()
     }
 
     /** Refusals for [order] against [account] under the owner's limits; empty = it may go. */

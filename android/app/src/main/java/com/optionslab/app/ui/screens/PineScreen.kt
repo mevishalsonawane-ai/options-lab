@@ -727,12 +727,19 @@ private fun ExportCsv(t: TestRun, modifier: Modifier) {
     val p = LocalPalette.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val rep = t.report
+    val csvScope = androidx.compose.runtime.rememberCoroutineScope()
     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri != null && rep != null) runCatching {
-            ctx.contentResolver.openOutputStream(uri)?.use { it.write(tradesCsv(rep).toByteArray(Charsets.UTF_8)) } ?: error("could not open the file")
-        }.onSuccess { com.optionslab.app.work.Alerts.success("Saved ${rep.trades.size} trades") }
-            .onFailure { com.optionslab.app.work.Alerts.error("Could not save the CSV: ${it.message}") }
+        if (uri != null && rep != null) {
+            // 18 Oct, review: written on the IO threads (a cloud provider's stream can block), never in this main-thread callback.
+            val resolver = ctx.applicationContext.contentResolver
+            csvScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { resolver.openOutputStream(uri)?.use { it.write(tradesCsv(rep).toByteArray(Charsets.UTF_8)) } ?: error("could not open the file") }
+                }.onSuccess { com.optionslab.app.work.Alerts.success("Saved ${rep.trades.size} trades") }
+                    .onFailure { com.optionslab.app.work.Alerts.error("Could not save the CSV: ${it.message}") }
+            }
+        }
     }
     BrassButton("Export CSV", modifier, tone = p.inkSoft, enabled = rep != null && rep.trades.isNotEmpty()) {
         launcher.launch("pine-${t.symbol.lowercase()}-${t.interval}-${java.time.LocalDate.now()}.csv")

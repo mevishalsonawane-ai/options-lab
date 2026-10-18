@@ -206,6 +206,26 @@ data class AppSettings(
             )
         }
 
+        /**
+         * Bumped after every [save] (18 Oct, review): the screen's copy ([com.optionslab.app.ui.AppModel.settings]) reads the
+         * vault again, so a kill switch the guard turned on shows at once and is never written back off. Memory only.
+         */
+        private val saveCount = java.util.concurrent.atomic.AtomicLong()
+        private val savesFlow = kotlinx.coroutines.flow.MutableStateFlow(0L)
+        val saves: kotlinx.coroutines.flow.StateFlow<Long> = savesFlow
+
+        /**
+         * The kill switch on, as the guard turns it on by itself (18 Oct, review): readable at once by every reader (the entry
+         * door, the arms, the screen through [saves]) and written to disk by the vault's background writer, so the order path
+         * and the screen's thread never wait on a vault write. Only that one key: nothing else the vault holds is touched.
+         */
+        fun killSoon() {
+            SecurePrefs.putAllSoon(mapOf(KILL_KEY to true))
+            savesFlow.value = saveCount.incrementAndGet()
+            // In the diary, on its own thread (the screen's own switch writes the same line through AppModel.update).
+            runCatching { Diag.record("mode", "kill switch ON (the guard: a live drawdown)") }
+        }
+
         fun save(s: AppSettings) {
             // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
             runCatching { SettingsLog.diff(load(), s) }
@@ -233,6 +253,7 @@ data class AppSettings(
             ))
             // The entry path reads the danger meter's switch from memory only: kept in step with every save (13 Oct).
             DangerToday.halfSize = s.dangerHalfSize
+            savesFlow.value = saveCount.incrementAndGet()
         }
 
         /** The danger meter's switch from the vault into [DangerToday]'s memory copy: the app's start, after a restore. */

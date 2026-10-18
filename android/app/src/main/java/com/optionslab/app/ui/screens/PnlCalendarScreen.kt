@@ -66,6 +66,7 @@ import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -187,6 +188,7 @@ fun PnlCalendarScreen(model: AppModel) {
     val prev = all.filterKeys { YearMonth.from(it) == month.minusMonths(1) }
     // CSV export of every day shown (this account, this filter), to a file the owner picks.
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val csvScope = androidx.compose.runtime.rememberCoroutineScope()
     val csv = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) {
             val rows = all.values.sortedBy { it.date }
@@ -194,8 +196,14 @@ fun PnlCalendarScreen(model: AppModel) {
                 append("date,account,strategy,pnl,trades,charges\n")
                 rows.forEach { d -> append("${d.date},${if (live) "Zerodha" else "Paper"},${owner.replace(',', ' ')},${"%.2f".format(Locale.ENGLISH, d.pnl)},${d.trades},${"%.2f".format(Locale.ENGLISH, d.charges)}\n") }
             }
-            val ok = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }.isSuccess
-            if (ok) com.optionslab.app.work.Alerts.success("Exported ${rows.size} days.") else com.optionslab.app.work.Alerts.error("Could not write the file.")
+            // 18 Oct, review: written on the IO threads (a cloud provider's stream can block), never in this main-thread callback.
+            val resolver = ctx.applicationContext.contentResolver
+            csvScope.launch {
+                val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { resolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }.isSuccess
+                }
+                if (ok) com.optionslab.app.work.Alerts.success("Exported ${rows.size} days.") else com.optionslab.app.work.Alerts.error("Could not write the file.")
+            }
         }
     }
 
@@ -751,7 +759,7 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
 
 /** IraGoldAlgo's paper trades as days (India time, by the day each trade closed), for its P&L calendar. */
 internal fun goldDays(trades: List<com.optionslab.app.data.GoldPaper.Trade>): Map<LocalDate, DailyPnl.Day> =
-    trades.groupBy { it.exitTime.plusMinutes(330).toLocalDate() }
+    trades.groupBy { goldIstDay(it.exitTime) }
         .mapValues { (d, ts) -> DailyPnl.Day(d, Math.round(ts.sumOf { it.pnl } * 100) / 100.0, ts.size) }
 
 /**

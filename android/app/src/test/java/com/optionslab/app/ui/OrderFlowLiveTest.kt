@@ -88,6 +88,43 @@ class OrderFlowLiveTest : RobolectricTest() {
             "quantity" to "75", "product" to "NRML", "price" to "100.05", "validity" to "DAY", "tag" to "iraalgo"), sent.form)
     }
 
+    @Test fun aFailureAfterEveryLegFilledSaysFilledNeverNotSent() {
+        // 18 Oct, review: the ledger's write after the fills failed (here: its temp file cannot be opened) and the review said
+        // "Not sent" for an order that had filled at Zerodha - Boss could send it again. Filled stays filled, with the failure said.
+        val model = model()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
+        val plan = await("the plan") { (model.plan.value as? Load.Done)?.value ?: (model.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
+        model.plan.value = Load.Done(plan.copy(session = LocalDate.now()))
+        java.io.File(context.noBackupFilesDir, "ledger.vault.tmp").apply { mkdirs(); java.io.File(this, "busy").writeText("x") }
+        model.sendPlan()
+        val fills = await("the send") {
+            (model.sending.value as? Load.Done)?.value ?: (model.sending.value as? Load.Failed)?.let { throw AssertionError(it.why) }
+        }
+        assertEquals("COMPLETE", fills.single().status)
+        assertEquals("exactly one order", 1, kite.placed.size)
+        val said = await("the message") { model.message.value?.takeIf { it.startsWith("Filled:") } }
+        assertTrue(said, said.contains("ledger") && said.contains("failed"))
+        assertTrue("still shown as filled: ${model.sending.value}", model.sending.value is Load.Done)
+    }
+
+    @Test fun aLaterLegRefusedAfterAFillSaysTheFilledLegNeverJustNotSent() {
+        // 18 Oct, review: leg 1 filled, leg 2 refused by Zerodha (a definite error): the review says leg 1 is open.
+        val model = model()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
+        val plan = await("the plan") { (model.plan.value as? Load.Done)?.value ?: (model.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
+        val leg = plan.legs.single()
+        model.plan.value = Load.Done(plan.copy(legs = listOf(leg, leg), refusals = listOf(emptyList(), emptyList())))
+        kite.nextPlace(FakeKite.Scenario())
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "Invalid order"))
+        model.sendPlan()
+        val why = await("the refusal") {
+            (model.plan.value as? Load.Done)?.value?.refusals?.flatten()?.takeIf { it.isNotEmpty() }?.let { throw AssertionError("refused before sending: $it") }
+            (model.sending.value as? Load.Done)?.let { throw AssertionError("both legs went: ${it.value}") }
+            (model.sending.value as? Load.Failed)?.why
+        }
+        assertTrue(why, why.startsWith("Not all sent:") && why.contains("1 earlier leg filled at Zerodha"))
+    }
+
     @Test fun paperModeNeverSends() {
         SecurePrefs.put("k.mode", "sandbox"); SecurePrefs.put("k.allow", false)
         val model = model()
