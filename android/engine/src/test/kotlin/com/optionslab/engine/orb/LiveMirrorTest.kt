@@ -231,4 +231,99 @@ class LiveMirrorTest {
         assertEquals("-Rs 40,000", LiveMirror.rs(-40_000.0))
         assertNotNull(LiveMirror.spec(LiveMirror.TELEGRAM_CALLS)?.signal?.takeIf { it.contains("labelled") })
     }
+
+    // ---- shadow and the safety stop (18 Oct) ----------------------------------------------------------------------------------
+
+    @Test fun shadowStartsOnForEveryArmAndOnlyBossesChoiceTurnsItOff() {
+        assertTrue(LiveMirror.SHADOW_DEFAULT)
+        for (a in LiveMirror.ARMS) assertTrue(LiveMirror.shadowOn(a.key, emptyMap()), a.key)
+        assertFalse(LiveMirror.shadowOn(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to false)))
+        assertTrue(LiveMirror.shadowOn(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to true)))
+        assertTrue(LiveMirror.shadowOn("unknown", mapOf("unknown" to false)), "an unknown arm is never live")
+    }
+
+    @Test fun aShadowExitFillsAsTheLiveMirrorWould() {
+        assertEquals(170.0, LiveMirror.shadowExit(true, 169.0, 170.0, 0.05, 1), 1e-9)      // its SL's trigger
+        assertEquals(150.0, LiveMirror.shadowExit(true, 150.0, 170.0, 0.05, 1), 1e-9)      // through the limit: at market
+        assertEquals(230.0, LiveMirror.shadowExit(true, 231.0, 230.0, 0.05, -1), 1e-9)
+        assertEquals(205.0, LiveMirror.shadowExit(false, 205.0, 170.0, 0.05, 1), 1e-9)     // any other exit: at market
+        assertEquals(205.0, LiveMirror.shadowExit(true, 205.0, null, 0.05, 1), 1e-9)
+    }
+
+    @Test fun theShadowRecord() {
+        val r = LiveMirror.record(listOf(100.0, -40.0, 60.0, -20.0))
+        assertEquals(4, r.trades); assertEquals(100.0, r.net, 1e-9); assertEquals(0.5, r.winRate, 1e-9)
+        assertEquals("4 trades, Rs 100, 50% won", LiveMirror.recordWords(r))
+        assertTrue(LiveMirror.record(emptyList()).winRate.isNaN())
+        assertEquals("no shadow trade yet", LiveMirror.recordWords(LiveMirror.record(emptyList())))
+        assertEquals("1 trade, -Rs 5, 0% won", LiveMirror.recordWords(LiveMirror.record(listOf(-5.0))))
+    }
+
+    @Test fun theSafetyStopIs30PercentBeyondTheFillForTheArmsWithoutAPremiumStop() {
+        assertEquals(140.0, LiveMirror.safetyLevel(200.0, 1, 0.05)!!, 1e-9)
+        assertEquals(260.0, LiveMirror.safetyLevel(200.0, -1, 0.05)!!, 1e-9)
+        assertNull(LiveMirror.safetyLevel(0.0, 1, 0.05))
+        assertEquals(setOf(NightRules.SOURCE, LiveMirror.SOLO_MIDDAY, Solo2.SOURCE, VixDivRules.SOURCE, "mcx_trend12"),
+            LiveMirror.ARMS.filter { it.safety }.map { it.key }.toSet())
+        assertEquals(0.30, LiveMirror.SAFETY_PCT, 1e-9)
+    }
+
+    // ---- review fixes (18 Oct) ------------------------------------------------------------------------------------------------
+
+    @Test fun aRestingStopIsShrunkToWhatIsHeldLessTheOtherWorkingExits() {
+        val l = Look(side = 1, qty = 60, held = 30, ltp = 200.0, tick = 0.05, stopTrigger = 170.0, stopResting = true, stopQty = 60, lot = 30)
+        assertEquals(Decision(Step.SHRINK_STOP, "held_less", 30), LiveMirror.decide(l))           // Boss sold one of two lots by hand
+        assertEquals(Decision(Step.SHRINK_STOP, "held_less", 0), LiveMirror.decide(l.copy(otherWorking = 30)))   // another holder covers it
+        assertEquals(Decision(Step.HOLD), LiveMirror.decide(l.copy(held = 60)))
+        assertEquals(Decision(Step.HOLD), LiveMirror.decide(l.copy(held = 120, otherWorking = 60)))
+        assertEquals(Decision(Step.SHRINK_STOP, "held_less", 20), LiveMirror.decide(l.copy(side = -1, held = -20, stopQty = 30, lot = 0)))
+        assertEquals(Step.SELL, LiveMirror.decide(l.copy(squareOff = true)).step, "a sale due goes first")
+    }
+
+    @Test fun aTradeNeverSeenHeldIsNotClosedOnALaggingZeroRead() {
+        val l = Look(side = 1, qty = 30, held = 0, ltp = 200.0, tick = 0.05, stopTrigger = 170.0, stopResting = true, heldSeen = false)
+        assertEquals(Decision(Step.HOLD), LiveMirror.decide(l))
+        assertEquals(Step.CLOSED_OUTSIDE, LiveMirror.decide(l.copy(heldSeen = true)).step)
+        assertFalse(LiveMirror.zeroLongEnough(null, 100_000))
+        assertFalse(LiveMirror.zeroLongEnough(50_000, 100_000))
+        assertTrue(LiveMirror.zeroLongEnough(40_000, 100_000))
+    }
+
+    @Test fun throughAFiredGttsOwnLimit() {
+        // A GTT's leg is 5% under its trigger: 170 -> 161.5; through it below that.
+        assertTrue(LiveMirror.throughLimit(161.0, 170.0, 161.5, 0.05, 1))
+        assertFalse(LiveMirror.throughLimit(162.0, 170.0, 161.5, 0.05, 1))
+        assertTrue(LiveMirror.throughLimit(180.0, 170.0, 178.5, 0.05, -1))
+        assertFalse(LiveMirror.throughLimit(null, 170.0, 161.5, 0.05, 1))
+        assertFalse(LiveMirror.throughLimit(150.0, 170.0, -1.0, 0.05, 1))
+        assertTrue(LiveMirror.throughLimit(151.0, 160.0, null, 0.05, 1), "no own limit: the SL's")
+        val l = Look(side = 1, qty = 30, held = 30, ltp = 161.0, tick = 0.05, stopTrigger = 170.0, stopResting = true, stopLimit = 161.5)
+        assertEquals(Decision(Step.SELL, "stop_run_through", 30), LiveMirror.decide(l))
+    }
+
+    @Test fun lateEntriesAndEntriesAgainstTheNetAreRefused() {
+        assertNull(LiveMirror.tooLate(at(15, 14), "NFO", "MIS", null))
+        assertNotNull(LiveMirror.tooLate(at(15, 15), "NFO", "MIS", null))
+        assertNotNull(LiveMirror.tooLate(at(15, 5), "NFO", "MIS", day))
+        assertNull(LiveMirror.tooLate(at(15, 20), "NFO", "NRML", null))
+        assertNotNull(LiveMirror.tooLate(at(15, 6), "NFO", "NRML", day))
+        assertNull(LiveMirror.tooLate(at(23, 0), "MCX", "NRML", day))
+        assertNull(LiveMirror.againstNet(1, 0)); assertNull(LiveMirror.againstNet(1, 30)); assertNull(LiveMirror.againstNet(-1, -1))
+        assertNotNull(LiveMirror.againstNet(-1, 1)); assertNotNull(LiveMirror.againstNet(1, -2))
+    }
+
+    @Test fun aCarriedNseOptionIsSquaredOffAt1505OnItsExpiryDay() {
+        assertTrue(LiveMirror.squareOffDue(at(15, 5), "NFO", "NRML", day, day.minusDays(1)))
+        assertFalse(LiveMirror.squareOffDue(at(15, 4), "NFO", "NRML", day, day.minusDays(1)))
+        assertFalse(LiveMirror.squareOffDue(at(9, 16), "NFO", "NRML", day.plusDays(1), day.minusDays(1)))
+        assertFalse(LiveMirror.squareOffDue(at(15, 5), "MCX", "NRML", day, day))
+    }
+
+    @Test fun closeJudgedArmsRestOnlyADisasterStop() {
+        assertEquals(setOf(HeroRules.ARM.source, HeroTicketRules.SOURCE), LiveMirror.ARMS.filter { it.closeStop }.map { it.key }.toSet())
+        assertEquals(4.0, LiveMirror.disasterLevel(20.0, 1, 0.05)!!, 1e-9)
+        assertEquals(36.0, LiveMirror.disasterLevel(20.0, -1, 0.05)!!, 1e-9)
+        assertNull(LiveMirror.disasterLevel(0.1, 1, 0.05))
+        assertTrue(LiveMirror.spec(LiveMirror.SHADOW_PROMOTED)!!.safety)
+    }
 }

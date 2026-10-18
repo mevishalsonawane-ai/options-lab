@@ -65,6 +65,17 @@ object LiveMirror {
     data class Spec(
         val key: String, val label: String, val family: String, val scale: Scale = Scale.PCT, val exchange: String = "NFO",
         val product: String = "MIS", val rest: Rest = Rest.SL, val signal: String = "the index", val defaultOn: Boolean = DEFAULT_ON,
+        /**
+         * 18 Oct (Boss): an arm whose own rule has no stop on the premium (its stop is on the index, or it has none) rests a protective
+         * "safety stop" at Zerodha [SAFETY_PCT] beyond the live fill when its paper trade gives no premium stop - protection only.
+         */
+        val safety: Boolean = false,
+        /**
+         * Review fix (18 Oct): the arm's paper stop or trail is judged on a minute's CLOSE (the Hero arm's -60%, the Hero ticket's 25%
+         * trail): a tick-triggered SL at that level would stop the live trade out on a wick the paper trade holds through. Its paper
+         * close-exit drives the live exit instead, and only a labelled "disaster stop" [DISASTER_PCT] beyond the fill rests at Zerodha.
+         */
+        val closeStop: Boolean = false,
     )
 
     const val PASSED = "passed"
@@ -89,21 +100,24 @@ object LiveMirror {
         Spec(DonchianArm.SOURCE, DonchianArm.LABEL, PASSED, signal = "the index's 5-minute Donchian 20 break (Supertrend filter when on)"),
         Spec(BreadthDonchianArm.SOURCE, BreadthDonchianArm.LABEL, PASSED, signal = "4 of the five indices' Donchian breaks together"),
         Spec(OovArm.SOURCE, OovArm.LABEL, PASSED, signal = "the index opening outside yesterday's value area"),
-        Spec(Solo2.SOURCE, Solo2.LABEL, PASSED, signal = "the index (Solo 2.0's setups)"),
-        Spec(SOLO_MIDDAY, "Solo (midday)", SOLO, signal = "the index's 12:00 move against its ATR"),
+        Spec(Solo2.SOURCE, Solo2.LABEL, PASSED, signal = "the index (Solo 2.0's setups)", safety = true),
+        Spec(SOLO_MIDDAY, "Solo (midday)", SOLO, signal = "the index's 12:00 move against its ATR", safety = true),
         Spec(SweepRules.ARM.source, SweepRules.ARM.label, ORB, Scale.POINTS, signal = "BANKNIFTY's opening-range failed break"),
         Spec(RangeFadeRules.ARM.source, RangeFadeRules.ARM.label, ORB, Scale.POINTS, signal = "BANKNIFTY's opening-range edge fade"),
-        Spec(HeroRules.ARM.source, HeroRules.ARM.label, ORB, signal = "NIFTY and its ATM straddle on expiry day"),
-        Spec(SHADOW_PROMOTED, "Shadow variants re-armed", SHADOW, Scale.POINTS, signal = "BANKNIFTY or NIFTY (each variant's own rule)"),
-        Spec(HeroTicketRules.SOURCE, HeroTicketRules.LABEL, HERO_TICKET, signal = "the expiry day at 12:30 (NIFTY, SENSEX)"),
-        Spec(VixDivRules.SOURCE, VixDivRules.LABEL, VIX, signal = "the index against India VIX"),
-        Spec(NightRules.SOURCE, NightRules.LABEL, NIGHT, product = "NRML", rest = Rest.GTT, signal = "the index's close and the day-end OI build-up"),
+        Spec(HeroRules.ARM.source, HeroRules.ARM.label, ORB, signal = "NIFTY and its ATM straddle on expiry day", closeStop = true),
+        Spec(SHADOW_PROMOTED, "Shadow variants re-armed", SHADOW, Scale.POINTS, signal = "BANKNIFTY or NIFTY (each variant's own rule)",
+            safety = true),
+        Spec(HeroTicketRules.SOURCE, HeroTicketRules.LABEL, HERO_TICKET, signal = "the expiry day at 12:30 (NIFTY, SENSEX)", closeStop = true),
+        Spec(VixDivRules.SOURCE, VixDivRules.LABEL, VIX, signal = "the index against India VIX", safety = true),
+        Spec(NightRules.SOURCE, NightRules.LABEL, NIGHT, product = "NRML", rest = Rest.GTT, signal = "the index's close and the day-end OI build-up",
+            safety = true),
         // Its trigger is the option's own price (CLAUDE.md: labelled, reported apart, on only by Boss): its live switch starts off.
         Spec(TELEGRAM_CALLS, "Telegram calls", TELEGRAM, signal = "a chat's call, bought when the option trades at its entry (the option's own price: labelled)",
             defaultOn = false),
         Spec(McxEveRules.SOURCE, McxEveRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the NATURALGAS future's evening break"),
         Spec(McxMorningRules.SOURCE, McxMorningRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the SILVERM future's morning"),
-        Spec(McxTrendRules.SOURCE, McxTrendRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the MCX future's 12-month trend"),
+        Spec(McxTrendRules.SOURCE, McxTrendRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the MCX future's 12-month trend",
+            safety = true),
         Spec(McxUsSilverRules.SOURCE, McxUsSilverRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the SILVERM future, US night"),
     )
 
@@ -118,6 +132,52 @@ object LiveMirror {
 
     /** Whether [key]'s "Trade live" is on, from Boss's saved choices ([saved]: key -> on; a key never set is its [Spec.defaultOn]). */
     fun on(key: String, saved: Map<String, Boolean>): Boolean = spec(key)?.let { saved[key] ?: it.defaultOn } ?: false
+
+    // ---- the shadow (18 Oct, Boss: "add a shadow button, so that even i move to live, until is on, it will not trade") ----------
+
+    /** Each arm's Shadow starts ON: it records what it would have sent live, and sends nothing, until Boss turns it off (the PIN). */
+    const val SHADOW_DEFAULT = true
+
+    /** Whether [key]'s Shadow is on, from Boss's saved choices ([saved]: key -> on); an arm never set, or unknown, is on. */
+    fun shadowOn(key: String, saved: Map<String, Boolean>): Boolean = spec(key) == null || (saved[key] ?: SHADOW_DEFAULT)
+
+    /**
+     * A shadow trade's exit price, as the live mirror would have filled it: at a stop ([stopExit]) its resting SL's trigger while the
+     * price [ltp] is not through the SL's limit (beyond it the app sells at market: [ltp]); any other exit at [ltp] (a market order).
+     */
+    fun shadowExit(stopExit: Boolean, ltp: Double, trigger: Double?, tick: Double, side: Int): Double {
+        if (!stopExit || trigger == null) return ltp
+        return if (runThrough(ltp, trigger, tick, side)) ltp else trigger
+    }
+
+    /** A shadow record: its closed trades' nets ([nets], after charges): (trades, net, win rate 0..1; NaN with none). */
+    data class Record(val trades: Int, val net: Double, val winRate: Double)
+
+    fun record(nets: List<Double>): Record =
+        Record(nets.size, nets.sum(), if (nets.isEmpty()) Double.NaN else nets.count { it > 0 }.toDouble() / nets.size)
+
+    /** "12 trades, Rs 3,400, 58% won" (or "no trade yet"). */
+    fun recordWords(r: Record): String = if (r.trades == 0) "no shadow trade yet" else
+        "%d trade%s, %s, %.0f%% won".format(java.util.Locale.ENGLISH, r.trades, if (r.trades == 1) "" else "s", rs(r.net), r.winRate * 100)
+
+    /**
+     * The disaster stop of a close-judged arm ([Spec.closeStop]): 80% beyond the fill. For the Hero arm (its own stop -60% on a close)
+     * and the Hero ticket (Rs 5-30 options that swing 30% and more in minutes while its 25% trail, judged on closes, holds them;
+     * with the default 2x start no stop at all below 2x), a -30% tick stop would sell ahead of the paper trade on ordinary noise;
+     * -80% fires only in a collapse the paper trade would also be in (a ticket's whole lot costs at most Rs 1,000).
+     */
+    const val DISASTER_PCT = 0.80
+
+    /** The disaster stop for a live fill [fill] ([DISASTER_PCT] beyond it), on the [tick]; null when it is no price. */
+    fun disasterLevel(fill: Double, side: Int, tick: Double): Double? =
+        level(fill, if (side >= 0) fill * (1 - DISASTER_PCT) else fill * (1 + DISASTER_PCT), fill, Scale.PCT, side, tick)
+
+    /** The safety stop's distance: 30% beyond the live fill. */
+    const val SAFETY_PCT = 0.30
+
+    /** The safety stop for a live fill [fill]: 30% below it for a long (above for a short), on the [tick]; null when it is no price. */
+    fun safetyLevel(fill: Double, side: Int, tick: Double): Double? =
+        level(fill, if (side >= 0) fill * (1 - SAFETY_PCT) else fill * (1 + SAFETY_PCT), fill, Scale.PCT, side, tick)
 
     // ---- entries --------------------------------------------------------------------------------------------------------------
 
@@ -218,11 +278,12 @@ object LiveMirror {
 
     /**
      * The mirror's own square-off for a position on [exchange] in [product] at [t]: an NSE intraday (MIS) one at 15:15, and on its
-     * contract's [expiry] day at 15:05; a held-over one (bought on an earlier day, [entryDay]) at once. A carried (NRML) or MCX
-     * position never: it goes by its paper arm's own exit.
+     * contract's [expiry] day at 15:05; a held-over one (bought on an earlier day, [entryDay]) at once. A carried (NRML) NSE option
+     * only on its contract's expiry day at 15:05 (never held into settlement); MCX never: it goes by its paper arm's own exit.
      */
     fun squareOffDue(t: LocalDateTime, exchange: String, product: String, expiry: LocalDate?, entryDay: LocalDate): Boolean {
-        if (exchange !in NSE || product != "MIS") return false
+        if (exchange !in NSE) return false
+        if (product != "MIS") return expiry == t.toLocalDate() && !t.toLocalTime().isBefore(EXPIRY_SQUARE_OFF)
         if (entryDay.isBefore(t.toLocalDate())) return true
         val at = t.toLocalTime()
         if (!at.isBefore(SQUARE_OFF)) return true
@@ -259,6 +320,11 @@ object LiveMirror {
         PLACE_STOP,
         /** Move the resting stop to [Decision.to] (tighter only). */
         MOVE_STOP,
+        /**
+         * The resting stop is for more than Zerodha holds less the other exits working on the contract (Boss sold part by hand, or
+         * another holder's stop covers it): shrink it to [Decision.qty] (0: take it out) - a resting stop never sells into a short.
+         */
+        SHRINK_STOP,
         HOLD,
     }
 
@@ -276,6 +342,14 @@ object LiveMirror {
         val side: Int, val qty: Int, val held: Int?, val ltp: Double?, val tick: Double, val stopTrigger: Double?, val stopResting: Boolean,
         val stopFilled: Boolean = false, val wanted: Double? = null, val paperSell: Int = 0, val paperReason: String? = null,
         val squareOff: Boolean = false, val operatorStop: Boolean = false,
+        /**
+         * Review fixes (18 Oct): [heldSeen] Zerodha has shown this trade held (or its zero reads have lasted the grace): only then is a
+         * zero read "closed outside" - a position book that lags a fill never closes a trade; [stopQty] the resting stop's working
+         * quantity (null: unknown); [otherWorking] the other exits working on the contract (another holder's stop, Boss's own sell,
+         * a fired GTT's order); [lot] the order lot; [stopLimit] the resting order's own limit when known (a GTT's leg price), else
+         * the SL limit the arms use ([stopLimit]).
+         */
+        val heldSeen: Boolean = true, val stopQty: Int? = null, val otherWorking: Int = 0, val lot: Int = 1, val stopLimit: Double? = null,
     )
 
     /**
@@ -287,14 +361,20 @@ object LiveMirror {
         if (l.stopFilled) return Decision(Step.STOP_FILLED, "stop")
         val held = l.held ?: return Decision(Step.HOLD)
         val heldMine = if (l.side >= 0) held else -held
-        if (heldMine <= 0) return Decision(Step.CLOSED_OUTSIDE, "closed_outside")
+        if (heldMine <= 0) return if (l.heldSeen) Decision(Step.CLOSED_OUTSIDE, "closed_outside") else Decision(Step.HOLD)
         val qty = minOf(l.qty, heldMine)
         if (l.operatorStop) return Decision(Step.SELL, "operator_stop", qty)
         if (l.squareOff) return Decision(Step.SELL, "square_off", qty)
         if (l.paperSell > 0) return Decision(Step.SELL, l.paperReason ?: "paper_exit", minOf(l.paperSell, qty))
+        // A resting stop for more than is held less the other working exits: shrunk (whole lots; 0 takes it out).
+        if (l.stopResting && l.stopQty != null) {
+            val room = (heldMine - l.otherWorking.coerceAtLeast(0)).coerceAtLeast(0)
+            val lot = l.lot.coerceAtLeast(1)
+            if (l.stopQty > room) return Decision(Step.SHRINK_STOP, "held_less", room / lot * lot)
+        }
         val trigger = l.stopTrigger
         if (!l.stopResting && atStop(l.ltp, trigger, l.side)) return Decision(Step.SELL, "stop", qty)
-        if (l.stopResting && runThrough(l.ltp, trigger, l.tick, l.side)) return Decision(Step.SELL, "stop_run_through", qty)
+        if (l.stopResting && throughLimit(l.ltp, trigger, l.stopLimit, l.tick, l.side)) return Decision(Step.SELL, "stop_run_through", qty)
         val ltp = l.ltp ?: return Decision(Step.HOLD)
         if (!l.stopResting) {
             // No stop rests: the tighter of its own and the paper trade's level, placed when it may rest at this price.
@@ -304,6 +384,29 @@ object LiveMirror {
         val to = move(trigger, l.wanted, ltp, l.tick, l.side) ?: return Decision(Step.HOLD)
         return Decision(Step.MOVE_STOP, to = to)
     }
+
+    /** Through the resting order's own [limit] when known (a fired GTT's leg price), else through the SL limit the arms use. */
+    fun throughLimit(ltp: Double?, trigger: Double?, limit: Double?, tick: Double, side: Int): Boolean {
+        if (limit == null) return runThrough(ltp, trigger, tick, side)
+        if (ltp == null || ltp <= 0 || limit <= 0) return false
+        return if (side >= 0) ltp < limit - EPS else ltp > limit + EPS
+    }
+
+    /**
+     * A zero position read for a trade never seen held counts as closed only after [GRACE_MS] of zero reads (a position book that
+     * lags the fill never closes it): [zeroSinceMs] when the first zero read came (null: none yet), at [nowMs].
+     */
+    fun zeroLongEnough(zeroSinceMs: Long?, nowMs: Long): Boolean = zeroSinceMs != null && nowMs - zeroSinceMs >= GRACE_MS
+
+    const val GRACE_MS = 60_000L
+
+    /** Why a live entry may not go at [t] although the gate allows it: too late for an intraday trade (or its expiry square-off). */
+    fun tooLate(t: LocalDateTime, exchange: String, product: String, expiry: LocalDate?): String? =
+        if (squareOffDue(t, exchange, product, expiry, t.toLocalDate())) "too late in the day for a new live entry (its square-off is due)" else null
+
+    /** Why a live entry may not go on a contract Zerodha holds the other way ([net], signed) in the same product: never a reversal. */
+    fun againstNet(side: Int, net: Int): String? =
+        if (net != 0 && (net > 0) != (side > 0)) "Zerodha holds this contract the other way (net $net): no live entry against it" else null
 
     /**
      * Whether a live position may be sold because its paper trade is gone: only once its paper trade was SEEN open after the live

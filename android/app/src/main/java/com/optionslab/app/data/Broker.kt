@@ -1526,15 +1526,19 @@ object Broker {
 
     // ---- GTT ------------------------------------------------------------------------------
 
+    /** [orderIds]: the orders a fired GTT placed (its legs' results), so a fired stop's own exit order can be found (18 Oct). */
     data class GttRow(val id: Long, val type: String, val status: String, val exchange: String, val symbol: String,
-                      val triggers: List<Double>, val lastPrice: Double, val orders: String, val created: String)
+                      val triggers: List<Double>, val lastPrice: Double, val orders: String, val created: String,
+                      val orderIds: List<String> = emptyList(), val legPrices: List<Double> = emptyList())
 
     suspend fun gtts(): List<GttRow> = rows(call("GET", "/gtt/triggers") as? JSONArray).map { g ->
         val c = g.optJSONObject("condition") ?: JSONObject()
         val tv = c.optJSONArray("trigger_values") ?: JSONArray()
         val os = rows(g.optJSONArray("orders")).joinToString(" / ") { "${it.optString("transaction_type")} ${it.optInt("quantity")} @ ${it.optDouble("price")}" }
         GttRow(g.optLong("id"), g.optString("type"), g.optString("status"), c.optString("exchange"), c.optString("tradingsymbol"),
-            (0 until tv.length()).map { tv.getDouble(it) }, c.optDouble("last_price", 0.0), os, g.optString("created_at"))
+            (0 until tv.length()).map { tv.getDouble(it) }, c.optDouble("last_price", 0.0), os, g.optString("created_at"),
+            rows(g.optJSONArray("orders")).mapNotNull { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.optString("order_id")?.takeIf { it.isNotBlank() } },
+            rows(g.optJSONArray("orders")).map { it.optDouble("price", 0.0) })
     }.sortedByDescending { it.created }
 
     /** Places a GTT. Callers must have had the owner confirm it. */
