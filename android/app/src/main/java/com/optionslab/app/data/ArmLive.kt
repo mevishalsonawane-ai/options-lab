@@ -225,6 +225,7 @@ object ArmLive {
      * Nothing goes unless every switch and guard allows it ([LiveMirror.refusal]).
      */
     fun entered(ask: Ask) {
+        testHeard?.add("entered|${ask.key}|${ask.ref}|${ask.paperQty}|${ask.stop}")
         if (!ready() || LiveMirror.spec(ask.key) == null) return
         ask.stop?.let { level(ask.ref, it) }
         // In Paper (the usual case) nothing more happens: no worker, no read (the settings are in memory).
@@ -243,12 +244,14 @@ object ArmLive {
     /** The paper trade [ref]'s stop or lock is at [paperLevel] now: the live stop follows on the next look (memory only). */
     fun level(ref: String, paperLevel: Double?) {
         if (paperLevel == null || !paperLevel.isFinite() || paperLevel <= 0) return
+        testHeard?.add("level|$ref|$paperLevel")
         levels[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to paperLevel
         if (levels.size > NOTES_KEPT) prune()
     }
 
     /** The paper trade [ref] is closed ([why]): its live trade is sold on the next look, which is asked now (memory only). */
     fun closed(ref: String, why: String) {
+        testHeard?.add("closed|$ref|$why")
         closedRefs[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to why
         if (closedRefs.size > NOTES_KEPT) prune()
         if (holdingHint || shadowHint) nudge()
@@ -487,6 +490,16 @@ object ArmLive {
     /** TEST ONLY: [entered] runs the entry before it returns (no worker), so a test reads what it did at once. Debug builds only. */
     @Volatile internal var testSync: Boolean = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+    /**
+     * TEST ONLY (review D8, the hosts' wiring tests): what the paper hosts told this object, in order - "entered|key|ref|qty|stop",
+     * "level|ref|x", "closed|ref|why". Null in the app, always; its setter throws unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var testHeard: MutableList<String>? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: the legs [family]'s registered paper book gives now (null: none registered, or not read). */
+    internal fun legsForTest(family: String): List<PaperLeg>? = hosts[family]?.open()
+
     private fun now(): LocalDateTime = (testNow ?: Market.now()).toLocalDateTime().withNano(0)
     private fun nowMs(): Long = (testNow ?: Market.now()).toInstant().toEpochMilli()
 
