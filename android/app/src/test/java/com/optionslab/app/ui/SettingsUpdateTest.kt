@@ -108,6 +108,27 @@ class SettingsUpdateTest : RobolectricTest() {
         assertEquals(s, model.settings.value)
     }
 
+    /**
+     * 18 Oct (CI flake of the test below): on a vault from before the guard's v2 defaults the first change is written whole.
+     * The guard's kill switch landing between that change's read and its write (the guard writes from the order path, at any
+     * moment) was written back off. Forced here: the guard's write lands after [from] was read and before the write.
+     */
+    @Test fun aWholeWriteOfAnOlderVaultNeverWritesTheKillSwitchItDidNotChange() {
+        assertTrue("a fresh vault is written whole", SecurePrefs.getInt("g.v", 1) < 2)
+        val from = AppSettings.load()
+        assertFalse(from.guardKill)
+        SecurePrefs.put(AppSettings.KILL_KEY, true)                 // the guard, between the read and the write
+        AppSettings.saveChanged(from, from.copy(theme = "dark"))
+        assertTrue("the guard's kill switch is kept", AppSettings.load().guardKill)
+        assertEquals("dark", AppSettings.load().theme)
+        assertEquals("the whole write was made (migrated)", 2, SecurePrefs.getInt("g.v", 1))
+        // Boss's own clear in a whole write still clears it.
+        SecurePrefs.put("g.v", 1)
+        val on = AppSettings.load()
+        AppSettings.saveChanged(on, on.copy(guardKill = false))
+        assertFalse(AppSettings.load().guardKill)
+    }
+
     @Test fun aGuardWriteDuringQueuedChangesIsKeptByAll() {
         val model = model()
         model.update { it.copy(theme = "dark") }

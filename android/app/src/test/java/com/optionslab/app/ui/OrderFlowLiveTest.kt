@@ -195,9 +195,10 @@ class OrderFlowLiveTest : RobolectricTest() {
     }
 
     @Test fun jarvissOrderThatTheAppRefusedAtTheSendIsSaidAsNotSentNeverAnEarlierSendsFills() {
-        // 18 Oct: a send the app refused at once (real orders not allowed, a check that failed again) left the send's state as it
-        // was, and Jarvis answered from it: an earlier order's fills as "Sent to Zerodha". Nothing had gone.
-        SecurePrefs.put("k.allow", false)
+        // 18 Oct: a send the app refused at once (the app back in Paper mode since Jarvis decided it would go live, a check that
+        // failed again) left the send's state as it was, and Jarvis answered from it: an earlier order's fills as "Sent to
+        // Zerodha". Nothing had gone. (Live mode always allows real orders, so the refusal here is Paper mode's.)
+        paperMode()
         val model = model()
         com.optionslab.app.ira.IraActions.attach(model)
         model.sending.value = Load.Done(listOf(com.optionslab.app.data.Broker.Fill("250926000000999", "COMPLETE", 99.0, 75, "")))

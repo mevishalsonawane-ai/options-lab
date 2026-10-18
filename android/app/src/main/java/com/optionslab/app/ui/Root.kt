@@ -783,10 +783,12 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
         onDismissRequest = { confirmLive = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
-        text = { Text((paperOnly?.let { com.optionslab.ira.PaperOnlyPeriod.liveAsk(it) + "\n\n" } ?: "") +
-            "Prices, positions and orders will come from your Zerodha account, with real money. As on paper, your order goes when you tap Buy or Sell " +
-            "and enter your PIN or fingerprint (no review step). \"AI trades go live\" turns on too: ideas you approve may go to Zerodha. Each arm keeps " +
-            "its own live choice, and paper-only arms stay on paper. Switching back to Paper turns both off.", style = Type.bodySmall) },
+        // Scrolls at a large font or in landscape (CI's layout check: the text was cut at 2x fonts).
+        text = { androidx.compose.foundation.layout.Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+            Text((paperOnly?.let { com.optionslab.ira.PaperOnlyPeriod.liveAsk(it) + "\n\n" } ?: "") +
+            "Prices, positions and orders will come from your Zerodha account, with real money. As on paper, an order goes when you tap Buy or Sell " +
+            "and enter your PIN (no review step). \"AI trades go live\" turns on too. Each arm keeps its own live choice; paper-only arms stay " +
+            "on paper. Paper turns both off.", style = Type.bodySmall) } },
         // Your PIN follows (the caller asks it): Live and "AI trades go live" switch on only with it.
         confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) {
             Text("Enter PIN to go live", color = p.oxblood) } },

@@ -291,8 +291,16 @@ data class AppSettings(
             // 18 Oct, review: a kill switch the guard turned on since [from] was read (this change did not touch it) is kept in that
             // whole write too - CI's SettingsUpdateTest caught the first change on a fresh vault writing it back off.
             if (SecurePrefs.getInt("g.v", 1) < 2) {
-                val guardOn = !from.guardKill && !to.guardKill && SecurePrefs.getBoolean(KILL_KEY, false)
-                save(if (guardOn) to.copy(guardKill = true) else to); return
+                // 18 Oct (CI: SettingsUpdateTest flaked): a change that does not touch the kill switch leaves its key out of the
+                // whole write altogether. Reading the key first and writing it back still lost a kill switch the guard set in
+                // between (the guard writes it from the order path on its own, at any moment).
+                if (from.guardKill == to.guardKill) {
+                    runCatching { SettingsLog.diff(load(), to) }
+                    SecurePrefs.putAll(keys(to) - KILL_KEY)
+                    DangerToday.halfSize = to.dangerHalfSize
+                    savesFlow.value = saveCount.incrementAndGet()
+                } else save(to)
+                return
             }
             runCatching { SettingsLog.diff(from, to) }
             val was = keys(from)

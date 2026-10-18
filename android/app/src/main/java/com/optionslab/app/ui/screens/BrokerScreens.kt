@@ -310,13 +310,15 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
     var paperArms by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(live) {
         // Read on the AI-live writes' own lane, so after a switch's write still queued there (18 Oct review: never the old value).
-        aiLive = AI_LIVE_WRITES.async { runCatching { !com.optionslab.app.ira.IraNewsTrades.paperFirst }.getOrDefault(false) }.await()
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val ai = AI_LIVE_WRITES.async { runCatching { !com.optionslab.app.ira.IraNewsTrades.paperFirst }.getOrDefault(false) }.await()
+        val (on, off) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val orb = runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }
             val strat = runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).map { it.def }
-            liveArms = orb.filter { it.liveOk && !it.arm.paperOnly }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }
-            paperArms = orb.filter { !it.liveOk || it.arm.paperOnly }.map { it.arm.label }
+            (orb.filter { it.liveOk && !it.arm.paperOnly }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
+                orb.filter { !it.liveOk || it.arm.paperOnly }.map { it.arm.label }
         }
+        // Set on the main thread (never from a worker's continuation: the compose tests' unconfined dispatcher would run the frame there).
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { aiLive = ai; liveArms = on; paperArms = off }
     }
     Column(Modifier.padding(top = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
