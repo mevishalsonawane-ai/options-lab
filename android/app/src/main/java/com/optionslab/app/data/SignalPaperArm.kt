@@ -19,6 +19,11 @@ import java.time.LocalDateTime
 import java.util.Locale
 
 /**
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on (off until Boss turns it on: its trigger is the option's own price), outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * Paper-trading a Telegram chat's calls (15 Oct 2026, Boss's explicit choice; the rules are [SignalPaperRules]). BOSS'S CHOICE -
  * NOT PROVEN, PAPER ONLY: every order is the paper account's ([Paper.place] / [Paper.cancel] / [Paper.modify]); there is no live
  * flag and no Zerodha call anywhere here, so nothing can reach Zerodha whatever Live, "AI trades go live" or a voice command says.
@@ -43,7 +48,22 @@ object SignalPaperArm {
     @Volatile private var file: File? = null
     private val written = Vault.LastWrite()
 
-    fun init(context: Context) { file = File(context.applicationContext.noBackupFilesDir, FILE) }
+    fun init(context: Context) {
+        file = File(context.applicationContext.noBackupFilesDir, FILE)
+        // 18 Oct (Boss: every paper strategy present for live too): its paper trades, for their live path ([ArmLive]; its live switch
+        // starts off - the trigger is the option's own price, so only Boss switches it on).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.TELEGRAM) {
+            if (cache == null) null else _view.value.let { v ->
+                val today = Market.today()
+                (v.open + v.closed.filter { it.day == today }).map {
+                    ArmLive.PaperLeg(mirrorRef(it), com.optionslab.engine.orb.LiveMirror.TELEGRAM_CALLS, if (it.open) (it.qty - it.soldQty).coerceAtLeast(0) else 0)
+                }
+            }
+        }
+    }
+
+    /** A trade's reference for its live path ([ArmLive]): its chat's call (never the chat's name). */
+    private fun mirrorRef(p: Pos): String = "telegram:${p.chat}:${p.callId}"
 
     /** A chat's short id (the change timeline and the paper tags carry it, never the name). */
     fun chatId(name: String): String = "c" + MessageDigest.getInstance("SHA-256").digest(SignalTesterHost.norm(name).toByteArray())
@@ -372,8 +392,13 @@ object SignalPaperArm {
         val lots = (qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
         val stopId = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, stop) }.getOrNull()?.takeIf { it.ok }?.orderId
             ?.also { runCatching { Strategies.tagOwner("paper:$it", "${SignalPaperRules.OWNER} · stop") } }
-        b.positions += Pos(chat, r.id, d.underlying!!, c.symbol, d.right!!.name, lots, qty, price, now, orderId, stop, ours, stopId, s.exit.key,
+        val pos = Pos(chat, r.id, d.underlying!!, c.symbol, d.right!!.name, lots, qty, price, now, orderId, stop, ours, stopId, s.exit.key,
             SignalPaperRules.target(s.exit, d.targets), d.targets.lastOrNull(), r.expiry == now.toLocalDate(), charges = chargesOf(orderId))
+        b.positions += pos
+        // 18 Oct: its live path ([ArmLive], off until Boss switches it on): the same option and lots, a LIMIT 1% over the fill at most,
+        // the call's stop (or ours) resting at Zerodha and moved to cost at T1; targets stay the app's.
+        runCatching { ArmLive.entered(ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.TELEGRAM_CALLS, mirrorRef(pos), c, 1, qty, price, stop = stop,
+            limit = price * 1.01)) }
         b.decided += r.id
         return say(b, chat, "bought ${c.symbol} $qty @ ${CallParser.num(price)} · paper · stop ${CallParser.num(stop)}${if (ours) " (our stop)" else ""}, " +
             "${s.exit.words} · ${SignalPaperRules.BOSS_CHOICE}", final = true)
@@ -386,6 +411,9 @@ object SignalPaperArm {
             val p = b.positions[i]
             if (!p.open) continue
             val next = runCatching { exitOne(p, now) }.getOrNull() ?: continue
+            // 18 Oct: its stop (moved to cost at T1) for its live trade, and its close ([ArmLive]; memory only).
+            runCatching { ArmLive.level(mirrorRef(next), next.stop) }
+            if (!next.open) runCatching { ArmLive.closed(mirrorRef(next), next.why ?: "exit") }
             if (next != p) {
                 b.positions[i] = next; changed = true
                 if (!next.open) say(b, p.chat, "sold ${p.symbol} (${next.why}): %s after charges · paper".format(Locale.ENGLISH, com.optionslab.engine.signals.ChannelScore.rs(next.net ?: 0.0)), final = true)

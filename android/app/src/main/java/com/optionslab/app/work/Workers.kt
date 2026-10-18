@@ -50,7 +50,7 @@ object WatchWorkers {
         PositionCards.anyOpen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.Strategies.runningHint ||
             com.optionslab.app.data.Protections.activeHint != false || com.optionslab.app.data.PineAuto.holding() ||
             com.optionslab.app.data.PassedArmsHost.holding() || com.optionslab.app.data.HeroTicketArm.holding() ||
-            com.optionslab.app.data.SignalPaperArm.holding()
+            com.optionslab.app.data.SignalPaperArm.holding() || com.optionslab.app.data.ArmLive.holdingHint
     }.getOrDefault(true)
 
     /** One watch run's workers: its supervisor and the job they all run under. */

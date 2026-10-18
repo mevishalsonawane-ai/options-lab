@@ -420,6 +420,15 @@ internal object Autopilot {
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setSupertrend(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
             }
+            // 18 Oct (Boss: every paper strategy present for live too): an arm's own "Trade live" switch ([logArmLive]). Its Undo
+            // flips it back: off is free; on raises live risk, so it goes only with the PIN (checked above and in the setter).
+            AutoChange.Kind.ARM_LIVE -> {
+                val key = c.target.removePrefix(AutoChange.ARM_LIVE)
+                if (!c.target.startsWith(AutoChange.ARM_LIVE) || com.optionslab.engine.orb.LiveMirror.spec(key) == null ||
+                    (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.ArmLive.setLive(key, c.to == AutoChange.ON, pinConfirmed, log = false) }
+                    .takeIf { !it.contains("needs your PIN") && !it.contains("Not ready") && !it.contains("No such arm") }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -875,6 +884,29 @@ internal object Autopilot {
     fun logPassedSupertrendOn() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedSupertrend(true), "the 16 Oct update (your ask: \"T7 supertrend agree\"); paper only - never live")
+    }
+
+    /**
+     * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too ... i will switch it off, if i need
+     * it"): Boss switched [label]'s own "Trade live" [on] or off ([com.optionslab.app.data.ArmLive.setLive]). Logged as Boss's (kept)
+     * so the change log and "Today's changes" show it; one tap undoes it (an undo that turns it back on asks the PIN). Every flip is
+     * logged (only the newest undoes). In the background, on Autopilot's own worker.
+     */
+    fun logArmLive(key: String, label: String, on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): $label's live switch") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, AutoChange.armLive(key, label, on), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "your choice", note = if (on) "live only in Live with AI trades on, never in the paper-only period" else "paper only from now on").first
+                    save()
+                }
+            }
+        }
     }
 
     /**

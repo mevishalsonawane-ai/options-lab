@@ -19,8 +19,11 @@ import java.util.Locale
  *    price (one order: never a second sell in flight). Said as "Lock missed at X, sold at Y". The bots' own checks (Pine,
  *    Solo, Liquidity, ORB, protections, Jarvis's trades) run in the same loop for positions with no resting order.
  *  - 6, the live backup: a GTT beside every bot's resting SL at Zerodha ([LiveBackup]), moved up with it, never down;
- *    when either fires the other comes out; deleted when the position is closed. Placing or moving one needs Live on
- *    ([OrbArms.liveNow]); a failed GTT is said plainly and alerted, and the SL itself always stays.
+ *    when either fires the other comes out; deleted when the position is closed. 18 Oct (review of the arms' live path):
+ *    NO LONGER PLACED. With the phone dead, the SL triggered and resting at its limit, the GTT firing at that limit puts in a
+ *    second sell; a bounce back to the limit then fills both and turns the long into a short - the one state that must never
+ *    exist. The SL alone rests at Zerodha now (the app's own check sells a price through its limit; Zerodha's MIS square-off
+ *    is the dead-phone backstop). A backup still active beside a working SL (placed by an older build) is deleted here.
  *  - 8, the no-price failsafe: Zerodha prices are read through its REST quote (never the stream alone); no price for any
  *    open position for over two minutes is a loud warning, a notice and Jarvis's spoken safety warning
  *    ("Positions not protected: no prices since HH:MM"). 15 Oct: a position is judged only while its own market trades
@@ -149,23 +152,19 @@ object Sweeper {
                     map.remove(sl)
                 }
                 LiveBackup.Step.DROP_GTT -> { runCatching { Broker.deleteGtt(gid) }; map.remove(sl) }
-                LiveBackup.Step.KEEP -> if (g.status.lowercase() != "active" && so?.working != true) map.remove(sl)
+                LiveBackup.Step.KEEP -> when {
+                    g.status.lowercase() != "active" && so?.working != true -> map.remove(sl)
+                    // 18 Oct: an older build's backup beside a working SL - two resting sells: the GTT comes out, the SL stays.
+                    g.status.lowercase() == "active" && so?.working == true -> {
+                        if (runCatching { Broker.deleteGtt(gid) }.isSuccess) {
+                            map.remove(sl)
+                            runCatching { Diag.record("risk", "Zerodha: the backup GTT beside the stop on ${g.symbol} was deleted (two resting sells could both fill); the stop stays") }
+                        }
+                    }
+                }
             }
         }
-        // Placed or moved up only with Live on (the live gates); a paper position never has one.
-        if (OrbArms.liveNow()) for (so in stops) {
-            val spec = runCatching { Broker.spec(so.exchange, so.symbol) }.getOrNull() ?: continue
-            val want = LiveBackup.trigger(so.trigger, so.price.takeIf { so.type == "SL" }, spec.tickSize) ?: continue
-            val old = map[so.id]?.let { id -> gtts.firstOrNull { it.id == id } }
-            if (!LiveBackup.moves(old?.triggers?.firstOrNull(), want)) continue
-            val px = ltp["${so.exchange}:${so.symbol}"] ?: continue
-            val (gtt, why) = com.optionslab.engine.Kite.protect(spec, so.product.ifBlank { "MIS" }, so.qty - so.filled, px, want, null)
-            if (gtt == null) { failed(so.symbol, want, why.joinToString("; ")); continue }
-            // Moved: the old one out first, so two GTTs never sell the same position.
-            old?.let { o -> runCatching { Broker.deleteGtt(o.id) }; map.remove(so.id) }
-            val id = runCatching { Broker.placeGtt(gtt) }
-            id.getOrNull()?.let { map[so.id] = it } ?: failed(so.symbol, want, id.exceptionOrNull()?.message?.take(160) ?: "an error")
-        }
+        // 18 Oct: no backup GTT is placed beside a stop any more (see item 6 above): the stop alone rests at Zerodha.
         keep(map)
     }
 

@@ -57,7 +57,7 @@ class Diag1016Test : RobolectricTest() {
     }
 
     @Test fun anArmsOwnDescriptionIsNotAnErrorButARealFailureStillIs() {
-        val sweep = "ORB Sweep armed on paper (it never trades on Zerodha), fully automatic: it fades a failed break of the opening range"
+        val sweep = "ORB Sweep armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on), fully automatic: it fades a failed break of the opening range"
         assertEquals(Alerts.Kind.SUCCESS, Alerts.classify(sweep))
         assertEquals(Alerts.Kind.SUCCESS, Alerts.classify("Liquidity 15+5 armed: it sells at the next level, when the break fails, or at 15:10."))
         assertEquals(Alerts.Kind.ERROR, Alerts.classify("Order failed: margin"))

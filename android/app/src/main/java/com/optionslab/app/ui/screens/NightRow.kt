@@ -52,7 +52,7 @@ internal fun NightRow() {
 internal fun nightExplanation(v: NightArm.View): List<String> = listOf(
     NightRules.RULES + ".",
     "Research: pre-holdout Rs ${NightRules.PRE_PER_DAY}/day, holdout Rs ${NightRules.HOLD_PER_DAY}/day · not proven.",
-    "Paper only: it never trades on Zerodha.",
+    "Paper first: at Zerodha only by its own \"Trade live\" switch (beside the Live switch), in Live with AI trades on.",
 ) + v.status.toSortedMap().map { (idx, s) -> "$idx: $s" }
 
 /** The row from plain state ([v]) and the switch's callback. COMPACT (15 Oct): name (tap: the explanation), badge, holdings. */

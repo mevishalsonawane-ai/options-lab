@@ -141,6 +141,33 @@ class OneSwitchTest {
         assertTrue("the app stays Live", AppSettings.load().live)
     }
 
+    /**
+     * 18 Oct (Boss: every paper strategy present for live too, "i will switch it off, if i need it"): beside the Live switch, each paper
+     * strategy's own "Trade live" switch - on by default, off with one tap and no PIN, on again only with the PIN; the change is
+     * logged. Jarvis's own ideas are not in the list.
+     */
+    @Test fun eachPaperStrategyHasItsOwnTradeLiveSwitchOffFreeOnWithThePin() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        PinLock.setPin(pin.toCharArray())
+        AutomationSupport.liveSettings(live = true)
+        val m = holder.model
+        compose.setContent { IraAlgoTheme("light") { ArmsLiveList(m) } }
+        compose.waitForIdle()
+        val label = com.optionslab.engine.orb.DonchianArm.LABEL
+        pump { exists(label) }
+        assertTrue("on by default", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE))
+        assertFalse("Jarvis's own ideas are not listed", exists("Forge ideas", substring = true))
+        assertTrue("an option-price rule starts off", exists("Telegram calls"))
+        compose.onNode(hasContentDescription("Trade live: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
+        pump { !com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE) }
+        assertFalse("off with no PIN", exists("Confirm it is you"))
+        compose.onNode(hasContentDescription("Trade live: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
+        enterPin(pin)
+        pump { com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE) }
+        val log = com.optionslab.app.data.ArmLive.view.value.log.joinToString("\n")
+        assertTrue(log, log.contains("Trade live OFF (you)") && log.contains("Trade live ON (you)"))
+    }
+
     @Test fun eachArmKeepsItsOwnLiveChoiceAndJarvissOwnTradesStayOnPaper() {
         // ORB cleared for live with its own PIN; ORB Fresh armed in Paper (not cleared): the switch changes neither.
         AutomationSupport.orbState(app, JSONObject()

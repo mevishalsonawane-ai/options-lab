@@ -103,7 +103,7 @@ object LiveSelfTest {
         override suspend fun booksOpen(): Boolean = runCatching {
             // Memory first (the watch's own "anything held" and MCX's), then the books already in memory, then Zerodha afresh.
             com.optionslab.app.work.WatchWorkers.heldQuick() || McxMarket.heldQuick() || Paper.watching() ||
-                McxPaperArms.holdsNow() || NightArm.refresh().open.isNotEmpty() || VixDivArm.refresh().open.isNotEmpty() ||
+                McxPaperArms.holdsNow() || NightArm.refresh().open.isNotEmpty() || VixDivArm.refresh().open.isNotEmpty() || ArmLive.holding() ||
                 Ledger.openTicket() != null || (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holdingOrThrow()) ||
                 Broker.positionBook().net.any { it.open } || Broker.orders().any { it.working }
         }.getOrDefault(true)
@@ -447,6 +447,7 @@ object LiveSelfTest {
         suspend fun positions() {
             var live: List<Broker.Position>? = null
             var working: Int? = null
+            var workingRows: List<Broker.OrderRow> = emptyList()
             var paper: SandboxState? = null
             r.step(Group.POSITIONS, "Position book (Zerodha)", Budgets.READ_MS) {
                 val b = Broker.positionBook()
@@ -456,6 +457,7 @@ object LiveSelfTest {
             r.step(Group.POSITIONS, "Order book (Zerodha)", Budgets.READ_MS) {
                 val o = Broker.orders()
                 working = o.count { it.working }
+                workingRows = o.filter { it.working }
                 LiveCheck.pass("${o.size} orders today, ${o.count { it.working }} working")
             }
             r.step(Group.POSITIONS, "Paper book", Budgets.READ_MS) {
@@ -477,7 +479,12 @@ object LiveSelfTest {
                 val held = ArrayList<LiveCheck.Held>()
                 for (pos in l.filter { it.open }) {
                     val it0 = prot.lastOrNull { it.live && it.symbol == pos.symbol && it.exchange == pos.exchange }
-                    held += LiveCheck.Held(paper = false, stop = it0?.stop != null, target = it0?.target != null, checkedAgoMs = age(src.stopsCheckedAt()))
+                    // 18 Oct: a bot's own stop resting at Zerodha counts too - an SL / SL-M order on the exit side (the ORB arms', Pine's,
+                    // the paper strategies' live trades'), or the GTT a carried live trade of theirs rests on ([ArmLive]).
+                    val exitSide = if (pos.qty > 0) "SELL" else "BUY"
+                    val resting = workingRows.any { it.symbol == pos.symbol && it.side == exitSide && (it.type == "SL" || it.type == "SL-M") } ||
+                        ArmLive.stopRests(pos.symbol)
+                    held += LiveCheck.Held(paper = false, stop = it0?.stop != null || resting, target = it0?.target != null, checkedAgoMs = age(src.stopsCheckedAt()))
                 }
                 for (pos in p.positions.filter { it.quantity != 0 }) {
                     val it0 = prot.lastOrNull { !it.live && it.symbol == pos.symbol }

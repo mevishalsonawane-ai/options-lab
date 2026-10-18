@@ -1571,6 +1571,7 @@ class WatchService : Service() {
             com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
             com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
             com.optionslab.app.data.Strategies.runningHint ||       // 18 Oct, review: a strategy run's leg stops too
+            com.optionslab.app.data.ArmLive.holdingHint ||          // 18 Oct: the paper strategies' live trades
             (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
 
     /**
@@ -1587,7 +1588,7 @@ class WatchService : Service() {
         PositionCards.anyOpen || paper || nseHeldSeen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.OrbArms.liveHint ||
             com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
             com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
-            com.optionslab.app.data.Strategies.runningHint ||
+            com.optionslab.app.data.Strategies.runningHint || com.optionslab.app.data.ArmLive.holdingHint ||
             (com.optionslab.app.data.McxMarket.isOpen() && com.optionslab.app.data.McxMarket.heldQuick())
     }.getOrDefault(true)
 
@@ -1722,6 +1723,9 @@ class WatchService : Service() {
                             if (com.optionslab.app.data.PassedArmsHost.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.PASSED_ARMS}") { com.optionslab.app.data.PassedArmsHost.manageOnly() } else null,
                             if (com.optionslab.app.data.HeroTicketArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.HERO_TICKET}") { com.optionslab.app.data.HeroTicketArm.manageOnly() } else null,
                             if (com.optionslab.app.data.SignalPaperArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.SIGNAL_PAPER}") { com.optionslab.app.data.SignalPaperArm.manageOnly() } else null,
+                            // 18 Oct: the paper strategies' live trades ([com.optionslab.app.data.ArmLive]): their Zerodha stops, the paper
+                            // exits they follow and the 15:15 square-off, every 15 s while held.
+                            if (com.optionslab.app.data.ArmLive.holdingHint) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch() } else null,
                             // 18 Oct, review: the Strategy Module's open runs - their per-leg and basket stops, targets and trails
                             // (no scheduled starts or square-offs: those stay in the full pass). Its leg stops were checked once a minute.
                             if (com.optionslab.app.data.Strategies.runningHint) com.optionslab.ira.Supervisor.Step("15-second stop check: strategies") {

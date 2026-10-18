@@ -23,6 +23,11 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * The shadow tracker (Boss's choice, 06 Oct 2026): beside ORB, ORB Fresh, ORB Sweep and Range Fade ([com.optionslab.engine.orb.RetiredArms]; un-retired 07 Oct, research rows here) the
  * research's best variant, and one new candidate, run on the app's live index and option prices - recording what each
  * WOULD have done, never placing an order (paper or live). The rules are [ShadowRules]'s (pinned there); entries and exits
@@ -49,7 +54,18 @@ object ShadowArms {
 
     fun init(context: Context) {
         file = File(context.applicationContext.noBackupFilesDir, "shadow.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): a re-armed variant's paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.SHADOW) { mirrorLegs }
     }
+
+    /** The re-armed variants' paper trades of today and those open (0 once closed), for [ArmLive]; null until the book is read. */
+    @Volatile private var mirrorLegs: List<ArmLive.PaperLeg>? = null
+
+    /** A paper trade's reference for its live path: its variant and its paper order (or its entry time). */
+    private fun mirrorRef(t: Trade): String = "shadow:${t.variant}:${t.orderId ?: t.entryTime}"
+
+    /** The variants whose rule is the ORB family's -40 premium stop (their descriptions): it rests at Zerodha; the others' stops are on the index. */
+    private val POINT_STOPS = setOf("orb_v43", "sweep_s17", "fade_r20")
 
     // ---- state ----------------------------------------------------------------------------------------------------
 
@@ -621,6 +637,14 @@ object ShadowArms {
         private set
 
     private fun hints(b: Book) {
+        runCatching {
+            val today = today()
+            val legs = b.trades.filter { it.paper && (it.open || it.entryTime.toLocalDate() == today) }
+                .map { ArmLive.PaperLeg(mirrorRef(it), com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED, if (it.open) it.qty else 0) }
+            val before = mirrorLegs?.associate { it.ref to it.qty }
+            mirrorLegs = legs
+            if (before != null && legs.any { l -> (before[l.ref] ?: 0) > l.qty }) ArmLive.nudge()
+        }
         liquidityHint = b.liq.mapValues { (_, a) ->
             val e2 = a.entry2
             val x2 = a.exit2
@@ -646,19 +670,24 @@ object ShadowArms {
         val (qty, px) = filled(buy) ?: return null
         val label = "${ShadowRules.armName(v)} (${v.name})"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "$label · entry") }
-        return base.copy(qty = qty, entry = px, peak = px, paper = true, orderId = buy.orderId,
+        val t = base.copy(qty = qty, entry = px, peak = px, paper = true, orderId = buy.orderId,
             charges = Paper.state.trades.filter { it.orderId == buy.orderId }.sumOf { it.charges.toDouble() })
+        // 18 Oct: its live path ([ArmLive]): the same option and lot; the -40 stop rests at Zerodha where the variant's rule has it.
+        runCatching { ArmLive.entered(ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED, mirrorRef(t), c, 1, qty, px,
+            stop = if (v.id in POINT_STOPS) px - 40.0 else null)) }
+        return t
     }
 
     /** A paper MARKET sell of the whole position; null when nothing sold (tried again next pass). */
     private suspend fun exitPaper(p: Trade, c: Paper.Contract, why: String, ltp: Double): Trade? {
         val held = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
         // Gone from the paper book without this selling it (the 15:15 square-off, or Boss closed it): booked at the price seen.
-        if (held <= 0) return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp)
+        if (held <= 0) { runCatching { ArmLive.closed(mirrorRef(p), "closed_outside") }; return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp) }
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
         val (_, px) = filled(sell) ?: return null
         val v = ShadowRules.of(p.variant)
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${v?.let { x -> "${ShadowRules.armName(x)} (${x.name})" } ?: p.variant} · $why") }
+        runCatching { ArmLive.closed(mirrorRef(p), why) }
         return p.copy(exit = px, exitTime = now(), why = why, last = ltp,
             charges = p.charges + Paper.state.trades.filter { it.orderId == sell.orderId }.sumOf { it.charges.toDouble() })
     }

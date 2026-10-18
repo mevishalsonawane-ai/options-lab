@@ -66,6 +66,8 @@ object Slippage {
             tag == "iraorb" -> "ORB"
             tag == "iraalgoexpiry" || o.startsWith("expiry") -> "Expiry square-off"
             tag == "iraalgostrat" -> "Strategy"
+            // 18 Oct: a paper strategy's live trade (tag "iraarm", the app's ArmLive), apart from the ORB family's own.
+            tag == "iraarm" || a.startsWith("arm:") -> "Arms (live)"
             else -> "Manual"
         }
     }

@@ -26,6 +26,11 @@ import java.util.Locale
  * expiry. BANKNIFTY holds to 15:10; NIFTY takes the Liquidity exit (-15% on the option's low, out after 20 minutes unless
  * +5%). It failed the research's luck checks: off by default, and it needs about 150 paper trades before anyone trusts it.
  *
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * PAPER ONLY, always: every order is the paper account's ([Paper.place] / [Paper.cancel]); there is no live flag, and its
  * file is not in the backup, so nothing here can reach Zerodha whatever Live, "AI trades go live" or a voice command says.
  * New entries obey the kill switch, the bot's stop for today (the daily loss limit included), the account day lock, a fresh
@@ -42,7 +47,17 @@ object VixDivArm {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "vix_div.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): its paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.VIX) {
+            if (cache == null) null else _view.value.let { v ->
+                val today = Market.today()
+                (v.open + v.closed.filter { it.entryDay == today }).map { ArmLive.PaperLeg(mirrorRef(it), VixDivRules.SOURCE, if (it.open) it.qty else 0) }
+            }
+        }
     }
+
+    /** A trade's reference for its live path ([ArmLive]): its index and paper order (or its entry time). */
+    private fun mirrorRef(p: Pos): String = "vix:${p.index}:${p.orderId ?: p.entryTime}"
 
     /** One paper trade. */
     data class Pos(
@@ -311,7 +326,11 @@ object VixDivArm {
         val stopId = if (!VixDivRules.liquidityExit(u)) null else runCatching {
             Paper.place(c, "SELL", VixDivRules.LOTS, "SL-M", "MIS", null, VixDivRules.stop(fill.price, vp.stopPct))
         }.getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · stop") } }
-        b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
+        val pos = Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
+        b.positions += pos
+        // 18 Oct: its live path ([ArmLive]): the same option and lot; NIFTY's -15% stop rests at Zerodha (BANKNIFTY has none: held to 15:10).
+        runCatching { ArmLive.entered(ArmLive.Ask(VixDivRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price,
+            stop = if (VixDivRules.liquidityExit(u)) VixDivRules.stop(fill.price, vp.stopPct) else null)) }
         // R17 shadow (I3 / I5): the charges check and smart stop noted beside the trade (memory only; nothing changes).
         runCatching { PreTradeShadow.vixDiv("${VixDivRules.SOURCE}_${u.lowercase()}", "${VixDivRules.LABEL} $u", index, c, fill.price, fill.quantity, now,
             if (VixDivRules.liquidityExit(u)) fill.price - VixDivRules.stop(fill.price, vp.stopPct) else null) }
@@ -389,6 +408,7 @@ object VixDivArm {
     }
 
     private fun closed(b: Book, p: Pos) {
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
         note(b, "%s: sold (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0), Notifier.SELL, "${VixDivRules.LABEL} sold ${p.symbol} · Paper",

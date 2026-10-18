@@ -122,7 +122,7 @@ class HeroArmTest : RobolectricTest() {
 
     private fun armHero(): String {
         val msg = runBlocking { OrbArms.setArmed(HeroRules.ARM.source, true, automatic = true) }
-        assertTrue(msg, msg.startsWith("Hero (expiry) armed on paper (it never trades on Zerodha) - Not proven — paper only."))
+        assertTrue(msg, msg.startsWith("Hero (expiry) armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on) - Not proven — paper only."))
         // 14 Oct: where its signal comes from (the straddle's premium, not the default index-only signal) is said on arming.
         assertTrue(msg, msg.endsWith(" ${HeroRules.SIGNAL_SOURCE}."))
         return msg

@@ -1,0 +1,320 @@
+package com.optionslab.engine.orb
+
+import com.optionslab.engine.Kite
+import com.optionslab.engine.mcx.McxArmRules
+import com.optionslab.engine.mcx.McxEveRules
+import com.optionslab.engine.mcx.McxMorningRules
+import com.optionslab.engine.mcx.McxTrendRules
+import com.optionslab.engine.mcx.McxUsSilverRules
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import kotlin.math.abs
+
+/**
+ * The live path of every paper strategy that had none (18 Oct 2026, Boss: "What ever strategies are present for paper, should be
+ * present for live too"; "I want all be present for live too, i will switch it off, if i need it").
+ *
+ * Each of these arms keeps trading its own paper book by its own rules, exactly as before; its plain-rules paper record stays its
+ * own. Its LIVE path MIRRORS that paper trade at Zerodha: when its paper buy fills, the same contract (the same signal on the
+ * underlying and the same strike rule - the arm's own choice), the same number of lots (never more), and the same exits - each
+ * paper exit (stop, target, ladder, time stop, square-off, index exit, Supertrend gate) sells the live trade, a partial paper sale
+ * sells the same share live, and every stop or lock level the paper trade moves to moves the Zerodha stop to the same level on the
+ * live fill ([level]: the same percentage of the price paid - or, for the ORB family's point stops, the same points).
+ *
+ * Who it is for: the arms in [ARMS]. Jarvis's own free-form trade ideas (IraNewsTrades' own picks, the forge's ideas) are NOT
+ * strategies and stay on paper (CLAUDE.md, kept on 18 Oct): no key here names them.
+ *
+ * The rules here are pure (no clock, no network, no orders); the app's ArmLive carries them out with the existing live machinery.
+ */
+object LiveMirror {
+    private const val EPS = 1e-9
+
+    /** The order tag of every mirrored live order (its own, so no other bot's lost-reply search ever adopts one of them). */
+    const val TAG = "iraarm"
+
+    /** The mirror's own NSE square-off backstop for an intraday (MIS) position: 15:15 (Boss's), whatever its paper arm does. */
+    val SQUARE_OFF: LocalTime = LocalTime.of(15, 15)
+
+    /** NSE's derivative segments here (NIFTY and the others on NFO, SENSEX on BFO). */
+    private val NSE = setOf("NFO", "BFO")
+
+    /** On its contract's expiry day an NSE option goes by 15:05 (CLAUDE.md's expiry square-off). */
+    val EXPIRY_SQUARE_OFF: LocalTime = LocalTime.of(15, 5)
+
+    /**
+     * How a paper level becomes the live one: [PCT] the same share of the price paid (-15%, the 30/60/100 ladder, +5% once +25%,
+     * the 25% trail); [POINTS] the same points from the price paid (the ORB family's -40 / +40 / +80).
+     */
+    enum class Scale { PCT, POINTS }
+
+    /**
+     * How the stop rests at Zerodha: [SL] a real SL order with a limit (intraday, MIS - it lives in the exchange's own book while
+     * the session runs); [GTT] a single-leg GTT, the only broker-side order that outlives the session, for a carried (NRML)
+     * position - never both for one position, so two resting exits can never fill together.
+     */
+    enum class Rest { SL, GTT }
+
+    /**
+     * One mirrored arm: its switch [key] (stable: "Trade live" is kept by it), its [label], the [family] that hosts its paper book,
+     * the [scale] of its levels, its [exchange] and [product] (as its paper orders), how its stop [rest]s at Zerodha, and its
+     * [signal] source in words (CLAUDE.md: signal on the underlying, trade the option); [defaultOn] its "Trade live" before Boss
+     * sets it ([DEFAULT_ON], Boss's 18 Oct choice) - except a rule whose signal is read from an option's own price (CLAUDE.md: such a
+     * rule is switched on only by Boss), which starts off.
+     */
+    data class Spec(
+        val key: String, val label: String, val family: String, val scale: Scale = Scale.PCT, val exchange: String = "NFO",
+        val product: String = "MIS", val rest: Rest = Rest.SL, val signal: String = "the index", val defaultOn: Boolean = DEFAULT_ON,
+    )
+
+    const val PASSED = "passed"
+    const val SOLO = "solo"
+    const val ORB = "orb"
+    const val HERO_TICKET = "hero_ticket"
+    const val VIX = "vix"
+    const val NIGHT = "night"
+    const val TELEGRAM = "telegram"
+    const val MCX = "mcx"
+    const val SHADOW = "shadow"
+
+    /** Solo (midday)'s key (its paper book is Jarvis's Solo; it is a strategy, not one of Jarvis's own ideas). */
+    const val SOLO_MIDDAY = "solo_midday"
+    /** The shadow variants Boss re-armed on paper ([ShadowRules]): one live switch for them all. */
+    const val SHADOW_PROMOTED = "shadow_promoted"
+    /** A Telegram chat's calls, on paper by Boss's per-chat choice: one live switch for them all. */
+    const val TELEGRAM_CALLS = "telegram_calls"
+
+    /** Every arm that trades on paper with no live path of its own, given one here. */
+    val ARMS: List<Spec> = listOf(
+        Spec(DonchianArm.SOURCE, DonchianArm.LABEL, PASSED, signal = "the index's 5-minute Donchian 20 break (Supertrend filter when on)"),
+        Spec(BreadthDonchianArm.SOURCE, BreadthDonchianArm.LABEL, PASSED, signal = "4 of the five indices' Donchian breaks together"),
+        Spec(OovArm.SOURCE, OovArm.LABEL, PASSED, signal = "the index opening outside yesterday's value area"),
+        Spec(Solo2.SOURCE, Solo2.LABEL, PASSED, signal = "the index (Solo 2.0's setups)"),
+        Spec(SOLO_MIDDAY, "Solo (midday)", SOLO, signal = "the index's 12:00 move against its ATR"),
+        Spec(SweepRules.ARM.source, SweepRules.ARM.label, ORB, Scale.POINTS, signal = "BANKNIFTY's opening-range failed break"),
+        Spec(RangeFadeRules.ARM.source, RangeFadeRules.ARM.label, ORB, Scale.POINTS, signal = "BANKNIFTY's opening-range edge fade"),
+        Spec(HeroRules.ARM.source, HeroRules.ARM.label, ORB, signal = "NIFTY and its ATM straddle on expiry day"),
+        Spec(SHADOW_PROMOTED, "Shadow variants re-armed", SHADOW, Scale.POINTS, signal = "BANKNIFTY or NIFTY (each variant's own rule)"),
+        Spec(HeroTicketRules.SOURCE, HeroTicketRules.LABEL, HERO_TICKET, signal = "the expiry day at 12:30 (NIFTY, SENSEX)"),
+        Spec(VixDivRules.SOURCE, VixDivRules.LABEL, VIX, signal = "the index against India VIX"),
+        Spec(NightRules.SOURCE, NightRules.LABEL, NIGHT, product = "NRML", rest = Rest.GTT, signal = "the index's close and the day-end OI build-up"),
+        // Its trigger is the option's own price (CLAUDE.md: labelled, reported apart, on only by Boss): its live switch starts off.
+        Spec(TELEGRAM_CALLS, "Telegram calls", TELEGRAM, signal = "a chat's call, bought when the option trades at its entry (the option's own price: labelled)",
+            defaultOn = false),
+        Spec(McxEveRules.SOURCE, McxEveRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the NATURALGAS future's evening break"),
+        Spec(McxMorningRules.SOURCE, McxMorningRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the SILVERM future's morning"),
+        Spec(McxTrendRules.SOURCE, McxTrendRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the MCX future's 12-month trend"),
+        Spec(McxUsSilverRules.SOURCE, McxUsSilverRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the SILVERM future, US night"),
+    )
+
+    /** The arm with [key], or null (an unknown key never trades live). */
+    fun spec(key: String): Spec? = ARMS.firstOrNull { it.key == key }
+
+    /**
+     * Boss's 18 Oct words: each new live switch starts ON ("i will switch it off, if i need it"). It still trades live only with the
+     * app in Live AND "AI trades go live" on - which only going Live with Boss's PIN turns on - and never in the paper-only period.
+     */
+    const val DEFAULT_ON = true
+
+    /** Whether [key]'s "Trade live" is on, from Boss's saved choices ([saved]: key -> on; a key never set is its [Spec.defaultOn]). */
+    fun on(key: String, saved: Map<String, Boolean>): Boolean = spec(key)?.let { saved[key] ?: it.defaultOn } ?: false
+
+    // ---- entries --------------------------------------------------------------------------------------------------------------
+
+    /**
+     * What a live entry checks first, in order. [appLive] the app in Live with real orders allowed; [aiLive] "AI trades go live";
+     * [armOn] the arm's own "Trade live"; [paperOnly] the paper-only period's refusal (null: none); [kill] the kill switch; [stopped]
+     * the bot stopped for today; [lossLimit] the daily loss limit reached; [dayLock] the account day lock's refusal; [accountStop] the
+     * account stop rule's (-Rs 40k drawdown or -Rs 13k a month on the live record); [loggedIn] to Zerodha today; [compromised] the
+     * phone's security check.
+     */
+    data class Gate(
+        val appLive: Boolean, val aiLive: Boolean, val armOn: Boolean, val paperOnly: String? = null, val kill: Boolean = false,
+        val stopped: Boolean = false, val lossLimit: Boolean = false, val dayLock: String? = null, val accountStop: String? = null,
+        val loggedIn: Boolean = true, val compromised: Boolean = false,
+    )
+
+    /** Why no live entry goes now, or null when it may. Every refusal only stops an entry; exits never come here. */
+    fun refusal(g: Gate): String? = when {
+        !g.appLive -> "the app is in Paper"
+        !g.aiLive -> "\"AI trades go live\" is off"
+        !g.armOn -> "its \"Trade live\" switch is off"
+        g.paperOnly != null -> g.paperOnly
+        g.kill -> "the kill switch is on"
+        g.stopped -> "the bot is stopped for today"
+        g.lossLimit -> "the daily loss limit was reached today"
+        g.dayLock != null -> g.dayLock
+        g.accountStop != null -> "the account stop rule: ${g.accountStop}"
+        !g.loggedIn -> "not logged in to Zerodha today"
+        g.compromised -> "this phone failed the security check"
+        else -> null
+    }
+
+    /** The paper trade's lots: its quantity in whole lots (0 when it is less than one lot or the lot is unknown). */
+    fun lots(paperQty: Int, paperLot: Int): Int = if (paperLot <= 0 || paperQty <= 0) 0 else paperQty / paperLot
+
+    /**
+     * The live quantity for [paperLots] at Zerodha's [lot]: the same lots, never more - and never past [maxLots] (the Bot
+     * settings' cap; 0 or less: no cap here, the order gates still apply). 0: nothing to buy.
+     */
+    fun liveQty(paperLots: Int, lot: Int, maxLots: Int = 0): Int {
+        if (paperLots <= 0 || lot <= 0) return 0
+        val lots = if (maxLots > 0) minOf(paperLots, maxLots) else paperLots
+        return lots * lot
+    }
+
+    // ---- levels ---------------------------------------------------------------------------------------------------------------
+
+    /**
+     * The live level for the paper trade's [paperLevel] (bought at [paperEntry]) on the live fill [liveEntry]: by [scale], on the
+     * [tick] - a long's stop rounded down (a sell), a short's up (a buy). Null when any price is not usable or the level is not a
+     * price (at or under one tick).
+     */
+    fun level(paperEntry: Double, paperLevel: Double, liveEntry: Double, scale: Scale, side: Int, tick: Double): Double? {
+        if (!(paperEntry.isFinite() && paperEntry > 0 && paperLevel.isFinite() && paperLevel > 0 && liveEntry.isFinite() && liveEntry > 0 &&
+                tick.isFinite() && tick > 0)) return null
+        val raw = when (scale) {
+            Scale.PCT -> liveEntry * paperLevel / paperEntry
+            Scale.POINTS -> liveEntry + (paperLevel - paperEntry)
+        }
+        val t = Kite.onTick(raw, tick, if (side >= 0) Kite.Side.SELL else Kite.Side.BUY)
+        return t.takeIf { it > tick + EPS }
+    }
+
+    /**
+     * The SL order's limit for a stop at [trigger]: as the ORB and Pine arms' - 5% (at least 2 points) beyond it so it fills in a
+     * fast move (below for a long's sell, above for a short's buy), on the [tick], never under one tick.
+     */
+    fun stopLimit(trigger: Double, tick: Double, side: Int): Double {
+        val gap = maxOf(2.0, trigger * 0.05)
+        return if (side >= 0) Kite.onTick(trigger - gap, tick, Kite.Side.SELL).coerceAtLeast(tick)
+        else Kite.onTick(trigger + gap, tick, Kite.Side.BUY)
+    }
+
+    /** Whether a stop at [trigger] may rest at Zerodha with the price at [ltp]: a long's at least a tick below it, a short's above. */
+    fun mayRest(trigger: Double, ltp: Double, tick: Double, side: Int): Boolean =
+        trigger.isFinite() && ltp.isFinite() && trigger > 0 && ltp > 0 && (if (side >= 0) trigger <= ltp - tick + EPS else trigger >= ltp + tick - EPS)
+
+    /**
+     * Where the resting stop moves to: [wanted] when it is tighter than [current] (higher for a long, lower for a short; with no
+     * stop yet, any) and may rest at [ltp] ([mayRest]); null - no move. Never loosened.
+     */
+    fun move(current: Double?, wanted: Double?, ltp: Double?, tick: Double, side: Int): Double? {
+        if (wanted == null || ltp == null) return null
+        if (current != null && (if (side >= 0) wanted <= current + EPS else wanted >= current - EPS)) return null
+        return wanted.takeIf { mayRest(it, ltp, tick, side) }
+    }
+
+    /** The price at or through the stop (at or under it for a long, at or over it for a short). */
+    fun atStop(ltp: Double?, trigger: Double?, side: Int): Boolean =
+        ltp != null && trigger != null && ltp > 0 && trigger > 0 && (if (side >= 0) ltp <= trigger + EPS else ltp >= trigger - EPS)
+
+    /** The price through the stop order's limit: it can no longer fill, so the app sells at market itself. */
+    fun runThrough(ltp: Double?, trigger: Double?, tick: Double, side: Int): Boolean {
+        if (ltp == null || trigger == null || ltp <= 0 || trigger <= 0) return false
+        val lim = stopLimit(trigger, tick, side)
+        return if (side >= 0) ltp < lim - EPS else ltp > lim + EPS
+    }
+
+    /**
+     * The mirror's own square-off for a position on [exchange] in [product] at [t]: an NSE intraday (MIS) one at 15:15, and on its
+     * contract's [expiry] day at 15:05; a held-over one (bought on an earlier day, [entryDay]) at once. A carried (NRML) or MCX
+     * position never: it goes by its paper arm's own exit.
+     */
+    fun squareOffDue(t: LocalDateTime, exchange: String, product: String, expiry: LocalDate?, entryDay: LocalDate): Boolean {
+        if (exchange !in NSE || product != "MIS") return false
+        if (entryDay.isBefore(t.toLocalDate())) return true
+        val at = t.toLocalTime()
+        if (!at.isBefore(SQUARE_OFF)) return true
+        return expiry == t.toLocalDate() && !at.isBefore(EXPIRY_SQUARE_OFF)
+    }
+
+    /**
+     * The live quantity to sell now so the live trade holds what its paper trade still holds: [liveQty] held of a live entry of
+     * [liveEntryQty] at Zerodha's [lot]; the paper trade entered [paperEntryQty] and holds [paperHeldQty] (null: closed - all of it
+     * goes). The same share in whole lots, rounded so the live trade never holds more of its entry than the paper trade does.
+     */
+    fun toSell(liveQty: Int, liveEntryQty: Int, paperEntryQty: Int, paperHeldQty: Int?, lot: Int): Int {
+        if (liveQty <= 0) return 0
+        if (paperHeldQty == null || paperHeldQty <= 0) return liveQty
+        if (paperEntryQty <= 0 || paperHeldQty >= paperEntryQty) return 0
+        val l = lot.coerceAtLeast(1)
+        val entryLots = liveEntryQty / l
+        // The live lots the paper share allows, rounded down: holding less than the paper share only ever lowers risk.
+        val keepLots = (entryLots.toLong() * paperHeldQty / paperEntryQty).toInt()
+        return (liveQty - keepLots * l).coerceAtLeast(0)
+    }
+
+    // ---- the watch ------------------------------------------------------------------------------------------------------------
+
+    /** What the watch does with one live position this look. */
+    enum class Step {
+        /** The resting stop filled at Zerodha: book the exit at its price. */
+        STOP_FILLED,
+        /** Nothing is held at Zerodha any more and no exit of ours filled: closed there (Zerodha's square-off, or by hand). */
+        CLOSED_OUTSIDE,
+        /** Sell [Decision.qty] now (the resting stop taken out first): [Decision.why] says why. */
+        SELL,
+        /** Rest the stop at Zerodha at [Decision.to] (none rests now). */
+        PLACE_STOP,
+        /** Move the resting stop to [Decision.to] (tighter only). */
+        MOVE_STOP,
+        HOLD,
+    }
+
+    data class Decision(val step: Step, val why: String? = null, val qty: Int = 0, val to: Double? = null)
+
+    /**
+     * One live position as the watch sees it: [stopFilled] its resting stop filled at Zerodha (null: unknown or none); [held] the
+     * quantity Zerodha holds of its contract and product (null: not read - nothing is decided on it); [ltp] the price now (null:
+     * none fresh); [qty] the trade's own live quantity; [stopTrigger] where its stop rests or is watched; [stopResting] whether a
+     * stop order rests at Zerodha; [wanted] the paper trade's level on the live fill ([level]; null: none); [paperSell] the
+     * quantity its paper trade no longer holds ([toSell]); [paperReason] why the paper trade closed (when it did); [squareOff]
+     * the mirror's own square-off is due ([squareOffDue]); [operatorStop] Boss's stop for today; [side] +1 long, -1 short.
+     */
+    data class Look(
+        val side: Int, val qty: Int, val held: Int?, val ltp: Double?, val tick: Double, val stopTrigger: Double?, val stopResting: Boolean,
+        val stopFilled: Boolean = false, val wanted: Double? = null, val paperSell: Int = 0, val paperReason: String? = null,
+        val squareOff: Boolean = false, val operatorStop: Boolean = false,
+    )
+
+    /**
+     * The watch's decision for one live position, in order: its stop filled; gone at Zerodha; Boss's stop; the mirror's square-off;
+     * its paper trade sold (all or part); the stop reached with nothing resting, or the price through the resting stop's limit;
+     * the stop placed or moved up to the paper trade's level; else held.
+     */
+    fun decide(l: Look): Decision {
+        if (l.stopFilled) return Decision(Step.STOP_FILLED, "stop")
+        val held = l.held ?: return Decision(Step.HOLD)
+        val heldMine = if (l.side >= 0) held else -held
+        if (heldMine <= 0) return Decision(Step.CLOSED_OUTSIDE, "closed_outside")
+        val qty = minOf(l.qty, heldMine)
+        if (l.operatorStop) return Decision(Step.SELL, "operator_stop", qty)
+        if (l.squareOff) return Decision(Step.SELL, "square_off", qty)
+        if (l.paperSell > 0) return Decision(Step.SELL, l.paperReason ?: "paper_exit", minOf(l.paperSell, qty))
+        val trigger = l.stopTrigger
+        if (!l.stopResting && atStop(l.ltp, trigger, l.side)) return Decision(Step.SELL, "stop", qty)
+        if (l.stopResting && runThrough(l.ltp, trigger, l.tick, l.side)) return Decision(Step.SELL, "stop_run_through", qty)
+        val ltp = l.ltp ?: return Decision(Step.HOLD)
+        if (!l.stopResting) {
+            // No stop rests: the tighter of its own and the paper trade's level, placed when it may rest at this price.
+            val best = listOfNotNull(trigger, l.wanted).let { if (l.side >= 0) it.maxOrNull() else it.minOrNull() } ?: return Decision(Step.HOLD)
+            return if (mayRest(best, ltp, l.tick, l.side)) Decision(Step.PLACE_STOP, to = best) else Decision(Step.HOLD)
+        }
+        val to = move(trigger, l.wanted, ltp, l.tick, l.side) ?: return Decision(Step.HOLD)
+        return Decision(Step.MOVE_STOP, to = to)
+    }
+
+    /**
+     * Whether a live position may be sold because its paper trade is gone: only once its paper trade was SEEN open after the live
+     * fill ([seen]) and is now absent from a book that was read ([paperOpen] false; null: the book unread - nothing is decided).
+     * A paper view that has not caught up with a new entry yet never sells a live one.
+     */
+    fun paperGone(seen: Boolean, paperOpen: Boolean?): Boolean = seen && paperOpen == false
+
+    /** "Rs 1,234" / "-Rs 1,234" (a live record's words; never on a locked phone). */
+    fun rs(x: Double): String = (if (x < 0) "-Rs " else "Rs ") + "%,.0f".format(java.util.Locale.ENGLISH, abs(x))
+
+    /** The lots an MCX arm trades on paper (1, fixed), the live trade's size. */
+    const val MCX_LOTS = McxArmRules.LOTS
+}

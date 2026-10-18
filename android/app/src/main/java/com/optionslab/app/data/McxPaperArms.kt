@@ -34,6 +34,11 @@ import java.util.Locale
  * 12-month trend rule on the MCX minis (M2). None passed its research gates: each is "Not proven - paper only", OFF by
  * default, 1 lot fixed, no compounding.
  *
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * PAPER ONLY, always: every order here is the paper account's ([Paper.place] / [Paper.cancel]); nothing in this file can
  * reach Zerodha, whatever Live, "AI trades go live" or any voice command says - there is no live flag to set, and its file
  * is not in the backup. New entries obey MCX's hours and holidays ([McxMarket.isOpen]), the kill switch, the bot's stop
@@ -52,7 +57,17 @@ object McxPaperArms {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "mcx_arms.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): their paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.MCX) {
+            if (cache == null) null else _view.value.let { v ->
+                val today = Market.today()
+                (v.open + v.closed.filter { it.exitTime?.toLocalDate() == today }).map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0) }
+            }
+        }
     }
+
+    /** A trade's reference for its live path ([ArmLive]): its arm and paper order (or its entry time). */
+    private fun mirrorRef(p: Pos): String = "mcx:${p.arm}:${p.orderId ?: p.entryTime}"
 
     /** The arms, in the order the screen lists them (the US-night silver futures rule, 9 Oct research R2, last). */
     val ARMS: List<String> = listOf(McxEveRules.SOURCE, McxMorningRules.SOURCE, McxTrendRules.SOURCE, McxUsSilverRules.SOURCE)
@@ -585,6 +600,7 @@ object McxPaperArms {
     }
 
     private fun closed(b: Book, p: Pos) {
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
         b.status[p.arm] = "closed ${p.symbol}: ${p.why}"
         note(b, p.arm, "%s: closed (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6970 + ARMS.indexOf(p.arm).coerceAtLeast(0), Notifier.SELL, "${label(p.arm)} closed ${p.symbol} · Paper",
@@ -593,6 +609,13 @@ object McxPaperArms {
 
     private fun opened(b: Book, p: Pos, facts: String) {
         b.positions += p
+        // 18 Oct: its live path ([ArmLive]): the same contract and lot at Zerodha (MCX, NRML), long or short as on paper; its paper
+        // stop (when it has one) rests at Zerodha as a GTT - the one resting exit that outlives MCX's session.
+        runCatching {
+            val c = Paper.contractOf(p.symbol) ?: return@runCatching
+            val stop = p.stopOrderId?.let { id -> Paper.state.orders.firstOrNull { it.orderId == id }?.triggerPrice?.toDouble() }
+            ArmLive.entered(ArmLive.Ask(p.arm, mirrorRef(p), c, p.side, p.qty, p.entry, stop = stop))
+        }
         runCatching { LiveRecorder.signal(label(p.arm), p.symbol, null, if (p.side > 0) "BUY" else "SELL", p.entry, paper = true, exchange = "MCX") }
         val verb = if (p.side > 0) "bought" else "sold"
         decideLine(b, p.arm, "%s %s @ %.2f (%s) · paper".format(Locale.ENGLISH, verb, p.symbol, p.entry, facts))

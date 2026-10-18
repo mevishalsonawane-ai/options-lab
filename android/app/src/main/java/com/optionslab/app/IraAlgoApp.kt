@@ -92,6 +92,11 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Paper.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
+        // 18 Oct (Boss: every paper strategy present for live too): the paper strategies' live path, before the arms register with it.
+        com.optionslab.app.data.ArmLive.init(this)
+        if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.data.ArmLive.register(com.optionslab.engine.orb.LiveMirror.SOLO) {
+            com.optionslab.app.ira.IraSolo.mirrorLegs()
+        }
         com.optionslab.app.data.OrbArms.init(this)
         com.optionslab.app.data.NightArm.init(this)
         com.optionslab.app.data.VixDivArm.init(this)

@@ -131,6 +131,13 @@ object AutoChange {
          * lowers risk. Logged so the timeline shows it and one tap undoes it (back to the plain rules). Paper only: no PIN.
          */
         PAPER_FILTER("strategies", "an entry filter on a passed paper arm"),
+        /**
+         * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too ... i will switch it off, if i
+         * need it"): a paper strategy's own "Trade live" switch ([armLive]) - Boss's own change, logged so the timeline shows it and
+         * one tap undoes it. LIVE scope: on adds live risk, so an undo that turns it back on asks the PIN; off is free. Never
+         * proposed or applied by Autopilot.
+         */
+        ARM_LIVE("strategies", "an arm's own live switch"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -297,6 +304,8 @@ object AutoChange {
             Kind.PAPER_LOCK -> if (c.target == L25_TARGET) { if (c.to == ON) Risk.LOWER else Risk.RAISE } else if (c.to == ON) Risk.RAISE else Risk.LOWER
             // 16 Oct: an entry filter only skips paper entries: on lowers risk, off takes the skips away.
             Kind.PAPER_FILTER -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
+            Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -336,7 +345,7 @@ object AutoChange {
      * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
-        k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER
+        k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER || k == Kind.ARM_LIVE
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -454,6 +463,20 @@ object AutoChange {
     fun passedArmOff(source: String, label: String, why: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, ON, SWITCHED_OFF,
         "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** The target prefix of an arm's own live switch ([Kind.ARM_LIVE]): + its key ([com.optionslab.engine.orb.LiveMirror]). */
+    const val ARM_LIVE = "armlive:"
+
+    /**
+     * 18 Oct (Boss): [label]'s own "Trade live" switch [on] or off, by Boss ([Kind.ARM_LIVE], LIVE scope, kept). It acts only with the
+     * app in Live and "AI trades go live" on (only going Live with the PIN turns that on), never in the paper-only period.
+     */
+    fun armLive(key: String, label: String, on: Boolean): Change = Change(Kind.ARM_LIVE, ARM_LIVE + key, if (on) SWITCHED_OFF else ON,
+        if (on) ON else SWITCHED_OFF,
+        "your choice: $label ${if (on) "trades live again" else "stays on paper"} (\"What ever strategies are present for paper, should be present " +
+            "for live too ... i will switch it off, if i need it\"); it acts only in Live with AI trades on, never in the paper-only period",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, if (on) 1 else -1), if (on) Risk.RAISE else Risk.LOWER, Scope.LIVE,
+        what = "$label's live switch")
 
     /** The target prefix of a Telegram chat's paper trading in the Signal tester ([Kind.PAPER_ARM_ON]): + the chat's short id. */
     const val TELEGRAM_PAPER = "paperarm:telegram:"
@@ -973,7 +996,7 @@ object AutoChange {
         // 15 Oct: an arm hidden, restored and hidden again ([Kind.ARM_HIDE]) likewise - only its newest entry undoes.
         // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
         // switch flipped since is the one to undo.
-        if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER)) return false
+        if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

@@ -27,6 +27,11 @@ import java.util.Locale
  * priced Rs 5-30 whose lot costs at most Rs 1,000; out on Boss's 25% trail (or a 2x / 3x target Boss picks on its row), else
  * 15:05. BOSS'S CHOICE - IT DID NOT PASS RESEARCH (R50): said on its row, in its notices and by Jarvis.
  *
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * PAPER ONLY, always: every order is the paper account's ([Paper.place] / [Paper.close]); there is no live flag and no Zerodha
  * call anywhere here, so nothing can reach Zerodha whatever Live, "AI trades go live" or a voice command says. Its book is
  * its own encrypted file (not in the backup), so its trades are a record of their own - apart from the arms that passed and
@@ -46,7 +51,14 @@ object HeroTicketArm {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "hero_ticket.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): its paper tickets, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.HERO_TICKET) {
+            if (cache == null) null else _view.value.let { v -> (v.open + v.today.filter { !it.open }).map { ArmLive.PaperLeg(mirrorRef(it), HeroTicketRules.SOURCE, if (it.open) it.qty else 0) } }
+        }
     }
+
+    /** A ticket's reference for its live path ([ArmLive]): its paper order (or its entry time). */
+    private fun mirrorRef(p: Pos): String = "hero_ticket:${p.index}:${p.orderId ?: p.entryTime}"
 
     /** The one-time switch-on of 15 Oct (Boss's choice); in [Book.migrated] once done, never again. */
     internal const val AUTO_ON = "boss_on_2026-10-15"
@@ -537,9 +549,14 @@ object HeroTicketArm {
             runCatching { Paper.place(c, "SELL", HeroTicketRules.LOTS, "LIMIT", "MIS", lv, null) }.getOrNull()?.takeIf { it.ok }?.orderId
                 ?.also { runCatching { Strategies.tagOwner("paper:$it", "${HeroTicketRules.OWNER} · target") } }
         }
-        b.positions += Pos(u, c.symbol, right.name, qty, price, now, orderId, b.target.key, charges = chargesOf(orderId), targetOrderId = targetId,
+        val pos = Pos(u, c.symbol, right.name, qty, price, now, orderId, b.target.key, charges = chargesOf(orderId), targetOrderId = targetId,
             trailStart = b.trailStart.key)
+        b.positions += pos
         b.marks[c.symbol] = price
+        // 18 Oct: its live path ([ArmLive]): the same option and lot, a LIMIT at the paper fill (it never chases); the 25% trail rests at
+        // Zerodha as the stop once it is armed (from the fill, or after 2x / 3x as Boss set); the 2x / 3x target stays the app's.
+        runCatching { ArmLive.entered(ArmLive.Ask(HeroTicketRules.SOURCE, mirrorRef(pos), c, 1, qty, price,
+            stop = if (b.trailStart.mult == null) price * (1 - HeroTicketRules.TRAIL) else null, limit = price)) }
         val exits = HeroTicketRules.targetLevel(price, b.target)?.let { "target %s (%s) or the 25%% trail, else 15:05".format(Locale.ENGLISH, px(it), b.target.words) }
             ?: "the 25% trail, else 15:05"
         val exitsSaid = "$exits (${b.trailStart.words})"
@@ -587,6 +604,8 @@ object HeroTicketArm {
             val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.maxByOrNull { it.key }?.value?.close
             ltp?.let { b.marks[p.symbol] = it }
             val trail = HeroTicketRules.trail(p.entry, p.entryTime.toLocalTime(), bars.mapValues { it.value.close }, HeroTicketRules.TrailStart.of(p.trailStart))
+            // 18 Oct: the trail's level once armed, for its live trade's Zerodha stop ([ArmLive]; memory only).
+            HeroTicketRules.TrailStart.of(p.trailStart).mult.let { m -> if (m == null || trail.peak >= m * p.entry - 1e-9) ArmLive.level(mirrorRef(p), trail.level) }
             // A resting target is the paper book's to fill; the pure check below covers a target that could not be placed.
             val target = if (p.targetOrderId != null) HeroTicketRules.Target.TRAIL_ONLY else HeroTicketRules.Target.of(p.target)
             val step = HeroTicketRules.exitStep(p.entry, ltp, trail, now.toLocalTime(), target, p.day.isBefore(now.toLocalDate()))
@@ -649,6 +668,7 @@ object HeroTicketArm {
     const val TREND_WHY = "trend_turn"
 
     private fun closed(b: Book, p: Pos) {
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
         if (p.why == TREND_WHY) runCatching {
             TrendWatchHost.sold(p.symbol, "%s %s sold on paper on the trend turn (T3) @ %s".format(Locale.ENGLISH,

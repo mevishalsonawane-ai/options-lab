@@ -46,6 +46,11 @@ import java.util.Locale
  *    same five 5-minute series Donchian builds (no extra read), its trades in its own rows with Donchian's exits.
  * Every row, notice and answer says "Passed research (R51/R52/R57/R72) — paper only".
  *
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * PAPER ONLY, always: every order is the paper account's ([Paper.place]); there is no live flag and no Zerodha call anywhere
  * here, so nothing can reach Zerodha whatever Live, "AI trades go live" or a voice command says - and Solo 2.0 is never
  * offered as a trade idea. 1 lot each. Their book is their own encrypted file (not in the backup): their trades are a record
@@ -73,7 +78,22 @@ object PassedArmsHost {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "passed_arms.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): these arms' paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.PASSED) { mirrorLegs() }
     }
+
+    /** A paper trade's reference for its live path ([ArmLive]): its arm and its paper order (or its entry time). */
+    internal fun mirrorRef(p: Pos): String = "passed:${p.arm}:${p.orderId ?: p.entryTime}"
+
+    /** Today's and the open paper trades, each with what it still holds (0 once closed); null until the book is read. Memory only. */
+    private fun mirrorLegs(): List<ArmLive.PaperLeg>? {
+        if (cache == null) return null
+        val v = _view.value
+        return (v.open + v.today.filter { !it.open }).map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0) }
+    }
+
+    /** [p]'s own stop on the premium at its entry (-15% and the like); null for S1 (its stop is on the index). */
+    private fun premiumStop(p: Pos): Double? = if (p.setup == Solo2.Setup.S1.key) null else exitsOf(p).stop?.let { p.entry * (1 - it) }
 
     /** 16 Oct: R72 Breadth Donchian last (each arm's notice numbers go by its place here, so the first three keep theirs). */
     val SOURCES = listOf(DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, BreadthDonchianArm.SOURCE)
@@ -915,6 +935,9 @@ object PassedArmsHost {
                     // end of the pass - its stop, target and time exit run from the next minute-lane look, and a pass cut short or
                     // a restart after the fill can never leave it held with no record here. Not cancellable between the two.
                     kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys) }
+                    // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
+                    // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
+                    runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos))) }
                     r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(arm)} · entry") } }
                     runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
                     pos
@@ -1261,6 +1284,8 @@ object PassedArmsHost {
                 w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
             }.exit?.kind?.why
         } ?: if (stopped) "operator_stop" else null
+        // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
+        runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
         if (why == null) return false
         val next = sell(b, p, c, why, ltp)
         if (next != p) { b.positions[i] = next; return true }
@@ -1356,6 +1381,8 @@ object PassedArmsHost {
     private fun closed(b: Book, p: Pos) {
         // 16 Oct: on every way out (closed elsewhere too), so a later trade on the same option never reads this one's lock.
         forget(b, p)
+        // 18 Oct: its live trade, if any, is sold on the next look ([ArmLive]; memory only).
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
         b.status["${p.arm}|${p.index}"] = "closed ${p.symbol}: ${p.why}"
         note(b, "%s: %s sold (%s) @ %s, %s after charges · paper".format(Locale.ENGLISH, label(p.arm), p.symbol, p.why, px(p.exit ?: 0.0), rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, NOTICE + 40 + SOURCES.indexOf(p.arm) * 5 + ALL_INDICES.indexOf(p.index).coerceAtLeast(0), Notifier.SELL,

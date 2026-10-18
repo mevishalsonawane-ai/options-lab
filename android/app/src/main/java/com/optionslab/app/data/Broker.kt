@@ -130,8 +130,11 @@ object Broker {
      */
     private val entryGate = com.optionslab.ira.EntryGate(maxWaitMs = 15_000L)
 
-    /** The order tags of the bots' own entries (ORB and Liquidity, the Pine scripts, the scheduled strategies). */
-    private val BOT_TAGS = setOf("iraorb", "irapine", "iraalgostrat")
+    /**
+     * The order tags of the bots' own entries (ORB and Liquidity, the Pine scripts, the scheduled strategies, and since 18 Oct the
+     * paper strategies' live path, [ArmLive]: "iraarm").
+     */
+    private val BOT_TAGS = setOf("iraorb", "irapine", "iraalgostrat", com.optionslab.engine.orb.LiveMirror.TAG)
 
     /**
      * Why an entry may not be sent NOW, asked inside the door (null: it may). Reads memory and the settings already in it:
@@ -1538,6 +1541,12 @@ object Broker {
     suspend fun placeGtt(g: Kite.Gtt): Long = (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id")
 
     suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id") }
+
+    /**
+     * 18 Oct (the arms' live path, [ArmLive]): an active GTT's trigger and order replaced in place (PUT), so a carried position's
+     * stop moves up with its lock without ever being deleted and placed again (no moment with two, or none).
+     */
+    suspend fun modifyGtt(id: Long, g: Kite.Gtt) { call("PUT", "/gtt/triggers/$id", g.formBody()) }
 
     /** What Zerodha would block for these orders together ([required]), against the account's free margin. */
     data class Margin(val required: Double, val initial: Double, val available: Double, val charges: Double) {

@@ -27,6 +27,8 @@ object Origins {
         "iraorb" -> "ORB"
         "irapine" -> "Pine"
         "iraalgostrat" -> "Strategy order"
+        // 18 Oct: a paper strategy's live trade ([ArmLive]); its own label ("R51 Donchian 20 · live entry") is kept beside it.
+        "iraarm" -> "Arm (live)"
         "iraprotect" -> "Protection"
         "iraalgoexpiry" -> EXPIRY
         "iraalgo" -> MANUAL

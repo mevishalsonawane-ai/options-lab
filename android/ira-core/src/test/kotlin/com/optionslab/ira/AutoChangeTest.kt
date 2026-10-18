@@ -561,4 +561,26 @@ class AutoChangeTest {
         val best = (0 until 5).minOf { once() }
         assertTrue(best < 60, "${best} ms")   // 20 ms was hit at 21-22 ms on a busy machine; 60 still catches a real slowdown
     }
+
+    /** 18 Oct (Boss: every paper strategy present for live too): an arm's own live switch, Boss's own change, LIVE scope. */
+    @Test fun anArmsOwnLiveSwitchIsBossesAndAnUndoThatTurnsItOnNeedsThePin() {
+        val off = A.armLive("r51_donchian20", "R51 Donchian 20", on = false)
+        val on = A.armLive("r51_donchian20", "R51 Donchian 20", on = true)
+        assertEquals(AutoChange.Kind.ARM_LIVE, off.kind)
+        assertEquals("armlive:r51_donchian20", off.target)
+        assertEquals(AutoChange.Scope.LIVE, off.scope)
+        assertEquals(AutoChange.Risk.LOWER, A.riskOf(off))
+        assertEquals(AutoChange.Risk.RAISE, A.riskOf(on))
+        assertTrue(A.undoNeedsPin(off), "undoing an off turns live trading back on: the PIN")
+        assertFalse(A.undoNeedsPin(on), "undoing an on only lowers risk")
+        assertTrue(A.bossOwn(AutoChange.Kind.ARM_LIVE))
+        assertFalse(A.never(off), "a safety word is not in its target")
+        assertFalse(AutoChange.Kind.ARM_LIVE.never)
+        // Only the newest flip undoes.
+        var b = AutoChange.Book()
+        b = A.record(b, off, AutoChange.Status.KEPT, 1L, java.time.LocalDate.of(2026, 10, 18)).first
+        b = A.record(b, on, AutoChange.Status.KEPT, 2L, java.time.LocalDate.of(2026, 10, 18)).first
+        assertTrue(A.superseded(b, b.entries.first()))
+        assertFalse(A.superseded(b, b.entries.last()))
+    }
 }

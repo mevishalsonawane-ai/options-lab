@@ -116,6 +116,8 @@ object PositionsFirst {
         // The paper account first (NSE and MCX paper positions and resting orders: the fast exits' STREAM lane).
         one("paper") { Paper.watching() }
         one("ORB") { OrbArms.holding() }
+        // 18 Oct: the paper strategies' live trades (their own book, [ArmLive]) - restored here, with their Zerodha stops, first.
+        one("arms live") { ArmLive.holding() }
         one("protections") { Protections.active().isNotEmpty() }
         one("Pine") { PineAuto.load(); PineAuto.holding() }
         // The Strategy Module's runs are open positions too (CLAUDE.md: restored first). Its book is the slowest (4.4 s at Boss's

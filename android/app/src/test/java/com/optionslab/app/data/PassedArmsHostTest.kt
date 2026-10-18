@@ -104,6 +104,7 @@ class PassedArmsHostTest : RobolectricTest() {
     private fun view() = runBlocking { PassedArmsHost.refresh() }
     private fun only(source: String) { for (s in PassedArmsHost.SOURCES) runBlocking { PassedArmsHost.setArmed(s, s == source, log = false) } }
 
+    /** Nothing at Zerodha (18 Oct: these tests leave the arms' "Trade live" unset, which the tests' app counts as off). */
     private fun assertNothingAtZerodha() {
         assertEquals("no order at Zerodha", emptyList<FakeKite.Req>(), kite.placed)
         assertEquals("nothing written at Zerodha", emptyList<FakeKite.Req>(), kite.writes)
@@ -174,6 +175,44 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
         assertTrue(view().forwardLine(DonchianArm.SOURCE).startsWith("Forward test: 1 of 40"))
         assertNothingAtZerodha()
+    }
+
+    /**
+     * 18 Oct (Boss: every paper strategy present for live too): in Live with AI trades on and R51's "Trade live" on (its default), the
+     * same break also buys the same option and lot at Zerodha, its -15% stop resting there as an SL order; the paper stop's exit
+     * then sells the live trade too, the Zerodha stop taken out first. The paper record stays the paper book's.
+     */
+    @Test fun inLiveWithTradeLiveOnTheBreakAlsoTradesAtZerodhaAndThePaperStopSellsItThere() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        com.optionslab.app.data.ArmLive.testSync = true
+        val sym = "NIFTY26OCT25050CE"
+        kite.instruments += FakeKite.Ins(26_000_001, sym, "NIFTY", day.plusDays(7), 25_050.0, "CE", 65)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        File(context.filesDir, "kite_instruments.json").delete()
+        runBlocking { Broker.instruments() }
+        kite.requests.clear()
+        only(DonchianArm.SOURCE)
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        val (buy, stop) = kite.placed
+        assertEquals(mapOf("tradingsymbol" to sym, "transaction_type" to "BUY", "order_type" to "MARKET", "quantity" to "65", "tag" to "iraarm"),
+            buy.form.filterKeys { it in setOf("tradingsymbol", "transaction_type", "order_type", "quantity", "tag") })
+        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "trigger_price" to "85.00", "quantity" to "65"),
+            stop.form.filterKeys { it in setOf("transaction_type", "order_type", "trigger_price", "quantity") })
+        val live = com.optionslab.app.data.ArmLive.view.value.open.single()
+        assertEquals(DonchianArm.SOURCE, live.key)
+        // 09:24 trades at 84: the paper stop sells it, and its live trade follows (the Zerodha stop out first).
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        kite.quote("NFO:$sym", 86.0, 85.95, 86.05)
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        assertEquals("CANCELLED", kite.order(live.stopOrderId!!).status)
+        assertEquals("the live trade closed with its paper trade", "stop", com.optionslab.app.data.ArmLive.view.value.closed.single().why)
+        assertEquals("flat at Zerodha, never short", 0, kite.positions["NFO:$sym:MIS"]?.first ?: 0)
+        // Its paper record is the paper book's alone; the live one is the live path's.
+        assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
+        assertTrue(p.symbol != sym)
     }
 
     /** 16 Oct (Boss: "+50% profit, still not selling"): the position popup's Exits line is the arm's own stop, target and time. */

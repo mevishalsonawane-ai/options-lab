@@ -364,7 +364,7 @@ class OrbArmsDayTest : RobolectricTest() {
         sweepDay = true
         at(LocalTime.of(9, 50))
         val msg = runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }
-        assertTrue(msg, msg.startsWith("ORB Sweep armed on paper (it never trades on Zerodha)"))
+        assertTrue(msg, msg.startsWith("ORB Sweep armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on)"))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 34))
         assertTrue("no sweep before the 10:30 bar closes", arm("orb_sweep").today.isEmpty())
         passes(LocalTime.of(10, 35), LocalTime.of(10, 40))
@@ -586,7 +586,7 @@ class OrbArmsDayTest : RobolectricTest() {
         at(LocalTime.of(9, 50))
         assertTrue(runBlocking { OrbArms.setArmed("orb", true, automatic = true) }.startsWith("ORB armed on paper, fully automatic"))
         assertTrue(runBlocking { OrbArms.setArmed("orb_fresh", true, automatic = false) }.startsWith("ORB Fresh armed on paper, you approve each entry"))
-        assertTrue(runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }.startsWith("ORB Sweep armed on paper (it never trades on Zerodha)"))
+        assertTrue(runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }.startsWith("ORB Sweep armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on)"))
         for (src in listOf("orb", "orb_fresh", "orb_sweep")) assertTrue("$src armed", arm(src).armed)
         assertEquals("ORB disarmed.", runBlocking { OrbArms.setArmed("orb", false, automatic = true) })
         assertTrue(!arm("orb").armed)
@@ -595,7 +595,7 @@ class OrbArmsDayTest : RobolectricTest() {
         assertNotNull(said, act)
         assertFalse(said, said.contains("retired"))
         val done = runBlocking { act!!() }
-        assertTrue(done, done.startsWith("Range Fade armed on paper (it never trades on Zerodha)"))
+        assertTrue(done, done.startsWith("Range Fade armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on)"))
         assertTrue(arm("range_fade").armed)
         // The Hero arm and Liquidity arm as before.
         assertTrue(runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }.startsWith("Liquidity 15+5 armed on paper"))
@@ -670,7 +670,7 @@ class OrbArmsDayTest : RobolectricTest() {
         sweepDay = true                                     // 10:05-10:25 sit mid-range; the 10:30 bar touches 54,060
         at(LocalTime.of(9, 50))
         val msg = runBlocking { OrbArms.setArmed("range_fade", true, automatic = true) }
-        assertTrue(msg, msg.startsWith("Range Fade armed on paper (it never trades on Zerodha)"))
+        assertTrue(msg, msg.startsWith("Range Fade armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on)"))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 34))
         assertTrue("nothing while the bars sit mid-range", arm("range_fade").today.isEmpty())
         passes(LocalTime.of(10, 35), LocalTime.of(10, 40))

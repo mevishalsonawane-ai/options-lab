@@ -59,6 +59,9 @@ class SlippageTest {
         assertEquals("Protection", Slippage.strategyOf("iraprotect", null, null))
         assertEquals("Expiry square-off", Slippage.strategyOf("iraalgoexpiry", null, null))
         assertEquals("Strategy", Slippage.strategyOf("iraalgostrat", null, null))
+        // 18 Oct: a paper strategy's live trade (the arms' live path), by its tag or the arm key it was sent under.
+        assertEquals("Arms (live)", Slippage.strategyOf("iraarm", null, null))
+        assertEquals("Arms (live)", Slippage.strategyOf("iraalgo", "arm:r51_donchian20", null))
         assertEquals("Manual", Slippage.strategyOf("iraalgo", null, null))
         assertEquals("Manual", Slippage.strategyOf(null, null, null))
     }

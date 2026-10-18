@@ -58,7 +58,7 @@ internal fun vixDivExplanation(v: VixDivArm.View): List<String> = listOf(
     VixDivRules.RECORD,
     VixDivRules.RULES,
     paperTestLine(VixDivRules.LABEL, v.trades, VixDivRules.PAPER_TRADES_WANTED),
-    "Paper only: it never trades on Zerodha.",
+    "Paper first: at Zerodha only by its own \"Trade live\" switch (beside the Live switch), in Live with AI trades on.",
 ) + v.status.toSortedMap().map { (idx, s) -> "$idx: $s" }
 
 /** Its key numbers: its paper trades and their net after charges. */

@@ -19,6 +19,11 @@ import java.time.LocalDateTime
 import java.util.Locale
 
 /**
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * "Night (R3)" (08 Oct, Boss's yes; research/hunt/x2/PREREG.md rule R3, the rules in [NightRules]): a PAPER-ONLY arm that
  * buys one lot of a 1-ITM NIFTY weekly and BANKNIFTY monthly option at 15:20 on a strong close the day-end OI build-up
  * agrees with, and sells it at 09:16 the next session. Not proven (research: about Rs 207 a day before the holdout, Rs 150
@@ -37,7 +42,17 @@ object NightArm {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "night.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): its paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.NIGHT) {
+            if (cache == null) null else _view.value.let { v ->
+                val today = Market.today()
+                (v.open + v.closed.filter { it.exitTime?.toLocalDate() == today }).map { ArmLive.PaperLeg(mirrorRef(it), NightRules.SOURCE, if (it.open) it.qty else 0) }
+            }
+        }
     }
+
+    /** A trade's reference for its live path ([ArmLive]): its index and paper order (or its entry time). */
+    private fun mirrorRef(p: Pos): String = "night:${p.index}:${p.orderId ?: p.entryTime}"
 
     /** One overnight trade on paper. */
     data class Pos(
@@ -224,6 +239,7 @@ object NightArm {
             val gone = closedElsewhere(p, held, Paper.state.trades, now)
             if (gone != null) {
                 b.positions[i] = gone
+                runCatching { ArmLive.closed(mirrorRef(p), "closed_elsewhere") }
                 b.status[p.index] = "closed elsewhere"
                 note(b, "${p.symbol}: no longer held on paper (closed elsewhere), %s after charges".format(Locale.ENGLISH, rs(gone.net ?: 0.0)))
                 changed = true
@@ -241,6 +257,8 @@ object NightArm {
             val charges = p.charges + chargesOf(r.orderId)
             val done = p.copy(exit = fill.price, exitTime = now, why = if (NightRules.exitDue(p.entryDay, now)) "night_exit_0916" else "trade_manager", charges = charges)
             b.positions[i] = done
+            // 18 Oct: its live trade, if any, is sold now too ([ArmLive]; memory only).
+            runCatching { ArmLive.closed(mirrorRef(p), done.why ?: "night_exit_0916") }
             b.status[p.index] = "sold at 09:16"
             note(b, "${p.symbol}: sold ${fill.quantity} @ %.2f, %s after charges".format(Locale.ENGLISH, fill.price, rs(done.net ?: 0.0)))
             runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(p.index), Notifier.SELL, "${NightRules.LABEL} sold ${p.symbol} · Paper",
@@ -345,7 +363,10 @@ object NightArm {
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NightRules.LABEL} · entry") } }
         FlowGate.taken(flow, r.orderId)
-        b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
+        val pos = Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
+        b.positions += pos
+        // 18 Oct: its live path ([ArmLive]): the same option and lot, NRML, sold at 09:16 with its paper trade (the rule has no stop).
+        runCatching { ArmLive.entered(ArmLive.Ask(NightRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price)) }
         runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${NightRules.LABEL} bought ${c.symbol} · Paper",
             "Bought ${fill.quantity} @ %.2f on a strong close (%s). Sells at 09:16 next session. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts), "almanac") }
         // Text goes in as %s arguments (14 Oct: [facts] always holds a "%" - "day +1.20%" - and broke this line on every buy).

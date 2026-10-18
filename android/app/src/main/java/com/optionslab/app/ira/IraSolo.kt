@@ -39,6 +39,11 @@ import com.optionslab.ira.Market as IraMarket
  * research harness. Their trades stay in the record, readable; the new Solo's record starts fresh with its first trade
  * (tagged [SoloMidday.TAG]), so its 60-trade forward test is clean.
  *
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * Never live: Solo has no path to Zerodha - its orders go to the paper account only, and it never offers its setups as
  * trade ideas for approval.
  */
@@ -525,6 +530,10 @@ internal object IraSolo {
             val trade = T(today.toString(), s.underlying, c.symbol, s.call, fill.quantity, fill.price,
                 t.hour * 60 + t.minute - (9 * 60 + 15), s.index, s.stop, s.target, seen, orderId = r.orderId, tag = SoloMidday.TAG, atr = s.atr)
             save(list + trade)
+            // 18 Oct (Boss: every paper strategy present for live too): Solo (midday)'s live path ([com.optionslab.app.data.ArmLive]) -
+            // the same option and lot; its stop is on the index (no premium stop rests), so the live trade follows these exits.
+            runCatching { com.optionslab.app.data.ArmLive.entered(com.optionslab.app.data.ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY,
+                managerId(trade), c, 1, trade.qty, trade.entry)) }
             // Labelled once the trade is recorded: a label that cannot be saved never leaves the position untracked.
             r.orderId?.let { ownerTag("paper:$it", "Jarvis solo · entry") }
             val thinMoved = thinFirst != null
@@ -633,6 +642,18 @@ internal object IraSolo {
         return Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
     }
 
+    /**
+     * 18 Oct: Solo (midday)'s paper trades of today and those still open, for their live path ([com.optionslab.app.data.ArmLive]):
+     * each with what it holds (0 once closed). The settings vault's copy in memory; null when it cannot be read.
+     */
+    internal fun mirrorLegs(): List<com.optionslab.app.data.ArmLive.PaperLeg>? = runCatching {
+        // A vault that cannot be read is not "no trades": nothing is decided on it.
+        if (com.optionslab.app.security.SecurePrefs.unreadable) return null
+        val today = com.optionslab.app.data.Market.today().toString()
+        all().filter { it.midday && (!it.closed || it.day == today) }
+            .map { com.optionslab.app.data.ArmLive.PaperLeg(managerId(it), com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY, if (it.closed) 0 else it.qty) }
+    }.getOrNull()
+
     /** Solo's trade's id for the trade manager. */
     internal fun managerId(t: T): String = "solo:${t.day}:${t.symbol}:${t.entryMinute}"
 
@@ -707,6 +728,8 @@ internal object IraSolo {
 
     private fun finish(t: T, list: List<T>, px: Double?, why: String, exitOrderId: String? = null) {
         runCatching { com.optionslab.ira.ArmExits.set(exitsOwner(t), emptyList()) }
+        // 18 Oct: its live trade, if any, is sold on the next look ([com.optionslab.app.data.ArmLive]; memory only).
+        if (t.midday) runCatching { com.optionslab.app.data.ArmLive.closed(managerId(t), "paper_exit") }
         val net = px?.let { (it - t.entry) * t.qty - ShadowRules.charges(t.entry, it, t.qty) }
         val done = t.copy(closed = true, exitPrice = px, net = net, exit = why, exitOrderId = exitOrderId)
         val all = list.map { if (it === t) done else it }

@@ -351,7 +351,57 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
         Note("Each arm keeps its own live choice: " +
             (if (liveArms.isEmpty()) "no arm is cleared to trade live by itself" else "trade live when armed: ${liveArms.joinToString(", ")}") + ". " +
             (if (paperArms.isNotEmpty()) "On paper: ${paperArms.joinToString(", ")}. " else "") +
-            "An arm trades live only when you arm it in Live with its own PIN; one armed in Paper asks you first; paper-only arms never trade live.")
+            "An ORB-family arm trades live only when you arm it in Live with its own PIN; one armed in Paper asks you first. " +
+            "The paper strategies below trade live by their own switch.")
+        ArmsLiveList(model)
+    }
+}
+
+/**
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"; "i will switch it off, if i need
+ * it"): each paper strategy's own "Trade live" switch ([com.optionslab.app.data.ArmLive]), on by default (a rule triggered by the
+ * option's own price starts off). Off with one tap, no PIN (it lowers risk); on asks the PIN. It acts only with the app in Live and
+ * "AI trades go live" on, and never in the paper-only period. Each arm's live record is shown apart from its paper record; Jarvis's
+ * own ideas are not listed (they stay on paper). Every change is logged in the diagnostics and Autopilot's change log.
+ */
+@Composable
+internal fun ArmsLiveList(model: AppModel) {
+    val p = LocalPalette.current
+    val v by com.optionslab.app.data.ArmLive.view.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var askOn by remember { mutableStateOf<String?>(null) }
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.ArmLive.refresh() } } }
+    askOn?.let { key ->
+        val label = com.optionslab.engine.orb.LiveMirror.spec(key)?.label ?: key
+        Reauth(model, onOk = {
+            askOn = null
+            scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setLive(key, true, pinConfirmed = true) } }
+        }, onCancel = { askOn = null }, pinOnly = true, why = "Enter your app PIN to let $label trade live (only in Live with AI trades on; never in the paper-only period).")
+    }
+    Column(Modifier.padding(top = 8.dp)) {
+        Text("Paper strategies, live", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+        Note("Each follows its own paper trade at Zerodha: the same option and lots, the same exits; its stop rests at Zerodha and moves " +
+            "with its lock. Live only in Live with AI trades on; the paper-only period blocks every live entry.")
+        for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
+            val on = v.on(spec.key)
+            val (n, net) = v.record(spec.key)
+            val open = v.open.count { it.key == spec.key }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text(spec.label, style = Type.label.copy(color = if (on) p.oxblood else p.ink, fontSize = 13.sp))
+                    Text((if (on) "Trade live: on" else "Trade live: off (paper only)") +
+                        (if (open > 0) " · $open open live" else "") + (if (n > 0) " · live record $n, ${com.optionslab.engine.orb.LiveMirror.rs(net)}" else "") +
+                        (v.refused[spec.key]?.let { " · last not sent: $it" } ?: ""),
+                        style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                }
+                androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
+                    if (want) askOn = spec.key
+                    else scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setLive(spec.key, false, pinConfirmed = false) } }
+                }, modifier = Modifier.semantics { contentDescription = "Trade live: ${spec.label}" })
+            }
+        }
+        said?.let { Note(it) }
     }
 }
 

@@ -71,6 +71,23 @@ object OrbArms {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "orb.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): the paper-only arms' trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.ORB) { mirrorLegs }
+    }
+
+    /**
+     * The paper-only arms' (ORB Sweep, Range Fade, the Hero arm) paper trades of today and those still open, for their live path
+     * ([ArmLive]): each one's quantity held (0 once closed). Null until the book is read. Memory only, set with the hints.
+     */
+    @Volatile private var mirrorLegs: List<ArmLive.PaperLeg>? = null
+
+    /** A paper trade's reference for its live path: its arm and its paper order (or its entry time). */
+    private fun mirrorRef(p: Position): String = "orb:${p.arm}:${p.entryOrderId ?: p.entryTime}"
+
+    /** [p] (a paper-only arm's paper buy just filled, its stop at [stop]) offered to its live path ([ArmLive]); memory only. */
+    private fun mirror(p: Position, c: Paper.Contract, stop: Double?, limit: Double? = null) {
+        if (p.live || !runCatching { armOf(p.arm).paperOnly }.getOrDefault(false)) return
+        runCatching { ArmLive.entered(ArmLive.Ask(p.arm, mirrorRef(p), c, 1, p.qty, p.entry, stop = stop, limit = limit)) }
     }
 
     // ---- state -------------------------------------------------------------------
@@ -457,6 +474,15 @@ object OrbArms {
 
     private fun hints(b: Book) {
         runCatching { stopHints(b) }
+        runCatching {
+            val today = today()
+            val legs = b.positions.filter { !it.live && armOf(it.arm).paperOnly && (it.open || it.day == today) }
+                .map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0) }
+            val before = mirrorLegs?.associate { it.ref to it.qty }
+            mirrorLegs = legs
+            // A mirrored paper trade sold (all or part) since the last look: its live trade follows at once.
+            if (before != null && legs.any { l -> (before[l.ref] ?: 0) > l.qty }) ArmLive.nudge()
+        }
         liquidityBnLiveHint = LiquidityRules.BOOKS.filter { it.source in com.optionslab.engine.orb.ArmPriority.BN_BOOKS }
             .any { b.armed[it.source] == true && b.liveOk[it.source] == true }
         armedHint = ALL_ARMS.any { b.armed[it.source] == true }
@@ -1485,18 +1511,18 @@ object OrbArms {
         // constants unless the lab promoted a variant - then the same words with the variant's numbers). Memory only.
         val ap = runCatching { paramsOf(armOf(source), today(), live) }.getOrElse { com.optionslab.engine.orb.OrbParams.of(armOf(source)) }
         val (firstBar, _) = OrbRules.decisionBars(ap)
-        if (on && armOf(source).hero) "$label armed on paper (it never trades on Zerodha) - ${HeroRules.NOT_PROVEN}. Fully automatic, " +
+        if (on && armOf(source).hero) "$label armed on paper (its live trade at Zerodha follows only by its own "Trade live" switch, in Live with AI trades on) - ${HeroRules.NOT_PROVEN}. Fully automatic, " +
             "NIFTY expiry days only (from the instrument master): from 13:30 to 14:45, when the ATM straddle is 15% above its low " +
             "since 12:00 and NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1-5 with a " +
             "LIMIT order, up to Rs 5,000 of premium, once a day. It sells half at 5x the price paid and the rest at 20x or " +
             "15:05 (the expiry square-off), with a stop at -60% of the premium on a minute's close. With the old exits it " +
             "lost on all 13 trades out of sample (-Rs 64,190). It disarms itself after ${HeroRules.MAX_LOSING_DAYS} losing expiry " +
             "days in a row or Rs 50,000 lost. ${HeroRules.SIGNAL_SOURCE}."
-        else if (on && armOf(source).fade) "$label armed on paper (it never trades on Zerodha), fully automatic: when a 5-minute bar " +
+        else if (on && armOf(source).fade) "$label armed on paper (its live trade at Zerodha follows only by its own "Trade live" switch, in Live with AI trades on), fully automatic: when a 5-minute bar " +
             "reaches the outer ${if (kotlin.math.abs(ap.edge - 0.10) < 1e-9) "tenth" else pts(ap.edge * 100) + "%"} of the opening range and closes back inside, it buys the option toward the middle - 1 lot, " +
             "${pointsWith(ap.stopPoints)} stop, ${pointsWith(ap.targetPoints)} target and the 15:10 exit, at most ${RangeFadeRules.MAX_ENTRIES} a day, " +
             "from ${hhmm(RangeFadeRules.FIRST_BAR)}."
-        else if (on && paperOnly) "$label armed on paper (it never trades on Zerodha), fully automatic: it fades a failed break of the " +
+        else if (on && paperOnly) "$label armed on paper (its live trade at Zerodha follows only by its own "Trade live" switch, in Live with AI trades on), fully automatic: it fades a failed break of the " +
             "opening range - a 5-minute bar through the range high or low that closes back inside - with 1 lot, ${pointsWith(ap.stopPoints)} stop, " +
             "${pointsWith(ap.targetPoints)} target and the 15:10 exit, at most ${SweepRules.MAX_ENTRIES} a day, from ${hhmm(firstBar)}."
         else if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
@@ -1863,9 +1889,12 @@ object OrbArms {
             val stop = Paper.place(c, "SELL", 1, "SL-M", "MIS", null, trigger)
             if (stop.ok) { stopId = stop.orderId; stopId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · stop") } }
         }
-        b.positions += stamped(Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
+        val pos = stamped(Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
             charges = chargesOf(buy.orderId), ladder = ProfitLock.targetOf(arm) != null))
+        b.positions += pos
         marks[c.symbol] = fill.price
+        // 18 Oct: a paper-only arm's (ORB Sweep, Range Fade) live path: the same contract, lot and stop at Zerodha ([ArmLive]).
+        mirror(pos, c, trigger)
         // R17 shadow (I3 / I5): the charges check and smart stop noted beside the trade (memory only; nothing changes).
         runCatching { PreTradeShadow.orb(arm, c, expected, fill.quantity, signalBar, pp.stopPoints) }
         return "entered"
@@ -2023,7 +2052,11 @@ object OrbArms {
             LiquidityTrail.raise(p.entry, p.peak, p.lot, p.trail, p.stopTrigger, ltp, activateRs = p.trailFrom),
         ).maxOrNull() ?: return p
         val r = runCatching { Paper.modify(id, null, null, to) }
-        if (r.getOrNull()?.ok == true) return p.copy(stopTrigger = to)
+        if (r.getOrNull()?.ok == true) {
+            // 18 Oct: a paper-only arm's live trade moves its Zerodha stop to the same lock ([ArmLive]; memory only).
+            if (runCatching { armOf(p.arm).paperOnly }.getOrDefault(false)) ArmLive.level(mirrorRef(p), to)
+            return p.copy(stopTrigger = to)
+        }
         val why = r.getOrNull()?.message ?: r.exceptionOrNull()?.javaClass?.simpleName ?: "an error"
         com.optionslab.app.work.Alerts.post("${armOf(p.arm).label}: the ${if (target == null) "₹500 trail" else "profit lock"} could not move the paper stop up to " +
             "%.2f (%s). The stop stays at %s; it is tried again on the next check.".format(Locale.ENGLISH, to, why,
@@ -2260,9 +2293,12 @@ object OrbArms {
         runCatching { Notifier.post(app, HERO_NOTICE, Notifier.BUY, "${HeroRules.ARM.label} fired", text, "trade") }
         runCatching { Diag.record("orb", "${HeroRules.ARM.label}: $text") }
         // The book at the signal minute (bid, ask and their quantities from Zerodha's stream; else the last price alone).
-        b.positions += Position(src, c.symbol, c.right.name, fill.quantity, fill.price, now(), day.atTime(at), buy.orderId, null, null,
+        val pos = Position(src, c.symbol, c.right.name, fill.quantity, fill.price, now(), day.atTime(at), buy.orderId, null, null,
             charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
+        b.positions += pos
         marks[c.symbol] = fill.price
+        // 18 Oct: its live path ([ArmLive]): the same option and lots, a LIMIT at the same limit, its -60% stop resting at Zerodha.
+        mirror(pos, c, HeroRules.stopLevel(fill.price), limit)
         runCatching { PreTradeShadow.hero(HeroRules.ARM, spotBars, c, fill.price, fill.quantity, day, at) }  // R17 shadow (memory only)
         return kept("entered", pick, limit, lots)
     }
