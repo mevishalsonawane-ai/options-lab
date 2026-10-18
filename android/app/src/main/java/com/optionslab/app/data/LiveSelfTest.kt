@@ -393,7 +393,6 @@ object LiveSelfTest {
                 // Exactly the hand order form's buy ([com.optionslab.app.ui.AppModel.planManual]): a LIMIT at the offer, on the tick.
                 val px = Kite.onTick(q.ask?.takeIf { it > 0 } ?: q.last, c.tickSize, Kite.Side.BUY)
                 val o = Kite.Order(c.tradingSymbol, Kite.Side.BUY, c.lotSize, c.lotSize, s.orderProduct, "LIMIT", px, c.tickSize)
-                order = o
                 // The day's order count is left out (0): this order is never sent, and the count is not the contract's rule.
                 val why = Kite.refusals(o, s.limits(), 0, holdToSettlement = false, refPrice = q.last)
                 if (why.isNotEmpty()) return@step LiveCheck.fail(why.joinToString("; ") { LiveCheck.clean(it) })
@@ -403,6 +402,8 @@ object LiveSelfTest {
                 val wrong = want.filter { (k, v) -> form[k] != v }.keys
                 if (wrong.isNotEmpty()) return@step LiveCheck.fail("the order's form is wrong in: ${wrong.joinToString()}")
                 if (form["price"].isNullOrEmpty() || form["tag"].isNullOrEmpty()) return@step LiveCheck.fail("the order's form has no price or no tag")
+                // Only an order every rule passed is priced and protected by the next steps (a refused one is never priced).
+                order = o
                 LiveCheck.pass("LIMIT ${s.orderProduct}, 1 lot of ${c.lotSize}, priced at the offer on the ${com.optionslab.engine.fmtG(c.tickSize)} tick; every rule passed")
             }
             r.step(Group.ORDER, "Order margin (Zerodha, read-only)", Budgets.READ_MS) {

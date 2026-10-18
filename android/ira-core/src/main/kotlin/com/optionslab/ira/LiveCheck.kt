@@ -161,7 +161,8 @@ object LiveCheck {
     private val TOKENISH = Regex("[A-Za-z0-9_\\-+/=]{24,}")
     private val LONG_NUMBER = Regex("\\d{9,}")
     private val RUPEES = Regex("(₹|Rs\\.?|INR)\\s*[\\d,]+(\\.\\d+)?", RegexOption.IGNORE_CASE)
-    private val DECIMAL = Regex("\\d[\\d,]*\\.\\d+")
+    /** A decimal amount, but never an IPv4 address (the static-IP step names both addresses). */
+    private val DECIMAL = Regex("(?<!\\d)(?<!\\d\\.)\\d[\\d,]*\\.\\d+(?!\\.?\\d)")
     /** A whole number after a money word ("Required margin is 52345", "available cash: 1,200"): an amount too. */
     private val AMOUNT = Regex("\\b(margin|funds?|required|available|cash|balance|amount|value|premium|limit|exposure|need|needed|short)\\b([^0-9.]{0,24})\\d[\\d,]*",
         RegexOption.IGNORE_CASE)

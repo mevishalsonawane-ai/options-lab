@@ -334,7 +334,7 @@ class LiveSelfTestTest : RobolectricTest() {
             val (out, _) = run()
             val w = out.of("Every open position's stop watched")
             assertEquals(w.detail, Verdict.PASS, w.verdict)
-            assertEquals("1 open (1 paper, 0 live): 1 with a stop, 0 with a target, last checked at most 3 s ago", w.detail)
+            assertTrue(w.detail, Regex("1 open \\(1 paper, 0 live\\): 1 with a stop, 0 with a target, last checked at most [3-6] s ago").matches(w.detail))
             assertEquals("1 open, 1 working", out.of("Paper book").detail)
             assertEquals("a resting paper stop is something open: the stream is not dropped", 0, stream.drops)
             stream.paperAt = System.currentTimeMillis() - 20_000

@@ -90,6 +90,9 @@ class LiveCheckTest {
         val rms = LiveCheck.clean("Insufficient funds. Required margin is 52345 but available margin is 1,200; cash: 900")
         for (bad in listOf("52345", "1,200", "900")) assertFalse(rms.contains(bad), "$bad in $rms")
         assertEquals("Insufficient funds. Required margin is # but available margin is #; cash: #", rms)
+        // An IP address is not an amount: the static-IP step names both.
+        assertEquals("Orders would reach Zerodha from 49.36.1.2, not your registered static IP 13.235.10.20.",
+            LiveCheck.clean("Orders would reach Zerodha from 49.36.1.2, not your registered static IP 13.235.10.20."))
         // A count that is not an amount stays.
         assertEquals("3 orders still resting", LiveCheck.clean("3 orders still resting"))
         assertEquals("failed", LiveCheck.clean("   "))

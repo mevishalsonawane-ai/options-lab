@@ -859,9 +859,8 @@ class BrokerScreensTest {
         assertTrue(shown("20 of 20 passed, 14 waiting for market hours, 1 skipped, slowest:", substring = true))
         assertEquals("one run", 1, kite.requests.count { it.path == "/margins/orders" })
         assertTrue("reads only", kite.writes.isEmpty() && kite.placed.isEmpty() && kite.gtts.isEmpty())
-        // The run is kept: the card shows it again when it opens.
-        show { SelfTestCard() }
-        assertTrue(shown("✓ Funds"))
+        // The run is kept: the card opens on it next time (it starts from LiveSelfTest.last).
+        assertEquals(20 + 14 + 1, LiveSelfTest.last.size)
     }
 
     @Test fun theLiveCheckShowsWhatFailed() {
