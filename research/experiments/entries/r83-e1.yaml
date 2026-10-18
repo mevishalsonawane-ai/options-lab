@@ -1,0 +1,31 @@
+id: r83-e1
+title: 'R83: EIA crude release: fade the first 15-minute spike'
+family: calendar-events
+date: '2026-10-18'
+doc: research/HUNT_R83_MCX_ENERGY.md
+hypothesis: 'EIA crude release: fade the first 15-minute spike earns after strict MCX costs on 1 mini lot, beating its baseline
+  in walk-forward and final.'
+data_version: Dukascopy 1-min BID WTI/Henry Hub proxies 2016-2026 (/dev/shm, not committed); Drive lake options_rolling_1m
+  MCX for the real replay
+period:
+  design: 2016-01-01..2022-12-31
+  holdout: 2023-01-01..2026-10-13 (final, read once)
+instruments:
+- CRUDE
+features:
+- 'signal source: US benchmark proxy future (WTI / Henry Hub), labelled proxy'
+model_or_rule: k x ATR14d spike after the Wednesday EIA release, faded; stop beyond the spike extreme, target the pre-release
+  price, 120 min
+settings: research/hunt/r83/PREREG.md section 4
+prereg: research/hunt/r83/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Frozen k0.35. Final 2023-01-01..2026-10-13: 9 trades, net Rs -2,258 (baseline Rs +0); walk-forward 2019-22 Rs
+    -2,039 (baseline Rs +0); twin p 0.896; BH q 1.00 across 33 variants; net without the top 5 trades Rs -1,874. Real MCX
+    replay Aug 2025 - Oct 2026: futures: 0 trades, Rs +0; option_1itm: 0 trades, Rs +0; proxy_same_window: 0 trades, Rs +0.
+    Gates failed: final_pos_and_beats_base, wf_pos_and_beats_base, twin_p<0.10, bh_q<0.10, not_top5, trades>=30.'
+  costs: McxCosts.kt charges; futures half-spread CRUDEOILM 0.03%, NATGASMINI 0.06%, COPPER 0.05% each side, +0.02% on stops;
+    options CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90% half-spread
+holdout_read: true
+verdict: rejected
+notes: Too few final trades to judge (< 30); design and walk-forward were also negative or below baseline.

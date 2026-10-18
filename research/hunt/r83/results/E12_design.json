@@ -1,0 +1,87 @@
+{
+ "idea": "E12",
+ "primary": "crude_long",
+ "frozen": "crude_long",
+ "wf_net": -37057.339570000026,
+ "wf_picks": [
+  "ng_short",
+  "ng_short",
+  "ng_short",
+  "ng_short"
+ ],
+ "variants": {
+  "crude_long": {
+   "design": {
+    "trades": 127,
+    "win_rate": 0.5354330708661418,
+    "net": -177.60075960001177,
+    "max_dd": 26011.057476,
+    "top5_share": null
+   },
+   "fold_net": [
+    11215.453517599997,
+    9415.89133519999,
+    -15114.450198400007,
+    12167.708482000013
+   ],
+   "twin_p": 0.27860696517412936,
+   "base_design_net": 0,
+   "base_design_trades": 0
+  },
+  "crude_short": {
+   "design": {
+    "trades": 127,
+    "win_rate": 0.4330708661417323,
+    "net": -30876.481739199997,
+    "max_dd": 42799.15112759998,
+    "top5_share": null
+   },
+   "fold_net": [
+    -15494.72716959999,
+    -13794.339331999994,
+    9990.552556400002,
+    -19832.559352400003
+   ],
+   "twin_p": 0.835820895522388,
+   "base_design_net": 0,
+   "base_design_trades": 0
+  },
+  "ng_long": {
+   "design": {
+    "trades": 127,
+    "win_rate": 0.4251968503937008,
+    "net": -14488.0349069999,
+    "max_dd": 73008.14311599995,
+    "top5_share": null
+   },
+   "fold_net": [
+    -18240.570357000008,
+    -4366.840272000022,
+    27453.307772999986,
+    27107.556913000077
+   ],
+   "twin_p": 0.417910447761194,
+   "base_design_net": 0,
+   "base_design_trades": 0
+  },
+  "ng_short": {
+   "design": {
+    "trades": 127,
+    "win_rate": 0.5118110236220472,
+    "net": -13463.57921100009,
+    "max_dd": 76824.148484,
+    "top5_share": null
+   },
+   "fold_net": [
+    13903.464727000008,
+    2546.9687280000217,
+    -28692.413276999996,
+    -24815.359748000054
+   ],
+   "twin_p": 0.5422885572139303,
+   "base_design_net": 0,
+   "base_design_trades": 0
+  }
+ },
+ "base_wf_net": 0.0
+}

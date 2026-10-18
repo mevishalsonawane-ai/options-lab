@@ -1,0 +1,30 @@
+id: r83-e10
+title: 'R83: ATR-percentile regime filter on the app''s NG evening breakout (EVE)'
+family: mcx-crypto
+date: '2026-10-18'
+doc: research/HUNT_R83_MCX_ENERGY.md
+hypothesis: ATR-percentile regime filter on the app's NG evening breakout (EVE) earns after strict MCX costs on 1 mini lot,
+  beating its baseline in walk-forward and final.
+data_version: Dukascopy 1-min BID WTI/Henry Hub proxies 2016-2026 (/dev/shm, not committed); Drive lake options_rolling_1m
+  MCX for the real replay
+period:
+  design: 2016-01-01..2022-12-31
+  holdout: 2023-01-01..2026-10-13 (final, read once)
+instruments:
+- NATURALGAS
+features:
+- 'signal source: US benchmark proxy future (WTI / Henry Hub), labelled proxy'
+model_or_rule: McxEveRules unchanged, taken only when the previous day's ATR14 percentile over 250 days is < 50 (calm) / >=
+  50 (busy)
+settings: research/hunt/r83/PREREG.md section 4
+prereg: research/hunt/r83/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Frozen calm. Final 2023-01-01..2026-10-13: 533 trades, net Rs -37,644 (baseline Rs -51,428); walk-forward 2019-22
+    Rs -14,854 (baseline Rs -89,164); twin p 0.045; BH q 0.74 across 33 variants; net without the top 5 trades Rs -48,931.
+    Real MCX replay Aug 2025 - Oct 2026: futures_NATGASMINI: 175 trades, Rs -15,608; option_NATURALGAS_1ITM: 167 trades, Rs
+    -9,980. Gates failed: final_pos_and_beats_base, wf_pos_and_beats_base, bh_q<0.10, not_top5.'
+  costs: McxCosts.kt charges; futures half-spread CRUDEOILM 0.03%, NATGASMINI 0.06%, COPPER 0.05% each side, +0.02% on stops;
+    options CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90% half-spread
+holdout_read: true
+verdict: rejected

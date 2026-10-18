@@ -1,0 +1,28 @@
+id: r83-e12
+title: 'R83: Rollover week: hold the near future over the last 5 days before expiry'
+family: calendar-events
+date: '2026-10-18'
+doc: research/HUNT_R83_MCX_ENERGY.md
+hypothesis: 'Rollover week: hold the near future over the last 5 days before expiry earns after strict MCX costs on 1 mini
+  lot, beating its baseline in walk-forward and final.'
+data_version: Drive lake fut_daily_continuous (MCX, 2012-2026), Yahoo daily CL/NG/HG/INR
+period:
+  design: 2012-01-01..2022-12-31
+  holdout: 2023-01-01..2026-10-13 (final, read once)
+instruments:
+- CRUDE
+- NATURALGAS
+features:
+- 'signal source: MCX daily future (copper: COMEX x USD/INR proxy)'
+model_or_rule: long or short over the 5 MCX days before the roll, 2 x ATR stop
+settings: research/hunt/r83/PREREG.md section 4
+prereg: research/hunt/r83/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Frozen crude_long. Final 2023-01-01..2026-10-13: 45 trades, net Rs +6,306 (baseline Rs +0); walk-forward 2019-22
+    Rs -37,057 (baseline Rs +0); twin p 0.478; BH q 1.00 across 33 variants; net without the top 5 trades Rs -21,938. Real
+    MCX replay Aug 2025 - Oct 2026: none (daily rule). Gates failed: wf_pos_and_beats_base, twin_p<0.10, bh_q<0.10, not_top5.'
+  costs: McxCosts.kt charges; futures half-spread CRUDEOILM 0.03%, NATGASMINI 0.06%, COPPER 0.05% each side, +0.02% on stops;
+    options CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90% half-spread
+holdout_read: true
+verdict: rejected

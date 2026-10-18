@@ -1,0 +1,81 @@
+{
+ "idea": "E7",
+ "signal_source": "WTI proxy (Dukascopy LIGHTCMDUSD), traded as CRUDEOILM future",
+ "variants": {
+  "1h": {
+   "trades": 430,
+   "win_rate": 0.3627906976744186,
+   "net": -26502.617030183188,
+   "avg_win": 294.94463822575375,
+   "avg_loss": -264.64956420949187,
+   "worst_day": -2065.4318356007807,
+   "max_dd": 27863.457239445226,
+   "top5_share": null,
+   "days": 352,
+   "net_per_day": -75.29152565392951,
+   "gross": 1411.0872731398485,
+   "design_twin_p": 0.40298507462686567,
+   "fold_net": [
+    -206.07590436291252,
+    -745.7116670014829,
+    -5075.986618696885,
+    -13224.774725449715
+   ],
+   "exits": {
+    "next liquidity": 196,
+    "atr stop": 104,
+    "failed break": 84,
+    "cut-off": 45,
+    "new liquidity": 1
+   },
+   "longs_net": -7756.3585056706615,
+   "shorts_net": -18746.258524512534
+  },
+  "15m": {
+   "trades": 1890,
+   "win_rate": 0.25343915343915346,
+   "net": -103158.86108125352,
+   "avg_win": 204.89869391751603,
+   "avg_loss": -142.6685580919516,
+   "worst_day": -1777.6336241923502,
+   "max_dd": 103445.36521704287,
+   "top5_share": null,
+   "days": 1145,
+   "net_per_day": -90.09507518013407,
+   "gross": 20255.08318527236,
+   "design_twin_p": 0.009950248756218905,
+   "fold_net": [
+    -13834.393001768647,
+    -7660.568017322289,
+    -12077.161239406105,
+    -29305.918284230822
+   ],
+   "exits": {
+    "next liquidity": 964,
+    "atr stop": 471,
+    "failed break": 364,
+    "cut-off": 59,
+    "new liquidity": 32
+   },
+   "longs_net": -47127.070776971515,
+   "shorts_net": -56031.79030428202
+  }
+ },
+ "baseline": "flat (0)",
+ "walk_forward": {
+  "wf_net": -19252.548915510997,
+  "wf_picks": [
+   "1h",
+   "1h",
+   "1h",
+   "1h"
+  ],
+  "design_net": {
+   "1h": -26502.617030183195,
+   "15m": -103158.86108125348
+  },
+  "frozen": "1h"
+ },
+ "baseline_wf_net": 0.0,
+ "frozen": "1h"
+}
