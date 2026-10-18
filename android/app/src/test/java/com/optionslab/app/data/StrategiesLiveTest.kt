@@ -199,6 +199,41 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("the next pass sends no second exit", 1, sells().size)
     }
 
+    /** 18 Oct, review: the 15-second stop check's part ([Strategies.manageOnly]) sells a leg through its stop, once. */
+    @Test fun theStopChecksOwnPassSellsTheLegThroughItsStopOnce() {
+        live()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        assertTrue(Strategies.runningHint)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("nothing sold above the stop", sells().isEmpty())
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, sells().size)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("no second exit from either pass", 1, sells().size)
+    }
+
+    /** A compromised phone: the stop check's exits still go (only entries are refused). */
+    @Test fun theStopChecksOwnPassSellsEvenOnACompromisedPhone() {
+        live()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        runBlocking { Strategies.manageOnly(compromised = true) }
+        assertEquals(1, sells().size)
+    }
+
+    @Test fun theStopChecksOwnPassReadsNothingWithNoRunOpen() {
+        live()
+        saved(Position.B to OptionType.CE)
+        assertFalse(Strategies.runningHint)
+        kite.requests.clear()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("no read at all: ${kite.requests}", kite.requests.isEmpty())
+    }
+
     @Test fun closingOneLegSendsOnlyThatLeg() {
         live()
         val id = saved(Position.B to OptionType.CE, Position.B to OptionType.PE)
@@ -242,6 +277,23 @@ class StrategiesLiveTest : RobolectricTest() {
         val id = saved(Position.B to OptionType.CE)
         assertNull(runBlocking { Strategies.setArmed(id, true, RunMode.LIVE, automatic = automatic) })
         return id
+    }
+
+    /**
+     * 18 Oct, review: the stop check's own pass never starts a scheduled run, and does not use up the scheduler's slot:
+     * the minute pass still starts it.
+     */
+    @Test fun theStopChecksOwnPassNeverStartsAScheduledRun() {
+        live()
+        val id = armedLive(automatic = true)
+        at(9, 19); tick()
+        at(9, 21)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("nothing started by the stop check", kite.placed.isEmpty())
+        assertFalse(entry(id).running)
+        val notes = tick()
+        assertTrue(notes.toString(), notes.any { it.contains("scheduled live start") })
+        assertEquals("BUY", kite.placed.single().form["transaction_type"])
     }
 
     @Test fun anAutomaticLiveArmStartsAtItsTimeAndSquaresOffAtItsExit() {

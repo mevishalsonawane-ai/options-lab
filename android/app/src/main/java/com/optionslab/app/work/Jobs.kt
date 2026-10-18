@@ -859,6 +859,9 @@ object Tasks {
             // The guards as they stand now, in the shared state (memory: the settings and the breaker's record).
             runCatching { com.optionslab.app.data.AppState.refreshGuards() }
         }
+        // 18 Oct, review: while anything is held each arms group is waited on 10 s, not 45 (a slow arm finishes by itself), so
+        // the stops and targets below and the 15-second stop check after the pass are never held up long behind it.
+        val armsWait = WatchWorkers.armsWaitMs(WatchWorkers.heldQuick())
         // The arms side by side (10 Oct), each under its own lock as before; every new position still goes through the one
         // entry door and the one-index claims. Outside the service (a test's pass) one after another, in this order.
         together("arms", armsDue(lanes != null, listOfNotNull(
@@ -876,7 +879,7 @@ object Tasks {
             if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
-        )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
+        )), armsWait, inOrder = lanes == null)
         safely {
             // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
@@ -896,7 +899,7 @@ object Tasks {
             },
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
-        )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
+        )), armsWait, inOrder = lanes == null)
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
         step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
         // Jarvis: your own stops trailed up automatically (Boss's switch).
@@ -1550,6 +1553,7 @@ class WatchService : Service() {
                 val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
                     com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
                     com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
+                    com.optionslab.app.data.Strategies.runningHint ||       // 18 Oct, review: a strategy run's leg stops too
                     (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
                 stepSec = if (holding) 15 else 60
                 // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
@@ -1559,6 +1563,9 @@ class WatchService : Service() {
                     com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
                     com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
                 val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
+                // 18 Oct, review: while holding, a bar-close check in this window is followed straight by the stop check (it
+                // went back to the top and waited another 15 s, so the stops were looked at about 30 s apart at each bar close).
+                var barCloseRan = false
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
                     Heartbeat.stepBegin("bar-close entry check")
@@ -1588,11 +1595,12 @@ class WatchService : Service() {
                         runCatching { com.optionslab.app.data.SmartWorkers.ranByLane(listOf("Night (R3)", "VIX divergence")) }
                     } } finally { Heartbeat.stepEnd() }
                     Heartbeat.beat(this)
-                    continue
+                    if (!holding) continue
+                    barCloseRan = true
                 }
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
-                if (holding && streaming) {
+                if (barCloseRan) Unit else if (holding && streaming) {
                     val until = System.currentTimeMillis() + 15_000
                     // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
                     val step = Battery.gap(this, 3_000)
@@ -1644,6 +1652,12 @@ class WatchService : Service() {
                             if (com.optionslab.app.data.PassedArmsHost.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.PASSED_ARMS}") { com.optionslab.app.data.PassedArmsHost.manageOnly() } else null,
                             if (com.optionslab.app.data.HeroTicketArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.HERO_TICKET}") { com.optionslab.app.data.HeroTicketArm.manageOnly() } else null,
                             if (com.optionslab.app.data.SignalPaperArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.SIGNAL_PAPER}") { com.optionslab.app.data.SignalPaperArm.manageOnly() } else null,
+                            // 18 Oct, review: the Strategy Module's open runs - their per-leg and basket stops, targets and trails
+                            // (no scheduled starts or square-offs: those stay in the full pass). Its leg stops were checked once a minute.
+                            if (com.optionslab.app.data.Strategies.runningHint) com.optionslab.ira.Supervisor.Step("15-second stop check: strategies") {
+                                val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(this@WatchService, 60_000))
+                                com.optionslab.app.data.Strategies.manageOnly(bad)
+                            } else null,
                         ), WatchWorkers.EXITS_WAIT_MS, inOrder = false)
                         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the
                         // bots' live stops, and the no-price failsafe (REST quotes; a loud warning after two minutes).

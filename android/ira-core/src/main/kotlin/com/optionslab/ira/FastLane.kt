@@ -125,6 +125,12 @@ object FastLane {
         val idle: Boolean get() = lanes.isEmpty() && minuteAtMs == null && retryMs == null && minuteAgainMs == null
     }
 
+    /**
+     * May the live lane run a look that also marks the paper holdings (the ORB book's whole-book price check)? Only when
+     * those are all streamed, or nothing is held on paper: else it would read the candle feed per tick (18 Oct, review).
+     */
+    fun liveMarksPaper(st: State): Boolean = st.covered || !st.holding
+
     /** The live lane's gap: the stream's when every live instrument is fresh on it, else Zerodha's ([LIVE_GAP_MS]). */
     fun liveGap(st: State): Long = if (st.liveFresh) STREAM_GAP_MS else LIVE_GAP_MS
 
@@ -162,8 +168,10 @@ object FastLane {
             if (gate.due(lane, nowMs, gap, force)) lanes += lane else hold(lane, gap)
         }
         if (st.holding && st.covered) try_(Lane.STREAM, STREAM_GAP_MS, roll.minute)
-        // The live lane's looks also mark the paper holdings: only when those are streamed too (no candle feed read per tick).
-        if (st.liveHolding && (st.covered || !st.holding)) try_(Lane.LIVE, liveGap(st), roll.minute)
+        // 18 Oct, review: the live lane runs for every Zerodha holding, whatever the paper book: one paper position without a
+        // stream price used to switch it off, leaving the real-money exits to the 15-second pass. Only its look that also marks
+        // the paper holdings (the ORB book's) waits for those to be streamed ([liveMarksPaper]: no candle feed read per tick).
+        if (st.liveHolding) try_(Lane.LIVE, liveGap(st), roll.minute)
         if (roll.bar && st.armed && Lane.BAR_CLOSE !in busy && gate.due(Lane.BAR_CLOSE, nowMs, BAR_GAP_MS)) lanes += Lane.BAR_CLOSE
         val minute = roll.minute && st.minuteArms && gate.due(Lane.MINUTE, nowMs, MINUTE_GAP_MS)
         val feedAt = maxOf(nowMs, (roll.closedAtMs ?: nowMs) + MINUTE_AFTER_MS)

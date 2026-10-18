@@ -53,6 +53,15 @@ object McxGuard {
         runCatching { Notifier.post(context, 2050, Notifier.RISK, title, text, "trade") }
     }
 
+    /**
+     * The exits due ([due]: found on the pass's shared read) re-sized from a fresh read of Zerodha's positions ([fresh]): a
+     * position gone flat since is dropped, one that changed size (or side) goes at its fresh quantity; shorts first. Pure.
+     */
+    internal fun <C, D> freshDue(due: List<Triple<Broker.Position, C, D>>, fresh: List<Broker.Position>): List<Triple<Broker.Position, C, D>> =
+        due.mapNotNull { (p, c, d) ->
+            fresh.firstOrNull { it.exchange == p.exchange && it.symbol == p.symbol && it.product == p.product && it.qty != 0 }?.let { Triple(it, c, d) }
+        }.sortedBy { if (it.first.qty < 0) 0 else 1 }
+
     suspend fun maybeRun(context: Context, s: AppSettings) {
         if (!s.mcxExpiryExit) return
         // Shut, nothing can be closed: whatever is due goes at the next session's first pass.
@@ -90,8 +99,15 @@ object McxGuard {
                 } else McxExpiry.due(c.name, c.expiry, c.isOption, now, cal, cfg)?.let { Triple(p, c, it) }
             }.sortedBy { if (it.first.qty < 0) 0 else 1 }
             if (dueList.isEmpty()) return@runCatching
+            // 18 Oct, review: the pass's shared read above may be up to 20 s old and is for words only ([Broker.passPositionBook]):
+            // a resting stop filled at MCX since then left it showing the position, and a market exit sized from it opened a new
+            // one. So with an exit due, the orders are read, then the positions fresh (in that order: a stop filling between the
+            // two reads shows as still working and is only cancelled, never doubled), and only what is still open is closed.
             val working = Broker.orders().filter { it.working }
-            for ((p, c, due) in dueList) {
+            val fresh = Broker.positionBook().net
+            McxMarket.noteLive(fresh)
+            val sendList = freshDue(dueList, fresh)
+            for ((p, c, due) in sendList) {
                 val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
                 val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
                 // A resting stop or target on it would keep the market exit from going: cancelled first, exit next pass.

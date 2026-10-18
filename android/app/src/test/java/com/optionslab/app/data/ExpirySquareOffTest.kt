@@ -116,6 +116,32 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals("closed in full", 0, kite.positions.getValue("NFO:$pe:NRML").first)
     }
 
+    /** 18 Oct, review: no Zerodha session at 15:05 is a book not read: not done for the day, and a 15:10 login still closes it. */
+    @Test fun noSessionAt1505IsNotDoneAndALaterLoginStillClosesIt() {
+        kite.position(ce, 75, 20.0)
+        SecurePrefs.putAll(mapOf("kite.accessToken" to null))
+        assertTrue(!Broker.loggedIn && Broker.linked)
+        pass()
+        assertTrue("nothing can be sent without a session", kite.requests.isEmpty())
+        assertTrue("the live book was not read: not done", !done())
+        at(15, 7); pass()
+        assertTrue("still not done while the session is missing", !done())
+        kite.login()
+        at(15, 10); pass()
+        assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+        pass()
+        assertTrue("closed and read: done", done())
+    }
+
+    /** No Zerodha account linked at all (paper only): an empty paper book is done for the day, as before. */
+    @Test fun noLinkedAccountAndNothingExpiringOnPaperIsDone() {
+        SecurePrefs.putAll(mapOf("kite.accessToken" to null, "kite.userId" to null))
+        assertTrue(!Broker.loggedIn && !Broker.linked)
+        pass()
+        assertTrue(done())
+        assertTrue(kite.requests.isEmpty())
+    }
+
     @Test fun retriesEveryPassUntilNothingIsLeftThenStops() {
         kite.position(ce, 75, 20.0)
         kite.nextPlace(outcome = Outcome.REJECT, message = "RMS:Blocked for trading")

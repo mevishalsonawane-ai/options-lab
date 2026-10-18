@@ -132,6 +132,10 @@ object ExpirySquareOff {
                 if (placed.isNotEmpty()) closed += "live ${p.symbol}"
             }
         }.onFailure { unread = true }
+        // 18 Oct, review: a linked account with no session now (the morning's token not renewed yet, or dropped by Zerodha)
+        // is a live book not read, not an empty one: the day is not marked done, so a login before F&O's close still closes
+        // what expires today (it was marked done at 15:05 with an empty paper book, and a 15:10 login closed nothing).
+        if (!Broker.loggedIn && Broker.linked) unread = true
 
         if (!unread && stillOpen == 0) SecurePrefs.put(K_DONE, today.toString())
         if (closed.isNotEmpty()) Notifier.post(context, 2017, Notifier.APPROVAL, "Expiry square-off at 15:05",

@@ -82,6 +82,39 @@ class BatteryRestTest : RobolectricTest() {
         assertEquals(McxRest.IDLE_MS, McxMarket.watchCadenceMs())
     }
 
+    /**
+     * 18 Oct, review: a live MCX position seen on one day is still held the next (carried overnight, Paper mode: nothing
+     * re-marks it), until a read of Zerodha's positions shows MCX flat.
+     */
+    @Test fun aLiveMcxPositionCarriedOvernightIsStillWatchedNextDayUntilSeenFlat() {
+        at(day, "22:30")
+        booksRead()
+        McxMarket.markLive()
+        at("2026-10-09", "18:00")                            // the next day (a Friday), MCX's evening
+        assertTrue("still held after midnight", McxMarket.liveExposure())
+        assertTrue(McxMarket.liveExposureOrThrow())
+        assertTrue("the watch runs for it", McxMarket.watchDue())
+        assertEquals(McxRest.HELD_MS, McxMarket.watchCadenceMs())
+        // A read still showing it (an NFO line beside it changes nothing): held.
+        McxMarket.noteLive(listOf(Broker.Position("GOLDM26NOVFUT", "NRML", 1, 100.0, 100.0, 0.0, exchange = "MCX"),
+            Broker.Position("NIFTY26OCT25000CE", "NRML", 0, 10.0, 10.0, 0.0)))
+        assertTrue(McxMarket.liveExposure())
+        // Days later, a read showing only a closed MCX line and an NFO position: flat on MCX, not held any more.
+        at("2026-10-12", "18:00")
+        assertTrue(McxMarket.liveExposure())
+        McxMarket.noteLive(listOf(Broker.Position("GOLDM26NOVFUT", "NRML", 0, 100.0, 100.0, 0.0, exchange = "MCX"),
+            Broker.Position("NIFTY26OCT25000CE", "NRML", 75, 10.0, 10.0, 0.0)))
+        assertFalse(McxMarket.liveExposure())
+        assertFalse(McxMarket.liveExposureOrThrow())
+    }
+
+    @Test fun nothingSeenOnMcxIsNotHeld() {
+        at(day, "22:30")
+        assertFalse(McxMarket.liveExposure())
+        McxMarket.noteLive(emptyList())
+        assertFalse(McxMarket.liveExposure())
+    }
+
     @Test fun theNightlyPassesAreRetriedAfterTheCloseUntilDoneAndNotPastMcxsClose() {
         // Review, 14 Oct: a nightly pass the battery budget refused at 15:45 is looked for again every 5 minutes to 23:30.
         assertFalse("nothing due: asleep", SmartWorkers.nightlyRetry(false, 18 * 60))
