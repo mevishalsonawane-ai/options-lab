@@ -60,6 +60,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-18-live-like-paper", OCT18, "Live works like paper: your PIN, then the order goes",
+            "In Live, your Buy, Sell and Close go straight to Zerodha after your PIN, with no review card. " +
+                "Every check still runs first: the guard, kill switch, day lock, margin, lot size and market hours. " +
+                "Going Live asks your PIN once and turns on AI trades too; going back to Paper turns both off. " +
+                "Each arm keeps its own live choice, and Jarvis's own ideas stay on paper. " +
+                "During your paper-only period no new live entry goes out, but exits, stops and square-offs always do. " +
+                "In Paper you can still close a real Zerodha position with your PIN. " +
+                "Orders Zerodha took despite an error reply are now found and protected, never left without a stop.",
+            "Settings → Zerodha for the Live switch; Trade tab for Still open at Zerodha"),
         Entry("2026-10-18-whole-app-review", OCT18, "Kill switch needs your PIN; Jarvis quiet when locked",
             "The kill switch can no longer be cleared by mistake, and clearing it asks for your PIN. " +
                 "Jarvis never says a request or an order's result aloud on a locked phone. " +
