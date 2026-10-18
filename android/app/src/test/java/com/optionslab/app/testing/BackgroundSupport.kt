@@ -131,6 +131,7 @@ object Background {
     fun reset() {
         Market.testClock = null
         Net.testEndpoint = null
+        Holidays.resetForTest()
         holidaysCache().set(null, null)
         Holidays.forgetTrading()
         clearChartCache()

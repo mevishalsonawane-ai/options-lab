@@ -39,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
@@ -427,7 +428,8 @@ object Tasks {
     }
 
     suspend fun harvest(context: Context, s: AppSettings, session: java.time.LocalDate, onProgress: (String, Float) -> Unit) {
-        if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
+        // Waited for here (the harvest is off every order path), but bounded, and a cancelled harvest stops waiting at once.
+        if (Holidays.stale(Market.today())) Holidays.refreshInBackground().join()
         // Jarvis: FINNIFTY's chain too, and the FINNIFTY and SENSEX index candles (1-minute OHLC, volume and OI for every contract).
         val r = if (com.optionslab.app.BuildConfig.JARVIS) Harvester.run(underlyings = listOf("NIFTY", "BANKNIFTY", "FINNIFTY"), session = session,
             extraIndices = linkedMapOf("FINNIFTY" to "NSE_INDEX|Nifty Fin Service", "SENSEX" to "BSE_INDEX|SENSEX"),
@@ -1320,6 +1322,8 @@ class WatchService : Service() {
                 // ANR fix (9 Oct): the watch's start note - a settings read and a vault WRITE (a Keystore encryption and two
                 // disk syncs, queued behind any other vault work), the battery question to Android - off the main thread.
                 if (k == Jobs.Kind.LIVE) noteStart(run, byAndroid)
+                // 18 Oct: stopped or destroyed while the start note ran (blocking vault work): no further start-up.
+                ensureActive()
                 val s = AppSettings.load()
                 when (k) {
                     Jobs.Kind.LIVE -> { watch(s, run); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
@@ -1485,7 +1489,12 @@ class WatchService : Service() {
 
     private suspend fun watchLoop(s: AppSettings, workers: WatchWorkers.Run) {
         val fired = HashSet<String>()
-        if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
+        // 18 Oct: a watch already stopped or destroyed (its job cancelled while its start note ran) goes no further, and
+        // starts no holiday refresh.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        // 18 Oct (open positions first): a stale calendar is refreshed in the background, never waited for. The first pass and
+        // every stop, target and square-off check run at once on the cached list (or the built-in one) until it lands.
+        if (Holidays.stale(Market.today())) Holidays.refreshInBackground()
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
             "Yesterday's session ended at 06:00. Open ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha and log in before the 11:00 entry.", "broker",
