@@ -354,7 +354,7 @@ class JobsTest : RobolectricTest() {
     }
 
     @Test fun aWatchDestroyedDuringItsStartFetchesNothing() {
-        // A stale calendar: a live watch would refresh it from Upstox and NSE before its first pass.
+        // A stale calendar: a live watch would start a refresh of it.
         Background.calendar(null)
         Background.at(WED, 10, 0)
         val lock = WatchService::class.java.getDeclaredField("runDayLock").apply { isAccessible = true }.get(null)!!
@@ -364,8 +364,35 @@ class JobsTest : RobolectricTest() {
             Robolectric.buildService(WatchService::class.java, i).create().also { services += it; it.startCommand(0, 1); it.destroy() }
         }
         awaitJobsEnded(c)
-        assertEquals("no holiday refresh after the stop", emptyList<String>(), NetworkGuard.blocked.toList())
+        assertNull("no holiday refresh after the stop", com.optionslab.app.data.Holidays.pendingForTest())
+        assertEquals(emptyList<String>(), NetworkGuard.blocked.toList())
         Background.await("its end in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] ended") } }
+    }
+
+    @Test fun aStaleCalendarNeverHoldsUpTheWatchsChecks() {
+        // 18 Oct (open positions first): a restart with a week-old calendar and a holiday site that hangs.
+        val release = java.util.concurrent.CountDownLatch(1)
+        val newDay = LocalDate.of(2025, 12, 31)
+        com.optionslab.app.data.Holidays.testList = { release.await(); mapOf(newDay to "Test holiday") }
+        Background.calendar(WED.minusDays(30))
+        Background.at(WED, 10, 0)
+        upstox.reply = { p -> if (isIntraday(p)) UpstoxStub.candles(UpstoxStub.minutes(WED, LocalTime.of(9, 15), 46, 24_800.0)) else status(404) }
+        Alarms.upsert(PriceAlarm(31, "NIFTY", above = true, level = 24_000.0))
+        val t0 = System.nanoTime()
+        val svc = startService(Jobs.Kind.LIVE)
+        // The first pass's price checks (the same pass as every stop, target and square-off check) run on the cached calendar.
+        Background.await("the first pass's alarm check while the holiday site hangs") { alert("Alarm: NIFTY rises above 24,000.00") != null }
+        assertTrue("took ${(System.nanoTime() - t0) / 1e9} s", (System.nanoTime() - t0) / 1e9 < 15)
+        assertNotNull("the refresh runs in the background", com.optionslab.app.data.Holidays.pendingForTest())
+        assertEquals("still the cached calendar", WED.minusDays(30), com.optionslab.app.data.Holidays.book().fetched)
+        // A stop does not wait for it either.
+        svc.onStartCommand(Intent(context, WatchService::class.java).setAction(WatchService.STOP), 0, 2)
+        Background.await("the stop", timeoutMs = 10_000) { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] ended: stopped from the notification or the app") } }
+        // The site answers: the calendar is updated.
+        release.countDown()
+        Background.await("the refreshed calendar") { com.optionslab.app.data.Holidays.book().fetched == WED }
+        assertEquals("Test holiday", com.optionslab.app.data.Holidays.book().nse[newDay])
+        assertTrue(com.optionslab.app.data.Holidays.isHoliday(newDay))
     }
 
     @Test fun androidsRestartAfterHoursEndsQuietly() {
@@ -702,6 +729,18 @@ class JobsTest : RobolectricTest() {
         assertTrue(lines.contains("• Mode: Paper"))
         DailyReports.post(context, DailyReports.Kind.MORNING, title, lines)
         assertEquals(title, Background.title(Background.notifications(context).getNotification(DailyReports.Kind.MORNING.id)))
+    } }
+
+    @Test fun theMorningCheckWaitsForAStaleCalendarsRefreshAndSaysWhenItFails() = com.optionslab.app.testing.bounded("theMorningCheckWaitsForAStaleCalendarsRefreshAndSaysWhenItFails") { runBlocking {
+        // 18 Oct: the 09:00 check joins the bounded background refresh (no order path waits on it).
+        Background.calendar(WED.minusDays(30))
+        com.optionslab.app.data.Holidays.testList = { Thread.sleep(300); mapOf(LocalDate.of(2025, 12, 25) to "Christmas") }
+        assertTrue(DailyReports.morning(context).second.contains("✓ NSE holiday list up to date"))
+        assertEquals(WED, com.optionslab.app.data.Holidays.book().fetched)
+        Background.calendar(WED.minusDays(30))
+        com.optionslab.app.data.Holidays.testList = { throw java.io.IOException("simulated: NSE refused") }
+        assertTrue(DailyReports.morning(context).second.contains("✗ NSE holiday list up to date"))
+        assertEquals("a failure keeps the cached list", WED.minusDays(30), com.optionslab.app.data.Holidays.book().fetched)
     } }
 
     @Test fun aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow() = com.optionslab.app.testing.bounded("aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow") { runBlocking {

@@ -56,6 +56,7 @@ class TestApp : Application() {
         Store.init(this)
         Market.init(this)
         Holidays.init(this)
+        Holidays.resetForTest()            // no background holiday refresh or test list left from the previous test
         com.optionslab.app.data.McxMarket.init(this)
         Broker.init(this)
         StaticIp.init(this)

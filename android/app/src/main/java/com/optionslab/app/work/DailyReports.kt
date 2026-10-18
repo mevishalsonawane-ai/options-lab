@@ -236,7 +236,8 @@ object DailyReports {
             t.startsWith(com.optionslab.ira.PreMarket.Part.MARGIN.label + ":") || t.startsWith(com.optionslab.ira.PreMarket.Part.CARRIED.label + ":") }
         fun ok(yes: Boolean, text: String) { if (!yes) bad++; lines += (if (yes) "✓ " else "✗ ") + text }
         ok(Broker.loggedIn, if (Broker.loggedIn) "Zerodha logged in for today" else "Zerodha not logged in: log in before 09:15 (${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha)")
-        if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
+        // Bounded, and off every order path (18 Oct): the morning check waits for the background refresh, never longer than its limit.
+        if (Holidays.stale(Market.today())) Holidays.refreshInBackground().join()
         ok(!Holidays.stale(Market.today()), "NSE holiday list up to date")
         val contracts = runCatching { Market.contracts().size }.getOrDefault(0)
         ok(contracts > 0, if (contracts > 0) "Today's option contracts loaded ($contracts)" else "Option contracts could not be loaded")
