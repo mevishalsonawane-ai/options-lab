@@ -90,6 +90,7 @@ import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
@@ -297,6 +298,65 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
 }
 
 /**
+ * Beside the Live switch (18 Oct, Boss: "Live like paper, arms too"): what goes live with it. "AI trades go live" (on with the
+ * switch to Live; turned off here on its own, no PIN), and each arm's own live choice - unchanged by the switch: only an arm
+ * cleared for live with its own PIN trades live by itself; paper-only arms and paper changes stay on paper. Reads only.
+ */
+@Composable
+internal fun LiveScopeNote(model: AppModel, live: Boolean) {
+    val p = LocalPalette.current
+    var aiLive by remember(live) { mutableStateOf(false) }
+    var liveArms by remember { mutableStateOf<List<String>>(emptyList()) }
+    var paperArms by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(live) {
+        // Read on the AI-live writes' own lane, so after a switch's write still queued there (18 Oct review: never the old value).
+        aiLive = AI_LIVE_WRITES.async { runCatching { !com.optionslab.app.ira.IraNewsTrades.paperFirst }.getOrDefault(false) }.await()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val orb = runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }
+            val strat = runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).map { it.def }
+            liveArms = orb.filter { it.liveOk && !it.arm.paperOnly }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }
+            paperArms = orb.filter { !it.liveOk || it.arm.paperOnly }.map { it.arm.label }
+        }
+    }
+    Column(Modifier.padding(top = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
+                Text(if (aiLive) "On (with Live): Jarvis's ideas you approve may go to Zerodha. His own trades stay on paper."
+                    else "Off: Jarvis's ideas go on paper. It turns on when you switch to Live with your PIN.",
+                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            }
+            // Off on its own at any time, no PIN (it lowers risk); on only with the switch to Live (its PIN) or Jarvis settings.
+            androidx.compose.material3.Switch(checked = aiLive, enabled = aiLive, onCheckedChange = { v ->
+                if (!v) {
+                    aiLive = false
+                    com.optionslab.app.ira.IraNewsTrades.paperNow()
+                    AI_LIVE_WRITES.launch {
+                        runCatching { com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+                        runCatching { com.optionslab.app.data.Diag.record("mode", "AI trades go live off (by itself, beside the Live switch)") }
+                    }
+                }
+            }, modifier = Modifier.semantics { contentDescription = "AI trades go live" })
+        }
+        Note("Each arm keeps its own live choice: " +
+            (if (liveArms.isEmpty()) "no arm is cleared to trade live by itself" else "trade live when armed: ${liveArms.joinToString(", ")}") + ". " +
+            (if (paperArms.isNotEmpty()) "On paper: ${paperArms.joinToString(", ")}. " else "") +
+            "An arm trades live only when you arm it in Live with its own PIN; one armed in Paper asks you first; paper-only arms never trade live.")
+    }
+}
+
+/**
+ * 18 Oct (Boss: "Live like paper, arms too"): the Live switch's PIN step, the one door to [AppModel.goLive] from the screen
+ * (the Masthead badge and Settings → Zerodha → Mode). The PIN or fingerprint, never skipped by "Live orders without PIN":
+ * right, Live and "AI trades go live" switch on in one step; wrong or cancelled, nothing changes. [why]: the words before it
+ * (the paper-only period's reason and end date while it runs).
+ */
+@Composable
+fun GoLivePin(model: AppModel, why: String, onDone: () -> Unit) {
+    Reauth(model, pinOnly = false, why = why, onOk = { onDone(); model.goLive() }, onCancel = onDone)
+}
+
+/**
  * How long the send button must be held. Long enough that a tap, a brush or a scroll never sends (a tap is
  * under ~150 ms), short enough not to be a wait: it was 1.5 s. The PIN or fingerprint still follows.
  */
@@ -368,6 +428,8 @@ fun OrderReviewDialog(model: AppModel) {
 
 @Composable
 private fun OrderReviewBody(model: AppModel) {
+    val direct by model.direct.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    if (direct) { DirectOrderBody(model); return }
     val p = LocalPalette.current
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val plan by model.plan.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -385,11 +447,66 @@ private fun OrderReviewBody(model: AppModel) {
             // His own record's losing rule, softly (S10; words only).
             if (pl.value.source.startsWith(com.optionslab.app.data.Origins.MANUAL)) BossRuleNote(!pl.value.exit)
             AgainstArmsNote(pl.value)
-            PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
+            // 18 Oct: in Paper mode an exit of a real Zerodha position may be sent too (with the PIN); an entry never.
+            PlanCard(pl.value, (s.allowRealOrders && s.live) || pl.value.exit, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
     }
-    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false }, orderAction = true)
+    // "Live orders without PIN" (the owner's setting) applies in Live only: a Paper-mode exit always asks the PIN.
+    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan(reauthed = true) }, onCancel = { confirming = false }, orderAction = s.live && s.allowRealOrders)
+    stuckAction?.let { a ->
+        Reauth(model, onOk = {
+            stuckAction = null
+            when (a) { "cancel" -> model.cancelStuck(); "reprice" -> model.repriceStuck(); else -> model.continueAfterStuck() }
+        }, onCancel = { stuckAction = null })
+    }
+}
+
+/**
+ * Boss's own order sent straight after the PIN (18 Oct, Boss: "same as paper, directly placing order with pin"): no review card.
+ * The PIN (or fingerprint) is asked at once, while the order is priced; once right, the order goes ([AppModel.confirmDirect]) with
+ * every check the review ran. A wrong PIN or Cancel sends nothing and closes it. Shown after: the send's progress, a refusal or
+ * a leg still working (its own choices); a complete fill closes it (the fill is said, as for paper).
+ */
+@Composable
+private fun DirectOrderBody(model: AppModel) {
+    val p = LocalPalette.current
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val plan by model.plan.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val sending by model.sending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val st by model.stuck.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // Asked once per order: afresh for each new one, even while the dialog stays open (18 Oct review).
+    val order by model.directOrder.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    var asking by remember(order) { mutableStateOf(true) }
+    var stuckAction by remember { mutableStateOf<String?>(null) }
+    val live = s.live && s.allowRealOrders
+    val title = (plan as? Load.Done<OrderPlan>)?.value?.title
+    // Jarvis's word before an opening order, and Boss's order against an automatic position: words only, as on the review.
+    (plan as? Load.Done<OrderPlan>)?.value?.let { PreTradeNote(it); AgainstArmsNote(it) }
+    LedgerCard(title = if (live) "Real order · Zerodha" else "Closing at Zerodha (real money)", accent = p.oxblood) {
+        title?.let { Text(it, style = Type.title.copy(color = p.ink, fontSize = 14.sp)) }
+        val pv = plan
+        val sv = sending
+        when {
+            pv is Load.Failed -> com.optionslab.app.ui.components.AlertOn(pv.why)
+            sv is Load.Busy -> FullSpinner(sv.label)
+            sv is Load.Failed -> com.optionslab.app.ui.components.AlertOn(sv.why)
+            sv is Load.Done -> sv.value.forEach { f ->
+                LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
+            pv is Load.Busy -> FullSpinner(pv.label)
+            else -> Note("Waiting for your PIN or fingerprint.")
+        }
+        val pl = (plan as? Load.Done<OrderPlan>)?.value
+        st?.takeIf { it.plan == pl }?.let { stk -> StuckCard(stk) { stuckAction = it } }
+        if (sending !is Load.Busy) BrassButton("Close", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkFaint) { model.dismissPlan() }
+    }
+    // Every leg filled: nothing left to decide here (the fill was said). Not priced: the reason shows in the red banner; it closes.
+    LaunchedEffect(sending, st) { if (sending is Load.Done && st == null) model.dismissPlan() }
+    LaunchedEffect(plan) { if (plan is Load.Failed) model.dismissPlan() }
+    // "Live orders without PIN" (the owner's setting) applies in Live only: a Paper-mode exit always asks the PIN.
+    if (asking) Reauth(model, onOk = { asking = false; model.confirmDirect() }, onCancel = { asking = false; model.dismissPlan() },
+        orderAction = live,
+        why = if (live) "Enter your app PIN to send this order to Zerodha." else "Enter your app PIN to close this real position at Zerodha.")
     stuckAction?.let { a ->
         Reauth(model, onOk = {
             stuckAction = null
@@ -721,8 +838,8 @@ fun BrokerPage(
     // 18 Oct, review: the reason asked (the period's, or "not read yet": it fails closed); null when not asked.
     var paperOnlyPin by remember { mutableStateOf<String?>(null) }
     val modeScope = androidx.compose.runtime.rememberCoroutineScope()
-    paperOnlyPin?.let { why -> Reauth(model, onOk = { paperOnlyPin = null; model.update { it.copy(mode = "live", allowRealOrders = true) } },
-        onCancel = { paperOnlyPin = null }, pinOnly = false, why = why) }
+    // 18 Oct: going Live always asks the PIN (one switch: Live and "AI trades go live" together).
+    paperOnlyPin?.let { why -> GoLivePin(model, why) { paperOnlyPin = null } }
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() } } }
     Page {
@@ -754,13 +871,14 @@ fun BrokerPage(
                 LedgerCard(title = "Mode") {
                     ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
                         if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
-                        // Going Live: the paper-only period checked first, read off this thread if it is not yet (18 Oct, review).
+                        // Going Live: always the PIN; the paper-only period checked first, read off this thread if it is not yet.
                         else if (i == 0 && !s.live) modeScope.launch {
                             val ask = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.PaperOnly.liveAskRead() }
-                            if (ask != null) paperOnlyPin = ask else model.update { it.copy(mode = "live", allowRealOrders = true) }
+                            paperOnlyPin = ask ?: com.optionslab.app.ui.LIVE_PIN_ASK
                         }
-                        else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
+                        else if (i == 1 && s.live) model.goPaper()
                     }
+                    LiveScopeNote(model, s.live)
                     Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
                     else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
                 }
@@ -770,11 +888,12 @@ fun BrokerPage(
             com.optionslab.app.ui.SettingSpot("broker.orders") {
                 LedgerCard(title = "Real orders") {
                     Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
-                        if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
+                        if (s.oneTapOrders) " No PIN is on: in Live your order goes to Zerodha when you tap Buy or Sell; cancels and square-offs need no PIN either (closing in Paper mode still asks it)."
+                        else " As on paper: tap Buy or Sell (or Close), enter your PIN or fingerprint, and it goes at once, with no review step. Every check still runs first.")
                     ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
                         model.update { it.copy(prepareRealOrder = on) }
                     }
-                    ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders, keepSub = true) { on ->
+                    ToggleRow("Live orders without PIN", "In Live, tapping Buy, Sell or Close sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders, keepSub = true) { on ->
                         if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
                     }
                     ToggleRow("Keep a stop-loss order at the exchange for live positions",
@@ -1175,9 +1294,13 @@ internal fun ManualOrder(model: AppModel) {
         OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Limit price (blank = best bid/offer)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         Spacer(Modifier.height(8.dp))
-        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = !loading && !listing && expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
-            model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull())
+        // 18 Oct: in Live, as on paper - one tap, then the PIN (or fingerprint), and the order goes; no review card. In Paper it
+        // opens the review, which says Paper mode sends nothing.
+        BrassButton(if (s.live) "${if (side == Kite.Side.BUY) "Buy" else "Sell"} (live)" else "Review the order", Modifier.fillMaxWidth(),
+            enabled = !loading && !listing && expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
+            model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull(), direct = s.live)
         }
-        Note("Nothing is sent from here: the order opens for review over this page.")
+        Note(if (s.live) "Live: your PIN or fingerprint, then the order goes to Zerodha at once. The guard, margin and every limit are still checked first."
+            else "Paper mode: nothing is sent to Zerodha from here.")
     }
 }

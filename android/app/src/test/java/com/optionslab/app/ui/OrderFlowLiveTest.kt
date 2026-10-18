@@ -194,20 +194,171 @@ class OrderFlowLiveTest : RobolectricTest() {
         assertEquals("only the first order exists", listOf(first), kite.orders.keys.toList())
     }
 
-    @Test fun jarvissCloseOfAZerodhaPositionThatTheAppRefusedIsSaidAsNotSent() {
-        // 18 Oct: in Paper mode (Boss's paper-only days, Zerodha still logged in) the order sheet refuses the close at once, and
-        // Jarvis answered from the send's old state: an earlier order's fills as "Sent to Zerodha", or after a minute "Sent;
-        // Zerodha has not confirmed yet". Nothing had gone.
-        SecurePrefs.put("k.mode", "sandbox"); SecurePrefs.put("k.allow", false)
-        kite.position(sym, 75, 100.0)
+    @Test fun jarvissOrderThatTheAppRefusedAtTheSendIsSaidAsNotSentNeverAnEarlierSendsFills() {
+        // 18 Oct: a send the app refused at once (real orders not allowed, a check that failed again) left the send's state as it
+        // was, and Jarvis answered from it: an earlier order's fills as "Sent to Zerodha". Nothing had gone.
+        SecurePrefs.put("k.allow", false)
         val model = model()
         com.optionslab.app.ira.IraActions.attach(model)
         model.sending.value = Load.Done(listOf(com.optionslab.app.data.Broker.Fill("250926000000999", "COMPLETE", 99.0, 75, "")))
         val said = java.util.concurrent.atomic.AtomicReference<String?>()
-        Thread { said.set(kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraActions.closeLiveSymbol(sym) }) }.start()
+        val t = com.optionslab.app.ira.IraOrders.Ticket("NIFTY", expiry, 24_500.0, Right.CE, 1, true, 75)
+        Thread { said.set(kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraActions.trade(t, live = true) }) }.start()
         val answer = await("Jarvis's answer", 20_000) { said.get() }
-        assertTrue(answer, answer.startsWith("Not sent:") && answer.contains("Paper mode"))
+        assertTrue(answer, answer.startsWith("Not sent:"))
+        assertFalse(answer, answer.contains("Sent to Zerodha"))
         assertTrue("nothing went to Zerodha", kite.placed.isEmpty())
+    }
+
+    // ---- 18 Oct (Boss): exits of real Zerodha positions in Paper mode, with the PIN ---------------------------------------
+
+    private fun paperMode() { SecurePrefs.put("k.mode", "sandbox"); SecurePrefs.put("k.allow", false) }
+
+    private fun position(qty: Int) = kotlinx.coroutines.runBlocking { com.optionslab.app.data.Broker.positionBook() }.net.single { it.symbol == sym && it.qty == qty }
+
+    @Test fun inPaperModeAnExitWithThePinSendsExactlyTheHeldQuantity() {
+        paperMode()
+        for ((held, side) in listOf(75 to "SELL", -150 to "BUY")) {
+            kite.orders.clear(); kite.requests.clear()
+            kite.position(sym, held, 100.0)
+            val model = model()
+            model.planSquareOff(position(held), "Close (Paper mode)", direct = true)
+            await("the exit priced") { model.plan.value as? Load.Done }
+            model.confirmDirect()                               // what the PIN's Confirm calls, after a right PIN
+            val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
+            assertEquals(side, post.form["transaction_type"])
+            assertEquals("exactly what is held", "${kotlin.math.abs(held)}", post.form["quantity"])
+            await("filled") { model.sending.value as? Load.Done }
+            assertEquals("one order", 1, kite.placed.size)
+            assertFalse("still Paper mode", model.settings.value.live)
+            model.dismissPlan()
+            store.clear()
+        }
+    }
+
+    @Test fun inPaperModeAnExitWithoutThePinOrCancelledSendsNothing() {
+        paperMode()
+        kite.position(sym, 75, 100.0)
+        val model = model()
+        // Jarvis's (or any) send without the PIN: refused, and says the PIN is needed.
+        model.planSquareOff(position(75), "Square off")
+        await("the exit priced") { model.plan.value as? Load.Done }
+        val why = model.sendPlan()
+        assertEquals(com.optionslab.app.ui.PAPER_EXIT_PIN, why)
+        // Cancelled at the PIN (or a wrong PIN: Confirm is never reached): closing the dialog sends nothing.
+        model.planSquareOff(position(75), "Square off", direct = true)
+        await("the exit priced") { model.plan.value as? Load.Done }
+        model.dismissPlan()
+        shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
+        assertTrue("nothing went to Zerodha: ${kite.placed}", kite.placed.isEmpty())
+    }
+
+    @Test fun inPaperModeAnEntryNeverGoesToZerodhaEvenWithThePin() {
+        paperMode()
+        val model = model()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        model.confirmDirect()
+        val failed = await("refused") { model.sending.value as? Load.Failed }
+        assertTrue(failed.why, failed.why.contains("Paper mode"))
+        // The review's own send with the PIN: refused the same way.
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
+        await("the plan") { model.plan.value as? Load.Done }
+        assertEquals(com.optionslab.app.ui.PAPER_NO_ENTRY, model.sendPlan(reauthed = true))
+        shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
+        assertTrue("nothing went to Zerodha", kite.placed.isEmpty())
+    }
+
+    private fun keyguard() = shadowOf(context.getSystemService(android.app.KeyguardManager::class.java))
+
+    /**
+     * 18 Oct (Boss): Jarvis's close (or the emergency exit) of a Zerodha position in Paper mode opens the PIN prompt in the app
+     * and never sends without it. Before, the app refused it at once and Jarvis answered from the send's old state (an earlier
+     * order's fills as "Sent to Zerodha"): that old state is set here, and never answers.
+     */
+    @Test fun jarvissCloseInPaperModeOpensThePinPromptAndSendsOnlyAfterIt() {
+        paperMode()
+        kite.position(sym, 75, 100.0)
+        val model = model()
+        com.optionslab.app.ira.IraActions.attach(model)
+        model.sending.value = Load.Done(listOf(com.optionslab.app.data.Broker.Fill("250926000000999", "COMPLETE", 99.0, 75, "")))
+        keyguard().setKeyguardLocked(false)
+        run {
+            val said = java.util.concurrent.atomic.AtomicReference<String?>()
+            Thread { said.set(kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraActions.closeLiveSymbol(sym) }) }.start()
+            val answer = await("Jarvis's answer", 20_000) { said.get() }
+            assertTrue(answer, answer.startsWith("Enter your PIN on the screen"))
+            assertFalse("never an earlier send's fills: $answer", answer.contains("Sent to Zerodha"))
+            assertTrue("the PIN prompt is open in the app", model.direct.value)
+            await("the exit priced") { model.plan.value as? Load.Done }
+            shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
+            assertTrue("never sent without the PIN", kite.placed.isEmpty())
+            model.confirmDirect()
+            val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
+            assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
+        }
+    }
+
+    @Test fun jarvissCloseInPaperModeOnALockedPhoneOpensNothingAndSendsNothing() {
+        paperMode()
+        kite.position(sym, 75, 100.0)
+        val model = model()
+        com.optionslab.app.ira.IraActions.attach(model)
+        keyguard().setKeyguardLocked(true)
+        try {
+            val said = java.util.concurrent.atomic.AtomicReference<String?>()
+            Thread { said.set(kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraActions.closeLiveSymbol(sym) }) }.start()
+            val answer = await("Jarvis's answer", 20_000) { said.get() }
+            assertTrue(answer, answer.startsWith("Unlock the phone"))
+            assertFalse("no figure on a locked phone: $answer", Regex("\\d").containsMatchIn(answer))
+            assertFalse(model.direct.value)
+            assertTrue(kite.placed.isEmpty())
+        } finally { keyguard().setKeyguardLocked(false) }
+    }
+
+    // ---- 18 Oct (Boss): the live manual order goes straight after the PIN ------------------------------------------------
+
+    @Test fun aLiveDirectOrderGoesAfterThePinWithEveryCheckAndNoReview() {
+        val model = model()
+        val t0 = System.nanoTime()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        assertTrue("the PIN is asked at once, while the order is priced", model.direct.value)
+        model.confirmDirect()                                   // the PIN typed while it was priced
+        val post = await("the order at Zerodha") { kite.placed.firstOrNull() }
+        println("LIVEFLOW direct live buy: tap -> POST ${(post.atNanos - t0) / 1_000_000} ms (PIN typed at once; taps: Buy, PIN, Confirm)")
+        assertEquals("BUY", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
+        await("filled") { model.sending.value as? Load.Done }
+        assertEquals(1, kite.placed.size)
+    }
+
+    @Test fun aLiveDirectOrderTheChecksRefuseIsSaidAndNothingGoes() {
+        SecurePrefs.put("g.kill", true)
+        val model = model()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        model.confirmDirect()
+        val failed = await("refused") { model.sending.value as? Load.Failed }
+        assertTrue(failed.why, failed.why.startsWith("Not sent:"))
+        shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(300)
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    // ---- 18 Oct (Boss): the paper-only period blocks every new live entry; exits still go -------------------------------
+
+    @Test fun thePaperOnlyPeriodRefusesALiveManualEntryButItsExitStillGoes() {
+        val today = com.optionslab.app.data.Market.today()
+        com.optionslab.app.data.PaperOnly.resetForTest(com.optionslab.ira.PaperOnlyPeriod.Period(today.plusDays(8), "10 days on paper", today.minusDays(1)))
+        val model = model()
+        model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        model.confirmDirect()
+        val failed = await("refused") { model.sending.value as? Load.Failed }
+        assertTrue(failed.why, failed.why.contains("paper-only period") && failed.why.contains("Exits, stops and square-offs still go"))
+        assertTrue("no entry went, even in Live", kite.placed.isEmpty())
+        model.dismissPlan()
+        kite.position(sym, 75, 100.0)
+        model.planSquareOff(position(75), "Square off", direct = true)
+        await("the exit priced") { model.plan.value as? Load.Done }
+        model.confirmDirect()
+        val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
+        assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
     }
 }
 

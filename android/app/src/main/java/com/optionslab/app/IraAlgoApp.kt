@@ -75,6 +75,11 @@ class IraAlgoApp : Application() {
         // The danger meter's half-size switch (paper arms, off by default) into the entry path's memory copy before any
         // arm can run: read from the settings just decrypted above (13 Oct; it no longer waits for the morning check or the card).
         runCatching { com.optionslab.app.data.AppSettings.syncDangerHalf() }
+        // 18 Oct (Boss): the paper-only period into memory before any order can be asked for, from the settings just decrypted
+        // above (as the half-size switch): the order door reads it from memory only and, until it is read, refuses new live
+        // entries (never an exit). A failed read is tried again in the background ([PaperOnly.loadSoon]).
+        runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() }
+        com.optionslab.app.data.PaperOnly.loadSoon()
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)

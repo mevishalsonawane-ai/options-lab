@@ -80,7 +80,7 @@ fun CommoditiesScreen(model: AppModel, onChart: (String, String) -> Unit, onChai
         McxFutureSheet(q, s.live, futureExitDays = s.mcxFutureExitDays,
             onOrder = { buy, lots, limit, product ->
                 val side = if (buy) Kite.Side.BUY else Kite.Side.SELL
-                if (s.live) model.planMcx(q.contract, side, lots, product, limit)
+                if (s.live) model.planMcx(q.contract, side, lots, product, limit, direct = true)
                 else model.paperPlaceMcx(q.contract, side.name, lots, if (limit != null) "LIMIT" else "MARKET", product, limit)
             },
             onChart = { picked = null; onChart(q.contract.tradingSymbol, Mcx.EXCHANGE) },
@@ -228,10 +228,11 @@ internal fun McxFutureSheet(q: McxMarket.Quote, live: Boolean, onOrder: (Boolean
                 val tone = if (buy) p.verdigris else p.oxblood
                 val lotsSaid = "$lots lot${if (lots == 1) "" else "s"}"
                 if (live) {
-                    BrassButton("Review ${if (buy) "buy" else "sell"} of $lotsSaid", Modifier.fillMaxWidth(), enabled = ok, tone = tone) {
+                    // 18 Oct: as on paper - one tap, then the PIN (or fingerprint), and the order goes; no review card.
+                    BrassButton("${if (buy) "Buy" else "Sell"} $lotsSaid (live)", Modifier.fillMaxWidth(), enabled = ok, tone = tone) {
                         onOrder(buy, lots, if (limit) price.toDoubleOrNull() else null, product); onClose()
                     }
-                    Note("Live: the order opens for review; it is sent only after you hold the button and confirm.")
+                    Note("Live: Zerodha. Your PIN or fingerprint, then the order goes at once. MCX's checks, the margin and every limit still run first.")
                 } else {
                     BrassButton("${if (buy) "Buy" else "Sell"} $lotsSaid (paper)", Modifier.fillMaxWidth(), enabled = ok, tone = tone) {
                         onOrder(buy, lots, if (limit) price.toDoubleOrNull() else null, product); onClose()

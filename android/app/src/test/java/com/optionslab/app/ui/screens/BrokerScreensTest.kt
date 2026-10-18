@@ -693,13 +693,21 @@ class BrokerScreensTest {
         BrokerArea.saveKeys()
         val m = model()
         page(m)
+        // 18 Oct (one switch): going Live asks the PIN, then turns Live and "AI trades go live" on together.
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
         click("Live · Zerodha")
+        until("the PIN asked") { shown("Confirm it is you") }
+        assertFalse("not Live before the PIN", m.settings.value.live)
+        field("PIN").performTextInput(BrokerArea.PIN)
+        compose.onNodeWithText("Confirm").performClick(); compose.waitForIdle()
         until("live") { m.settings.value.live }
         assertTrue(m.settings.value.allowRealOrders)
+        until("AI trades go live on with it") { !com.optionslab.app.ira.IraNewsTrades.paperFirst }
         node("Live · Zerodha").assertIsSelected()
         click("Paper · simulated")
         until("paper") { !m.settings.value.live }
         assertFalse(m.settings.value.allowRealOrders)
+        assertTrue("AI trades go live off with Paper", com.optionslab.app.ira.IraNewsTrades.paperFirst)
         click("MIS")
         until("MIS") { m.settings.value.orderProduct == "MIS" }
         node("MIS positions are squared off by Zerodha", substring = true)
@@ -871,14 +879,15 @@ class BrokerScreensTest {
         return m
     }
 
+    /** 18 Oct: in Live the card's button is "Buy (live)" / "Sell (live)" (the PIN then sends it; no dialog is shown here, so nothing goes). */
     private fun reviewed(m: AppModel): OrderPlan {
-        click("Review the order")
+        click(" (live)", substring = true)
         return BrokerArea.await("the plan") { (m.plan.value as? Load.Done)?.value ?: (m.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
     }
 
     @Test fun theOrderCardReviewsWithoutSending() {
         val m = orderCard()
-        node("Review the order").assertIsEnabled()
+        node("Sell (live)").assertIsEnabled()
         click("CE"); click("BUY"); click("2")
         node("CE").assertIsSelected(); node("BUY").assertIsSelected(); node("2").assertIsSelected()
         field("Limit price (blank = best bid/offer)").performTextInput("1a01.5")
@@ -888,8 +897,9 @@ class BrokerScreensTest {
         assertEquals(BrokerArea.symbol("NIFTY", e1, 24_500.0, "CE"), leg.tradingSymbol)
         assertEquals(Kite.Side.BUY, leg.side); assertEquals(150, leg.quantity); assertEquals(101.5, leg.price!!, 0.0)
         assertEquals("NRML", leg.product)
-        assertTrue("the review sends nothing: ${kite.writes}", kite.writes.isEmpty())
-        assertTrue(shown("Nothing is sent from here: the order opens for review over this page."))
+        assertTrue("nothing goes before the PIN: ${kite.writes}", kite.writes.isEmpty())
+        assertTrue("the PIN is asked at once (no review card)", m.direct.value)
+        assertTrue(shown("Live: your PIN or fingerprint, then the order goes to Zerodha at once.", substring = true))
     }
 
     @Test fun aBlankPriceSellsAtTheBidOnTheChosenExpiry() {
@@ -934,7 +944,7 @@ class BrokerScreensTest {
         val m = model()
         show { ManualOrder(m) }
         until("the reason") { shown("Could not load Zerodha's contract list: Gateway timed out") }
-        node("Review the order").assertIsNotEnabled()
+        node("Sell (live)").assertIsNotEnabled()
         assertEquals(Load.Idle, m.plan.value)
     }
 
@@ -1061,7 +1071,7 @@ abstract class BrokerLayoutBase(device: DeviceConfig) : BrokerScreenBase(device)
         compose.onNodeWithText("Advanced: use a WireGuard VPN instead ▼").performScrollTo().performClick()
         compose.onNodeWithText("Run the self-test").performScrollTo().performClick()
         until(60_000) { compose.onAllNodesWithText("All 9 checks passed.").fetchSemanticsNodes().isNotEmpty() }
-        until { runCatching { compose.onNodeWithText("Review the order").assertIsEnabled(); true }.getOrDefault(false) }
+        until { runCatching { compose.onNodeWithText("Sell (live)").assertIsEnabled(); true }.getOrDefault(false) }
         snap("zerodha-cards", KNOWN)
         smokeOnce(NO_SMOKE)
     }

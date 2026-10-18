@@ -70,8 +70,9 @@ data class ChainPick(
 /**
  * The order sheet for one call or put, opened by tapping its price in the
  * chain. Buy or sell, lots, market or limit, product. In PAPER mode it
- * places a paper order; in LIVE mode it opens the usual review (margin
- * check, swipe to send, PIN or fingerprint) - nothing is sent from here.
+ * places a paper order. In LIVE mode (18 Oct, Boss: "same as paper, directly placing order with pin") the same tap asks the
+ * PIN (or fingerprint) and the order goes straight to Zerodha, with no review card: every check (the guard, kill switch,
+ * day lock, margin, freeze quantity and lots, static IP, market hours, the paper-only period) still runs before it is sent.
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -214,15 +215,19 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 val bracketProblem = protect?.let { pr -> px?.let { e -> com.optionslab.engine.risk.Protection.validate(if (buy) 1 else -1, e, pr.stop, pr.trail, pr.target) } }
                 com.optionslab.app.ui.components.AlertOn(bracketProblem)
                 val ok = (!limit || price.toDoubleOrNull()?.let { it > 0 } == true) && bracketProblem == null
-                // His own record's losing rule, softly, before a paper entry (S10; the live review shows it too). Words only.
-                if (!s.live) BossRuleNote(buy)
+                // His own record's losing rule, softly, before an entry (S10), paper or live. Words only.
+                BossRuleNote(buy)
                 if (s.live) {
-                    BrassButton("Review ${if (buy) "buy" else "sell"} order", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
+                    // 18 Oct: as on paper - one tap, then the PIN (or fingerprint), and the order goes; no review card.
+                    BrassButton("${if (buy) "Buy" else "Sell"} (live)", Modifier.fillMaxWidth(), enabled = ok, busy = placing, tone = side) {
+                        if (placing) return@BrassButton
+                        placing = true
                         model.planManual(pick.underlying, pick.expiry, pick.strike, pick.right,
-                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null, protect, area)
+                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null, protect, area,
+                            direct = true)
                         onClose()
                     }
-                    Note("Live: Zerodha. The order opens for review; it is sent only after you hold the button and confirm with your PIN or fingerprint.")
+                    Note("Live: Zerodha. Your PIN or fingerprint, then the order goes at once. The guard, margin and every limit are still checked first.")
                 } else {
                     BrassButton("${if (buy) "Buy" else "Sell"} (paper)", Modifier.fillMaxWidth(), enabled = ok, busy = placing, tone = side) {
                         if (placing) return@BrassButton

@@ -265,7 +265,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
                 LedgerCard(title = "Ira") {
                     Note("Ask about Nifty, BankNifty, FinNifty, Sensex, India VIX or gold. Ira answers only from the market data and news it reads, " +
                         "and says when it does not know. It never gives buy or sell advice. An order you ask for is sent only after you confirm it " +
-                        "(Paper: Confirm; Live: the order review, swipe and PIN).")
+                        "(Paper: Confirm; Live: Confirm, then your PIN or fingerprint).")
                     val day = st.lastDay?.let { " Latest data: ${it.dayOfMonth} ${it.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)} ${it.year}." } ?: ""
                     Note(when {
                         !memoryReady -> "Reading what I remember..."
@@ -397,8 +397,9 @@ internal fun ProposalActions(id: Long) {
 }
 
 /**
- * The app's own order paths, as Ira uses them. [paper] places on the paper account; [review] opens IraAlgo's order
- * review (swipe and PIN) for Zerodha. Read at the moment of the tap: [live] and [maxLots] from the settings.
+ * The app's own order paths, as Ira uses them. [paper] places on the paper account; [review] sends Boss's order to Zerodha
+ * straight after his PIN or fingerprint (18 Oct: no review card, every check still run). Read at the moment of the tap:
+ * [live] and [maxLots] from the settings.
  */
 class IraOrderPaths(val live: () -> Boolean, val maxLots: () -> Int,
                     val paper: (IraOrders.Ticket) -> Unit, val review: (IraOrders.Ticket) -> Unit)
@@ -409,12 +410,14 @@ fun iraOrderPathsFor(model: com.optionslab.app.ui.AppModel) = with(model) { com.
     paper = { t -> paperPlace(t.underlying, t.expiry, t.strike, t.right, if (t.buy) "BUY" else "SELL", t.lots, "MARKET",
         settings.value.orderProduct, null, null, null, "Ira") },
     review = { t -> planManual(t.underlying, t.expiry, t.strike, t.right,
-        if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, t.lots, settings.value.orderProduct, null, null, "Ira") },
+        if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, t.lots, settings.value.orderProduct, null, null, "Ira",
+        direct = true) },
 ) }
 
 /**
- * Under an order Ira read: Review looks the contract up (nearest expiry; ATM from the live price). Paper then shows
- * the contract with Confirm / Cancel; Live opens the order review, where only the swipe and the PIN send it.
+ * Under an order Ira read: Review looks the contract up (nearest expiry; ATM from the live price), then shows it with
+ * Confirm / Cancel. 18 Oct (Boss: "same as paper"): Live is the same card; its Confirm asks the PIN or fingerprint and the
+ * order goes to Zerodha at once (no review card).
  */
 @Composable
 private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPaths) {
@@ -422,12 +425,27 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var ticket by remember { mutableStateOf<IraOrders.Ticket?>(null) }
+    // Whether the ticket was prepared for Live (the mode at the tap; the app's checks read the mode again at the send).
+    var ticketLive by remember { mutableStateOf(false) }
     var problem by remember { mutableStateOf<String?>(null) }
     var done by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     Column(Modifier.padding(top = 6.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val t = ticket
         when {
             done != null -> Note(done!!)
+            t != null && ticketLive -> LedgerCard(title = "Live order · Zerodha", accent = pal.oxblood) {
+                Text(t.title, style = Type.figure.copy(color = if (t.buy) pal.verdigris else pal.oxblood))
+                Note("Real money: ${t.lots * t.lotSize} quantity (lot ${t.lotSize}) at the best price. Confirm asks your PIN or fingerprint, then it goes to Zerodha.")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BrassButton("Confirm (live)", tone = pal.oxblood) {
+                        ticket = null
+                        // The mode read again at the tap: switched to Paper since, nothing goes to Zerodha (18 Oct review).
+                        if (!orders.live()) done = "The app is in Paper mode now: nothing was sent. Ask again for a paper order."
+                        else { orders.review(t); done = "Enter your PIN or fingerprint to send it to Zerodha: ${t.title}." }
+                    }
+                    BrassButton("Cancel", tone = pal.inkSoft) { ticket = null; done = "Cancelled; nothing was sent." }
+                }
+            }
             t != null -> LedgerCard(title = "Paper order") {
                 Text(t.title, style = Type.figure.copy(color = if (t.buy) pal.verdigris else pal.oxblood))
                 Note("Market order on the paper account, ${t.lots * t.lotSize} quantity (lot ${t.lotSize}). Nothing is placed until you press Confirm.")
@@ -439,17 +457,14 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
             else -> {
                 problem?.let { Note(it) }
                 val live = orders.live()
-                BrassButton(if (busy) "Looking up the contract…" else if (live) "Review (Live, Zerodha)" else "Review (paper)", enabled = !busy) {
+                BrassButton(if (busy) "Looking up the contract…" else if (live) "Review (live)" else "Review (paper)", enabled = !busy) {
                     busy = true; problem = null
                     scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                             IraOrders.prepare(o, live, orders.maxLots(), o.market?.let { m -> IraHub.state.value.snaps[m] }?.price)
                         }
                         busy = false
-                        r.onSuccess { tk ->
-                            if (live) { orders.review(tk); done = "Opened in the order review: ${tk.title}. Only the swipe and your PIN send it." }
-                            else ticket = tk
-                        }.onFailure { problem = it.message ?: "Could not prepare the order." }
+                        r.onSuccess { tk -> ticketLive = live; ticket = tk }.onFailure { problem = it.message ?: "Could not prepare the order." }
                     }
                 }
             }
@@ -1245,8 +1260,8 @@ private fun AutomationsCard() {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
-                    Text(if (aiLive) "On: in Live, Jarvis's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint. Solo stays on paper always."
-                        else "Off: Jarvis's trades go on PAPER, even when the app is in Live (Solo always does).",
+                    Text(if (aiLive) "On: in Live, Jarvis's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint. What he takes by himself stays on paper always."
+                        else "Off: Jarvis's trades go on PAPER, even when the app is in Live. It turns on with the switch to Live (your PIN), or here.",
                         style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
                 }
                 androidx.compose.material3.Switch(checked = aiLive, onCheckedChange = { v ->

@@ -295,6 +295,32 @@ object Broker {
         }
     }
 
+    /** The notification of a bot's live entry the paper-only period refused ([paperOnlyRefused]). */
+    internal const val ID_PAPER_ONLY = 2062
+    /** The day the last [ID_PAPER_ONLY] notice was posted (memory only): one a day is enough to tell Boss why. */
+    @Volatile private var paperOnlyNoticeDay: String? = null
+
+    /**
+     * 18 Oct: a live entry refused by the paper-only period. Always in the diagnostics; a bot's (no screen shows its refusal)
+     * also as one notification a day. Posted off the caller's thread: the order path only reads memory here.
+     */
+    private fun paperOnlyRefused(o: Kite.Order, why: String) {
+        runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): the paper-only period") }
+        if (o.tag !in BOT_TAGS) return
+        val day = runCatching { Market.today().toString() }.getOrNull() ?: return
+        if (paperOnlyNoticeDay == day) return
+        paperOnlyNoticeDay = day
+        runCatching {
+            val ctx = app
+            readScope.launch {
+                runCatching {
+                    com.optionslab.app.work.Notifier.post(ctx, ID_PAPER_ONLY, com.optionslab.app.work.Notifier.APPROVAL, "Live entry not sent: paper-only period",
+                        "A bot's live entry (${o.tradingSymbol}) was not sent. $why", "broker", setting = "risk.paperonly")
+                }
+            }
+        }
+    }
+
     // ---- HTTP ---------------------------------------------------------------------
 
     /**
@@ -706,7 +732,7 @@ object Broker {
     private fun dropKept() { keptOrders = null; keptBook = null; fundsKept = null; killKept = null; writes.incrementAndGet() }
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
-    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear() }
+    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -1242,6 +1268,9 @@ object Broker {
      * its entry check asked the portfolio guard with), so the door refuses only that arm's entry; null for any other order.
      */
     suspend fun placeOrder(o: Kite.Order, exit: Boolean = false, arm: String? = null, intended: Double? = null): String {
+        // 18 Oct (Boss): the paper-only period refuses every NEW live entry, from every source (Boss's own, the arms, Pine, the
+        // strategies, Jarvis, MCX), even when the app is already Live. Memory only ([PaperOnly.entryRefusal]); an exit never asks.
+        if (!exit) PaperOnly.entryRefusal()?.let { why -> paperOnlyRefused(o, why); throw KiteError("paper_only", why) }
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.

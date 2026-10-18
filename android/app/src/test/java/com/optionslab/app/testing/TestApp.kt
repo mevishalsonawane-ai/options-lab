@@ -88,6 +88,8 @@ class TestApp : Application() {
         // Liquidity BANKNIFTY's paper-test freeze ends on a fixed date: unfrozen here so no test depends on the real date (the freeze
         // has its own tests, which set it).
         com.optionslab.app.data.LiquidityTest.setStateForTest(com.optionslab.ira.LiquidityFreeze.State(unfrozen = true))
+        // 18 Oct: no paper-only period, read (a fresh phone whose start read it); the period's own tests set or unread it.
+        com.optionslab.app.data.PaperOnly.resetForTest()
         com.optionslab.app.data.ZerodhaSync.resetForTest()
         com.optionslab.app.data.OrderReviewHost.init(this)
         com.optionslab.app.data.OrderReviewHost.resetForTest()

@@ -57,6 +57,7 @@ object NoticeCards {
         "schedule.permissions" to "schedule",
         "schedule.holidays" to "schedule",
         "risk.guards" to "risk",
+        "risk.paperonly" to "risk",
         "jarvis.voice" to "jarvis",
         "jarvis.model" to "jarvis",
         "jarvis.automations" to "jarvis",

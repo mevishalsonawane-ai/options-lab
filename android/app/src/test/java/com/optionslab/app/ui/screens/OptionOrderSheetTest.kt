@@ -349,8 +349,9 @@ class OptionOrderSheetTest {
         compose.waitUntil(5_000) { closed == 1 }
     }
 
-    // ---- live: review only ------------------------------------------------------------------------
+    // ---- live: as paper, then the PIN (18 Oct) --------------------------------------------------------
 
+    /** The sheet's Buy prepares the order and asks the PIN at once (the app's order dialog); nothing goes before the PIN. */
     @Test fun liveOpensTheReviewAndSendsNothing() {
         val k = FakeKite().also { kite = it }
         k.login()
@@ -360,10 +361,10 @@ class OptionOrderSheetTest {
         val m = show()
         m.loadAccount(quiet = true)
         compose.waitUntil(20_000) { m.account.value is Load.Done<*> }
-        assertTrue(exists("Live: Zerodha. The order opens for review; it is sent only after you hold the button and confirm with your PIN or fingerprint."))
+        assertTrue(exists("Live: Zerodha. Your PIN or fingerprint, then the order goes at once. The guard, margin and every limit are still checked first."))
         assertTrue(!exists("Buy (paper)"))
         tap("Limit"); price().performTextClearance(); price().performTextInput("99.5")
-        compose.onNodeWithText("Review buy order").performClick()
+        compose.onNodeWithText("Buy (live)").performClick()
         compose.waitUntil(5_000) { closed == 1 }
         compose.waitUntil(20_000) { m.plan.value is Load.Done<*> || m.plan.value is Load.Failed }
         val plan = (m.plan.value as? Load.Done)?.value ?: throw AssertionError("the review failed: ${m.plan.value}")
@@ -372,7 +373,8 @@ class OptionOrderSheetTest {
         assertEquals(75, leg.quantity)
         assertEquals(99.5, leg.price!!, 1e-9)
         assertEquals("NRML", leg.product)
-        assertTrue("the review must not send anything: ${k.writes}", k.writes.isEmpty())
+        assertTrue("the PIN is asked at once, with no review card", m.direct.value)
+        assertTrue("nothing goes before the PIN: ${k.writes}", k.writes.isEmpty())
         assertTrue("and nothing is placed on paper", Paper.state.orders.isEmpty())
     }
 
@@ -381,9 +383,9 @@ class OptionOrderSheetTest {
         k.login()
         show(initialBuy = false)
         tap("Limit"); price().performTextClearance()
-        compose.onNodeWithText("Review sell order").assertIsNotEnabled()
+        compose.onNodeWithText("Sell (live)").assertIsNotEnabled()
         price().performTextInput("0")
-        compose.onNodeWithText("Review sell order").assertIsNotEnabled()
+        compose.onNodeWithText("Sell (live)").assertIsNotEnabled()
         assertTrue(k.writes.isEmpty())
     }
 }

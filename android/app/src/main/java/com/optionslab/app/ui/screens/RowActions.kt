@@ -231,7 +231,7 @@ fun RowActionPopup(model: AppModel) {
                     protectFor = ProtectTarget(true, r.symbol, r.exchange, r.product, r.qty, r.last, r.avg)
                 }
                 pr?.let { button("Remove protection") { if (it.live) removeAuth = it.id else model.removeProtection(it.id) } }
-                swipe("Slide to close position") { model.planSquareOff(r); close() }
+                swipe("Slide to close position") { model.planSquareOff(r, direct = true); close() }
             }
         }
         is RowTarget.LiveOrder -> {
@@ -255,7 +255,7 @@ fun RowActionPopup(model: AppModel) {
                 button("Modify order") { modify = r }
                 swipe("Slide to cancel order") { cancelAuth = r }
             }
-            pos?.let { ps -> swipe("Slide to close position (${abs(ps.qty)})") { model.planSquareOff(ps); close() } }
+            pos?.let { ps -> swipe("Slide to close position (${abs(ps.qty)})") { model.planSquareOff(ps, direct = true); close() } }
         }
         is RowTarget.LiveTrade -> {
             val r = t.row
@@ -275,7 +275,7 @@ fun RowActionPopup(model: AppModel) {
                 lines += "Last price (LTP)" to px(pos.last)
             }
             source = orderSource(owners, "kite:${r.orderId}", (account as? Load.Done)?.value?.orders?.firstOrNull { it.id == r.orderId }?.tag)
-            pos?.let { ps -> swipe("Slide to close position (${abs(ps.qty)})") { model.planSquareOff(ps); close() } }
+            pos?.let { ps -> swipe("Slide to close position (${abs(ps.qty)})") { model.planSquareOff(ps, direct = true); close() } }
         }
     }
 

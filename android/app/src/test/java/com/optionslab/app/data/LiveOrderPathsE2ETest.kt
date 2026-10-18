@@ -328,6 +328,102 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         assertNotNull("an unknown arm is refused", OrbArms.liveRefusal("no_such_arm"))
     }
 
+    // ---- 18 Oct (Boss): the paper-only period blocks every NEW live entry; exits never ------------------------------------
+
+    private fun period(untilDays: Long = 8) = com.optionslab.ira.PaperOnlyPeriod.Period(now.toLocalDate().plusDays(untilDays), "10 days on paper", now.toLocalDate().minusDays(5))
+
+    /** One entry as each source sends it to the order door: Boss's own, ORB/Liquidity, Pine, a strategy, Jarvis's approved idea, MCX, Gold. */
+    private fun entries() = listOf(
+        "manual" to order(side = Kite.Side.BUY).copy(tag = "iraalgo"),
+        "orb/liquidity" to order(side = Kite.Side.BUY).copy(tag = "iraorb"),
+        "pine" to order(side = Kite.Side.BUY).copy(tag = "irapine"),
+        "strategy" to order(side = Kite.Side.BUY).copy(tag = "iraalgostrat"),
+        "jarvis" to order(side = Kite.Side.BUY).copy(tag = "iraalgo"),
+        "mcx" to Kite.Order("CRUDEOIL26NOVFUT", Kite.Side.BUY, 1, 1, "NRML", "LIMIT", 6_000.0, 1.0, "MCX", "iraorb", multiplier = 100),
+        "gold" to Kite.Order("GOLDBEES", Kite.Side.BUY, 10, 1, "CNC", "LIMIT", 60.0, 0.01, "NSE", "iraalgo"),
+    )
+
+    @Test fun duringThePaperOnlyPeriodANewEntryFromEverySourceIsRefusedEvenWhenLive() = runBlocking {
+        PaperOnly.resetForTest(period())
+        assertTrue("the app is Live", AppSettings.load().live)
+        for ((who, o) in entries()) {
+            try { Broker.placeOrder(o, arm = if (o.tag == "iraorb") "orb" else null); fail("$who: an entry went in the paper-only period") }
+            catch (e: Broker.KiteError) {
+                assertEquals(who, "paper_only", e.type)
+                assertTrue("$who: Boss is told why: ${e.message}", e.message!!.contains("paper-only period until") && e.message!!.contains("10 days on paper"))
+                assertTrue("$who: a definite refusal (nothing sent, never looked for)", Broker.definite(e))
+            }
+        }
+        assertTrue("nothing reached Zerodha: ${kite.writes.map { it.method + " " + it.path }}", kite.writes.isEmpty())
+        // The ORB arm's own approved entry, end to end: refused, nothing placed.
+        state(pending = true)
+        val said = approve()
+        assertFalse(said, said.startsWith("Entered"))
+        assertTrue("the arm placed nothing", kite.placed.isEmpty())
+        // A bot's refusal is told once a day (no screen shows it); the reason, never a figure of the account.
+        awaitTrue("Boss is told") { Alerts.posted.any { it.title == "Live entry not sent: paper-only period" } }
+        assertEquals("once a day", 1, Alerts.posted.count { it.title == "Live entry not sent: paper-only period" })
+    }
+
+    @Test fun duringThePaperOnlyPeriodExitsStopsAndGttsStillGo() = runBlocking {
+        PaperOnly.resetForTest(period())
+        kite.position(sym, 30, 200.0, product = "MIS")
+        val id = Broker.placeOrder(order(type = "LIMIT", price = 199.0), exit = true)
+        assertEquals(id, kite.orders.keys.single())
+        val stop = restingStop()
+        assertEquals("a resting stop goes", "TRIGGER PENDING", kite.order(stop).status)
+        assertTrue("a GTT protection goes", Broker.placeGtt(Kite.Gtt("single", "NFO", sym, 200.0, listOf(160.0), listOf(order(type = "LIMIT", price = 158.0)))) > 0)
+    }
+
+    @Test fun duringThePaperOnlyPeriodAnOrbStopStillSellsTheLivePosition() {
+        PaperOnly.resetForTest(period())
+        val s1 = restingStop()
+        state(positions = listOf(position(30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)                    // through the stop: the app sells
+        pass()
+        val sell = kite.placed.single { it.form["order_type"] == "MARKET" }
+        assertEquals("SELL", sell.form["transaction_type"]); assertEquals("30", sell.form["quantity"])
+        assertEquals(0, kite.positions.getValue("NFO:$sym:MIS").first)
+    }
+
+    @Test fun aRestartKeepsThePaperOnlyBlockAndItFailsClosedUntilTheVaultIsRead() = runBlocking {
+        SecurePrefs.put(PaperOnly.KEY, com.optionslab.ira.PaperOnlyPeriod.encode(period()))
+        // As at a cold start (or a low-memory kill): memory empty, the period not read yet.
+        PaperOnly.unreadForTest(); Broker.resetForTest(); kite.login()
+        assertEquals(PaperOnly.ENTRY_UNREAD, PaperOnly.entryRefusal())
+        try { Broker.placeOrder(order(side = Kite.Side.BUY)); fail("an entry went before the period was read") } catch (e: Broker.KiteError) { assertEquals("paper_only", e.type) }
+        // An exit goes even then.
+        kite.position(sym, 30, 200.0, product = "MIS")
+        Broker.placeOrder(order(type = "LIMIT", price = 199.0), exit = true)
+        // The start's read (a background thread in the app): the block is the period's own.
+        PaperOnly.ensureLoaded()
+        assertTrue(PaperOnly.entryRefusal()!!.contains("paper-only period until"))
+        try { Broker.placeOrder(order(side = Kite.Side.BUY)); fail("an entry went in the paper-only period") } catch (e: Broker.KiteError) { assertEquals("paper_only", e.type) }
+        assertEquals("only the exit went", listOf("SELL"), kite.placed.map { it.form["transaction_type"] })
+    }
+
+    @Test fun afterThePaperOnlyPeriodEndsEntriesGoAgain() = runBlocking {
+        val ended = com.optionslab.ira.PaperOnlyPeriod.Period(now.toLocalDate().minusDays(1), "10 days on paper", now.toLocalDate().minusDays(11))
+        SecurePrefs.put(PaperOnly.KEY, com.optionslab.ira.PaperOnlyPeriod.encode(ended))
+        PaperOnly.unreadForTest(); PaperOnly.ensureLoaded()
+        assertNull(PaperOnly.entryRefusal())
+        val id = Broker.placeOrder(order(side = Kite.Side.BUY))
+        assertEquals(id, kite.orders.keys.single())
+        // And with no period at all.
+        PaperOnly.resetForTest(null)
+        assertNull(PaperOnly.entryRefusal())
+    }
+
+    /** Every order the app sends goes through [Broker.placeOrder] (the one door the paper-only check sits in): one POST in the code. */
+    @Test fun theOrderPostIsInOnePlaceOnly() {
+        val main = listOf(java.io.File("src/main/java"), java.io.File("app/src/main/java")).first { it.isDirectory }
+        val posts = main.walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .flatMap { f -> f.readLines().mapIndexedNotNull { i, l -> if ("\"/orders/regular\"" in l && "\"POST\"" in l) "${f.name}:${i + 1}" else null } }.toList()
+        assertEquals("one POST /orders/regular: $posts", 1, posts.size)
+        assertTrue(posts.single(), posts.single().startsWith("Broker.kt:"))
+    }
+
     // ---- the fake's Zerodha shapes, read through the app's own code -------------------------------------------------------
 
     @Test fun theDayBookHoldingsOhlcAndOtherExchangesReadAsZerodhaSendsThem() = runBlocking {
