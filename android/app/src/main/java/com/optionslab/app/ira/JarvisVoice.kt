@@ -234,9 +234,17 @@ class JarvisVoice : Service() {
          */
         fun askYesNo(id: Long, text: String): Boolean {
             val v = instance?.get() ?: return false
-            v.main.post { v.asking = id; v.askingText = text; v.askingNeedsBoss = true; v.askingUntil = 0; v.sayWhenFree(text, "question") }
+            v.main.post { v.asking = id; v.askingText = text; v.askingNeedsBoss = true; v.askingUntil = 0; v.askWhenFree(text) }
             return true
         }
+
+        /**
+         * A request's yes-or-no question [text] as it may be said now (18 Oct, review): the lock as it is this moment
+         * (unknown counts as locked, as for an announcement); locked, only how many requests wait.
+         */
+        internal fun askWords(text: String): String = com.optionslab.ira.Requests.askAloud(text,
+            runCatching { IraHub.locked() }.getOrDefault(true),
+            runCatching { IraHub.pendingRequests().value.count { it.voiced } }.getOrDefault(1))
 
         /** Pauses listening while the owner teaches Jarvis their voice (the microphone is needed for that). */
         fun hold(on: Boolean) {
@@ -919,9 +927,10 @@ class JarvisVoice : Service() {
             if (listening && tap != null && hold == null && turnReadyAt > 0 && !turnHeardAny && !turnSpeech && now - turnReadyAt > 12_000 && !speaking) {
                 tapFailed = true
                 val n = silentShared + 1; silentShared = n
-                if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, true) }
+                // On the main thread here: the vault writes go to the background writer, never done here (18 Oct, review).
+                if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(TAP_BROKEN to true)) }
                 note("shared audio gave nothing ($n in a row): back to the phone's own microphone" + if (n >= 3) " for good" else " for now")
-                IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).")
+                scope.launch(Dispatchers.IO) { IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).") }
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
             }
             // Never while Boss is speaking into the turn (a reset then lost his words), unless it is stuck (45 s).
@@ -983,7 +992,9 @@ class JarvisVoice : Service() {
     /** Shared turns in a row that heard nothing at all: only 3 in a row (not one quiet moment) drop it for good. */
     private var silentShared: Int
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.tapsilent")?.toInt() }.getOrNull() ?: 0
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.tapsilent", v.toString()) } }
+        // Set from the watchdog and the recognizer's callbacks (the main thread): read back at once, written on the
+        // background writer - never a vault write on the main thread (18 Oct, review).
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.tapsilent" to v.toString())) } }
     /** When the recognizer said ready this turn, and whether it heard anything (for the silent-turn check). */
     @Volatile private var turnReadyAt = 0L
     @Volatile private var turnHeardAny = false
@@ -1973,7 +1984,8 @@ class JarvisVoice : Service() {
         val day = hearingDay()
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.hearing.told") }.getOrNull() == day) return
         val text = runCatching { com.optionslab.ira.Hearing.nudge(hearingDays, day, googleSpeech) }.getOrNull() ?: return
-        runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.hearing.told", day) }
+        // Reached from the recognizer's callbacks (the main thread): written on the background writer (18 Oct, review).
+        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.hearing.told" to day)) }
         hearingSave()
         runCatching { IraHub.note(text) }
     }
@@ -2215,7 +2227,8 @@ class JarvisVoice : Service() {
             if (yes != null && com.optionslab.ira.AnswerWindow.yesFor(true, lastInvite) == com.optionslab.ira.AnswerWindow.For.HOLD) {
                 note("a yes or no after another offer: not taken for the waiting request")
                 // Its own question asked again, so the next yes or no answers that very question.
-                say(com.optionslab.ira.AnswerWindow.hold(askingText), "question")
+                // On a locked phone the question is not said again in its own words (18 Oct, review).
+                say(askWords(com.optionslab.ira.AnswerWindow.hold(askingText)), "question")
                 return
             }
             if (manyRequestsWaiting(id, alternatives.firstOrNull(), yes)) return
@@ -2238,7 +2251,8 @@ class JarvisVoice : Service() {
                         // (His words for the no go with it: a reason in them, "no, too late in the day", is noted - its kind
                         // only, and only in Boss's own voice when it is enrolled - a no with no voice heard is not his reason; a
                         // no from anyone still cancels.)
-                        else { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }, by = com.optionslab.ira.Requests.By.VOICE); "Rejected. Nothing was placed." }
+                        // (Off the main thread, as the yes is: the no's vault writes - 18 Oct, review.)
+                        else { withContext(Dispatchers.IO) { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }, by = com.optionslab.ira.Requests.By.VOICE) }; "Rejected. Nothing was placed." }
                     // An order's result is read back as it is: its prices exact, never rounded for the ear.
                     say(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
                 }
@@ -2476,7 +2490,7 @@ class JarvisVoice : Service() {
             if (stopped) return@post
             if (asking == null) IraHub.requestAsk(id)?.let { shall ->
                 asking = id; askingText = shall; askingNeedsBoss = true; askingUntil = 0
-                sayWhenFree(shall, "question")
+                askWhenFree(shall)
             }
             if (_state.value.mode == Mode.THINKING && !speaking) { _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING); if (!listening) again() }
         }
@@ -2553,7 +2567,8 @@ class JarvisVoice : Service() {
                     // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
                     val shall = IraHub.requestAsk(a.action) ?: com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?")
                     asking = a.action; askingText = shall; askingNeedsBoss = IraHub.isExit(a.action); askingUntil = 0
-                    say(shall, "question")
+                    // A request's words (a symbol, its prices): not said on a locked phone (18 Oct, review).
+                    say(askWords(shall), "question")
                     return@launch
                 }
                 // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
@@ -2731,6 +2746,14 @@ class JarvisVoice : Service() {
         say(words, id, reply = false)
     }
 
+    /**
+     * Jarvis's own yes-or-no question about a request (18 Oct, review): its words name the held symbol, its prices and
+     * the side, so on a locked phone only how many requests wait and "unlock to answer" is said
+     * ([com.optionslab.ira.Requests.askAloud]) - the lock checked when the words are finally said, as an announcement's
+     * are. The pop-up and the notification already hid them; the voice said them whole.
+     */
+    private fun askWhenFree(text: String) = sayWhenFree(text, "question", recheck = { askWords(text) })
+
     /** The words being said now answer Boss ([say]'s reply, an "answer" or "question"); unasked notes wait for them. */
     @Volatile private var sayingReply = false
     /** [sayWhenFree] waits this many 250 ms turns at most for Boss's answer to be worked out and said. */
@@ -2802,7 +2825,7 @@ class JarvisVoice : Service() {
         if (text != null && runCatching { IraHub.waitsFor(id) }.getOrDefault(false)) {
             note("an offer said over a waiting question: its window closed, the question asked again")
             // After this utterance's own end is done (posted), never from inside it; only while it is still the same ask.
-            main.post { if (asking == id && askingUntil == 0L) sayWhenFree(text, "question") }
+            main.post { if (asking == id && askingUntil == 0L) askWhenFree(text) }
         } else asking = null
     }
 

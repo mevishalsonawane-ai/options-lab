@@ -615,7 +615,7 @@ object IraHub {
         runCatching { JarvisPopup.show(c, "Boss, a new strategy: ${r.kind.label} on ${r.market.label}", "${r.trades} trades, ${Math.round(r.winRate)}% won over ${r.days} days. Open Jarvis to approve or dismiss.", proposal = p.id) }
         val money = r.rupees?.let { " Options: ${"%+,.0f".format(java.util.Locale.ENGLISH, it).replace("+", "+Rs ").replace("-", "-Rs ")} a lot." } ?: ""
         runCatching {
-            com.optionslab.app.work.Notifier.post(c, NOTIFY_BASE + p.id.toInt(), com.optionslab.app.work.Notifier.IRA,
+            com.optionslab.app.work.Notifier.post(c, proposalNoticeId(p.id), com.optionslab.app.work.Notifier.IRA,
                 "Jarvis found a strategy: ${r.kind.label} on ${r.market.label} ${chartWord(r.minutes)}",
                 "${r.trades} trades, ${Math.round(r.winRate)}% won, ${"%+,.1f".format(java.util.Locale.ENGLISH, r.netPoints)} points over ${r.days} days; " +
                     "both halves positive.$money Open Jarvis to approve or dismiss.", tab = "almanac", proposal = p.id)
@@ -679,11 +679,14 @@ object IraHub {
         return text
     }
 
-    fun dismiss(id: Long) {
+    fun dismiss(id: Long): kotlinx.coroutines.Job {
         _state.value.proposals.firstOrNull { it.id == id && it.status == Proposal.NEW }?.let { strategyDone(it, com.optionslab.ira.Requests.Outcome.DECLINED, "Dismissed; not offered again today.") }
         _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id && it.status == Proposal.NEW) it.copy(status = Proposal.DISMISSED) else it },
             messages = (s.messages + Msg(true, "Dismissed. I won't offer that one again today.")).takeLast(MAX_MESSAGES)) }
-        saveState()
+        // Saved on the hub's I/O thread, never the tap's (18 Oct, review): the Dismiss button is on the main thread, and
+        // the save encrypts and syncs the whole conversation (and waited on the keeper's own save). The state above is
+        // already changed; the returned job is the save, for a caller that needs it on disk.
+        return scope.launch(Dispatchers.IO) { saveState() }
     }
 
     /**
@@ -1456,7 +1459,18 @@ object IraHub {
         }
     }
     const val BACKGROUND_MINUTES = 15L
-    private const val NOTIFY_BASE = 7300
+    /**
+     * A strategy proposal's notification ids (18 Oct, review): 9600 + the proposal's id folded into [NOTIFY_SLOTS]. The
+     * ids were 7300 + the id, which grows without end: they ran into the trend watch's (7300-7499), the pop-ups'
+     * (7400-7449) and then the news-trade approvals' (7500-7589), replacing an approval card and its Approve and Reject
+     * buttons (and the paper settle / square-off notices take 7000-8023). 9600-9649 is used by nothing else. Proposal
+     * N and N+50 share an id: the newer card replaces the older one, as a second notice of one kind does.
+     */
+    private const val NOTIFY_BASE = 9600
+    private const val NOTIFY_SLOTS = 50L
+
+    /** The notification id for proposal [id]: always in 9600-9649, whatever the id (a negative one too). */
+    internal fun proposalNoticeId(id: Long): Int = NOTIFY_BASE + Math.floorMod(id, NOTIFY_SLOTS).toInt()
 
     /** A question in, Ira's answer appended to the conversation. */
     /** The morning check's line per index: trend, today's usual range, pivot (from the candles the phone holds). */
@@ -5839,14 +5853,42 @@ object IraHub {
 
     private fun isSolo(id: Long): Boolean = synchronized(actions) { id in soloAsks }
 
+    /**
+     * [cancelAction] off the caller's thread (18 Oct, review): a tap on No (the main thread) did the news-trade record's,
+     * the activity log's and the fingerprint check's vault reads and writes on it. The request is still taken off the
+     * waiting list at once, on the caller's thread (memory only), so a Yes tapped just after the No finds nothing waiting,
+     * as before; the rest of the no is done on the hub's I/O thread. Null: nothing was waiting.
+     */
+    fun cancelAsync(id: Long, said: String? = null, by: com.optionslab.ira.Requests.By? = null): kotlinx.coroutines.Job? {
+        val c = claimCancel(id) ?: return null
+        return scope.launch(Dispatchers.IO) { finishCancel(c, said, by) }
+    }
+
     /** [said]: Boss's spoken words for the rejection ("no, too late in the day"), when he said it aloud. */
     /** [by]: how the no came (a tap, the voice, the notification), kept for Recent's record only. */
     fun cancelAction(id: Long, said: String? = null, by: com.optionslab.ira.Requests.By? = null) {
-        // Whether a yes on it would have asked for the fingerprint, read while it still waits (for Recent's record).
-        val askedFp = runCatching { needsFingerprint(id) }.getOrNull()
-        // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
-        val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
-        if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
+        val c = claimCancel(id) ?: return
+        finishCancel(c, said, by)
+    }
+
+    /** A no's claim on request [id]: whether it is a trade, and whether it was the emergency exit (for the fingerprint record). */
+    private class CancelClaim(val id: Long, val trade: Boolean, val exit: Boolean)
+
+    /**
+     * The no's first half, memory only: only what is still waiting can be cancelled (one already confirmed or lapsed is
+     * not said to be undone); null then.
+     */
+    private fun claimCancel(id: Long): CancelClaim? {
+        val (was, trade, exit) = synchronized(actions) { val ex = exitIds.remove(id); Triple(actions.remove(id) != null, id in newsAsks, ex) }
+        if (!was) { _state.update { it.copy(pending = it.pending - id) }; return null }
+        return CancelClaim(id, trade, exit)
+    }
+
+    /** The no's second half: the record, the activity log and the conversation (vault reads and writes). */
+    private fun finishCancel(c: CancelClaim, said: String?, by: com.optionslab.ira.Requests.By?) {
+        val id = c.id; val trade = c.trade
+        // Whether a yes on it would have asked for the fingerprint, as [needsFingerprint] read it while it waited (for Recent's record).
+        val askedFp = runCatching { (c.exit || asksYesNo(id) && IraNewsTrades.goesLive(isSolo(id))) && fingerprintNeeded() }.getOrNull()
         // A lesson's proposal turned down: his no is kept ([JarvisLearning]); nothing else is done.
         val onNo = synchronized(actions) { declinedCbs.remove(id) }
         runCatching { onNo?.invoke() }
