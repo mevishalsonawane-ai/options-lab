@@ -94,6 +94,35 @@ def duka_days(sym: str, out: str, first_year=2003, last_year=2026):
     print(sym, len(df), df.date.min(), df.date.max())
 
 
+HOUR = "https://datafeed.dukascopy.com/datafeed/{sym}/{y}/{m:02d}/BID_candles_hour_1.bi5"
+
+
+def duka_hours(sym: str, out: str, year=2026, months=range(1, 11)):
+    """Dukascopy hourly BID candles for the open year (the year's day file appears only after it ends), one request a
+    month, summed into UTC weekday days (open = first hour, high / low = extremes, close = last hour)."""
+    rows = []
+    for mo in months:
+        b = None
+        for _ in range(8):
+            b = get(HOUR.format(sym=sym, y=year, m=mo - 1), tries=3)
+            if b is not None:
+                break
+            time.sleep(15)
+        if not b:
+            print(sym, year, mo, "missing")
+            continue
+        rows += decode(lzma.decompress(b), dt.date(year, mo, 1))
+        time.sleep(2)
+    h = pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    h["date"] = pd.to_datetime(h.timestamp, unit="ms").dt.date
+    h = h.sort_values("timestamp")
+    d = h.groupby("date").agg(timestamp=("timestamp", "first"), open=("open", "first"), high=("high", "max"),
+                              low=("low", "min"), close=("close", "last"), volume=("volume", "sum")).reset_index()
+    d = d[pd.to_datetime(d.date).dt.weekday < 5]
+    d[["timestamp", "open", "high", "low", "close", "volume", "date"]].to_csv(out, index=False)
+    print(sym, len(d), d.date.min(), d.date.max())
+
+
 HOURLY = ["GC=F", "SI=F", "INR=X"]
 
 
@@ -113,4 +142,4 @@ def yahoo_hourly(dest: str):
 
 if __name__ == "__main__":
     {"duka": lambda: duka(sys.argv[2], sys.argv[3]), "days": lambda: duka_days(sys.argv[2], sys.argv[3]),
-     "hourly": lambda: yahoo_hourly(sys.argv[2]), "yahoo": lambda: yahoo(sys.argv[2])}[sys.argv[1]]()
+     "hourly": lambda: yahoo_hourly(sys.argv[2]), "hours": lambda: duka_hours(sys.argv[2], sys.argv[3]), "yahoo": lambda: yahoo(sys.argv[2])}[sys.argv[1]]()
