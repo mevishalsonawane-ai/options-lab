@@ -138,11 +138,19 @@ object LiveRecord {
         val und = INDEX_NAMES.filter { name.startsWith(it) }.maxByOrNull { it.length } ?: return null
         // The strike: the digits right before CE/PE, after the expiry's code (YYMDD, YYMON or a separator).
         val body = s.removeSuffix(right)
+        // The expiry's code read as itself (18 Oct, review): a weekly's YY + month (1-9, O, N, D) + DD, a monthly's YY + MON; the
+        // rest is the strike. Guessing by multiples of 50 read 26O21|25000 as 125000 (a day ending in 1 ran into the strike).
+        val rest = body.removePrefix(und)
+        val coded = WEEKLY.matchEntire(rest)?.groupValues?.get(4) ?: MONTHLY.matchEntire(rest)?.groupValues?.get(3)
+        coded?.toDoubleOrNull()?.takeIf { it > 0 }?.let { return Triple(und, it, right) }
         val digits = Regex("(\\d+(?:\\.\\d+)?)$").find(body)?.value ?: return null
-        // Weekly codes run the expiry's day into the strike (26O2052000): the strike is the trailing digits a multiple of 50 or 100.
+        // Anything else (a test symbol, "BANKNIFTY-TEST-52000"): the trailing digits a multiple of 50 or 100.
         val strike = strikeOf(digits) ?: return null
         return Triple(und, strike, right)
     }
+
+    private val WEEKLY = Regex("^(\\d{2})([1-9OND])(\\d{2})(\\d+(?:\\.\\d+)?)$")
+    private val MONTHLY = Regex("^(\\d{2})([A-Z]{3})(\\d+(?:\\.\\d+)?)$")
 
     private val INDEX_NAMES = listOf("MIDCPNIFTY", "FINNIFTY", "BANKNIFTY", "NIFTY", "SENSEX", "BANKEX")
 

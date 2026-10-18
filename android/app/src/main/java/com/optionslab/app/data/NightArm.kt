@@ -218,7 +218,17 @@ object NightArm {
             val manager = if (p.open) TradeManagerHost.exitDue(managerId(p)) else null
             if (!p.open || (!NightRules.exitDue(p.entryDay, now) && manager == null)) continue
             val c = Paper.contractOf(p.symbol) ?: continue
-            val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
+            // Gone from the paper book without this arm selling it (Boss's close, an exit-all): booked as closed elsewhere at
+            // that sale, never sold again - a SELL on a flat book opens a naked short nothing manages (18 Oct, review).
+            val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
+            closedElsewhere(p, held, Paper.state.trades, now)?.let { done ->
+                b.positions[i] = done
+                b.status[p.index] = "closed elsewhere"
+                note(b, "${p.symbol}: no longer held on paper (closed elsewhere), %s after charges".format(Locale.ENGLISH, rs(done.net ?: 0.0)))
+                changed = true
+                continue
+            }
+            val lots = (sellQty(p.qty, held) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
             val r = Paper.place(c, "SELL", lots, "MARKET", "NRML", null, null)
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
@@ -245,6 +255,20 @@ object NightArm {
         }
         return changed
     }
+
+    /**
+     * [p] booked as closed elsewhere when the paper book holds none of it ([held] <= 0): at the last SELL of its symbol since its
+     * entry in [trades] (its entry price and [now] when none is found), that sale's charges added. Null while it is still held.
+     */
+    internal fun closedElsewhere(p: Pos, held: Int, trades: List<com.optionslab.engine.sandbox.Trade>, now: LocalDateTime): Pos? {
+        if (held > 0) return null
+        val t = trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+        return p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
+            charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+    }
+
+    /** The quantity the 09:16 sale sells: the arm's [qty], never more than the paper book still [held] (18 Oct, review). */
+    internal fun sellQty(qty: Int, held: Int): Int = minOf(qty, held.coerceAtLeast(0))
 
     private fun chargesOf(orderId: String?): Double =
         if (orderId == null) 0.0 else Paper.state.trades.filter { it.orderId == orderId }.sumOf { it.charges.toDouble() }

@@ -259,6 +259,51 @@ class VariantLabTest {
         assertNull(VariantLab.undoLive(back, c.id, true, from))
     }
 
+    @Test fun aLiveProposalStartsFromWhatLiveTradesAndItsUndoPutsEachAccountBack() {
+        // 18 Oct, review: ORB was promoted on PAPER (V1, applied by itself), then Boss ran it LIVE. The live arm still trades its
+        // defaults; the lab's current rules are V1's. A live proposal must show (and undo back to) the live arm's rules.
+        val s = VariantLab.strategy("orb")!!
+        val b0 = VariantLab.Book(runs = mapOf("orb" to VariantLab.Run.PAPER), variants = listOf(variant("V1", "orb", strong)), tried = 1, nextId = 2)
+        val p1 = VariantLab.judge(b0, day, day.plusDays(1))
+        val paperRules = p1.events.filterIsInstance<VariantLab.Event.Applied>().single().change.to
+        assertTrue(paperRules != s.defaults)
+        assertEquals(paperRules, p1.book.currentOf("orb"))
+        val v2 = variant("V2", "orb", strong).copy(values = paperRules + (ArmParams.STOP_PTS to 30.0), base = paperRules)
+        val live = p1.book.copy(runs = mapOf("orb" to VariantLab.Run.LIVE), variants = p1.book.variants + v2, tried = 2)
+        val p2 = VariantLab.judge(live, day.plusDays(5), day.plusDays(6))
+        val c = p2.events.filterIsInstance<VariantLab.Event.Proposed>().single().change
+        assertEquals(s.defaults, c.from, "from = what the live arm trades (its defaults), not the paper rules")
+        assertEquals(v2.values, c.to)
+        // Accepted with the PIN: both accounts trade it from the next session.
+        val from = day.plusDays(6)
+        val yes = VariantLab.accept(p2.book, c.id, pinConfirmed = true, from = from)!!
+        assertEquals(c.to, VariantLab.valuesFor(yes, "orb", true, from))
+        assertEquals(c.to, VariantLab.valuesFor(yes, "orb", false, from))
+        // Undo: live back to its defaults, paper back to V1's rules (what each traded before), the lab's current rules too.
+        val back = VariantLab.undoLive(yes, c.id, pinConfirmed = true, from = from.plusDays(1))!!
+        assertNull(VariantLab.valuesFor(back, "orb", true, from.plusDays(1)))
+        assertEquals(paperRules, VariantLab.valuesFor(back, "orb", false, from.plusDays(1)))
+        assertEquals(paperRules, back.currentOf("orb"))
+        assertEquals(VariantLab.ChangeStatus.UNDONE, back.change(c.id)!!.status)
+    }
+
+    @Test fun aLiveProposalFromALiveTuneUsesThatTune() {
+        // Edge (18 Oct, review): the live arm has its own tune (an earlier accepted change) and paper differs; from = the live tune.
+        val s = VariantLab.strategy("orb")!!
+        val liveTune = s.defaults + (ArmParams.STOP_PTS to 25.0)
+        val paperTune = s.defaults + (ArmParams.STOP_PTS to 35.0)
+        val v = variant("V1", "orb", strong)
+        val b = VariantLab.Book(runs = mapOf("orb" to VariantLab.Run.LIVE), current = mapOf("orb" to paperTune), variants = listOf(v), tried = 1, nextId = 2,
+            tunes = listOf(VariantLab.Tune("orb", true, day.minusDays(3), liveTune, "C0"), VariantLab.Tune("orb", false, day.minusDays(3), paperTune, "C0")))
+        val c = VariantLab.judge(b, day).events.filterIsInstance<VariantLab.Event.Proposed>().single().change
+        assertEquals(s.values(liveTune), c.from)
+        // Accepted without a session (no tune made): its undo leaves paper on what it trades.
+        val yes = VariantLab.accept(b.let { VariantLab.judge(it, day).book }, c.id, pinConfirmed = true)!!
+        val back = VariantLab.undoLive(yes, c.id, pinConfirmed = true, from = day.plusDays(1))!!
+        assertEquals(s.values(liveTune), VariantLab.valuesFor(back, "orb", true, day.plusDays(1)))
+        assertEquals(s.values(paperTune), VariantLab.valuesFor(back, "orb", false, day.plusDays(1)))
+    }
+
     @Test fun theSafetyNetRevertsToTheDefaults() {
         val (b, c) = proposed()
         val from = day.plusDays(1)

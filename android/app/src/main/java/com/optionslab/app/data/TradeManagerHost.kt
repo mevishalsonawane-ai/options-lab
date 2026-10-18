@@ -559,7 +559,14 @@ object TradeManagerHost {
         try {
             for ((id, l) in live.toMap()) runCatching {
                 val t = l.reg.trade
-                val bars = testBars?.invoke(id) ?: l.reg.bars?.invoke() ?: return@runCatching
+                val bars = testBars?.invoke(id) ?: l.reg.bars?.invoke() ?: run {
+                    // No bars to read (a live trade whose contract is not in the paper book): a closed trade is still let go
+                    // once its square-off is 30 minutes past, so it never stays followed (and its record kept) for good. An
+                    // open one is kept followed (18 Oct, review).
+                    val done = synchronized(recs) { recs[id] }?.closed ?: true
+                    if (done && now > t.caps.squareOffMs + 30 * 60_000L) { live.remove(id); runCatching { ManagerSpecialists.dropView(id) } }
+                    return@runCatching
+                }
                 // The research's rules read only minutes that had closed when read (a minute still forming is never kept).
                 l.bars = bars.filter { it.startMs + 60_000L <= now }.sortedBy { it.startMs }
                 // The best wick and the recent range from the entry's minute on, closed minutes only (G4 L2).

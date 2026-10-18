@@ -156,8 +156,14 @@ object Strategies {
 
     private fun book(): Book {
         cache?.let { return it }
+        // A read that failed (a Keystore hiccup past readFileSteady's retries) is not a destroyed file (18 Oct, review): it is
+        // thrown, nothing cached, so the next call reads again - as TradeBook does. Setting the vault aside for it lost an open
+        // live run's legs, broker ids and stops for good. Only bytes that fail authentication or do not parse are set aside.
+        val bytes = try { Vault.readFileSteady(file) } catch (e: Vault.Tampered) { null } catch (e: Exception) {
+            throw java.io.IOException("strategies could not be read now", e)
+        }
         val b = runCatching {
-            val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching null, Charsets.UTF_8))
+            val o = JSONObject(String(bytes ?: return@runCatching null, Charsets.UTF_8))
             val defs = o.getJSONArray("defs").let { a -> (0 until a.length()).map { StrategyCodec.decode(a.getString(it)) } }.toMutableList()
             val runs = HashMap<Long, RunState>()
             o.getJSONObject("runs").let { r -> r.keys().forEach { k -> runs[k.toLong()] = RunStateCodec.decode(r.getString(k)) } }
@@ -390,7 +396,11 @@ object Strategies {
     suspend fun owners(): Map<String, String> = lock.withLock { HashMap(book().owners) }
 
     /** Label an order placed outside a strategy definition (the ORB arms), for the Orders and Trades lists. */
-    suspend fun tagOwner(key: String, label: String) = lock.withLock { val b = book(); b.owners[key] = label; save(b) }
+    suspend fun tagOwner(key: String, label: String) = lock.withLock {
+        // The book unreadable just now: the label is skipped, never a throw on the caller's order path (18 Oct, review).
+        val b = runCatching { book() }.getOrNull() ?: return@withLock
+        b.owners[key] = label; save(b)
+    }
 
     /**
      * The order flow beside a one-leg strategy's option BUY entry (9 Oct; a basket's legs are never gated one by one: a
@@ -556,11 +566,14 @@ object Strategies {
     }
 
     /** Whether the owner stopped the bot for today. */
-    suspend fun stoppedToday(): Boolean = lock.withLock { book().stoppedDay == Market.today().toString() }
+    suspend fun stoppedToday(): Boolean = stoppedWhy() != null
 
-    /** Why the bot is stopped for today (by Boss, the daily loss limit, the tile), or null when it is not. */
+    /**
+     * Why the bot is stopped for today (by Boss, the daily loss limit, the tile), or null when it is not. The book unreadable
+     * just now: the last one read or saved ([stopHint]), never a throw into an arm's exits (18 Oct, review).
+     */
     suspend fun stoppedWhy(): com.optionslab.ira.DayStop.Why? = lock.withLock {
-        val b = book()
+        val b = runCatching { book() }.getOrElse { return@withLock stopHint() }
         if (b.stoppedDay == Market.today().toString()) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
     }
 
@@ -760,6 +773,9 @@ object Strategies {
     suspend fun anyRunning(): Boolean = all().any { it.running }
 
     fun wipe() { cache = null; runningHint = false; exposureHint = emptyList(); stopHintDay = null; file.delete() }
+
+    /** TEST ONLY: the book read from its file again on the next call (as after a restart); the file is kept. */
+    internal fun forgetCacheForTest() { cache = null }
 
     @Suppress("unused") private fun today(): LocalDate = Market.today()
 }

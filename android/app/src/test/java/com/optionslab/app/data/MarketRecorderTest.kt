@@ -204,6 +204,21 @@ class MarketRecorderTest : RobolectricTest() {
         assertEquals(2 * (close - (9 * 60 + 15)), lines().count { it.startsWith("B,") })
     }
 
+    @Test fun theLastCandlesAreReadByAPassAfterTheCloseWhenTheCloseMinuteHadNone() {
+        // 18 Oct, review: the pass a minute before the close (to the close - 2), then none in the close's own minute, the next
+        // two minutes after it: the rest is still fetched once, and no later pass adds anything or writes prices.
+        val close = Market.foClose(day)
+        MarketRecorder.testSource = Feeds()
+        runBlocking { MarketRecorder.pass(at(close / 60, close % 60 - 1, 10)) }
+        assertEquals(2 * (close - 1 - (9 * 60 + 15)), lines().count { it.startsWith("B,") })
+        val prices = lines().count { it.startsWith("S,") }
+        runBlocking { MarketRecorder.pass(at(close / 60, close % 60 + 2, 10)) }
+        assertEquals(2 * (close - (9 * 60 + 15)), lines().count { it.startsWith("B,") })
+        runBlocking { MarketRecorder.pass(at(close / 60, close % 60 + 4, 10)) }
+        assertEquals(2 * (close - (9 * 60 + 15)), lines().count { it.startsWith("B,") })
+        assertEquals("no prices after the close", prices, lines().count { it.startsWith("S,") })
+    }
+
     @Test fun withoutZerodhaOnlyTheNewsCalendarAndFlowsAndOneGap() {
         val f = Feeds().apply { loggedIn = false }
         MarketRecorder.testSource = f

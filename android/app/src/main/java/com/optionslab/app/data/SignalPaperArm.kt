@@ -307,12 +307,8 @@ object SignalPaperArm {
         fun done(why: String): Boolean { b.decided += r.id; return say(b, chat, why, final = true) }
         val s = b.settings
         val expiryDay = r.expiry == r.at.toLocalDate()
-        when (SignalPaperRules.phase(r.at, now, s, expiryDay)) {
-            SignalPaperRules.Phase.WAIT -> return say(b, chat, "a call came; waiting the ${s.delaySec} s reaction delay")
-            SignalPaperRules.Phase.LATE -> return done("${d.line()}: not triggered in ${s.validityMin} minutes - no order")
-            SignalPaperRules.Phase.OPEN -> Unit
-        }
-        // An entry order a cancel could not take out: settled first, never a second BUY beside it.
+        // An entry order a cancel could not take out: settled first, never a second BUY beside it - and before the window's end
+        // is looked at, so a call is never decided (and its order forgotten) while that order may still fill (18 Oct, review).
         b.pending[r.id]?.let { id ->
             val o = Paper.state.orders.firstOrNull { it.orderId == id }
             return when {
@@ -321,6 +317,11 @@ object SignalPaperArm {
                     bought(b, r, c, id, o.quantity, o.averagePrice?.toDouble() ?: return true, now) }
                 else -> { runCatching { Paper.cancel(id, "unfilled_limit") }; false }
             }
+        }
+        when (SignalPaperRules.phase(r.at, now, s, expiryDay)) {
+            SignalPaperRules.Phase.WAIT -> return say(b, chat, "a call came; waiting the ${s.delaySec} s reaction delay")
+            SignalPaperRules.Phase.LATE -> return done("${d.line()}: not triggered in ${s.validityMin} minutes - no order")
+            SignalPaperRules.Phase.OPEN -> Unit
         }
         val exp = r.expiry ?: return say(b, chat, "waiting for the call's contract to be found")
         val c = Paper.ticketContract(d.underlying!!, exp, d.strike!!, d.right!!) ?: return done("${d.line()}: not in the phone's options list - no order")
@@ -394,7 +395,8 @@ object SignalPaperArm {
         return changed
     }
 
-    private suspend fun exitOne(p: Pos, now: LocalDateTime): Pos {
+    private suspend fun exitOne(start: Pos, now: LocalDateTime): Pos {
+        var p = start
         val c = Paper.contractOf(p.symbol) ?: return p
         // Its resting stop filled in the paper book: that is the exit.
         p.stopOrderId?.let { id ->
@@ -412,6 +414,16 @@ object SignalPaperArm {
         val sq = p.day.atTime(SignalPaperRules.squareOff(p.expiryDay))
         if (!now.isBefore(sq) || p.day.isBefore(now.toLocalDate())) return sellRest(p, c, "square-off")
         val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: runCatching { Paper.quote(c)?.ltp }.getOrNull() ?: return p
+        // No stop resting in the paper book (its SL-M was refused or could not be put back, or was cancelled): the arm checks the
+        // stop itself - through it, sold now - and puts the SL-M back while above it; never a position riding to the square-off
+        // without a stop (18 Oct, review).
+        if (!stopResting(p.stopOrderId)) {
+            if (ltp <= p.stop) return sellRest(p, c, if (p.halfDone) "stop at cost" else if (p.ourStop) "our stop" else "stop")
+            val lots = ((p.qty - p.soldQty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
+            val again = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
+                ?.also { runCatching { Strategies.tagOwner("paper:$it", "${SignalPaperRules.OWNER} · stop") } }
+            if (again != null) p = p.copy(stopOrderId = again)
+        }
         val rule = Exit.of(p.exitRule)
         val level = if (p.halfDone) p.lastTarget else p.target
         if (level == null || ltp < level) return p
@@ -447,6 +459,12 @@ object SignalPaperArm {
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${SignalPaperRules.OWNER} · exit") } }
         return closed(p.copy(stopOrderId = null), f.price, now(), why, chargesOf(r.orderId))
+    }
+
+    /** Whether stop order [id] still rests in the paper book (working or waiting for its trigger): not null, gone, cancelled or refused. */
+    private fun stopResting(id: String?): Boolean {
+        val o = id?.let { x -> Paper.state.orders.firstOrNull { it.orderId == x } } ?: return false
+        return o.status != "cancelled" && o.status != "rejected" && o.status != "complete"
     }
 
     private fun closed(p: Pos, price: Double, at: LocalDateTime, why: String, charges: Double): Pos =

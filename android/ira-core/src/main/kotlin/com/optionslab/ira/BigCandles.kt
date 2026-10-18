@@ -170,7 +170,9 @@ object BigCandles {
     private fun todayLine(m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String? {
         val tb = bars.filter { it.t.toLocalDate() == today }.sortedBy { it.t }
         if (tb.isEmpty()) return null
-        val hour = firstHour(tb)
+        // Only the 5-minute candles that have ended by [now]: the one still forming is not a "5-minute candle" yet (its move may
+        // shrink by its close), as BigMoveRisk reads only finished ones (18 Oct, review).
+        val hour = firstHour(tb).filter { now.toLocalDate() != today || !today.atTime(it.start).plusMinutes(5).isAfter(now) }
         if (hour.isEmpty()) return null
         val live = now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
         val inHour = live && now.toLocalTime().isBefore(HOUR_END)
