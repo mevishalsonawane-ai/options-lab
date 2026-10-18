@@ -201,6 +201,10 @@ class StrategiesLiveTest : RobolectricTest() {
 
     /** 18 Oct, review: the 15-second stop check's part ([Strategies.manageOnly]) sells a leg through its stop, once. */
     @Test fun theStopChecksOwnPassSellsTheLegThroughItsStopOnce() {
+        // 18 Oct: mid-session (the test basket squares off at its 15:15 exit time, so after 15:15 IST its first pass sold it
+        // whatever the price - this test failed whenever CI ran late in the day).
+        val ist = com.optionslab.engine.IST
+        Market.testClock = java.time.Clock.fixed(Market.today().atTime(11, 0).atZone(ist).toInstant(), ist)
         live()
         val id = saved(Position.B to OptionType.CE)
         startLive(id)
