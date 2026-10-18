@@ -27,6 +27,8 @@ class FlushOnStopTest : RobolectricTest() {
     }
 
     @Test fun theScreensStopFlushesInTheBackground() {
+        // The screen hides other apps' overlays (as the app's own screen tests grant it).
+        org.robolectric.Shadows.shadowOf(context as android.app.Application).grantPermissions(android.Manifest.permission.HIDE_OVERLAY_WINDOWS)
         val before = SecurePrefs.flushSoonRuns.get()
         val c = Robolectric.buildActivity(MainActivity::class.java).create().start()
         c.stop()
