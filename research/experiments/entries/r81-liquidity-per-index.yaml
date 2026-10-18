@@ -1,0 +1,38 @@
+id: r81-liquidity-per-index
+title: R81 Liquidity 15+5 plain rules re-checked per index on the newest lake (NIFTY and SENSEX 15+5 too)
+family: trade-management
+date: '2026-10-18'
+doc: research/HUNT_R81_LIQUIDITY_EXITS.md
+hypothesis: Liquidity 15+5 with its own exits makes money on each index in design, walk-forward and final, and stays positive in
+  design and final without its 5 best trades.
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores rebuilt 18
+  Oct, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once; already read by R51 / R63 / R70 / R76 (weak)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- NIFTY
+- SENSEX
+features:
+- 'signal: index level breaks (15/30/5-min); exits: own (premium stop, time stop, index exits)'
+model_or_rule: Liquidity 15+5 (FINNIFTY 30+5), 1-ITM, own exits; NIFTY 15-pt and SENSEX 50-pt index stops (h4 IDX_STOP_EXT)
+settings: research/hunt/r81/r81study.py; r81rules.py
+prereg: research/hunt/r81/PREREG.md
+variants_tried: 5
+results:
+  summary: 'BANKNIFTY: design 336 trades Rs 110,094, walk-forward Rs 63,994, final 131 trades Rs 10,978; without top 5 design Rs
+    51,193 / final -Rs 33,992; random-entry twin p 0.6766. FINNIFTY: design 252 trades Rs 89,651, walk-forward Rs 85,442, final
+    95 trades Rs 4,852; without top 5 design Rs 32,697 / final -Rs 26,880; random-entry twin p 0.513. MIDCPNIFTY: design 293 trades
+    Rs 57,504, walk-forward Rs 88,628, final 131 trades -Rs 4,674; without top 5 design -Rs 13,828 / final -Rs 48,028; random-entry
+    twin p 0.8443. NIFTY: design 235 trades -Rs 9,522, walk-forward Rs 6,313, final 94 trades -Rs 23,134; without top 5 design
+    -Rs 63,392 / final -Rs 46,371; random-entry twin p 0.9721. SENSEX: design 229 trades Rs 5,877, walk-forward Rs 22,728, final
+    72 trades Rs 5,263; without top 5 design -Rs 40,462 / final -Rs 19,281; random-entry twin p 0.8144. No index meets the pre-registered
+    run-it rule (every final ex-top-5 is negative). BANKNIFTY and FINNIFTY are positive in all three periods; MIDCPNIFTY lost in
+    the final and trailed random entries in design; NIFTY loses; SENSEX is all top-5 trades.'
+  costs: as R76
+holdout_read: true
+verdict: rejected
+notes: NIFTY and SENSEX are not to be added. BANKNIFTY stays on its plain rules (26 Oct candidate); nothing changes in the app.

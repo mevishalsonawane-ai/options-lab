@@ -1173,3 +1173,19 @@ amendment 1 before the final read).
 has budget and RBI dates only.
 
 **App:** nothing changes; nothing goes on paper.
+
+## Liquidity 15+5 exits and trade management, and which indices run it (R81, 18 Oct 2026) - 0 of 66 pass; keep the own exits
+Full study: `HUNT_R81_LIQUIDITY_EXITS.md` (pre-registered `hunt/r81/PREREG.md`; final 1 Apr - 13 Oct 2026 read once,
+already read by earlier studies, so weak). Signal on the index in every rule.
+- What was tested, on the pooled arm (881 design / 357 final trades) and on each of five indices:
+  - index rules: a stop beyond the breaking bar, an ATR chandelier trail, a no-progress time stop;
+  - scaling out half at +15%, one re-entry after a stop, adding a lot at 50% to the target;
+  - 14:30 or 15:20 square-off, holding runners overnight with a GTT, breakeven after a structure confirmation;
+  - no premium stop.
+- 0 of 66 passed. Nearest miss: no -15% premium stop. It was never worse (+Rs 2.6k design, +Rs 23.2k final) but
+  q 0.165, and one MIDCPNIFTY trade carries the final gain. Earlier exits (trail, no-progress stop, scale-out)
+  lost Rs 62k-85k in design. Overnight holds lost in both periods. The pyramid made +Rs 58k in design and lost
+  Rs 20k in the final. The runners are the edge, again.
+- Per index on the newest lake (plain rules): BANKNIFTY (+110k / +64k / +11k) and FINNIFTY are positive in every period.
+  MIDCPNIFTY lost in the final and trailed random entries in design. NIFTY loses. SENSEX's gains are all its top 5 trades.
+  In the final period, no index's profit survives removing its top 5 trades or beats random entries. Do not add NIFTY or SENSEX.

@@ -1,0 +1,3091 @@
+{
+ "info": {
+  "atr_nan": 0,
+  "stopped": 152
+ },
+ "cells": {
+  "pooled": {
+   "B0": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.373,
+     "net": 11155,
+     "per_trade": 31,
+     "avg_win": 1762,
+     "avg_loss": -997,
+     "biggest_loss": -4639,
+     "worst_day": -11405,
+     "max_dd": 61062,
+     "green_days": 0.407,
+     "top5_share": 5.606,
+     "ex_top5": -51376,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 100,
+     "squareoff": 12,
+     "rule_exit": 233,
+     "big_movers": 62,
+     "big_kept": 13,
+     "big_cut": 49,
+     "big_net": 116402,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 10978
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 4852
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -4674
+      }
+     }
+    }
+   },
+   "X1": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.378,
+     "net": 34333,
+     "per_trade": 96,
+     "avg_win": 1828,
+     "avg_loss": -957,
+     "biggest_loss": -4474,
+     "worst_day": -11405,
+     "max_dd": 56307,
+     "green_days": 0.425,
+     "top5_share": 1.902,
+     "ex_top5": -30978,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 105,
+     "squareoff": 13,
+     "rule_exit": 239,
+     "big_movers": 62,
+     "big_kept": 14,
+     "big_cut": 48,
+     "big_net": 131221,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 11090
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 14335
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": 8909
+      }
+     }
+    },
+    "changed": 12,
+    "added": 0,
+    "gain": 23178,
+    "top5_left": 421,
+    "paired": {
+     "p": 0.004,
+     "diff": 23178
+    },
+    "twin_p": 0.01
+   },
+   "X2": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.395,
+     "net": 21530,
+     "per_trade": 60,
+     "avg_win": 1717,
+     "avg_loss": -1021,
+     "biggest_loss": -4639,
+     "worst_day": -11419,
+     "max_dd": 60149,
+     "green_days": 0.416,
+     "top5_share": 2.904,
+     "ex_top5": -41001,
+     "stops": 13,
+     "locks": 0,
+     "targets": 0,
+     "time": 108,
+     "squareoff": 14,
+     "rule_exit": 222,
+     "big_movers": 62,
+     "big_kept": 13,
+     "big_cut": 49,
+     "big_net": 116952,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 16916
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 7700
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -3086
+      }
+     }
+    },
+    "changed": 49,
+    "added": 0,
+    "gain": 10375,
+    "top5_left": -2448,
+    "paired": {
+     "p": 0.117,
+     "diff": 10375
+    },
+    "twin_p": 0.1657
+   },
+   "X3": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.398,
+     "net": -5795,
+     "per_trade": -16,
+     "avg_win": 1417,
+     "avg_loss": -963,
+     "biggest_loss": -4639,
+     "worst_day": -10147,
+     "max_dd": 65387,
+     "green_days": 0.407,
+     "top5_share": null,
+     "ex_top5": -50826,
+     "stops": 9,
+     "locks": 0,
+     "targets": 0,
+     "time": 87,
+     "squareoff": 3,
+     "rule_exit": 258,
+     "big_movers": 62,
+     "big_kept": 10,
+     "big_cut": 52,
+     "big_net": 84825,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 10034
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 182
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -16012
+      }
+     }
+    },
+    "changed": 49,
+    "added": 0,
+    "gain": -16950,
+    "top5_left": -29687,
+    "paired": {
+     "p": 0.7985,
+     "diff": -16950
+    },
+    "twin_p": 0.992
+   },
+   "X4": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.339,
+     "net": 4121,
+     "per_trade": 12,
+     "avg_win": 1711,
+     "avg_loss": -860,
+     "biggest_loss": -4362,
+     "worst_day": -9374,
+     "max_dd": 51984,
+     "green_days": 0.354,
+     "top5_share": 15.175,
+     "ex_top5": -58410,
+     "stops": 8,
+     "locks": 0,
+     "targets": 0,
+     "time": 34,
+     "squareoff": 10,
+     "rule_exit": 305,
+     "big_movers": 62,
+     "big_kept": 13,
+     "big_cut": 49,
+     "big_net": 102083,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 11279
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 9326
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -16485
+      }
+     }
+    },
+    "changed": 98,
+    "added": 0,
+    "gain": -7034,
+    "top5_left": -17903,
+    "paired": {
+     "p": 0.691,
+     "diff": -7034
+    },
+    "twin_p": 0.9501
+   },
+   "X5": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.395,
+     "net": -23896,
+     "per_trade": -67,
+     "avg_win": 1372,
+     "avg_loss": -1006,
+     "biggest_loss": -4639,
+     "worst_day": -11405,
+     "max_dd": 62153,
+     "green_days": 0.416,
+     "top5_share": null,
+     "ex_top5": -62807,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 0,
+     "squareoff": 0,
+     "rule_exit": 0,
+     "big_movers": 62,
+     "big_kept": 9,
+     "big_cut": 53,
+     "big_net": 70014,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": -1498
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": -3132
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -19265
+      }
+     }
+    },
+    "changed": 41,
+    "added": 0,
+    "gain": -35051,
+    "top5_left": -46624,
+    "paired": {
+     "p": 0.983,
+     "diff": -35051
+    },
+    "twin_p": 0.9581
+   },
+   "X6": {
+    "final": {
+     "trades": 429,
+     "days": 113,
+     "win": 0.382,
+     "net": 23145,
+     "per_trade": 54,
+     "avg_win": 1680,
+     "avg_loss": -952,
+     "biggest_loss": -4639,
+     "worst_day": -10949,
+     "max_dd": 56932,
+     "green_days": 0.389,
+     "top5_share": 2.896,
+     "ex_top5": -43891,
+     "stops": 13,
+     "locks": 0,
+     "targets": 0,
+     "time": 121,
+     "squareoff": 18,
+     "rule_exit": 277,
+     "big_movers": 73,
+     "big_kept": 14,
+     "big_cut": 59,
+     "big_net": 124067,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 155,
+       "net": 12309
+      },
+      "FINNIFTY": {
+       "trades": 115,
+       "net": 7180
+      },
+      "MIDCPNIFTY": {
+       "trades": 159,
+       "net": 3656
+      }
+     }
+    },
+    "changed": 0,
+    "added": 72,
+    "gain": 11990,
+    "top5_left": -11139,
+    "paired": {
+     "p": 0.196,
+     "diff": 11990
+    },
+    "twin_p": 0.002
+   },
+   "X7": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.342,
+     "net": -8770,
+     "per_trade": -25,
+     "avg_win": 2045,
+     "avg_loss": -1099,
+     "biggest_loss": -5444,
+     "worst_day": -11405,
+     "max_dd": 68101,
+     "green_days": 0.336,
+     "top5_share": null,
+     "ex_top5": -68925,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 100,
+     "squareoff": 12,
+     "rule_exit": 233,
+     "big_movers": 62,
+     "big_kept": 13,
+     "big_cut": 49,
+     "big_net": 116672,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 651
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": -1559
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -7862
+      }
+     }
+    },
+    "changed": 87,
+    "added": 87,
+    "gain": -19925,
+    "top5_left": -31151,
+    "paired": {
+     "p": 0.9635,
+     "diff": -19925
+    },
+    "twin_p": 0.4251
+   },
+   "X8": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.378,
+     "net": 17224,
+     "per_trade": 48,
+     "avg_win": 1768,
+     "avg_loss": -998,
+     "biggest_loss": -4639,
+     "worst_day": -11405,
+     "max_dd": 61062,
+     "green_days": 0.416,
+     "top5_share": 3.692,
+     "ex_top5": -46362,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 100,
+     "squareoff": 15,
+     "rule_exit": 230,
+     "big_movers": 62,
+     "big_kept": 14,
+     "big_cut": 48,
+     "big_net": 119132,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 21166
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": -3312
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -629
+      }
+     }
+    },
+    "changed": 14,
+    "added": 0,
+    "gain": 6069,
+    "top5_left": -10121,
+    "paired": {
+     "p": 0.284,
+     "diff": 6069
+    },
+    "twin_p": 0.1577
+   },
+   "X9": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.375,
+     "net": 14526,
+     "per_trade": 41,
+     "avg_win": 1774,
+     "avg_loss": -1001,
+     "biggest_loss": -4639,
+     "worst_day": -11405,
+     "max_dd": 61062,
+     "green_days": 0.416,
+     "top5_share": 4.381,
+     "ex_top5": -49110,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 100,
+     "squareoff": 12,
+     "rule_exit": 233,
+     "big_movers": 62,
+     "big_kept": 13,
+     "big_cut": 49,
+     "big_net": 117476,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 13462
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 7037
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -5973
+      }
+     }
+    },
+    "changed": 12,
+    "added": 0,
+    "gain": 3371,
+    "top5_left": -3273,
+    "paired": {
+     "p": 0.2005,
+     "diff": 3371
+    },
+    "twin_p": 0.1976
+   },
+   "X10": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.37,
+     "net": -12612,
+     "per_trade": -35,
+     "avg_win": 1620,
+     "avg_loss": -1007,
+     "biggest_loss": -4639,
+     "worst_day": -11405,
+     "max_dd": 61062,
+     "green_days": 0.398,
+     "top5_share": null,
+     "ex_top5": -73243,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 100,
+     "squareoff": 6,
+     "rule_exit": 233,
+     "big_movers": 62,
+     "big_kept": 11,
+     "big_cut": 51,
+     "big_net": 92635,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": -983
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 2245
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -13874
+      }
+     }
+    },
+    "changed": 6,
+    "added": 0,
+    "gain": -23767,
+    "top5_left": -9199,
+    "paired": {
+     "p": 0.9535,
+     "diff": -23767
+    },
+    "twin_p": 0.9182
+   },
+   "X11": {
+    "final": {
+     "trades": 357,
+     "days": 113,
+     "win": 0.44,
+     "net": 25651,
+     "per_trade": 72,
+     "avg_win": 1384,
+     "avg_loss": -958,
+     "biggest_loss": -4639,
+     "worst_day": -9856,
+     "max_dd": 59867,
+     "green_days": 0.407,
+     "top5_share": 2.438,
+     "ex_top5": -36880,
+     "stops": 8,
+     "locks": 52,
+     "targets": 0,
+     "time": 76,
+     "squareoff": 9,
+     "rule_exit": 212,
+     "big_movers": 62,
+     "big_kept": 12,
+     "big_cut": 50,
+     "big_net": 115568,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 13672
+      },
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 8623
+      },
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": 3356
+      }
+     }
+    },
+    "changed": 52,
+    "added": 0,
+    "gain": 14496,
+    "top5_left": 3996,
+    "paired": {
+     "p": 0.0805,
+     "diff": 14496
+    },
+    "twin_p": 0.1876
+   }
+  },
+  "BANKNIFTY": {
+   "B0": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.366,
+     "net": 10978,
+     "per_trade": 84,
+     "avg_win": 1982,
+     "avg_loss": -1014,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 24873,
+     "green_days": 0.358,
+     "top5_share": 4.096,
+     "ex_top5": -33992,
+     "stops": 2,
+     "locks": 0,
+     "targets": 0,
+     "time": 31,
+     "squareoff": 7,
+     "rule_exit": 91,
+     "big_movers": 26,
+     "big_kept": 6,
+     "big_cut": 20,
+     "big_net": 49124,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 10978
+      }
+     }
+    },
+    "entry_twin_p": 0.6766
+   },
+   "X1": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.366,
+     "net": 11090,
+     "per_trade": 85,
+     "avg_win": 1982,
+     "avg_loss": -1012,
+     "biggest_loss": -4474,
+     "worst_day": -6745,
+     "max_dd": 24707,
+     "green_days": 0.358,
+     "top5_share": 4.055,
+     "ex_top5": -33880,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 32,
+     "squareoff": 7,
+     "rule_exit": 92,
+     "big_movers": 26,
+     "big_kept": 6,
+     "big_cut": 20,
+     "big_net": 49124,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 11090
+      }
+     }
+    },
+    "changed": 2,
+    "added": 0,
+    "gain": 112,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.348,
+     "diff": 112
+    },
+    "twin_p": 0.485
+   },
+   "X2": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.389,
+     "net": 16916,
+     "per_trade": 129,
+     "avg_win": 1904,
+     "avg_loss": -1002,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 22679,
+     "green_days": 0.395,
+     "top5_share": 2.658,
+     "ex_top5": -28054,
+     "stops": 2,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 9,
+     "rule_exit": 87,
+     "big_movers": 26,
+     "big_kept": 6,
+     "big_cut": 20,
+     "big_net": 48177,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 16916
+      }
+     }
+    },
+    "changed": 22,
+    "added": 0,
+    "gain": 5938,
+    "top5_left": -1622,
+    "paired": {
+     "p": 0.118,
+     "diff": 5938
+    },
+    "twin_p": 0.1277
+   },
+   "X3": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.397,
+     "net": 10034,
+     "per_trade": 77,
+     "avg_win": 1665,
+     "avg_loss": -969,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 24913,
+     "green_days": 0.383,
+     "top5_share": 4.052,
+     "ex_top5": -30627,
+     "stops": 1,
+     "locks": 0,
+     "targets": 0,
+     "time": 27,
+     "squareoff": 2,
+     "rule_exit": 101,
+     "big_movers": 26,
+     "big_kept": 5,
+     "big_cut": 21,
+     "big_net": 43659,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 10034
+      }
+     }
+    },
+    "changed": 19,
+    "added": 0,
+    "gain": -943,
+    "top5_left": -9460,
+    "paired": {
+     "p": 0.5695,
+     "diff": -943
+    },
+    "twin_p": 0.8244
+   },
+   "X4": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.359,
+     "net": 11279,
+     "per_trade": 86,
+     "avg_win": 1911,
+     "avg_loss": -935,
+     "biggest_loss": -3078,
+     "worst_day": -4891,
+     "max_dd": 24031,
+     "green_days": 0.383,
+     "top5_share": 3.987,
+     "ex_top5": -33690,
+     "stops": 1,
+     "locks": 0,
+     "targets": 0,
+     "time": 9,
+     "squareoff": 7,
+     "rule_exit": 114,
+     "big_movers": 26,
+     "big_kept": 6,
+     "big_cut": 20,
+     "big_net": 50254,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 11279
+      }
+     }
+    },
+    "changed": 31,
+    "added": 0,
+    "gain": 301,
+    "top5_left": -6397,
+    "paired": {
+     "p": 0.465,
+     "diff": 301
+    },
+    "twin_p": 0.7285
+   },
+   "X5": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.405,
+     "net": -1498,
+     "per_trade": -11,
+     "avg_win": 1492,
+     "avg_loss": -1033,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 22672,
+     "green_days": 0.395,
+     "top5_share": null,
+     "ex_top5": -31058,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 0,
+     "squareoff": 0,
+     "rule_exit": 0,
+     "big_movers": 26,
+     "big_kept": 5,
+     "big_cut": 21,
+     "big_net": 31550,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": -1498
+      }
+     }
+    },
+    "changed": 20,
+    "added": 0,
+    "gain": -12476,
+    "top5_left": -22677,
+    "paired": {
+     "p": 0.859,
+     "diff": -12476
+    },
+    "twin_p": 0.8543
+   },
+   "X6": {
+    "final": {
+     "trades": 155,
+     "days": 81,
+     "win": 0.387,
+     "net": 12309,
+     "per_trade": 79,
+     "avg_win": 1731,
+     "avg_loss": -964,
+     "biggest_loss": -4639,
+     "worst_day": -5545,
+     "max_dd": 24061,
+     "green_days": 0.346,
+     "top5_share": 3.653,
+     "ex_top5": -32660,
+     "stops": 2,
+     "locks": 0,
+     "targets": 0,
+     "time": 38,
+     "squareoff": 10,
+     "rule_exit": 105,
+     "big_movers": 28,
+     "big_kept": 6,
+     "big_cut": 22,
+     "big_net": 48098,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 155,
+       "net": 12309
+      }
+     }
+    },
+    "changed": 0,
+    "added": 24,
+    "gain": 1331,
+    "top5_left": -5803,
+    "paired": {
+     "p": 0.371,
+     "diff": 1331
+    },
+    "twin_p": 0.0379
+   },
+   "X7": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.328,
+     "net": 651,
+     "per_trade": 5,
+     "avg_win": 2311,
+     "avg_loss": -1122,
+     "biggest_loss": -5444,
+     "worst_day": -6910,
+     "max_dd": 27071,
+     "green_days": 0.333,
+     "top5_share": 69.041,
+     "ex_top5": -44318,
+     "stops": 2,
+     "locks": 0,
+     "targets": 0,
+     "time": 31,
+     "squareoff": 7,
+     "rule_exit": 91,
+     "big_movers": 26,
+     "big_kept": 6,
+     "big_cut": 20,
+     "big_net": 45700,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 651
+      }
+     }
+    },
+    "changed": 37,
+    "added": 37,
+    "gain": -10327,
+    "top5_left": -16541,
+    "paired": {
+     "p": 0.901,
+     "diff": -10327
+    },
+    "twin_p": 0.3832
+   },
+   "X8": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.382,
+     "net": 21166,
+     "per_trade": 162,
+     "avg_win": 2071,
+     "avg_loss": -1017,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 22608,
+     "green_days": 0.37,
+     "top5_share": 2.257,
+     "ex_top5": -26615,
+     "stops": 2,
+     "locks": 0,
+     "targets": 0,
+     "time": 31,
+     "squareoff": 8,
+     "rule_exit": 90,
+     "big_movers": 26,
+     "big_kept": 7,
+     "big_cut": 19,
+     "big_net": 53960,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 21166
+      }
+     }
+    },
+    "changed": 8,
+    "added": 0,
+    "gain": 10188,
+    "top5_left": -4161,
+    "paired": {
+     "p": 0.127,
+     "diff": 10188
+    },
+    "twin_p": 0.004
+   },
+   "X9": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.374,
+     "net": 13462,
+     "per_trade": 103,
+     "avg_win": 1992,
+     "avg_loss": -1026,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 22974,
+     "green_days": 0.37,
+     "top5_share": 3.317,
+     "ex_top5": -31192,
+     "stops": 2,
+     "locks": 0,
+     "targets": 0,
+     "time": 31,
+     "squareoff": 7,
+     "rule_exit": 91,
+     "big_movers": 26,
+     "big_kept": 6,
+     "big_cut": 20,
+     "big_net": 49710,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 13462
+      }
+     }
+    },
+    "changed": 7,
+    "added": 0,
+    "gain": 2484,
+    "top5_left": -1486,
+    "paired": {
+     "p": 0.2205,
+     "diff": 2484
+    },
+    "twin_p": 0.2415
+   },
+   "X10": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.366,
+     "net": -983,
+     "per_trade": -8,
+     "avg_win": 1733,
+     "avg_loss": -1014,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 24873,
+     "green_days": 0.346,
+     "top5_share": null,
+     "ex_top5": -39867,
+     "stops": 2,
+     "locks": 0,
+     "targets": 0,
+     "time": 31,
+     "squareoff": 3,
+     "rule_exit": 91,
+     "big_movers": 26,
+     "big_kept": 4,
+     "big_cut": 22,
+     "big_net": 37163,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": -983
+      }
+     }
+    },
+    "changed": 4,
+    "added": 0,
+    "gain": -11961,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.8135,
+     "diff": -11961
+    },
+    "twin_p": 0.7505
+   },
+   "X11": {
+    "final": {
+     "trades": 131,
+     "days": 81,
+     "win": 0.45,
+     "net": 13672,
+     "per_trade": 104,
+     "avg_win": 1462,
+     "avg_loss": -1008,
+     "biggest_loss": -4639,
+     "worst_day": -6910,
+     "max_dd": 26394,
+     "green_days": 0.407,
+     "top5_share": 3.289,
+     "ex_top5": -31298,
+     "stops": 1,
+     "locks": 19,
+     "targets": 0,
+     "time": 24,
+     "squareoff": 5,
+     "rule_exit": 82,
+     "big_movers": 26,
+     "big_kept": 6,
+     "big_cut": 20,
+     "big_net": 53323,
+     "per_index": {
+      "BANKNIFTY": {
+       "trades": 131,
+       "net": 13672
+      }
+     }
+    },
+    "changed": 19,
+    "added": 0,
+    "gain": 2694,
+    "top5_left": -5743,
+    "paired": {
+     "p": 0.344,
+     "diff": 2694
+    },
+    "twin_p": 0.5269
+   }
+  },
+  "FINNIFTY": {
+   "B0": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.379,
+     "net": 4852,
+     "per_trade": 51,
+     "avg_win": 1462,
+     "avg_loss": -810,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 12371,
+     "green_days": 0.38,
+     "top5_share": 6.541,
+     "ex_top5": -26880,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 26,
+     "squareoff": 3,
+     "rule_exit": 61,
+     "big_movers": 15,
+     "big_kept": 4,
+     "big_cut": 11,
+     "big_net": 25710,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 4852
+      }
+     }
+    },
+    "entry_twin_p": 0.513
+   },
+   "X1": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.389,
+     "net": 14335,
+     "per_trade": 151,
+     "avg_win": 1489,
+     "avg_loss": -703,
+     "biggest_loss": -2715,
+     "worst_day": -2715,
+     "max_dd": 9191,
+     "green_days": 0.394,
+     "top5_share": 2.214,
+     "ex_top5": -17397,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 28,
+     "squareoff": 4,
+     "rule_exit": 63,
+     "big_movers": 15,
+     "big_kept": 4,
+     "big_cut": 11,
+     "big_net": 28890,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 14335
+      }
+     }
+    },
+    "changed": 5,
+    "added": 0,
+    "gain": 9483,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.045,
+     "diff": 9483
+    },
+    "twin_p": 0.1277
+   },
+   "X2": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.4,
+     "net": 7700,
+     "per_trade": 81,
+     "avg_win": 1470,
+     "avg_loss": -845,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 12278,
+     "green_days": 0.408,
+     "top5_share": 4.121,
+     "ex_top5": -24032,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 29,
+     "squareoff": 3,
+     "rule_exit": 58,
+     "big_movers": 15,
+     "big_kept": 4,
+     "big_cut": 11,
+     "big_net": 25710,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 7700
+      }
+     }
+    },
+    "changed": 7,
+    "added": 0,
+    "gain": 2849,
+    "top5_left": -1643,
+    "paired": {
+     "p": 0.2295,
+     "diff": 2849
+    },
+    "twin_p": 0.2675
+   },
+   "X3": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.411,
+     "net": 182,
+     "per_trade": 2,
+     "avg_win": 1050,
+     "avg_loss": -728,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 14372,
+     "green_days": 0.394,
+     "top5_share": 114.993,
+     "ex_top5": -20793,
+     "stops": 3,
+     "locks": 0,
+     "targets": 0,
+     "time": 26,
+     "squareoff": 1,
+     "rule_exit": 65,
+     "big_movers": 15,
+     "big_kept": 3,
+     "big_cut": 12,
+     "big_net": 13665,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 182
+      }
+     }
+    },
+    "changed": 13,
+    "added": 0,
+    "gain": -4669,
+    "top5_left": -15085,
+    "paired": {
+     "p": 0.68,
+     "diff": -4669
+    },
+    "twin_p": 0.9441
+   },
+   "X4": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.358,
+     "net": 9326,
+     "per_trade": 98,
+     "avg_win": 1545,
+     "avg_loss": -709,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 11669,
+     "green_days": 0.38,
+     "top5_share": 3.545,
+     "ex_top5": -23738,
+     "stops": 4,
+     "locks": 0,
+     "targets": 0,
+     "time": 12,
+     "squareoff": 2,
+     "rule_exit": 77,
+     "big_movers": 15,
+     "big_kept": 5,
+     "big_cut": 10,
+     "big_net": 26973,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 9326
+      }
+     }
+    },
+    "changed": 22,
+    "added": 0,
+    "gain": 4475,
+    "top5_left": -755,
+    "paired": {
+     "p": 0.048,
+     "diff": 4475
+    },
+    "twin_p": 0.3074
+   },
+   "X5": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.4,
+     "net": -3132,
+     "per_trade": -33,
+     "avg_win": 1115,
+     "avg_loss": -798,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 12371,
+     "green_days": 0.408,
+     "top5_share": null,
+     "ex_top5": -24411,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 0,
+     "squareoff": 0,
+     "rule_exit": 0,
+     "big_movers": 15,
+     "big_kept": 2,
+     "big_cut": 13,
+     "big_net": 12458,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": -3132
+      }
+     }
+    },
+    "changed": 11,
+    "added": 0,
+    "gain": -7984,
+    "top5_left": -13264,
+    "paired": {
+     "p": 0.8455,
+     "diff": -7984
+    },
+    "twin_p": 0.8363
+   },
+   "X6": {
+    "final": {
+     "trades": 115,
+     "days": 71,
+     "win": 0.383,
+     "net": 7180,
+     "per_trade": 62,
+     "avg_win": 1391,
+     "avg_loss": -761,
+     "biggest_loss": -4362,
+     "worst_day": -3462,
+     "max_dd": 12899,
+     "green_days": 0.408,
+     "top5_share": 4.419,
+     "ex_top5": -24552,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 5,
+     "rule_exit": 72,
+     "big_movers": 19,
+     "big_kept": 4,
+     "big_cut": 15,
+     "big_net": 25940,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 115,
+       "net": 7180
+      }
+     }
+    },
+    "changed": 0,
+    "added": 20,
+    "gain": 2329,
+    "top5_left": -5694,
+    "paired": {
+     "p": 0.315,
+     "diff": 2329
+    },
+    "twin_p": 0.1337
+   },
+   "X7": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.358,
+     "net": -1559,
+     "per_trade": -16,
+     "avg_win": 1598,
+     "avg_loss": -916,
+     "biggest_loss": -4362,
+     "worst_day": -5407,
+     "max_dd": 17789,
+     "green_days": 0.338,
+     "top5_share": null,
+     "ex_top5": -35820,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 26,
+     "squareoff": 3,
+     "rule_exit": 61,
+     "big_movers": 15,
+     "big_kept": 4,
+     "big_cut": 11,
+     "big_net": 25444,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": -1559
+      }
+     }
+    },
+    "changed": 19,
+    "added": 19,
+    "gain": -6411,
+    "top5_left": -10056,
+    "paired": {
+     "p": 0.916,
+     "diff": -6411
+    },
+    "twin_p": 0.6667
+   },
+   "X8": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.379,
+     "net": -3312,
+     "per_trade": -35,
+     "avg_win": 1235,
+     "avg_loss": -810,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 12371,
+     "green_days": 0.38,
+     "top5_share": null,
+     "ex_top5": -26845,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 26,
+     "squareoff": 5,
+     "rule_exit": 59,
+     "big_movers": 15,
+     "big_kept": 3,
+     "big_cut": 12,
+     "big_net": 19566,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": -3312
+      }
+     }
+    },
+    "changed": 4,
+    "added": 0,
+    "gain": -8164,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.9745,
+     "diff": -8164
+    },
+    "twin_p": 0.998
+   },
+   "X9": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.379,
+     "net": 7037,
+     "per_trade": 74,
+     "avg_win": 1522,
+     "avg_loss": -810,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 12371,
+     "green_days": 0.38,
+     "top5_share": 4.813,
+     "ex_top5": -26830,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 26,
+     "squareoff": 3,
+     "rule_exit": 61,
+     "big_movers": 15,
+     "big_kept": 4,
+     "big_cut": 11,
+     "big_net": 27844,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 7037
+      }
+     }
+    },
+    "changed": 3,
+    "added": 0,
+    "gain": 2185,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.135,
+     "diff": 2185
+    },
+    "twin_p": 0.3014
+   },
+   "X10": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.379,
+     "net": 2245,
+     "per_trade": 24,
+     "avg_win": 1389,
+     "avg_loss": -810,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 12371,
+     "green_days": 0.38,
+     "top5_share": 12.971,
+     "ex_top5": -26880,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 26,
+     "squareoff": 2,
+     "rule_exit": 61,
+     "big_movers": 15,
+     "big_kept": 4,
+     "big_cut": 11,
+     "big_net": 23104,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 2245
+      }
+     }
+    },
+    "changed": 1,
+    "added": 0,
+    "gain": -2606,
+    "top5_left": 0,
+    "paired": {
+     "p": 1.0,
+     "diff": -2606
+    },
+    "twin_p": 1.0
+   },
+   "X11": {
+    "final": {
+     "trades": 95,
+     "days": 71,
+     "win": 0.411,
+     "net": 8623,
+     "per_trade": 91,
+     "avg_win": 1182,
+     "avg_loss": -669,
+     "biggest_loss": -4362,
+     "worst_day": -4362,
+     "max_dd": 10688,
+     "green_days": 0.408,
+     "top5_share": 3.231,
+     "ex_top5": -19241,
+     "stops": 3,
+     "locks": 14,
+     "targets": 0,
+     "time": 20,
+     "squareoff": 2,
+     "rule_exit": 56,
+     "big_movers": 15,
+     "big_kept": 3,
+     "big_cut": 12,
+     "big_net": 19387,
+     "per_index": {
+      "FINNIFTY": {
+       "trades": 95,
+       "net": 8623
+      }
+     }
+    },
+    "changed": 14,
+    "added": 0,
+    "gain": 3772,
+    "top5_left": -4257,
+    "paired": {
+     "p": 0.288,
+     "diff": 3772
+    },
+    "twin_p": 0.2455
+   }
+  },
+  "MIDCPNIFTY": {
+   "B0": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.374,
+     "net": -4674,
+     "per_trade": -36,
+     "avg_win": 1768,
+     "avg_loss": -1114,
+     "biggest_loss": -4049,
+     "worst_day": -6682,
+     "max_dd": 35514,
+     "green_days": 0.329,
+     "top5_share": null,
+     "ex_top5": -48028,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 43,
+     "squareoff": 2,
+     "rule_exit": 81,
+     "big_movers": 21,
+     "big_kept": 3,
+     "big_cut": 18,
+     "big_net": 41567,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -4674
+      }
+     }
+    },
+    "entry_twin_p": 0.8443
+   },
+   "X1": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.382,
+     "net": 8909,
+     "per_trade": 68,
+     "avg_win": 1931,
+     "avg_loss": -1082,
+     "biggest_loss": -4049,
+     "worst_day": -6682,
+     "max_dd": 34105,
+     "green_days": 0.342,
+     "top5_share": 5.396,
+     "ex_top5": -39158,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 45,
+     "squareoff": 2,
+     "rule_exit": 84,
+     "big_movers": 21,
+     "big_kept": 4,
+     "big_cut": 17,
+     "big_net": 53206,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": 8909
+      }
+     }
+    },
+    "changed": 5,
+    "added": 0,
+    "gain": 13583,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.05,
+     "diff": 13583
+    },
+    "twin_p": 0.0978
+   },
+   "X2": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.397,
+     "net": -3086,
+     "per_trade": -24,
+     "avg_win": 1714,
+     "avg_loss": -1168,
+     "biggest_loss": -4064,
+     "worst_day": -6697,
+     "max_dd": 37863,
+     "green_days": 0.329,
+     "top5_share": null,
+     "ex_top5": -46440,
+     "stops": 6,
+     "locks": 0,
+     "targets": 0,
+     "time": 46,
+     "squareoff": 2,
+     "rule_exit": 77,
+     "big_movers": 21,
+     "big_kept": 3,
+     "big_cut": 18,
+     "big_net": 43064,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -3086
+      }
+     }
+    },
+    "changed": 20,
+    "added": 0,
+    "gain": 1588,
+    "top5_left": -6258,
+    "paired": {
+     "p": 0.382,
+     "diff": 1588
+    },
+    "twin_p": 0.3812
+   },
+   "X3": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.389,
+     "net": -16012,
+     "per_trade": -122,
+     "avg_win": 1443,
+     "avg_loss": -1120,
+     "biggest_loss": -3001,
+     "worst_day": -5425,
+     "max_dd": 35905,
+     "green_days": 0.355,
+     "top5_share": null,
+     "ex_top5": -46320,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 34,
+     "squareoff": 0,
+     "rule_exit": 92,
+     "big_movers": 21,
+     "big_kept": 2,
+     "big_cut": 19,
+     "big_net": 27501,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -16012
+      }
+     }
+    },
+    "changed": 17,
+    "added": 0,
+    "gain": -11337,
+    "top5_left": -17096,
+    "paired": {
+     "p": 0.7675,
+     "diff": -11337
+    },
+    "twin_p": 0.982
+   },
+   "X4": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.305,
+     "net": -16485,
+     "per_trade": -126,
+     "avg_win": 1618,
+     "avg_loss": -892,
+     "biggest_loss": -3001,
+     "worst_day": -5189,
+     "max_dd": 31206,
+     "green_days": 0.263,
+     "top5_share": null,
+     "ex_top5": -53009,
+     "stops": 3,
+     "locks": 0,
+     "targets": 0,
+     "time": 13,
+     "squareoff": 1,
+     "rule_exit": 114,
+     "big_movers": 21,
+     "big_kept": 2,
+     "big_cut": 19,
+     "big_net": 24856,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -16485
+      }
+     }
+    },
+    "changed": 45,
+    "added": 0,
+    "gain": -11810,
+    "top5_left": -20855,
+    "paired": {
+     "p": 0.842,
+     "diff": -11810
+    },
+    "twin_p": 0.9641
+   },
+   "X5": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.382,
+     "net": -19265,
+     "per_trade": -147,
+     "avg_win": 1440,
+     "avg_loss": -1127,
+     "biggest_loss": -4049,
+     "worst_day": -6682,
+     "max_dd": 35621,
+     "green_days": 0.342,
+     "top5_share": null,
+     "ex_top5": -47352,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 0,
+     "squareoff": 0,
+     "rule_exit": 0,
+     "big_movers": 21,
+     "big_kept": 2,
+     "big_cut": 19,
+     "big_net": 26006,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -19265
+      }
+     }
+    },
+    "changed": 10,
+    "added": 0,
+    "gain": -14591,
+    "top5_left": -15267,
+    "paired": {
+     "p": 0.9855,
+     "diff": -14591
+    },
+    "twin_p": 0.9661
+   },
+   "X6": {
+    "final": {
+     "trades": 159,
+     "days": 76,
+     "win": 0.377,
+     "net": 3656,
+     "per_trade": 23,
+     "avg_win": 1840,
+     "avg_loss": -1078,
+     "biggest_loss": -4049,
+     "worst_day": -6227,
+     "max_dd": 35678,
+     "green_days": 0.368,
+     "top5_share": 13.621,
+     "ex_top5": -46136,
+     "stops": 6,
+     "locks": 0,
+     "targets": 0,
+     "time": 50,
+     "squareoff": 3,
+     "rule_exit": 100,
+     "big_movers": 26,
+     "big_kept": 4,
+     "big_cut": 22,
+     "big_net": 50029,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 159,
+       "net": 3656
+      }
+     }
+    },
+    "changed": 0,
+    "added": 28,
+    "gain": 8330,
+    "top5_left": -12372,
+    "paired": {
+     "p": 0.3055,
+     "diff": 8330
+    },
+    "twin_p": 0.006
+   },
+   "X7": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.344,
+     "net": -7862,
+     "per_trade": -60,
+     "avg_win": 2127,
+     "avg_loss": -1204,
+     "biggest_loss": -4049,
+     "worst_day": -6682,
+     "max_dd": 39462,
+     "green_days": 0.342,
+     "top5_share": null,
+     "ex_top5": -52707,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 43,
+     "squareoff": 2,
+     "rule_exit": 81,
+     "big_movers": 21,
+     "big_kept": 3,
+     "big_cut": 18,
+     "big_net": 45527,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -7862
+      }
+     }
+    },
+    "changed": 31,
+    "added": 31,
+    "gain": -3188,
+    "top5_left": -13191,
+    "paired": {
+     "p": 0.641,
+     "diff": -3188
+    },
+    "twin_p": 0.2595
+   },
+   "X8": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.374,
+     "net": -629,
+     "per_trade": -5,
+     "avg_win": 1851,
+     "avg_loss": -1114,
+     "biggest_loss": -4049,
+     "worst_day": -6682,
+     "max_dd": 35514,
+     "green_days": 0.329,
+     "top5_share": null,
+     "ex_top5": -48022,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 43,
+     "squareoff": 2,
+     "rule_exit": 81,
+     "big_movers": 21,
+     "big_kept": 4,
+     "big_cut": 17,
+     "big_net": 45607,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -629
+      }
+     }
+    },
+    "changed": 2,
+    "added": 0,
+    "gain": 4046,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.134,
+     "diff": 4046
+    },
+    "twin_p": 0.018
+   },
+   "X9": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.374,
+     "net": -5973,
+     "per_trade": -46,
+     "avg_win": 1742,
+     "avg_loss": -1114,
+     "biggest_loss": -4049,
+     "worst_day": -6682,
+     "max_dd": 35514,
+     "green_days": 0.316,
+     "top5_share": null,
+     "ex_top5": -47681,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 43,
+     "squareoff": 2,
+     "rule_exit": 81,
+     "big_movers": 21,
+     "big_kept": 3,
+     "big_cut": 18,
+     "big_net": 39922,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -5973
+      }
+     }
+    },
+    "changed": 2,
+    "added": 0,
+    "gain": -1298,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.774,
+     "diff": -1298
+    },
+    "twin_p": 0.7605
+   },
+   "X10": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.366,
+     "net": -13874,
+     "per_trade": -106,
+     "avg_win": 1681,
+     "avg_loss": -1139,
+     "biggest_loss": -4049,
+     "worst_day": -7608,
+     "max_dd": 35514,
+     "green_days": 0.316,
+     "top5_share": null,
+     "ex_top5": -54630,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 43,
+     "squareoff": 1,
+     "rule_exit": 81,
+     "big_movers": 21,
+     "big_kept": 3,
+     "big_cut": 18,
+     "big_net": 32368,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": -13874
+      }
+     }
+    },
+    "changed": 1,
+    "added": 0,
+    "gain": -9199,
+    "top5_left": 0,
+    "paired": {
+     "p": 1.0,
+     "diff": -9199
+    },
+    "twin_p": 1.0
+   },
+   "X11": {
+    "final": {
+     "trades": 131,
+     "days": 76,
+     "win": 0.45,
+     "net": 3356,
+     "per_trade": 26,
+     "avg_win": 1441,
+     "avg_loss": -1134,
+     "biggest_loss": -4049,
+     "worst_day": -6682,
+     "max_dd": 32407,
+     "green_days": 0.408,
+     "top5_share": 12.918,
+     "ex_top5": -39997,
+     "stops": 4,
+     "locks": 19,
+     "targets": 0,
+     "time": 32,
+     "squareoff": 2,
+     "rule_exit": 74,
+     "big_movers": 21,
+     "big_kept": 3,
+     "big_cut": 18,
+     "big_net": 42858,
+     "per_index": {
+      "MIDCPNIFTY": {
+       "trades": 131,
+       "net": 3356
+      }
+     }
+    },
+    "changed": 19,
+    "added": 0,
+    "gain": 8031,
+    "top5_left": 555,
+    "paired": {
+     "p": 0.011,
+     "diff": 8031
+    },
+    "twin_p": 0.1477
+   }
+  },
+  "NIFTY": {
+   "B0": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.266,
+     "net": -23134,
+     "per_trade": -246,
+     "avg_win": 1558,
+     "avg_loss": -900,
+     "biggest_loss": -2280,
+     "worst_day": -4612,
+     "max_dd": 23567,
+     "green_days": 0.293,
+     "top5_share": null,
+     "ex_top5": -46371,
+     "stops": 11,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 2,
+     "rule_exit": 48,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 12386,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -23134
+      }
+     }
+    },
+    "entry_twin_p": 0.9721
+   },
+   "X1": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.266,
+     "net": -24331,
+     "per_trade": -259,
+     "avg_win": 1558,
+     "avg_loss": -917,
+     "biggest_loss": -2880,
+     "worst_day": -4307,
+     "max_dd": 24455,
+     "green_days": 0.293,
+     "top5_share": null,
+     "ex_top5": -47568,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 39,
+     "squareoff": 2,
+     "rule_exit": 53,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 12325,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -24331
+      }
+     }
+    },
+    "changed": 11,
+    "added": 0,
+    "gain": -1197,
+    "top5_left": -1991,
+    "paired": {
+     "p": 0.8125,
+     "diff": -1197
+    },
+    "twin_p": 0.7745
+   },
+   "X2": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.287,
+     "net": -20286,
+     "per_trade": -216,
+     "avg_win": 1506,
+     "avg_loss": -910,
+     "biggest_loss": -2280,
+     "worst_day": -4612,
+     "max_dd": 22005,
+     "green_days": 0.31,
+     "top5_share": null,
+     "ex_top5": -43522,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 2,
+     "rule_exit": 47,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 15309,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -20286
+      }
+     }
+    },
+    "changed": 7,
+    "added": 0,
+    "gain": 2849,
+    "top5_left": -915,
+    "paired": {
+     "p": 0.0905,
+     "diff": 2849
+    },
+    "twin_p": 0.1377
+   },
+   "X3": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.298,
+     "net": -20868,
+     "per_trade": -222,
+     "avg_win": 1266,
+     "avg_loss": -853,
+     "biggest_loss": -2197,
+     "worst_day": -4612,
+     "max_dd": 20868,
+     "green_days": 0.328,
+     "top5_share": null,
+     "ex_top5": -36638,
+     "stops": 9,
+     "locks": 0,
+     "targets": 0,
+     "time": 30,
+     "squareoff": 0,
+     "rule_exit": 55,
+     "big_movers": 39,
+     "big_kept": 2,
+     "big_cut": 37,
+     "big_net": 5733,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -20868
+      }
+     }
+    },
+    "changed": 15,
+    "added": 0,
+    "gain": 2266,
+    "top5_left": -5235,
+    "paired": {
+     "p": 0.3565,
+     "diff": 2266
+    },
+    "twin_p": 0.7964
+   },
+   "X4": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.255,
+     "net": -11568,
+     "per_trade": -123,
+     "avg_win": 1527,
+     "avg_loss": -689,
+     "biggest_loss": -2088,
+     "worst_day": -3289,
+     "max_dd": 16747,
+     "green_days": 0.31,
+     "top5_share": null,
+     "ex_top5": -34805,
+     "stops": 5,
+     "locks": 0,
+     "targets": 0,
+     "time": 13,
+     "squareoff": 2,
+     "rule_exit": 74,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 15019,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -11568
+      }
+     }
+    },
+    "changed": 32,
+    "added": 0,
+    "gain": 11566,
+    "top5_left": 3499,
+    "paired": {
+     "p": 0.0045,
+     "diff": 11566
+    },
+    "twin_p": 0.4012
+   },
+   "X5": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.319,
+     "net": -27583,
+     "per_trade": -293,
+     "avg_win": 1055,
+     "avg_loss": -926,
+     "biggest_loss": -2280,
+     "worst_day": -4612,
+     "max_dd": 27583,
+     "green_days": 0.328,
+     "top5_share": null,
+     "ex_top5": -42846,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 0,
+     "squareoff": 0,
+     "rule_exit": 0,
+     "big_movers": 39,
+     "big_kept": 2,
+     "big_cut": 37,
+     "big_net": 4175,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -27583
+      }
+     }
+    },
+    "changed": 17,
+    "added": 0,
+    "gain": -4448,
+    "top5_left": -10418,
+    "paired": {
+     "p": 0.74,
+     "diff": -4448
+    },
+    "twin_p": 0.7525
+   },
+   "X6": {
+    "final": {
+     "trades": 109,
+     "days": 58,
+     "win": 0.275,
+     "net": -24242,
+     "per_trade": -222,
+     "avg_win": 1571,
+     "avg_loss": -904,
+     "biggest_loss": -2280,
+     "worst_day": -7914,
+     "max_dd": 27117,
+     "green_days": 0.328,
+     "top5_share": null,
+     "ex_top5": -48589,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 38,
+     "squareoff": 3,
+     "rule_exit": 56,
+     "big_movers": 47,
+     "big_kept": 4,
+     "big_cut": 43,
+     "big_net": 17965,
+     "per_index": {
+      "NIFTY": {
+       "trades": 109,
+       "net": -24242
+      }
+     }
+    },
+    "changed": 0,
+    "added": 15,
+    "gain": -1108,
+    "top5_left": -9291,
+    "paired": {
+     "p": 0.5695,
+     "diff": -1108
+    },
+    "twin_p": 0.3134
+   },
+   "X7": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.245,
+     "net": -30538,
+     "per_trade": -325,
+     "avg_win": 1883,
+     "avg_loss": -1040,
+     "biggest_loss": -2430,
+     "worst_day": -4612,
+     "max_dd": 31150,
+     "green_days": 0.241,
+     "top5_share": null,
+     "ex_top5": -56209,
+     "stops": 11,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 2,
+     "rule_exit": 48,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 12728,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -30538
+      }
+     }
+    },
+    "changed": 22,
+    "added": 22,
+    "gain": -7403,
+    "top5_left": -12011,
+    "paired": {
+     "p": 0.9415,
+     "diff": -7403
+    },
+    "twin_p": 0.2136
+   },
+   "X8": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.266,
+     "net": -22402,
+     "per_trade": -238,
+     "avg_win": 1588,
+     "avg_loss": -900,
+     "biggest_loss": -2280,
+     "worst_day": -4612,
+     "max_dd": 23888,
+     "green_days": 0.293,
+     "top5_share": null,
+     "ex_top5": -46692,
+     "stops": 11,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 3,
+     "rule_exit": 47,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 13440,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -22402
+      }
+     }
+    },
+    "changed": 3,
+    "added": 0,
+    "gain": 732,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.369,
+     "diff": 732
+    },
+    "twin_p": 0.5689
+   },
+   "X9": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.266,
+     "net": -24678,
+     "per_trade": -263,
+     "avg_win": 1497,
+     "avg_loss": -900,
+     "biggest_loss": -2280,
+     "worst_day": -4612,
+     "max_dd": 24678,
+     "green_days": 0.293,
+     "top5_share": null,
+     "ex_top5": -46818,
+     "stops": 11,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 2,
+     "rule_exit": 48,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 11290,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -24678
+      }
+     }
+    },
+    "changed": 2,
+    "added": 0,
+    "gain": -1543,
+    "top5_left": 0,
+    "paired": {
+     "p": 1.0,
+     "diff": -1543
+    },
+    "twin_p": 1.0
+   },
+   "X10": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.255,
+     "net": -31525,
+     "per_trade": -335,
+     "avg_win": 1387,
+     "avg_loss": -926,
+     "biggest_loss": -2724,
+     "worst_day": -4612,
+     "max_dd": 31525,
+     "green_days": 0.293,
+     "top5_share": null,
+     "ex_top5": -51171,
+     "stops": 11,
+     "locks": 0,
+     "targets": 0,
+     "time": 33,
+     "squareoff": 1,
+     "rule_exit": 48,
+     "big_movers": 39,
+     "big_kept": 3,
+     "big_cut": 36,
+     "big_net": 3996,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -31525
+      }
+     }
+    },
+    "changed": 1,
+    "added": 0,
+    "gain": -8390,
+    "top5_left": 0,
+    "paired": {
+     "p": 1.0,
+     "diff": -8390
+    },
+    "twin_p": 1.0
+   },
+   "X11": {
+    "final": {
+     "trades": 94,
+     "days": 58,
+     "win": 0.34,
+     "net": -15168,
+     "per_trade": -161,
+     "avg_win": 1126,
+     "avg_loss": -826,
+     "biggest_loss": -2197,
+     "worst_day": -4612,
+     "max_dd": 16505,
+     "green_days": 0.31,
+     "top5_share": null,
+     "ex_top5": -38404,
+     "stops": 9,
+     "locks": 23,
+     "targets": 0,
+     "time": 20,
+     "squareoff": 1,
+     "rule_exit": 41,
+     "big_movers": 39,
+     "big_kept": 4,
+     "big_cut": 35,
+     "big_net": 17446,
+     "per_index": {
+      "NIFTY": {
+       "trades": 94,
+       "net": -15168
+      }
+     }
+    },
+    "changed": 23,
+    "added": 0,
+    "gain": 7967,
+    "top5_left": 1281,
+    "paired": {
+     "p": 0.014,
+     "diff": 7967
+    },
+    "twin_p": 0.475
+   }
+  },
+  "SENSEX": {
+   "B0": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.361,
+     "net": 5263,
+     "per_trade": 73,
+     "avg_win": 1574,
+     "avg_loss": -775,
+     "biggest_loss": -2157,
+     "worst_day": -3621,
+     "max_dd": 13860,
+     "green_days": 0.352,
+     "top5_share": 4.663,
+     "ex_top5": -19281,
+     "stops": 10,
+     "locks": 0,
+     "targets": 0,
+     "time": 21,
+     "squareoff": 3,
+     "rule_exit": 38,
+     "big_movers": 25,
+     "big_kept": 6,
+     "big_cut": 19,
+     "big_net": 30211,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 5263
+      }
+     }
+    },
+    "entry_twin_p": 0.8144
+   },
+   "X1": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.361,
+     "net": 2470,
+     "per_trade": 34,
+     "avg_win": 1574,
+     "avg_loss": -836,
+     "biggest_loss": -2496,
+     "worst_day": -4641,
+     "max_dd": 15900,
+     "green_days": 0.352,
+     "top5_share": 9.938,
+     "ex_top5": -22074,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 29,
+     "squareoff": 3,
+     "rule_exit": 40,
+     "big_movers": 25,
+     "big_kept": 6,
+     "big_cut": 19,
+     "big_net": 29086,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 2470
+      }
+     }
+    },
+    "changed": 10,
+    "added": 0,
+    "gain": -2793,
+    "top5_left": -3138,
+    "paired": {
+     "p": 0.971,
+     "diff": -2793
+    },
+    "twin_p": 0.9481
+   },
+   "X2": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.361,
+     "net": 4949,
+     "per_trade": 69,
+     "avg_win": 1574,
+     "avg_loss": -782,
+     "biggest_loss": -2157,
+     "worst_day": -3621,
+     "max_dd": 13860,
+     "green_days": 0.352,
+     "top5_share": 4.96,
+     "ex_top5": -19595,
+     "stops": 10,
+     "locks": 0,
+     "targets": 0,
+     "time": 21,
+     "squareoff": 3,
+     "rule_exit": 38,
+     "big_movers": 25,
+     "big_kept": 6,
+     "big_cut": 19,
+     "big_net": 29886,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 4949
+      }
+     }
+    },
+    "changed": 2,
+    "added": 0,
+    "gain": -314,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.7735,
+     "diff": -314
+    },
+    "twin_p": 0.7804
+   },
+   "X3": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.347,
+     "net": -3380,
+     "per_trade": -47,
+     "avg_win": 1213,
+     "avg_loss": -717,
+     "biggest_loss": -1923,
+     "worst_day": -3621,
+     "max_dd": 14561,
+     "green_days": 0.315,
+     "top5_share": null,
+     "ex_top5": -23519,
+     "stops": 9,
+     "locks": 0,
+     "targets": 0,
+     "time": 17,
+     "squareoff": 1,
+     "rule_exit": 45,
+     "big_movers": 25,
+     "big_kept": 4,
+     "big_cut": 21,
+     "big_net": 21250,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": -3380
+      }
+     }
+    },
+    "changed": 14,
+    "added": 0,
+    "gain": -8643,
+    "top5_left": -11621,
+    "paired": {
+     "p": 0.9595,
+     "diff": -8643
+    },
+    "twin_p": 0.988
+   },
+   "X4": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.361,
+     "net": 10489,
+     "per_trade": 146,
+     "avg_win": 1502,
+     "avg_loss": -621,
+     "biggest_loss": -2157,
+     "worst_day": -3621,
+     "max_dd": 12926,
+     "green_days": 0.37,
+     "top5_share": 2.34,
+     "ex_top5": -14055,
+     "stops": 4,
+     "locks": 0,
+     "targets": 0,
+     "time": 12,
+     "squareoff": 3,
+     "rule_exit": 53,
+     "big_movers": 25,
+     "big_kept": 6,
+     "big_cut": 19,
+     "big_net": 32419,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 10489
+      }
+     }
+    },
+    "changed": 19,
+    "added": 0,
+    "gain": 5226,
+    "top5_left": 234,
+    "paired": {
+     "p": 0.0595,
+     "diff": 5226
+    },
+    "twin_p": 0.1876
+   },
+   "X5": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.375,
+     "net": -5340,
+     "per_trade": -74,
+     "avg_win": 1087,
+     "avg_loss": -771,
+     "biggest_loss": -2157,
+     "worst_day": -3621,
+     "max_dd": 13922,
+     "green_days": 0.37,
+     "top5_share": null,
+     "ex_top5": -21075,
+     "stops": 0,
+     "locks": 0,
+     "targets": 0,
+     "time": 0,
+     "squareoff": 0,
+     "rule_exit": 0,
+     "big_movers": 25,
+     "big_kept": 4,
+     "big_cut": 21,
+     "big_net": 18118,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": -5340
+      }
+     }
+    },
+    "changed": 12,
+    "added": 0,
+    "gain": -10603,
+    "top5_left": -11883,
+    "paired": {
+     "p": 0.986,
+     "diff": -10603
+    },
+    "twin_p": 0.9741
+   },
+   "X6": {
+    "final": {
+     "trades": 85,
+     "days": 54,
+     "win": 0.365,
+     "net": 205,
+     "per_trade": 2,
+     "avg_win": 1413,
+     "avg_loss": -808,
+     "biggest_loss": -2157,
+     "worst_day": -7155,
+     "max_dd": 19296,
+     "green_days": 0.389,
+     "top5_share": 120.013,
+     "ex_top5": -24339,
+     "stops": 12,
+     "locks": 0,
+     "targets": 0,
+     "time": 23,
+     "squareoff": 5,
+     "rule_exit": 45,
+     "big_movers": 32,
+     "big_kept": 6,
+     "big_cut": 26,
+     "big_net": 29291,
+     "per_index": {
+      "SENSEX": {
+       "trades": 85,
+       "net": 205
+      }
+     }
+    },
+    "changed": 0,
+    "added": 13,
+    "gain": -5059,
+    "top5_left": -7934,
+    "paired": {
+     "p": 0.9005,
+     "diff": -5059
+    },
+    "twin_p": 0.525
+   },
+   "X7": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.333,
+     "net": 5338,
+     "per_trade": 74,
+     "avg_win": 1985,
+     "avg_loss": -881,
+     "biggest_loss": -4472,
+     "worst_day": -5632,
+     "max_dd": 17470,
+     "green_days": 0.315,
+     "top5_share": 5.565,
+     "ex_top5": -24368,
+     "stops": 10,
+     "locks": 0,
+     "targets": 0,
+     "time": 21,
+     "squareoff": 3,
+     "rule_exit": 38,
+     "big_movers": 25,
+     "big_kept": 6,
+     "big_cut": 19,
+     "big_net": 37193,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 5338
+      }
+     }
+    },
+    "changed": 16,
+    "added": 16,
+    "gain": 75,
+    "top5_left": -7483,
+    "paired": {
+     "p": 0.4985,
+     "diff": 75
+    },
+    "twin_p": 0.1836
+   },
+   "X8": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.361,
+     "net": -65,
+     "per_trade": -1,
+     "avg_win": 1370,
+     "avg_loss": -775,
+     "biggest_loss": -2157,
+     "worst_day": -3621,
+     "max_dd": 13860,
+     "green_days": 0.352,
+     "top5_share": null,
+     "ex_top5": -18993,
+     "stops": 10,
+     "locks": 0,
+     "targets": 0,
+     "time": 21,
+     "squareoff": 4,
+     "rule_exit": 37,
+     "big_movers": 25,
+     "big_kept": 5,
+     "big_cut": 20,
+     "big_net": 24883,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": -65
+      }
+     }
+    },
+    "changed": 4,
+    "added": 0,
+    "gain": -5328,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.88,
+     "diff": -5328
+    },
+    "twin_p": 0.9741
+   },
+   "X9": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.361,
+     "net": 4440,
+     "per_trade": 62,
+     "avg_win": 1543,
+     "avg_loss": -775,
+     "biggest_loss": -2157,
+     "worst_day": -3621,
+     "max_dd": 13860,
+     "green_days": 0.352,
+     "top5_share": 5.515,
+     "ex_top5": -20046,
+     "stops": 10,
+     "locks": 0,
+     "targets": 0,
+     "time": 21,
+     "squareoff": 3,
+     "rule_exit": 38,
+     "big_movers": 25,
+     "big_kept": 6,
+     "big_cut": 19,
+     "big_net": 29387,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 4440
+      }
+     }
+    },
+    "changed": 3,
+    "added": 0,
+    "gain": -823,
+    "top5_left": 0,
+    "paired": {
+     "p": 1.0,
+     "diff": -823
+    },
+    "twin_p": 1.0
+   },
+   "X10": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.361,
+     "net": 13582,
+     "per_trade": 189,
+     "avg_win": 1894,
+     "avg_loss": -775,
+     "biggest_loss": -2157,
+     "worst_day": -3621,
+     "max_dd": 13860,
+     "green_days": 0.352,
+     "top5_share": 2.375,
+     "ex_top5": -18676,
+     "stops": 10,
+     "locks": 0,
+     "targets": 0,
+     "time": 21,
+     "squareoff": 1,
+     "rule_exit": 38,
+     "big_movers": 25,
+     "big_kept": 6,
+     "big_cut": 19,
+     "big_net": 38530,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 13582
+      }
+     }
+    },
+    "changed": 2,
+    "added": 0,
+    "gain": 8319,
+    "top5_left": 0,
+    "paired": {
+     "p": 0.131,
+     "diff": 8319
+    },
+    "twin_p": 0.2375
+   },
+   "X11": {
+    "final": {
+     "trades": 72,
+     "days": 54,
+     "win": 0.444,
+     "net": 8491,
+     "per_trade": 118,
+     "avg_win": 1077,
+     "avg_loss": -650,
+     "biggest_loss": -1698,
+     "worst_day": -1679,
+     "max_dd": 9922,
+     "green_days": 0.426,
+     "top5_share": 2.891,
+     "ex_top5": -16053,
+     "stops": 7,
+     "locks": 19,
+     "targets": 0,
+     "time": 11,
+     "squareoff": 2,
+     "rule_exit": 33,
+     "big_movers": 25,
+     "big_kept": 5,
+     "big_cut": 20,
+     "big_net": 27974,
+     "per_index": {
+      "SENSEX": {
+       "trades": 72,
+       "net": 8491
+      }
+     }
+    },
+    "changed": 19,
+    "added": 0,
+    "gain": 3228,
+    "top5_left": -4017,
+    "paired": {
+     "p": 0.2625,
+     "diff": 3228
+    },
+    "twin_p": 0.4092
+   }
+  }
+ }
+}
