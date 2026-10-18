@@ -102,4 +102,27 @@ class SlippageTest {
         assertFalse(a.contains("Pine"), a)
         assertTrue(Slippage.answer(xs, Slippage.Ask(null, true), day).startsWith("No paper fills measured yet"))
     }
+
+    /** 18 Oct (final review F4): the measured live slippage a shadow fill may not beat, as a share of the price. */
+    @Test fun theMedianShareIsZerodhasOwnFillsTheStrategysFirstAndNoneUntilMeasured() {
+        fun g(strategy: String, intended: Double, avg: Double, leg: Slippage.Leg = Slippage.Leg.ENTRY, paper: Boolean = false,
+              basis: Slippage.Basis = Slippage.Basis.SIGNAL) =
+            checkNotNull(Slippage.Fill.of(day, 1L, strategy, "X", "BUY", leg, 30, intended, avg, 0.05, paper, basis))
+        val bases = setOf(Slippage.Basis.SIGNAL, Slippage.Basis.LTP)
+        assertEquals(0.0, Slippage.medianShare(emptyList(), Slippage.Leg.ENTRY, bases), 1e-12)
+        // Fewer than five: nothing measured yet.
+        val four = (1..4).map { g("Arms (live)", 100.0, 101.0) }
+        assertEquals(0.0, Slippage.medianShare(four, Slippage.Leg.ENTRY, bases, "Arms (live)"), 1e-12)
+        // Five of the arms' own: theirs (1%), whatever the others paid.
+        val own = (1..5).map { g("Arms (live)", 100.0, 101.0) } + (1..9).map { g("ORB", 200.0, 201.0) }
+        assertEquals(0.01, Slippage.medianShare(own, Slippage.Leg.ENTRY, bases, "Arms (live)"), 1e-12)
+        // Too few of its own: everyone's (0.5% median of nine ORB and four arms).
+        assertEquals(0.005, Slippage.medianShare(four + (1..9).map { g("ORB", 200.0, 201.0) }, Slippage.Leg.ENTRY, bases, "Arms (live)"), 1e-12)
+        // Paper fills, other legs and other bases never count; a better median is 0, never negative.
+        val other = (1..6).map { g("Arms (live)", 100.0, 103.0, paper = true) } + (1..6).map { g("Arms (live)", 100.0, 103.0, leg = Slippage.Leg.EXIT) } +
+            (1..6).map { g("Arms (live)", 100.0, 103.0, basis = Slippage.Basis.TRIGGER) }
+        assertEquals(0.0, Slippage.medianShare(other, Slippage.Leg.ENTRY, bases), 1e-12)
+        assertEquals(0.0, Slippage.medianShare((1..5).map { g("Arms (live)", 100.0, 99.0) }, Slippage.Leg.ENTRY, bases), 1e-12)
+        assertEquals(0.03, Slippage.medianShare(other, Slippage.Leg.EXIT, bases), 1e-12)
+    }
 }

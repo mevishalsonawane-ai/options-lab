@@ -157,6 +157,9 @@ object Broker {
         // 18 Oct (review): the paper-only period read again inside the door too (memory only), so a period set while this entry
         // waited its turn still refuses it. [placeOrder] asks it first; this is the door's own look.
         PaperOnly.entryRefusal()?.let { return it }
+        // 18 Oct (final review F2): a paper strategy's mirrored entry can wait here up to 15 s after its own checks ran: the app in
+        // Live, "AI trades go live", its arm's Trade live and its Shadow asked again at the last moment - memory only.
+        if (o.tag == com.optionslab.engine.orb.LiveMirror.TAG) ArmLive.doorRefusal(arm)?.let { return it }
         if (o.tag in BOT_TAGS) {
             if (LossBreaker.trippedToday()) return "refused: the daily loss limit was reached today"
             if (Strategies.stopHint() != null) return "stopped_for_today"

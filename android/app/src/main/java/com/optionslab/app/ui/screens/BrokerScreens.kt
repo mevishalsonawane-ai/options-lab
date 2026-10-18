@@ -401,8 +401,12 @@ internal fun ArmsLiveList(model: AppModel) {
         Note("Each follows its own paper trade at Zerodha: the same option and lots, the same exits; its stop rests at Zerodha and moves " +
             "with its lock. Live only in Live with AI trades on; the paper-only period blocks every live entry. Shadow (on until you " +
             "turn it off with your PIN) sends nothing and records what it would have traded.")
+        // Final review F4: what the shadow records include, so they are not read as better than live would get.
+        Note("Shadow records: " + com.optionslab.engine.orb.LiveMirror.SHADOW_BASIS + ".")
         if (!v.loaded) { Note("Loading the arms' live choices…"); return@Column }
-        if (v.unreadable) Note("The arms' live book could not be read: no live entry goes until it is. Open live trades are still watched.")
+        // Final review F1: every watching lane reads it again (at most every 5 s), and its open live trades are watched from then.
+        if (v.unreadable) Note("The arms' live book could not be read: no live entry goes until it is. The app reads it again every few " +
+            "seconds and watches its open live trades as soon as it reads; meanwhile their stops rest at Zerodha. Check open positions in Trade.")
         for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
             if (spec.key == com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) continue
             val on = v.on(spec.key)

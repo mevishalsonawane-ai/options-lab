@@ -161,3 +161,70 @@ Left as is (low risk, noted for Boss):
    follows. No change was made.
 4. **Not covered by a test:** a lost reply on placing a GTT (the fake Zerodha cannot simulate it). The logic adopts a matching
    active GTT; please watch for it in the first live days.
+
+## Final review fixes (an independent review of 8cb69bc): 8 confirmed findings, all fixed
+
+1. **HIGH: an unreadable book at start-up left open live trades unwatched.** Fixed. While the book cannot be read, `recoverHint` (and
+   so `lookDue`) is on: the minute lane, the live lane, the 15-second stop check and both keep-alives (`Workers.heldQuick`,
+   `SmartWorkers.holdingAny`) keep running for it, and each watch reads the book again, at most every 5 s. Once it reads, its
+   open live trades are watched in the same pass. The Live-switch card now says what really happens ("reads it again every few
+   seconds and watches its open live trades as soon as it reads; meanwhile their stops rest at Zerodha").
+   Test: the first read fails, the trade is held, the paper trade closes; the next read succeeds and the live trade is sold.
+2. **MEDIUM: Trade live, AI-live, Paper and Shadow were not re-checked inside the entry door.** Fixed. For an `iraarm` entry,
+   `Broker.entryRecheck` asks `ArmLive.doorRefusal` at the last moment: the app in Live, "AI trades go live", the arm's Trade live
+   and its Shadow, all from memory. The Live switch is kept in memory (`ArmLive.liveFlags`) and read again only after one of its
+   keys is written (a new `SecurePrefs.liveHint` generation for `k.mode`, `k.allow` and "AI trades go live"), as the kill switch is.
+   Tests: Shadow turned on while the entry waits in a held door sends nothing; each of the four switches refuses at the door.
+3. **MEDIUM: the account stop rule and the security check let entries through when they failed.** Fixed. Any failure refuses the
+   entry: "the account stop could not be checked" (an ORB record that cannot be read now counts as a failure, not as no losses),
+   and a security check that cannot run counts as failed. The day lock and the daily loss limit fail closed the same way.
+   Tests: both failures refuse; with both readable the entry goes.
+4. **MEDIUM: shadow P&L was better than live would get.** Fixed.
+   - A shadow MARKET buy pays Zerodha's ask and a sale gets the bid (with no usable book: the last price less the measured
+     default half-spread). It is never better than the app's own measured live slippage (`Slippage.medianShare`: the arms' own
+     Zerodha fills first, else all, once there are 5). The worse of the two is used, not the sum, because the measured slippage
+     is taken against the last price and so already holds the spread.
+   - A shadow stop is judged on the lowest price (a short's highest) traded since the last look: the stream's ticks
+     (`TickPath.lowSince`), else Zerodha's minute candles that began after the last look. It fills at its trigger less the
+     spread or the measured stop slippage, never past its SL limit. A price through the limit now is a market sale at the bid.
+   - The card says what the records include: "priced at Zerodha's ask to buy and bid to sell, with the app's measured slippage
+     and the charges; stops judged on each minute's low or high".
+   - Tests: the engine rules; a wick through the stop inside a minute fills it; a minute from before the last look is never
+     judged; the earlier shadow tests now expect the ask, the bid and the trigger less the spread.
+5. **LOW-MEDIUM: Solo (midday) was kept in shadow only by `setShadow`.** Fixed. `enterNow` forces shadow for Solo (midday) while
+   `soloWhy()` is not null, whatever the stored switch says. Test: a stored Shadow off still records a shadow trade and sends
+   nothing.
+6. **LOW: a part closed by hand was booked at the price now.** Fixed. It is booked at what Zerodha's trade book says it sold for
+   (the newest exit-side fills on that contract that are none of the app's own orders), else its order book's average; only with
+   neither, at the price now, else the price paid. An own exit or entry with no average from Zerodha reads its trade book too.
+   Test: the trade book's price, then the order book's.
+7. **LOW: settings reads on the caller's thread.** Fixed. `entered()` and `stateOf()` read the Live switch from memory
+   (`liveFlags`); the Hero dialog works its live state out on the IO threads (`produceState`). Tests: OrderPathRound2Test (a paper
+   fill and a mirrored entry's door look make no settings reads, and a later flip is seen at once); MainThreadBinderTest (the
+   dialog's state is read off the main thread).
+8. **LOW: nothing was watched before the day's Zerodha login.** Fixed. With a live trade open, an exit due (its paper trade closed
+   or sold part, or its square-off) and no login, Boss is alerted once a day per trade: "<arm> live trade waiting for the Zerodha
+   login to exit". Test: nothing said while no exit is due; one alert when it is, and nothing sold.
+
+Also: the Live PIN prompt (`LIVE_PIN_ASK`) now says every paper strategy starts in Shadow and sends nothing to Zerodha until its
+Shadow is turned off with the PIN.
+
+A reviewer agent then checked these fixes. Its confirmed findings were fixed too:
+- The shadow look's quote and candle reads no longer hold the live trades' lock. It runs after the live look, under its own
+  lock, so the live lane and the 15-second check never skip a live look while it reads. It makes at most 4 candle reads a look,
+  one per contract, each within 3 s.
+- The live lane never re-reads an unreadable book: only the minute lane and the 15-second check do. Their wait doubles from 5 s
+  to 60 s while the read keeps failing.
+- The door's kept Live switch reads only its own keys on a miss (the mode and "AI trades go live"), never the whole settings,
+  and the entry's own checks keep it warm.
+- A shadow window whose candles could not be read is kept for the next look, never skipped. A stop that moves starts a new
+  window. A wick through the SL's own limit fills at that limit.
+- Several parts closed outside in one look each take the next fill (newest first), never the same fill twice.
+- The go-live dialog (Root.kt) now says the same as the PIN prompt: a paper strategy trades live only once it is out of Shadow.
+
+Left as is (noted for Boss):
+- After a restart, a shadow trade's first look is judged on the price at that look, not on the minutes it missed: a stop moved up
+  before the restart must not be judged on prices from before it moved.
+- Without a historical-data plan the minute candles cannot be read: a shadow stop is then judged on the stream's ticks when the
+  contract streams, else on the price at each look (as before). After a failed read the candles are not asked again for 2 minutes.
+- The stream keeps 5 minutes of ticks: a look more than 5 minutes after the last one (a stalled phone) judges only those 5 minutes.

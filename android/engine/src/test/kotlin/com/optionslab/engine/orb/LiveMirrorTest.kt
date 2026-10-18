@@ -327,4 +327,47 @@ class LiveMirrorTest {
         assertNull(LiveMirror.disasterLevel(0.1, 1, 0.05))
         assertTrue(LiveMirror.spec(LiveMirror.SHADOW_PROMOTED)!!.safety)
     }
+
+    // ---- final review F4: shadow P&L no better than live -------------------------------------------------------------------
+
+    @Test fun aShadowMarketFillPaysTheAskOrGetsTheBidNeverBetterThanTheMeasuredSlippage() {
+        // A real book: a buy at the ask, a sale at the bid.
+        assertEquals(200.05, LiveMirror.shadowFill(true, 200.0, 199.95, 200.05, 0.05, 0.0016, 0.0), 1e-9)
+        assertEquals(199.95, LiveMirror.shadowFill(false, 200.0, 199.95, 200.05, 0.05, 0.0016, 0.0), 1e-9)
+        // No book (or a junk one): the last moved by the default half-spread, rounded against the order.
+        assertEquals(200.35, LiveMirror.shadowFill(true, 200.0, null, null, 0.05, 0.0016, 0.0), 1e-9)
+        assertEquals(199.65, LiveMirror.shadowFill(false, 200.0, null, 200.05, 0.05, 0.0016, 0.0), 1e-9)
+        assertEquals(200.35, LiveMirror.shadowFill(true, 200.0, 100.0, 300.0, 0.05, 0.0016, 0.0), 1e-9)
+        // The measured live slippage when it is worse than the touch (not added to it: it already holds the spread).
+        assertEquals(201.0, LiveMirror.shadowFill(true, 200.0, 199.95, 200.05, 0.05, 0.0016, 0.005), 1e-9)
+        assertEquals(199.0, LiveMirror.shadowFill(false, 200.0, 199.95, 200.05, 0.05, 0.0016, 0.005), 1e-9)
+        assertEquals(200.05, LiveMirror.shadowFill(true, 200.0, 199.95, 200.05, 0.05, 0.0016, -0.01), 1e-9, "a better measured fill never helps")
+        // Junk: a NaN slippage is none; no last price uses the book's mid; never under one tick.
+        assertEquals(200.05, LiveMirror.shadowFill(true, 200.0, 199.95, 200.05, 0.05, Double.NaN, Double.NaN), 1e-9)
+        assertEquals(200.05, LiveMirror.shadowFill(true, 0.0, 199.95, 200.05, 0.05, 0.0016, 0.0), 1e-9)
+        assertTrue(LiveMirror.shadowFill(true, 0.0, null, null, 0.05, 0.0016, 0.0) <= 0.0)
+        assertEquals(0.05, LiveMirror.shadowFill(false, 0.05, null, null, 0.05, 0.5, 0.0), 1e-9)
+    }
+
+    @Test fun aShadowStopIsReachedByAWickInsideTheMinuteAndFillsAtItsTriggerLessTheSlipNeverPastItsLimit() {
+        // The price back above the stop now, but the minute's low went through it: the resting SL would have filled.
+        assertTrue(LiveMirror.shadowStopReached(175.0, 168.0, 170.0, 1))
+        assertFalse(LiveMirror.shadowStopReached(175.0, 171.0, 170.0, 1))
+        assertFalse(LiveMirror.shadowStopReached(175.0, null, 170.0, 1))
+        assertTrue(LiveMirror.shadowStopReached(169.0, null, 170.0, 1))
+        assertFalse(LiveMirror.shadowStopReached(null, null, 170.0, 1))
+        assertFalse(LiveMirror.shadowStopReached(160.0, 150.0, null, 1))
+        // A short's stop above: its high.
+        assertTrue(LiveMirror.shadowStopReached(95.0, 101.0, 100.0, -1))
+        assertFalse(LiveMirror.shadowStopReached(95.0, 99.0, 100.0, -1))
+        // Its fill: the trigger less the slip, on the tick against the order, never past the SL's limit (161.50 for 170).
+        assertEquals(169.7, LiveMirror.shadowStopFill(170.0, 0.05, 1, 0.0016), 1e-9)
+        assertEquals(170.0, LiveMirror.shadowStopFill(170.0, 0.05, 1, 0.0), 1e-9)
+        assertEquals(161.5, LiveMirror.shadowStopFill(170.0, 0.05, 1, 0.2), 1e-9)
+        assertEquals(170.0, LiveMirror.shadowStopFill(170.0, 0.05, 1, Double.NaN), 1e-9)
+        // A short buys back above its trigger, never past its limit (105 for 100).
+        assertEquals(100.2, LiveMirror.shadowStopFill(100.0, 0.05, -1, 0.0016), 1e-9)
+        assertEquals(105.0, LiveMirror.shadowStopFill(100.0, 0.05, -1, 0.3), 1e-9)
+        assertTrue(LiveMirror.SHADOW_BASIS.contains("ask") && LiveMirror.SHADOW_BASIS.contains("bid") && LiveMirror.SHADOW_BASIS.contains("charges"))
+    }
 }

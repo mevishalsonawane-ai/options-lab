@@ -787,9 +787,9 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
         text = { androidx.compose.foundation.layout.Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
             Text((paperOnly?.let { com.optionslab.ira.PaperOnlyPeriod.liveAsk(it) + "\n\n" } ?: "") +
             "Prices, positions and orders will come from your Zerodha account, with real money. As on paper, an order goes when you tap Buy or Sell " +
-            "and enter your PIN (no review step). \"AI trades go live\" turns on too. Each arm keeps its own live choice, and every paper " +
-            "strategy whose own \"Trade live\" is on (on until you switch it off, beside the Live switch) also trades live, outside the " +
-            "paper-only period. Paper turns both off.", style = Type.bodySmall) } },
+            "and enter your PIN (no review step). \"AI trades go live\" turns on too. Each arm keeps its own live choice. A paper strategy " +
+            "trades live only once you have taken it out of Shadow with your PIN and its own \"Trade live\" is on (beside the Live " +
+            "switch), outside the paper-only period; in Shadow (where each starts) it sends nothing. Paper turns both off.", style = Type.bodySmall) } },
         // Your PIN follows (the caller asks it): Live and "AI trades go live" switch on only with it.
         confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) {
             Text("Enter PIN to go live", color = p.oxblood) } },

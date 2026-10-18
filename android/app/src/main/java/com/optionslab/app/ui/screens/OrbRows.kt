@@ -271,6 +271,12 @@ internal fun OrbRowsContent(
     if (reenableAuth) reauth("Enter your app PIN to let Liquidity BANKNIFTY take live entries again after its stop rule. Its stop rule then counts from now.",
         { reenableAuth = false; actions.reenableLiquidityLive(true) }, { reenableAuth = false })
     heroConfirm?.let { src ->
+        // Final review F7: the live state is worked out on the IO threads, never in composition on the main thread.
+        val heroLive by androidx.compose.runtime.produceState("live state not read yet", src) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.optionslab.app.data.ArmLive.stateOf(com.optionslab.engine.orb.HeroRules.ARM.source)
+            }
+        }
         AlertDialog(
             onDismissRequest = { heroConfirm = null },
             properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -278,7 +284,7 @@ internal fun OrbRowsContent(
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(com.optionslab.engine.orb.HeroRules.NOT_PROVEN + ". Arming it here is paper; its live copy goes by its own " +
-                        "Trade live and Shadow switches (" + com.optionslab.app.data.ArmLive.stateOf(com.optionslab.engine.orb.HeroRules.ARM.source) + ").",
+                        "Trade live and Shadow switches ($heroLive).",
                         style = Type.body.copy(color = p.oxblood, fontWeight = FontWeight.SemiBold))
                     Text("On NIFTY expiry days only, from 13:30 to 14:45: when the ATM straddle is 15% above its low since 12:00 and " +
                         "NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1–5 with a LIMIT " +

@@ -178,6 +178,16 @@ object ArmLive {
     @Volatile private var unreadable = false
     /** The book failed authentication and was rebuilt: the open live trades are to be recovered from Zerodha on the next look. */
     @Volatile private var recoverDue = false
+    /**
+     * 18 Oct (final review F1): when the last read of the book failed (memory). While it is unreadable every lane that watches
+     * keeps coming back ([recoverHint]) and reads it again, at most every [RETRY_MS], so its open live trades are watched the
+     * moment it reads.
+     */
+    @Volatile private var readFailedMs = 0L
+    /** Reads failed in a row (memory): the wait before the next read doubles from [RETRY_MS] to [RETRY_MAX_MS]. */
+    @Volatile private var readFails = 0
+    private const val RETRY_MS = 5_000L
+    private const val RETRY_MAX_MS = 60_000L
 
     /** The open live trades' quote keys ("NFO:SYMBOL"), for the price stream (memory only: the tick path reads it). */
     @Volatile var liveKeysHint: List<String> = emptyList()
@@ -230,8 +240,9 @@ object ArmLive {
         testHeard?.add("entered|${ask.key}|${ask.ref}|${ask.paperQty}|${ask.stop}")
         if (!ready() || LiveMirror.spec(ask.key) == null) return
         ask.stop?.let { level(ask.ref, it) }
-        // In Paper (the usual case) nothing more happens: no worker, no read (the settings are in memory).
-        if (!runCatching { AppSettings.load().let { it.live && it.allowRealOrders } }.getOrDefault(false)) return
+        // In Paper (the usual case) nothing more happens: no worker, no read. Final review F7: the Live switch from memory
+        // ([liveFlags]), never a settings read on whatever lane the paper fill is on.
+        if (!liveFlags().first) return
         if (testSync) { kotlinx.coroutines.runBlocking { enterNow(ask) }; return }
         scope.launch { runCatching { enterNow(ask) }.onFailure { e -> note(ask.key, "live entry failed: ${e.javaClass.simpleName}") } }
     }
@@ -350,8 +361,13 @@ object ArmLive {
     private fun book(): Book {
         cache?.let { return it }
         val f = file ?: return Book().also { cache = it }
-        val bytes = try { Vault.readFileSteady(f) } catch (e: Vault.Tampered) { null.also { tampered(f) } } catch (e: Exception) {
-            // Not read now (a Keystore hiccup): nothing cached, read again next time; meanwhile no live entry goes.
+        val bytes = try {
+            testReadFails?.let { if (it.getAndDecrement() > 0) throw java.io.IOException("test: the book could not be read") }
+            Vault.readFileSteady(f)
+        } catch (e: Vault.Tampered) { null.also { tampered(f) } } catch (e: Exception) {
+            // Not read now (a Keystore hiccup): nothing cached, read again by every lane ([recoverHint]); meanwhile no live entry goes.
+            readFailedMs = runCatching { nowMs() }.getOrDefault(System.currentTimeMillis())
+            readFails = (readFails + 1).coerceAtMost(30)
             if (!unreadable) {
                 unreadable = true
                 publishUnreadable()
@@ -375,7 +391,9 @@ object ArmLive {
         if (!parsed) tampered(f)
         // No file (new, or set aside) or a rebuilt one: Boss's switches from their second copy, never fresh defaults.
         if (bytes == null || !parsed) restoreSwitches(b)
+        if (unreadable) runCatching { Diag.record("armlive", "the live book was read again: its open live trades are watched") }
         unreadable = false
+        readFails = 0
         cache = b
         publish(b)
         return b
@@ -501,11 +519,58 @@ object ArmLive {
     @Volatile internal var testHeard: MutableList<String>? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
+    /** TEST ONLY: the next this many reads of the book fail as a Keystore hiccup would (final review F1). Debug builds only. */
+    @Volatile internal var testReadFails: java.util.concurrent.atomic.AtomicInteger? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     /** TEST ONLY: the legs [family]'s registered paper book gives now (null: none registered, or not read). */
     internal fun legsForTest(family: String): List<PaperLeg>? = hosts[family]?.open()
 
     private fun now(): LocalDateTime = (testNow ?: Market.now()).toLocalDateTime().withNano(0)
     private fun nowMs(): Long = (testNow ?: Market.now()).toInstant().toEpochMilli()
+
+    // ---- the Live switch in memory (final review F2, F7) ------------------------------------------------------------------------
+
+    /** The kept (settings generation, Live generation, (app in Live with real orders, "AI trades go live")). */
+    @Volatile private var liveKept: Triple<Int, Int, Pair<Boolean, Boolean>>? = null
+
+    /**
+     * (the app in Live with real orders allowed, "AI trades go live" on), from memory: read from the settings only after one of
+     * them was written ([SecurePrefs.liveHint]) or the settings were reloaded ([SecurePrefs.generationHint]), as the entry door
+     * keeps its kill switch. A read that fails says Paper (nothing goes), and is not kept.
+     */
+    internal fun liveFlags(): Pair<Boolean, Boolean> {
+        val g = SecurePrefs.generationHint
+        val l = SecurePrefs.liveHint
+        liveKept?.let { if (it.first == g && it.second == l) return it.third }
+        // Only the keys behind it (never the whole settings): Live is the mode "live", which always allows real orders
+        // ([AppSettings.load]'s allowRealOrders).
+        val now = runCatching {
+            val app = SecurePrefs.getString("k.mode", AppSettings().mode) == "live"
+            app to (app && !com.optionslab.app.ira.IraNewsTrades.paperFirst)
+        }.getOrElse { return false to false }
+        liveKept = Triple(g, l, now)
+        return now
+    }
+
+    /**
+     * Final review F2: why a mirrored entry ([LiveMirror.TAG]) of arm [arm] ("arm:<key>") may not go NOW, asked by the entry door
+     * at the last moment ([Broker.entryRecheck]) - an entry can wait up to 15 s there after [gate] ran. The app in Live, "AI trades
+     * go live", the arm's own Trade live and its Shadow, all from memory (the kept settings and this object's view): no disk, no
+     * lock. Null: it may go.
+     */
+    internal fun doorRefusal(arm: String?): String? {
+        val key = arm?.takeIf { it.startsWith("arm:") }?.removePrefix("arm:") ?: return "refused: a mirrored entry with no arm"
+        val label = LiveMirror.spec(key)?.label ?: return "refused: no such mirrored arm"
+        val (appLive, aiLive) = liveFlags()
+        if (!appLive) return "refused: the app is in Paper"
+        if (!aiLive) return "refused: \"AI trades go live\" is off"
+        val v = _view.value
+        if (!v.loaded || v.unreadable) return "refused: the arms' live book is not read"
+        if (!v.on(key)) return "refused: $label's \"Trade live\" switch is off"
+        if (v.shadowOn(key)) return "refused: $label is in shadow"
+        return null
+    }
 
     // ---- entries ---------------------------------------------------------------------------------------------------------------
 
@@ -515,40 +580,55 @@ object ArmLive {
      */
     private suspend fun gate(key: String, shadow: Boolean): LiveMirror.Gate {
         val s = AppSettings.load()
+        liveFlags()                                   // kept warm for the entry door's own look ([doorRefusal])
         val appLive = s.live && s.allowRealOrders
         val aiLive = appLive && runCatching { !com.optionslab.app.ira.IraNewsTrades.paperFirst }.getOrDefault(false)
         val armOn = lock.withLock { book().switches.toMap() }.let { sw -> if (testDefaultOff && key !in sw) false else LiveMirror.on(key, sw) }
         val first = LiveMirror.Gate(appLive = appLive, aiLive = aiLive, armOn = armOn)
         if (LiveMirror.refusal(first) != null) return first
+        // Final review F3: a check that cannot be read refuses the entry (an entry never goes on a guess), as the day stop does.
         val g = first.copy(paperOnly = if (shadow) null else PaperOnly.entryRefusal(), kill = s.guardKill,
             stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(true),
-            lossLimit = runCatching { LossBreaker.trippedToday() }.getOrDefault(false))
+            lossLimit = runCatching { LossBreaker.trippedToday() }.getOrDefault(true))
         if (LiveMirror.refusal(g) != null) return g
-        val g2 = g.copy(dayLock = runCatching { DayLockGuard.refusal(true) }.getOrNull(), accountStop = if (shadow) null else accountStop(),
-            loggedIn = Broker.loggedIn)
+        val g2 = g.copy(dayLock = runCatching { DayLockGuard.refusal(true) }.getOrElse { "the day lock could not be checked" },
+            accountStop = if (shadow) null else accountStop(), loggedIn = Broker.loggedIn)
         if (LiveMirror.refusal(g2) != null) return g2
         return g2.copy(compromised = !shadow && runCatching {
+            if (testSecurityFails) throw java.io.IOException("test: the security check could not run")
             com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(app, 60_000))
-        }.getOrDefault(false))
+        }.getOrDefault(true))
     }
 
     /**
      * The account stop rule (Boss's: -Rs 40,000 from the best, or -Rs 13,000 in a calendar month) over the app's whole live record of
-     * the arms - every real trade of these arms (all are kept) and the ORB family's - or null while neither is reached.
+     * the arms - every real trade of these arms (all are kept) and the ORB family's - or null while neither is reached. Final review
+     * F3: a record that cannot be read (this book's or the ORB family's) refuses the entry: [ACCOUNT_UNCHECKED].
      */
     private suspend fun accountStop(): String? = runCatching {
         val mine = lock.withLock { book().positions.filter { !it.open && !it.shadow } }.mapNotNull { p ->
             val t = p.exitTime ?: return@mapNotNull null
             com.optionslab.ira.LiquidityStopRule.Trade(t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli(), t.toLocalDate(), p.net ?: 0.0)
         }
-        val orb = runCatching { OrbArms.closedLive() }.getOrDefault(emptyList()).mapNotNull { p ->
+        val orb = (if (testAccountFails) throw java.io.IOException("test: the ORB record could not be read") else OrbArms.closedLive()).mapNotNull { p ->
             val t = p.exitTime ?: return@mapNotNull null
             val net = p.exit?.let { (it - p.entry) * p.qty - p.charges } ?: return@mapNotNull null
             com.optionslab.ira.LiquidityStopRule.Trade(t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli(), t.toLocalDate(), net)
         }
         val st = com.optionslab.ira.LiquidityStopRule.check(mine + orb, now().toLocalDate())
         if (st.stopped) st.why else null
-    }.getOrNull()
+    }.getOrElse { ACCOUNT_UNCHECKED }
+
+    /** The account stop rule's refusal when its record could not be read (final review F3). */
+    internal const val ACCOUNT_UNCHECKED = "the account stop could not be checked"
+
+    /** TEST ONLY: the phone's security check fails to run (final review F3). Debug builds only. */
+    @Volatile internal var testSecurityFails: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: the ORB family's live record fails to read (final review F3). Debug builds only. */
+    @Volatile internal var testAccountFails: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     private data class Ins(val symbol: String, val exchange: String, val lot: Int, val tick: Double, val multiplier: Int)
 
@@ -606,7 +686,9 @@ object ArmLive {
     private suspend fun enterNow(a: Ask) = entryLock.withLock {
         val spec = LiveMirror.spec(a.key) ?: return@withLock
         runCatching { OrderTiming.decided() }
-        val shadowed = try { lock.withLock { val b = book(); LiveMirror.shadowOn(a.key, b.shadow) } } catch (e: Unreadable) {
+        // Final review F5: Solo (midday) is in shadow while it is not proven, whatever its stored switch says.
+        val soloHeld = a.key == LiveMirror.SOLO_MIDDAY && soloWhy() != null
+        val shadowed = soloHeld || try { lock.withLock { val b = book(); LiveMirror.shadowOn(a.key, b.shadow) } } catch (e: Unreadable) {
             note(a.key, "not mirrored: the live book could not be read"); return@withLock
         }
         val g = gate(a.key, shadowed)
@@ -625,8 +707,8 @@ object ArmLive {
         val qty = LiveMirror.liveQty(lots, ins.lot)
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }
         val qkey = "${ins.exchange}:${ins.symbol}"
-        val last = runCatching { Broker.stopQuotes(listOf(qkey))[qkey]?.last }.getOrNull()?.takeIf { it > 0 }
-            ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
+        val quote = runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
+        val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
         // Never an entry against what Zerodha holds the other way on this contract (two arms on one future, opposite ways).
         val net = runCatching { Broker.positionBook().net.filter { it.symbol == ins.symbol && it.exchange == ins.exchange && it.product == spec.product }.sumOf { it.qty } }
             .getOrElse { notMirrored(a, "Zerodha's positions could not be read"); return@withLock }
@@ -643,11 +725,14 @@ object ArmLive {
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true)
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
-        val shadowNow = shadowed || try { lock.withLock { LiveMirror.shadowOn(a.key, book().shadow) } } catch (e: Unreadable) {
-            note(a.key, "not mirrored: the live book could not be read"); return@withLock
-        }
-        if (shadowNow) { enterShadow(spec, a, base, o); return@withLock }
+        val shadowNow = shadowed || (a.key == LiveMirror.SOLO_MIDDAY && soloWhy() != null) ||
+            try { lock.withLock { LiveMirror.shadowOn(a.key, book().shadow) } } catch (e: Unreadable) {
+                note(a.key, "not mirrored: the live book could not be read"); return@withLock
+            }
+        if (shadowNow) { enterShadow(spec, a, base, o, quote); return@withLock }
         val known = known()
+        // (The entry door asks the switches again inside it, from memory: [doorRefusal].)
+        testHeard?.add("door|${a.key}|${a.ref}")
         val id: String? = try {
             Broker.placeOrder(o, arm = "arm:${a.key}", intended = last)
         } catch (e: Broker.NotLoggedIn) {
@@ -697,13 +782,20 @@ object ArmLive {
 
     private fun stopWords(p: Pos): String = when (p.stopKind) { SAFETY -> "safety stop"; DISASTER -> "disaster stop"; else -> "stop" }
 
-    /** A shadow entry: what would have been sent, priced as the live mirror fills it (a LIMIT that would not fill: noted, not booked). */
-    private suspend fun enterShadow(spec: LiveMirror.Spec, a: Ask, base: Pos, o: Kite.Order) {
-        val px = base.entry
-        if (o.orderType == "LIMIT" && o.price != null && (if (base.side > 0) px > o.price!! + 1e-9 else px < o.price!! - 1e-9)) {
-            notMirrored(a, "shadow: its LIMIT %.2f would not have filled at %.2f".format(Locale.ENGLISH, o.price, px)); return
+    /**
+     * A shadow entry: what would have been sent, priced as the live mirror fills it (a LIMIT that would not fill: noted, not booked).
+     * Final review F4: a MARKET buy pays Zerodha's ask (a sale gets the bid), never better than the app's measured live slippage
+     * ([LiveMirror.shadowFill]); a LIMIT fills at the touch only when it is within its limit.
+     */
+    private suspend fun enterShadow(spec: LiveMirror.Spec, a: Ask, base: Pos, o: Kite.Order, quote: Broker.Quote?) {
+        val buy = base.side > 0
+        val limit = o.price?.takeIf { o.orderType == "LIMIT" }
+        val px = LiveMirror.shadowFill(buy, base.entry, quote?.bid, quote?.ask, base.tick, halfSpreadOf(base),
+            if (limit != null) 0.0 else measured(com.optionslab.ira.Slippage.Leg.ENTRY, ENTRY_BASES))
+        if (limit != null && (if (buy) px > limit + 1e-9 else px < limit - 1e-9)) {
+            notMirrored(a, "shadow: its LIMIT %.2f would not have filled at %.2f".format(Locale.ENGLISH, limit, px)); return
         }
-        var p = base.copy(shadow = true, heldSeen = true, charges = charge(if (base.side > 0) "BUY" else "SELL", px, base.qty, base.exchange, base.symbol, base.multiplier))
+        var p = base.copy(entry = px, shadow = true, heldSeen = true, charges = charge(if (buy) "BUY" else "SELL", px, base.qty, base.exchange, base.symbol, base.multiplier))
         val (stop, kind) = firstStop(spec, p)
         p = p.copy(stopTrigger = stop, stopKind = kind)
         lock.withLock {
@@ -714,6 +806,7 @@ object ArmLive {
                 p.symbol, p.qty, px, stop?.let { " · %s %.2f".format(Locale.ENGLISH, stopWords(p), it) } ?: ""))
             save(b)
         }
+        shadowSeen[p.ref] = System.currentTimeMillis() to nowMs()
         note(a.key, "shadow entry ${p.symbol} ${p.qty} @ %.2f (nothing sent)".format(Locale.ENGLISH, px))
     }
 
@@ -970,13 +1063,45 @@ object ArmLive {
         var f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
         if (f?.status !in DONE) { runCatching { Broker.cancel(id) }; f = runCatching { Broker.orderState(id) }.getOrNull() ?: f }
         if (f == null || f.filled <= 0) return closed + (if (f != null && f.status in DONE) back(cur) else cur)
-        val px = f.avgPrice.takeIf { it > 0 } ?: p.entry
+        // Final review F6: an average Zerodha did not give is read from its trade book, else the price now, else the price paid.
+        val px = f.avgPrice.takeIf { it > 0 } ?: orderPrice(id) ?: ltp?.takeIf { it > 0 } ?: p.entry
         runCatching { Notifier.orderFilled(app, exitSide.name, f.filled, p.symbol, px, "Live", "${p.label} · live $why", f.orderId) }
         val (done, rest) = closePart(cur, minOf(f.filled, cur.qty), px, why, exitSide.name)
         closed += done
         // The rest still open keeps a stop for all of it: rested again when out, grown back when a part sale only part filled.
         return closed + listOfNotNull(rest?.let { back(it) })
     }
+
+    /**
+     * Final review F6: the fills of what was closed of [p]'s contract outside this path (by hand, Zerodha's square-off), newest
+     * first, as (quantity, price): Zerodha's trade book's exit-side fills that are none of the app's own orders ([mine]), else the
+     * same from its order book ([orders]). Empty when neither shows one.
+     */
+    private suspend fun outsideFills(p: Pos, mine: Set<String>, orders: Collection<Broker.OrderRow>): List<Pair<Int, Double>> {
+        val exitSide = if (p.side > 0) "SELL" else "BUY"
+        runCatching { Broker.trades() }.getOrNull()?.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product &&
+            it.side == exitSide && it.orderId !in mine && it.qty > 0 && it.price > 0 }?.sortedByDescending { it.at }
+            ?.map { it.qty to it.price }?.takeIf { it.isNotEmpty() }?.let { return it }
+        return orders.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product && it.side == exitSide &&
+            it.id !in mine && it.filled > 0 && it.avg > 0 }.sortedByDescending { it.placedAt }.map { it.filled to it.avg }
+    }
+
+    /** The average price of [qty] units of [rows] (quantity, price) after the first [skip] units; null when none are left. */
+    internal fun takeAvg(rows: List<Pair<Int, Double>>, skip: Int, qty: Int): Double? {
+        var toSkip = skip; var need = qty; var sum = 0.0; var got = 0
+        for ((n0, px) in rows) {
+            var n = n0
+            if (toSkip > 0) { val s0 = minOf(toSkip, n); toSkip -= s0; n -= s0 }
+            if (n <= 0) continue
+            if (need <= 0) break
+            val take = minOf(need, n); sum += take * px; got += take; need -= take
+        }
+        return if (got > 0) sum / got else null
+    }
+
+    /** Order [id]'s average fill from Zerodha's trade book (an order whose own average was not given); null when it shows none. */
+    private suspend fun orderPrice(id: String): Double? = runCatching { Broker.trades() }.getOrNull()?.filter { it.orderId == id && it.qty > 0 && it.price > 0 }
+        ?.takeIf { it.isNotEmpty() }?.let { rows -> rows.sumOf { it.qty * it.price } / rows.sumOf { it.qty } }
 
     /** [sold] of [p] closed at [px] ([why]): the closed part, and the rest still open (null when all of it). */
     private fun closePart(p: Pos, sold: Int, px: Double, why: String, exitSide: String): Pair<Pos, Pos?> {
@@ -994,15 +1119,25 @@ object ArmLive {
      * regular look, every shadow trade. [stream]: prices from the stream's fresh ticks where it has them (the live lane). A worker
      * thread; never the tick path. Nothing open: returns at once (memory only).
      */
-    /** A damaged book's open live trades are still to be taken back from Zerodha (memory): the watch runs for them. */
-    val recoverHint: Boolean get() = recoverDue
+    /**
+     * A damaged book's open live trades are still to be taken back from Zerodha, or the book could not be read yet (final review
+     * F1: it may hold open live trades) - memory only: every lane that watches (the minute lane, the live lane, the 15-second
+     * check) and every keep-alive keeps running for it, and the watch reads the book again.
+     */
+    val recoverHint: Boolean get() = recoverDue || unreadable
 
-    /** Whether a look has work now (memory only): a live trade held, a shadow trade open, or a damaged book to recover. */
-    val lookDue: Boolean get() = holdingHint || shadowHint || recoverDue
+    /** Whether a look has work now (memory only): a live trade held, a shadow trade open, a damaged or unread book. */
+    val lookDue: Boolean get() = holdingHint || shadowHint || recoverHint
+
+    private fun retryWaitMs(): Long = (RETRY_MS shl (readFails - 1).coerceIn(0, 4)).coerceAtMost(RETRY_MAX_MS)
 
     suspend fun watch(stream: Boolean = false) {
         if (!ready()) return
         if (cache == null) {
+            // Final review F1: an unreadable book is read again by the minute lane and the 15-second check - never the live lane,
+            // which comes every tick and must not wait on the Keystore - at most every 5 s, doubling to 60 s while it keeps failing.
+            if (stream && unreadable) return
+            if (unreadable && runCatching { nowMs() }.getOrDefault(0L) - readFailedMs in 0 until retryWaitMs()) return
             val ok = runCatching { lock.withLock { book() } }.isSuccess
             if (!ok) return
         }
@@ -1012,9 +1147,16 @@ object ArmLive {
         try {
             if (recoverDue && Broker.loggedIn) runCatching { recover() }
             if (holdingHint) look(stream)
-            if (!stream && shadowHint) runCatching { lookShadow() }
         } finally { opLock.unlock() }
+        // The shadow trades after, under their own lock (review of the final fixes): their quote and candle reads never hold up
+        // the live trades' looks (the live lane and the 15-second check skip a look while [opLock] is held).
+        if (!stream && shadowHint && shadowLock.tryLock()) {
+            try { runCatching { lookShadow() } } finally { shadowLock.unlock() }
+        }
     }
+
+    /** One shadow look at a time (never the live trades' [opLock]). */
+    private val shadowLock = Mutex()
 
     /** Each paper book's legs as last read by a regular look, for the stream looks (memory only). */
     private val legsKept = java.util.concurrent.ConcurrentHashMap<String, List<PaperLeg>>()
@@ -1038,7 +1180,8 @@ object ArmLive {
 
     private suspend fun look(stream: Boolean) {
         val open = lock.withLock { book().positions.filter { it.open && !it.shadow }.toList() }
-        if (open.isEmpty() || !Broker.loggedIn) return
+        if (open.isEmpty()) return
+        if (!Broker.loggedIn) { waitingForLogin(open, stream); return }
         val t = now()
         val ms = nowMs()
         var orders = (if (stream) runCatching { Broker.ordersRecon() } else runCatching { Broker.orders() }).getOrNull()?.associateBy { it.id } ?: return
@@ -1142,6 +1285,16 @@ object ArmLive {
             }
             var excess = live.filter { it.first in counted }.sumOf { (cur(it.first) ?: it.second).qty } - held.coerceAtLeast(0)
             if (excess <= 0) continue
+            // Final review F6: what was closed outside is booked at what Zerodha's trade book (else its order book) says it sold
+            // for; only with neither, at the price now (else the price paid), as before.
+            val mine = known().toSet()
+            // Each closed part takes the next of those fills (newest first), never the same fill twice (review of the final fixes).
+            var fills: List<Pair<Int, Double>>? = null
+            var used = 0
+            suspend fun outsideAt(p: Pos, q: Int): Double? {
+                val rows = fills ?: outsideFills(p, mine, orders.values).also { fills = it }
+                return takeAvg(rows, used, q).also { if (it != null) used += q }
+            }
             for ((p0, _) in live) {
                 if (excess <= 0) break
                 if (p0 !in counted) continue
@@ -1154,11 +1307,11 @@ object ArmLive {
                     if (out == null) continue
                     val side = if (p.side > 0) "SELL" else "BUY"
                     val filled = out.first == "COMPLETE" && (out.second?.filled ?: p.qty) - p.stopBooked > 0
-                    val px = (if (filled) out.second?.avgPrice?.takeIf { it > 0 } ?: p.stopTrigger else null) ?: ltpOf(p) ?: p.entry
+                    val px = (if (filled) out.second?.avgPrice?.takeIf { it > 0 } ?: p.stopTrigger else outsideAt(p, p.qty)) ?: ltpOf(p) ?: p.entry
                     if (filled) runCatching { Notifier.orderFilled(app, side, p.qty, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", p.slId) }
                     set(p0, listOf(closePart(p, p.qty, px, if (filled) p.stopWord else "closed_at_zerodha", side).first))
                 } else {
-                    val (done, rest) = closePart(p, take, ltpOf(p) ?: p.entry, "closed_at_zerodha", if (p.side > 0) "SELL" else "BUY")
+                    val (done, rest) = closePart(p, take, outsideAt(p, take) ?: ltpOf(p) ?: p.entry, "closed_at_zerodha", if (p.side > 0) "SELL" else "BUY")
                     set(p0, listOfNotNull(done, rest))
                 }
                 excess -= take
@@ -1230,6 +1383,26 @@ object ArmLive {
         commit(updates)
     }
 
+    /** Trades Boss was told are waiting for the day's Zerodha login to exit ("ref|day"; memory, final review F8). */
+    private val loginAsked: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * Final review F8: no Zerodha login today, so nothing can be sold - its stop still rests at Zerodha where it can. A trade whose
+     * exit is due (its paper trade closed or sold part, its square-off) is told to Boss once a day: he logs in, or closes it in Kite.
+     */
+    private fun waitingForLogin(open: List<Pos>, stream: Boolean) {
+        val t = runCatching { now() }.getOrElse { return }
+        if (loginAsked.size > 500) loginAsked.clear()
+        for (p in open) {
+            if (p.unconfirmed) continue
+            val sell = runCatching { paperSide(p, legsOf(LiveMirror.spec(p.key), stream)).second }.getOrDefault(0)
+            if (sell <= 0 && !LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day)) continue
+            if (!loginAsked.add("${p.ref}|${t.toLocalDate()}")) continue
+            com.optionslab.app.work.Alerts.error("${p.label} live trade waiting for the Zerodha login to exit (${p.symbol}). " +
+                "Log in to Zerodha in the app, or close it in Kite.", WHO)
+        }
+    }
+
     /** The look's changes into the book (each old trade replaced by what it became), the closed ones logged once. */
     private suspend fun commit(updates: Map<Pos, List<Pos>>) = lock.withLock {
         val b = book()
@@ -1249,42 +1422,118 @@ object ArmLive {
 
     /**
      * The shadow trades' look (a regular one, never the live lane): each follows its paper trade and its stop exactly as a live trade
-     * would - priced from Zerodha's quote (or the last seen) - and nothing is ever sent.
+     * would - priced from Zerodha's quote (or the last seen) - and nothing is ever sent. Final review F4: a stop is judged on the
+     * lowest (a short's highest) price traded since the last look - the stream's ticks, else the minute candles - as the resting SL
+     * would have filled on a wick; it fills at its trigger less the spread or the measured stop slippage (never past its limit),
+     * and any other exit sells at Zerodha's bid (buys back at the ask), never better than the measured live slippage.
      */
     private suspend fun lookShadow() {
         val open = lock.withLock { book().positions.filter { it.open && it.shadow }.toList() }
         if (open.isEmpty()) return
         val t = now()
+        val realMs = System.currentTimeMillis()
+        val ms = nowMs()
         val q = if (Broker.loggedIn) runCatching { Broker.stopQuotes(open.map { "${it.exchange}:${it.symbol}" }.distinct()) }.getOrDefault(emptyMap()) else emptyMap()
+        val exitSlip = measured(com.optionslab.ira.Slippage.Leg.EXIT, EXIT_BASES)
+        val stopSlip = measured(com.optionslab.ira.Slippage.Leg.EXIT, STOP_BASES)
+        // The minute candles read this look, by contract (one read each), and at most [CANDLE_READS] of them.
+        val candleCalls = HashMap<Long, List<com.optionslab.engine.Upstox.Bar>?>()
         val updates = LinkedHashMap<Pos, List<Pos>>()
         for (p0 in open) {
             val (p, paperSell, paperWhy) = paperSide(p0, legsOf(LiveMirror.spec(p0.key), false))
-            val ltp = q["${p.exchange}:${p.symbol}"]?.last?.takeIf { it > 0 }?.also { shadowMarks[p.ref] = it } ?: shadowMarks[p.ref]
+            val quote = q["${p.exchange}:${p.symbol}"]?.takeIf { it.last > 0 }
+            val ltp = quote?.last?.also { shadowMarks[p.ref] = it } ?: shadowMarks[p.ref]
+            // The moment of its last look (null after a restart: judged on the price now only, as a stop moved up since must
+            // not be judged on the prices before it moved).
+            val since = shadowSeen[p.ref]
+            val (known, extreme) = if (since != null && p.stopTrigger != null)
+                runCatching { shadowExtreme(p, since, realMs, ms, candleCalls) }.getOrDefault(false to null) else (true to null)
+            // A window that could not be read is kept for the next look (a wick in it is still seen then), never skipped.
+            if (known) shadowSeen[p.ref] = realMs to ms
             // Review: a stop the price has reached is booked first - the resting SL at Zerodha would have filled before the paper
-            // exit the app follows; with no price at all nothing is booked (never at the price paid).
-            val atStop = LiveMirror.atStop(ltp, p.stopTrigger, p.side)
+            // exit the app follows; with no price at all (and no wick seen) nothing is booked (never at the price paid).
+            val atStop = LiveMirror.shadowStopReached(ltp, extreme, p.stopTrigger, p.side)
             val d0 = LiveMirror.decide(LiveMirror.Look(side = p.side, qty = p.qty, held = p.qty * p.side, ltp = ltp, tick = p.tick,
                 stopTrigger = p.stopTrigger, stopResting = false, wanted = wanted(p), paperSell = paperSell, paperReason = paperWhy,
                 squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = false))
             val d = if (atStop) LiveMirror.Decision(LiveMirror.Step.SELL, "stop", p.qty) else d0
-            if (d.step == LiveMirror.Step.SELL && ltp == null) { if (p != p0) updates[p0] = listOf(p); continue }
+            if (d.step == LiveMirror.Step.SELL && ltp == null && !atStop) { if (p != p0) updates[p0] = listOf(p); continue }
             when (d.step) {
                 LiveMirror.Step.SELL -> {
                     val stopExit = d.why == "stop"
-                    val px = LiveMirror.shadowExit(stopExit, ltp ?: p.entry, p.stopTrigger, p.tick, p.side)
+                    val hs = halfSpreadOf(p)
+                    val trig = p.stopTrigger
+                    // A wick that went through the SL's limit: the limit order rests and fills at its limit when the price comes back.
+                    val px = if (stopExit && trig != null && !LiveMirror.runThrough(ltp, trig, p.tick, p.side))
+                        (if (LiveMirror.runThrough(extreme, trig, p.tick, p.side)) LiveMirror.stopLimit(trig, p.tick, p.side)
+                        else LiveMirror.shadowStopFill(trig, p.tick, p.side, maxOf(hs, stopSlip)))
+                    else LiveMirror.shadowFill(p.side < 0, ltp ?: trig ?: p.entry, quote?.bid, quote?.ask, p.tick, hs, exitSlip)
                     val (done, rest) = closePart(p, d.qty, px, if (stopExit) p.stopWord else d.why ?: "exit", if (p.side > 0) "SELL" else "BUY")
                     updates[p0] = listOfNotNull(done, rest)
-                    if (rest == null) shadowMarks.remove(p.ref)
+                    if (rest == null) { shadowMarks.remove(p.ref); shadowSeen.remove(p.ref) }
                 }
                 LiveMirror.Step.PLACE_STOP -> if (d.to != p.stopTrigger || p != p0) {
                     val w = wanted(p)
                     updates[p0] = listOf(p.copy(stopTrigger = d.to, stopKind = if (w != null && d.to == w && p.stopKind != DISASTER) OWN else p.stopKind))
+                    // A stop that moved is judged only on the prices after it moved.
+                    if (d.to != p.stopTrigger) shadowSeen[p.ref] = realMs to ms
                 }
                 else -> if (p != p0) updates[p0] = listOf(p)
             }
         }
         if (updates.isNotEmpty()) commit(updates)
     }
+
+    /** Each open shadow trade's last look (real clock ms for the stream's ticks, the market clock ms for the candles); memory. */
+    private val shadowSeen = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Long>>()
+    /** The minute candles failed (no historical-data plan, a refusal): not asked again before this (real ms). */
+    @Volatile private var candlesOffUntil = 0L
+
+    /**
+     * The lowest price [p] traded since its last look ([since]: real and market ms) - a short's highest: the stream's ticks when it
+     * streams the contract, else Zerodha's minute candles that began after it (read once per contract a look, [calls]; at most
+     * [CANDLE_READS] reads, each within [CANDLE_MS]). (whether the window was read, the extreme or null for none traded); not read:
+     * the caller keeps the window for the next look.
+     */
+    private suspend fun shadowExtreme(p: Pos, since: Pair<Long, Long>, realMs: Long, ms: Long,
+                                      calls: MutableMap<Long, List<com.optionslab.engine.Upstox.Bar>?>): Pair<Boolean, Double?> {
+        val tok = runCatching { Broker.tokenOf("${p.exchange}:${p.symbol}") }.getOrNull() ?: return true to null
+        val long = p.side > 0
+        (if (long) KiteStream.lowSince(tok, since.first) else KiteStream.highSince(tok, since.first))?.let { return true to it }
+        // The minutes that began after the last look (a minute that began before it may hold prices from before the stop moved).
+        val from = since.second - Math.floorMod(since.second, 60_000L) + 60_000L
+        if (from > ms) return true to null
+        if (!Broker.loggedIn || realMs < candlesOffUntil) return false to null
+        val day = java.time.Instant.ofEpochMilli(from).atZone(com.optionslab.engine.IST).toLocalDate()
+        val all = (if (calls.containsKey(tok)) calls[tok] else {
+            if (calls.size >= CANDLE_READS) return false to null
+            // From the session's start (MCX: its whole day): one read serves every shadow trade on the contract this look.
+            val got = runCatching { kotlinx.coroutines.withTimeout(CANDLE_MS) {
+                if (p.exchange == "MCX") Broker.minuteBars(tok, day, from = "09:00:00", to = "23:59:00") else Broker.minuteBars(tok, day)
+            } }.getOrNull()
+            calls[tok] = got
+            if (got == null) candlesOffUntil = realMs + 2 * 60_000L
+            got
+        }) ?: return false to null
+        val bars = all.filter { it.epochSecond * 1000 in from..ms }
+        return true to (if (long) bars.mapNotNull { b -> b.low.takeIf { it > 0 } }.minOrNull() else bars.mapNotNull { b -> b.high.takeIf { it > 0 } }.maxOrNull())
+    }
+
+    private const val CANDLE_READS = 4
+    private const val CANDLE_MS = 3_000L
+
+    private val ENTRY_BASES = setOf(com.optionslab.ira.Slippage.Basis.SIGNAL, com.optionslab.ira.Slippage.Basis.LTP)
+    private val EXIT_BASES = setOf(com.optionslab.ira.Slippage.Basis.LTP, com.optionslab.ira.Slippage.Basis.SIGNAL)
+    private val STOP_BASES = setOf(com.optionslab.ira.Slippage.Basis.TRIGGER)
+
+    /** The app's measured live slippage on [leg] (a share of the price; the arms' own fills first, else all; 0 until measured). */
+    private fun measured(leg: com.optionslab.ira.Slippage.Leg, bases: Set<com.optionslab.ira.Slippage.Basis>): Double =
+        runCatching { com.optionslab.ira.Slippage.medianShare(FillSlippage.fills(), leg, bases, strategy = "Arms (live)") }.getOrDefault(0.0)
+
+    /** The half-spread a fill in [p]'s contract pays with no book read (the measured defaults, [com.optionslab.engine.sandbox.PaperSpread]). */
+    private fun halfSpreadOf(p: Pos): Double = runCatching {
+        com.optionslab.engine.sandbox.PaperSpread.halfSpread(p.symbol, null, p.exchange, now().toLocalTime())
+    }.getOrDefault(com.optionslab.engine.sandbox.PaperSpread.UNKNOWN)
 
     private val shadowMarks = java.util.concurrent.ConcurrentHashMap<String, Double>()
 
@@ -1335,7 +1584,7 @@ object ArmLive {
             if (st.status !in DONE) return p.copy(entryOrderId = oid)
         }
         if (st.filled <= 0) return null
-        val fill = st.avgPrice.takeIf { it > 0 } ?: p.entry
+        val fill = st.avgPrice.takeIf { it > 0 } ?: orderPrice(oid) ?: p.entry
         val got = p.copy(qty = st.filled, entryQty = st.filled, entry = fill, entryOrderId = oid, unconfirmed = false,
             charges = charge(side, fill, st.filled, p.exchange, p.symbol, p.multiplier))
         val (stop, kind) = spec?.let { firstStop(it, got) } ?: (null to OWN)
@@ -1414,7 +1663,7 @@ object ArmLive {
     fun stateOf(key: String): String {
         val v = _view.value
         if (!v.loaded) return "live state not read yet"
-        val live = runCatching { AppSettings.load().let { it.live && it.allowRealOrders } }.getOrDefault(false)
+        val live = liveFlags().first
         return stateWords(v.on(key), v.shadowOn(key)) + if (live) "" else "; the app is in Paper, so nothing is sent or shadowed"
     }
 
@@ -1459,10 +1708,11 @@ object ArmLive {
 
     /** For tests: the book forgotten (its file goes with the test's directory) and the memory notes cleared. */
     internal fun wipe() {
-        cache = null; unreadable = false; recoverDue = false; gttsKept = null; legsKept.clear(); shadowMarks.clear()
+        cache = null; unreadable = false; recoverDue = false; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
+        readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); levels.clear(); closedRefs.clear()
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */
-    internal fun forgetMemoryForTest() { cache = null; legsKept.clear(); gttsKept = null; levels.clear(); closedRefs.clear() }
+    internal fun forgetMemoryForTest() { cache = null; legsKept.clear(); gttsKept = null; levels.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear() }
 }

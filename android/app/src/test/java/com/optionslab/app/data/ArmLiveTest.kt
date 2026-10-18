@@ -50,6 +50,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testSync = true
         ArmLive.testDefaultOff = false                        // each arm's switch as in the app: on until Boss turns it off
         ArmLive.testNow = AutomationSupport.earlierToday()
+        FillSlippage.resetForTest()                           // no measured slippage left by another test (final review F4)
         if (com.optionslab.app.ira.Autopilot.enabled()) { com.optionslab.app.ira.Autopilot.resetForTest(); com.optionslab.app.ira.Autopilot.init(context); com.optionslab.app.ira.Autopilot.testLive = false }
         // Every arm out of shadow (Boss's PIN), so these tests are about the live orders; Solo (midday) cannot leave it (not proven).
         for (a in LiveMirror.ARMS) if (a.key != LiveMirror.SOLO_MIDDAY) runBlocking { ArmLive.setShadow(a.key, false, pinConfirmed = true, log = false) }
@@ -61,6 +62,7 @@ class ArmLiveTest : RobolectricTest() {
     @After fun down() {
         ArmLive.testSync = false
         ArmLive.testNow = null
+        ArmLive.testReadFails = null; ArmLive.testAccountFails = false; ArmLive.testSecurityFails = false; ArmLive.testHeard = null
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -374,7 +376,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(donchian, "sh"))
         assertTrue("nothing sent", kite.placed.isEmpty())
         val p = view().openShadow.single()
-        assertEquals(200.0, p.entry, 1e-9)
+        assertEquals("a MARKET buy pays Zerodha's ask (final review F4)", 200.05, p.entry, 1e-9)
         assertEquals(170.0, p.stopTrigger!!, 1e-9)
         assertTrue(view().openReal.isEmpty())
         watch()                                                    // seen open on paper
@@ -382,7 +384,7 @@ class ArmLiveTest : RobolectricTest() {
         watch()
         val c = view().shadowClosed.single()
         assertEquals("stop", c.why)
-        assertEquals("filled as the resting SL would: at its trigger", 170.0, c.exit!!, 1e-9)
+        assertEquals("filled as the resting SL would: at its trigger less BANKNIFTY's 0.16% half-spread", 169.70, c.exit!!, 1e-9)
         assertTrue("still nothing sent", kite.placed.isEmpty())
         val r = view().shadowRecord(donchian)
         assertEquals(1, r.trades)
@@ -400,7 +402,7 @@ class ArmLiveTest : RobolectricTest() {
         legs["sx"] = donchian to 0
         watch()
         val c = view().shadowClosed.single()
-        assertEquals("paper_exit", c.why); assertEquals(230.0, c.exit!!, 1e-9)
+        assertEquals("paper_exit", c.why); assertEquals("a MARKET sale gets the bid", 229.95, c.exit!!, 1e-9)
         assertEquals(1.0, view().shadowRecord(donchian).winRate, 1e-9)
         assertTrue(kite.placed.isEmpty())
     }
@@ -685,7 +687,7 @@ class ArmLiveTest : RobolectricTest() {
         legs["shs"] = donchian to 0                                // the paper trade closed in the same minute
         watch()
         assertEquals("stop", view().shadowClosed.single().why)
-        assertEquals(170.0, view().shadowClosed.single().exit!!, 1e-9)
+        assertEquals(169.70, view().shadowClosed.single().exit!!, 1e-9)
         // No price at all (not logged in, nothing seen): nothing booked, never at the price paid.
         ArmLive.entered(ask(donchian, "shn"))
         SecurePrefs.put("kite.accessToken", null)                   // logged out of Zerodha
@@ -764,5 +766,176 @@ class ArmLiveTest : RobolectricTest() {
         val active = kite.gtts.values.filter { it.optString("status", "active") == "active" }
         assertEquals(1, active.size)
         assertEquals(30, active.single().getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+    }
+
+    // ---- the final review (18 Oct) ----------------------------------------------------------------------------------------
+
+    /** F1: a book that cannot be read at the start is read again by the watch, and its open live trade is watched and exits. */
+    @Test fun anUnreadableBookIsReadAgainByEveryLaneAndItsOpenLiveTradeIsWatchedAndExits() {
+        val ref = "unread"
+        ArmLive.entered(ask(donchian, ref))
+        assertEquals(30, held())
+        watch()                                                    // seen open on paper
+        ArmLive.wipe()                                             // a restart: the memory gone, the book on disk
+        ArmLive.testReadFails = java.util.concurrent.atomic.AtomicInteger(1)
+        assertTrue("held while it cannot be read (positions first)", runBlocking { ArmLive.holding() })
+        assertTrue(view().unreadable)
+        assertFalse(ArmLive.holdingHint)
+        assertTrue("every lane and keep-alive keeps coming for it", ArmLive.recoverHint && ArmLive.lookDue)
+        legs[ref] = donchian to 0                                  // the paper trade closes meanwhile
+        watch()                                                    // within 5 s of the failed read: not hammered
+        assertTrue(view().unreadable)
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(10)
+        watch()                                                    // read now: the trade is watched and follows its paper exit
+        assertFalse(view().unreadable)
+        assertEquals("paper_exit", view().closed.single().why)
+        assertEquals("flat, never short", 0, held())
+        assertFalse(ArmLive.recoverHint)
+        assertTrue(kite.placed.any { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+    }
+
+    /** F2: Shadow turned on while the entry waits in the entry door: the door asks again and nothing is sent. */
+    @Test fun shadowTurnedOnWhileTheEntryWaitsInTheDoorSendsNothing() {
+        val gate = Broker::class.java.getDeclaredField("entryGate").apply { isAccessible = true }.get(null)
+        val door = gate.javaClass.getDeclaredField("door").apply { isAccessible = true }.get(gate) as kotlinx.coroutines.sync.Mutex
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        assertTrue("the door held, as another entry being sent would", door.tryLock())
+        val t = Thread { ArmLive.entered(ask(donchian, "door")) }  // its checks pass, then it waits at the door
+        try {
+            t.start()
+            val deadline = System.currentTimeMillis() + 20_000
+            while (heard.none { it.startsWith("door|$donchian|door") } && System.currentTimeMillis() < deadline) Thread.sleep(10)
+            assertTrue("the entry reached the door", heard.any { it.startsWith("door|$donchian|door") })
+            runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        } finally { door.unlock() }
+        t.join(20_000)
+        assertFalse(t.isAlive)
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue(view().open.isEmpty())
+        assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("in shadow"))
+    }
+
+    /** F2: the door's own look, from memory: the app in Paper, AI trades off, Trade live off or Shadow on each refuse. */
+    @Test fun theDoorAsksLiveAiTradesTradeLiveAndShadowAgain() {
+        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", LiveMirror.TAG)
+        runBlocking { ArmLive.refresh() }
+        assertNull(Broker.entryRecheck(o, "arm:$donchian"))
+        assertEquals("refused: a mirrored entry with no arm", Broker.entryRecheck(o, null))
+        IraNewsTrades.paperFirst = true
+        assertEquals("refused: \"AI trades go live\" is off", Broker.entryRecheck(o, "arm:$donchian"))
+        IraNewsTrades.paperFirst = false
+        AutomationSupport.liveSettings(live = false)
+        assertEquals("refused: the app is in Paper", Broker.entryRecheck(o, "arm:$donchian"))
+        AutomationSupport.liveSettings()
+        runBlocking { ArmLive.setLive(donchian, false, pinConfirmed = false) }
+        assertEquals(true, Broker.entryRecheck(o, "arm:$donchian")?.contains("Trade live"))
+        runBlocking { ArmLive.setLive(donchian, true, pinConfirmed = true); ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        assertEquals(true, Broker.entryRecheck(o, "arm:$donchian")?.contains("in shadow"))
+        // Another bot's entry is not asked about the arms' switches.
+        assertNull(Broker.entryRecheck(o.copy(tag = "iraalgo")))
+    }
+
+    /** F3: an account stop rule or a security check that cannot be read refuses the entry, never lets it through. */
+    @Test fun anAccountStopOrASecurityCheckThatCannotBeReadRefusesTheEntry() {
+        ArmLive.testAccountFails = true
+        ArmLive.entered(ask(donchian, "acct"))
+        assertTrue(kite.placed.isEmpty())
+        assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("account stop could not be checked"))
+        ArmLive.testAccountFails = false
+        ArmLive.testSecurityFails = true
+        ArmLive.entered(ask(donchian, "sec"))
+        assertTrue(kite.placed.isEmpty())
+        assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("security check"))
+        ArmLive.testSecurityFails = false
+        ArmLive.entered(ask(donchian, "ok"))
+        assertEquals("both readable: it goes", 2, kite.placed.size)
+    }
+
+    /** F4: a shadow trade bought at the ask, and its stop judged on the minute's low: a wick through it fills it. */
+    @Test fun aShadowStopIsJudgedOnTheMinutesLowNotJustThePriceAtTheLook() {
+        runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        ArmLive.entered(ask(donchian, "wick"))
+        assertEquals(200.05, view().openShadow.single().entry, 1e-9)
+        watch()                                                    // a look: its moment noted
+        val t0 = ArmLive.testNow!!
+        val minute = t0.withSecond(0).withNano(0).plusMinutes(1)
+        // Inside the next minute it dipped to 165 (through the 170 stop) and was back at 180 by the next look.
+        kite.candles = org.json.JSONArray().put(org.json.JSONArray().put(minute.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")))
+            .put(190.0).put(191.0).put(165.0).put(180.0).put(1000).put(0))
+        kite.quote("NFO:$sym", 180.0, 179.95, 180.05)
+        ArmLive.testNow = t0.plusMinutes(2)
+        watch()
+        val c = view().shadowClosed.single()
+        assertEquals("stop", c.why)
+        assertEquals("at its trigger less the half-spread, as the resting SL would have filled", 169.70, c.exit!!, 1e-9)
+        assertTrue(kite.placed.isEmpty())
+        // A minute from before the last look is never judged against a stop (it may have moved since).
+        runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        ArmLive.entered(ask(donchian, "wick2"))
+        watch()
+        kite.candles = org.json.JSONArray().put(org.json.JSONArray().put(ArmLive.testNow!!.withSecond(0).minusMinutes(1)
+            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ"))).put(190.0).put(191.0).put(100.0).put(180.0).put(1000).put(0))
+        ArmLive.testNow = ArmLive.testNow!!.plusMinutes(2)
+        watch()
+        assertEquals(1, view().openShadow.size)
+    }
+
+    /** F5: Solo (midday) trades in shadow while it is not proven, even when its stored Shadow says off. */
+    @Test fun soloMiddayStaysInShadowWhateverItsStoredSwitchSays() {
+        SecurePrefs.put(ArmLive.K_SHADOW, org.json.JSONObject().put(LiveMirror.SOLO_MIDDAY, false).toString())
+        java.io.File(context.noBackupFilesDir, "arm_live.vault").delete()
+        ArmLive.wipe(); runBlocking { ArmLive.refresh() }
+        assertFalse("its stored switch says out of shadow", view().shadowOn(LiveMirror.SOLO_MIDDAY))
+        assertNotNull(ArmLive.soloWhy())
+        ArmLive.entered(ask(LiveMirror.SOLO_MIDDAY, "solo"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertEquals(1, view().openShadow.count { it.key == LiveMirror.SOLO_MIDDAY })
+    }
+
+    /** F6: a part closed by hand is booked at what Zerodha's trade book (else its order book) says it sold for. */
+    @Test fun aPartClosedByHandIsBookedAtWhatZerodhaSaysItSoldFor() {
+        ArmLive.entered(ask(donchian, "byhand", qty = 90))
+        watch()
+        kite.tradesFromFills = true
+        kite.orders["H1"] = FakeKite.Order("H1", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 214.0)
+        kite.positions["NFO:$sym:MIS"] = 60 to 200.0               // Boss sold one lot in Kite at 214 (the price now is 200)
+        watch()
+        assertEquals("closed_at_zerodha", view().closed.single().why)
+        assertEquals("the trade book's price", 214.0, view().closed.single().exit!!, 1e-9)
+        kite.tradesFromFills = false                               // the trade book shows nothing: the order book's average
+        kite.orders["H2"] = FakeKite.Order("H2", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 221.0,
+            at = java.time.LocalDateTime.now(com.optionslab.engine.IST).plusMinutes(1))
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0
+        watch()
+        assertEquals(listOf(214.0, 221.0), view().closed.map { it.exit!! })
+        assertEquals(30, view().open.single().qty)
+    }
+
+    /** F6 (its review): parts closed outside in one look each take the next fill, never the same one twice. */
+    @Test fun eachPartClosedOutsideTakesTheNextFill() {
+        val rows = listOf(30 to 220.0, 30 to 214.0, 60 to 210.0)          // newest first
+        assertEquals(220.0, ArmLive.takeAvg(rows, 0, 30)!!, 1e-9)
+        assertEquals(214.0, ArmLive.takeAvg(rows, 30, 30)!!, 1e-9)
+        assertEquals((214.0 * 15 + 210.0 * 45) / 60, ArmLive.takeAvg(rows, 45, 60)!!, 1e-9)
+        assertEquals(210.0, ArmLive.takeAvg(rows, 60, 90)!!, 1e-9)       // only what is left
+        assertNull(ArmLive.takeAvg(rows, 120, 30))
+        assertNull(ArmLive.takeAvg(emptyList(), 0, 30))
+    }
+
+    /** F8: an exit due before the day's Zerodha login: Boss is told once, and nothing is sold. */
+    @Test fun anExitDueWithNoZerodhaLoginTellsBossOnce() {
+        ArmLive.entered(ask(donchian, "nologin"))
+        watch()
+        SecurePrefs.put("kite.accessToken", null)                   // no Zerodha login (a new day before the login)
+        AutomationSupport.clearAlerts()
+        watch()
+        assertTrue("nothing due: nothing said", AutomationSupport.alerts().none { it.contains("waiting for the Zerodha login") })
+        legs["nologin"] = donchian to 0                            // its paper trade closed
+        watch(); watch()
+        val said = AutomationSupport.alerts().filter { it.contains("live trade waiting for the Zerodha login to exit") }
+        assertEquals(said.toString(), 1, said.size)
+        assertTrue(said.single().contains(LiveMirror.spec(donchian)!!.label))
+        assertEquals("nothing sold", 1, view().openReal.size)
     }
 }

@@ -97,6 +97,22 @@ object Slippage {
         return Stats(fills.size, median(rs), quantile(rs, 0.9), median(ts), quantile(ts, 0.9), fills.sumOf { it.rupees * it.qty })
     }
 
+    /** Live fills needed before a measured slippage is used ([medianShare]). */
+    const val MIN_MEASURED = 5
+
+    /**
+     * 18 Oct (final review F4, shadow P&L no better than live): the median slippage of Zerodha's own fills (never paper) on [leg]
+     * whose intended price came from one of [bases], as a share of that price (a cost positive, never below 0): [strategy]'s own
+     * fills when it has [min] of them, else every strategy's; 0 with fewer than [min] (nothing measured yet).
+     */
+    fun medianShare(fills: List<Fill>, leg: Leg, bases: Set<Basis>, strategy: String? = null, min: Int = MIN_MEASURED): Double {
+        val all = fills.filter { !it.paper && it.leg == leg && it.basis in bases && it.intended > 0 }
+        val own = if (strategy == null) emptyList() else all.filter { it.strategy == strategy }
+        val use = if (own.size >= min) own else all
+        if (use.size < min) return 0.0
+        return median(use.map { it.rupees / it.intended }).coerceAtLeast(0.0)
+    }
+
     /** Per strategy, then entry or exit, then buy or sell: "ORB · entries · BUY" -> its figures. Most fills first. */
     fun groups(fills: List<Fill>): List<Pair<String, Stats>> =
         fills.groupBy { "${it.strategy} · ${it.leg.word} · ${it.side}" }.mapNotNull { (k, v) -> stats(v)?.let { k to it } }

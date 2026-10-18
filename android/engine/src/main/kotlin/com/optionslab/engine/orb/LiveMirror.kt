@@ -150,6 +150,50 @@ object LiveMirror {
         return if (runThrough(ltp, trigger, tick, side)) ltp else trigger
     }
 
+    /**
+     * Final review F4 (shadow P&L no better than live): a shadow MARKET fill as Zerodha would give it. A buy ([buy]) pays the
+     * [ask] and a sell gets the [bid] when the quote has a usable book ([com.optionslab.engine.sandbox.PaperSpread.fromBook]);
+     * with none, the [last] price moved against the order by [halfSpread] (the measured default). Then never better than the
+     * app's own measured live slippage on such fills ([measured]: a share of the price, a cost positive; 0 with too few fills):
+     * the worse of the two - not their sum, since the measured slippage is taken against the last price and so already holds
+     * the spread. On the [tick], rounded against the order, never under one tick.
+     */
+    fun shadowFill(buy: Boolean, last: Double, bid: Double?, ask: Double?, tick: Double, halfSpread: Double, measured: Double): Double {
+        val book = if (bid != null && ask != null) com.optionslab.engine.sandbox.PaperSpread.fromBook(bid, ask) else null
+        val hs = halfSpread.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0
+        val m = measured.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0
+        val ref = if (last.isFinite() && last > 0) last else if (book != null) (bid!! + ask!!) / 2 else return last
+        val touch = if (book != null) (if (buy) ask!! else bid!!) else if (buy) ref * (1 + hs) else ref * (1 - hs)
+        val worst = if (buy) maxOf(touch, ref * (1 + m)) else minOf(touch, ref * (1 - m))
+        val t = if (tick.isFinite() && tick > 0) tick else 0.05
+        return Kite.onTick(worst, t, if (buy) Kite.Side.BUY else Kite.Side.SELL).coerceAtLeast(t)
+    }
+
+    /**
+     * Final review F4: whether a shadow trade's stop at [trigger] was reached since its last look - by the price now ([ltp]) or by
+     * the extreme traded meanwhile ([extreme]: a long's lowest, a short's highest, from the stream's ticks or the minute candles),
+     * so a wick through the stop inside the minute counts as the resting SL at Zerodha would have filled on it.
+     */
+    fun shadowStopReached(ltp: Double?, extreme: Double?, trigger: Double?, side: Int): Boolean =
+        atStop(ltp, trigger, side) || atStop(extreme, trigger, side)
+
+    /**
+     * Final review F4: where the resting SL at [trigger] fills for a shadow trade: at the trigger moved against the order by
+     * [slip] (a share: the half-spread, or the measured live stop slippage when worse), never past the SL's own limit
+     * ([stopLimit]) - an SL fills at its limit or better. (A price through that limit now is a market sale: [shadowFill].)
+     */
+    fun shadowStopFill(trigger: Double, tick: Double, side: Int, slip: Double): Double {
+        val s = slip.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0
+        val lim = stopLimit(trigger, tick, side)
+        val raw = if (side >= 0) maxOf(trigger * (1 - s), lim) else minOf(trigger * (1 + s), lim)
+        return Kite.onTick(raw, tick, if (side >= 0) Kite.Side.SELL else Kite.Side.BUY).let { if (side >= 0) maxOf(it, lim) else minOf(it, lim) }
+            .coerceAtLeast(tick)
+    }
+
+    /** What a shadow record includes, said beside it on the card (final review F4). */
+    const val SHADOW_BASIS = "shadow priced at Zerodha's ask to buy and bid to sell, with the app's measured slippage and the " +
+        "charges; stops judged on each minute's low or high"
+
     /** A shadow record: its closed trades' nets ([nets], after charges): (trades, net, win rate 0..1; NaN with none). */
     data class Record(val trades: Int, val net: Double, val winRate: Double)
 

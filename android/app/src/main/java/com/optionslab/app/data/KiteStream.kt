@@ -144,6 +144,9 @@ object KiteStream {
     /** The highest price [token] traded on the stream after [sinceMs] (epoch ms), or null when the stream has none kept. */
     fun highSince(token: Long, sinceMs: Long): Double? = paths[token]?.highSince(sinceMs)
 
+    /** The lowest price [token] traded on the stream after [sinceMs] (epoch ms), or null when the stream has none kept. */
+    fun lowSince(token: Long, sinceMs: Long): Double? = paths[token]?.lowSince(sinceMs)
+
     /** Where a resting SELL stop at [trigger] on [token], resting since [sinceMs], filled on the stream's ticks, or null. */
     fun sellStopFill(token: Long, sinceMs: Long, trigger: Double): Double? = paths[token]?.sellStopFill(sinceMs, trigger)
 

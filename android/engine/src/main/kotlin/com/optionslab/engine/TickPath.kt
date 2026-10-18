@@ -53,6 +53,15 @@ class TickPath(private val keepMs: Long = 5 * 60_000L, private val bucketMs: Lon
         return high
     }
 
+    /** The lowest price traded after [sinceMs], or null when none is kept (18 Oct, final review F4: a shadow stop's wick). */
+    @Synchronized fun lowSince(sinceMs: Long): Double? {
+        val from = firstAfter(sinceMs)
+        if (from >= buckets.size) return null
+        var low = buckets[from].low
+        for (i in from + 1 until buckets.size) low = minOf(low, buckets[i].low)
+        return low
+    }
+
     /**
      * Where a resting SELL stop at [trigger], resting since [sinceMs], filled: the first bucket after it that traded at or
      * under the trigger, at the trigger or at that bucket's first price when it was already under it. Null: not reached.

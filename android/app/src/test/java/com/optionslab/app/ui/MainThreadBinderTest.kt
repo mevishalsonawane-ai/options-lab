@@ -76,4 +76,22 @@ class MainThreadBinderTest {
         // Jarvis's own yes-or-no questions are said only through the lock-aware path.
         assertFalse(Regex("sayWhenFree\\([^)]*\"question\"\\)").containsMatchIn(v))
     }
+
+    /** 18 Oct (final review F7): the Hero dialog's live state is worked out on the IO threads, never in composition. */
+    @Test fun theHeroDialogsLiveStateIsReadOffTheMainThread() {
+        val s = src("com/optionslab/app/ui/screens/OrbRows.kt") ?: return
+        assertFalse(s.contains("+ com.optionslab.app.data.ArmLive.stateOf("))
+        assertTrue(Regex("produceState\\([^)]*\\)\\s*\\{\\s*value = kotlinx\\.coroutines\\.withContext\\(kotlinx\\.coroutines\\.Dispatchers\\.IO\\)\\s*\\{\\s*" +
+            "com\\.optionslab\\.app\\.data\\.ArmLive\\.stateOf\\(").containsMatchIn(s))
+        // ArmLive's state words and its paper-fill note read the Live switch from memory, never the settings.
+        val a = src("com/optionslab/app/data/ArmLive.kt") ?: return
+        assertTrue(a.contains("if (!liveFlags().first) return"))
+        // Each function's whole body, up to its closing brace at the object's indent.
+        for (f in listOf("fun stateOf(key: String): String {", "fun entered(ask: Ask) {", "internal fun doorRefusal(arm: String?): String? {")) {
+            val at = a.indexOf(f)
+            assertTrue(f, at >= 0)
+            val body = a.substring(at, a.indexOf("\n    }", at))
+            assertFalse(f, body.contains("AppSettings.load") || body.contains("SecurePrefs."))
+        }
+    }
 }

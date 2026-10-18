@@ -106,4 +106,17 @@ class TickPathTest {
         }
         return out
     }
+
+    /** 18 Oct (final review F4): the lowest price since a look, for a shadow stop judged on a wick. */
+    @Test fun theLowSinceALookIsEveryTickAfterIt() {
+        val p = TickPath()
+        assertNull(p.lowSince(0))
+        p.record(300.0, 10_000)
+        p.record(285.0, 10_400)       // a dip inside one second
+        p.record(296.0, 11_200)
+        p.record(298.0, 14_000)
+        assertEquals(285.0, p.lowSince(9_000))
+        assertEquals(296.0, p.lowSince(10_500), "the bucket holding the look itself is the look's own")
+        assertNull(p.lowSince(14_000))
+    }
 }

@@ -45,6 +45,17 @@ object SecurePrefs {
         private set
 
     /**
+     * 18 Oct (final review F2): the Live switch's generation - bumped by a write of the app's mode, its real-orders switch or
+     * "AI trades go live" ([LIVE]) and never by anything else, so the entry door keeps those three in memory
+     * ([com.optionslab.app.data.ArmLive.liveFlags]) and still sees a flip at once. Kept values compare it with [generationHint].
+     */
+    @Volatile var liveHint: Int = 0
+        private set
+
+    /** The settings behind [liveHint]: the mode, the real-orders switch and "AI trades go live" (IraNewsTrades.PAPER_KEY). */
+    private val LIVE = setOf("k.mode", "k.allow", "jarvis.trades.paper.v3")
+
+    /**
      * TEST ONLY: how many settings reads [countedThread] made ([getString] and the other getters), to prove the order path
      * makes none. Null in the app, always (one volatile read per get); never read by the app.
      */
@@ -60,6 +71,7 @@ object SecurePrefs {
     private fun touched(keys: Collection<String>) {
         if (keys.any { it in HOT || it.startsWith("tls.") }) generationHint++
         if (keys.any { it in GUARD }) guardHint++
+        if (keys.any { it in LIVE }) liveHint++
     }
 
     /** The settings the entry door keeps in memory for the bots' entries (the loss limit's day, the day lock). */

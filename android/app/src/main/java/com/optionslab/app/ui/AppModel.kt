@@ -121,8 +121,9 @@ internal const val PAPER_EXIT_PIN = "This is Paper mode: closing a real Zerodha 
  * Live and "AI trades go live" together ([AppModel.goLive]).
  */
 internal const val LIVE_PIN_ASK = "Enter your PIN to switch to Live. Your own orders then go to Zerodha straight after your PIN, as on paper, and " +
-    "\"AI trades go live\" turns on with it. Each arm keeps its own live choice, and every paper strategy whose own \"Trade live\" is on " +
-    "(on until you switch it off, beside the Live switch) then also trades live, outside the paper-only period."
+    "\"AI trades go live\" turns on with it. Each arm keeps its own live choice. Every paper strategy starts in Shadow: it records what " +
+    "it would trade and sends nothing to Zerodha until you turn its Shadow off with your PIN (beside the Live switch); only then, with " +
+    "its own \"Trade live\" on and outside the paper-only period, does it trade live."
 /** 18 Oct (review): an entry whose price is too old at the PIN ([AppModel.confirmDirect]). */
 internal val PRICE_TOO_OLD = "Not sent: its price is more than ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} seconds old. Tap Buy or Sell again for a fresh price."
 /** 18 Oct: a new position never goes to Zerodha in Paper mode. */

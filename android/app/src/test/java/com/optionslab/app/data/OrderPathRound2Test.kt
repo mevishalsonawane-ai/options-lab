@@ -424,6 +424,30 @@ class OrderPathRound2Test : RobolectricTest() {
         assertNull(Broker.entryRecheck(o, "orb"))
     }
 
+    /**
+     * 18 Oct (final review F2, F7): a paper fill told to the arms' live path ([ArmLive.entered]) and a mirrored entry's last look
+     * inside the door (Live, AI trades, its Trade live and its Shadow) read nothing from the settings vault - the Live switch is
+     * kept in memory and read again only after it is written - and a flip written later is seen at once.
+     */
+    @Test fun theArmsLivePathsPaperNoteAndItsDoorLookReadNothingFromTheSettingsVault() {
+        val key = com.optionslab.engine.orb.LiveMirror.ARMS.first().key
+        val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", com.optionslab.engine.orb.LiveMirror.TAG)
+        val c = Paper.Contract(paperCe, "BANKNIFTY", expiry, 52_000.0, com.optionslab.engine.Right.CE, 30, "NSE_FO|TESTCE")
+        AutomationSupport.liveSettings(live = false)                 // Paper: a paper fill is only noted
+        // Warm: the first look after a write reads the switch once (then kept in memory).
+        ArmLive.liveFlags(); Broker.entryRecheck(o, "arm:$key")
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        try {
+            ArmLive.entered(ArmLive.Ask(key, "purity:1", c, 1, 30, 200.0, stop = 170.0))
+            assertEquals("refused: the app is in Paper", Broker.entryRecheck(o, "arm:$key"))
+        } finally { SecurePrefs.countedThread = null }
+        assertEquals("settings reads for a paper fill and a mirrored entry's door look", 0L, SecurePrefs.readsForTest.get())
+        AutomationSupport.liveSettings()                             // Live written: seen at once
+        assertTrue(Broker.entryRecheck(o, "arm:$key") != "refused: the app is in Paper")
+        assertTrue(ArmLive.liveFlags().first)
+    }
+
     /** Review R1: the vault's generation only ever grows (a kept kill switch can never match a stale one); dropKept forgets it. */
     @Test fun theKeptKillSwitchFollowsAStrictlyGrowingGenerationAndIsDroppedWithTheSession() {
         val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
