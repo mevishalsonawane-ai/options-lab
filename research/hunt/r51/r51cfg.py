@@ -30,8 +30,11 @@ OUT = Path(os.environ.get("R51_OUT", CACHE_ROOT / "r51")).expanduser()
 # Amendment A (15 Oct 2026): R51_CLEAN=1 builds and reads the stores with foreign rows and stray prints removed
 # (research/hunt/lakeclean.py), in their own folder so the original stores and trade caches are never mixed with them.
 CLEAN = os.environ.get("R51_CLEAN", "0") == "1"
+# Stale-print step (18 Oct 2026, research/hunt/lakestale/PREREG.md): R51_CLEAN=1 R51_STALE=1 also drops stale repeated
+# zero-volume prints (lakeclean step 3), in a folder of its own so the Amendment A stores stay reproducible.
+STALE = CLEAN and os.environ.get("R51_STALE", "0") == "1"
 if CLEAN:
-    OUT = OUT / "clean"
+    OUT = OUT / ("clean_stale" if STALE else "clean")
 RESULTS = HERE / "results"
 FINAL_FLAG = RESULTS / "FINAL_READ"
 

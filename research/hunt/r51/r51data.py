@@ -89,9 +89,11 @@ def expiry_days(tv: pd.Series) -> set:
     return {d for d, v in ok.items() if v}
 
 
-def add_options(und: str, days: dict, series: str = "WEEK", clean: bool = False):
+def add_options(und: str, days: dict, series: str = "WEEK", clean: bool = False, stale: bool = False):
     """Fill each Day's atm / con / expiry. clean (Amendment A): drop foreign rows and stray prints first (the ATM label
-    from the rows after the foreign step only); returns the log of every dropped or capped row (None when not clean)."""
+    from the rows after the foreign step only); stale (with clean, 18 Oct 2026): also drop stale repeated zero-volume
+    prints (lakeclean step 3; prices only, the ATM label and expiry test are unchanged); returns the log of every
+    dropped or capped row (None when not clean)."""
     step = K.STEP[und]
     tv = {}
     logs, total = [], 0
@@ -108,7 +110,7 @@ def add_options(und: str, days: dict, series: str = "WEEK", clean: bool = False)
         lab = o
         if clean:
             total += len(o)
-            o, lab, log = lakeclean.clean(o, closes)
+            o, lab, log = lakeclean.clean(o, closes, stale=stale)
             logs.append(log)
         labs = dict(tuple(lab[lab.offset == 0].groupby("day", sort=True)))
         # clean: the expiry test reads its 15:15 straddle from the same rows as the ATM label (a dropped stray-open row
@@ -155,7 +157,7 @@ def add_options(und: str, days: dict, series: str = "WEEK", clean: bool = False)
 
 def build(und: str) -> dict:
     days = index_days(und)
-    log = add_options(und, days, clean=K.CLEAN)
+    log = add_options(und, days, clean=K.CLEAN, stale=K.STALE)
     K.OUT.mkdir(parents=True, exist_ok=True)
     with open(K.OUT / f"day_{und}.pkl", "wb") as f:
         pickle.dump(days, f, protocol=pickle.HIGHEST_PROTOCOL)
