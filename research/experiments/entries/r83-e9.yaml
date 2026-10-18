@@ -1,0 +1,29 @@
+id: r83-e9
+title: 'R83: Natural-gas month-of-year seasonality'
+family: calendar-events
+date: '2026-10-18'
+doc: research/HUNT_R83_MCX_ENERGY.md
+hypothesis: Natural-gas month-of-year seasonality earns after strict MCX costs on 1 mini lot, beating its baseline in walk-forward
+  and final.
+data_version: Drive lake fut_daily_continuous (MCX, 2012-2026), Yahoo daily CL/NG/HG/INR
+period:
+  design: 2012-01-01..2022-12-31
+  holdout: 2023-01-01..2026-10-13 (final, read once)
+instruments:
+- NATURALGAS
+features:
+- 'signal source: MCX daily future (copper: COMEX x USD/INR proxy)'
+model_or_rule: walk-forward Henry Hub month-of-year mean sign (|t| >= 1.5, or all months), monthly hold, 2.5 x ATR stop
+settings: research/hunt/r83/PREREG.md section 4
+prereg: research/hunt/r83/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Frozen t15. Final 2023-01-01..2026-10-13: 14 trades, net Rs -37,413 (baseline Rs +14,687); walk-forward 2019-22
+    Rs -16,310 (baseline Rs +45,719); twin p 0.746; BH q 1.00 across 33 variants; net without the top 5 trades Rs -65,664.
+    Real MCX replay Aug 2025 - Oct 2026: none (daily rule). Gates failed: final_pos_and_beats_base, wf_pos_and_beats_base,
+    twin_p<0.10, bh_q<0.10, not_top5, trades>=30.'
+  costs: McxCosts.kt charges; futures half-spread CRUDEOILM 0.03%, NATGASMINI 0.06%, COPPER 0.05% each side, +0.02% on stops;
+    options CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90% half-spread
+holdout_read: true
+verdict: rejected
+notes: Too few final trades to judge (< 30); design and walk-forward were also negative or below baseline.

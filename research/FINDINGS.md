@@ -1173,3 +1173,23 @@ amendment 1 before the final read).
 has budget and RBI dates only.
 
 **App:** nothing changes; nothing goes on paper.
+
+## MCX energy and base metals: event days, US-open ORB, Liquidity, Donchian/breadth, seasonality, EVE regime, trend exits (R83, 18 Oct 2026) - 0 of 13 pass
+Full study: `HUNT_R83_MCX_ENERGY.md` (pre-registered `hunt/r83/PREREG.md`, commit 97f2e00). Intraday signal source: the US
+benchmark future as a labelled PROXY (WTI, Henry Hub; Dukascopy minutes 2016-2026), traded as 1 CRUDEOILM / NATGASMINI
+lot inside MCX hours. Daily: the MCX continuous future (copper: COMEX x INR). Design 2016/2012-2022, walk-forward
+2019-22, final 1 Jan 2023 - 13 Oct 2026, read once, plus a real-MCX futures and 1-ITM option replay (Aug 2025 - Oct
+2026). Strict costs: McxCosts + half-spread 0.03% crude / 0.06% natgas futures, 0.30-0.60% crude / 0.45-0.90% natgas options.
+- 33 variants, BH across all: 0 pass. EIA fade/follow (E1, E2), storage fade/follow (E3, E4), OPEC+ (E5), the US-open ORB
+  with SMA/breadth agreement (E6), the Liquidity book on crude 1h/15m (E7), NG seasonality (E9) and the rollover week (E12)
+  all lose in design, walk-forward and/or final. Gross is about zero; the costs decide.
+- The app's NG evening breakout (EVE) loses after costs on 2016-2026 Henry Hub data: design -Rs 1.43 lakh (1,634 trades),
+  final -Rs 51k (881), though its timing beats random (twin p 0.015). A calm-ATR filter halves the loss but stays negative
+  (final -Rs 37.6k, 533 trades). Switching EVE off is a risk-lowering paper call for Boss.
+- The 12-month trend arm on CRUDEOILM + NATGASMINI made +Rs 53.6k in the final (113 leg-months) after -Rs 14.6k in
+  design; neither a chandelier stop nor a weekly check beat it. Still "not proven".
+- Crude daily Donchian-20 + Supertrend: final +Rs 21.8k on 27 trades, but walk-forward below unfiltered, twin p 0.23 and
+  carried by its top 5. Agreement filters do not help on commodities out of sample.
+- Same signal, option vs mini future (real MCX): the option was worse in 4 of 7 replays, every crude one.
+- Not tested: API Tuesday (after MCX hours), zinc and aluminium (no data; Dhan token expired), trend-arm roll timing (no
+  next-month prices).
