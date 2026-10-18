@@ -729,4 +729,40 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(60, view().closed.sumOf { it.qty })
         assertTrue(view().open.isEmpty())
     }
+
+    @Test fun aStopForLessThanTheTradeThatFillsLeavesTheRestWithANewStop() {
+        ArmLive.entered(ask(donchian, "small", qty = 60))
+        val sid = view().open.single().stopOrderId!!
+        watch()
+        kite.order(sid).qty = 30                                    // the stop rests for 30 of the 60 (shrunk earlier)
+        kite.trigger(sid, 170.0)                                    // and fills, all of it
+        assertEquals(30, held())
+        watch()
+        assertEquals("stop", view().closed.single().why); assertEquals(30, view().closed.single().qty)
+        watch()
+        val rest = view().open.single()
+        assertEquals(30, rest.qty)
+        assertTrue("a new stop for the rest", rest.stopOrderId != null && rest.stopOrderId != sid)
+        assertEquals(30, kite.order(rest.stopOrderId!!).qty)
+        watch()
+        assertEquals("booked once", 1, view().closed.size)
+    }
+
+    @Test fun aFiredGttForLessThanTheTradeIsBookedOnceAndTheRestGetsANewGtt() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "gsmall", qty = 60))
+        val gid = kite.gtts.keys.single()
+        watch()
+        kite.gtts.getValue(gid).getJSONArray("orders").getJSONObject(0).put("quantity", 30)   // the GTT is for 30 of the 60
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)
+        kite.triggerGtt(gid)                                        // its LIMIT 161.50 fills: 30 sold
+        assertEquals(30, nrmlHeld())
+        kite.quote("NFO:$sym", 190.0, 189.95, 190.05)
+        watch(); watch()
+        assertEquals("booked once", 1, view().closed.size)
+        assertEquals(30, view().closed.single().qty)
+        assertEquals(30, view().open.single().qty)
+        val active = kite.gtts.values.filter { it.optString("status", "active") == "active" }
+        assertEquals(1, active.size)
+        assertEquals(30, active.single().getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+    }
 }

@@ -1048,7 +1048,7 @@ object ArmLive {
         // The GTT list: read on a regular look; a stream look (the live lane, every tick) uses the last one read within 15 s.
         // Review: a GTT missing from a CACHED list may simply be newer than it: only a fresh list may say a GTT is gone.
         var gttsFresh = false
-        val gtts = if (open.none { it.gttId != null }) emptyMap() else gttsKept?.takeIf { stream && System.currentTimeMillis() - it.first < 15_000L }?.second
+        var gtts = if (open.none { it.gttId != null }) emptyMap() else gttsKept?.takeIf { stream && System.currentTimeMillis() - it.first < 15_000L }?.second
             ?: runCatching { Broker.gtts().associateBy { it.id } }.getOrNull()?.also { gttsKept = System.currentTimeMillis() to it; gttsFresh = true }
         val stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(false)
         val updates = LinkedHashMap<Pos, List<Pos>>()
@@ -1064,6 +1064,9 @@ object ArmLive {
         suspend fun reread() {
             runCatching { Broker.orders() }.getOrNull()?.let { orders = it.associateBy { o -> o.id } }
             runCatching { Broker.positionBook().net }.getOrNull()?.let { net = it }
+            // GTTs too (review: one deleted earlier in this look must not still count against a sibling's stop).
+            if (gtts.orEmpty().isNotEmpty() || open.any { it.gttId != null })
+                runCatching { Broker.gtts().associateBy { it.id } }.getOrNull()?.let { gtts = it; gttsKept = System.currentTimeMillis() to it; gttsFresh = true }
             dirty.clear()
         }
 
@@ -1082,9 +1085,14 @@ object ArmLive {
                     val sold = minOf(newFill, p.qty)
                     runCatching { Notifier.orderFilled(app, side, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", p.slId) }
                     val (done, rest) = closePart(p, sold, px, p.stopWord, side)
-                    set(p0, listOfNotNull(done, rest?.copy(stopBooked = p.stopBooked + sold, stopQty = rest.stopQty?.let { (it - sold).coerceAtLeast(0) })))
+                    // The rest keeps a working stop's id (what is new of its fill is booked once); a stop that is done (filled for less
+                    // than the trade) is gone, so the next look rests a new one for the rest.
+                    val after = if (so.working) rest?.copy(stopBooked = p.stopBooked + sold, stopQty = rest.stopQty?.let { (it - sold).coerceAtLeast(0) })
+                        else rest?.copy(stopOrderId = null, stopQty = null, stopBooked = 0)
+                    set(p0, listOfNotNull(done, after))
                     continue
                 }
+                if (so != null && !so.working && so.status == "COMPLETE") p = p.copy(stopOrderId = null, stopQty = null, stopBooked = 0)
                 if (so != null && so.status in setOf("REJECTED", "CANCELLED")) {
                     com.optionslab.app.work.Alerts.post("${p.label}: the live stop at Zerodha was ${so.status.lowercase()} (${so.message.ifBlank { "no reason given" }}); " +
                         "the app watches it and rests it again.", com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
@@ -1097,12 +1105,17 @@ object ArmLive {
                     // A fired GTT: its own orders are the stop. All filled: that was the stop; refused or cancelled: rested again.
                     val st = g.orderIds.mapNotNull { orders[it] }
                     if (st.isNotEmpty() && st.all { it.status == "COMPLETE" }) {
+                        // All its orders filled: what is new of that fill is booked once, and the GTT is done - a rest (the GTT was for
+                        // less than the trade) gets a new stop on the next look.
                         val px = st.first().avg.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
                         val side = if (p.side > 0) "SELL" else "BUY"
-                        val sold = minOf(st.sumOf { it.filled }.takeIf { it > 0 } ?: p.qty, p.qty)
-                        runCatching { Notifier.orderFilled(app, side, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", st.first().id) }
-                        val (done, rest) = closePart(p, sold, px, p.stopWord, side)
-                        set(p0, listOfNotNull(done, rest)); continue
+                        val sold = minOf(((st.sumOf { it.filled }.takeIf { it > 0 } ?: p.qty) - p.stopBooked).coerceAtLeast(0), p.qty)
+                        if (sold > 0) {
+                            runCatching { Notifier.orderFilled(app, side, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", st.first().id) }
+                            val (done, rest) = closePart(p, sold, px, p.stopWord, side)
+                            set(p0, listOfNotNull(done, rest?.copy(stopOrderId = null, stopQty = null, stopBooked = 0))); continue
+                        }
+                        p = p.copy(stopOrderId = null, stopQty = null, stopBooked = 0)
                     }
                     if (st.isNotEmpty() && st.none { it.working }) p = p.copy(stopOrderId = null, stopQty = null)
                 }
@@ -1351,14 +1364,19 @@ object ArmLive {
             val lot = runCatching { Broker.spec(pos.exchange, pos.symbol).lotSize }.getOrDefault(1).coerceAtLeast(1)
             val side = if (pos.qty > 0) 1 else -1
             val p = Pos(spec.key, "recovered:${entry.id}", pos.symbol, pos.exchange, pos.product, side, kotlin.math.abs(pos.qty), kotlin.math.abs(pos.qty), lot, tick,
-                pos.multiplier.toInt().coerceAtLeast(1), pos.avg.takeIf { it > 0 } ?: entry.avg, now(), pos.avg, kotlin.math.abs(pos.qty), null, entry.id,
+                pos.multiplier.toInt().coerceAtLeast(1), pos.avg.takeIf { it > 0 } ?: entry.avg, now(), pos.avg, kotlin.math.abs(pos.qty),
+                // Its contract's expiry from the day's lists, so the 15:05 expiry square-off applies to it too (review).
+                runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == pos.symbol }?.expiry }.getOrNull(),
+                entry.id,
                 seen = false, heldSeen = true, stopKind = SAFETY)
             // A stop of this path's own still resting on it is kept as its stop; else the safety stop rests.
             val so = orders.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 (it.type == "SL" || it.type == "SL-M") }.singleOrNull()
             // Its GTT still resting (a carried trade's stop) is kept too: a second one beside it could fire with it into a short.
             val exitSide = if (side > 0) "SELL" else "BUY"
-            val gt = gtts?.firstOrNull { it.symbol == pos.symbol && it.exchange == pos.exchange && it.covers(exitSide, pos.product) > 0 }
+            // A GTT has no tag: one whose quantity is this position's is preferred (else one Boss or a strategy set could be taken).
+            val cands = gtts.orEmpty().filter { it.symbol == pos.symbol && it.exchange == pos.exchange && it.covers(exitSide, pos.product) > 0 }
+            val gt = cands.firstOrNull { it.covers(exitSide, pos.product) == kotlin.math.abs(pos.qty) } ?: cands.singleOrNull()
             adopted += when {
                 so != null -> p.copy(stopOrderId = so.id, stopTrigger = so.trigger, stopQty = ExitQty.remaining(so.qty, so.filled, so.pending), stopKind = OWN)
                 gt != null -> p.copy(stopOrderId = GTT + gt.id, stopTrigger = gt.triggers.firstOrNull(), stopQty = gt.covers(exitSide, pos.product), stopKind = OWN)
