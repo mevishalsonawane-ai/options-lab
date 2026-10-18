@@ -60,6 +60,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-18-live-check", OCT18, "Live check: test Zerodha, prices and orders in one tap",
+            "The Live check tests your Zerodha login, funds, prices, option chain and order margins, and never places an order. " +
+                "It times the price stream, its gaps and a reconnect, and checks each open position's stop is watched. " +
+                "A paper trade at live prices is bought and closed, and kept out of every result. " +
+                "Each step shows its time and passed, slow or failed. " +
+                "Stops are now judged on a price at most two seconds old, or Zerodha is asked. " +
+                "Prices are read faster, and the price stream never waits on saved data.",
+            "More → Zerodha → Live check, or ask Jarvis to run the live check"),
         Entry("2026-10-18-live-like-paper", OCT18, "Live works like paper: your PIN, then the order goes",
             "In Live, your Buy, Sell and Close go straight to Zerodha after your PIN, with no review card. " +
                 "Every check still runs first: the guard, kill switch, day lock, margin, lot size and market hours. " +

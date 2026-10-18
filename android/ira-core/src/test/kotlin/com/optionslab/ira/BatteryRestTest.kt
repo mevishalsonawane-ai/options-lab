@@ -224,7 +224,7 @@ class BatteryRestTest {
         // (16 Oct: the passed arms' exits fix and the Telegram login fix, the open trade change on top of those; R72 Breadth Donchian,
         // then R51's Supertrend filter newest.)
         // (17 Oct: the diagnostics fixes on top of all; 18 Oct: the whole-app review's fixes above them, then live-like-paper's.)
-        assertEquals(18, o)
+        assertEquals(19, o)
         assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
         assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
         assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)
