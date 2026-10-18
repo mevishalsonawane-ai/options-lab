@@ -203,7 +203,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                             d.record("mode", "${if (saved.live) "LIVE (Zerodha)" else "Paper"} · real orders allowed: ${saved.allowRealOrders}")
                         if (stored.oneTapOrders != saved.oneTapOrders) d.record("mode", "live orders without PIN ${if (saved.oneTapOrders) "ON" else "off"}")
                         if (stored.guardKill != saved.guardKill) d.record("mode", "kill switch ${if (saved.guardKill) "ON" else "off"}")
-                        AppSettings.save(saved)
+                        // Only what this change changed: a value the guard wrote since the read above is kept.
+                        AppSettings.saveChanged(stored, saved)
                     } catch (e: Exception) {
                         // Said, never a crash on this thread; the screen goes back to what the vault holds (below).
                         if (e is kotlinx.coroutines.CancellationException) throw e

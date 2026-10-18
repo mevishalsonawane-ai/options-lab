@@ -226,10 +226,8 @@ data class AppSettings(
             runCatching { Diag.record("mode", "kill switch ON (the guard: a live drawdown)") }
         }
 
-        fun save(s: AppSettings) {
-            // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
-            runCatching { SettingsLog.diff(load(), s) }
-            SecurePrefs.putAll(mapOf(
+        /** Every setting's vault key and value. */
+        private fun keys(s: AppSettings): Map<String, Any?> = mapOf(
                 "s.otm" to s.otmPct, "s.entry" to s.entry, "s.regime" to s.regime, "s.dated" to s.datedLot,
                 "s.lot" to s.pinnedLot, "s.wing" to (s.wingPct ?: -1.0), "s.capital" to s.capital,
                 "s.survive" to s.survive, "s.holdout" to s.holdout, "s.last" to s.healthLast,
@@ -250,7 +248,27 @@ data class AppSettings(
                 "g.mcxExit" to s.mcxExpiryExit, "g.mcxOptAt" to s.mcxOptionExitMinute, "g.mcxFutDays5" to s.mcxFutureExitDays,
                 "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
                 "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
-            ))
+            )
+
+        /**
+         * 18 Oct, review: only the settings [to] changes from [from] are written (the screen's change, applied to what was
+         * stored), so a value written meanwhile by someone else - the guard's kill switch - is never written back over.
+         */
+        fun saveChanged(from: AppSettings, to: AppSettings) {
+            // Settings from before the guard's v2 defaults are read through a migration (see [load]): written whole once.
+            if (SecurePrefs.getInt("g.v", 1) < 2) { save(to); return }
+            runCatching { SettingsLog.diff(from, to) }
+            val was = keys(from)
+            val changed = keys(to).filter { (k, v) -> was[k] != v }
+            if (changed.isNotEmpty()) SecurePrefs.putAll(changed)
+            DangerToday.halfSize = to.dangerHalfSize
+            savesFlow.value = saveCount.incrementAndGet()
+        }
+
+        fun save(s: AppSettings) {
+            // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
+            runCatching { SettingsLog.diff(load(), s) }
+            SecurePrefs.putAll(keys(s))
             // The entry path reads the danger meter's switch from memory only: kept in step with every save (13 Oct).
             DangerToday.halfSize = s.dangerHalfSize
             savesFlow.value = saveCount.incrementAndGet()

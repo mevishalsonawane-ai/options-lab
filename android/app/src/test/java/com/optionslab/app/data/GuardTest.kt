@@ -86,6 +86,24 @@ class GuardTest : RobolectricTest() {
         assertFalse(AppSettings.load().guardKill)
     }
 
+    /** 18 Oct, review: a change saved from an older read writes only what it changed, so the guard's kill switch stays on. */
+    @Test fun aChangeSavedFromAnOlderReadNeverClearsTheGuardsKillSwitch() {
+        limits { it.copy(guardDrawdownPct = 10.0) }
+        val before = AppSettings.load()
+        assertFalse(before.guardKill)
+        Guard.onRefusal(listOf("Drawdown limit: 15.0% from the peak (limit 10%)"))   // between the read and the write
+        AppSettings.saveChanged(before, before.copy(theme = "dark", guardDailyLoss = 5_000.0))
+        val s = AppSettings.load()
+        assertTrue("the kill switch the guard set is kept", s.guardKill)
+        assertEquals("dark", s.theme); assertEquals(5_000.0, s.guardDailyLoss, 0.0)
+        // Nothing changed: nothing written, still kept.
+        AppSettings.saveChanged(s, s)
+        assertTrue(AppSettings.load().guardKill)
+        // Boss's own clear is a change, so it is written.
+        AppSettings.saveChanged(s, s.copy(guardKill = false))
+        assertFalse(AppSettings.load().guardKill)
+    }
+
     @Test fun theGuardsKillSwitchReadsAtOnceTouchesNothingElseAndReachesDisk() {
         // 18 Oct, review: written behind (never a vault write on the order path or the screen's thread), only the one key.
         limits { it.copy(guardDrawdownPct = 10.0, guardDailyLoss = 0.0, theme = "dark", pnlLossAlert = 4_000.0) }
