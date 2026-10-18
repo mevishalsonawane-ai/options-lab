@@ -33,7 +33,9 @@ object GoldPaper {
     const val DEFAULT_BALANCE = 1_000.0
     const val DEFAULT_LOTS = 0.01
 
-    data class Position(val entry: Double, val entryTime: LocalDateTime, val signalBar: LocalDateTime, val level: Double, val target: Double?)
+    /** One open buy; [lots] the lot size it was bought with (a lot change while holding never re-prices it: 18 Oct, review). */
+    data class Position(val entry: Double, val entryTime: LocalDateTime, val signalBar: LocalDateTime, val level: Double, val target: Double?,
+                        val lots: Double = DEFAULT_LOTS)
 
     data class Trade(val entry: Double, val exit: Double, val entryTime: LocalDateTime, val exitTime: LocalDateTime, val lots: Double,
                      val why: String, val pnl: Double)
@@ -52,7 +54,7 @@ object GoldPaper {
     ) {
         val realized: Double get() = trades.sumOf { it.pnl }
         val balance: Double get() = start + realized
-        fun open(mid: Double?): Double? = position?.let { p -> mid?.let { GoldLiquidity.pnl(p.entry, GoldLiquidity.sellPrice(it), lots) } }
+        fun open(mid: Double?): Double? = position?.let { p -> mid?.let { GoldLiquidity.pnl(p.entry, GoldLiquidity.sellPrice(it), p.lots) } }
     }
 
     private lateinit var app: Context
@@ -142,11 +144,11 @@ object GoldPaper {
                 val why = GoldLiquidity.exitReason(pos.level, pos.target, pos.signalBar, pos.entryTime, hourly, since, t)
                 if (why != null && mid != null) {
                     val px = GoldLiquidity.exitPrice(why, pos.target, mid)
-                    val tr = Trade(pos.entry, px, pos.entryTime, t, b.lots, why, GoldLiquidity.pnl(pos.entry, px, b.lots))
+                    val tr = Trade(pos.entry, px, pos.entryTime, t, pos.lots, why, GoldLiquidity.pnl(pos.entry, px, pos.lots))
                     b = b.copy(position = null, trades = b.trades + tr, status = "Sold: ${label(why)}")
                     notify("SELL XAUUSD now (paper): ${label(why)}",
                         "${when_(t)}: paper sold %.2f lot at %.2f, P&L %s. Futures price: XM's XAUUSD sits a few dollars lower.".format(
-                            java.util.Locale.ENGLISH, b.lots, px, usd(tr.pnl)), Notifier.SELL)
+                            java.util.Locale.ENGLISH, pos.lots, px, usd(tr.pnl)), Notifier.SELL)
                 } else b = b.copy(status = "Holding the buy from %.2f".format(java.util.Locale.ENGLISH, pos.entry))
             } else if (b.armed) {
                 save(b)
@@ -193,7 +195,7 @@ object GoldPaper {
         val s = GoldLiquidity.signal(hourly) ?: return "No liquidity break on the ${when_(bar.start)} candle"
         val mid = last?.close ?: return "No price to buy at"
         val px = GoldLiquidity.buyPrice(mid)
-        save(_book.value.copy(position = Position(px, t, bar.start, s.level, s.target),
+        save(_book.value.copy(position = Position(px, t, bar.start, s.level, s.target, b.lots),
             lastSignal = "${when_(bar.start)}: broke %.2f, bought at %.2f".format(java.util.Locale.ENGLISH, s.level, px)))
         notify("BUY XAUUSD now (paper): liquidity break",
             ("The ${when_(bar.start)} 1-hour candle took a liquidity pool above %.2f. Paper bought %.2f lot at %.2f" +
@@ -358,7 +360,7 @@ object GoldPaper {
             b.lastSignal?.let { put("lastSignal", it) } }
         .apply {
             b.position?.let { p -> put("pos", JSONObject().put("entry", p.entry).put("at", p.entryTime.toString()).put("bar", p.signalBar.toString())
-                .put("level", p.level).apply { p.target?.let { put("target", it) } }) }
+                .put("level", p.level).put("lots", p.lots).apply { p.target?.let { put("target", it) } }) }
         }
         .put("trades", JSONArray().apply {
             b.trades.forEach { t -> put(JSONObject().put("entry", t.entry).put("exit", t.exit).put("in", t.entryTime.toString())
@@ -368,7 +370,9 @@ object GoldPaper {
     private fun fromJson(o: JSONObject): Book {
         val pos = o.optJSONObject("pos")?.let { p ->
             Position(p.getDouble("entry"), LocalDateTime.parse(p.getString("at")), LocalDateTime.parse(p.getString("bar")), p.getDouble("level"),
-                if (p.has("target")) p.getDouble("target") else null)
+                if (p.has("target")) p.getDouble("target") else null,
+                // A buy saved before its lots were kept: the book's lots (what it was bought with unless changed since).
+                p.optDouble("lots", o.optDouble("lots", DEFAULT_LOTS)))
         }
         val tr = o.optJSONArray("trades")?.let { a ->
             (0 until a.length()).map { i -> a.getJSONObject(i).let { t ->

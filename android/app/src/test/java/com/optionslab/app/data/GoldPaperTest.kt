@@ -92,6 +92,33 @@ class GoldPaperTest : RobolectricTest() {
         assertEquals(GoldLiquidity.exitPrice("next_liquidity", target, 0.0), tr.exit, 1e-9)
     }
 
+    @Test fun aLotChangeWhileHoldingNeverRepricesTheOpenBuy() {
+        // 18 Oct, review: bought at 0.01 lot, then Boss picks 0.10 while holding: the open P&L and the exit stay at 0.01.
+        GoldPaper.testHistory = { now -> hours.filter { !it.start.plusHours(1).isAfter(now) } }
+        GoldPaper.testMinutes = { now -> minutes.filter { it.start.toLocalDate() == now.toLocalDate() && !it.start.plusMinutes(1).isAfter(now) } }
+        val day2 = (61 until hours.size).first {
+            hours[it].start.toLocalDate() != hours[it - 1].start.toLocalDate() && hours[it].start.dayOfWeek != DayOfWeek.MONDAY &&
+                hours.subList(it - 10, it).maxOf { b -> b.high } - 0.5 > hours[it].high
+        }
+        val entry = hours[day2 - 14].start.plusHours(3).plusMinutes(10)
+        val target = hours.subList(day2 - 10, day2).maxOf { it.high } - 0.5
+        runBlocking {
+            GoldPaper.replaceForTest(GoldPaper.Book(armed = true, lots = 0.01,
+                position = GoldPaper.Position(target - 30, entry, entry.minusMinutes(70), target - 40, target, lots = 0.01),
+                decided = hours[day2 - 1].start.toString()))
+            GoldPaper.setLots(0.10)
+        }
+        // The buy keeps its own lots; the book has the new ones.
+        assertEquals(0.01, GoldPaper.book.value.position!!.lots, 1e-12)
+        assertEquals(0.10, GoldPaper.book.value.lots, 1e-12)
+        val mid = target - 20
+        assertEquals(GoldLiquidity.pnl(target - 30, GoldLiquidity.sellPrice(mid), 0.01), GoldPaper.book.value.open(mid)!!, 1e-9)
+        at(hours[day2].start.plusMinutes(20))
+        val tr = GoldPaper.book.value.trades.single()
+        assertEquals(0.01, tr.lots, 1e-12)
+        assertEquals(GoldLiquidity.pnl(target - 30, tr.exit, 0.01), tr.pnl, 1e-9)
+    }
+
     private fun at(t: LocalDateTime) { GoldPaper.testNow = t; runBlocking { GoldPaper.tick() } }
 
     @Test fun yahooChartJsonBecomesUtcBarsSkippingGaps() {

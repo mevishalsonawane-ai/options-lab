@@ -171,7 +171,8 @@ object TrendWatch {
         if (minutes.isEmpty()) return Verdict(rule, null, "no ${h.underlying} minutes yet")
         if (stale(minutes, now)) return Verdict(rule, null, "${h.underlying}'s prices are stale (last ${minutes.maxOf { it.start }.toLocalTime()})")
         val grid = if (h.mcx) TrendTurn.Grid.MCX else TrendTurn.Grid.NSE
-        val turns = TrendTurn.turns(rule, minutes, h.bias > 0, grid).filter { !it.act.isAfter(now) }
+        val seen = seenTo(minutes)
+        val turns = TrendTurn.turns(rule, minutes, h.bias > 0, grid).filter { !it.act.isAfter(now) && !it.act.isAfter(seen) }
         val t = TrendTurn.exitTurn(rule, turns, h.fill)
         val bars = TrendTurn.bars(minutes, rule.minutes, grid).size
         return when {
@@ -185,8 +186,16 @@ object TrendWatch {
     fun pendingTurned(bias: Int, placed: LocalDateTime, minutes: List<Bar>, now: LocalDateTime, mcx: Boolean = false): LocalDateTime? {
         if (minutes.isEmpty() || stale(minutes, now)) return null
         val grid = if (mcx) TrendTurn.Grid.MCX else TrendTurn.Grid.NSE
-        return TrendTurn.turns(SHADOW_RULE, minutes, bias > 0, grid).lastOrNull { it.act.isAfter(placed) && !it.act.isAfter(now) }?.act
+        val seen = seenTo(minutes)
+        return TrendTurn.turns(SHADOW_RULE, minutes, bias > 0, grid).lastOrNull { it.act.isAfter(placed) && !it.act.isAfter(now) && !it.act.isAfter(seen) }?.act
     }
+
+    /**
+     * The end of the newest minute held: a bar whose act time is after it has not been seen to its end (its last minutes not in
+     * yet, the feed a minute or two behind), so it is not judged on part of its minutes - the research only saw whole bars
+     * (18 Oct, review). A bar whose last minute never comes (a gap) is judged once a later minute is in.
+     */
+    private fun seenTo(minutes: List<Bar>): LocalDateTime = minutes.maxOf { it.start }.plusMinutes(1)
 
     fun hhmm(t: LocalDateTime): String = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
 

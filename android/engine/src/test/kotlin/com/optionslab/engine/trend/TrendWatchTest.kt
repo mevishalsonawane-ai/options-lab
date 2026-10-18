@@ -143,6 +143,32 @@ class TrendWatchTest {
     }
 
     @Test
+    fun aBarWhoseLastMinutesAreNotInYetIsNeverJudged() {
+        // 18 Oct, review: at 11:05:20 the feed holds minutes to 11:03 (the 11:04 minute not in yet; not stale). The 11:00-11:04
+        // bar is not whole: no turn on it, though its act time (11:05) has passed. Once 11:04 is in, it turns at 11:05.
+        val c = DoubleArray(375) { if (it < 100) 100.0 + it * 0.01 else 95.0 }
+        val ms = session(day, c, 0.1)
+        val hero = held(Source.HERO_TICKET, fill = day.atTime(10, 50))
+        val now = day.atTime(11, 5, 20)
+        val partial = ms.filter { it.start.isBefore(day.atTime(11, 4)) }
+        assertFalse(TrendWatch.stale(partial, now))
+        assertNull(TrendWatch.judge(hero, partial, now).at)
+        assertEquals(day.atTime(11, 5), TrendWatch.judge(hero, ms.filter { it.start.isBefore(day.atTime(11, 5)) }, now).at)
+        // A gap: the 11:04 minute never comes, but 11:05 does - the bar is judged on what it had (as the research did).
+        val gap = ms.filter { it.start.isBefore(day.atTime(11, 6)) && it.start != day.atTime(11, 4) }
+        assertEquals(day.atTime(11, 5), TrendWatch.judge(hero, gap, day.atTime(11, 6, 10)).at)
+        // A pending order's turn: never on a bar whose last minute is not in.
+        val up = DoubleArray(375) { 100.0 + it * 0.2 }
+        val dn = DoubleArray(375) { 175.0 - it * 0.3 }
+        val two = session(day.minusDays(1), up) + session(day, dn)
+        val at = TrendWatch.pendingTurned(1, day.atTime(9, 15), two, day.atTime(15, 29))!!
+        val cut = two.filter { it.start.isBefore(at.minusMinutes(1)) }
+        val early = TrendWatch.pendingTurned(1, day.atTime(9, 15), cut, at.plusSeconds(20))
+        assertTrue(early == null || early.isBefore(at), "judged on a part bar: $early")
+        assertEquals(at, TrendWatch.pendingTurned(1, day.atTime(9, 15), two.filter { it.start.isBefore(at) }, at.plusSeconds(20)))
+    }
+
+    @Test
     fun linesSayWhatHappenedAndNeverAccountDetailsBeyondThePremium() {
         val v = TrendWatch.Verdict(Rule.T3, day.atTime(11, 5), "turned at 11:05")
         assertEquals("trend turned against Hero ₹1,000 ticket NIFTY26OCT25000CE at 11:05: selling on paper at about 12.50 (T3, passed research R63)",

@@ -108,7 +108,9 @@ class BotTile : TileService() {
             GoldPaper.setArmed(false); GoldTrendPaper.setArmed(false); GoldDipPaper.setArmed(false); GoldTasPaper.setArmed(false)
             runCatching { Diag.record("gold", "tile: all arms stopped (were: ${was.joinToString()})") }
         } else {
-            val msg = Strategies.stopForToday(stopRunning = false, compromised = false, why = com.optionslab.ira.DayStop.Why.TILE)
+            // The strategies' book unreadable just now: said in the log, never a crash of the tile (18 Oct, review).
+            val msg = runCatching { Strategies.stopForToday(stopRunning = false, compromised = false, why = com.optionslab.ira.DayStop.Why.TILE) }
+                .getOrElse { "could not stop: ${it.javaClass.simpleName}" }
             runCatching { Diag.record("info", "tile: $msg") }
         }
     }
@@ -123,7 +125,7 @@ class BotTile : TileService() {
             runCatching { GoldService.ensure(this) }
             runCatching { Diag.record("gold", "tile: arms started: ${arms.joinToString()}") }
         } else {
-            val msg = Strategies.startAgain()
+            val msg = runCatching { Strategies.startAgain() }.getOrElse { "could not start: ${it.javaClass.simpleName}" }
             runCatching { Diag.record("info", "tile: $msg") }
         }
     }

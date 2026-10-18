@@ -67,6 +67,24 @@ class LiveRecordTest {
         assertNull(LiveRecord.parseOption("CRUDEOIL26NOV6000CE"))
     }
 
+    @Test fun aWeeklyExpiryDayEndingInOneNeverRunsIntoTheStrike() {
+        // 18 Oct, review: days 01, 11, 21 and 31 read 1|25000 as 125000; the expiry's code is now read as itself.
+        for (dd in listOf("01", "11", "21", "31")) {
+            assertEquals(Triple("NIFTY", 25_000.0, "CE"), LiveRecord.parseOption("NIFTY26O${dd}25000CE"), dd)
+            assertEquals(Triple("NIFTY", 25_000.0, "PE"), LiveRecord.parseOption("NIFTY261${dd}25000PE"), dd)
+            assertEquals(Triple("BANKNIFTY", 52_000.0, "CE"), LiveRecord.parseOption("BANKNIFTY26N${dd}52000CE"), dd)
+            assertEquals(Triple("SENSEX", 82_000.0, "PE"), LiveRecord.parseOption("SENSEX26D${dd}82000PE"), dd)
+        }
+        // Other weeklies, a half strike, a lower-case symbol and the monthlies still read.
+        assertEquals(Triple("NIFTY", 25_150.0, "CE"), LiveRecord.parseOption("NIFTY26O2025150CE"))
+        assertEquals(Triple("MIDCPNIFTY", 12_525.0, "CE"), LiveRecord.parseOption("MIDCPNIFTY2692812525CE"))
+        assertEquals(Triple("NIFTY", 24_950.5, "CE"), LiveRecord.parseOption("NIFTY26O2124950.5CE"))
+        assertEquals(Triple("NIFTY", 25_000.0, "CE"), LiveRecord.parseOption("nifty26o2125000ce"))
+        assertEquals(Triple("NIFTY", 25_000.0, "PE"), LiveRecord.parseOption("NIFTY26DEC25000PE"))
+        // A strike of 0 in the code is no strike: the old rule decides (nothing a multiple of 50 here: null).
+        assertNull(LiveRecord.parseOption("NIFTY26O210CE"))
+    }
+
     @Test fun linesAreOneJsonObjectWithTheSchema() {
         val h = LiveRecord.header(LiveRecord.MARKET_FILE, day)
         assertTrue(h.startsWith("{\"t\":\"H\",\"schema\":1,"), h)

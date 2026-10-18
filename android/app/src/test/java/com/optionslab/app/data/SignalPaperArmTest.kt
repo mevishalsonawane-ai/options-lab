@@ -157,6 +157,36 @@ class SignalPaperArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    @Test fun withNoStopRestingTheArmPutsItBackAndSellsThroughItItself() {
+        // 18 Oct, review: the resting SL-M is gone (refused, not put back, or cancelled). Above the stop the arm puts it back;
+        // through it the arm sells at once - never riding to the 15:15 square-off without a stop.
+        runBlocking { SignalPaperArm.setOn(chat, true) }
+        message()
+        tick(LocalTime.of(9, 30), 10)
+        val p = v().open.single()
+        runBlocking { Paper.cancel(p.stopOrderId!!, "test") }
+        assertEquals("cancelled", Paper.state.orders.single { it.orderId == p.stopOrderId }.status)
+        // 09:31 trades 121, above the stop (100): a new SL-M at the same stop rests, nothing sold.
+        at(LocalTime.of(9, 31)); market(LocalTime.of(9, 31), rally); runBlocking { SignalPaperArm.manageOnly() }
+        val back = v().open.single()
+        assertTrue(back.stopOrderId != null && back.stopOrderId != p.stopOrderId)
+        val again = Paper.state.orders.single { it.orderId == back.stopOrderId }
+        assertEquals("SL-M", again.priceType); assertEquals("SELL", again.action); assertEquals(100.0, again.triggerPrice!!.toDouble(), 1e-9)
+        assertEquals(65, again.quantity)
+        // A second pass with it resting puts no second one beside it.
+        at(LocalTime.of(9, 32)); market(LocalTime.of(9, 32), rally); runBlocking { SignalPaperArm.manageOnly() }
+        assertEquals(back.stopOrderId, v().open.single().stopOrderId)
+        assertEquals(1, Paper.state.orders.count { it.priceType == "SL-M" && it.status != "cancelled" })
+        // Gone again, and the premium is through the stop (the paper book never filled a stop): the arm sells it itself.
+        runBlocking { Paper.cancel(back.stopOrderId!!, "test") }
+        val crash: (LocalTime) -> Double = { t -> if (t.isBefore(LocalTime.of(9, 33))) rally(t) else 90.0 }
+        at(LocalTime.of(9, 35)); market(LocalTime.of(9, 35), crash); runBlocking { SignalPaperArm.manageOnly() }
+        val done = v().closed.single()
+        assertEquals("stop", done.why); assertTrue(done.net!! < 0)
+        assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
     @Test fun halfAtT1MovesTheStopToCostAndTheLastTargetSellsTheRest() {
         runBlocking { SignalPaperArm.setOn(chat, true); SignalPaperArm.setExit(SignalPaperRules.Exit.HALF_COST) }
         message()
