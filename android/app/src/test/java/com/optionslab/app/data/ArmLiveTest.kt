@@ -895,21 +895,23 @@ class ArmLiveTest : RobolectricTest() {
 
     /** F6: a part closed by hand is booked at what Zerodha's trade book (else its order book) says it sold for. */
     @Test fun aPartClosedByHandIsBookedAtWhatZerodhaSaysItSoldFor() {
-        ArmLive.entered(ask(donchian, "byhand", qty = 90))
+        ArmLive.entered(ask(donchian, "byhand", qty = 60))
+        assertEquals(60, held())
         watch()
         kite.tradesFromFills = true
         kite.orders["H1"] = FakeKite.Order("H1", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 214.0)
-        kite.positions["NFO:$sym:MIS"] = 60 to 200.0               // Boss sold one lot in Kite at 214 (the price now is 200)
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0               // Boss sold one lot in Kite at 214 (the price now is 200)
         watch()
         assertEquals("closed_at_zerodha", view().closed.single().why)
         assertEquals("the trade book's price", 214.0, view().closed.single().exit!!, 1e-9)
+        assertEquals(30, view().open.single().qty)
         kite.tradesFromFills = false                               // the trade book shows nothing: the order book's average
         kite.orders["H2"] = FakeKite.Order("H2", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 221.0,
             at = java.time.LocalDateTime.now(com.optionslab.engine.IST).plusMinutes(1))
-        kite.positions["NFO:$sym:MIS"] = 30 to 200.0
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                  // and then the rest, at 221
         watch()
         assertEquals(listOf(214.0, 221.0), view().closed.map { it.exit!! })
-        assertEquals(30, view().open.single().qty)
+        assertTrue(view().open.isEmpty())
     }
 
     /** F6 (its review): parts closed outside in one look each take the next fill, never the same one twice. */
