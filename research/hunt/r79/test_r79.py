@@ -272,3 +272,55 @@ def test_final_read_once(tmp_path, monkeypatch):
     (tmp_path / "final.json").write_text("{}")
     with pytest.raises(SystemExit):
         S.run("final")                                                           # final.json exists: refused
+
+
+# ------------------------------------------------------------------------------------------------ Amendment 1 (release)
+import pandas as pd  # noqa: E402
+
+import r79data as RD  # noqa: E402
+
+
+def _frame():
+    ts = pd.to_datetime(["2025-03-03 09:15", "2025-03-03 09:16", "2025-03-03 09:16", "2025-03-03 15:30",
+                         "2025-03-03 09:15", "2025-03-03 09:17", "2025-03-03 09:15", "2024-11-19 09:15"])
+    return pd.DataFrame(dict(ts=ts, right=["IX", "IX", "IX", "IX", "CE", "CE", "PE", "CE"],
+                             strike=[0, 0, 0, 0, 50000, 50000, 49900, 50000],
+                             expiry=[None, None, None, None, "2025-03-27", "2025-03-27", "2025-01-29", "2024-11-27"],
+                             open=[1, 2, 9, 3, 10, 11, 20, 5.0], high=[1, 2, 9, 3, 12, 13, 21, 5.0],
+                             low=[1, 2, 9, 3, 9, 10, 19, 5.0], close=[1, 2, 9, 3, 11, 12, 20, 5.0],
+                             volume=[0, 0, 0, 0, 30, 40, 50, 1.0]))
+
+
+def test_release_index_days_grid_and_duplicates():
+    ix = RD.index_days(_frame())
+    a = ix[date(2025, 3, 3)]
+    assert a.shape == (4, N) and a[3, 0] == 1 and a[3, 1] == 2              # duplicate 09:16: first row kept
+    assert np.isnan(a[3, 2]) and np.isfinite(a[3]).sum() == 2               # 15:30 dropped (outside the grid)
+
+
+def test_release_contracts_and_expiry():
+    con = RD.contracts(_frame())
+    assert set(con) == {date(2025, 3, 3)}                                   # 19 Nov 2024 is before START
+    c = con[date(2025, 3, 3)]
+    assert set(c) == {("C", 50000.0), ("P", 49900.0)}
+    assert c[("C", 50000.0)][3, 0] == 11 and c[("C", 50000.0)][4, 2] == 40 and np.isnan(c[("C", 50000.0)][0, 1])
+    ex = RD.expiry_dates(_frame())
+    assert ex == {date(2025, 3, 27), date(2025, 1, 30), date(2024, 11, 27)}  # 29 Jan 2025 moved to 30 Jan
+
+
+def test_release_atm_row():
+    a = np.full((4, N), np.nan)
+    a[3, 0], a[3, 1] = 50049.0, 50051.0
+    r = RD.atm_row(a)
+    assert r[0] == 50000.0 and r[1] == 50100.0 and np.isnan(r[2])
+
+
+def test_amendment_periods_split():
+    tr = [dict(day=date(2025, 1, 5), net=10.0, why="stop", und="BANKNIFTY", ret=0.0),
+          dict(day=date(2025, 5, 5), net=-4.0, why="stop", und="BANKNIFTY", ret=0.0),
+          dict(day=date(2025, 11, 5), net=7.0, why="time", und="BANKNIFTY", ret=0.0)]
+    p = S.periods(tr, "design")
+    assert p["design"]["net"] == 13 and p["wf"]["net"] == 3 and p["wf"]["trades"] == 2
+    assert [q["trades"] for q in p["wf_quarters"]] == [1, 0, 1]
+    assert S.periods(tr, "final")["final"]["trades"] == 3
+    assert S.AM_DESIGN_END < S.AM_FINAL_START <= S.AM_END

@@ -6,6 +6,10 @@ candles for getting accurate direction? Or like Breadth Donchian, check all the 
     python research/hunt/r79/r79study.py final                 # the ONE final read (refuses a second)
     python research/hunt/r79/r79study.py summary
 
+PREREG Amendment 1 (the default, R79_SOURCE=release): BANKNIFTY only, from the research-data release store that
+`r79data.py build` writes ($R79_STORE); design 20 Nov 2024 - 31 Dec 2025 (walk-forward Apr - Dec 2025), final 1 Jan -
+23 Feb 2026. R79_SOURCE=lake runs the original plan (R51's clean lake stores, three books, R76's periods).
+
 Each variant's trades are made afresh through fam_liq's own loop (same signals, same exits, same one-position-per-book
 walk), with the filter applied to each signal before the walk, so a skipped signal frees the book's slot. Every signal
 and every filter reads index bars only; the 1-ITM option is bought. Trades go to $R79_OUT (never git); results/ holds
@@ -31,7 +35,9 @@ import r64study as P  # noqa: E402  (stats, periods, paired_boot, bh)
 import r70study as R70  # noqa: E402  (LIQ_BOOKS, LIQ_IDX_STOP_MIDCP)
 import r79rules as RU  # noqa: E402
 
-OUT = Path(os.environ.get("R79_OUT", R64.CACHE_ROOT / "r79")).expanduser()
+SOURCE = os.environ.get("R79_SOURCE", "release")
+STORE = Path(os.environ.get("R79_STORE", "/dev/shm/r79/store"))
+OUT = Path(os.environ.get("R79_OUT", R64.CACHE_ROOT / ("r79" if SOURCE == "lake" else "r79_release"))).expanduser()
 RESULTS = HERE / "results"
 FINAL_FLAG = RESULTS / "FINAL_READ"
 TESTS = RU.VARIANTS
@@ -39,6 +45,12 @@ ALL = ("B0",) + TESTS
 TWINS, SEED, BOOT = 500, 79, 2000
 GATE_Q, GATE_SKIP = 0.10, 0.10
 R76_B0 = {"design": (881, 257249), "final": (357, 11155)}       # R76 results/summary.json, B0
+# Amendment 1 periods (release source)
+AM_START, AM_DESIGN_END, AM_FINAL_START, AM_END = date(2024, 11, 20), date(2025, 12, 31), date(2026, 1, 1), \
+    date(2026, 2, 23)
+AM_WF_QUARTERS = ((date(2025, 4, 1), date(2025, 6, 30)), (date(2025, 7, 1), date(2025, 9, 30)),
+                  (date(2025, 10, 1), date(2025, 12, 31)))
+BOOKS = {"BANKNIFTY": (15, 5)} if SOURCE == "release" else R70.LIQ_BOOKS
 WIDTH = {"W10a": 1, "W10b": 5}
 NEED = {"X1": 2, "X2": 3}
 
@@ -113,6 +125,18 @@ def p_of(tw, actual: float) -> float:
     return round((1 + int((np.asarray(tw) >= actual).sum())) / (len(tw) + 1), 4)
 
 
+def periods(trades: list, phase: str) -> dict:
+    """Amendment 1: design / walk-forward (sum of AM_WF_QUARTERS, and each quarter) for the design phase; final for the
+    final phase. r64study.stats for each. Pure."""
+    if phase == "final":
+        return {"final": P.stats(trades)}
+    wf = [t for t in trades if AM_WF_QUARTERS[0][0] <= t["day"] <= AM_WF_QUARTERS[-1][1]]
+    return {"design": P.stats(trades), "wf": P.stats(wf),
+            "wf_quarters": [dict(lo=str(a), hi=str(b), **{k: v for k, v in P.stats(P.split(trades, a, b)).items()
+                                                          if k in ("trades", "net", "win", "worst_day")})
+                            for a, b in AM_WF_QUARTERS]}
+
+
 def decide(b0: dict, v: dict) -> dict:
     """PREREG section 3: PASS only if net beats B0 in walk-forward AND final, BH q < 0.10 and random-skip p < 0.10."""
     fails = []
@@ -139,25 +163,38 @@ def _load(name):
 
 
 def _mods():
-    os.environ["R51_CLEAN"] = "1"
+    if SOURCE == "release":                        # Amendment 1: the release store, not the lake's clean stores
+        os.environ["R51_CLEAN"] = "0"
+        os.environ["R51_OUT"] = str(STORE)
+    else:
+        os.environ["R51_CLEAN"] = "1"
     sys.path.insert(0, str(HERE.parent / "r51"))
     import r51cfg as K
     import common as C
     import fam_liq
     import r51data
 
-    assert K.CLEAN
+    assert K.CLEAN == (SOURCE == "lake")
     fam_liq.IDX_STOP.setdefault("MIDCPNIFTY", R70.LIQ_IDX_STOP_MIDCP)
     return K, C, fam_liq, r51data
 
 
+def _index(r51data, u: str) -> dict:
+    if SOURCE == "release":
+        p = STORE / f"idx_{u}.pkl"
+        return pickle.loads(p.read_bytes()) if p.exists() else {}
+    return {d: D.idx for d, D in r51data.index_days(u).items()}
+
+
 def trends(r51data) -> dict:
-    """5-minute Supertrend for every index (index minutes only) and 15-minute for the traded ones."""
+    """5-minute Supertrend for every index with data (index minutes only) and 15-minute for the traded ones."""
     t5, t15 = {}, {}
     for u in RU.OTHERS:
-        days = {d: D.idx for d, D in r51data.index_days(u).items()}
+        days = _index(r51data, u)
+        if not days:
+            continue                                 # Amendment 1: no MIDCPNIFTY in the release
         t5[u] = RU.Trend.build(days, 5)
-        if u in R70.LIQ_BOOKS:
+        if u in BOOKS:
             t15[u] = RU.Trend.build(days, 15)
     return dict(t5=t5, t15=t15)
 
@@ -166,7 +203,9 @@ def make_trades(v: str, lo: date, hi: date, M, T) -> list:
     """fam_liq.make(und, books).run(lo, hi) for every book of the arm, with variant v's filter on each signal."""
     K, C, fam_liq, r51data = M
     out = []
-    for und, books in R70.LIQ_BOOKS.items():
+    if SOURCE == "release" and hi > AM_DESIGN_END and not C.final_open():
+        raise PermissionError("R79: the final period is read only by `r79study.py final`")
+    for und, books in BOOKS.items():
         days = r51data.load(und)
         ctx = dict(und=und, step=K.STEP[und], last=fam_liq.LAST, atm=fam_liq.H4.atm, t5=T["t5"],
                    t15=T["t15"].get(und))
@@ -194,21 +233,24 @@ def make_trades(v: str, lo: date, hi: date, M, T) -> list:
 def run_phase(phase: str) -> dict:
     M = _mods()
     K, C = M[0], M[1]
+    rel = SOURCE == "release"
     if phase == "final":
         C.open_final()
-        lo, hi = R64.FINAL_START, K.END
+        lo, hi = (AM_FINAL_START, AM_END) if rel else (R64.FINAL_START, K.END)
     else:
-        lo, hi = R64.START, R64.DESIGN_END
+        lo, hi = (AM_START, AM_DESIGN_END) if rel else (R64.START, R64.DESIGN_END)
     T = trends(M[3])
     tr = {v: make_trades(v, lo, hi, M, T) for v in ALL}
-    n0, net0 = R76_B0[phase]
-    assert len(tr["B0"]) == n0 and round(sum(t["net"] for t in tr["B0"])) == net0, "B0 must equal R76's B0"
-    out = {"res": {}}
+    if not rel:
+        n0, net0 = R76_B0[phase]
+        assert len(tr["B0"]) == n0 and round(sum(t["net"] for t in tr["B0"])) == net0, "B0 must equal R76's B0"
+    out = {"source": SOURCE, "books": {u: list(b) for u, b in BOOKS.items()}, "breadth": sorted(T["t5"]),
+           "window": [str(lo), str(hi)], "res": {}}
     rng = np.random.default_rng(SEED)
     b0nets = [t["net"] for t in tr["B0"]]
     for v in ALL:
         _save(f"{v}_{phase}", tr[v])
-        r = out["res"][v] = P.periods(tr[v], "Liquidity", phase)
+        r = out["res"][v] = periods(tr[v], phase) if rel else P.periods(tr[v], "Liquidity", phase)
         if v != "B0":
             r["vs_b0"] = skip_compare(tr["B0"], tr[v])
             p, diff = P.paired_boot(tr["B0"], tr[v], BOOT, SEED)
@@ -248,7 +290,8 @@ def final():
 
 def summarise() -> dict:
     d, f = (json.loads((RESULTS / f"{ph}.json").read_text()) for ph in ("design", "final"))
-    out = {"res": {}}
+    out = {"source": d.get("source"), "books": d.get("books"), "breadth": d.get("breadth"),
+           "windows": dict(design=d.get("window"), final=f.get("window")), "res": {}}
     for v in ALL:
         a, b = d["res"][v], f["res"][v]
         A = out["res"][v] = dict(design=a["design"], wf=a["wf"], wf_quarters=a["wf_quarters"], final=b["final"])
