@@ -1,0 +1,1294 @@
+{
+ "tests": {
+  "A-X1": {
+   "design": {
+    "trades": 328,
+    "days": 76,
+    "net": -45965,
+    "per_trade": -140.1,
+    "win": 0.2683,
+    "avg_win": 1070,
+    "avg_loss": -584,
+    "worst_day": -7391,
+    "best_day": 6209,
+    "max_dd": 45965,
+    "green_days": 0.3158,
+    "ex_top5": -64865,
+    "per_month": 20.1,
+    "why": {
+     "rule_exit": 291,
+     "time": 37
+    }
+   },
+   "wf": {
+    "trades": 229,
+    "days": 50,
+    "net": -26059,
+    "per_trade": -113.8,
+    "win": 0.2664,
+    "avg_win": 1065,
+    "avg_loss": -542,
+    "worst_day": -7391,
+    "best_day": 6209,
+    "max_dd": 28058,
+    "green_days": 0.3,
+    "ex_top5": -44879,
+    "per_month": null,
+    "why": {
+     "rule_exit": 199,
+     "time": 30
+    }
+   },
+   "folds": [
+    -2258,
+    -12161,
+    -7334,
+    -4305
+   ],
+   "fold_trades": [
+    57,
+    78,
+    58,
+    36
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 95,
+     "net": -83,
+     "win": 0.2842
+    },
+    "FINNIFTY": {
+     "trades": 102,
+     "net": -9114,
+     "win": 0.2647
+    },
+    "MIDCPNIFTY": {
+     "trades": 112,
+     "net": -35930,
+     "win": 0.2589
+    },
+    "NIFTY": {
+     "trades": 18,
+     "net": -550,
+     "win": 0.2778
+    },
+    "SENSEX": {
+     "trades": 1,
+     "net": -289,
+     "win": 0.0
+    }
+   },
+   "examples": [
+    {
+     "und": "FINNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 26250.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:48",
+     "fill": 263.45,
+     "out": 340.0,
+     "why": "rule_exit",
+     "index_stop": 26290.5,
+     "index_target": 26384.55,
+     "net": 4860
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2025-09-26",
+     "side": "C",
+     "strike": 25950.0,
+     "absorption_bar": "14:05",
+     "entry": "14:07",
+     "exit": "14:08",
+     "fill": 156.5,
+     "out": 152.65,
+     "why": "rule_exit",
+     "index_stop": 25973.2,
+     "index_target": 26038.4,
+     "net": -333
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2025-01-28",
+     "side": "P",
+     "strike": 22900.0,
+     "absorption_bar": "11:43",
+     "entry": "11:45",
+     "exit": "11:54",
+     "fill": 249.1,
+     "out": 220.0,
+     "why": "rule_exit",
+     "index_stop": 22861.05,
+     "index_target": 22750.0,
+     "net": -1988
+    }
+   ],
+   "design_twin_p": 0.5289,
+   "design_twin_mean": -45219
+  },
+  "A-X2": {
+   "design": {
+    "trades": 315,
+    "days": 76,
+    "net": -67577,
+    "per_trade": -214.5,
+    "win": 0.4127,
+    "avg_win": 1181,
+    "avg_loss": -1195,
+    "worst_day": -9630,
+    "best_day": 12590,
+    "max_dd": 67577,
+    "green_days": 0.3816,
+    "ex_top5": -90246,
+    "per_month": 19.3,
+    "why": {
+     "time": 212,
+     "stop": 84,
+     "target": 19
+    }
+   },
+   "wf": {
+    "trades": 220,
+    "days": 50,
+    "net": -40914,
+    "per_trade": -186.0,
+    "win": 0.4045,
+    "avg_win": 1137,
+    "avg_loss": -1085,
+    "worst_day": -9630,
+    "best_day": 12590,
+    "max_dd": 48454,
+    "green_days": 0.36,
+    "ex_top5": -63584,
+    "per_month": null,
+    "why": {
+     "time": 153,
+     "stop": 54,
+     "target": 13
+    }
+   },
+   "folds": [
+    -3353,
+    -17259,
+    -9172,
+    -11129
+   ],
+   "fold_trades": [
+    53,
+    76,
+    55,
+    36
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 91,
+     "net": -10047,
+     "win": 0.4176
+    },
+    "FINNIFTY": {
+     "trades": 97,
+     "net": -8487,
+     "win": 0.3918
+    },
+    "MIDCPNIFTY": {
+     "trades": 108,
+     "net": -42777,
+     "win": 0.4352
+    },
+    "NIFTY": {
+     "trades": 18,
+     "net": -5463,
+     "win": 0.3889
+    },
+    "SENSEX": {
+     "trades": 1,
+     "net": -803,
+     "win": 0.0
+    }
+   },
+   "examples": [
+    {
+     "und": "FINNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 26250.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:48",
+     "fill": 263.45,
+     "out": 342.49,
+     "why": "target",
+     "index_stop": 26290.5,
+     "index_target": 26384.55,
+     "net": 5039
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2025-05-28",
+     "side": "C",
+     "strike": 26350.0,
+     "absorption_bar": "10:03",
+     "entry": "10:05",
+     "exit": "10:34",
+     "fill": 244.0,
+     "out": 241.0,
+     "why": "time",
+     "index_stop": 26418.0,
+     "index_target": 26490.6,
+     "net": -297
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2026-03-25",
+     "side": "C",
+     "strike": 25100.0,
+     "absorption_bar": "14:07",
+     "entry": "14:09",
+     "exit": "14:22",
+     "fill": 380.5,
+     "out": 323.43,
+     "why": "stop",
+     "index_stop": 25143.7,
+     "index_target": 25213.4,
+     "net": -3549
+    }
+   ],
+   "design_twin_p": 0.6766,
+   "design_twin_mean": -53302
+  },
+  "B-X1": {
+   "design": {
+    "trades": 520,
+    "days": 112,
+    "net": -58188,
+    "per_trade": -111.9,
+    "win": 0.2731,
+    "avg_win": 1107,
+    "avg_loss": -570,
+    "worst_day": -7391,
+    "best_day": 5464,
+    "max_dd": 58188,
+    "green_days": 0.3214,
+    "ex_top5": -77087,
+    "per_month": 31.8,
+    "why": {
+     "rule_exit": 455,
+     "time": 65
+    }
+   },
+   "wf": {
+    "trades": 378,
+    "days": 81,
+    "net": -33159,
+    "per_trade": -87.7,
+    "win": 0.2751,
+    "avg_win": 1078,
+    "avg_loss": -530,
+    "worst_day": -7391,
+    "best_day": 5464,
+    "max_dd": 33159,
+    "green_days": 0.2963,
+    "ex_top5": -51979,
+    "per_month": null,
+    "why": {
+     "rule_exit": 328,
+     "time": 50
+    }
+   },
+   "folds": [
+    -10483,
+    -7967,
+    -8874,
+    -5835
+   ],
+   "fold_trades": [
+    94,
+    125,
+    88,
+    71
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 152,
+     "net": -2550,
+     "win": 0.3092
+    },
+    "FINNIFTY": {
+     "trades": 159,
+     "net": -8120,
+     "win": 0.283
+    },
+    "MIDCPNIFTY": {
+     "trades": 167,
+     "net": -49335,
+     "win": 0.2335
+    },
+    "NIFTY": {
+     "trades": 38,
+     "net": 1529,
+     "win": 0.2632
+    },
+    "SENSEX": {
+     "trades": 4,
+     "net": 289,
+     "win": 0.25
+    }
+   },
+   "examples": [
+    {
+     "und": "FINNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 26250.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:48",
+     "fill": 263.45,
+     "out": 340.0,
+     "why": "rule_exit",
+     "index_stop": 26290.5,
+     "index_target": 26384.55,
+     "net": 4860
+    },
+    {
+     "und": "MIDCPNIFTY",
+     "day": "2025-06-25",
+     "side": "C",
+     "strike": 13175.0,
+     "absorption_bar": "10:08",
+     "entry": "10:10",
+     "exit": "10:14",
+     "fill": 96.9,
+     "out": 95.0,
+     "why": "rule_exit",
+     "index_stop": 13205.95,
+     "index_target": 13230.95,
+     "net": -321
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2025-01-28",
+     "side": "P",
+     "strike": 22900.0,
+     "absorption_bar": "11:43",
+     "entry": "11:45",
+     "exit": "11:54",
+     "fill": 249.1,
+     "out": 220.0,
+     "why": "rule_exit",
+     "index_stop": 22861.05,
+     "index_target": 22750.0,
+     "net": -1988
+    }
+   ],
+   "design_twin_p": 0.2854,
+   "design_twin_mean": -70097
+  },
+  "B-X2": {
+   "design": {
+    "trades": 502,
+    "days": 112,
+    "net": -100386,
+    "per_trade": -200.0,
+    "win": 0.4203,
+    "avg_win": 1172,
+    "avg_loss": -1195,
+    "worst_day": -11330,
+    "best_day": 11952,
+    "max_dd": 100386,
+    "green_days": 0.3571,
+    "ex_top5": -123385,
+    "per_month": 30.7,
+    "why": {
+     "time": 342,
+     "stop": 128,
+     "target": 32
+    }
+   },
+   "wf": {
+    "trades": 362,
+    "days": 81,
+    "net": -65978,
+    "per_trade": -182.3,
+    "win": 0.4171,
+    "avg_win": 1110,
+    "avg_loss": -1107,
+    "worst_day": -9559,
+    "best_day": 11952,
+    "max_dd": 65978,
+    "green_days": 0.3457,
+    "ex_top5": -88593,
+    "per_month": null,
+    "why": {
+     "time": 255,
+     "stop": 86,
+     "target": 21
+    }
+   },
+   "folds": [
+    -21216,
+    -25079,
+    147,
+    -19830
+   ],
+   "fold_trades": [
+    90,
+    120,
+    86,
+    66
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 148,
+     "net": -35675,
+     "win": 0.3986
+    },
+    "FINNIFTY": {
+     "trades": 151,
+     "net": -18399,
+     "win": 0.3974
+    },
+    "MIDCPNIFTY": {
+     "trades": 163,
+     "net": -50339,
+     "win": 0.4356
+    },
+    "NIFTY": {
+     "trades": 36,
+     "net": 4454,
+     "win": 0.5278
+    },
+    "SENSEX": {
+     "trades": 4,
+     "net": -427,
+     "win": 0.5
+    }
+   },
+   "examples": [
+    {
+     "und": "FINNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 26250.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:48",
+     "fill": 263.45,
+     "out": 342.49,
+     "why": "target",
+     "index_stop": 26290.5,
+     "index_target": 26384.55,
+     "net": 5039
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2025-12-22",
+     "side": "C",
+     "strike": 27400.0,
+     "absorption_bar": "10:26",
+     "entry": "10:28",
+     "exit": "10:57",
+     "fill": 268.6,
+     "out": 265.75,
+     "why": "time",
+     "index_stop": 27455.3,
+     "index_target": 27508.3,
+     "net": -291
+    },
+    {
+     "und": "BANKNIFTY",
+     "day": "2026-03-24",
+     "side": "P",
+     "strike": 52200.0,
+     "absorption_bar": "11:57",
+     "entry": "11:59",
+     "exit": "12:26",
+     "fill": 880.7,
+     "out": 748.6,
+     "why": "stop",
+     "index_stop": 52185.65,
+     "index_target": 51992.6,
+     "net": -4094
+    }
+   ],
+   "design_twin_p": 0.6766,
+   "design_twin_mean": -83455
+  },
+  "C-X1": {
+   "design": {
+    "trades": 208,
+    "days": 61,
+    "net": -9722,
+    "per_trade": -46.7,
+    "win": 0.3077,
+    "avg_win": 1057,
+    "avg_loss": -537,
+    "worst_day": -3699,
+    "best_day": 7862,
+    "max_dd": 18042,
+    "green_days": 0.3279,
+    "ex_top5": -27325,
+    "per_month": 12.7,
+    "why": {
+     "rule_exit": 183,
+     "time": 25
+    }
+   },
+   "wf": {
+    "trades": 139,
+    "days": 39,
+    "net": 4926,
+    "per_trade": 35.4,
+    "win": 0.3309,
+    "avg_win": 1090,
+    "avg_loss": -486,
+    "worst_day": -3699,
+    "best_day": 7862,
+    "max_dd": 13975,
+    "green_days": 0.3846,
+    "ex_top5": -12677,
+    "per_month": null,
+    "why": {
+     "rule_exit": 117,
+     "time": 22
+    }
+   },
+   "folds": [
+    10473,
+    -1724,
+    -5734,
+    1911
+   ],
+   "fold_trades": [
+    41,
+    37,
+    43,
+    18
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 64,
+     "net": 6997,
+     "win": 0.3125
+    },
+    "FINNIFTY": {
+     "trades": 63,
+     "net": 4194,
+     "win": 0.3651
+    },
+    "MIDCPNIFTY": {
+     "trades": 70,
+     "net": -23022,
+     "win": 0.2429
+    },
+    "NIFTY": {
+     "trades": 11,
+     "net": 2108,
+     "win": 0.3636
+    }
+   },
+   "examples": [
+    {
+     "und": "FINNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 26250.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:48",
+     "fill": 263.45,
+     "out": 340.0,
+     "why": "rule_exit",
+     "index_stop": 26290.5,
+     "index_target": 26384.55,
+     "net": 4860
+    },
+    {
+     "und": "BANKNIFTY",
+     "day": "2025-07-29",
+     "side": "C",
+     "strike": 55900.0,
+     "absorption_bar": "11:48",
+     "entry": "11:50",
+     "exit": "11:52",
+     "fill": 328.65,
+     "out": 323.9,
+     "why": "rule_exit",
+     "index_stop": 55960.55,
+     "index_target": 56086.15,
+     "net": -249
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2025-01-28",
+     "side": "P",
+     "strike": 22900.0,
+     "absorption_bar": "11:43",
+     "entry": "11:45",
+     "exit": "11:54",
+     "fill": 249.1,
+     "out": 220.0,
+     "why": "rule_exit",
+     "index_stop": 22861.05,
+     "index_target": 22750.0,
+     "net": -1988
+    }
+   ],
+   "design_twin_p": 0.0639,
+   "design_twin_mean": -28420
+  },
+  "C-X2": {
+   "design": {
+    "trades": 200,
+    "days": 61,
+    "net": -9054,
+    "per_trade": -45.3,
+    "win": 0.49,
+    "avg_win": 1102,
+    "avg_loss": -1147,
+    "worst_day": -7071,
+    "best_day": 11791,
+    "max_dd": 20506,
+    "green_days": 0.4426,
+    "ex_top5": -29821,
+    "per_month": 12.2,
+    "why": {
+     "time": 144,
+     "stop": 41,
+     "target": 15
+    }
+   },
+   "wf": {
+    "trades": 132,
+    "days": 39,
+    "net": 5483,
+    "per_trade": 41.5,
+    "win": 0.5076,
+    "avg_win": 1071,
+    "avg_loss": -1020,
+    "worst_day": -6814,
+    "best_day": 11791,
+    "max_dd": 18792,
+    "green_days": 0.4615,
+    "ex_top5": -13985,
+    "per_month": null,
+    "why": {
+     "time": 100,
+     "target": 11,
+     "stop": 21
+    }
+   },
+   "folds": [
+    13359,
+    -830,
+    -10630,
+    3585
+   ],
+   "fold_trades": [
+    40,
+    37,
+    37,
+    18
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 63,
+     "net": 288,
+     "win": 0.4603
+    },
+    "FINNIFTY": {
+     "trades": 59,
+     "net": 13514,
+     "win": 0.5763
+    },
+    "MIDCPNIFTY": {
+     "trades": 67,
+     "net": -24581,
+     "win": 0.4328
+    },
+    "NIFTY": {
+     "trades": 11,
+     "net": 1725,
+     "win": 0.5455
+    }
+   },
+   "examples": [
+    {
+     "und": "BANKNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 54900.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:50",
+     "fill": 585.55,
+     "out": 761.21,
+     "why": "target",
+     "index_stop": 55002.95,
+     "index_target": 55179.15,
+     "net": 5172
+    },
+    {
+     "und": "BANKNIFTY",
+     "day": "2025-12-23",
+     "side": "C",
+     "strike": 59200.0,
+     "absorption_bar": "11:40",
+     "entry": "11:42",
+     "exit": "12:11",
+     "fill": 410.3,
+     "out": 411.55,
+     "why": "time",
+     "index_stop": 59247.0,
+     "index_target": 59338.25,
+     "net": -49
+    },
+    {
+     "und": "MIDCPNIFTY",
+     "day": "2025-01-23",
+     "side": "P",
+     "strike": 12150.0,
+     "absorption_bar": "09:53",
+     "entry": "09:55",
+     "exit": "10:10",
+     "fill": 165.3,
+     "out": 140.51,
+     "why": "stop",
+     "index_stop": 12134.95,
+     "index_target": 11995.55,
+     "net": -3100
+    }
+   ],
+   "design_twin_p": 0.1836,
+   "design_twin_mean": -32880
+  },
+  "D-X1": {
+   "design": {
+    "trades": 333,
+    "days": 90,
+    "net": -11675,
+    "per_trade": -35.1,
+    "win": 0.3033,
+    "avg_win": 1142,
+    "avg_loss": -548,
+    "worst_day": -4677,
+    "best_day": 7140,
+    "max_dd": 27976,
+    "green_days": 0.3778,
+    "ex_top5": -29278,
+    "per_month": 20.4,
+    "why": {
+     "rule_exit": 295,
+     "time": 38
+    }
+   },
+   "wf": {
+    "trades": 235,
+    "days": 63,
+    "net": 11090,
+    "per_trade": 47.2,
+    "win": 0.3234,
+    "avg_win": 1178,
+    "avg_loss": -493,
+    "worst_day": -4068,
+    "best_day": 7140,
+    "max_dd": 11175,
+    "green_days": 0.4444,
+    "ex_top5": -6513,
+    "per_month": null,
+    "why": {
+     "rule_exit": 205,
+     "time": 30
+    }
+   },
+   "folds": [
+    6822,
+    1894,
+    -446,
+    2819
+   ],
+   "fold_trades": [
+    64,
+    69,
+    62,
+    40
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 99,
+     "net": 4160,
+     "win": 0.3131
+    },
+    "FINNIFTY": {
+     "trades": 100,
+     "net": 9413,
+     "win": 0.36
+    },
+    "MIDCPNIFTY": {
+     "trades": 113,
+     "net": -31542,
+     "win": 0.2301
+    },
+    "NIFTY": {
+     "trades": 19,
+     "net": 6676,
+     "win": 0.4211
+    },
+    "SENSEX": {
+     "trades": 2,
+     "net": -382,
+     "win": 0.0
+    }
+   },
+   "examples": [
+    {
+     "und": "FINNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 26250.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:48",
+     "fill": 263.45,
+     "out": 340.0,
+     "why": "rule_exit",
+     "index_stop": 26290.5,
+     "index_target": 26384.55,
+     "net": 4860
+    },
+    {
+     "und": "BANKNIFTY",
+     "day": "2026-03-27",
+     "side": "C",
+     "strike": 52400.0,
+     "absorption_bar": "14:08",
+     "entry": "14:10",
+     "exit": "14:12",
+     "fill": 600.2,
+     "out": 594.7,
+     "why": "rule_exit",
+     "index_stop": 52444.45,
+     "index_target": 52555.75,
+     "net": -267
+    },
+    {
+     "und": "FINNIFTY",
+     "day": "2025-01-28",
+     "side": "P",
+     "strike": 22900.0,
+     "absorption_bar": "11:43",
+     "entry": "11:45",
+     "exit": "11:54",
+     "fill": 249.1,
+     "out": 220.0,
+     "why": "rule_exit",
+     "index_stop": 22861.05,
+     "index_target": 22750.0,
+     "net": -1988
+    }
+   ],
+   "design_twin_p": 0.014,
+   "design_twin_mean": -44054
+  },
+  "D-X2": {
+   "design": {
+    "trades": 324,
+    "days": 90,
+    "net": -9020,
+    "per_trade": -27.8,
+    "win": 0.4815,
+    "avg_win": 1173,
+    "avg_loss": -1143,
+    "worst_day": -12773,
+    "best_day": 11073,
+    "max_dd": 20975,
+    "green_days": 0.4333,
+    "ex_top5": -31205,
+    "per_month": 19.8,
+    "why": {
+     "time": 231,
+     "stop": 67,
+     "target": 26
+    }
+   },
+   "wf": {
+    "trades": 227,
+    "days": 63,
+    "net": 7565,
+    "per_trade": 33.3,
+    "win": 0.4934,
+    "avg_win": 1137,
+    "avg_loss": -1042,
+    "worst_day": -6814,
+    "best_day": 11073,
+    "max_dd": 14120,
+    "green_days": 0.4444,
+    "ex_top5": -13112,
+    "per_month": null,
+    "why": {
+     "target": 19,
+     "time": 168,
+     "stop": 40
+    }
+   },
+   "folds": [
+    7804,
+    3548,
+    995,
+    -4783
+   ],
+   "fold_trades": [
+    64,
+    69,
+    55,
+    39
+   ],
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 98,
+     "net": -4397,
+     "win": 0.4694
+    },
+    "FINNIFTY": {
+     "trades": 96,
+     "net": 14019,
+     "win": 0.5104
+    },
+    "MIDCPNIFTY": {
+     "trades": 109,
+     "net": -29539,
+     "win": 0.4312
+    },
+    "NIFTY": {
+     "trades": 19,
+     "net": 11480,
+     "win": 0.6842
+    },
+    "SENSEX": {
+     "trades": 2,
+     "net": -583,
+     "win": 0.5
+    }
+   },
+   "examples": [
+    {
+     "und": "BANKNIFTY",
+     "day": "2025-05-23",
+     "side": "C",
+     "strike": 54900.0,
+     "absorption_bar": "10:35",
+     "entry": "10:37",
+     "exit": "10:50",
+     "fill": 585.55,
+     "out": 761.21,
+     "why": "target",
+     "index_stop": 55002.95,
+     "index_target": 55179.15,
+     "net": 5172
+    },
+    {
+     "und": "MIDCPNIFTY",
+     "day": "2025-06-20",
+     "side": "P",
+     "strike": 12925.0,
+     "absorption_bar": "10:54",
+     "entry": "10:56",
+     "exit": "11:25",
+     "fill": 121.3,
+     "out": 121.25,
+     "why": "time",
+     "index_stop": 12897.3,
+     "index_target": 12859.85,
+     "net": -107
+    },
+    {
+     "und": "BANKNIFTY",
+     "day": "2026-03-24",
+     "side": "P",
+     "strike": 52200.0,
+     "absorption_bar": "11:57",
+     "entry": "11:59",
+     "exit": "12:26",
+     "fill": 880.7,
+     "out": 748.6,
+     "why": "stop",
+     "index_stop": 52185.65,
+     "index_target": 51992.6,
+     "net": -4094
+    }
+   ],
+   "design_twin_p": 0.1058,
+   "design_twin_mean": -50117
+  }
+ },
+ "written": "2026-10-18T14:25:25+00:00",
+ "events": {
+  "A": {
+   "5": {
+    "n": 506,
+    "days": 145,
+    "mean_bps": -0.19,
+    "median_bps": -0.29,
+    "share_up": 0.4822,
+    "p_time_bps": -0.02,
+    "p_swing_bps": 0.11,
+    "n_swing_matched": 506,
+    "diff_time_bps": -0.17,
+    "ci_time": [
+     -0.72,
+     0.39
+    ],
+    "diff_swing_bps": -0.3,
+    "ci_swing": [
+     -0.87,
+     0.28
+    ]
+   },
+   "15": {
+    "n": 506,
+    "days": 145,
+    "mean_bps": 0.2,
+    "median_bps": 0.57,
+    "share_up": 0.5217,
+    "p_time_bps": 0.03,
+    "p_swing_bps": -0.11,
+    "n_swing_matched": 506,
+    "diff_time_bps": 0.17,
+    "ci_time": [
+     -0.79,
+     1.09
+    ],
+    "diff_swing_bps": 0.31,
+    "ci_swing": [
+     -0.66,
+     1.27
+    ]
+   },
+   "30": {
+    "n": 506,
+    "days": 145,
+    "mean_bps": -0.37,
+    "median_bps": 0.22,
+    "share_up": 0.5079,
+    "p_time_bps": 0.02,
+    "p_swing_bps": -0.05,
+    "n_swing_matched": 506,
+    "diff_time_bps": -0.39,
+    "ci_time": [
+     -1.82,
+     1.02
+    ],
+    "diff_swing_bps": -0.32,
+    "ci_swing": [
+     -1.82,
+     1.15
+    ]
+   }
+  },
+  "B": {
+   "5": {
+    "n": 816,
+    "days": 232,
+    "mean_bps": -0.09,
+    "median_bps": -0.12,
+    "share_up": 0.4902,
+    "p_time_bps": 0.05,
+    "p_swing_bps": 0.1,
+    "n_swing_matched": 816,
+    "diff_time_bps": -0.14,
+    "ci_time": [
+     -0.6,
+     0.3
+    ],
+    "diff_swing_bps": -0.19,
+    "ci_swing": [
+     -0.62,
+     0.25
+    ]
+   },
+   "15": {
+    "n": 816,
+    "days": 232,
+    "mean_bps": -0.05,
+    "median_bps": 0.35,
+    "share_up": 0.5147,
+    "p_time_bps": 0.01,
+    "p_swing_bps": -0.1,
+    "n_swing_matched": 816,
+    "diff_time_bps": -0.06,
+    "ci_time": [
+     -0.94,
+     0.76
+    ],
+    "diff_swing_bps": 0.06,
+    "ci_swing": [
+     -0.81,
+     0.9
+    ]
+   },
+   "30": {
+    "n": 816,
+    "days": 232,
+    "mean_bps": -0.72,
+    "median_bps": 0.01,
+    "share_up": 0.5,
+    "p_time_bps": -0.03,
+    "p_swing_bps": -0.08,
+    "n_swing_matched": 816,
+    "diff_time_bps": -0.69,
+    "ci_time": [
+     -1.95,
+     0.57
+    ],
+    "diff_swing_bps": -0.64,
+    "ci_swing": [
+     -1.86,
+     0.64
+    ]
+   }
+  },
+  "C": {
+   "5": {
+    "n": 254,
+    "days": 109,
+    "mean_bps": 0.37,
+    "median_bps": 0.26,
+    "share_up": 0.5197,
+    "p_time_bps": 0.08,
+    "p_swing_bps": 0.14,
+    "n_swing_matched": 254,
+    "diff_time_bps": 0.29,
+    "ci_time": [
+     -0.57,
+     1.13
+    ],
+    "diff_swing_bps": 0.23,
+    "ci_swing": [
+     -0.63,
+     1.07
+    ]
+   },
+   "15": {
+    "n": 254,
+    "days": 109,
+    "mean_bps": 0.69,
+    "median_bps": 0.66,
+    "share_up": 0.5236,
+    "p_time_bps": 0.17,
+    "p_swing_bps": -0.09,
+    "n_swing_matched": 254,
+    "diff_time_bps": 0.51,
+    "ci_time": [
+     -0.94,
+     2.01
+    ],
+    "diff_swing_bps": 0.78,
+    "ci_swing": [
+     -0.67,
+     2.11
+    ]
+   },
+   "30": {
+    "n": 254,
+    "days": 109,
+    "mean_bps": 0.98,
+    "median_bps": 1.46,
+    "share_up": 0.5472,
+    "p_time_bps": 0.16,
+    "p_swing_bps": 0.01,
+    "n_swing_matched": 254,
+    "diff_time_bps": 0.82,
+    "ci_time": [
+     -1.11,
+     2.78
+    ],
+    "diff_swing_bps": 0.97,
+    "ci_swing": [
+     -0.93,
+     2.92
+    ]
+   }
+  },
+  "D": {
+   "5": {
+    "n": 414,
+    "days": 173,
+    "mean_bps": 0.31,
+    "median_bps": 0.32,
+    "share_up": 0.5217,
+    "p_time_bps": 0.05,
+    "p_swing_bps": 0.1,
+    "n_swing_matched": 414,
+    "diff_time_bps": 0.25,
+    "ci_time": [
+     -0.41,
+     0.93
+    ],
+    "diff_swing_bps": 0.21,
+    "ci_swing": [
+     -0.47,
+     0.87
+    ]
+   },
+   "15": {
+    "n": 414,
+    "days": 173,
+    "mean_bps": 0.61,
+    "median_bps": 1.22,
+    "share_up": 0.5386,
+    "p_time_bps": 0.13,
+    "p_swing_bps": -0.1,
+    "n_swing_matched": 414,
+    "diff_time_bps": 0.48,
+    "ci_time": [
+     -0.73,
+     1.73
+    ],
+    "diff_swing_bps": 0.71,
+    "ci_swing": [
+     -0.55,
+     1.91
+    ]
+   },
+   "30": {
+    "n": 414,
+    "days": 173,
+    "mean_bps": 0.49,
+    "median_bps": 0.87,
+    "share_up": 0.5266,
+    "p_time_bps": 0.1,
+    "p_swing_bps": -0.08,
+    "n_swing_matched": 414,
+    "diff_time_bps": 0.39,
+    "ci_time": [
+     -1.22,
+     2.13
+    ],
+    "diff_swing_bps": 0.57,
+    "ci_swing": [
+     -1.18,
+     2.22
+    ]
+   }
+  },
+  "swing_only": {
+   "5": {
+    "n": 40185,
+    "mean_bps": 0.1,
+    "share_up": 0.5123
+   },
+   "15": {
+    "n": 40177,
+    "mean_bps": -0.03,
+    "share_up": 0.5138
+   },
+   "30": {
+    "n": 40167,
+    "mean_bps": -0.02,
+    "share_up": 0.5124
+   }
+  }
+ }
+}
