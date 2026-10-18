@@ -125,7 +125,13 @@ def proxy_book(mkt: str) -> Book:
     raw = C.load_proxy(mkt)
     daily = C.daily_from_minutes(raw).set_index("day")
     mh = C.mcx_hours(raw)
-    return book_from_frame(mkt, mh, daily, lambda px, d, _m=mkt: C.proxy_notional(_m, px, d))
+    inr = {}
+
+    def notional(px, d, _m=mkt):
+        if d not in inr:                       # USD/INR of the previous Yahoo day, cached per day (speed only)
+            inr[d] = C.usdinr_prev(d)
+        return px * inr[d] * C.FACTOR[_m] * C.LOT[_m]
+    return book_from_frame(mkt, mh, daily, notional)
 
 
 # ------------------------------------------------------------------------------------------------ helpers
