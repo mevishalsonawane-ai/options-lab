@@ -54,6 +54,17 @@ class StrategiesLiveTest : RobolectricTest() {
 
     private fun live() { kite.login(); AutomationSupport.liveSettings() }
 
+    /**
+     * 18 Oct (CI ran at 15:29 IST): the test basket is intraday with a 15:15 exit, so after 15:15 the stop check's pass exited
+     * the leg by its time ("nothing sold above the stop" failed). Today at 11:00 IST, the clock still running (an offset, not
+     * a fixed clock: the waits inside still see time pass).
+     */
+    private fun midSession() {
+        val sys = java.time.Clock.system(com.optionslab.engine.IST)
+        val at = java.time.ZonedDateTime.now(sys).toLocalDate().atTime(11, 0).atZone(com.optionslab.engine.IST)
+        Market.testClock = java.time.Clock.offset(sys, java.time.Duration.between(java.time.ZonedDateTime.now(sys), at))
+    }
+
     /** Save [def] live-enabled and return its id. */
     private fun saved(vararg legs: Pair<Position, OptionType>, lots: Int = 1, sl: Double? = 30.0): Long = runBlocking {
         assertNull(Strategies.save(AutomationSupport.strategy("Test basket", *legs, lots = lots, sl = sl)))
@@ -202,6 +213,7 @@ class StrategiesLiveTest : RobolectricTest() {
     /** 18 Oct, review: the 15-second stop check's part ([Strategies.manageOnly]) sells a leg through its stop, once. */
     @Test fun theStopChecksOwnPassSellsTheLegThroughItsStopOnce() {
         live()
+        midSession()
         val id = saved(Position.B to OptionType.CE)
         startLive(id)
         assertTrue(Strategies.runningHint)
@@ -218,6 +230,7 @@ class StrategiesLiveTest : RobolectricTest() {
     /** A compromised phone: the stop check's exits still go (only entries are refused). */
     @Test fun theStopChecksOwnPassSellsEvenOnACompromisedPhone() {
         live()
+        midSession()
         val id = saved(Position.B to OptionType.CE)
         startLive(id)
         kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
