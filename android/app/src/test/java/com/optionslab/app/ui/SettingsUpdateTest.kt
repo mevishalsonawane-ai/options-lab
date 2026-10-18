@@ -42,9 +42,9 @@ class SettingsUpdateTest : RobolectricTest() {
     @Test fun aKillSwitchTheModelNeverHeardOfSurvivesALaterUnrelatedChange() {
         val model = model()
         assertFalse(model.settings.value.guardKill)
-        // Written behind the model's back (no save notice at all): the screen's copy is certainly stale.
+        // Written behind the model's back (no save notice). The model's first read of the vault (on IO, at its start) may or
+        // may not have seen it yet; either way the change below must keep it (the stored-read race itself is in GuardTest).
         SecurePrefs.put(AppSettings.KILL_KEY, true)
-        assertFalse("the screen has not been told", model.settings.value.guardKill)
         model.update { it.copy(theme = "dark") }
         await("the theme saved") { AppSettings.load().theme == "dark" }
         assertTrue("an unrelated change must never clear the kill switch", AppSettings.load().guardKill)
