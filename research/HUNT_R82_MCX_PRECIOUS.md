@@ -32,7 +32,7 @@
 
 **3. Supertrend agreement on Donchian (R73's lesson)** did not carry over to daily MCX metals.
 - D0, D1 and D2 lost in design (-Rs 1.4 to -1.9 lakh on 134-139 trades).
-- On daily bars the Supertrend almost always agrees with a 55-day breakout, so D1 = D0.
+- On daily bars the Supertrend almost always agrees with a 55-day breakout, so D1 is nearly D0 (identical in the final).
 
 **4. The US-session ideas looked best in design and failed worst in the final.**
 - **U2** (both metals moving the same way in the first US-cash hour; trade both futures that way, stop at that hour's
@@ -55,7 +55,7 @@ final.
 
 **6. The gold/silver ratio regime (G1) and the DXY filter (U1) both failed.**
 - G1: final +Rs 2.8 lakh, far below holding the trend.
-- U1: final -Rs 2.6 lakh. Skipping longs while the dollar rose kept it out of gold's best months.
+- U1: final -Rs 2.6 lakh. Its silver longs lost Rs 4.1 lakh, and gold made +Rs 1.5 lakh against T2's +Rs 7.8 lakh.
 
 **7. Not tested:**
 - MCX options versus futures (no option history reachable);
@@ -172,7 +172,7 @@ Daily: 2009-10, 2011-12, ..., 2021-22. Hourly: Apr-Jun 2025, Jul-Sep, Oct-Dec, J
 | 12-month trend: gold+silver agreement | T3 | own + other metal's proxy | rejected (q 0.33; top-5 carried); beat T0 in WF and final |
 | 12-month trend: volatility skip ("sizing" at 1 lot) | T4 | own proxy | rejected (did not out-earn T0; q 0.33); **lowest-risk version**, kept as a note |
 | Donchian 55/20 | D0 | own proxy | rejected (lost in design) |
-| Donchian + Supertrend agreement (R73) | D1 | own proxy | rejected (= D0) |
+| Donchian + Supertrend agreement (R73) | D1 | own proxy | rejected (nearly D0; identical in the final) |
 | Donchian + Supertrend on both metals (R72 breadth) | D2 | own + other metal | rejected |
 | Gold/silver ratio regime | G1 | gold/silver ratio + own proxy | rejected |
 | DXY context | U1 | own proxy + DXY | rejected |
