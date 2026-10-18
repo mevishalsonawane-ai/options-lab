@@ -1,0 +1,1307 @@
+{
+ "tests": {
+  "T0": {
+   "final": {
+    "trades": 6,
+    "net": 1104268.0,
+    "win": 0.333,
+    "avg_win": 619762.0,
+    "avg_loss": -33814.0,
+    "max_dd": -135256.0,
+    "worst": -39375.0,
+    "by_metal": {
+     "gold": {
+      "trades": 3,
+      "net": 613368.0
+     },
+     "silver": {
+      "trades": 3,
+      "net": 490900.0
+     }
+    },
+    "longs": {
+     "trades": 4,
+     "net": 1175883.0
+    },
+    "shorts": {
+     "trades": 2,
+     "net": -71615.0
+    },
+    "exits": {
+     "flip": 4,
+     "window_end": 2
+    }
+   },
+   "top5_removed": -39375.0,
+   "examples": [
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2023-04-03 00:00:00",
+     "exit_t": "2026-09-30 00:00:00",
+     "entry": 56839.95,
+     "exit": 135895.88,
+     "why": "window_end",
+     "net": 671091.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2023-04-03 00:00:00",
+     "exit_t": "2026-09-30 00:00:00",
+     "entry": 69192.01,
+     "exit": 197429.21,
+     "why": "window_end",
+     "net": 568432.0
+    },
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2023-03-01 00:00:00",
+     "exit_t": "2023-04-03 00:00:00",
+     "entry": 61006.28,
+     "exit": 69192.01,
+     "why": "flip",
+     "net": -39375.0
+    }
+   ]
+  },
+  "T1": {
+   "final": {
+    "trades": 45,
+    "net": 1120729.0,
+    "win": 0.467,
+    "avg_win": 111469.0,
+    "avg_loss": -50839.0,
+    "max_dd": -879363.0,
+    "worst": -338581.0,
+    "by_metal": {
+     "gold": {
+      "trades": 21,
+      "net": 773388.0
+     },
+     "silver": {
+      "trades": 24,
+      "net": 347340.0
+     }
+    },
+    "longs": {
+     "trades": 43,
+     "net": 1140391.0
+    },
+    "shorts": {
+     "trades": 2,
+     "net": -19662.0
+    },
+    "exits": {
+     "stop": 45
+    }
+   },
+   "top5_removed": -464156.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-01-01 00:00:00",
+     "exit_t": "2026-01-30 00:00:00",
+     "entry": 219305.84,
+     "exit": 316777.64,
+     "why": "stop",
+     "net": 481835.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-11-03 00:00:00",
+     "exit_t": "2025-12-29 00:00:00",
+     "entry": 146632.76,
+     "exit": 217967.18,
+     "why": "stop",
+     "net": 349705.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-03-02 00:00:00",
+     "exit_t": "2026-03-19 00:00:00",
+     "entry": 296987.4,
+     "exit": 230153.29,
+     "why": "stop",
+     "net": -338581.0
+    }
+   ],
+   "twin_p": 0.09780439121756487,
+   "twin_mean": 410612.0
+  },
+  "T2": {
+   "final": {
+    "trades": 43,
+    "net": 1140391.0,
+    "win": 0.488,
+    "avg_win": 111469.0,
+    "avg_loss": -54567.0,
+    "max_dd": -879363.0,
+    "worst": -338581.0,
+    "by_metal": {
+     "gold": {
+      "trades": 20,
+      "net": 784267.0
+     },
+     "silver": {
+      "trades": 23,
+      "net": 356124.0
+     }
+    },
+    "longs": {
+     "trades": 43,
+     "net": 1140391.0
+    },
+    "shorts": {
+     "trades": 0,
+     "net": 0.0
+    },
+    "exits": {
+     "stop": 43
+    }
+   },
+   "top5_removed": -444493.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-01-01 00:00:00",
+     "exit_t": "2026-01-30 00:00:00",
+     "entry": 219305.84,
+     "exit": 316777.64,
+     "why": "stop",
+     "net": 481835.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-11-03 00:00:00",
+     "exit_t": "2025-12-29 00:00:00",
+     "entry": 146632.76,
+     "exit": 217967.18,
+     "why": "stop",
+     "net": 349705.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-03-02 00:00:00",
+     "exit_t": "2026-03-19 00:00:00",
+     "entry": 296987.4,
+     "exit": 230153.29,
+     "why": "stop",
+     "net": -338581.0
+    }
+   ],
+   "twin_p": 0.08582834331337326,
+   "twin_mean": 456030.0
+  },
+  "T3": {
+   "final": {
+    "trades": 45,
+    "net": 1120729.0,
+    "win": 0.467,
+    "avg_win": 111469.0,
+    "avg_loss": -50839.0,
+    "max_dd": -879363.0,
+    "worst": -338581.0,
+    "by_metal": {
+     "gold": {
+      "trades": 21,
+      "net": 773388.0
+     },
+     "silver": {
+      "trades": 24,
+      "net": 347340.0
+     }
+    },
+    "longs": {
+     "trades": 43,
+     "net": 1140391.0
+    },
+    "shorts": {
+     "trades": 2,
+     "net": -19662.0
+    },
+    "exits": {
+     "stop": 45
+    }
+   },
+   "top5_removed": -464156.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-01-01 00:00:00",
+     "exit_t": "2026-01-30 00:00:00",
+     "entry": 219305.84,
+     "exit": 316777.64,
+     "why": "stop",
+     "net": 481835.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-11-03 00:00:00",
+     "exit_t": "2025-12-29 00:00:00",
+     "entry": 146632.76,
+     "exit": 217967.18,
+     "why": "stop",
+     "net": 349705.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-03-02 00:00:00",
+     "exit_t": "2026-03-19 00:00:00",
+     "entry": 296987.4,
+     "exit": 230153.29,
+     "why": "stop",
+     "net": -338581.0
+    }
+   ],
+   "twin_p": 0.09780439121756487,
+   "twin_mean": 410612.0
+  },
+  "T4": {
+   "final": {
+    "trades": 34,
+    "net": 1010840.0,
+    "win": 0.471,
+    "avg_win": 84269.0,
+    "avg_loss": -18748.0,
+    "max_dd": -189803.0,
+    "worst": -86448.0,
+    "by_metal": {
+     "gold": {
+      "trades": 17,
+      "net": 711723.0
+     },
+     "silver": {
+      "trades": 17,
+      "net": 299117.0
+     }
+    },
+    "longs": {
+     "trades": 32,
+     "net": 1030503.0
+    },
+    "shorts": {
+     "trades": 2,
+     "net": -19662.0
+    },
+    "exits": {
+     "stop": 34
+    }
+   },
+   "top5_removed": 82484.0,
+   "examples": [
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2026-01-01 00:00:00",
+     "exit_t": "2026-01-29 00:00:00",
+     "entry": 132315.45,
+     "exit": 161676.02,
+     "why": "stop",
+     "net": 287204.0
+    },
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2025-07-01 00:00:00",
+     "exit_t": "2025-10-17 00:00:00",
+     "entry": 96491.45,
+     "exit": 125694.51,
+     "why": "stop",
+     "net": 274650.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-08-01 00:00:00",
+     "exit_t": "2025-10-21 00:00:00",
+     "entry": 109626.34,
+     "exit": 149983.97,
+     "why": "stop",
+     "net": 194323.0
+    }
+   ],
+   "twin_p": 0.07984031936127745,
+   "twin_mean": 338752.0
+  },
+  "D0": {
+   "final": {
+    "trades": 28,
+    "net": 533959.0,
+    "win": 0.25,
+    "avg_win": 161925.0,
+    "avg_loss": -28548.0,
+    "max_dd": -288486.0,
+    "worst": -137991.0,
+    "by_metal": {
+     "gold": {
+      "trades": 14,
+      "net": 336471.0
+     },
+     "silver": {
+      "trades": 14,
+      "net": 197488.0
+     }
+    },
+    "longs": {
+     "trades": 16,
+     "net": 924308.0
+    },
+    "shorts": {
+     "trades": 12,
+     "net": -390349.0
+    },
+    "exits": {
+     "signal_exit": 12,
+     "stop": 16
+    }
+   },
+   "top5_removed": -583267.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-06-06 00:00:00",
+     "exit_t": "2026-02-06 00:00:00",
+     "entry": 104561.14,
+     "exit": 206071.64,
+     "why": "signal_exit",
+     "net": 486296.0
+    },
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2025-08-29 00:00:00",
+     "exit_t": "2026-03-20 00:00:00",
+     "entry": 102035.67,
+     "exit": 147508.53,
+     "why": "signal_exit",
+     "net": 420400.0
+    },
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-06-11 00:00:00",
+     "exit_t": "2026-06-15 00:00:00",
+     "entry": 201966.73,
+     "exit": 229652.2,
+     "why": "stop",
+     "net": -137991.0
+    }
+   ],
+   "twin_p": 0.2275449101796407,
+   "twin_mean": 213166.0
+  },
+  "D1": {
+   "final": {
+    "trades": 28,
+    "net": 533959.0,
+    "win": 0.25,
+    "avg_win": 161925.0,
+    "avg_loss": -28548.0,
+    "max_dd": -288486.0,
+    "worst": -137991.0,
+    "by_metal": {
+     "gold": {
+      "trades": 14,
+      "net": 336471.0
+     },
+     "silver": {
+      "trades": 14,
+      "net": 197488.0
+     }
+    },
+    "longs": {
+     "trades": 16,
+     "net": 924308.0
+    },
+    "shorts": {
+     "trades": 12,
+     "net": -390349.0
+    },
+    "exits": {
+     "signal_exit": 12,
+     "stop": 16
+    }
+   },
+   "top5_removed": -583267.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-06-06 00:00:00",
+     "exit_t": "2026-02-06 00:00:00",
+     "entry": 104561.14,
+     "exit": 206071.64,
+     "why": "signal_exit",
+     "net": 486296.0
+    },
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2025-08-29 00:00:00",
+     "exit_t": "2026-03-20 00:00:00",
+     "entry": 102035.67,
+     "exit": 147508.53,
+     "why": "signal_exit",
+     "net": 420400.0
+    },
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-06-11 00:00:00",
+     "exit_t": "2026-06-15 00:00:00",
+     "entry": 201966.73,
+     "exit": 229652.2,
+     "why": "stop",
+     "net": -137991.0
+    }
+   ],
+   "twin_p": 0.2275449101796407,
+   "twin_mean": 213166.0
+  },
+  "D2": {
+   "final": {
+    "trades": 27,
+    "net": 499283.0,
+    "win": 0.222,
+    "avg_win": 178786.0,
+    "avg_loss": -27306.0,
+    "max_dd": -288486.0,
+    "worst": -137991.0,
+    "by_metal": {
+     "gold": {
+      "trades": 13,
+      "net": 351590.0
+     },
+     "silver": {
+      "trades": 14,
+      "net": 147694.0
+     }
+    },
+    "longs": {
+     "trades": 16,
+     "net": 861521.0
+    },
+    "shorts": {
+     "trades": 11,
+     "net": -362238.0
+    },
+    "exits": {
+     "signal_exit": 11,
+     "stop": 16
+    }
+   },
+   "top5_removed": -564136.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-08-29 00:00:00",
+     "exit_t": "2026-02-06 00:00:00",
+     "entry": 116450.98,
+     "exit": 206071.64,
+     "why": "signal_exit",
+     "net": 432490.0
+    },
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2025-08-29 00:00:00",
+     "exit_t": "2026-03-20 00:00:00",
+     "entry": 102035.67,
+     "exit": 147508.53,
+     "why": "signal_exit",
+     "net": 420400.0
+    },
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-06-11 00:00:00",
+     "exit_t": "2026-06-15 00:00:00",
+     "entry": 201966.73,
+     "exit": 229652.2,
+     "why": "stop",
+     "net": -137991.0
+    }
+   ],
+   "twin_p": 0.24550898203592814,
+   "twin_mean": 207066.0
+  },
+  "G1": {
+   "final": {
+    "trades": 30,
+    "net": 277105.0,
+    "win": 0.4,
+    "avg_win": 117500.0,
+    "avg_loss": -62938.0,
+    "max_dd": -865887.0,
+    "worst": -338581.0,
+    "by_metal": {
+     "gold": {
+      "trades": 11,
+      "net": 213175.0
+     },
+     "silver": {
+      "trades": 19,
+      "net": 63930.0
+     }
+    },
+    "longs": {
+     "trades": 30,
+     "net": 277105.0
+    },
+    "shorts": {
+     "trades": 0,
+     "net": 0.0
+    },
+    "exits": {
+     "stop": 22,
+     "signal_exit": 8
+    }
+   },
+   "top5_removed": -923857.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-01-01 00:00:00",
+     "exit_t": "2026-01-30 00:00:00",
+     "entry": 219305.84,
+     "exit": 316777.64,
+     "why": "stop",
+     "net": 481835.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2025-11-03 00:00:00",
+     "exit_t": "2025-12-29 00:00:00",
+     "entry": 146632.76,
+     "exit": 217967.18,
+     "why": "stop",
+     "net": 349705.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-03-02 00:00:00",
+     "exit_t": "2026-03-19 00:00:00",
+     "entry": 296987.4,
+     "exit": 230153.29,
+     "why": "stop",
+     "net": -338581.0
+    }
+   ],
+   "twin_p": 0.46706586826347307,
+   "twin_mean": 244010.0
+  },
+  "U1": {
+   "final": {
+    "trades": 23,
+    "net": -258370.0,
+    "win": 0.348,
+    "avg_win": 87620.0,
+    "avg_loss": -63955.0,
+    "max_dd": -678651.0,
+    "worst": -338581.0,
+    "by_metal": {
+     "gold": {
+      "trades": 11,
+      "net": 147590.0
+     },
+     "silver": {
+      "trades": 12,
+      "net": -405961.0
+     }
+    },
+    "longs": {
+     "trades": 23,
+     "net": -258370.0
+    },
+    "shorts": {
+     "trades": 0,
+     "net": 0.0
+    },
+    "exits": {
+     "stop": 23
+    }
+   },
+   "top5_removed": -898598.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-03-02 00:00:00",
+     "exit_t": "2026-03-19 00:00:00",
+     "entry": 296987.4,
+     "exit": 230153.29,
+     "why": "stop",
+     "net": -338581.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-02-02 00:00:00",
+     "exit_t": "2026-02-06 00:00:00",
+     "entry": 255323.06,
+     "exit": 197217.33,
+     "why": "stop",
+     "net": -291598.0
+    },
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2025-06-02 00:00:00",
+     "exit_t": "2025-10-17 00:00:00",
+     "entry": 96318.56,
+     "exit": 125694.51,
+     "why": "stop",
+     "net": 271818.0
+    }
+   ],
+   "twin_p": 0.9261477045908184,
+   "twin_mean": 219727.0
+  },
+  "L1": {
+   "final": {
+    "trades": 36,
+    "net": -34031.0,
+    "win": 0.361,
+    "avg_win": 7730.0,
+    "avg_loss": -5849.0,
+    "max_dd": -65823.0,
+    "worst": -12017.0,
+    "by_metal": {
+     "gold": {
+      "trades": 16,
+      "net": -37943.0
+     },
+     "silver": {
+      "trades": 20,
+      "net": 3912.0
+     }
+    },
+    "longs": {
+     "trades": 36,
+     "net": -34031.0
+    },
+    "shorts": {
+     "trades": 0,
+     "net": 0.0
+    },
+    "exits": {
+     "failed_break": 10,
+     "target": 12,
+     "stop": 9,
+     "flat": 5
+    }
+   },
+   "top5_removed": -98251.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-08-05 06:00:00",
+     "exit_t": "2026-08-05 14:00:00",
+     "entry": 200483.44,
+     "exit": 204435.47,
+     "why": "target",
+     "net": 19538.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-05-06 05:00:00",
+     "exit_t": "2026-05-06 08:00:00",
+     "entry": 247159.0,
+     "exit": 250392.77,
+     "why": "target",
+     "net": 15907.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-05-06 09:00:00",
+     "exit_t": "2026-05-06 12:00:00",
+     "entry": 251510.5,
+     "exit": 249159.53,
+     "why": "stop",
+     "net": -12017.0
+    }
+   ],
+   "twin_p": 0.36327345309381237,
+   "twin_mean": -48817.0
+  },
+  "L2": {
+   "final": {
+    "trades": 36,
+    "net": -34031.0,
+    "win": 0.361,
+    "avg_win": 7730.0,
+    "avg_loss": -5849.0,
+    "max_dd": -65823.0,
+    "worst": -12017.0,
+    "by_metal": {
+     "gold": {
+      "trades": 16,
+      "net": -37943.0
+     },
+     "silver": {
+      "trades": 20,
+      "net": 3912.0
+     }
+    },
+    "longs": {
+     "trades": 36,
+     "net": -34031.0
+    },
+    "shorts": {
+     "trades": 0,
+     "net": 0.0
+    },
+    "exits": {
+     "failed_break": 10,
+     "target": 12,
+     "stop": 9,
+     "flat": 5
+    }
+   },
+   "top5_removed": -98251.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-08-05 06:00:00",
+     "exit_t": "2026-08-05 14:00:00",
+     "entry": 200483.44,
+     "exit": 204435.47,
+     "why": "target",
+     "net": 19538.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-05-06 05:00:00",
+     "exit_t": "2026-05-06 08:00:00",
+     "entry": 247159.0,
+     "exit": 250392.77,
+     "why": "target",
+     "net": 15907.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-05-06 09:00:00",
+     "exit_t": "2026-05-06 12:00:00",
+     "entry": 251510.5,
+     "exit": 249159.53,
+     "why": "stop",
+     "net": -12017.0
+    }
+   ],
+   "twin_p": 0.36327345309381237,
+   "twin_mean": -48817.0
+  },
+  "L3": {
+   "final": {
+    "trades": 86,
+    "net": -109263.0,
+    "win": 0.407,
+    "avg_win": 7131.0,
+    "avg_loss": -7036.0,
+    "max_dd": -145995.0,
+    "worst": -20771.0,
+    "by_metal": {
+     "gold": {
+      "trades": 39,
+      "net": -32731.0
+     },
+     "silver": {
+      "trades": 47,
+      "net": -76532.0
+     }
+    },
+    "longs": {
+     "trades": 36,
+     "net": -34031.0
+    },
+    "shorts": {
+     "trades": 50,
+     "net": -75233.0
+    },
+    "exits": {
+     "failed_break": 21,
+     "target": 23,
+     "stop": 23,
+     "flat": 19
+    }
+   },
+   "top5_removed": -197302.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-05-15 06:00:00",
+     "exit_t": "2026-05-15 07:00:00",
+     "entry": 255461.77,
+     "exit": 259562.46,
+     "why": "stop",
+     "net": -20771.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-08-05 06:00:00",
+     "exit_t": "2026-08-05 14:00:00",
+     "entry": 200483.44,
+     "exit": 204435.47,
+     "why": "target",
+     "net": 19538.0
+    },
+    {
+     "metal": "gold",
+     "side": -1,
+     "entry_t": "2026-04-28 06:00:00",
+     "exit_t": "2026-04-28 11:00:00",
+     "entry": 149182.84,
+     "exit": 147247.19,
+     "why": "target",
+     "net": 19054.0
+    }
+   ],
+   "twin_p": 0.4930139720558882,
+   "twin_mean": -109081.0
+  },
+  "E1": {
+   "final": {
+    "trades": 28,
+    "net": -7954.0,
+    "win": 0.393,
+    "avg_win": 7892.0,
+    "avg_loss": -5574.0,
+    "max_dd": -39745.0,
+    "worst": -12017.0,
+    "by_metal": {
+     "gold": {
+      "trades": 12,
+      "net": -28657.0
+     },
+     "silver": {
+      "trades": 16,
+      "net": 20704.0
+     }
+    },
+    "longs": {
+     "trades": 28,
+     "net": -7954.0
+    },
+    "shorts": {
+     "trades": 0,
+     "net": 0.0
+    },
+    "exits": {
+     "failed_break": 9,
+     "target": 10,
+     "stop": 5,
+     "flat": 4
+    }
+   },
+   "top5_removed": -71246.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-08-05 06:00:00",
+     "exit_t": "2026-08-05 14:00:00",
+     "entry": 200483.44,
+     "exit": 204435.47,
+     "why": "target",
+     "net": 19538.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-05-06 05:00:00",
+     "exit_t": "2026-05-06 08:00:00",
+     "entry": 247159.0,
+     "exit": 250392.77,
+     "why": "target",
+     "net": 15907.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-05-06 09:00:00",
+     "exit_t": "2026-05-06 12:00:00",
+     "entry": 251510.5,
+     "exit": 249159.53,
+     "why": "stop",
+     "net": -12017.0
+    }
+   ],
+   "twin_p": 0.2275449101796407,
+   "twin_mean": -38537.0
+  },
+  "O1": {
+   "final": {
+    "trades": 180,
+    "net": -128693.0,
+    "win": 0.317,
+    "avg_win": 18813.0,
+    "avg_loss": -9765.0,
+    "max_dd": -316662.0,
+    "worst": -18408.0,
+    "by_metal": {
+     "gold": {
+      "trades": 90,
+      "net": -13159.0
+     },
+     "silver": {
+      "trades": 90,
+      "net": -115534.0
+     }
+    },
+    "longs": {
+     "trades": 80,
+     "net": -54811.0
+    },
+    "shorts": {
+     "trades": 100,
+     "net": -73882.0
+    },
+    "exits": {
+     "flat": 62,
+     "stop": 118
+    }
+   },
+   "top5_removed": -420715.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-05-15 04:00:00",
+     "exit_t": "2026-05-15 17:00:00",
+     "entry": 266775.03,
+     "exit": 250118.15,
+     "why": "flat",
+     "net": 83012.0
+    },
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-10-14 04:00:00",
+     "exit_t": "2026-10-14 17:00:00",
+     "entry": 193938.85,
+     "exit": 182186.97,
+     "why": "flat",
+     "net": 58548.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-04-17 04:00:00",
+     "exit_t": "2026-04-17 17:00:00",
+     "entry": 251230.26,
+     "exit": 262119.88,
+     "why": "flat",
+     "net": 54178.0
+    }
+   ],
+   "twin_p": 0.34930139720558884,
+   "twin_mean": -190150.0
+  },
+  "U2": {
+   "final": {
+    "trades": 234,
+    "net": -584415.0,
+    "win": 0.35,
+    "avg_win": 7608.0,
+    "avg_loss": -7949.0,
+    "max_dd": -692151.0,
+    "worst": -28760.0,
+    "by_metal": {
+     "gold": {
+      "trades": 117,
+      "net": -314757.0
+     },
+     "silver": {
+      "trades": 117,
+      "net": -269658.0
+     }
+    },
+    "longs": {
+     "trades": 112,
+     "net": -329915.0
+    },
+    "shorts": {
+     "trades": 122,
+     "net": -254501.0
+    },
+    "exits": {
+     "flat": 149,
+     "stop": 85
+    }
+   },
+   "top5_removed": -723908.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-06-09 14:00:00",
+     "exit_t": "2026-06-09 17:00:00",
+     "entry": 220394.63,
+     "exit": 210460.29,
+     "why": "flat",
+     "net": 49437.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-06-22 14:00:00",
+     "exit_t": "2026-06-22 14:00:00",
+     "entry": 214188.67,
+     "exit": 208482.27,
+     "why": "stop",
+     "net": -28760.0
+    },
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-10-02 14:00:00",
+     "exit_t": "2026-10-02 17:00:00",
+     "entry": 202464.52,
+     "exit": 197533.64,
+     "why": "flat",
+     "net": 24434.0
+    }
+   ],
+   "twin_p": 0.9800399201596807,
+   "twin_mean": -311272.0
+  },
+  "U3": {
+   "final": {
+    "trades": 32,
+    "net": -59083.0,
+    "win": 0.5,
+    "avg_win": 8174.0,
+    "avg_loss": -11867.0,
+    "max_dd": -126130.0,
+    "worst": -18738.0,
+    "by_metal": {
+     "gold": {
+      "trades": 16,
+      "net": -38303.0
+     },
+     "silver": {
+      "trades": 16,
+      "net": -20779.0
+     }
+    },
+    "longs": {
+     "trades": 14,
+     "net": -99061.0
+    },
+    "shorts": {
+     "trades": 18,
+     "net": 39978.0
+    },
+    "exits": {
+     "stop": 15,
+     "flat": 17
+    }
+   },
+   "top5_removed": -137370.0,
+   "examples": [
+    {
+     "metal": "silver",
+     "side": -1,
+     "entry_t": "2026-10-02 14:00:00",
+     "exit_t": "2026-10-02 17:00:00",
+     "entry": 202464.52,
+     "exit": 197533.64,
+     "why": "flat",
+     "net": 24434.0
+    },
+    {
+     "metal": "silver",
+     "side": 1,
+     "entry_t": "2026-07-02 14:00:00",
+     "exit_t": "2026-07-02 15:00:00",
+     "entry": 201894.85,
+     "exit": 198190.87,
+     "why": "stop",
+     "net": -18738.0
+    },
+    {
+     "metal": "gold",
+     "side": 1,
+     "entry_t": "2026-06-10 14:00:00",
+     "exit_t": "2026-06-10 14:00:00",
+     "entry": 137089.37,
+     "exit": 135357.24,
+     "why": "stop",
+     "net": -17602.0
+    }
+   ],
+   "twin_p": 0.6586826347305389,
+   "twin_mean": -38208.0
+  }
+ },
+ "gates": {
+  "T1": {
+   "positive": true,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": true,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "T2": {
+   "positive": true,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": true,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "T3": {
+   "positive": true,
+   "beats_baseline": true,
+   "design_twin": false,
+   "final_twin": true,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "T4": {
+   "positive": true,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": true,
+   "not_top5": true,
+   "enough": true,
+   "pass": false
+  },
+  "D0": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "D1": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "D2": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "G1": {
+   "positive": true,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "U1": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "L1": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "L2": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "L3": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "E1": {
+   "positive": false,
+   "beats_baseline": true,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "O1": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "U2": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": true,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  },
+  "U3": {
+   "positive": false,
+   "beats_baseline": false,
+   "design_twin": false,
+   "final_twin": false,
+   "not_top5": false,
+   "enough": true,
+   "pass": false
+  }
+ }
+}

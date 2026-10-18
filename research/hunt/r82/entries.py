@@ -75,7 +75,7 @@ def main():
                           "future). No real MCX price: the Drive lake was unreachable"),
             period=dict(design=("1 Jan 2005 - 31 Dec 2022 (walk-forward 2-year blocks 2009-2022)" if daily else
                                 "21 Oct 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)"),
-                        holdout=("1 Jan 2023 - 16 Oct 2026, read once (R82 final)" if daily else
+                        holdout=("1 Jan 2023 - 30 Sep 2026 (the daily data end), read once (R82 final)" if daily else
                                  "1 Apr - 16 Oct 2026, read once (R82 final)")),
             instruments=["GOLDM", "SILVERM"],
             features=[f"signal source: {S.SIGNAL[t]}; trade the future (no option chart)"],
@@ -93,7 +93,7 @@ def main():
         e = dict(id=f"r82-nt-{k}", title=f"R82 (not tested): {title}", family="mcx-crypto", date="2026-10-18", doc=DOC,
                  hypothesis=f"Pre-registered in R82 as an idea; not tested: {why}.", data_version="none", period=dict(
                      design="n/a", holdout="n/a"), instruments=["GOLDM", "SILVERM"], features=["not tested"],
-                 model_or_rule=title, settings="research/hunt/r82/PREREG.md section 4", prereg=PREREG, variants_tried=0,
+                 model_or_rule=title, settings="research/hunt/r82/PREREG.md section 4", prereg=PREREG, variants_tried=None,
                  results=dict(summary=f"Not tested: {why}.", costs="n/a"), holdout_read=False, verdict="not-a-test")
         (OUT / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
 

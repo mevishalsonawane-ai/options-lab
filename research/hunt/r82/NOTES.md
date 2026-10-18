@@ -44,3 +44,17 @@ Code:
    flat-time bar is missing from Yahoo's data, an intraday trade exits at the previous bar's close (the right price), but
    its recorded exit time is the next bar in the data (possibly the next day), and its bar count is one or more too high.
    P&L is unaffected; only the label and the twins' holding cap are. Yahoo rarely misses the 17:00 / 18:00 UTC bar.
+
+## Added at the final read (18 Oct)
+
+6. **The daily final ends 30 Sep 2026**, not 16 Oct. Dukascopy has not published October 2026; its month file returned
+   nothing.
+   - Silver 2026: Dukascopy monthly hour candles for Jan - Sep, summed into UTC days (194 weekdays).
+   - Gold 2026: the release's minute file, summed into UTC days (180 weekdays; the monthly fetch was rate-limited).
+   - Both series join the 2025 day files without a level jump (checked on 24 Dec 2025 - 8 Jan 2026).
+7. **The final was read once**, all 16 tests in one run, at 20:14 UTC on 18 Oct (`results/FINAL_READ`).
+8. **Diagnostics run on the design window only, after the design run and before the final (not gates):**
+   - U2's design profit was almost all silver in Jan-Mar 2026;
+   - at twice the slippage, U2's design net was -Rs 2,86,073 and O1's was -Rs 3,05,273.
+9. **T0's open-position drawdown in the final**, computed after the read from daily closes: -Rs 13,40,459, worst on
+   16 Jul 2026.
