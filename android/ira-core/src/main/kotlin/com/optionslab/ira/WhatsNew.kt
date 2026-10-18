@@ -66,7 +66,7 @@ object WhatsNew {
                 "Turning Shadow off needs your PIN, and you can turn it back on any time. " +
                 "Shadow records use Zerodha's ask and bid, the app's measured slippage and the charges. " +
                 "Live stops rest at Zerodha, as a GTT for trades carried overnight. " +
-                "A strategy with no premium stop of its own gets a safety stop 30% below its fill. " +
+                "Strategies with an index stop get a safety stop 30% below the fill; Hero and the Hero ticket get 80%. " +
                 "Every switch is checked again just before an order goes, and a check that fails blocks the entry. " +
                 "Exits, stops and square-offs always go.",
             "Settings → Zerodha, beside the Live switch: each strategy's Trade live and Shadow"),
