@@ -1173,3 +1173,10 @@ amendment 1 before the final read).
 has budget and RBI dates only.
 
 **App:** nothing changes; nothing goes on paper.
+
+## Liquidity direction filters: Supertrend, a 10-candle wait, the other indices (R79, 18 Oct 2026) - 0 of 6 pass; keep the plain rules
+- BANKNIFTY Liquidity 15+5, 20 Nov 2024 - 23 Feb 2026 (research-data release; the Drive lake was not reachable). Signal
+  on the index, option bought. Every filter made less than the plain rules in walk-forward (B0 Rs 32,567 on 173 trades).
+  5-min Supertrend skips almost nothing, 15-min skips winners, a 10-candle wait gives up the first move (design Rs 15,268
+  vs Rs 79,808), 2-of-3 other indices agreeing was -Rs 10,021 in walk-forward and no better than random skips (p 0.20).
+  Short final (48 trades) is weak evidence. `HUNT_R79_LIQUIDITY_DIRECTION.md`.
