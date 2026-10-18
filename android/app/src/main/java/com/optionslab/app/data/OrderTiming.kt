@@ -82,6 +82,8 @@ object OrderTiming {
             if (p.day != b.day) continue
             if (p.step == null) b.dropped() else b.add(p.step, false, p.ms)
         }
+        val drops = synchronized(dropsLock) { (if (dropsDay == b.day) dropsPending else 0).also { dropsPending = 0 } }
+        repeat(drops) { b.dropped() }
         return b
     }
 
@@ -134,7 +136,14 @@ object OrderTiming {
     fun streamGap(ms: Long) = queue(OrderSpeed.Step.STREAM_GAP, ms)
 
     /** The price stream dropped. In memory; written with the next order step. On the socket thread: only queued ([queue]). */
-    fun streamDropped() = queue(null, 0L)
+    fun streamDropped() {
+        // 18 Oct, review: counted apart from the queue, so a long run of clock samples can never push a drop out of it.
+        val d = today()
+        synchronized(dropsLock) { if (dropsDay != d) { dropsDay = d; dropsPending = 0 }; dropsPending++ }
+    }
+    private val dropsLock = Any()
+    private var dropsDay = ""
+    private var dropsPending = 0
 
     /**
      * An order's request starts now ([live] Zerodha, else paper): signal → decision, decision → sent and signal → sent from
@@ -207,7 +216,8 @@ object OrderTiming {
      * Null: neither measured today. Reads no network (the Live check's clock step, on a background thread).
      */
     fun latestClockOffset(): Pair<Long, String>? = synchronized(lock) {
-        val b = bookLocked()
+        // 18 Oct, review: the tick-stamp offsets wait in the lock-free queue until a look folds them in.
+        val b = withBook()
         b.all(OrderSpeed.Step.CLOCK_SERVER).lastOrNull()?.let { return@synchronized it to "Zerodha's server clock" }
         b.all(OrderSpeed.Step.CLOCK_OFFSET).lastOrNull()?.let { it to "the exchange's tick stamps, network delay included" }
     }
@@ -243,6 +253,6 @@ object OrderTiming {
     /** TEST ONLY (and a wipe): forget the in-memory book, the queued figures, and when the clock was last sampled (18 Oct: the next reading counts). */
     internal fun forget() = synchronized(lock) {
         book = null; fillsOnStream = 0; fillsKnown = 0; clockAt = 0L; serverClockAt = 0L
-        pending.clear(); pendingCount.set(0)
+        pending.clear(); pendingCount.set(0); synchronized(dropsLock) { dropsPending = 0; dropsDay = "" }
     }
 }

@@ -45,7 +45,7 @@ class WhatsNewChangelogTest {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-18-live-check" }
         assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
         assertEquals(LocalDate.of(2026, 10, 18), x.date)
-        for (w in listOf("never places an order", "reconnect", "stop is watched", "kept out of every result", "two seconds old"))
+        for (w in listOf("never places an order", "reconnect", "stop is watched", "kept out of every result", "over two seconds old is checked with Zerodha"))
             assertTrue(w in x.what, "$w: ${x.what}")
     }
 
