@@ -182,14 +182,18 @@ object Holidays {
      * the built-in one) in use. Callers that want the result join the job; the watch does not. Cancelling the job stops the
      * refresh too.
      */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)   // CoroutineStart.ATOMIC
     fun refreshInBackground(timeoutMs: Long = REFRESH_TIMEOUT_MS): Job = synchronized(refreshLock) {
         pending?.takeIf { it.isActive } ?: run {
             // Not the wait's child: a read stuck where closing cannot reach it (a DNS lookup) never holds the wait past its limit.
             val w = work?.takeIf { it.isActive } ?: bg.launch {
                 reader = Thread.currentThread()
-                try { runCatching { runInterruptible { refresh() } } } finally { reader = null }
+                // Cleared only while still this work's: a cancelled work unwinding never clears the next work's reader.
+                try { runCatching { runInterruptible { refresh() } } } finally { if (reader === Thread.currentThread()) reader = null }
             }.also { work = it }
-            bg.launch {
+            // ATOMIC (18 Oct): the wait always runs, so its finally always stops the reads. A wait cancelled before its
+            // coroutine first ran skipped its body, finally and all, and the reads went on (CI, shard 2).
+            bg.launch(start = kotlinx.coroutines.CoroutineStart.ATOMIC) {
                 try {
                     withTimeoutOrNull(timeoutMs) { w.join() }
                 } finally {
