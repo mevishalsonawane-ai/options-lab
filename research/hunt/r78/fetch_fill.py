@@ -11,6 +11,7 @@ import json
 import lzma
 import sys
 import time
+from pathlib import Path
 
 import pandas as pd
 
@@ -32,15 +33,27 @@ def main(src, out, last="2026-10-16"):
     first = pd.to_datetime(base.timestamp.min(), unit="ms").date()
     last_d = dt.date.fromisoformat(last)
     days = missing_weekdays(base.timestamp, first, last_d)
+    cache = Path(out + ".days")
+    cache.mkdir(exist_ok=True)
     rows, log = [], {}
+    for _ in range(8):                             # the proxy drops some requests; failed days are retried later
+        todo = [d for d in days if not (cache / f"{d}.json").exists()]
+        if not todo:
+            break
+        for day in todo:
+            b = get(URL.format(y=day.year, m=day.month - 1, d=day.day), tries=3)
+            if b is None:
+                continue
+            r = decode(lzma.decompress(b), day) if b else []
+            (cache / f"{day}.json").write_text(json.dumps(r))
+            time.sleep(0.4)
+    missing = [d for d in days if not (cache / f"{d}.json").exists()]
+    if missing:
+        raise SystemExit(f"failed days after retries: {missing}")
     for day in days:
-        b = get(URL.format(y=day.year, m=day.month - 1, d=day.day))
-        if b is None:
-            raise SystemExit(f"failed {day}")
-        r = decode(lzma.decompress(b), day) if b else []
+        r = json.loads((cache / f"{day}.json").read_text())
         log[str(day)] = len(r)
-        rows += r
-        time.sleep(0.4)
+        rows += [tuple(x) for x in r]
     ext = pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
     allx = pd.concat([base, ext]).drop_duplicates("timestamp").sort_values("timestamp")
     allx.to_csv(out, index=False, compression="gzip")
