@@ -95,6 +95,7 @@ import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.app.ui.theme.Type
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -465,21 +466,31 @@ private fun Main(model: AppModel) {
 
     // Boss's paper-only period (12 Oct), read off the main thread; the Live switch asks his PIN inside it.
     val paperOnlyPeriod by com.optionslab.app.data.PaperOnly.period.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    var paperOnlyPin by remember { mutableStateOf(false) }
+    // The PIN step's reason while it is asked (null: not asked).
+    var paperOnlyAsk by remember { mutableStateOf<String?>(null) }
+    val modeScope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() } } }
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
             // Turned sideways, the chart takes the whole screen.
             val fullChart = tab == Tab.CHART && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } },
+            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live ->
+                    if (!live) model.update { it.copy(mode = "sandbox", allowRealOrders = false) }
+                    // 18 Oct, review: the paper-only period is checked (read off this thread if it is not yet) before going Live:
+                    // not read yet, or unreadable, asks the PIN - a tap in the first moments after a start never goes Live without it.
+                    else modeScope.launch {
+                        val ask = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.PaperOnly.liveAskRead() }
+                        if (ask != null) paperOnlyAsk = ask else model.update { it.copy(mode = "live", allowRealOrders = true) }
+                    }
+                },
                 onLink = { tab = Tab.CABINET; cabinetPage = "broker" },
                 paperOnly = paperOnlyPeriod?.takeIf { com.optionslab.ira.PaperOnlyPeriod.active(it, Market.today()) },
-                onLiveWithPin = { paperOnlyPin = true })
+                onLiveWithPin = { paperOnlyAsk = paperOnlyPeriod?.let { com.optionslab.ira.PaperOnlyPeriod.liveAsk(it) } ?: com.optionslab.app.data.PaperOnly.UNREAD_ASK })
             // 12 Oct: going Live inside Boss's paper-only period asks his PIN, its reason and end date said first.
-            if (paperOnlyPin) paperOnlyPeriod?.let { po ->
-                com.optionslab.app.ui.screens.Reauth(model, pinOnly = false, why = com.optionslab.ira.PaperOnlyPeriod.liveAsk(po),
-                    onOk = { paperOnlyPin = false; model.update { it.copy(mode = "live", allowRealOrders = true) } }, onCancel = { paperOnlyPin = false })
+            paperOnlyAsk?.let { why ->
+                com.optionslab.app.ui.screens.Reauth(model, pinOnly = false, why = why,
+                    onOk = { paperOnlyAsk = null; model.update { it.copy(mode = "live", allowRealOrders = true) } }, onCancel = { paperOnlyAsk = null })
             }
             Box(Modifier.weight(1f)) {
                 AnimatedContent(

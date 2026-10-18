@@ -58,7 +58,14 @@ object PinLock {
     private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it) }
     private fun unhex(s: String) = ByteArray(s.length / 2) { s.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
 
-    fun setPin(pin: CharArray) {
+    /**
+     * The stored verifier (a salted hash, never the PIN), to tell whether [setPin] changed it (18 Oct, review: Change PIN says
+     * so when the vault's disk write failed after the new PIN was already in its memory).
+     */
+    fun verifierStamp(): String? = SecurePrefs.getString(K_HASH)
+
+    /** [also]: other settings written in the same vault write (18 Oct, review: the API secret re-sealed under the new PIN). */
+    fun setPin(pin: CharArray, also: Map<String, Any?> = emptyMap()) {
         require(pin.size == LENGTH) { "The PIN must be $LENGTH digits" }
         require(pin.distinct().size > 1) { "a PIN of one repeated digit is too easy to guess" }
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
@@ -69,7 +76,7 @@ object PinLock {
         val peppered = runCatching { PinPepper.mix(PinPepper.VERIFIER, raw) }.getOrNull()
         val hash = peppered ?: raw
         SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_VER to (if (peppered != null) 2 else null),
-            K_LEN to len, K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
+            K_LEN to len, K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L) + also)
         raw.fill(0)
     }
 

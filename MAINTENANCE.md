@@ -222,7 +222,7 @@ margins or P&L (an arm's P&L is in points and percent of the premium only). Ever
 and then a final scrub (GitHub tokens, JWTs, long letter-and-digit runs, digit runs of 9 or more, client-id shapes in any
 case, rupee amounts, every figure of a clause with a money word such as margin, required, available, cash, P&L, MTM,
 realised, net or charges, and lakh-grouped figures like 1,23,456); tests prove it with a set of fake secrets and real
-Kite and arm texts. A live order carries no fill price, an order's message only its reason (the words before its first
+Kite and arm texts. A live order carries no fill price and no quantities, a live trade no lots, an order's message only its reason (the words before its first
 figure), and the other arms' lines say "(net hidden)" instead of their rupee net. The recordings and backups, which
 hold your own trades, stay sealed.
 
@@ -239,10 +239,10 @@ the phone and the sample in step):
 | Key | What |
 | --- | --- |
 | `schema`, `kind`, `day`, `generated_at`, `app`, `privacy`, `mode` | the file itself; the app's switches as on/off |
-| `arms[]` | one row per arm: `state` (armed, off, parked, awaiting_approval), `automatic`, `live_cleared`, `parked_indices`, `status` and `status_kind`; `today` (decisions, signals, taken, skipped, `skips` by reason, entries, exits, paper, live, wins, losses, points, avg_pct, sum_pct) and `all_days` (trades, since, wins, losses, points, avg_pct, sum_pct); `trades[]` (account paper/live, source label, right, entry/exit time and premium, why, points, pct, lots, open, unconfirmed, trail) |
+| `arms[]` | one row per arm: `state` (armed, off, parked, awaiting_approval), `automatic`, `live_cleared`, `parked_indices`, `status` and `status_kind`; `today` (decisions, signals, taken, skipped, `skips` by reason, entries, exits, paper, live, wins, losses, points, avg_pct, sum_pct) and `all_days` (trades, since, wins, losses, points, avg_pct, sum_pct); `trades[]` (account paper/live, source label, right, entry/exit time and premium, why, points, pct, lots (null for a live trade), open, unconfirmed, trail) |
 | `other_arms[]` | the other paper arms' one-line states (Night, VIX divergence, MCX, forge ideas) |
 | `decisions_since`, `decisions[]` | each verdict: time, arm, verdict, `kind` (taken, guard, lock, day_lock, kill_switch, flow, liquidity, pretrade, event, cap, exposure, lapsed, skipped_by_boss, refused, order_refused, no_quote, error, or a waiting kind), `outcome` (taken, skipped, waiting, holding, error), bar |
-| `orders[]`, `orders_by_source` | the day's orders, paper and live, with who placed each (never the order id); `avg` (the fill price) is null for live orders, and `message` is the reason only |
+| `orders[]`, `orders_by_source` | the day's orders, paper and live, with who placed each (never the order id); `avg` (the fill price), `qty` and `filled` are null for live orders, and `message` is the reason only |
 | `health` | `errors` by kind, `unreadable`, `stream` drops, `lines` (app_health, speed, stream, github, order_speed, slippage in points, order_review, order_flow, zerodha_sync; as at the upload), `workers`, `sync` (failed, skipped, lines), `diary_lines` |
 | `timeline[]` | the Autopilot change timeline of the day; `own: true` is your own switch (the trail, the parks) |
 | `truncated` | how many items each long list lost to the size cap (256 KB before gzip; the newest are kept) |

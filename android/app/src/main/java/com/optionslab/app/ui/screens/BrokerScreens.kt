@@ -718,9 +718,11 @@ fun BrokerPage(
     if (noPinAuth) Reauth(model, onOk = { noPinAuth = false; model.update { it.copy(oneTapOrders = true) } }, onCancel = { noPinAuth = false },
         pinOnly = true, why = "Enter your app PIN to send live orders without a PIN.")
     // 12 Oct: going Live inside Boss's paper-only period asks his PIN, its reason and end date said first.
-    var paperOnlyPin by remember { mutableStateOf<com.optionslab.ira.PaperOnlyPeriod.Period?>(null) }
-    paperOnlyPin?.let { po -> Reauth(model, onOk = { paperOnlyPin = null; model.update { it.copy(mode = "live", allowRealOrders = true) } },
-        onCancel = { paperOnlyPin = null }, pinOnly = false, why = com.optionslab.ira.PaperOnlyPeriod.liveAsk(po)) }
+    // 18 Oct, review: the reason asked (the period's, or "not read yet": it fails closed); null when not asked.
+    var paperOnlyPin by remember { mutableStateOf<String?>(null) }
+    val modeScope = androidx.compose.runtime.rememberCoroutineScope()
+    paperOnlyPin?.let { why -> Reauth(model, onOk = { paperOnlyPin = null; model.update { it.copy(mode = "live", allowRealOrders = true) } },
+        onCancel = { paperOnlyPin = null }, pinOnly = false, why = why) }
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() } } }
     Page {
@@ -752,7 +754,11 @@ fun BrokerPage(
                 LedgerCard(title = "Mode") {
                     ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
                         if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
-                        else if (i == 0 && !s.live && com.optionslab.app.data.PaperOnly.activeNow() != null) paperOnlyPin = com.optionslab.app.data.PaperOnly.activeNow()
+                        // Going Live: the paper-only period checked first, read off this thread if it is not yet (18 Oct, review).
+                        else if (i == 0 && !s.live) modeScope.launch {
+                            val ask = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.PaperOnly.liveAskRead() }
+                            if (ask != null) paperOnlyPin = ask else model.update { it.copy(mode = "live", allowRealOrders = true) }
+                        }
                         else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
                     }
                     Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."

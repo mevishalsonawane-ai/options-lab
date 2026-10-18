@@ -167,31 +167,81 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** One settings write at a time, so an older snapshot can never land on disk after a newer one. */
     private val settingsWriter = kotlinx.coroutines.sync.Mutex()
+    /** Screen changes asked for and not yet in the vault (18 Oct, review): while any is queued, a reload never undoes it on screen. */
+    private val settingsQueued = java.util.concurrent.atomic.AtomicInteger()
 
+    /**
+     * A settings change. 18 Oct, review: the change is applied to what the vault holds when it is written, never to the
+     * screen's copy and saved whole. The guard turns the kill switch on by itself (a live drawdown, [com.optionslab.app.data.Guard.onRefusal]),
+     * and so can Jarvis with no screen open; the screen's copy did not know, and the next theme or alert change wrote the
+     * kill switch back off. [transform] runs twice: on the screen's copy at once (what is shown), then on the stored settings.
+     */
     fun update(transform: (AppSettings) -> AppSettings) {
         val prev = _settings.value
         val next = transform(prev)
+        settingsQueued.incrementAndGet()
         _settings.value = next
-        // Which mode orders go to is the first thing to check when an order is "missing" at Zerodha.
-        if (prev.live != next.live || prev.allowRealOrders != next.allowRealOrders)
-            com.optionslab.app.data.Diag.record("mode", "${if (next.live) "LIVE (Zerodha)" else "Paper"} · real orders allowed: ${next.allowRealOrders}")
         // Switching Live <-> Paper: each side keeps its own books (nothing is cleared); the side switched to is read
         // again at once, so its P&L, positions, orders and funds show as they are now, with the last figures in view meanwhile.
         if (prev.live != next.live) {
             if (next.live) { if (com.optionslab.app.data.Broker.loggedIn) loadAccount(quiet = true) } else loadPaper(quiet = true)
         }
-        if (prev.oneTapOrders != next.oneTapOrders) com.optionslab.app.data.Diag.record("mode", "live orders without PIN ${if (next.oneTapOrders) "ON" else "off"}")
-        if (prev.guardKill != next.guardKill) com.optionslab.app.data.Diag.record("mode", "kill switch ${if (next.guardKill) "ON" else "off"}")
-        viewModelScope.launch(Dispatchers.IO) {
+        // UNDISPATCHED: the (fair) lock is asked for here, so the changes reach the vault in the order they were made;
+        // the vault's read and write are on the IO threads, never this one.
+        viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             settingsWriter.lock()
-            try {
-                // The latest settings, read under the lock: the last write always matches the screen (Live, kill switch).
-                AppSettings.save(_settings.value)
-                Jobs.scheduleAll(ctx)
-                // Live mode streams Zerodha's prices; Paper does not.
-                com.optionslab.app.data.KiteStream.ensure()
-            } finally { settingsWriter.unlock() }
+            // Released on the IO thread that wrote (a Mutex has no owning thread): the next change never waits for the screen's
+            // thread. NonCancellable: once the lock is held the write and the release always run (a closing screen included).
+            withContext(Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
+                try {
+                    try {
+                        val stored = AppSettings.load()
+                        val saved = transform(stored)
+                        val d = com.optionslab.app.data.Diag
+                        // Which mode orders go to is the first thing to check when an order is "missing" at Zerodha.
+                        if (stored.live != saved.live || stored.allowRealOrders != saved.allowRealOrders)
+                            d.record("mode", "${if (saved.live) "LIVE (Zerodha)" else "Paper"} · real orders allowed: ${saved.allowRealOrders}")
+                        if (stored.oneTapOrders != saved.oneTapOrders) d.record("mode", "live orders without PIN ${if (saved.oneTapOrders) "ON" else "off"}")
+                        if (stored.guardKill != saved.guardKill) d.record("mode", "kill switch ${if (saved.guardKill) "ON" else "off"}")
+                        // Only what this change changed: a value the guard wrote since the read above is kept.
+                        AppSettings.saveChanged(stored, saved)
+                    } catch (e: Exception) {
+                        // Said, never a crash on this thread; the screen goes back to what the vault holds (below).
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        runCatching { com.optionslab.app.data.Diag.record("settings", "not saved: ${e.message}") }
+                        say("The setting was not saved: ${e.message ?: e.javaClass.simpleName}")
+                    } finally {
+                        // The last queued change written (or failed): the screen shows what the vault holds, guard writes included.
+                        if (settingsQueued.decrementAndGet() == 0) showStoredSettings()
+                    }
+                    Jobs.scheduleAll(ctx)
+                    // Live mode streams Zerodha's prices; Paper does not.
+                    com.optionslab.app.data.KiteStream.ensure()
+                } finally { settingsWriter.unlock() }
+            }
         }
+    }
+
+    /**
+     * 18 Oct, review: the screen's settings follow every save made outside [update] (the guard's kill switch, Jarvis with no
+     * model). Read on the IO threads; skipped while a screen change is queued (that change's own write shows the result).
+     */
+    private fun followSavedSettings() {
+        viewModelScope.launch(Dispatchers.IO) {
+            AppSettings.saves.collect { showStoredSettings() }
+        }
+    }
+
+    // After the fields above are set (an init block runs where it stands): the collector reads them at once.
+    init { followSavedSettings() }
+
+    /** The screen's settings set to the vault's (off the screen's thread), unless a screen change is queued or made meanwhile. */
+    private fun showStoredSettings() {
+        if (settingsQueued.get() != 0) return
+        val seen = _settings.value
+        val fresh = runCatching { AppSettings.load() }.getOrNull() ?: return
+        // compareAndSet: a screen change made during the read is never overwritten by this older copy.
+        if (settingsQueued.get() == 0) _settings.compareAndSet(seen, fresh)
     }
 
     // ---- the backtest ---------------------------------------------------------
@@ -1278,37 +1328,53 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                                     i + 1 < cur.legs.size -> "The remaining legs were NOT sent."
                                     else -> ""
                                 })
-                        cur.session?.let { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) }
+                        // 18 Oct, review: a ledger failure here never replaces what Zerodha said about the leg.
+                        cur.session?.let { runCatching { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) } }
                         refreshLedger(); loadAccount()
                         return@launch
                     }
                 }
                 stuck.value = null
+                // 18 Oct, review: every leg filled, so it is shown as filled now. The steps after (the ledger, the MCX watch, the
+                // bracket's exits) each fail on their own and are said as "Filled, but ..." - never "Not sent", which could
+                // lead Boss to send the same live orders again.
+                sending.value = Load.Done(fills)
+                val failed = ArrayList<String>()
+                suspend fun afterFill(what: String, step: suspend () -> Unit) {
+                    try { step() } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; failed += "$what failed (${e.message})" }
+                }
                 // An MCX order filled (9 Oct): the watch keeps it in view through MCX's evening, and its expiry exit with it.
-                if (cur.legs.any { it.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE }) {
+                if (cur.legs.any { it.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE }) afterFill("keeping the MCX order in view") {
                     com.optionslab.app.data.McxMarket.markLive()
                     runCatching { com.optionslab.app.work.Jobs.ensureWatch(ctx) }
                 }
                 cur.session?.let { day ->
                     val short = fills.last().avgPrice
                     val wing = if (fills.size > 1) fills.first().avgPrice else null
-                    Ledger.attachOrders(day, fills.map { it.orderId }, short, wing)
+                    afterFill("saving the orders to the ledger") { Ledger.attachOrders(day, fills.map { it.orderId }, short, wing) }
                 }
-                sending.value = Load.Done(fills)
                 // A square-off that left an instrument flat takes its protections and GTTs with it.
                 if (cur.exit) runCatching { clearExitsOf(cur.legs) }
                 // A bracket rides on the same confirmation: its exits go to Zerodha now that the entry filled.
+                var protectNote: String? = null
                 cur.protect?.let { pr ->
                     val leg = cur.legs.single(); val f = fills.last()
                     val signed = if (leg.side == com.optionslab.engine.Kite.Side.BUY) f.filled else -f.filled
-                    say(com.optionslab.app.data.Protections.protectLive(leg.tradingSymbol, leg.exchange, leg.product, signed, f.avgPrice, pr.stop, pr.trail, pr.target))
-                    refreshProtections()
+                    afterFill("placing the stop and target (set them by hand)") {
+                        protectNote = com.optionslab.app.data.Protections.protectLive(leg.tradingSymbol, leg.exchange, leg.product, signed, f.avgPrice, pr.stop, pr.trail, pr.target)
+                    }
+                    protectNote?.let { say(it) }
+                    runCatching { refreshProtections() }
                 }
                 refreshLedger(); loadAccount()
-                say("Filled: " + fills.joinToString(" · ") { "%s @ %.2f".format(it.orderId.takeLast(6), it.avgPrice) })
+                val filled = "Filled: " + fills.joinToString(" · ") { "%s @ %.2f".format(it.orderId.takeLast(6), it.avgPrice) }
+                say(if (failed.isEmpty()) filled else "$filled. But ${failed.joinToString("; ")}.")
             } catch (e: Exception) {
-                sending.value = Load.Failed("Not sent: ${e.message}")
-                if (fills.isNotEmpty()) cur.session?.let { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) }
+                // 18 Oct, review: legs that already filled are said, never hidden under "Not sent" (a resend would double them).
+                val filledLegs = fills.count { it.filled > 0 }
+                sending.value = Load.Failed(if (filledLegs == 0) "Not sent: ${e.message}"
+                    else "Not all sent: ${e.message}. $filledLegs earlier leg${if (filledLegs == 1) "" else "s"} filled at Zerodha; check Positions before sending again.")
+                if (fills.isNotEmpty()) cur.session?.let { runCatching { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) } }
                 loadAccount()
             }
         }

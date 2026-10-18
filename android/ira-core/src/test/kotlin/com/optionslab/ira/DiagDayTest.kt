@@ -128,7 +128,9 @@ class DiagDayTest {
         assertEquals("Strategy: Liquidity 15+5", trades[0]["source"])
         assertEquals(true, trades[2]["open"]); assertNull(trades[2]["exit"]); assertNull(trades[2]["pct"])
         assertEquals(true, trades[2]["trail"]); assertEquals(false, trades[0]["trail"])
-        assertEquals(2.0, trades[1]["lots"])
+        // 18 Oct review: a live trade has no lots (points x lots x lot size was its rupees); a paper one keeps them.
+        assertTrue(trades[1].containsKey("lots")); assertNull(trades[1]["lots"])
+        assertEquals(1.0, trades[0]["lots"])
         // The decisions list: today's only, oldest first, with each reason's kind and outcome.
         val ds = r["decisions"] as List<Map<String, Any?>>
         assertEquals(4, ds.size)
@@ -452,6 +454,18 @@ class DiagDayTest {
         assertEquals("realised ${Secrets.HIDDEN} by ${Secrets.HIDDEN} · valid device", ali)
     }
 
+    /** 18 Oct review: a part-filled order: paper keeps its quantities, live has none to multiply (its status stays). */
+    @Test fun aPartFilledLiveOrderHasNoQuantities() {
+        val orders = listOf(
+            DiagDay.Order(t(10, 5), true, "ORB", "NIFTY25OCT24500CE", "BUY", 150, 75, "COMPLETE", "LIMIT", 100.0),
+            DiagDay.Order(t(10, 6), false, "ORB", "NIFTY25OCT24500CE", "BUY", 150, 75, "OPEN", "LIMIT", 100.0),
+        )
+        val os = json(input(orders = orders))["orders"] as List<Map<String, Any?>>
+        assertEquals(listOf("COMPLETE", "OPEN"), os.map { it["status"] })
+        assertNull(os[0]["qty"]); assertNull(os[0]["filled"]); assertNull(os[0]["avg"])
+        assertEquals(150L, os[1]["qty"].num()); assertEquals(75L, os[1]["filled"].num())
+    }
+
     @Test fun aLiveOrderHasNoFillPriceAndNoRupeeFigureReachesTheFile() {
         val orders = listOf(
             DiagDay.Order(t(10, 5), false, "ORB", "BANKNIFTY25OCT51200CE", "BUY", 30, 30, "COMPLETE", "MARKET", 201.35),
@@ -466,7 +480,9 @@ class DiagDayTest {
         assertEquals(201.35, os[0]["avg"])
         assertTrue(os[1].containsKey("avg"))
         assertNull(os[1]["avg"]); assertNull(os[2]["avg"])
-        assertEquals(60L, os[1]["qty"].num())
+        // 18 Oct review: nor a live order's quantities (with a live trade's points they gave its rupees); a paper one keeps them.
+        assertTrue(os[1].containsKey("qty")); assertNull(os[1]["qty"]); assertNull(os[1]["filled"]); assertNull(os[2]["qty"])
+        assertEquals(30L, os[0]["qty"].num()); assertEquals(30L, os[0]["filled"].num())
         assertEquals("RMS:Margin Exceeds,Required", os[2]["message"])
         val raw = text(i)
         for (x in listOf("187.4", "95536", "95,536", "32112", "32,112", "AB1234", "1,200", "2,300", "12,400", "2,340", "1,180", "1,250"))

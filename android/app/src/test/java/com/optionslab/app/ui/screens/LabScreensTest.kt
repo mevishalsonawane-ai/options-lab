@@ -417,6 +417,18 @@ class LabScreensTest {
         text("No harvested sessions for BANKNIFTY yet.").assertIsDisplayed()
     }
 
+    /** 18 Oct, review: the days are read off the main thread and arrive later (a new [daysFor]): the page follows. */
+    @Test fun replayShowsTheDaysOnceTheyArrive() {
+        var daysFor by mutableStateOf<(String) -> List<LocalDate>>({ emptyList() })
+        set { ReplayContent(Load.Idle, daysFor = daysFor, onLoad = { _, _ -> }) }
+        text("No harvested sessions for NIFTY yet.").assertIsDisplayed()
+        daysFor = { u -> if (u == "NIFTY") listOf(LocalDate.of(2026, 3, 4)) else emptyList() }
+        compose.waitForIdle()
+        text("Wed 4 Mar 2026").assertIsDisplayed()
+        text("BANKNIFTY").performClick()
+        text("No harvested sessions for BANKNIFTY yet.").assertIsDisplayed()
+    }
+
     @Test fun replayBusyAndFailed() {
         var loaded by mutableStateOf<Load<com.optionslab.engine.Session>>(Load.Busy("Loading NIFTY 2026-03-04"))
         set { ReplayContent(loaded, daysFor = { listOf(LocalDate.of(2026, 3, 4)) }, onLoad = { _, _ -> }) }

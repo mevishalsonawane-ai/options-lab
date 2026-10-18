@@ -555,6 +555,76 @@ class ControlPagesTest {
         assertTrue(compose.onAllNodesWithText("Paper daily loss limit").fetchSemanticsNodes().isEmpty())
     }
 
+    /** 18 Oct, review: in Live, loosening the guard asks for the PIN (as the Security page does); tightening it never waits. */
+    @Test fun inLiveLooseningTheGuardAsksForThePinTighteningDoesNot() {
+        PinLock.setPin(pin.toCharArray())
+        model.update { it.copy(mode = "live", allowRealOrders = true) }
+        waitSettings { it.live && it.allowRealOrders }
+        show { RiskPage(model) }
+        compose.waitForText("Bot settings")
+        val ask = "Enter your app PIN to loosen the account guard on Zerodha."
+        fun chip(text: String) { compose.reveal(text); compose.onAllNodesWithText(text)[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
+        // Tighter (₹2,000 -> ₹1,000): at once.
+        chip("₹1,000")
+        waitSettings { it.guardDailyLoss == 1_000.0 }
+        assertFalse(compose.has("Confirm it is you"))
+        // Looser (₹1,000 -> ₹10,000): the PIN first; Cancel keeps the limit.
+        chip("₹10,000")
+        compose.waitForText("Confirm it is you")
+        compose.onNodeWithText(ask).assertExists()
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertEquals(1_000.0, model.settings.value.guardDailyLoss, 0.0)
+        // With the PIN it goes.
+        chip("₹10,000")
+        reauth(pin, ask)
+        waitSettings { it.guardDailyLoss == 10_000.0 }
+        // A later cut-off is looser too.
+        chip("15:00")
+        reauth(pin, ask)
+        waitSettings { it.guardCutoff == 15 * 60 }
+        // The kill switch: on at once, cleared only with the PIN.
+        compose.reveal("Kill switch")
+        toggle("Kill switch")
+        tap("Turn on")
+        waitSettings { it.guardKill }
+        assertFalse(compose.has("Confirm it is you"))
+        toggle("Kill switch")
+        tap("Clear")
+        compose.waitForText("Confirm it is you")
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertTrue("cancel keeps the kill switch on", model.settings.value.guardKill)
+        compose.until(10_000) { AppSettings.load().guardKill }
+        toggle("Kill switch")
+        tap("Clear")
+        reauth(pin, "Enter your app PIN to clear the kill switch on Zerodha.")
+        waitSettings { !it.guardKill }
+    }
+
+    /**
+     * 18 Oct, review: on Paper with Zerodha set up, loosening the Zerodha guard asks the PIN too (else it is loosened on Paper
+     * and Live is one tap away); with no Zerodha keys and no PIN the paper page changes it at once (the tests above).
+     */
+    @Test fun onPaperWithZerodhaSetUpLooseningTheGuardStillAsksForThePin() {
+        com.optionslab.app.testing.BrokerArea.saveKeys(pin)
+        assertFalse(model.settings.value.live)
+        show { RiskPage(model) }
+        compose.waitForText("Bot settings")
+        compose.reveal("Block naked option shorts")
+        val naked = model.settings.value.guardNakedShort
+        if (!naked) { toggle("Block naked option shorts"); waitSettings { it.guardNakedShort } }
+        assertFalse("switching a protection on never asks", compose.has("Confirm it is you"))
+        toggle("Block naked option shorts")
+        compose.waitForText("Confirm it is you")
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertTrue(model.settings.value.guardNakedShort)
+        toggle("Block naked option shorts")
+        reauth(pin, "Enter your app PIN to loosen the account guard on Zerodha.")
+        waitSettings { !it.guardNakedShort }
+    }
+
     @Test fun expirySquareOffAndNakedShortSwitches() {
         show { RiskPage(model) }
         val keep = "Keep the Expiry Put to settlement"

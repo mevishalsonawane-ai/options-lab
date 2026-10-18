@@ -31,7 +31,8 @@ import java.util.zip.GZIPOutputStream
  * personal words the app hands over (the account holder's name and each of its words, the user id, the GitHub login). No
  * order id or account id is ever an input. 14 Oct review: the other arms' lines lose their rupee net ([otherArmLine]), an
  * order's message keeps only its reason ([orderReason]: Kite's RMS text names the margins), and a live order has no fill
- * price (avg null: with the quantities it would give the live account's rupees). It is NOT sealed (13 Oct decision):
+ * price (avg null: with the quantities it would give the live account's rupees); 18 Oct review: nor its quantities (qty and
+ * filled null), and a live trade has no lots, so its points give no rupees either. It is NOT sealed (13 Oct decision):
  * nothing personal is left in it, the repository is private, and the research sessions have no passphrase; the recordings
  * and backups, which hold Boss's trades, stay sealed.
  */
@@ -56,7 +57,7 @@ object DiagDay {
 
     // ---- inputs ---------------------------------------------------------------------------------------------------------
 
-    /** One trade of an arm: premiums and times only ([lots], never the quantity's rupees). [exit] null: still open. */
+    /** One trade of an arm: premiums and times only ([lots] for paper only, never the quantity's rupees). [exit] null: still open. */
     data class Trade(
         val arm: String, val live: Boolean, val right: String?, val entryAt: LocalDateTime, val entry: Double,
         val exitAt: LocalDateTime? = null, val exit: Double? = null, val why: String? = null, val lots: Double = 1.0,
@@ -467,9 +468,12 @@ object DiagDay {
             // 14 Oct review: a live order's fill price is left out (null), so the live account's rupee P&L cannot be rebuilt
             // from its quantities and fills; a paper order keeps it. Live trades are read in points from the arms' trades.
             // A message keeps only its reason ([orderReason]): Kite's RMS text carries the account's margins.
+            // 18 Oct review: a live order's quantities are left out too (null; its status still says whether it filled): with a
+            // live trade's points they gave its rupees just the same.
             "orders" to capped("orders", i.orders.sortedBy { it.at }, MAX_ORDERS).map { o ->
                 linkedMapOf("at" to at(o.at, i.day), "account" to if (o.live) "live" else "paper", "source" to s(o.source), "symbol" to s(o.symbol),
-                    "side" to s(o.side), "qty" to o.qty, "filled" to o.filled, "status" to s(o.status), "type" to s(o.type),
+                    "side" to s(o.side), "qty" to if (o.live) null else o.qty, "filled" to if (o.live) null else o.filled,
+                    "status" to s(o.status), "type" to s(o.type),
                     "avg" to if (o.live) null else r2(o.avg), "message" to s(orderReason(o.message)))
             },
             "orders_by_source" to i.orders.groupingBy { (if (it.live) "live · " else "paper · ") + s(it.source) }.eachCount().toSortedMap(),
@@ -511,7 +515,8 @@ object DiagDay {
         "entry_at" to at(t.entryAt, day), "entry" to r2(t.entry),
         "exit_at" to t.exitAt?.let { at(it, day) }, "exit" to t.exit?.let { r2(it) },
         "why" to t.why?.let { scrub(it, personal) }, "points" to t.points?.let { r2(it) }, "pct" to t.pct?.let { r2(it) },
-        "lots" to r2(t.lots), "open" to (t.exit == null), "unconfirmed" to t.unconfirmed, "trail" to t.trail,
+        // 18 Oct review: a live trade's lots are left out (null): points x lots x the lot size was the live account's rupees.
+        "lots" to if (t.live) null else r2(t.lots), "open" to (t.exit == null), "unconfirmed" to t.unconfirmed, "trail" to t.trail,
     )
 
     /**

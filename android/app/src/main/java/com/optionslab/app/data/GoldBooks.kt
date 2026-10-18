@@ -60,5 +60,15 @@ object GoldBooks {
         return kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(BLOCK_MS) { awaitLoaded() } } != null
     }
 
+    /** Read already (no wait). */
+    fun loadedNow(): Boolean = gate.isCompleted && _ready.value
+
+    /**
+     * 18 Oct, review: [awaitBlocking] off the main thread; on it, only [loadedNow] - never a wait there (the gold service's
+     * start and its ensure, called from the screen, the boot receiver and the watch's start, waited up to 3 s each).
+     */
+    fun awaitOffMain(): Boolean =
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) loadedNow() else awaitBlocking()
+
     private const val BLOCK_MS = 3_000L
 }

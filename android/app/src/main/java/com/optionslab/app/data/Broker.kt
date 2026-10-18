@@ -551,10 +551,14 @@ object Broker {
         return legacy
     }
 
-    /** The PIN changed: re-seal the secret under the new one. */
-    fun resealSecret(oldPin: CharArray, newPin: CharArray) {
-        val secret = unsealSecret(oldPin) ?: return
-        SecurePrefs.put(K_SEALED, com.optionslab.app.security.SecretBox.seal(secret, newPin))
+    /**
+     * The PIN changed: the API secret sealed under [newPin], as the settings to write together with the new PIN ([com.optionslab.app.security.PinLock.setPin]'s
+     * `also`), or nothing when no PIN-sealed secret opens with [oldPin]. 18 Oct, review: it used to be written after the PIN
+     * changed, so a failed write left the secret sealed under the old PIN (and crashed the app); now both go in one write.
+     */
+    fun resealedSecret(oldPin: CharArray, newPin: CharArray): Map<String, Any?> {
+        val secret = unsealSecret(oldPin) ?: return emptyMap()
+        return mapOf(K_SEALED to com.optionslab.app.security.SecretBox.seal(secret, newPin))
     }
 
     /** Exchange the request token for the day's access token (kite_login.exchange_token). */

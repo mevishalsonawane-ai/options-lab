@@ -270,6 +270,9 @@ private fun GoldHome() {
     }
 }
 
+/** The India date of a gold time kept in UTC (18 Oct, review): the Trades tab and the P&L calendar ([goldDays]) agree. */
+internal fun goldIstDay(utc: java.time.LocalDateTime): LocalDate = utc.plusMinutes(330).toLocalDate()
+
 @Composable
 private fun GoldTrades() {
     val p = LocalPalette.current
@@ -279,11 +282,12 @@ private fun GoldTrades() {
     val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val trades = remember(book.trades, tb.trades, db.trades, sb.trades) { (book.trades + tb.trades + db.trades + sb.trades).sortedBy { it.exitTime } }
     val b = book.copy(trades = trades)
-    val today = GoldPaper.now().toLocalDate()
+    // 18 Oct, review: India's day, as the P&L calendar counts the same trades ([goldDays]); the times are kept in UTC.
+    val today = goldIstDay(GoldPaper.now())
     Page {
         item {
             LedgerCard(title = "Results") {
-                fun sum(f: (LocalDate) -> Boolean) = b.trades.filter { f(it.exitTime.toLocalDate()) }
+                fun sum(f: (LocalDate) -> Boolean) = b.trades.filter { f(goldIstDay(it.exitTime)) }
                 listOf("Today" to sum { it == today }, "This month" to sum { it.year == today.year && it.month == today.month }, "All" to b.trades)
                     .forEach { (label, ts) ->
                         val x = ts.sumOf { it.pnl }
@@ -318,7 +322,7 @@ private fun GoldTrades() {
                 if (b.trades.isEmpty()) Note("No trades yet.")
                 b.trades.asReversed().take(200).forEach { t ->
                     Column(Modifier.padding(vertical = 4.dp)) {
-                        LedgerLine("${t.exitTime.toLocalDate()} · %.2f → %.2f".format(Locale.ENGLISH, t.entry, t.exit), GoldPaper.usd(t.pnl),
+                        LedgerLine("${goldIstDay(t.exitTime)} · %.2f → %.2f".format(Locale.ENGLISH, t.entry, t.exit), GoldPaper.usd(t.pnl),
                             if (t.pnl >= 0) p.verdigris else p.oxblood)
                         Note("${GoldPaper.arm(t)} · ${GoldPaper.when_(t.entryTime)} → ${GoldPaper.when_(t.exitTime)} · %.2f lot · ".format(Locale.ENGLISH, t.lots) + GoldPaper.label(t.why))
                     }

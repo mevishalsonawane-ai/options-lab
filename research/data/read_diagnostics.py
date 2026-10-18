@@ -20,6 +20,8 @@ Schema 1 (see MAINTENANCE.md, "Daily diagnostics"):
 - ``orders`` (at, account, source, symbol, side, qty, filled, status, type, avg, message) and ``orders_by_source``.
   Since 14 Oct 2026: ``avg`` (the fill price) is null for a live order, so the live account's rupees cannot be rebuilt
   from it; ``message`` is only the reason, cut before its first figure (Kite's RMS text names the margins).
+  Since 18 Oct 2026: a live order's ``qty`` and ``filled`` are null too (its ``status`` still says whether it filled),
+  and a live trade's ``lots`` is null, so its points give no rupees either.
   ``other_arms`` lines say "(net hidden)" where the phone shows a rupee net. A file whose ``generated_at`` is on a
   later date than ``day`` was sent late (a retry): its arm states, ``mode``, health lines and workers are as at
   ``generated_at``, not as on ``day``.

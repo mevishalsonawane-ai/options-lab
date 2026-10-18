@@ -27,4 +27,19 @@ class GoldBooksTest : RobolectricTest() {
         assertEquals(0.10, b.lots, 1e-9)
         assertTrue(GoldTrendPaper.book.value.armed)
     }
+
+    /** 18 Oct, review: the gold service's start and its ensure never wait for the books on the main thread; off it they do. */
+    @Test fun onTheMainThreadNothingWaitsForTheBooks() {
+        assertTrue("Robolectric runs the test on the main thread", android.os.Looper.myLooper() == android.os.Looper.getMainLooper())
+        GoldBooks.init(context)
+        val t0 = System.nanoTime()
+        val now = GoldBooks.awaitOffMain()
+        assertTrue("no wait on the main thread", (System.nanoTime() - t0) / 1_000_000 < 500)
+        if (now) assertTrue("it says only what is read already", GoldBooks.loadedNow())
+        var off = false
+        Thread { off = GoldBooks.awaitOffMain() }.apply { start(); join(10_000) }
+        assertTrue("off the main thread it waits for the read", off)
+        assertTrue(GoldBooks.loadedNow())
+        assertTrue(GoldBooks.awaitOffMain())
+    }
 }
