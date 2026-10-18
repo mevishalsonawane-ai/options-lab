@@ -343,8 +343,8 @@ object KiteStream {
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
             if (conn !== c) return
             c.lastFrame = System.currentTimeMillis()
-            // 18 Oct (speed): the frame is read through a read-only view of okio's bytes: in place for a frame under 4 KB
-            // (okio keeps those whole); a larger one costs the single copy it always did. Each packet is read in place.
+            // 18 Oct (speed): the frame is read through a read-only view of okio's bytes (in place when okio holds them in one
+            // piece, else the single copy it always cost). Each packet is then read in place, with no array of its own.
             onTicks(c, bytes.asByteBuffer())
         }
         override fun onMessage(webSocket: WebSocket, text: String) { if (conn === c) onText(text) }

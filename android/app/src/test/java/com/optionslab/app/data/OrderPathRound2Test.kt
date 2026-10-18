@@ -332,6 +332,28 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     /**
+     * 18 Oct, review: the stream's drop and its gap (both told on the socket thread) read nothing from the vault either, and
+     * reach the speed card on its next read. One queued on an earlier day (no look overnight) is never filed under today.
+     */
+    @Test fun theStreamsDropAndGapAreQueuedOffTheVaultAndKeptToTheirOwnDay() {
+        val was = Market.testClock
+        try {
+            OrderTiming.forget()
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            try { OrderTiming.streamDropped(); OrderTiming.streamGap(1_200) } finally { SecurePrefs.countedThread = null }
+            assertEquals("settings reads on the stream's thread for a drop", 0L, SecurePrefs.readsForTest.get())
+            assertTrue(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Price stream drops today: 1") })
+            // Queued yesterday, read today: dropped.
+            OrderTiming.forget()
+            Market.testClock = java.time.Clock.offset(java.time.Clock.systemUTC(), java.time.Duration.ofDays(-1))
+            OrderTiming.streamDropped(); OrderTiming.streamGap(900)
+            Market.testClock = was
+            assertFalse(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Price stream drops today") })
+        } finally { Market.testClock = was; OrderTiming.forget() }
+    }
+
+    /**
      * 18 Oct: a tick whose arrival is "in the future" (the phone's clock stepped back since) is not fresh: the price read goes
      * to Zerodha's quote, and the decisions' fresh tick is none. It used to pass for fresh for as long as the clock's step.
      */

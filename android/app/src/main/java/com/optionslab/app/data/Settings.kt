@@ -305,7 +305,8 @@ data class AppSettings(
         /** Every setting written ([keepKill]: all but the kill switch, which keeps what the vault holds). */
         fun save(s: AppSettings, keepKill: Boolean = false) {
             // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
-            runCatching { SettingsLog.diff(load(), s) }
+            // A kill switch left as the vault holds it ([keepKill]) is logged as it is, never as a change that was not written.
+            runCatching { val was = load(); SettingsLog.diff(was, if (keepKill) s.copy(guardKill = was.guardKill) else s) }
             SecurePrefs.putAll(if (keepKill) keys(s) - KILL_KEY else keys(s))
             // The entry path reads the danger meter's switch from memory only: kept in step with every save (13 Oct).
             DangerToday.halfSize = s.dangerHalfSize

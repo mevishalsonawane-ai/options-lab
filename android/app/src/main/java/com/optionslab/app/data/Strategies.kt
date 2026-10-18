@@ -371,7 +371,8 @@ object Strategies {
         if (want.isEmpty()) return emptyList()
         return if (run.mode == RunMode.LIVE) {
             val keys = want.mapNotNull { (s, _) -> v.refs[s]?.kite?.let { s to "NFO:$it" } }
-            val q = runCatching { Broker.quotes(keys.map { it.second }) }.getOrDefault(emptyMap())
+            // 18 Oct: the run's stops and exits decide on these: a tick only while 2 s fresh, else Zerodha's quote ([Broker.stopQuotes]).
+            val q = runCatching { Broker.stopQuotes(keys.map { it.second }) }.getOrDefault(emptyMap())
             keys.mapNotNull { (s, k) -> q[k]?.last?.takeIf { it > 0 }?.let { Quote(s, "NFO", it) } }
         } else {
             want.mapNotNull { (s, ex) ->

@@ -58,16 +58,18 @@ object OrderTiming {
      * read (the day's first figure, or the first after a restart) - a vault read, and a wait behind any vault write, on the
      * thread every price arrives on. The socket thread's figures (the clock offset, the stream gap) are now only queued here,
      * lock-free, and folded into the book by the next look at it under [lock] ([withBook]): any order step, the card, the
-     * health line. At most [PENDING_CAP] wait (the oldest go first); memory only, as before.
+     * health line. At most [PENDING_CAP] wait (the oldest go first); memory only, as before. The stream's drop is queued
+     * the same way ([streamDropped], [step] null). Each carries its day: one from an earlier day (queued before a night with
+     * no look) is dropped, never filed under today's book.
      */
-    private class Pending(val step: OrderSpeed.Step, val ms: Long)
+    private class Pending(val step: OrderSpeed.Step?, val ms: Long, val day: String)
     private val pending = java.util.concurrent.ConcurrentLinkedQueue<Pending>()
     private val pendingCount = java.util.concurrent.atomic.AtomicInteger()
     private const val PENDING_CAP = 64
 
     /** From any thread, never locks or reads anything: [step]'s [ms] queued for the book. */
-    private fun queue(step: OrderSpeed.Step, ms: Long) {
-        pending.offer(Pending(step, ms))
+    private fun queue(step: OrderSpeed.Step?, ms: Long) {
+        pending.offer(Pending(step, ms, today()))
         if (pendingCount.incrementAndGet() > PENDING_CAP && pending.poll() != null) pendingCount.decrementAndGet()
     }
 
@@ -77,7 +79,8 @@ object OrderTiming {
         while (true) {
             val p = pending.poll() ?: break
             pendingCount.decrementAndGet()
-            b.add(p.step, false, p.ms)
+            if (p.day != b.day) continue
+            if (p.step == null) b.dropped() else b.add(p.step, false, p.ms)
         }
         return b
     }
@@ -130,8 +133,8 @@ object OrderTiming {
      */
     fun streamGap(ms: Long) = queue(OrderSpeed.Step.STREAM_GAP, ms)
 
-    /** The price stream dropped. In memory; written with the next order step. */
-    fun streamDropped() { synchronized(lock) { withBook().dropped() } }
+    /** The price stream dropped. In memory; written with the next order step. On the socket thread: only queued ([queue]). */
+    fun streamDropped() = queue(null, 0L)
 
     /**
      * An order's request starts now ([live] Zerodha, else paper): signal → decision, decision → sent and signal → sent from
