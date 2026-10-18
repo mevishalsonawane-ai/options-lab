@@ -335,6 +335,71 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals("a position still open keeps its GTT", setOf(own), kite.gtts.keys)
         assertTrue(kite.requests.none { it.path.startsWith("/gtt/triggers/") })
     }
+
+    // ---- 18 Oct (review): the paper-only period and changes to working orders ----------------------------------------------
+
+    private fun paperOnly() {
+        val today = com.optionslab.app.data.Market.today()
+        com.optionslab.app.data.PaperOnly.resetForTest(com.optionslab.ira.PaperOnlyPeriod.Period(today.plusDays(8), "10 days on paper", today.minusDays(1)))
+    }
+
+    @After fun noPeriod() { com.optionslab.app.data.PaperOnly.resetForTest(null) }
+
+    @Test fun inThePaperOnlyPeriodAChangeToAWorkingEntryIsRefusedButAStopsChangeGoes() {
+        val m = model()
+        val entryId = resting(leg(ce, Kite.Side.BUY, qty = 150, price = 90.0))
+        paperOnly()
+        kite.requests.clear()
+        val row = runBlocking { Broker.orders() }.single { it.id == entryId }
+        m.modifyOrder(row, 225, "LIMIT", 101.2, null)                      // a bigger size at a price that fills
+        val why = BrokerArea.await("the refusal") { m.message.value?.takeIf { it.startsWith("Not modified:") } }
+        assertTrue(why, why.contains("paper-only period") && why.contains("Exits, stops and square-offs still go"))
+        assertTrue("nothing changed at Zerodha: ${kite.writes}", kite.writes.none { it.method == "PUT" })
+        // The same price only made smaller: it lowers risk, so it goes.
+        m.message.value = null
+        m.modifyOrder(row, 75, "LIMIT", 90.0, null)
+        val smaller = BrokerArea.await("the smaller order") { m.message.value?.takeIf { it.startsWith("Modify sent") || it.startsWith("Not modified") } }
+        assertTrue(smaller, smaller.startsWith("Modify sent"))
+        assertEquals("75", kite.writes.single { it.method == "PUT" }.form["quantity"])
+        kite.requests.clear()
+        // A stop resting for a held position: its change still goes.
+        kite.position(ce, 75, 100.0)
+        val stopId = resting(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "SL", 80.0, 0.05, "NFO", triggerPrice = 81.0))
+        val stop = runBlocking { Broker.orders() }.single { it.id == stopId }
+        m.message.value = null
+        m.modifyOrder(stop, 75, "SL", 85.0, 86.0)
+        val said = BrokerArea.await("the change") { m.message.value?.takeIf { it.startsWith("Modify sent") || it.startsWith("Not modified") } }
+        assertTrue(said, said.startsWith("Modify sent"))
+        val put = kite.writes.single { it.method == "PUT" }
+        assertEquals("PUT /orders/regular/$stopId", "${put.method} ${put.path}")
+        assertEquals("86.00", put.form["trigger_price"])
+    }
+
+    @Test fun inThePaperOnlyPeriodAStuckEntryIsNotMovedButAStuckExitIs() {
+        val m = model()
+        kite.quote("NFO:$ce", 101.0, 100.9, 101.2)
+        stuckAt(m, review(m, "One leg", leg(ce, Kite.Side.BUY, price = 100.05)))
+        paperOnly()
+        m.repriceStuck()
+        val why = BrokerArea.await("the refusal") { m.message.value?.takeIf { it.startsWith("Not moved:") } }
+        assertTrue(why, why.contains("paper-only period"))
+        assertTrue("nothing changed at Zerodha: ${kite.writes}", kite.writes.isEmpty())
+        // Cancel still works on it.
+        m.cancelStuck()
+        BrokerArea.await("the cancel") { kite.requests.firstOrNull { it.method == "DELETE" } }
+        BrokerArea.await("cancelled") { (m.stuck.value == null).takeIf { it } }
+        // A stuck exit (selling what is held) is moved to the bid.
+        kite.position(ce, 75, 100.0)
+        val ex = stuckAt(m, review(m, "Close", leg(ce, Kite.Side.SELL, price = 101.5), exit = true))
+        kite.order(ex.orderId).pollsLeft = 1
+        m.message.value = null
+        m.repriceStuck()
+        val said = BrokerArea.await("the move") { m.message.value?.takeIf { it.startsWith("Leg 1 filled") || it.startsWith("Moved") || it.startsWith("Not moved") } }
+        assertTrue(said, !said.startsWith("Not moved"))
+        val put = kite.writes.single { it.method == "PUT" }
+        assertEquals("PUT /orders/regular/${ex.orderId}", "${put.method} ${put.path}")
+        assertEquals("a sell moves to the bid", "100.90", put.form["price"])
+    }
 }
 
 /**
@@ -538,69 +603,4 @@ class OrderReviewLiveGateTest {
 /** The Robolectric application, for classes that do not extend [RobolectricTest]. */
 private object ApplicationProviderApp {
     fun get(): Application = androidx.test.core.app.ApplicationProvider.getApplicationContext()
-
-    // ---- 18 Oct (review): the paper-only period and changes to working orders ----------------------------------------------
-
-    private fun paperOnly() {
-        val today = com.optionslab.app.data.Market.today()
-        com.optionslab.app.data.PaperOnly.resetForTest(com.optionslab.ira.PaperOnlyPeriod.Period(today.plusDays(8), "10 days on paper", today.minusDays(1)))
-    }
-
-    @After fun noPeriod() { com.optionslab.app.data.PaperOnly.resetForTest(null) }
-
-    @Test fun inThePaperOnlyPeriodAChangeToAWorkingEntryIsRefusedButAStopsChangeGoes() {
-        val m = model()
-        val entryId = resting(leg(ce, Kite.Side.BUY, qty = 150, price = 90.0))
-        paperOnly()
-        kite.requests.clear()
-        val row = runBlocking { Broker.orders() }.single { it.id == entryId }
-        m.modifyOrder(row, 225, "LIMIT", 101.2, null)                      // a bigger size at a price that fills
-        val why = BrokerArea.await("the refusal") { m.message.value?.takeIf { it.startsWith("Not modified:") } }
-        assertTrue(why, why.contains("paper-only period") && why.contains("Exits, stops and square-offs still go"))
-        assertTrue("nothing changed at Zerodha: ${kite.writes}", kite.writes.none { it.method == "PUT" })
-        // The same price only made smaller: it lowers risk, so it goes.
-        m.message.value = null
-        m.modifyOrder(row, 75, "LIMIT", 90.0, null)
-        val smaller = BrokerArea.await("the smaller order") { m.message.value?.takeIf { it.startsWith("Modify sent") || it.startsWith("Not modified") } }
-        assertTrue(smaller, smaller.startsWith("Modify sent"))
-        assertEquals("75", kite.writes.single { it.method == "PUT" }.form["quantity"])
-        kite.requests.clear()
-        // A stop resting for a held position: its change still goes.
-        kite.position(ce, 75, 100.0)
-        val stopId = resting(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "SL", 80.0, 0.05, "NFO", triggerPrice = 81.0))
-        val stop = runBlocking { Broker.orders() }.single { it.id == stopId }
-        m.message.value = null
-        m.modifyOrder(stop, 75, "SL", 85.0, 86.0)
-        val said = BrokerArea.await("the change") { m.message.value?.takeIf { it.startsWith("Modify sent") || it.startsWith("Not modified") } }
-        assertTrue(said, said.startsWith("Modify sent"))
-        val put = kite.writes.single { it.method == "PUT" }
-        assertEquals("PUT /orders/regular/$stopId", "${put.method} ${put.path}")
-        assertEquals("86.00", put.form["trigger_price"])
-    }
-
-    @Test fun inThePaperOnlyPeriodAStuckEntryIsNotMovedButAStuckExitIs() {
-        val m = model()
-        kite.quote("NFO:$ce", 101.0, 100.9, 101.2)
-        stuckAt(m, review(m, "One leg", leg(ce, Kite.Side.BUY, price = 100.05)))
-        paperOnly()
-        m.repriceStuck()
-        val why = BrokerArea.await("the refusal") { m.message.value?.takeIf { it.startsWith("Not moved:") } }
-        assertTrue(why, why.contains("paper-only period"))
-        assertTrue("nothing changed at Zerodha: ${kite.writes}", kite.writes.isEmpty())
-        // Cancel still works on it.
-        m.cancelStuck()
-        BrokerArea.await("the cancel") { kite.requests.firstOrNull { it.method == "DELETE" } }
-        BrokerArea.await("cancelled") { (m.stuck.value == null).takeIf { it } }
-        // A stuck exit (selling what is held) is moved to the bid.
-        kite.position(ce, 75, 100.0)
-        val ex = stuckAt(m, review(m, "Close", leg(ce, Kite.Side.SELL, price = 101.5), exit = true))
-        kite.order(ex.orderId).pollsLeft = 1
-        m.message.value = null
-        m.repriceStuck()
-        val said = BrokerArea.await("the move") { m.message.value?.takeIf { it.startsWith("Leg 1 filled") || it.startsWith("Moved") || it.startsWith("Not moved") } }
-        assertTrue(said, !said.startsWith("Not moved"))
-        val put = kite.writes.single { it.method == "PUT" }
-        assertEquals("PUT /orders/regular/${ex.orderId}", "${put.method} ${put.path}")
-        assertEquals("a sell moves to the bid", "100.90", put.form["price"])
-    }
 }
