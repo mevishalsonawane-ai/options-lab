@@ -170,6 +170,8 @@ object Diag {
         append(com.optionslab.app.work.BatteryMeter.line()).append('\n')
         // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
+        // 17 Oct: any vault write still made on the screen's thread, with its keys or file and who asked.
+        append(runCatching { com.optionslab.app.security.MainWrites.line() }.getOrElse { "Vault writes on the screen's thread: could not read" }).append('\n')
         // The settings vault's size (12 Oct): its biggest key classes and the large values kept in their own files - names and
         // sizes only, never a value - and any of those files read on the screen's thread (should be none).
         append(runCatching { com.optionslab.app.security.SecurePrefs.sizeLine() }.getOrElse { "Settings size: could not read" }).append('\n')

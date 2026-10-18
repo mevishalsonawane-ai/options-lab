@@ -639,6 +639,9 @@ object SignalTesterHost {
     /** The selected channels (id -> title); nothing at first. */
     fun telegramSelected(): Map<Long, String> = synchronized(lock) { log().tg.toMap() }
 
+    /** How many chats are followed in all (pasted, from a file, or selected in Telegram's list): the diagnostics (17 Oct). */
+    fun followedCount(): Int = synchronized(lock) { log().allow.size }
+
     /**
      * Boss's selection in the Telegram channel list: exactly these are read from now on (each joins the followed chats; a channel
      * unselected is no longer read - what was recorded of it stays for its scorecard).

@@ -53,7 +53,10 @@ object Vault {
         }
     }
 
-    fun encrypt(plain: ByteArray): ByteArray {
+    // 17 Oct: a write on the screen's thread is noted with its caller ([MainWrites]; never stopped, never thrown).
+    fun encrypt(plain: ByteArray): ByteArray = MainWrites.guard({ "Vault.encrypt" }) { encryptNow(plain) }
+
+    private fun encryptNow(plain: ByteArray): ByteArray {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, dataKey())
         val iv = c.iv
@@ -72,7 +75,9 @@ object Vault {
      * Atomic and durable: the new file is synced before it is renamed over the old one, and the
      * rename is synced too, so neither a crash nor a power cut leaves a half-written (or empty) vault file.
      */
-    fun writeFile(file: File, plain: ByteArray) {
+    fun writeFile(file: File, plain: ByteArray) = MainWrites.guard({ "Vault.writeFile ${file.name}" }) { writeFileNow(file, plain) }
+
+    private fun writeFileNow(file: File, plain: ByteArray) {
         file.parentFile?.mkdirs()
         val blob = encrypt(plain)   // before the file is opened: a Keystore failure leaves nothing half-written
         val tmp = File(file.parentFile, file.name + ".tmp")

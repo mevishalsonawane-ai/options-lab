@@ -187,13 +187,15 @@ class PositionsFirstTest : RobolectricTest() {
         assertEquals("the knowledge waits for the positions", 0, SharedKnowledgeHost.snapshot.size)
         assertTrue(events.isEmpty())
         PositionsFirst.appReady()
+        // 17 Oct: the watch is asked at once (it reads the books it checks itself); the books are restored beside it, so the
+        // stream that follows finds the held contract and the paper book in memory.
         runBlocking {
             PositionsFirst.steps(PositionsFirst::restore,
-                watch = { events += "watch with ${OrbArms.liveSymbolsHint} and paper ${if (Paper.loaded()) "loaded" else "not loaded"}" },
-                stream = { events += "stream" })
+                watch = { events += "watch" },
+                stream = { events += "stream with ${OrbArms.liveSymbolsHint} and paper ${if (Paper.loaded()) "loaded" else "not loaded"}" })
         }
         runBlocking { knowledge.join() }
-        assertEquals(listOf("watch with [$sym] and paper loaded", "stream", "knowledge"), events.toList())
+        assertEquals(listOf("watch", "stream with [$sym] and paper loaded", "knowledge"), events.toList())
         assertEquals(StartOrder.Step.entries, PositionsFirst.order.log().map { it.first })
         assertEquals(true, PositionsFirst.foundOpen)
         assertTrue(SharedKnowledgeHost.snapshot.size > 0)
@@ -239,6 +241,45 @@ class PositionsFirstTest : RobolectricTest() {
         // Empty book: nothing open.
         SecurePrefs.put(key, null)
         assertFalse(com.optionslab.app.ira.IraSolo.holdingOrThrow())
+    }
+
+    @Test fun theWatchIsAskedBeforeASlowBookIsRead() {
+        // 17 Oct (Boss's diagnostics: "positions +8707 ms ... slowest book: strategies 4411 ms"): the watch waited for every book.
+        PositionsFirst.resetForTest(started = true)
+        PositionsFirst.appReady()
+        val slowBook = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val events = java.util.Collections.synchronizedList(ArrayList<String>())
+        runBlocking {
+            kotlinx.coroutines.withTimeout(10_000) {
+                // The restore finishes only once the watch was asked: it never waits on the book.
+                PositionsFirst.steps({ slowBook.await(); events += "books read"; true },
+                    watch = { events += "watch"; slowBook.complete(Unit) }, stream = { events += "stream" })
+            }
+        }
+        assertEquals(listOf("watch", "books read", "stream"), events.toList())
+        assertTrue(PositionsFirst.watchAskedAt > 0L)
+        assertTrue(PositionsFirst.diagLine(), PositionsFirst.diagLine().startsWith("Start-up: watch asked +"))
+    }
+
+    @Test fun theBooksThatHoldNoPositionAreReadAfterThePositionsAndTheStream() {
+        PositionsFirst.resetForTest(started = true)
+        PositionsFirst.appReady()
+        val events = java.util.Collections.synchronizedList(ArrayList<String>())
+        runBlocking {
+            PositionsFirst.steps({ false }, watch = { events += "watch" }, stream = { events += "stream" }, late = {
+                // Read only once the positions and the stream are marked done.
+                assertTrue(PositionsFirst.order.isDone(StartOrder.Step.POSITIONS))
+                assertTrue(PositionsFirst.order.isDone(StartOrder.Step.STREAM))
+                events += "grammar"; true
+            })
+        }
+        // One that could not be read: the stream is asked again, and the start says something may be open.
+        assertEquals(listOf("watch", "stream", "grammar", "stream"), events.toList())
+        assertEquals(true, PositionsFirst.foundOpen)
+        // The app's own late books: nothing open on a fresh phone, named in the diagnostics.
+        PositionsFirst.resetForTest(started = true)
+        assertFalse(runBlocking { PositionsFirst.restoreLate() })
+        assertTrue(PositionsFirst.lateSlowest.orEmpty(), PositionsFirst.lateSlowest.orEmpty().startsWith("grammar"))
     }
 
     @Test fun theUnitTestsAppNeverWaits() {

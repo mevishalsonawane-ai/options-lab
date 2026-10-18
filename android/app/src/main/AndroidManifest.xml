@@ -17,6 +17,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Asks once to be left out of battery optimisation, so the market watch is not stopped. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 17 Oct: the market watch keeps the processor awake while it runs (a foreground service alone does not), so its
+         15-60 s passes and the stops they check are not frozen while the screen is off. Was merged by WorkManager already. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Android 12+: hide other apps' overlay windows over ours (tapjacking on dialogs and the PIN pad). -->
     <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
 

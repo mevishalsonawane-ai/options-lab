@@ -83,7 +83,8 @@ object HealthBook {
         val ours = w.substringAfterLast(" in ", "").trim()
         // A call into Android's system (a Binder transaction) keeps its top frame too: that is what tells a developer the
         // screen's thread made a system call ("BinderProxy.transactNative in AppModel.switchArm"), the commonest stall here.
-        if (ours.isNotEmpty() && w.substringBefore(" in ").contains("Binder", ignoreCase = true)) return clean(w, 90)
+        // 17 Oct: up to 200 characters, so the caller and the write the guard caught (" · SecurePrefs.put x by y") are kept.
+        if (ours.isNotEmpty() && w.substringBefore(" in ").contains("Binder", ignoreCase = true)) return clean(w, 200)
         return clean(ours.ifEmpty { w })
     }
 
@@ -99,11 +100,17 @@ object HealthBook {
         return m + (key to ((m[key] ?: 0) + 1))
     }
 
+    /**
+     * The day's places count a freeze under its stable part (17 Oct, review): the caller and the write the guard caught
+     * (" from ...", " · ...") change with each build and settings key, so they stay in the sample (the problem's words) only.
+     */
+    fun placeKey(place: String): String = place.substringBefore(" from ").substringBefore(" · ").trim().ifEmpty { "?" }
+
     /** A stall of [ms] at [atMs] in [where] (shorter than [STALL_MS]: not one). */
     fun stall(b: Book, atMs: Long, ms: Long, where: String?): Book {
         if (ms < STALL_MS) return b
         val p = place(where)
-        return upd(b, dayOf(atMs)) { d -> d.copy(stalls = d.stalls + 1, longestMs = maxOf(d.longestMs, ms), places = bump(d.places, p),
+        return upd(b, dayOf(atMs)) { d -> d.copy(stalls = d.stalls + 1, longestMs = maxOf(d.longestMs, ms), places = bump(d.places, placeKey(p)),
             samples = (d.samples + Stall(atMs, ms, p)).takeLast(SAMPLES_DAY)) }
     }
 

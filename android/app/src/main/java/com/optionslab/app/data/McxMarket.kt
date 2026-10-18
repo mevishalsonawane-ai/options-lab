@@ -329,7 +329,25 @@ object McxMarket {
      * The watch should run now for MCX: MCX is open and something is held or working there, or an MCX paper arm is on and
      * inside its minutes ([McxPaperArms.wantsWatch]: the evening break 17:00-23:16, the morning call 09:14-14:00).
      */
-    fun watchDue(): Boolean = isOpen() && (exposure() || runCatching { McxPaperArms.wantsWatch() }.getOrDefault(false))
+    fun watchDue(): Boolean = coverage().needs
+
+    /**
+     * MCX now as Session coverage sees it (17 Oct): open on its own calendar, what is held or working there (the paper and live
+     * books, a position in an MCX arm's book) and the arms armed. [watchDue] - the watch's own "should I run?" for MCX - is
+     * this market's [com.optionslab.ira.SessionCoverage.Market.needs], and the dead-man check judges its gaps from this same
+     * reading ([com.optionslab.app.work.Heartbeat]), so the two can never disagree about whether MCX needs the watch. A read
+     * that throws is passed on: the watch's rule counts it as nothing there (as before), the dead-man check judges nothing.
+     */
+    fun coverage(): com.optionslab.ira.SessionCoverage.Market {
+        if (!isOpen()) return com.optionslab.ira.SessionCoverage.Market(NAME, false)
+        // The arms' book read first (when nothing has read it yet), then its open positions from memory.
+        val armed = McxPaperArms.armedNow().map { McxPaperArms.label(it) }
+        val held = exposure() || McxPaperArms.holdsNow()
+        return com.optionslab.ira.SessionCoverage.Market(NAME, true, if (held) 1 else 0, armed)
+    }
+
+    /** The market's name in Session coverage's words and problem keys ("coverage:MCX:watch"). */
+    const val NAME = "MCX"
 
     /**
      * [watchDue] for the main thread (ANR fix, 9 Oct): from memory only - never a vault read (a Keystore decryption) and

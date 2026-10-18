@@ -111,8 +111,18 @@ internal object IraNewsTrades {
      */
     var paperFirst: Boolean
         // A new key, paper to start (review, 4 Oct): a "live" chosen earlier by voice, without the fingerprint, is not kept.
-        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper.v3", true) }.getOrDefault(true)
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper.v3", v) } }
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(PAPER_KEY, true) }.getOrDefault(true)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put(PAPER_KEY, v) } }
+
+    /** [paperFirst]'s setting. */
+    const val PAPER_KEY = "jarvis.trades.paper.v3"
+
+    /**
+     * Back to paper from the screen (17 Oct): every read sees it at once (memory only, no Keystore wait on the screen's thread);
+     * the caller then writes it to disk off that thread ([paperFirst] = true). Only ever this direction: going live waits for
+     * the disk write, so a read meanwhile still says paper.
+     */
+    fun paperNow() { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(PAPER_KEY to true)) } }
 
     const val DEFAULT_LIMIT = 3_000.0
     /** Rupees Jarvis's trades may lose in a day before it suggests no more (its own limit, apart from the app's). */

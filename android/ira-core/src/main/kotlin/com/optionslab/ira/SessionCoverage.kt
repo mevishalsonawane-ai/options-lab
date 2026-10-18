@@ -40,6 +40,26 @@ object SessionCoverage {
     }
 
     /**
+     * The coverage problems that stay open after a check found [gaps] ([told]: they outlasted the grace and were reported now):
+     * none when there is no gap - every earlier coverage problem is over (17 Oct: Boss saw MCX's evening gap still listed at
+     * 01:07, after MCX's close) - only the gaps reported now when they were told, and null (leave every problem as it is)
+     * while a gap waits for its grace.
+     */
+    fun keepOpen(gaps: List<Gap>, told: Boolean): Set<String>? = when {
+        gaps.isEmpty() -> emptySet()
+        told -> gaps.map { it.key }.toSet()
+        else -> null
+    }
+
+    /**
+     * The watch's own "should I run?" for the markets Session coverage looks at (17 Oct; the watch's loop asks it): NSE's window
+     * ([nseWindow]: its session, and a quarter-hour after F&O's close while a strategy run is open), or any of [markets] that
+     * needs watching - read only when NSE's window has not already answered. Never false where [gaps] would find a gap for a
+     * watch that is not running - the two read the same facts.
+     */
+    fun watchShouldRun(nseWindow: Boolean, markets: () -> List<Market>): Boolean = nseWindow || markets().any { it.needs }
+
+    /**
      * 16 Oct (Boss's diagnostics: "MCX is open with 2 armed, but the market watch is not running" at 09:01 and 17:56): the
      * dead-man check that found the gap is also what starts the watch (MCX's 09:00 open, a restart after Android ended the
      * app), and it judged the gap from the "alive" it read before that start, so every such start was reported as a SERIOUS

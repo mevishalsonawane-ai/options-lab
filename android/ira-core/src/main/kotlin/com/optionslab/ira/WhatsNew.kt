@@ -54,10 +54,19 @@ object WhatsNew {
     private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
     private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
     private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
+    private val OCT17: LocalDate = LocalDate.of(2026, 10, 17)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-17-diagnostics-fixes", OCT17, "No screen freezes on saves; MCX evenings kept awake",
+            "A switch or setting saved on a screen no longer freezes it: the save finishes in the background. " +
+                "While the watch runs for a market, it keeps the phone awake, so evening MCX checks never sleep. " +
+                "A watch problem clears itself once the watch runs again or MCX closes. " +
+                "After a restart, the watch starts at once, before the slower books are read. " +
+                "Diagnostics now say truly whether Telegram's login is in the app and logged in. " +
+                "They also name the code behind any screen freeze.",
+            "Copy diagnostics (Settings → Zerodha); Home → Automation card for open problems"),
         Entry("2026-10-16-donchian-supertrend", OCT16, "R51 Donchian 20 waits for Supertrend to agree (your ask)",
             "New paper trades of R51 Donchian 20 now need Supertrend (10, 3) to agree with the break. " +
                 "Research R73 made +₹1,34,743 over 1,670 trades in the final test, against +₹81,845 without it. " +

@@ -159,25 +159,37 @@ object Heartbeat {
      * (one notification a day, words only) and the watch is started again. The policy check runs here too (memory only).
      */
     private fun coverage(context: Context, alive: Boolean) {
-        val mcx = com.optionslab.app.data.McxMarket
-        val arms = com.optionslab.app.data.McxPaperArms
-        val open = runCatching { mcx.isOpen() }.getOrDefault(false)
-        val armed = if (!open) emptyList() else runCatching { arms.ARMS.filter { arms.armed(it) }.map { arms.label(it) } }.getOrDefault(emptyList())
-        val held = if (open && runCatching { mcx.exposure() }.getOrDefault(false)) 1 else 0
-        // The price stream may rest by design (Paper mode, nothing needing live prices): only the watch's own absence is a gap here.
-        val gaps = com.optionslab.ira.SessionCoverage.gaps(listOf(com.optionslab.ira.SessionCoverage.Market("MCX", open, held, armed)), alive, null)
-        if (gaps.any { it.watch }) runCatching { Jobs.ensureWatch(context) }
-        // 16 Oct: told only when the gap outlasts the grace (this check is often the very start of the watch: MCX's open, a
-        // restart after Android ended the app); else looked at again once the grace is over, with the watch's pulse then.
-        if (coverageGap.report(gaps.isNotEmpty(), System.currentTimeMillis())) {
-            for (g in gaps) com.optionslab.app.data.ProblemsHost.report(g.key, "Session coverage", com.optionslab.ira.OpenProblems.Severity.SERIOUS, g.text,
-                "the watch was started again and was still not running after ${com.optionslab.ira.SessionCoverage.GRACE_MS / 60_000} minutes; if this repeats, it needs a developer fix", notify = true)
-        } else if (gaps.isNotEmpty()) recheckCoverage(context)
+        // 17 Oct: MCX read exactly as the watch's own rule reads it ([com.optionslab.app.data.McxMarket.coverage]).
+        // A reading that fails (a Keystore hiccup) judges nothing: no gap told, none cleared (review, 17 Oct).
+        runCatching { com.optionslab.app.data.McxMarket.coverage() }.getOrNull()?.let { mcxGaps(context, it, alive) }
 
         // The live recording (Data Brain L8): nothing written while NSE is open and the watch runs is an open problem.
         runCatching { com.optionslab.app.data.LiveRecorder.healthCheck(alive) }
         runCatching { com.optionslab.app.data.ProblemsHost.policySweep(com.optionslab.app.data.AppSettings.load().let { it.live && it.allowRealOrders }) }
     }
+
+    /** MCX's coverage gaps from [mcx] (read just now): told after their grace, the watch started, cleared once there are none. */
+    private fun mcxGaps(context: Context, mcx: com.optionslab.ira.SessionCoverage.Market, alive: Boolean) {
+        // The price stream may rest by design (Paper mode, nothing needing live prices): only the watch's own absence is a gap here.
+        val gaps = com.optionslab.ira.SessionCoverage.gaps(listOf(mcx), alive, null)
+        if (gaps.any { it.watch }) runCatching { Jobs.ensureWatch(context) }
+        // 16 Oct: told only when the gap outlasts the grace (this check is often the very start of the watch: MCX's open, a
+        // restart after Android ended the app); else looked at again once the grace is over, with the watch's pulse then.
+        val told = coverageGap.report(gaps.isNotEmpty(), System.currentTimeMillis())
+        if (told) {
+            for (g in gaps) com.optionslab.app.data.ProblemsHost.report(g.key, "Session coverage", com.optionslab.ira.OpenProblems.Severity.SERIOUS, g.text,
+                "the watch was started again and was still not running after ${com.optionslab.ira.SessionCoverage.GRACE_MS / 60_000} minutes; if this repeats, it needs a developer fix", notify = true)
+        } else if (gaps.isNotEmpty()) recheckCoverage(context)
+        // 17 Oct (Boss saw "MCX is open ... the market watch is not running" at 01:07, long after MCX's 23:30 close): a gap told
+        // once stayed on the problems list after it closed. Now cleared as soon as a check finds none (the watch running
+        // again, or MCX closed or nothing armed or held there); a gap still in its grace leaves an earlier one as it is.
+        com.optionslab.ira.SessionCoverage.keepOpen(gaps, told)?.let { keep -> com.optionslab.app.data.ProblemsHost.clearOthers(COVERAGE_PREFIX, keep) }
+    }
+
+    private const val COVERAGE_PREFIX = "coverage:"
+
+    /** The watch is running (its pulse, from the watch itself): a coverage gap of its own absence is over at once (17 Oct). */
+    fun watchRunning() { runCatching { com.optionslab.app.data.ProblemsHost.clear(com.optionslab.ira.SessionCoverage.Gap(com.optionslab.app.data.McxMarket.NAME, true, "").key) } }
 
     /** When a coverage gap was first seen (memory: a new process starts its grace again). */
     private val coverageGap = com.optionslab.ira.SessionCoverage.GapTimer()

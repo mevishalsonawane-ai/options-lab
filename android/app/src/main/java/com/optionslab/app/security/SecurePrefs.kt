@@ -379,7 +379,33 @@ object SecurePrefs {
         if (SecureBlobs.isBlob(k)) blobJson(k)?.optDouble("v", d) ?: d
         else synchronized(this) { counted(); if (map().has(k)) map().optDouble(k, d) else d }
 
+    // ---- the screen's thread (17 Oct) ----------------------------------------------------------------------------------
+
+    /**
+     * Boss's diagnostics, 17 Oct 01:07: "The screen froze 5.8 s in BinderProxy.transactNative in Vault.encrypt" (and 2.3 s): a
+     * settings write made on the screen's thread waited on the Keystore. A [put] or [putAll] made there now goes the way of
+     * [putAllSoon]: every read sees the value at once, and the encryption and the disk syncs run on the background writer,
+     * in order, a moment later. The writes that must be on disk before the caller goes on ([durable]: the PIN and its failure
+     * count, the lock, Live and real orders, every guard setting, the kill switch, the day lock and the loss limit, AI trades
+     * going live, paper only, the restore's disarm, the Zerodha session - the same families [SecureBlobs.NEVER] keeps in this
+     * file) are still written right there, as before, and noted by [MainWrites] with their caller.
+     * Off the screen's thread nothing changes.
+     */
+    private fun durable(k: String): Boolean = k in HOT || k in GUARD || k in DURABLE || SecureBlobs.NEVER.any { k.startsWith(it) }
+
+    private val DURABLE = setOf("k.mode", "k.allow", "k.oneTap", "jarvis.trades.paper.v3", "restore.disarm", "sec.wipe", "sec.refuse")
+
+    /** Whether a write on the screen's thread is moved to the background writer (true; [MainWrites.onMain] tells the thread). */
+    @Volatile internal var deferOnMain: Boolean = true
+
+    private fun deferHere(keys: Collection<String>): Boolean = deferOnMain && MainWrites.onMain() && keys.none(::durable)
+
     fun put(k: String, v: Any?) {
+        if (deferHere(listOf(k))) { putAllSoon(mapOf(k to v)); return }
+        MainWrites.guard({ "SecurePrefs.put $k" }) { putNow(k, v) }
+    }
+
+    private fun putNow(k: String, v: Any?) {
         if (SecureBlobs.isBlob(k)) { SecureBlobs.put(k, v); return }
         val snap = synchronized(this) {
             if (unchanged(mapOf(k to v))) return
@@ -391,6 +417,12 @@ object SecurePrefs {
     }
 
     fun putAll(all: Map<String, Any?>) {
+        if (all.isEmpty()) return
+        if (deferHere(all.keys)) { putAllSoon(all); return }
+        MainWrites.guard({ "SecurePrefs.putAll " + all.keys.take(4).joinToString(" ") + if (all.size > 4) " +${all.size - 4}" else "" }) { putAllNow(all) }
+    }
+
+    private fun putAllNow(all: Map<String, Any?>) {
         val (values, blobs) = split(all)
         for ((k, v) in blobs) SecureBlobs.put(k, v)
         if (values.isEmpty()) return

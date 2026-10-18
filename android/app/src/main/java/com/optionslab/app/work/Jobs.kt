@@ -42,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -1414,8 +1415,17 @@ class WatchService : Service() {
 
     private suspend fun watch(s: AppSettings, run: Long) = kotlinx.coroutines.coroutineScope {
         // The service's own pulse: no network, no lock, every 30 s - "alive", whatever a check is waiting on.
+        // 17 Oct: each pulse also keeps the processor awake for the watch ([WatchWake]; a foreground service alone does not, and
+        // the evening's passes slept with the screen off) and closes a coverage gap told while the watch was away.
+        val me = this@WatchService
         val pulse = launch {
-            while (true) { Heartbeat.pulse(); delay(com.optionslab.ira.WatchHealth.PULSE_MS) }
+            while (true) {
+                Heartbeat.pulse()
+                // Not under the run lock (the screen's thread takes it at a start; this is a binder call): the newest run only.
+                if (run == watchRun) WatchWake.hold(me)
+                Heartbeat.watchRunning()
+                delay(com.optionslab.ira.WatchHealth.PULSE_MS)
+            }
         }
         // The watch's workers (10 Oct): the arms' groups run under this run's supervisor, and Jarvis's words-only checks as
         // the lowest-priority worker of their own. They end with this run.
@@ -1442,15 +1452,20 @@ class WatchService : Service() {
             watchLoop(s, workers)
         } finally {
             WatchWorkers.end(workers)
-            pulse.cancel()
+            // Joined (review, 17 Oct): a pulse already past its check can never take the processor's hold again after the
+            // release below.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { pulse.cancelAndJoin() }
             // Only the newest run's end stops the pulse (an old run ending after a new start leaves the new one's).
             // Checked and done under the one lock (fields in memory only), so a new run cannot start between the two.
-            synchronized(runDayLock) {
+            val newest = synchronized(runDayLock) {
                 if (run == watchRun) {
                     Heartbeat.pulseStopped()
                     stepSec = 0
                 }
+                run == watchRun
             }
+            // The processor may sleep again: a binder call, outside the run lock; an old run's end leaves a new run's hold.
+            if (newest && run == watchRun) WatchWake.release()
         }
     }
 
@@ -1468,7 +1483,8 @@ class WatchService : Service() {
         // stops, exits and bar-close entries at once ([com.optionslab.app.data.FastPath]); these passes stay as the safety net.
         com.optionslab.app.data.FastPath.start(this)
         try {
-            while (nseWindow() || mcxDue()) {
+            // 17 Oct: the same rule Session coverage judges gaps by ([com.optionslab.app.data.McxMarket.coverage]).
+            while (com.optionslab.ira.SessionCoverage.watchShouldRun(nseWindow()) { listOf(mcxCoverage()) }) {
                 try {
                     watchPass(fired)
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1499,6 +1515,10 @@ class WatchService : Service() {
         (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning()))
 
     private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
+
+    /** MCX now as Session coverage reads it; a read that fails counts as nothing to watch there (as [mcxDue]). */
+    private fun mcxCoverage(): com.optionslab.ira.SessionCoverage.Market = runCatching { com.optionslab.app.data.McxMarket.coverage() }
+        .getOrDefault(com.optionslab.ira.SessionCoverage.Market(com.optionslab.app.data.McxMarket.NAME, false))
 
     /**
      * The MCX pass and its wait. Every 15 s while something is held or working on MCX (paper or live) or an armed MCX arm is

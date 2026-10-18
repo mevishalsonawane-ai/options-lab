@@ -21,6 +21,14 @@ class MainThreadBinderTest {
         assertTrue("arming still starts the watch", s.contains("Jobs.ensureWatch(ctx)"))
     }
 
+    @Test fun theAiTradesGoLiveSwitchWritesOffTheMainThreadInOrder() {
+        // 17 Oct (the screen froze 5.8 s in Vault.encrypt): its write, which must reach the disk, is made off the screen's thread.
+        val s = src("com/optionslab/app/ui/screens/IraPage.kt") ?: return
+        assertFalse(s.contains("aiLive = false; com.optionslab.app.ira.IraNewsTrades.paperFirst = true"))
+        assertFalse(s.contains("aiLive = true; com.optionslab.app.ira.IraNewsTrades.paperFirst = false"))
+        assertTrue(s.contains("AI_LIVE_WRITES.launch { runCatching { com.optionslab.app.ira.IraNewsTrades.paperFirst = v } }"))
+    }
+
     @Test fun approvingAJarvisStrategyRunsOffTheMainThread() {
         val s = src("com/optionslab/app/ui/screens/IraPage.kt") ?: return
         assertFalse(s.contains("scope.launch { IraHub.approve("))

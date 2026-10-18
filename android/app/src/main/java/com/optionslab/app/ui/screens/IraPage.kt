@@ -1212,6 +1212,12 @@ internal const val AUTOMATIONS_NOTE = "Each runs on its own while IraAlgo watche
     "(Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops."
 internal const val AUTOMATIONS_ALWAYS = "Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice."
 
+/**
+ * The "AI trades go live" switch's vault writes (17 Oct): off the screen's thread, one at a time and in the order tapped, in a
+ * scope of the app's own (not the screen's), so leaving the page at once never drops the write.
+ */
+internal val AI_LIVE_WRITES = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+
 @Composable
 private fun AutomationsCard() {
     val p = LocalPalette.current
@@ -1220,6 +1226,13 @@ private fun AutomationsCard() {
         // in Live, once their record is proven, each trade still asks him first and needs the fingerprint.
         val act = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
         var aiLive by remember { mutableStateOf(!com.optionslab.app.ira.IraNewsTrades.paperFirst) }
+        // 17 Oct (Boss's diagnostics: the screen froze in Vault.encrypt): the switch's vault write - still straight to disk, never
+        // left in memory only - runs off the screen's thread ([AI_LIVE_WRITES]).
+        // Back to paper (lowering risk) is seen by every read at once; going live only once it is on disk.
+        fun paperFirst(v: Boolean) {
+            if (v) com.optionslab.app.ira.IraNewsTrades.paperNow()
+            AI_LIVE_WRITES.launch { runCatching { com.optionslab.app.ira.IraNewsTrades.paperFirst = v } }
+        }
         com.optionslab.app.ui.SettingSpot("jarvis.ailive") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
                 Column(Modifier.weight(1f)) {
@@ -1229,11 +1242,11 @@ private fun AutomationsCard() {
                         style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
                 }
                 androidx.compose.material3.Switch(checked = aiLive, onCheckedChange = { v ->
-                    if (!v) { aiLive = false; com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+                    if (!v) { aiLive = false; paperFirst(true) }
                     else if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
                         com.optionslab.app.work.Alerts.error("AI trades go live is switched on with your fingerprint: set one up on the phone first.")
                     else com.optionslab.app.security.BiometricGate.verify(act, "AI trades go live", "Jarvis's trades may go to Zerodha, each after your approval (Solo stays on paper)") { ok ->
-                        if (ok) { aiLive = true; com.optionslab.app.ira.IraNewsTrades.paperFirst = false } }
+                        if (ok) { aiLive = true; paperFirst(false) } }
                 })
             }
         }

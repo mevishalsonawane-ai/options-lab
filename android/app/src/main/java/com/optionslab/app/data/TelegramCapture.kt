@@ -583,12 +583,55 @@ object TelegramCapture {
     /** Inside the capture window now (set by [ensure]): the reader thread then also looks at the newest posts ([POLL_MS]). */
     @Volatile private var capturing = false
 
-    /** The diagnostics line: never a key, a phone number or a channel's name. */
+    /**
+     * The diagnostics line: never a key, a phone number or a channel's name.
+     *
+     * 17 Oct (Boss's diagnostics: "not in this build · not logged in · ... 0 channels selected" from an APK that carries
+     * libtdjsonjava.so): it read the card's view, whose library and login fields are filled only when the card opens. Now
+     * read as they are, and never by loading the library for it (review: TDLib's large library would stay in memory for a
+     * line): off the screen's thread (the diagnostics are built on IO) the login, capture and window come from the settings,
+     * and a library not loaded yet is looked for in the app's own package; on the screen's thread nothing is read from disk -
+     * it says "library not loaded yet", never "not in this build". The channels: Telegram's own selection (Choose channels)
+     * and, beside it, how many chats the Signal tester follows in all (pasted, from a file or from Telegram) - two different
+     * lists, so "0 channels selected" beside "4 chats followed" is said as such.
+     */
     fun diagLine(): String {
-        val v = _view.value
-        return "Telegram login (Signal tester, read-only): ${if (v.available) "in this build" else "not in this build"} · " +
+        val main = runCatching { com.optionslab.app.security.MainWrites.onMain() }.getOrDefault(true)
+        val shown = _view.value
+        val v = if (main) shown else runCatching {
+            shown.copy(loggedIn = shown.loggedIn || SecurePrefs.getBoolean(K_LOGGED_IN, false), capture = SecurePrefs.getBoolean(K_CAPTURE, false),
+                from = time(K_FROM, FROM), to = time(K_TO, TO))
+        }.getOrDefault(shown)
+        val state = loaded
+        val lib = libWords(com.optionslab.app.BuildConfig.GOLD, ok = shown.available || state == true || testTransport != null,
+            failed = state == false, why = shown.why, packaged = if (main || state != null) null else runCatching { packaged() }.getOrNull())
+        val followed = runCatching { SignalTesterHost.followedCount() }.getOrNull()
+        return "Telegram login (Signal tester, read-only): $lib · " +
             "${if (v.loggedIn) "logged in" else "not logged in"} · capture ${if (v.capture) "on ${v.from}-${v.to}" else "off"} · " +
+            (followed?.let { "the Signal tester follows $it chats in all · " } ?: "") +
             "${if (v.running) "running" else "stopped"} · ${SignalTesterHost.telegramSelected().size} channels selected"
+    }
+
+    /**
+     * The library's words for the diagnostics: [ok] loaded (or this build's test transport), [failed] tried and not loaded
+     * ([why]: the plain reason), else whether the app's package carries it ([packaged]; null: not looked - the screen's thread).
+     */
+    internal fun libWords(gold: Boolean, ok: Boolean, failed: Boolean, why: String?, packaged: Boolean?): String = when {
+        gold -> "not in this build"
+        ok -> "in this build"
+        failed -> why ?: "not in this build"
+        packaged == true -> "in this build (library not loaded yet)"
+        packaged == false -> "not in this build"
+        else -> "library not loaded yet"
+    }
+
+    /** The app's own package carries TDLib for this phone ([ABI]): unpacked beside the app, or inside its APK files. Off main. */
+    private fun packaged(): Boolean {
+        val info = app?.applicationInfo ?: return false
+        val name = "libtdjsonjava.so"
+        if (File(info.nativeLibraryDir ?: "", name).exists()) return true
+        val apks = listOfNotNull(info.sourceDir) + (info.splitSourceDirs?.toList() ?: emptyList())
+        return apks.any { a -> runCatching { java.util.zip.ZipFile(a).use { it.getEntry("lib/$ABI/$name") != null } }.getOrDefault(false) }
     }
 
     /** TEST ONLY: as a fresh process. */
