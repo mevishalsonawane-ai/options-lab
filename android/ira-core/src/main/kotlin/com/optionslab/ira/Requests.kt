@@ -220,6 +220,19 @@ object Requests {
         else -> "Jarvis: $count requests waiting"
     }
 
+    /**
+     * Jarvis's own yes-or-no question about a request, as it is said aloud (18 Oct, review): on a [locked] phone never the
+     * request's words - they name the held symbol, its prices, the side - only how many wait ([waiting]) and that the
+     * unlock answers it; unlocked, [text] as it is. Worked out when the question is finally said, so a phone that locked
+     * while it waited is caught too.
+     */
+    fun askAloud(text: String, locked: Boolean, waiting: Int): String = if (locked) lockedAsk(waiting) else text
+
+    /** The neutral question on a locked phone: no symbol, no amount, no side - only how many requests wait. */
+    fun lockedAsk(count: Int): String =
+        if (count <= 1) "Boss, a request is waiting for you. Unlock the phone to answer it."
+        else "Boss, $count requests are waiting for you. Unlock the phone to answer them."
+
     /** "Asked just now", "Asked 4 min ago", "Asked 2 h ago". */
     fun askedText(askedAt: Long, now: Long): String {
         val s = ((now - askedAt) / 1000).coerceAtLeast(0)

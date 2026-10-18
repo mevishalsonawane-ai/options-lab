@@ -69,6 +69,28 @@ class RequestsTest {
         assertFalse(Requests.lockedLine(2).any { it.isDigit() && it != '2' })
     }
 
+    // 18 Oct, review: Jarvis's spoken yes-or-no question never says the request's words on a locked phone.
+    @Test fun aLockedPhoneIsNeverAskedTheRequestsWordsAloud() {
+        val ask = Requests.spoken("close BANKNIFTY25OCT55000CE",
+            "Boss, BANKNIFTY25OCT55000CE has gone nowhere for 40 minutes (212.50 against the 230.00 you paid). Yes or no?")
+        // Unlocked: the question as it is.
+        assertEquals(ask, Requests.askAloud(ask, locked = false, waiting = 1))
+        // Locked: only the count and the unlock - no symbol, no price, no side.
+        val locked = Requests.askAloud(ask, locked = true, waiting = 1)
+        assertEquals("Boss, a request is waiting for you. Unlock the phone to answer it.", locked)
+        assertFalse(Overheard.holdsAccount(locked), locked)
+        assertFalse(locked.contains("BANKNIFTY") || locked.contains("212") || locked.contains("close"), locked)
+        assertEquals("Boss, 3 requests are waiting for you. Unlock the phone to answer them.", Requests.askAloud(ask, true, 3))
+        // A plain question with no figures is still not named on a locked phone (the request's title is the account's too).
+        assertEquals(Requests.lockedAsk(1), Requests.askAloud("Request: buy NIFTY CE. Yes or no?", true, 1))
+        // Edge: none counted (the list not yet updated) or a count gone wrong: still the one-request line, never empty.
+        assertEquals(Requests.lockedAsk(1), Requests.askAloud(ask, true, 0))
+        assertEquals(Requests.lockedAsk(1), Requests.askAloud(ask, true, -2))
+        // Edge: an empty question unlocked stays empty (nothing invented); locked, the neutral line.
+        assertEquals("", Requests.askAloud("", false, 1))
+        assertEquals(Requests.lockedAsk(1), Requests.askAloud("", true, 1))
+    }
+
     @Test fun countdownAndAskedTexts() {
         assertEquals("Lapses in 10:00", Requests.lapseText(600_000, 0))
         assertEquals("Lapses in 9:05", Requests.lapseText(545_000, 0))

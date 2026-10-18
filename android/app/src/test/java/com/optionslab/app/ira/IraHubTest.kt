@@ -369,7 +369,7 @@ class IraHubTest : RobolectricTest() {
         assertEquals(listOf(p), st.proposals)
         assertTrue("the conversation is remembered", st.messages.any { it.proposal == p.id && it.text.contains("Backtest of") })
         assertTrue(st.messages.any { !it.fromIra && it.text == "backtest the hammer on banknifty 1 hour" })
-        IraHub.dismiss(p.id)
+        IraHub.dismiss(p.id).join()                                // its save runs off the caller's thread (18 Oct, review)
         IraHub.init(context); IraHub.awaitLoadedBlocking()
         st = IraHub.state.value
         assertEquals(IraHub.Proposal.DISMISSED, st.proposals.single().status)
@@ -482,6 +482,28 @@ class IraHubTest : RobolectricTest() {
         val p = IraHub.state.value.proposals.single()
         assertTrue(p.result.error!!, p.result.error!!.endsWith("needs at least 2 years"))
         assertTrue(!p.result.recommended)
+    }
+
+    /**
+     * 18 Oct, review: a tap on No now does its vault work off the main thread, but still takes the request off the waiting
+     * list at once - a Yes tapped right after it finds nothing waiting, and nothing is done.
+     */
+    @Test fun aNoTappedBeforeAYesAlwaysWins() = runBlocking {
+        IraHub.ask("alert me when nifty goes above 25000")
+        waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
+        val id = IraHub.state.value.pending.single()
+        val job = IraHub.cancelAsync(id, by = com.optionslab.ira.Requests.By.TAP)
+        assertTrue("it was waiting", job != null)
+        // Taken at once, before its I/O half has run.
+        assertTrue(!IraHub.waitsFor(id))
+        assertEquals(null, IraHub.confirm(id))
+        job!!.join()
+        assertTrue("nothing was done", com.optionslab.app.data.Alarms.all().isEmpty())
+        assertEquals(com.optionslab.ira.Requests.Outcome.DECLINED, IraHub.recentRequests().value.first().outcome)
+        assertTrue(id !in IraHub.state.value.pending)
+        assertTrue(IraHub.state.value.messages.any { it.text == "Cancelled; nothing was done." })
+        // A second No on it: nothing waits, nothing launched.
+        assertEquals(null, IraHub.cancelAsync(id))
     }
 
     /** "Turn on the kill switch", "set an alarm": in IraAlgo every action waits for Confirm; nothing happens before it. */

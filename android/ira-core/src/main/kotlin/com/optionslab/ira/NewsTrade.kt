@@ -15,6 +15,12 @@ object NewsTrade {
     const val MIN_MOVE_PCT = 0.15
     const val FRESH_MINUTES = 15L
     const val MAX_A_DAY = 2
+    /**
+     * The newest 1-minute candle may be at most this old (18 Oct, review): after a stalled feed the "last 15 minutes"
+     * were hours old - a 09:45-10:00 move put to Boss at 13:00 as "in the last 15 minutes". A few minutes of slack: the
+     * news is judged just after the candles are read, and that can take a moment.
+     */
+    const val MAX_BAR_AGE_MINUTES = 5L
 
     data class Idea(val market: Market, val call: Boolean, val why: String, /** The pattern's two-year hit rate, when a pattern brought it. */ val hitRate: Double? = null, /** The candle pattern's name, when a pattern brought it. */ val kind: String? = null)
 
@@ -39,6 +45,11 @@ object NewsTrade {
         if (bars.size < 16) return null
         // The last 15 minutes of today's session only (never from last night's close).
         if (bars[bars.size - 16].t.toLocalDate() != now.toLocalDate()) return null
+        // Both ends of that window are recent (18 Oct, review): the newest candle at most [MAX_BAR_AGE_MINUTES] old, and
+        // the one 15 back at most 15 minutes plus that slack (and a minute) old - a long gap in the feed inside the window
+        // is no "last 15 minutes" either.
+        if (bars.last().t.isBefore(now.minusMinutes(MAX_BAR_AGE_MINUTES))) return null
+        if (bars[bars.size - 16].t.isBefore(now.minusMinutes(FRESH_MINUTES + MAX_BAR_AGE_MINUTES + 1))) return null
         val last = bars.last().c; val ago = bars[bars.size - 16].c
         val move = (last - ago) / ago * 100
         if (if (up) move < MIN_MOVE_PCT else move > -MIN_MOVE_PCT) return null

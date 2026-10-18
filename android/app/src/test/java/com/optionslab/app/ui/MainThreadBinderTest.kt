@@ -50,4 +50,30 @@ class MainThreadBinderTest {
             assertTrue(f, Regex("withContext\\(kotlinx\\.coroutines\\.Dispatchers\\.IO\\)\\s*\\{\\s*runCatching\\s*\\{\\s*resolver\\.openOutputStream\\(uri\\)").containsMatchIn(s))
         }
     }
+
+    // 18 Oct, review: taps and the voice's main-thread callbacks did vault writes on the main thread.
+    @Test fun theNoTapAndDismissTapSaveOffTheMainThread() {
+        val page = src("com/optionslab/app/ui/screens/IraPage.kt") ?: return
+        assertFalse("the No button cancels on the hub's thread", page.contains("IraHub.cancelAction("))
+        assertTrue(page.contains("IraHub.cancelAsync(mineId, by = com.optionslab.ira.Requests.By.TAP)"))
+        // Solo's card reads Solo's trades off the main thread, never in composition.
+        assertFalse(page.contains("remember(on) { com.optionslab.app.ira.IraSolo.card() }"))
+        assertFalse(page.contains("remember(on) { com.optionslab.app.ira.IraSolo.record() }"))
+        val hub = src("com/optionslab/app/ira/IraHub.kt") ?: return
+        assertTrue(hub.contains("fun cancelAsync(") && hub.contains("val c = claimCancel(id) ?: return null") && hub.contains("scope.launch(Dispatchers.IO) { finishCancel(c, said, by) }"))
+        assertTrue("dismiss saves on the I/O thread", hub.contains("return scope.launch(Dispatchers.IO) { saveState() }"))
+    }
+
+    @Test fun theVoicesMainThreadMarkersAreWrittenInTheBackground() {
+        val v = src("com/optionslab/app/ira/JarvisVoice.kt") ?: return
+        for (k in listOf("SecurePrefs.put(TAP_BROKEN", "SecurePrefs.put(\"jarvis.voice.tapsilent\"", "SecurePrefs.put(\"jarvis.hearing.told\""))
+            assertFalse(k, v.contains(k))
+        assertTrue(v.contains("putAllSoon(mapOf(TAP_BROKEN to true))"))
+        assertTrue(v.contains("putAllSoon(mapOf(\"jarvis.voice.tapsilent\" to v.toString()))"))
+        assertTrue(v.contains("putAllSoon(mapOf(\"jarvis.hearing.told\" to day))"))
+        // A spoken no is carried out off the main thread too.
+        assertFalse(v.contains("else { IraHub.cancelAction("))
+        // Jarvis's own yes-or-no questions are said only through the lock-aware path.
+        assertFalse(Regex("sayWhenFree\\([^)]*\"question\"\\)").containsMatchIn(v))
+    }
 }

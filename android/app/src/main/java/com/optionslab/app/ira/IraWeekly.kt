@@ -62,11 +62,18 @@ internal object IraWeekly {
     }
 
     /** The kept reviews, read from their file (off the main thread). */
-    fun kept(): List<WeeklyReview.Review> = runCatching {
+    fun kept(): List<WeeklyReview.Review> = read() ?: emptyList()
+
+    /**
+     * The kept reviews; null when their file is there but could not be read (the Keystore or the disk failed) - never
+     * the same as having none (18 Oct, review): a review made then was saved over the file, and every earlier one was lost.
+     */
+    internal fun read(): List<WeeklyReview.Review>? = runCatching {
         migrate()
         val f = file() ?: return@runCatching emptyList()
+        if (!f.exists()) return@runCatching emptyList()
         WeeklyReview.decodeAll(com.optionslab.app.security.Vault.readFileSteady(f)?.toString(Charsets.UTF_8))
-    }.getOrDefault(emptyList())
+    }.getOrNull()
 
     private fun save(rs: List<WeeklyReview.Review>) {
         migrate()
@@ -87,7 +94,11 @@ internal object IraWeekly {
         withContext(Dispatchers.IO) {
             lock.withLock {
                 val now = Market.now().toLocalDateTime()
-                val all = kept()
+                // Unreadable just now: no review is made over the kept ones (it is tried again at the next report).
+                val all = read() ?: run {
+                    runCatching { com.optionslab.app.data.Diag.record("jarvis", "the weekly reviews could not be read; not saved over") }
+                    return@withLock
+                }
                 val monday = WeeklyReview.due(now, all.filter { !it.soFar }.map { it.monday }, ::tradingDay) ?: return@withLock
                 val r = build(monday, now, soFar = false)
                 val keep = WeeklyReview.keep(all, r)

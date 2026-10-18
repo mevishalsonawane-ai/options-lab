@@ -71,8 +71,13 @@ internal fun SoloForwardGlance(refresh: Any?, onRead: (SoloGlanceRead?) -> Unit 
     var read by remember { mutableStateOf<SoloGlanceRead?>(null) }
     LaunchedEffect(refresh) {
         val r = withContext(Dispatchers.IO) { runCatching { load() }.getOrNull() }
-        read = r
-        onRead(r)
+        // Set on the main thread (18 Oct, review): where the effect's own dispatcher does not hop back by itself (the
+        // compose tests' unconfined one), the state was set on the I/O thread and the frame it started ran there too -
+        // touching the views off the main thread. The data page's reads do the same.
+        withContext(Dispatchers.Main.immediate) {
+            read = r
+            onRead(r)
+        }
     }
     read?.let { SoloGlanceContent(it) }
 }

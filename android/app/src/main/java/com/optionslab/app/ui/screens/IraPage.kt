@@ -838,7 +838,7 @@ internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
                 }
             }
         } else BrassButton(yes, tone = LocalPalette.current.oxblood) { mine()?.let { mineId -> IraHub.confirmAsync(mineId) } }
-        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAction(mineId, by = com.optionslab.ira.Requests.By.TAP) } }
+        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAsync(mineId, by = com.optionslab.ira.Requests.By.TAP) } }
     }
 }
 
@@ -1152,14 +1152,23 @@ fun JarvisSettingsPage() {
  * today's state, the research line), the "not proven" label and the bar set in advance.
  */
 @Composable
-private fun SoloCard() {
+internal fun SoloCard() {
     val p = LocalPalette.current
     LedgerCard {
         // Solo's own state, not a copy: it shows off once Solo has switched itself off (the forward test's bar).
         val on by com.optionslab.app.ira.IraSolo.onState.collectAsState()
         LaunchedEffect(Unit) { com.optionslab.app.ira.IraSolo.refreshOn() }
         // The forward test set in advance and the "not proven" label: in the name's dialog (COMPACT, 15 Oct), with its rules.
-        val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
+        // Its dialog's lines and the record line: read off the main thread, again on each switch (18 Oct, review: both read
+        // Solo's trades from the vault, decrypted on a first read, during composition). Shown once read.
+        // (Set on the main thread, never from the I/O thread's continuation: as [SoloForwardGlance].)
+        val solo by androidx.compose.runtime.produceState<Pair<List<String>, String>?>(null, on) {
+            val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { com.optionslab.app.ira.IraSolo.card() to com.optionslab.app.ira.IraSolo.record() }.getOrNull()
+            }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { value = r }
+        }
+        val lines = solo?.first.orEmpty()
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 ExplainedName("Solo: Jarvis trades by himself (paper)", listOf(SOLO_RULES) + lines,
@@ -1172,8 +1181,7 @@ private fun SoloCard() {
         // The forward test at a glance (read off the main thread, again on each switch; never in GOLD).
         var glance by remember { mutableStateOf<SoloGlanceRead?>(null) }
         SoloForwardGlance(on, onRead = { glance = it }) { readSoloGlance(on) }
-        val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
-        Note(rec)
+        solo?.second?.let { Note(it) }
         // The trade manager on Solo's newest trade: its lock (Solo has no target to extend), an early exit, against the original rules.
         val managed by com.optionslab.app.data.TradeManagerHost.records.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         managed.lastOrNull { it.trade.family == "solo" }?.let { Note(com.optionslab.ira.TradeManager.cardLine(it)) }

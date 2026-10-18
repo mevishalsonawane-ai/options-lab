@@ -36,7 +36,12 @@ internal object IraNewsTrades {
                    /** How sure Jarvis was (1-5) when it was suggested, for the bar it sets itself ([com.optionslab.ira.ActAlone.bar]). */
                    val stars: Int? = null,
                    /** The target in premium points it was placed with (its ladder too); null: placed before the 30 / 60 rules (+40). */
-                   val target: Double? = null) {
+                   val target: Double? = null,
+                   /**
+                    * The product a live trade was bought with (MIS or NRML, 18 Oct, review): its stop is re-set with this one,
+                    * never the setting as it is now. Null: paper, or recorded before it was kept.
+                    */
+                   val product: String? = null) {
         /** The points its target and profit-lock ladder are measured on. */
         val ladderPoints: Double get() = target?.takeIf { it.isFinite() && it > 0 } ?: LEGACY_TARGET_POINTS
     }
@@ -75,18 +80,19 @@ internal object IraNewsTrades {
                 o.getString("h"), o.getString("d"), o.optBoolean("c"), if (o.has("r")) o.getDouble("r") else null,
                 o.optString("u").ifEmpty { null }, if (o.has("cl")) o.getBoolean("cl") else null, if (o.has("si")) o.getDouble("si") else null,
                 if (o.has("mi")) o.getInt("mi") else null, if (o.has("so")) o.getDouble("so") else null, if (o.has("mo")) o.getInt("mo") else null,
-                if (o.has("cf")) o.getInt("cf") else null, if (o.has("tg")) o.getDouble("tg") else null)
+                if (o.has("cf")) o.getInt("cf") else null, if (o.has("tg")) o.getDouble("tg") else null, o.optString("pr").ifEmpty { null })
         } }.getOrNull() }
     }.getOrDefault(emptyList())
 
     /** One writer at a time: [place] and [tick] read, change and save the same record. */
     private val lock = kotlinx.coroutines.sync.Mutex()
 
-    private fun save(list: List<Pos>) = runCatching {
+    /** (internal for its round-trip test, 18 Oct, review) */
+    internal fun save(list: List<Pos>) = runCatching {
         com.optionslab.app.security.SecurePrefs.put(KEY, JSONArray().apply { list.takeLast(200).forEach { p ->
             put(JSONObject().put("s", p.symbol).put("l", p.live).put("e", p.entry).put("q", p.qty).put("p", p.peak)
                 .apply { p.stop?.let { put("st", it) }; p.result?.let { put("r", it) }; p.underlying?.let { put("u", it) }; p.call?.let { put("cl", it) }
-                    p.spotIn?.let { put("si", it) }; p.minuteIn?.let { put("mi", it) }; p.spotOut?.let { put("so", it) }; p.minuteOut?.let { put("mo", it) }; p.stars?.let { put("cf", it) }; p.target?.let { put("tg", it) } }.put("h", p.headline).put("d", p.day).put("c", p.closed)) } }.toString())
+                    p.spotIn?.let { put("si", it) }; p.minuteIn?.let { put("mi", it) }; p.spotOut?.let { put("so", it) }; p.minuteOut?.let { put("mo", it) }; p.stars?.let { put("cf", it) }; p.target?.let { put("tg", it) }; p.product?.let { put("pr", it) } }.put("h", p.headline).put("d", p.day).put("c", p.closed)) } }.toString())
     }
 
     fun today(): Int { val d = com.optionslab.app.data.Market.today().toString(); return all().count { it.day == d } }
@@ -343,12 +349,25 @@ internal object IraNewsTrades {
             .getOrNull() ?: return "$sent But I could not find its Zerodha symbol to set the stop: set it from the position now."
         val prot = com.optionslab.app.data.Protections.protectLive(zs, "NFO", s.orderProduct, c.lotSize * lots, avg, stop, null, target)
         val guarded = prot.startsWith("Protected")
+        // The product it was bought with (18 Oct, review): the order read the setting again when sent, so it is kept only
+        // when the setting is still the one read at the start; if it changed meanwhile, the position book's is used later.
+        val bought = s.orderProduct.takeIf { runCatching { AppSettings.load().orderProduct }.getOrNull() == it }
         save(all() + Pos(zs, true, avg, c.lotSize * lots, avg, if (guarded) stop else null, headline, day,
-            underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin, stars = stars, target = TARGET_POINTS))
+            underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin, stars = stars, target = TARGET_POINTS, product = bought))
         IraActivity.add("Bought $zs on Zerodha at ${"%.2f".format(avg)} ($headline).")
         if (!guarded) unguarded(zs, prot)
         return "$sent $prot" + if (guarded) " Profit lock on." else ""
     }
+
+    /**
+     * The product to re-set live trade [p]'s stop with (18 Oct, review): the one it was bought with; for a trade recorded
+     * before that was kept, the one Zerodha's position book holds it in ([net], when it is held in one only); only when
+     * neither is known, the setting as it is now ([setting]) - as before.
+     */
+    internal fun productFor(p: Pos, net: List<com.optionslab.app.data.Broker.Position>?, setting: String): String =
+        p.product?.takeIf { it.isNotBlank() }
+            ?: net?.filter { it.symbol == p.symbol && it.open }?.map { it.product }?.distinct()?.singleOrNull()
+            ?: setting
 
     /** The stop could not be set: the owner is told at once (the position is still tracked). */
     private fun unguarded(symbol: String, why: String) {
@@ -397,7 +416,9 @@ internal object IraNewsTrades {
             if (lock != null && (stop == null || lock > stop + 0.01)) {
                 if (ltp > lock) {
                     // Re-set at the new rung, priced from now (a stop must sit below the current price).
-                    val r = if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", AppSettings.load().orderProduct, p.qty, ltp, lock, null, p.entry + ref)
+                    // The product it was bought with (18 Oct, review): a stop re-set as NRML on an MIS buy opened a new short
+                    // and left the buy open.
+                    val r = if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", productFor(p, liveNet, AppSettings.load().orderProduct), p.qty, ltp, lock, null, p.entry + ref)
                         else com.optionslab.app.data.Protections.protectPaper(p.symbol, "MIS", p.qty, ltp, lock, null, p.entry + ref)
                     if (r.startsWith("Protected")) stop = lock else unguarded(p.symbol, r)
                 } else {
