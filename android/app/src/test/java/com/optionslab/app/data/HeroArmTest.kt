@@ -290,6 +290,43 @@ class HeroArmTest : RobolectricTest() {
         assertEquals("one entry, one exit: nothing more that day", 2, Paper.state.orders.size)
     }
 
+    /**
+     * 18 Oct (review D8): the Hero arm's paper trades reach the live path ([ArmLive]). Its paper buy is told with its own key, its
+     * reference and its quantity; once its -60% stop sells it on paper, the ORB book it registered shows that trade at quantity 0,
+     * so its live copy is sold too.
+     */
+    @Test fun itsPaperTradeAndItsStopReachTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        setUp(listOf(day, day.plusDays(7)))
+        armHero()
+        passes(LocalTime.of(13, 44), LocalTime.of(13, 46))
+        val p = hero().today.single()
+        assertTrue(p.open)
+        assertEquals(18 * lot, p.qty)
+        val armKey = HeroRules.ARM.source
+        val ref = "orb:${p.arm}:${p.entryOrderId ?: p.entryTime}"
+        val entered = synchronized(heard) { heard.filter { it.startsWith("entered|") } }
+        assertEquals("one paper buy told", 1, entered.size)
+        assertTrue(entered.single(), entered.single().startsWith("entered|$armKey|$ref|${18 * lot}|"))
+        assertEquals("open: held at its quantity", 18 * lot,
+            ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.ORB)!!.single { it.ref == ref }.qty)
+
+        // The bar labelled 14:00 closes at 1.50 (at or below 1.60, -60%): the 14:01 pass sells it all on paper.
+        val ce = key(day, 25_200.0, Right.CE)
+        upstox.price(ce, 1.5)
+        callPx = { m -> if (m >= 14 * 60) 1.5 else 1.7 }
+        passes(LocalTime.of(13, 47), LocalTime.of(14, 1))
+        val c = hero().today.single()
+        assertFalse(c.open)
+        assertEquals("hero_stop", c.why)
+        val leg = ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.ORB)!!.single { it.ref == ref }
+        assertEquals(armKey, leg.key)
+        assertTrue("closed: told by a closed line or by quantity 0 in its book",
+            synchronized(heard) { heard.any { it.startsWith("closed|$ref|") } } || leg.qty == 0)
+        assertEquals(0, leg.qty)
+    }
+
     @Test fun inLiveModeItStillTradesOnlyOnPaper() {
         setUp(listOf(day, day.plusDays(7)))
         AutomationSupport.liveSettings()

@@ -376,6 +376,42 @@ class OrbArmsDayTest : RobolectricTest() {
         assertTrue("the ORB itself stays off", arm("orb").today.isEmpty())
     }
 
+    /**
+     * 18 Oct (review D8): ORB Sweep's paper trades reach the live path ([ArmLive]). Its paper buy is told with its own key, its
+     * reference, its quantity and its -40 stop; once its +80 target sells it on paper, the ORB book it registered shows that
+     * trade at quantity 0, so its live copy is sold too.
+     */
+    @Test fun orbSweepsPaperTradeAndItsExitReachTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        sweepDay = true
+        at(LocalTime.of(9, 50))
+        runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 40))
+        val p = arm("orb_sweep").open!!
+        assertEquals("PE", p.right); assertEquals(30, p.qty)
+        val key = com.optionslab.engine.orb.SweepRules.ARM.source
+        assertEquals(key, p.arm)
+        val ref = "orb:${p.arm}:${p.entryOrderId ?: p.entryTime}"
+        val entered = synchronized(heard) { heard.filter { it.startsWith("entered|") } }
+        assertEquals("one paper buy told, with the arm's own key, its reference, quantity and stop",
+            listOf("entered|$key|$ref|30|${p.stopTrigger}"), entered)
+        assertEquals(OrbRules.stopTrigger(p.entry), p.stopTrigger)
+        assertEquals("open: held at its quantity", 30,
+            ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.ORB)!!.single { it.ref == ref }.qty)
+
+        upstox.price(peKey, p.entry + 90)                           // past the +80 target
+        tick(LocalTime.of(10, 41))
+        val closed = arm("orb_sweep").today.single()
+        assertFalse("sold on paper", closed.open)
+        val legs = ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.ORB)!!
+        val leg = legs.single { it.ref == ref }
+        assertEquals(key, leg.key)
+        assertTrue("closed: told by a closed line or by quantity 0 in its book",
+            synchronized(heard) { heard.any { it.startsWith("closed|$ref|") } } || leg.qty == 0)
+        assertEquals(0, leg.qty)
+    }
+
     // ---- one index, one side (Boss's 06 Oct rule) -----------------------------------------------------
 
     @Test fun theOrbNeverBuysACallWhileOrbSweepHoldsAPutOnTheSameIndex() {
