@@ -115,3 +115,30 @@ undoable in one tap, so its plain-rules record stays separable (CLAUDE.md). R79 
 R51's Amendment A stores for BANKNIFTY, FINNIFTY, MIDCPNIFTY (`R51_CLEAN=1 r51data.py build`), from the Drive lake
 (`index_1m`, `options_rolling_1m` WEEK), as R76. NIFTY and SENSEX index minutes from the same lake's `index_1m` files
 (`r51data.index_days`, index only). Data lives outside git (`/dev/shm`); results/ holds small JSON only.
+
+## Amendment 1 (18 Oct 2026, before any R79 result was computed): BANKNIFTY only, GitHub release data
+
+Why: the Drive lake that R76 used could not be reached from this session (rclone was not available), and the repo's
+`research-data` release has no index with option prices for the whole of Nov 2024 - Oct 2026. Boss, 18 Oct: *"Take 1
+index whose all data is present"*; the closest is BANKNIFTY, chosen by Boss from the options offered. No R79 number of
+any kind had been computed when this amendment was written. Everything above stays, except:
+
+- **Index and data.** BANKNIFTY only (the 26 Oct go-live candidate), books 15 + 5, index stop 30 points, 1-ITM,
+  Liquidity's own exits, expiry days skipped. Data: the `research-data` release, `banknifty_prev_year_wide.parquet` +
+  `banknifty_year_wide.parquet` (index minutes and the nearest expiry after the day at strikes within 1,000 points of
+  the 09:20 index; 311 sessions from 20 Nov 2024 to 23 Feb 2026, every one with options). Built into an R51-format day
+  store by `r79data.py` (index O H L C on the 09:15 grid; each contract's own O H L C V; ATM = the index close rounded
+  to 100; expiry days = the contracts' expiry dates seen in the data, with Jan 2025's move from 29 to 30 Jan as
+  `brain/adapters/release.py` records it). The lake's cleaning step (Amendment A of R51) does not apply to this source;
+  a strike outside the stored band means no trade (as with any missing contract).
+- **Periods.** Design 20 Nov 2024 - 31 Dec 2025; walk-forward = the quarters Apr-Jun, Jul-Sep, Oct-Dec 2025 (summed);
+  **final 1 Jan - 23 Feb 2026, read once** (`results/FINAL_READ`). This final is short (about 36 sessions) and was
+  inside the design period of R51 / R63 / R70 / R76, so it is weak evidence. There is no Apr - Oct 2026 data here.
+- **B0 check.** R76's exact B0 cannot be reproduced on a different source and window. Instead the study reports this
+  B0 next to R76's BANKNIFTY figures, as a sanity check only.
+- **Breadth (X1 / X2).** The release has index minutes for NIFTY (`nifty_prev` + `nifty_year`, IX rows), FINNIFTY
+  (`finnifty_index`) and SENSEX (`sensex_index`), not MIDCPNIFTY. So the "others" are NIFTY, FINNIFTY, SENSEX:
+  **X1 = at least 2 of the 3 agree, X2 = all 3 agree** (the "at least 3 others" of section 2 with 3 available).
+- **Gates unchanged:** PASS only if the variant's net beats B0 in walk-forward AND final, BH q < 0.10 over the 6 tests
+  (final-period paired day bootstrap) and random-skip p < 0.10. With about 36 final sessions a PASS is unlikely even
+  for a good filter; that is stated now, before any number.
