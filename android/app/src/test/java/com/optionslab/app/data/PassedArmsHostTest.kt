@@ -851,6 +851,10 @@ class PassedArmsHostTest : RobolectricTest() {
         val said = PassedArmsHost.facts(v).arms.single { it.source == DonchianArm.SOURCE }
         assertTrue(said.recordOnly && said.on == false); assertEquals(1, said.wouldBe)
         assertTrue(com.optionslab.ira.PassedArmsTalk.armWords(said).startsWith("${DonchianArm.LABEL}: record only (would-be trades, nothing bought)."))
+        // On again: its forward bar counts from now, so would-be trades (never bought) can never switch it off at once; they stay in its record.
+        assertTrue(runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) }.contains("paper only"))
+        assertEquals(1, view().base[DonchianArm.SOURCE])
+        assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
         assertNothingAtZerodha()
     }
 
@@ -954,6 +958,13 @@ class PassedArmsHostTest : RobolectricTest() {
         old()
         view().let { v -> assertTrue(v.recording(DonchianArm.SOURCE)); assertTrue(v.on(BreadthDonchianArm.SOURCE)) }
         assertTrue(PassedArmsHost.R51_RECORD in String(com.optionslab.app.security.Vault.readFileSteady(bookFile)!!, Charsets.UTF_8))
+        // R72 off in that older book (Boss's switch, or its bar): R51 still set to record only, and the note says R72 is off, never "stays on".
+        old { getJSONObject("armed").put(BreadthDonchianArm.SOURCE, false) }
+        view().let { v ->
+            assertTrue(v.recording(DonchianArm.SOURCE)); assertFalse(v.on(BreadthDonchianArm.SOURCE))
+            val l = v.log.single { "set to record only by the 19 Oct update" in it }
+            assertTrue(l, "${BreadthDonchianArm.LABEL} is off: switching it on is your choice" in l && "stays on" !in l)
+        }
         // R51 already off in an older book: left off.
         PassedArmsHost.wipe()
         com.optionslab.app.security.Vault.writeFile(bookFile, org.json.JSONObject().put("armed", org.json.JSONObject().put(DonchianArm.SOURCE, false))

@@ -423,10 +423,13 @@ object PassedArmsHost {
             if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && b.armed[s] == true) {
                 b.armed[s] = false
                 b.recordOnly += s
+                // (Review: R72's state said as it is - Boss may have switched it off, or its forward bar may have.)
+                val r72 = if (b.armed[BreadthDonchianArm.SOURCE] == true) "${BreadthDonchianArm.LABEL} stays on"
+                    else "${BreadthDonchianArm.LABEL} is off: switching it on is your choice"
                 note(b, "${label(s)} set to record only by the 19 Oct update, your \"Yes, keep only breadth donchain\": its breaks are kept as " +
-                    "would-be trades, nothing is bought; ${BreadthDonchianArm.LABEL} stays on" +
+                    "would-be trades, nothing is bought; $r72" +
                     if (b.positions.any { it.arm == s && it.open && it.shadow == null }) "; what it holds still closes by its own exits" else "")
-                runCatching { com.optionslab.app.ira.Autopilot.logPassedArmRecordOnly(s, label(s)) }
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedArmRecordOnly(s, label(s), r72) }
             }
             save(b)
         }
@@ -598,7 +601,7 @@ object PassedArmsHost {
     /**
      * Switch [source] on or off - on paper, always. Off sells nothing it holds: its own exits still close it. [log]: Boss's flip
      * from the row (Autopilot's change log is told); false for the change log's own Undo. On after the forward bar switched it
-     * off: the bar counts from now ([Book.base] / Solo 2.0's baseline).
+     * off (or, 19 Oct, after record only): the bar counts from now ([Book.base] / Solo 2.0's baseline).
      */
     suspend fun setArmed(source: String, on: Boolean, log: Boolean = true): String = setMode(source, if (on) Mode.ON else Mode.OFF, log)
 
@@ -616,7 +619,9 @@ object PassedArmsHost {
             b.armed[source] = mode == Mode.ON
             if (mode == Mode.RECORD) b.recordOnly += source else b.recordOnly -= source
             if (mode == Mode.ON && source == BreadthDonchianArm.SOURCE && b.breadthSince == null) b.breadthSince = runCatching { Market.today() }.getOrElse { LocalDate.now() }
-            if (mode == Mode.ON && b.paused.remove(source) != null) {
+            // 19 Oct (review): on again from record only, the forward bar also counts from now - its would-be trades were never
+            // bought, so they never switch it off the moment it is back on (they stay in its record, labelled).
+            if (mode == Mode.ON && (b.paused.remove(source) != null || was == Mode.RECORD)) {
                 val nets = b.positions.filter { it.arm == source && !it.open }.map { it.net ?: 0.0 }
                 if (source == Solo2.SOURCE) SoloMidday.baseline(nets).let { b.soloBase = "${it.from}|${it.peak}" } else b.base[source] = nets.size
             }
@@ -1699,12 +1704,13 @@ object PassedArmsHost {
         val arms = SOURCES.map { s ->
             val c = v.closedOf(s)
             val ap = c.filter { it.index == apart(s) }
+            val wb = c.filter { it.shadow != null }
             com.optionslab.ira.PassedArmsTalk.Arm(s, v.armed[s] ?: false, v.todayOf(s).map { tradeLine(it, v.marks) }, c.size, c.sumOf { it.net ?: 0.0 },
                 c.count { (it.net ?: 0.0) > 0 }, ap.size, ap.sumOf { it.net ?: 0.0 }, v.forwardLine(s), v.paused[s],
                 if (s == Solo2.SOURCE) v.scores else emptyList(), stOn = s == DonchianArm.SOURCE && v.stOn,
                 stUnjudged = if (s == DonchianArm.SOURCE) v.stUnjudged else 0,
                 live = runCatching { ArmLive.armLine(s) }.getOrNull(), recordOnly = v.recording(s),
-                wouldBe = v.wouldBeOf(s).size, wouldBeNet = v.wouldBeOf(s).sumOf { it.net ?: 0.0 })
+                wouldBe = wb.size, wouldBeNet = wb.sumOf { it.net ?: 0.0 })
         }
         val w = runCatching { WatchlistHost.cards() }.getOrDefault(emptyList()).map { com.optionslab.engine.orb.Watchlist.line(it) }
         return com.optionslab.ira.PassedArmsTalk.Facts(arms, w, runCatching { WatchlistHost.on() }.getOrNull(), v.modelLoaded,

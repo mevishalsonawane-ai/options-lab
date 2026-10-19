@@ -1066,12 +1066,12 @@ internal object Autopilot {
 
     /**
      * 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): R51 Donchian 20 set to record only once by the update - its breaks are
-     * kept as would-be trades, nothing bought, so it can still be compared with R72 Breadth Donchian (which stays on). Logged once as
+     * kept as would-be trades, nothing bought, so it can still be compared with R72 Breadth Donchian ([r72]: its state, in words). Logged once as
      * Boss's ask (kept); one tap undoes it (back on, paper only, no PIN). Its earlier "on" entry is closed. On Autopilot's own worker.
      */
-    fun logPassedArmRecordOnly(source: String, label: String) {
+    fun logPassedArmRecordOnly(source: String, label: String, r72: String) {
         logRecordOnly(AutoChange.passedArmRecordOnly(source, label, AutoChange.ON, AutoChange.CHOICE_KEEP_BREADTH),
-            "the 19 Oct update (your ask: \"Yes, keep only breadth donchain\"); paper only - ${com.optionslab.engine.orb.BreadthDonchianArm.LABEL} stays on", once = true)
+            "the 19 Oct update (your ask: \"Yes, keep only breadth donchain\"); paper only - $r72", once = true)
     }
 
     /** [c] (an arm set to record only) recorded as Boss's (kept), the arm's newest kept entry closed first; [once]: never twice. */
