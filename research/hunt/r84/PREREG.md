@@ -128,3 +128,19 @@ One `research/experiments/entries/r84-*.yaml` per variant (failures too), one FI
 hand-made signals; break size and shock ratio on hand-made bars with a look-ahead guard (changing bars after the signal
 bar never changes the decision); the twin keeps the same count; the pass rule and BH maths; K0 reproducing R75 when the
 stores are present.
+
+## Amendment A1 (19 Oct, written AFTER the design results of section 3, BEFORE this variant is run)
+
+The design run showed that a per-signal cap does not cap exposure: C1 fires on every bar while 4+ indices stay beyond
+their channels, so an index left out at one bar is eligible again at the next and usually enters 5 minutes later. The
+app's same-direction cap (build ee92c4c) is different: it counts OPEN positions. One variant is added to measure that
+cap on Breadth alone:
+
+| id | rule |
+|---|---|
+| K2-open | at any moment at most 2 Breadth positions open the same way across the five indices (a position counts from its entry row through its exit row); at a signal, the free slots go first-come in the fixed index order |
+
+Its twin keeps the same number (the free slots) from the eligible set at random. It is gated with the same section 6
+rule and its p joins BH (8 tests; the 7 earlier q values are re-computed over 8 and reported both ways). Because it was
+added after seeing design results it is labelled **post hoc**; a pass would be reported as such and would still need
+the paper record to confirm it. The final-window rule (section 7) is unchanged.
