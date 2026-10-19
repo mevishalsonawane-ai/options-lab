@@ -25,11 +25,14 @@ settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_met
 prereg: research/brain/mcx/PREREG.md
 variants_tried: 18
 results:
-  summary: 'Design: 5 of 6 pass. GOLD skill 0.139 vs b_iv (q 0.004, 4720 rows / 146 sessions, pass); GOLDM skill 0.191 vs
-    b_iv (q 0.004, 7359 rows / 150 sessions, pass); SILVER skill 0.177 vs b_last (q 0.004, 4041 rows / 130 sessions, pass);
-    SILVERM skill 0.182 vs b_iv (q 0.004, 6693 rows / 149 sessions, pass); CRUDEOIL skill 0.040 vs b_iv (q 0.240, 7628 rows
-    / 150 sessions, fail); NATURALGAS skill 0.175 vs b_tod (q 0.004, 7628 rows / 150 sessions, pass).'
+  summary: 'Design: 5 of 6 pass. GOLD skill 0.139 vs b_iv (q 0.004, 4720 rows / 146 sessions, pass); holdout skill 0.120 (3917
+    rows); GOLDM skill 0.191 vs b_iv (q 0.004, 7359 rows / 150 sessions, pass); holdout skill 0.084 (3917 rows); SILVER skill
+    0.177 vs b_last (q 0.004, 4041 rows / 130 sessions, pass); holdout skill 0.098 (3917 rows); SILVERM skill 0.182 vs b_iv
+    (q 0.004, 6693 rows / 149 sessions, pass); holdout skill 0.082 (3917 rows); CRUDEOIL skill 0.040 vs b_iv (q 0.240, 7628
+    rows / 150 sessions, fail); holdout skill 0.131 (3917 rows); NATURALGAS skill 0.175 vs b_tod (q 0.004, 7628 rows / 150
+    sessions, pass); holdout skill 0.035 (3917 rows).'
   costs: none (forecasts, no trades)
-holdout_read: false
-verdict: inconclusive
-notes: Information only (a size forecast for stops/targets and context); nothing trades. Same finding as the India brain B1.
+holdout_read: true
+verdict: adopted
+notes: 'Information only (a size forecast for stops/targets and context); nothing trades. Same finding as the India brain
+  B1. Holdout (read once): skill >= 5% with p <= 0.05 on GOLD, GOLDM, SILVER, SILVERM, CRUDEOIL; not on NATURALGAS.'

@@ -25,11 +25,13 @@ settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_met
 prereg: research/brain/mcx/PREREG.md
 variants_tried: 6
 results:
-  summary: 'Design: 1 of 6 pass. GOLD acted 2728 hit 0.514 (q 0.236, fail); size band coverage 0.728; GOLDM acted 4042 hit
-    0.506 (q 0.483, fail); size band coverage 0.800; SILVER acted 2888 hit 0.509 (q 0.429, fail); size band coverage 0.766;
-    SILVERM acted 3586 hit 0.532 (q 0.004, pass); size band coverage 0.647; CRUDEOIL acted 5220 hit 0.499 (q 0.970, fail);
-    size band coverage 0.718; NATURALGAS acted 3835 hit 0.511 (q 0.240, fail); size band coverage 0.779.'
+  summary: 'Design: 1 of 6 pass. GOLD acted 2728 hit 0.514 (q 0.236, fail); holdout hit 0.514 on 2081 acted (p 0.110); size
+    band coverage 0.728; GOLDM acted 4042 hit 0.506 (q 0.483, fail); holdout hit 0.528 on 1171 acted (p 0.031); size band
+    coverage 0.800; SILVER acted 2888 hit 0.509 (q 0.429, fail); holdout hit 0.503 on 2278 acted (p 0.409); size band coverage
+    0.766; SILVERM acted 3586 hit 0.532 (q 0.004, pass); holdout hit 0.471 on 1096 acted (p 0.975); size band coverage 0.647;
+    CRUDEOIL acted 5220 hit 0.499 (q 0.970, fail); holdout hit 0.512 on 1844 acted (p 0.147); size band coverage 0.718; NATURALGAS
+    acted 3835 hit 0.511 (q 0.240, fail); holdout hit 0.497 on 947 acted (p 0.577); size band coverage 0.779.'
   costs: none (forecasts, no trades)
-holdout_read: false
-verdict: inconclusive
+holdout_read: true
+verdict: rejected
 notes: A 53% hit rate does not cover MCX costs on a one-hour hold (L4 B1 lost on every symbol).

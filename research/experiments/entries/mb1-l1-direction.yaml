@@ -25,10 +25,11 @@ settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_met
 prereg: research/brain/mcx/PREREG.md
 variants_tried: 12
 results:
-  summary: 'Design: 0 of 6 pass. GOLD AUC 0.526 (4471 rows, fail); GOLDM AUC 0.533 (7333 rows, fail); SILVER AUC 0.535 (3870
-    rows, fail); SILVERM AUC 0.533 (6620 rows, fail); CRUDEOIL AUC 0.492 (7499 rows, fail); NATURALGAS AUC 0.500 (7456 rows,
-    fail).'
+  summary: 'Design: 0 of 6 pass. GOLD AUC 0.526 (4471 rows, fail); holdout AUC 0.533 (3856 rows); GOLDM AUC 0.533 (7333 rows,
+    fail); holdout AUC 0.517 (3873 rows); SILVER AUC 0.535 (3870 rows, fail); holdout AUC 0.504 (3844 rows); SILVERM AUC 0.533
+    (6620 rows, fail); holdout AUC 0.525 (3912 rows); CRUDEOIL AUC 0.492 (7499 rows, fail); holdout AUC 0.481 (3886 rows);
+    NATURALGAS AUC 0.500 (7456 rows, fail); holdout AUC 0.523 (3772 rows).'
   costs: none (forecasts, no trades)
-holdout_read: false
+holdout_read: true
 verdict: rejected
 notes: Direction is not predictable, as in R16 and B1.

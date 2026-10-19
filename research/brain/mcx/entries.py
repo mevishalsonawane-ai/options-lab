@@ -60,7 +60,12 @@ def entries(dm: dict, l4: dict, hm: dict | None) -> list[dict]:
                     ["all 56 MCX L4 features"], "HistGradientBoosting (primary) and ridge per symbol, walk-forward 4 folds",
                     3 * 6, f"Design: {npass} of 6 pass. {a}.",
                     "adopted" if read else "inconclusive",
-                    "Information only (a size forecast for stops/targets and context); nothing trades. Same finding as the India brain B1.",
+                    "Information only (a size forecast for stops/targets and context); nothing trades. Same finding as the India brain B1."
+                    + (" Holdout (read once): skill >= 5% with p <= 0.05 on " + ", ".join(
+                        s for s in SYMS if hm["specialists"][s]["size"]["skill"] >= 0.05
+                        and hm["specialists"][s]["size"]["p"] <= 0.05) + "; not on " + ", ".join(
+                        s for s in SYMS if not (hm["specialists"][s]["size"]["skill"] >= 0.05
+                                                and hm["specialists"][s]["size"]["p"] <= 0.05)) + "." if read else ""),
                     read))
     b = "; ".join(f"{s} AUC {_f(S[s]['B'].get('auc'))} ({S[s]['B'].get('rows')} rows, {V['L1B:' + s]})" for s in SYMS)
     out.append(base("mb1-l1-persistence", "MCX brain L1-B: does the last hour's move continue over the next hour?", "ml",

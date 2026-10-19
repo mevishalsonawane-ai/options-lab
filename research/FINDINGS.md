@@ -1280,3 +1280,21 @@ Signal source: the indices' own 5-minute bars (R72 C1, 4 of 5); R75's C harness,
   -Rs 5,049; X-skip Rs 0. About 2 signals a month lose Rs 9.7k or more (36 in design): normal for this arm.
 - The app's same-direction cap on Breadth alone turns design +Rs 2.17 lakh into -Rs 19k. Recommendation: Breadth
   record-only on paper (or uncapped, Boss's call); not a live candidate at 1 lot x 5 indices (account stop breached).
+
+## MCX Data Brain, 5 levels (MB1, 20 Oct 2026) - size of the next hour predictable on 5 of 6 (holdout 8-13%), direction not; 0 of 16 brain rules pass
+Full study: `BRAIN_MCX.md`, rules `HUNT_MB1_MCX_BRAIN.md` (pre-registered `brain/mcx/PREREG.md`, commit 8f1d9f5b). Signal
+source: the MCX future's minute closes (the near future from the 6 option books, Aug 2025 - Oct 2026); ATM IV as
+context. Data stored as Parquet zstd cube / features and float32 tensors (memmap .npy, Arrow, joint [11 x minute x 56],
+120-minute windows) on Drive `derived/mcx_brain/v1/`. Design to 23 Jun 2026 (226 sessions, walk-forward ~150), locked
+holdout 1 Jul - 16 Oct (76 sessions) read once for the predictions only.
+- L1 size of the next 60 minutes beats the best plain guess (often the option market's own IV) by 14-19% in design and
+  8-13% on the holdout on GOLD, GOLDM, SILVER, SILVERM (and crude 13% on the holdout after 4% in design); natural gas
+  17.5% then 3.5% (fails). 3,917 holdout forecasts a symbol.
+- Direction (AUC 0.48-0.54), persistence of the last hour (47-51%), the US open (0 of 12) and follow/fade around
+  releases (0 of 8): not predictable. US CPI/NFP hours are 1.15-1.74x the usual hour on gold/silver (9-17 releases),
+  EIA gas storage 1.23x (33): a risk fact. The L2 autoencoder state adds nothing (0 of 12); the L3 committee's one
+  design pass (SILVERM 53.2% of 3,586) fell to 47.1% of 1,096 on the holdout.
+- L4, 32 variants, real MCX costs: 0 of 16 pass. Only lead: B2 "big-size follow" on SILVERM (+Rs 2.53 lakh, 570 trades)
+  and NATGASMINI (+Rs 20k, 421; q 0.08), both carried by their top 5. Buying the straddle when the brain expects more
+  movement than the IV loses on all four (17-32% winners). Nothing goes to paper; the app is unchanged.
+- Not modelled: CRUDEOILM, NATGASMINI, COPPER, ZINC, ALUMINIUM (20-37 sessions, all after the design end; cards only).

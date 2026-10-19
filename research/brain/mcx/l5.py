@@ -94,7 +94,7 @@ def render(out: dict) -> str:
             L.append(f"- Usual 60-minute move (median close range): busiest from {big['hour']} "
                      f"({big['median_pct']}%, {big['sessions']} sessions), quietest from {small['hour']} "
                      f"({small['median_pct']}%, {small['sessions']} sessions)"
-                     + ("" if c["modelled"] else " (Aug-Oct 2026 only; not modelled: fewer than 60 design sessions)")
+                     + ("" if c["modelled"] else " (late Aug - Oct 2026 only, all after the design end; not modelled: fewer than 60 design sessions)")
                      + ".")
         if c.get("size"):
             z = c["size"]
