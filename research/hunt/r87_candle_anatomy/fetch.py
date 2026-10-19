@@ -31,7 +31,8 @@ OPT = (("NIFTY", "WEEK", dt.date(2021, 8, 1), END), ("SENSEX", "WEEK", dt.date(2
        ("BANKNIFTY", "WEEK", dt.date(2021, 8, 1), dt.date(2024, 11, 30)),
        ("BANKNIFTY", "MONTH", dt.date(2024, 11, 1), END))
 OFFS = range(-1, 2)          # ATM-1..+1 (PREREG amendment A0: Dhan rate limits, ~8 chunks a minute)
-OFF1_FROM = dt.date(2024, 11, 1)   # offsets -1 / +1 only from here (the option-rules window); ATM for all years
+OFF1_FROM = dt.date(2024, 11, 1)
+ONLY_RULES = os.environ.get("R87_ONLY_RULES", "0") == "1"   # R87B: -1 C, +1 P and the ATM pair from Nov 2024 only   # offsets -1 / +1 only from here (the option-rules window); ATM for all years
 
 
 def jobs(group: str) -> list:
@@ -54,14 +55,15 @@ def jobs(group: str) -> list:
                     for a, b in LF.windows(a0, b0, 30):
                         if off != 0 and b < OFF1_FROM:           # +-1 only for the rules window (A0)
                             continue
+                        if ONLY_RULES and (b < OFF1_FROM or (off, side) in (( -1, "PUT"), (1, "CALL"))):
+                            continue                             # R87B: the traded contracts' window only
                         J.append(LF.Job(f"{RAW}/opt/{und}/{flag}/{off:+03d}{side[0]}/{a}", "/charts/rollingoption",
                                         dict(securityId=sid, exchangeSegment=seg, instrument="OPTIDX", expiryFlag=flag,
                                              expiryCode=1, strike=strike, drvOptionType=side, requiredData=LF.RD,
                                              fromDate=a.isoformat(), toDate=b.isoformat(), interval="1"), key=key))
-        # ATM first, then +-1; newest windows first (the rules window is needed first)
-        J.sort(key=lambda j: (abs(int(j.path.split("/")[-2][:-1])), j.path.split("/")[-1]), reverse=False)
+        # R87B: the option-rules window (Nov 2024 on, offsets -1/0/+1) first, newest first; then the older ATM history
         J.sort(key=lambda j: j.path.split("/")[-1], reverse=True)
-        J.sort(key=lambda j: abs(int(j.path.split("/")[-2][:-1])))
+        J.sort(key=lambda j: (j.path.split("/")[-1] < OFF1_FROM.isoformat(), abs(int(j.path.split("/")[-2][:-1]))))
     elif group == "fut":
         rows = LF.master(str(RAW))
         want = {"FUTIDX": {"NIFTY", "BANKNIFTY", "SENSEX"}}   # MCX candles are R85's (reused, not re-fetched)

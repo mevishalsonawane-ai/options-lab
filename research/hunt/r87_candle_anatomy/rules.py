@@ -105,9 +105,44 @@ class _ModelCon:
         return self.c[key]
 
 
+class _HybridCon:
+    """R87B: the REAL option minutes (ATM-1..+1) where the held contract printed; minutes it did not print (it moved
+    out of ATM-1..+1, or no trade) are filled with the modelled premium x (real / model) at the last minute where
+    both existed (point in time; 1 before the first real print of the day). Filled minutes carry no volume, so a
+    fill there pays 4 ticks. A contract with no real print that day is the model alone."""
+
+    def __init__(self, real: dict, model: "_ModelCon"):
+        self.real, self.model, self.c = real, model, {}
+
+    def is_real(self, side, k, row):
+        A = self.real.get((side, float(k)))
+        return A is not None and 0 <= row < cfg.NROWS and np.isfinite(A[0, row])
+
+    def get(self, key):
+        if key in self.c:
+            return self.c[key]
+        B = self.model.get(key)
+        A = self.real.get((key[0], float(key[1])))
+        if B is None:
+            out = A
+        elif A is None:
+            out = B
+        else:
+            ok = np.isfinite(A[3]) & np.isfinite(B[3]) & (B[3] > 0)
+            ratio = pd.Series(np.where(ok, A[3] / np.where(ok, B[3], 1.0), np.nan)).ffill().fillna(1.0).to_numpy()
+            out = A.copy()
+            miss = ~np.isfinite(A[0])
+            for j in range(4):
+                out[j, miss] = B[j, miss] * ratio[miss]
+            out[4, miss] = 0.0
+        self.c[key] = out
+        return out
+
+
 class Market:
     """Index minutes and option contracts of one instrument by day (lazy, cached). mode 'model' (PREREG A1, the
-    rules' pricing): modelled premiums for every day; 'real': the Dhan option minutes (ATM-1..+1) where they exist."""
+    rules' pricing): modelled premiums for every day; 'real': the Dhan option minutes (ATM-1..+1) where they exist;
+    'hybrid' (R87B): real where printed, the calibrated model elsewhere (_HybridCon)."""
 
     def __init__(self, und: str, mode: str = "model"):
         self.und, self.mode = und, mode
@@ -117,17 +152,18 @@ class Market:
         self.mgrp = self.m.groupby("d").indices
         self.exps = MO.expiry_dates(und, cfg.START, cfg.END)
         self.exp = set(self.exps)
-        if mode == "real":
+        if mode in ("real", "hybrid"):
             o = D.option_minutes(und)
             self.o = o.assign(d=o.ts.dt.date)
             self.ogrp = self.o.groupby("d").indices
-        else:
+        if mode in ("model", "hybrid"):
             v = D.index_minutes("INDIAVIX")
             self.vix = v.assign(d=v.ts.dt.date, r=(v.ts.dt.hour * 60 + v.ts.dt.minute - cfg.OPEN_MIN))
             self.vgrp = self.vix.groupby("d").indices
             self.daily = {u: D.index_minutes(u).assign(d=lambda x: x.ts.dt.date).groupby("d").c.last()
                           for u in {"NIFTY", und}}
-            self.ogrp = {d: None for d in self.mgrp if d in self.vgrp}
+            if mode == "model":
+                self.ogrp = {d: None for d in self.mgrp if d in self.vgrp}
         self._c = {}
 
     def days(self, frm: date, to: date) -> list[date]:
@@ -143,28 +179,47 @@ class Market:
                 ohlc[j, mi.r.to_numpy()] = mi[col].to_numpy()
             c = ohlc[3]
             atm = np.full(cfg.NROWS, np.nan)
-            if self.mode == "real":
+            if self.mode in ("real", "hybrid"):
                 oi = self.o.iloc[self.ogrp[d]] if d in self.ogrp else self.o.iloc[:0]
                 a = oi[(oi.offset == 0)].drop_duplicates("ts")
                 ar = (a.ts.dt.hour * 60 + a.ts.dt.minute - cfg.OPEN_MIN).to_numpy()
                 atm[ar] = a.strike.to_numpy()
                 atm = pd.Series(atm).ffill().to_numpy()
                 con = D.option_day(oi)
-            else:
+            if self.mode in ("model", "hybrid") and d in self.vgrp:
                 vi = self.vix.iloc[self.vgrp[d]]
                 vx = np.full(cfg.NROWS, np.nan)
                 ok = (vi.r >= 0) & (vi.r < cfg.NROWS)
                 vx[vi.r[ok].to_numpy()] = vi.c[ok].to_numpy()
                 vx = pd.Series(vx).ffill().bfill().to_numpy()      # bfill only fills 09:15 before VIX's first print
-                con = _ModelCon(d, ohlc, vx, MO.iv_scale(self.daily, self.und, d), MO.next_expiry(self.exps, d))
+                mc = _ModelCon(d, ohlc, vx, MO.iv_scale(self.daily, self.und, d), MO.next_expiry(self.exps, d))
+                con = _HybridCon(con, mc) if self.mode == "hybrid" else mc
             self._c[d] = (c, atm, con, d in self.exp)
         return self._c[d]
+
+
+def family_mask(k: pd.DataFrame, fam: str) -> np.ndarray:
+    """A family's flags on a candle table: a column, or an R87B sequence ('seq:GBN-RSL-DN') / cluster
+    ('cluster5:07', centres from results/b/clusters_design.json)."""
+    if fam.startswith("seq:"):
+        from .batlas import seq3
+        return (seq3(k) == fam[4:]).to_numpy()
+    if fam.startswith("cluster"):
+        from .batlas import RES, assign, seq_features
+        tf, i = fam[len("cluster"):].split(":")
+        C = np.array(json.loads((RES / "clusters_design.json").read_text())[tf])
+        return assign(seq_features(k), C) == int(i)
+    return k[fam].to_numpy(bool)
+
+
+def hold_of(rule: dict) -> int:
+    return int(rule.get("hold", 5 * rule["tf"]))
 
 
 def signals(rule: dict, frm: date, to: date) -> pd.DataFrame:
     """Signal candles of a rule in [frm, to]: day, sig_row (the candle's last minute), long, und_stop."""
     k = B.load(rule["und"], rule["tf"], frm, to)
-    m = k[rule["family"]].to_numpy(bool)
+    m = family_mask(k, rule["family"])
     if rule.get("cond"):
         m &= k["c_" + rule["cond"]].to_numpy(bool)
     k = k[m]
@@ -179,7 +234,7 @@ def signals(rule: dict, frm: date, to: date) -> pd.DataFrame:
 def run(rule: dict, mk: Market, sig: pd.DataFrame, stop: float) -> pd.DataFrame:
     """Walk the signals in time; one open trade per rule (a signal while a trade is open is skipped)."""
     out, busy_until = [], (None, -1)
-    hold = 5 * rule["tf"]
+    hold = hold_of(rule)
     have = set(mk.ogrp) & set(mk.mgrp)
     for s in sig.itertuples(index=False):
         if s.day not in have:
@@ -218,7 +273,7 @@ def twins(rule: dict, mk: Market, tr: pd.DataFrame, days: list[date], stop: floa
     k = B.load(rule["und"], rule["tf"], days[0], days[-1])
     key = {(d, r): (lo, hi) for d, r, lo, hi in zip(k.day.dt.date, (k.tl.dt.hour * 60 + k.tl.dt.minute
                                                                        - cfg.OPEN_MIN), k.l, k.h)}
-    hold = 5 * rule["tf"]
+    hold = hold_of(rule)
     rows = tr.er.to_numpy() - 1 if len(tr) else np.zeros(0, int)
     out = np.zeros(n)
     for i in range(n):
@@ -287,7 +342,7 @@ def reprice_real(rule: dict, tr: pd.DataFrame, stop: float) -> dict:
     if tr.empty:
         return dict(n=0)
     mr = Market(rule["und"], "real")
-    hold = 5 * rule["tf"]
+    hold = hold_of(rule)
     out = []
     for t in tr.itertuples(index=False):
         if t.day not in mr.ogrp:

@@ -65,3 +65,33 @@ def test_modelled_trade_prices_end_to_end():
     con = {("C", 24950.0): MO.contract("C", 24950.0, d, o, vix, 1.0, exp)}
     t = S.price_trade("NIFTY", d, con, o[3], np.full(cfg.NROWS, np.nan), 100, True, 24900.0, 75, 0.15, False)
     assert t is not None and t["strike"] == 24950.0 and t["net"] > 0
+
+
+def test_hybrid_fills_gaps_with_calibrated_model():
+    from research.hunt.r87_candle_anatomy.rules import _HybridCon
+    N = cfg.NROWS
+    model = {("C", 100.0): np.vstack([np.full((4, N), 10.0), np.full((1, N), 1e9)])}
+
+    class M:
+        def get(self, key):
+            return model.get(key)
+    real = np.full((5, N), np.nan)
+    real[:4, 100:110] = 12.0                     # real prints 20% above the model, then the contract leaves the data
+    real[4, 100:110] = 500.0
+    h = _HybridCon({("C", 100.0): real}, M())
+    A = h.get(("C", 100.0))
+    assert np.allclose(A[3, 100:110], 12.0)                      # real where printed
+    assert np.allclose(A[3, 110:], 12.0) and (A[4, 110:] == 0).all()   # model x 1.2 afterwards, no volume
+    assert np.allclose(A[3, :100], 10.0)                         # before the first real print: the model
+    assert h.is_real("C", 100.0, 105) and not h.is_real("C", 100.0, 120)
+    assert h.get(("P", 100.0)) is None
+
+
+def test_forced_candle_exit():
+    from research.hunt.r87_candle_anatomy import sim as S
+    A = np.full((5, cfg.NROWS), 100.0)
+    A[4] = 1e6
+    r = S.simulate(A, np.full(cfg.NROWS, 20000.0), 100, True, 0, 60, 0.15, cfg.SQ_ROW, 75, fx=120)
+    assert r["why"] == "candle" and r["xr"] == 120
+    r2 = S.simulate(A, np.full(cfg.NROWS, 20000.0), 100, True, 0, 10, 0.15, cfg.SQ_ROW, 75, fx=120)
+    assert r2["why"] == "time" and r2["xr"] == 110

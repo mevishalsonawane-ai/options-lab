@@ -56,9 +56,10 @@ def _market_px(o, c, r, n):
 
 
 def simulate(A: np.ndarray, idx_c: np.ndarray, e: int, long: bool, und_stop: float, hold: int, stop: float,
-             sq: int, qty: float) -> dict | None:
+             sq: int, qty: float, fx: int = -1) -> dict | None:
     """A: (5, 375) option O H L C V of the held contract; idx_c: (375,) index closes; e: the entry row (the minute
-    after the signal candle's last minute). Returns None when there is no print within 3 minutes of e (no trade)."""
+    after the signal candle's last minute); fx: a forced market exit at that row's open (R87B candle exits; -1 off).
+    Returns None when there is no print within 3 minutes of e (no trade)."""
     o, h, l, c, v = A
     n = len(o)
     ef = -1
@@ -76,6 +77,9 @@ def simulate(A: np.ndarray, idx_c: np.ndarray, e: int, long: bool, und_stop: flo
     why, xr, px, kind = "time", end, np.nan, "mkt"
     j = ef
     while j < end:
+        if fx > ef and j >= fx:
+            why, xr = "candle", j
+            break
         if np.isfinite(l[j]):
             floor = max(fill * (1 + LOCK_KEEP), peak - LOCK_TRAIL * fill) if armed else -np.inf
             lvl = max(stop_px, floor)
@@ -115,7 +119,7 @@ def strike_1itm(und: str, atm: float, close: float, long: bool) -> float:
 
 
 def price_trade(und: str, d: date, con: dict, idx_c: np.ndarray, atm: np.ndarray, sig_row: int, long: bool,
-                und_stop: float, hold: int, stop: float, expiry: bool) -> dict | None:
+                und_stop: float, hold: int, stop: float, expiry: bool, fx: int = -1) -> dict | None:
     """One trade: the signal candle's last minute is sig_row; entry at sig_row + 1."""
     e = sig_row + 1
     sq = cfg.SQ_ROW_EXPIRY if expiry else cfg.SQ_ROW
@@ -126,10 +130,13 @@ def price_trade(und: str, d: date, con: dict, idx_c: np.ndarray, atm: np.ndarray
     if A is None:
         return None
     qty = float(cfg.lot(und, d))
-    r = simulate(A, idx_c, e, long, und_stop, hold, stop, sq, qty)
+    r = simulate(A, idx_c, e, long, und_stop, hold, stop, sq, qty, fx)
     if r is None:
         return None
     ch = charges(und, r["fill"], r["real_x"], qty, d)
     r.update(und=und, day=d, side="C" if long else "P", strike=k, qty=qty, charges=ch, und_stop=und_stop,
              net=(r["real_x"] - r["fill"]) * qty - ch, gross=(r["X"] - r["E"]) * qty)
+    real = getattr(con, "is_real", None)
+    if real is not None:                       # hybrid pricing (R87B): was the entry / exit price a real print?
+        r.update(real_entry=bool(real(r["side"], k, r["er"])), real_exit=bool(real(r["side"], k, r["xr"])))
     return r
