@@ -1280,3 +1280,22 @@ Signal source: the indices' own 5-minute bars (R72 C1, 4 of 5); R75's C harness,
   -Rs 5,049; X-skip Rs 0. About 2 signals a month lose Rs 9.7k or more (36 in design): normal for this arm.
 - The app's same-direction cap on Breadth alone turns design +Rs 2.17 lakh into -Rs 19k. Recommendation: Breadth
   record-only on paper (or uncapped, Boss's call); not a live candidate at 1 lot x 5 indices (account stop breached).
+
+## Candle anatomy: every candle shape on the indices (R87, 19 Oct 2026) - no shape predicts direction; 0 of 3 rules pass
+Full study: `HUNT_R87_CANDLE_ANATOMY.md` (pre-registered `hunt/r87_candle_anatomy/PREREG.md`, commit faa91cd; amendments
+A0-A3). Signal source: the index's own 1m / 5m / 15m candle (NIFTY, BANKNIFTY, SENSEX spot), design Aug 2021 - 14 Oct
+2025, holdout 15 Oct 2025 - 16 Oct 2026 read once. Knowledge pack for Jarvis: `hunt/r87_candle_anatomy/knowledge/`.
+- After any of 43 shapes / patterns / footprints, the index went up over the next 5 candles 43-62% of the time (92% of
+  234 tested 5m/15m cells within 45-55%) vs ~51% for matched candles (same time, trend, volatility, colour). Big tail,
+  big head, both, small both: no edge on any index (NIFTY 15m q 0.79-0.95; holdout q >= 0.98).
+- A long wick is not a defended level: a big tail's low is broken within 10 candles as often as any low at the same
+  distance (NIFTY 5m 59% vs 57%, n 3,314). Only the green marubozu's low holds a little better (NIFTY 15m 38% vs 42%).
+- "Reversal" shapes at trend extremes mostly mark continuation (NIFTY 15m hammer: -0.47 ATR after 20 candles vs +0.19
+  matched); stop runs above the day's high are followed by more upside, not a reversal (agrees with R86).
+- 4,049 shape x context cells (trend, day/prior-day levels, VWAP, opening range, gap, time, ATM OI, gamma proxy, value
+  area, expiry): 0 pass. 2 of 17 design findings held out of sample, both 1-minute and worth 1.6-1.8 points (< an
+  option round trip of 1.9 NIFTY / 6.4 SENSEX points).
+- Rules on modelled premiums (A1): NIFTY 5m three white soldiers -> call -Rs 3,910 (160 trades); NIFTY 15m stop run
+  above the day high -> call -Rs 25,064 (270); SENSEX 15m gravestone doji -> put +Rs 14,373 (71; twin p 0.026) but
+  walk-forward -Rs 1,923 and negative without its top 5. Holdout not read for rules. Volume / order-flow results rest on
+  an ATM-option activity proxy that correlates only 0.07-0.15 with true futures volume. MCX: see R85 (0 of 4).

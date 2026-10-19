@@ -129,7 +129,7 @@ def write_pack(cards: list, meta: dict) -> None:
         L += [f"## {c['name']}", "", f"- What: {c['definition']}.", f"- Reason (hypothesis): {c['mechanism_hypothesis']}.",
               f"- Verdict: {c['verdict']}."]
         for s in c["stats"]:
-            if s["tf"] == 1:
+            if s["tf"] == 1 or s["n"] < cfg.MIN_N or s["up_rate_5"] is None:
                 continue
             L.append(f"- {s['und']} {s['tf']}m: n {s['n']:,}; up after 5 candles {s['up_rate_5']:.0%} vs "
                      f"{s['base_up_rate_5']:.0%} matched; effect {s['eff_atr_5']:+.3f} ATR ({s['move_pts_5']:+.1f} pts "
@@ -138,6 +138,11 @@ def write_pack(cards: list, meta: dict) -> None:
                      + (" — FINDING" + (", held out of sample" if s.get("holds_oos") else
                                          (", did NOT hold out of sample" if s.get("holds_oos") is False else ""))
                         if s["finding"] else ""))
+        for w in c.get("wick_levels_vs_same_distance", []):
+            if w["period"] == "design" and w["tf"] == 15:
+                L.append(f"- {w['und']} 15m wick levels (design): low broken within 10 candles {w['low_broken']:.0%} vs "
+                         f"{w['low_broken_same_distance']:.0%} for any candle whose low is as far from the close; high "
+                         f"{w['high_broken']:.0%} vs {w['high_broken_same_distance']:.0%}")
         for lab, key in (("Up more than matched when", "up_more_than_matched"),
                          ("Down more than matched when", "down_more_than_matched")):
             for w in c[key][:4]:
@@ -158,7 +163,17 @@ def main() -> None:
     if (cfg.RESULTS / "final_summary.json").exists():
         fs = json.loads((cfg.RESULTS / "final_summary.json").read_text())
         meta["holdout_check"] = dict(design_findings=fs["design_findings"], held=fs["holds"])
-    write_pack(family_cards(d, o, pth), meta)
+    cards = family_cards(d, o, pth)
+    wk = {}
+    for tag in ("design", "final"):
+        p = cfg.RESULTS / f"wick_check_{tag}.json"
+        if p.exists():
+            for w in json.loads(p.read_text()):
+                wk.setdefault(w["family"], []).append(dict(period=tag, **{k: v for k, v in w.items() if k != "family"}))
+    for c in cards:
+        if c["family"] in wk:
+            c["wick_levels_vs_same_distance"] = wk[c["family"]]
+    write_pack(cards, meta)
 
 
 if __name__ == "__main__":
