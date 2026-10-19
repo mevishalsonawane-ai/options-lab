@@ -41,7 +41,20 @@ was a network read per index.
 
 ## Before and after (tests with a 1.5 s vault write, as a StrongBox)
 
-FILLED IN FROM CI
+On the phone, 19 Oct (diagnostics, 18 paper orders): decision → sent 5.7 s typical, 35 s worst; signal → sent 6.1 s typical.
+
+In the tests, every vault write is made 1.5 s slow (`Vault.testWriteDelayMs`). CI passes them on 7a94802:
+
+| Test (slow vault, 1.5 s a write) | Before (write on the caller) | After (write-behind) |
+|---|---|---|
+| One paper order (`ExposureSpeedTest`, 5 indices in a row) | ≥ 1,500 ms each | < 500 ms each |
+| Decision → sent, one run deciding once then 5 orders | median ≥ 2,500 ms | median < 1,000 ms |
+| Whole R51 entry pass (`PassedArmsHostTest`) | 3–4 writes in a row (≥ 4.5 s) | < 1,500 ms, decision → sent < 1,000 ms |
+| An exit on a slow vault | ≥ 1,500 ms | < 500 ms |
+| 9 refused entries in a row | n/a | < 1,000 ms total, 0 settings reads |
+
+These bounds are asserted, not measured: CI prints no times for tests that pass. The phone's own order-speed card shows the
+real figures from the next session on.
 
 ## The same-direction cap
 
@@ -62,14 +75,17 @@ FILLED IN FROM CI
 - **Live: shadow, off by default**. The entry door records what it would have refused and changes nothing. Its own switch
   ("Also refuse the bots' live entries") turns live refusals on; it only ever refuses. It counts the bots' live entries sent
   through the door, minus exits and whatever a later positions read shows closed.
+- **Live mirror (review fix)**: while an arm's paper entry could also be mirrored to Zerodha (Live, AI trades on, that arm's
+  "Trade live" on and out of Shadow, no paper-only period), the paper cap and the no-twin rule only log. Refusing the paper
+  entry would also skip its live trade. During the paper-only period (Boss, 13–26 Oct) both apply in full.
 - R51 and R72 refusals become **would-be trades** in their own book (`shadow = cap`), run by their own exits at the prices
   seen, with estimated charges. Their records stay comparable.
 
 ## No duplicate Donchian contracts
 
 R72 Breadth Donchian no longer buys an option R51 Donchian 20 holds, and the other way round. R51 decides first on a bar both
-break. The second arm's trade is a **would-be trade** (`shadow = twin`): no paper order, its own exits at the prices seen,
-estimated charges, never mirrored live and no notice. It is labelled in its row and in Jarvis's words. The R72-vs-R51
+break. The second arm's trade is a **would-be trade** (`shadow = twin`): no paper order, entered at the twin's real fill, its
+own exits (selling at a fresh bid when there is one), estimated real charges, never mirrored live and no notice. It is labelled in its row and in Jarvis's words. The R72-vs-R51
 comparison and each arm's forward bar still count it. Liquidity's own 15m/5m behaviour is untouched (its plain rules are the
 26 Oct live candidate), but the cap counts both books.
 
@@ -89,10 +105,41 @@ Not changed: the daily loss limit and the day lock.
   own stop; R72 beside R51 is a would-be trade with one lot on the account; the old shared-lot tests run on a carried-over book.
   `SameDirectionCapCardTest` covers the Bot settings card.
 
+## Review
+
+A separate reviewer agent found no compile errors and no test failures. It confirmed three logic bugs, all fixed in b96caec:
+
+1. Resting live stops wrongly freed cap places.
+2. The paper cap and the twin rule could skip an arm's live mirror outside the shadow rule.
+3. The strategies label write still held its ordering lock through the write.
+
+The same commit also fixed four minor points:
+
+- prices of would-be trades;
+- a prewarm timeout that did not bound the wait;
+- the position popup showing would-be trades;
+- the cap's kept record not merged with refusals made before it was read.
+
+CI on the first push saw one test reach the internet (a background options-list download). 7a94802 makes the prewarm use only
+lists already saved.
+
 ## Final green SHA
 
-FILLED IN FROM CI
+`7a94802ab45ab004fd85116c31039831f4c7ae7e`: all 4 app test shards, Build APK, Engine parity with the PC and the PC harness
+are green (b96caec was green too). Locally: `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification`
+passes. `git grep -nE "eyJ0eXAi|1114010050"` shows only CLAUDE.md's line.
 
-## Left undone
+## Left undone (on purpose or for later)
 
-FILLED IN
+- The real phone figures are not known until the next session. Check Diagnostics → Order speed after 09:30.
+- Another arm's capped entry (Liquidity, ORB, Pine and the rest) is a would-be record in the cap's log with its price, not a
+  trade with its own exits. Only R51 / R72 / R52 / Solo 2.0 (PassedArmsHost) run would-be trades to an exit.
+- Counting is first in, first out per option. When Boss holds the same option an arm bought, an arm's sell can be matched to
+  Boss's older lot, so the arm's entry stays counted. That errs on the safe side (one refusal too many).
+- The live ledger counts the bots' live entries sent by this process today. A position carried overnight is not counted, and
+  Boss's own sell of the same option frees one of the bots' places.
+- Would-be trades count in their arm's forward-test bar, as the arm's rule record would. A capped arm could still switch
+  itself off on would-be results.
+- "MCX paper arms 10.5 s" and "watch pass max 30.1 s" get the same write-behind gain (MCX paper orders go through the same
+  paper book). They were not studied separately.
+- The paper loss limit, the day lock and Liquidity's own rules are unchanged.
