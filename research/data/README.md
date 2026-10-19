@@ -19,6 +19,9 @@ is optional), **not** in git. This folder holds only code and metadata:
 | `validate.py`, `make_catalog.py` | write `VALIDATION.md` and `CATALOG.json` (`make_catalog.py --restore-qa LAKE_DIR` rebuilds `_qa/` for files downloaded from Drive; `make_catalog.py --annotate LAKE_DIR` adds spike counts and same-contract notes file by file; `validate.py --spikes` rewrites only the bad-tick section) |
 | `spikes.py` | bad-tick metric for option files (one-minute spikes that revert) and byte-identical WEEK/MONTH detection; tests in `test_spikes.py` |
 | `stkopt_coverage.py` | write `STOCK_OPTIONS_COVERAGE.json` from the raw stock-option chunks |
+| `mcx.py` | MCX loader (`load_futures`, `load_continuous`, `load_options`), MCX session rule, and `build` for the continuous futures files; tests in `test_mcx.py` |
+| `FUT_CONTRACTS.json` | every futures contract (symbol, expiry, security id) ever seen in Dhan's scrip master; `lake_fetch` keeps asking for contracts that have left the master |
+| `newdata_checks.py` | bad-tick checks on newly fetched data: the spike metric and `research/hunt/lakeclean.py` (foreign, stray, stale) |
 
 ## Where the data lives: Google Drive `gdrive:IraAlgo-data-lake`
 
@@ -70,13 +73,15 @@ NSE/BSE minute, 15:29 the last). Daily files have a naive `date` column.
 | `index_1m_<SYM>_<YEAR>.parquet` | 1-minute index OHLC, same 7 indices | ts, open, high, low, close, volume |
 | `opt_<UND>_<WEEK\|MONTH>_<YEAR>.parquet` | expired + live options, rolling by ATM offset, 1-minute, nearest expiry (expiry code 1) | ts, offset (-10..+10), side (C/P), open, high, low, close, iv, volume, strike, oi, spot |
 | `fut_daily_continuous.parquet` | continuous **near-month** index (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX) & MCX (CRUDEOIL, NATURALGAS, GOLD, GOLDM, SILVER, SILVERM) futures, daily | symbol, expiry_code (=0), date, OHLC, volume, oi |
-| `fut_1m_live_index.parquet`, `fut_1m_live_mcx.parquet` | 1-minute futures for contracts **live on the download date** only | symbol, expiry, security_id, ts, OHLC, volume, oi |
+| `fut_1m_live_index.parquet`, `fut_1m_live_mcx.parquet` | 1-minute futures, every contract Dhan serves (listed on a download date), from its listing. MCX (19 Oct 2026): GOLD, GOLDM, SILVER, SILVERM, CRUDEOIL, CRUDEOILM, NATURALGAS, NATGASMINI, COPPER, ZINC, ALUMINIUM | symbol, expiry, security_id, ts, OHLC, volume, oi |
+| `fut_1m_mcx_continuous.parquet` | one MCX contract per day per symbol (the previous day's busiest; no look-ahead), MCX session only; `roll` marks the first bar after a switch; `near_share` = held contract's day volume / Dhan's near-month daily volume (about 1 = near month) | symbol, expiry, security_id, ts, OHLC, volume, oi, roll, near_share |
+| `fut_mcx_rolls.parquet`, `fut_mcx_contracts.parquet` | every roll (day, from/to contract, both closes at the last shared minute, gap) and every MCX contract (first/last minute, minutes, volume) | |
 | `equity_daily.parquet` | daily OHLCV, current NIFTY 50 + NIFTY BANK constituents (59 stocks) | symbol, date, OHLC, volume |
 | `equity_1m_<YEAR>.parquet` | 1-minute OHLCV for the same 59 stocks, 2017 → | symbol, ts, OHLC, volume |
 | `stock_fut_daily_continuous.parquet` | continuous near-month stock futures, daily, same stocks | symbol, expiry_code (=0), date, OHLC, volume, oi |
 | `fut_1m_live_stock.parquet` | 1-minute stock futures, live contracts only | symbol, expiry, security_id, ts, OHLC, volume, oi |
 | `stkopt_<SYM>_MONTH.parquet` | stock options, rolling ATM-5..ATM+5, nearest monthly expiry, 1-minute, Aug 2021 →. **Partial**, see below | as the index option files |
-| `opt_<MCXSYM>_MONTH_<YEAR>.parquet` | MCX options (CRUDEOIL, NATURALGAS, GOLD, GOLDM, SILVER, SILVERM), ATM-5..ATM+5, 1-minute, from mid-2025 | as the index option files |
+| `opt_<MCXSYM>_MONTH_<YEAR>.parquet` | MCX options (CRUDEOIL, NATURALGAS, GOLD, GOLDM, SILVER, SILVERM; from 19 Oct 2026 also CRUDEOILM, NATGASMINI, COPPER, ZINC), ATM-5..ATM+5, 1-minute, from mid-2025. `spot` is the underlying future | as the index option files |
 
 ### How the option series work
 
@@ -161,8 +166,14 @@ A study that pools books must use one of each pair (use `MONTH`).
 
 * **Historical bid/ask, depth, or tick data.** Only OHLCV(+OI, IV) bars. Bid/ask exists only live (option-chain
   snapshot, market feed).
-* **Expired futures contracts at 1 minute.** `/charts/intraday` serves only contracts live today, so futures minutes
-  only go back to each live contract's listing. For history use `fut_daily_continuous`, or the option files' `spot`.
+* **Expired futures contracts at 1 minute.** The scrip master lists only live contracts, so futures minutes only go
+  back to the listing of the contracts live on a download date. On 20 Oct 2026 Dhan still served CRUDEOIL Oct-2026
+  (expired 19 Oct) by its security id, so `FUT_CONTRACTS.json` now records every contract seen and later runs keep
+  fetching them. For older history use `fut_daily_continuous`, or the MCX option files' `spot` (the near future, from
+  mid-2025). In `fut_1m_mcx_continuous` the days before each symbol's `near_month_from` (in its QA) hold a far month.
+* **The newest day needs a later `toDate`.** `/charts/intraday` returns a day's minutes only when `toDate` is a later
+  day (`lake_fetch.to_date`). `/charts/rollingoption` publishes a day some hours after the close (MCX 19 Oct options
+  appeared between 19:00 and 22:00 UTC; NSE options later): fetch the newest window again after that.
 * **Index minutes before 2017 / options before Aug–Oct 2021.** Intraday history is about 5 years for most indices
   (NIFTY back to Apr 2017). `rollingoption` starts in Aug–Oct 2021 for NSE and BSE, and in mid-2025 for MCX.
 * **Next/far-month continuous futures.** `/charts/historical` returns the identical near-month series for expiryCode
