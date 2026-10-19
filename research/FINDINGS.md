@@ -1315,3 +1315,18 @@ BANKNIFTY 1-minute bars and the 59 current index stocks' minute turnover, 2019-2
   random minute (997 bursts). Absorption at the day's extreme (heavy volume, no move) was almost never seen (2 + 4 cases).
 - Following any of these early (steady morning drift, bursts, absorption fades, a heavy last hour held overnight): 0 of 8
   pass (best q 0.319). The steady-drift follow on NIFTY broke even (+Rs 3,403 on 82 trades, all in its top 5).
+
+## Catching the big players, six ways, and every early seller pattern (R86c, 19 Oct 2026) - 0 of 12 pass; sellers recognisable by 09:45
+Full study: `HUNT_R86C_CATCH_THEM.md` (pre-registered `hunt/r86/PREREG_C.md`, commits 6f7c61f and e603e38). Design to
+2024 (folds 2022-2024); final 2025-26 not read. Signal on the underlying except C4 (option-chain trigger, non-default).
+- Seller patterns by 09:45 (2019-2024): a gap down >= 0.5% marks a heavy FII selling day 3.25x more often than chance
+  on NIFTY (132 days) and 2.73x on BANKNIFTY (107); a gap down with no recovery in 30 minutes 3.5x / 3.2x (55 / 45 days);
+  India VIX up >= 5% 2.3x / 2.2x (87 / 87). Closing at the lows, failed bounces, breadth and volume signs are 1.0-1.7x.
+- After a gap down NIFTY tends to bounce from 09:45 (+7 to +21 bps to 11:15); BANKNIFTY keeps falling when the gap is
+  not recovered (-17 bps to 11:15, -23 bps to 15:15, 45 days).
+- Seller detector at 09:45 (C6): BANKNIFTY +Rs 36,188 on 13 shorts, twin p 0.002, q 0.024, but -Rs 12,654 without its
+  top 5: fails. FII-buyer detector at 12:00 (C5): AUC 0.75-0.90 on NIFTY, trade +Rs 28,842 on 40 (q 0.23, carried by
+  the top 5). Both not proven; C6 is worth a fresh pre-registered test on new data.
+- Buying the VWAP dip on slow-buying days (C1), fading the month-end close (C2), straddles on predicted busy afternoons
+  (C3; buying the 11:30 straddle every day lost Rs 124-135 a day) and following unusual OTM option volume (C4: -Rs 1.71
+  lakh / -Rs 1.38 lakh on 215 / 256 trades, worse than random minutes) all fail.
