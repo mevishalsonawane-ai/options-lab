@@ -1,0 +1,55 @@
+{
+ "cost": {
+  "NIFTY": {
+   "und": "NIFTY",
+   "premium": 154.29963857710084,
+   "days": 223,
+   "real_days": 0,
+   "lot": 75,
+   "unit_cost": 1.1722996385771007,
+   "points": 1.9538327309618346,
+   "pricing": "hybrid (real where printed)"
+  },
+  "BANKNIFTY": {
+   "und": "BANKNIFTY",
+   "premium": 740.2680658355312,
+   "days": 223,
+   "real_days": 0,
+   "lot": 35,
+   "unit_cost": 3.573696637264103,
+   "points": 5.956161062106839,
+   "pricing": "hybrid (real where printed)"
+  },
+  "SENSEX": {
+   "und": "SENSEX",
+   "premium": 494.35795767948,
+   "days": 223,
+   "real_days": 0,
+   "lot": 20,
+   "unit_cost": 3.84385795767948,
+   "points": 6.4064299294658005,
+   "pricing": "hybrid (real where printed)"
+  }
+ },
+ "rules": [
+  {
+   "id": "R87B-1",
+   "und": "SENSEX",
+   "tf": 15,
+   "family": "cluster15:13",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.184112,
+   "z": 3.67855,
+   "q": 0.0337771,
+   "n": 840,
+   "fold_same": 4,
+   "rw_n": 148,
+   "dir_pts": 15.4232,
+   "cost_pts": 6.4064299294658005,
+   "screen": "passes every screen",
+   "hold": 75
+  }
+ ]
+}

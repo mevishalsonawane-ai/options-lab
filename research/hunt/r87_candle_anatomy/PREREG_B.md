@@ -77,3 +77,28 @@ choices below are fixed from them only where stated (the matched baseline, the e
    23:30 UTC; whatever has landed then is the snapshot, coverage reported). 4. B3 design. 5. `brules select`, the
    frozen rules committed as amendment B-A1 BEFORE any P&L. 6. B4 design. 7. One holdout read (`bfinal.py`).
 8. Write-up section in `research/HUNT_R87_CANDLE_ANATOMY.md`, experiments entries, pack update.
+
+## Amendment B-A1 (19 Oct 2026, 23:40 UTC, after the B1/B2 design atlas and the B3 exit design, BEFORE any R87B rule P&L)
+
+**Option data at the cutoff.** Dhan's option endpoint stayed degraded (80 s - 5.5 min a request, HTTP 504) and the
+serial fetcher stalled after 21:37 UTC; SENSEX contracts had been put first at 21:30 (a coverage choice: R87's near miss
+and the only R87B candidate are SENSEX; it changes which minutes are real, not which trades are taken). The snapshot
+(107 files) holds, from 20 Nov 2024: NIFTY ATM pair 199 design / 155 holdout days; BANKNIFTY ATM 0 / 59; SENSEX -1 C,
+ATM, +1 P 0 / 51 (29 for +1 P) holdout days; NIFTY and BANKNIFTY -1 / +1: none. **So the design window is priced by the
+calibrated model almost everywhere (real entry prints: 0.7-0.8% of B3 trades), and only SENSEX's holdout months carry
+real 1-ITM prices.** Every R87B P&L reports its real-entry and real-exit shares; a design pass is therefore "on modelled
+premiums" like R87, and the SENSEX holdout is the first real-price check.
+
+**B3 result (design, recorded before any rule P&L):** 1 of 6 overlays passes: ORB + X1 (exit on a 5m big wick against
+the position): +Rs 47,606 over 813 trades (base -Rs 50,071 -> -Rs 2,465), z 2.21, q 0.092, folds +16,961 / +29,348 /
++5,877, worst day -13,527 -> -12,743, max DD 89,452 -> 53,202. It goes to the holdout. DON X1-X3 and ORB X2-X3 fail
+(X2 "marubozu against" HURTS both arms: -Rs 14,257 DON, -Rs 32,888 ORB).
+
+**The frozen R87B rule (`results/b/brules_selected.json`, mechanical selection, section 5):**
+
+| rule | signal (index candle at its close) | design n / effect / q / folds | rules-window move vs cost | trade |
+|---|---|---|---|---|
+| R87B-1 | SENSEX 15m **cluster15:13**: three medium candles (~0.8 ATR, bodies ~55%), green, green, then red (a pullback after two up candles) | 840 / +0.184 ATR / 0.034 / 4 of 4 | +15.4 pts (148) vs 6.41 | BUY SENSEX 1-ITM call, out after 75 min |
+
+Only one cell was eligible, so only one rule is tested (BH over 1). Exits, variants (15% / 25% stop), walk-forward,
+500 twins and gates as R87; hybrid pricing. R87's three rules are re-priced the same way (descriptive).
