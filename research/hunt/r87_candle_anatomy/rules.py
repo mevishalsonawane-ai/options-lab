@@ -162,8 +162,9 @@ class Market:
             self.vgrp = self.vix.groupby("d").indices
             self.daily = {u: D.index_minutes(u).assign(d=lambda x: x.ts.dt.date).groupby("d").c.last()
                           for u in {"NIFTY", und}}
-            if mode == "model":
-                self.ogrp = {d: None for d in self.mgrp if d in self.vgrp}
+            if mode == "hybrid":                  # every day the model can price; real prints where they exist
+                self.rgrp = self.ogrp
+            self.ogrp = {d: None for d in self.mgrp if d in self.vgrp}
         self._c = {}
 
     def days(self, frm: date, to: date) -> list[date]:
@@ -180,7 +181,8 @@ class Market:
             c = ohlc[3]
             atm = np.full(cfg.NROWS, np.nan)
             if self.mode in ("real", "hybrid"):
-                oi = self.o.iloc[self.ogrp[d]] if d in self.ogrp else self.o.iloc[:0]
+                grp = self.rgrp if self.mode == "hybrid" else self.ogrp
+                oi = self.o.iloc[grp[d]] if d in grp else self.o.iloc[:0]
                 a = oi[(oi.offset == 0)].drop_duplicates("ts")
                 ar = (a.ts.dt.hour * 60 + a.ts.dt.minute - cfg.OPEN_MIN).to_numpy()
                 atm[ar] = a.strike.to_numpy()
