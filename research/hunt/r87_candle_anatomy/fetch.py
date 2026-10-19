@@ -4,13 +4,13 @@ Reuses research/data/lake_fetch.py's Job (one Parquet chunk per request, .empty/
 dhan_client.py (token only from the env vars DHAN_ACCESS_TOKEN / DHAN_CLIENT_ID, sent as headers, redacted from logs).
 
     python -I research/hunt/r87_candle_anatomy/fetch.py idx        # NIFTY, BANKNIFTY, SENSEX, INDIAVIX 1-minute spot
-    python -I research/hunt/r87_candle_anatomy/fetch.py opt        # rolling options ATM-3..ATM+3, nearest expiry
+    python -I research/hunt/r87_candle_anatomy/fetch.py opt        # rolling options ATM-1..ATM+1, nearest expiry
     python -I research/hunt/r87_candle_anatomy/fetch.py fut        # 1-minute futures, contracts live today (index + MCX)
 
 Why these and not the Drive lake: the lake (gdrive:IraAlgo-data-lake) is not reachable from this session and its
 GitHub release is not published (404), so the same Dhan endpoints the lake was built from are called directly.
 Dhan serves no expired futures minutes, so futures volume/OI minutes exist only for live contracts (stated in the
-write-up). Index spot has no volume; the options' own volume (ATM-3..ATM+3) is used as the activity proxy.
+write-up). Index spot has no volume; the options' own volume (ATM-1..ATM+1) is used as the activity proxy.
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ IDX = {"NIFTY": (13, "IDX_I"), "BANKNIFTY": (25, "IDX_I"), "SENSEX": (51, "IDX_I
 OPT = (("NIFTY", "WEEK", dt.date(2021, 8, 1), END), ("SENSEX", "WEEK", dt.date(2021, 8, 1), END),
        ("BANKNIFTY", "WEEK", dt.date(2021, 8, 1), dt.date(2024, 11, 30)),
        ("BANKNIFTY", "MONTH", dt.date(2024, 11, 1), END))
-OFFS = range(-3, 4)          # ATM-3..+3 (download time; 14 series per minute)
+OFFS = range(-1, 2)          # ATM-1..+1 (PREREG amendment A0: Dhan rate limits, ~10 chunks a minute)
 
 
 def jobs(group: str) -> list:
@@ -55,6 +55,9 @@ def jobs(group: str) -> list:
                                         dict(securityId=sid, exchangeSegment=seg, instrument="OPTIDX", expiryFlag=flag,
                                              expiryCode=1, strike=strike, drvOptionType=side, requiredData=LF.RD,
                                              fromDate=a.isoformat(), toDate=b.isoformat(), interval="1"), key=key))
+        # ATM first, then +-1; newest windows first (the rules window is needed first)
+        J.sort(key=lambda j: (abs(int(j.path.split("/")[-2][:-1])), j.path.split("/")[-1]), reverse=False)
+        J.sort(key=lambda j: j.path.split("/")[-1], reverse=True)
         J.sort(key=lambda j: abs(int(j.path.split("/")[-2][:-1])))
     elif group == "fut":
         rows = LF.master(str(RAW))

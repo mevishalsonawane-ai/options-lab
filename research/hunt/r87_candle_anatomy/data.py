@@ -1,10 +1,10 @@
 """R87 loaders: Dhan raw chunks (fetch.py) -> per-instrument minute tables, cached as Parquet under cfg.OUT.
 
 index minutes   ts (naive IST, minute start), o, h, l, c; 09:15-15:29 only; duplicates dropped (last wins)
-option minutes  ts, offset (-3..3), side C/P, o, h, l, c, iv, v (volume, units), strike, oi, spot; the nearest expiry
+option minutes  ts, offset (-1..1; PREREG amendment A0), side C/P, o, h, l, c, iv, v (volume, units), strike, oi, spot; the nearest expiry
                 (BANKNIFTY: weekly to 20 Nov 2024, monthly from 21 Nov 2024)
-chain minute    per ts: act (option volume of all 14 series, the index's activity proxy: the index itself has no
-                volume), coi / poi (call / put OI summed over ATM-3..+3), atm (offset-0 strike), straddle (ATM C + P)
+chain minute    per ts: act (option volume of the 6 series ATM-1..+1, the index's activity proxy: the index itself has no
+                volume), coi / poi (call / put OI summed over ATM-1..+1), atm (offset-0 strike), straddle (ATM C + P)
 """
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def option_minutes(und: str, refresh: bool = False) -> pd.DataFrame:
         x = pd.read_parquet(f)
         if not len(x):
             continue
-        if abs(int(ser[:-1])) > 3:                        # PREREG: ATM-3..+3 only
+        if abs(int(ser[:-1])) > 1:                        # PREREG amendment A0: ATM-1..+1 only
             continue
         x = x.assign(offset=int(ser[:-1]), side=ser[-1], flag=flag)
         parts.append(x)
@@ -94,7 +94,7 @@ def chain_minute(opt: pd.DataFrame) -> pd.DataFrame:
 
 
 def gex_sign_proxy(opt: pd.DataFrame) -> pd.DataFrame:
-    """Per-minute dealer-gamma proxy from ATM-3..+3 only (labelled an approximation): customers are assumed long
+    """Per-minute dealer-gamma proxy from ATM-1..+1 only (labelled an approximation): customers are assumed long
     calls and long puts (dealers short both is the textbook sign convention used by R28/brain.gex: calls +, puts -).
     Gamma per strike ~ phi(d) / (S * s), d = ln(S/K) / s, with s = sigma*sqrt(T) read from the ATM straddle
     (straddle ~ 0.8 * S * s), so no expiry date or rate is needed. Returns ts, gex (sign carries the meaning),
@@ -117,7 +117,7 @@ def gex_sign_proxy(opt: pd.DataFrame) -> pd.DataFrame:
 
 def option_day(opt_day: pd.DataFrame) -> dict:
     """Contracts of one day held by (side, strike): (5, 375) arrays O H L C V (NaN where no print). Rolling offsets
-    are stitched by strike, so a held contract stays the same strike as the index moves (within ATM-3..+3)."""
+    are stitched by strike, so a held contract stays the same strike as the index moves (within ATM-1..+1)."""
     out = {}
     if opt_day.empty:
         return out

@@ -157,7 +157,7 @@ def candle_context(k: pd.DataFrame, m: pd.DataFrame, expiries: set) -> pd.DataFr
     else:
         k["act_usual"] = np.nan
         k["act_ratio"] = np.nan
-    # OI change over the candle (ATM-3..+3 sums; the strike set rolls with ATM, so this is noisy: labelled)
+    # OI change over the candle (ATM-1..+1 sums; the strike set rolls with ATM, so this is noisy: labelled)
     for x in ("coi", "poi"):
         k["d" + x] = k[x] - k.groupby("day")[x].shift(1)
     k["expiry"] = k.day.dt.date.isin(expiries)

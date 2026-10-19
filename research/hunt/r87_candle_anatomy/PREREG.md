@@ -142,3 +142,15 @@ ATR), stop-run up / down (a wick through the day's high / low so far that closes
 
 `research/HUNT_R87_CANDLE_ANATOMY.md` (signal source of every rule stated), a FINDINGS line, experiments entries, the
 candle knowledge pack (`research/hunt/r87_candle_anatomy/knowledge/candle_pack.json` + `.md`), RESULT.md at the root.
+
+## Amendment A0 (19 Oct 2026, data only, BEFORE any statistic): options ATM-1..+1
+
+Dhan rate-limits the rolling-option endpoint (HTTP 429 DH-904; about 10 thirty-day chunks a minute), so ATM-3..+3 for
+2021-2026 would take hours. The option download is narrowed to **ATM-1..+1** (6 series a minute), newest windows first.
+Consequences, all in the direction of LESS information, none chosen after seeing a result:
+- `act` (the activity proxy) = volume of the 6 series ATM-1..+1 (not 14); OI sums and PCR = ATM-1..+1.
+- The dealer-gamma proxy uses ATM-1..+1 only: it is a near-the-money gamma tilt, a cruder proxy than R28 / brain.gex.
+  The two gamma conditions stay in P2 as pre-registered, labelled "very rough".
+- Option trades (1-ITM) and the ATM strike need only offsets -1, 0, +1, so Part 2 is unchanged. A held contract drops
+  out of the data once the index moves more than one strike away; its exit then takes the last known print ("stale",
+  counted and reported).
