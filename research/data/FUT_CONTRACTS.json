@@ -1,0 +1,754 @@
+[
+{
+"symbol": "ALUMINIUM",
+"expiry": "2026-10-30",
+"security_id": "574828",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ALUMINIUM",
+"expiry": "2026-11-30",
+"security_id": "578633",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ALUMINIUM",
+"expiry": "2026-12-31",
+"security_id": "581712",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ALUMINIUM",
+"expiry": "2027-01-29",
+"security_id": "587167",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ALUMINIUM",
+"expiry": "2027-03-31",
+"security_id": "584315",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ALUMINIUM",
+"expiry": "2027-06-30",
+"security_id": "584317",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ALUMINIUM",
+"expiry": "2027-09-30",
+"security_id": "587173",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "COPPER",
+"expiry": "2026-10-30",
+"security_id": "574829",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "COPPER",
+"expiry": "2026-11-30",
+"security_id": "578634",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "COPPER",
+"expiry": "2026-12-31",
+"security_id": "581714",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "COPPER",
+"expiry": "2027-01-29",
+"security_id": "587161",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "COPPER",
+"expiry": "2027-03-31",
+"security_id": "584326",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "COPPER",
+"expiry": "2027-06-30",
+"security_id": "584327",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "COPPER",
+"expiry": "2027-09-30",
+"security_id": "587162",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2026-10-19",
+"security_id": "569900",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2026-11-19",
+"security_id": "573422",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2026-12-18",
+"security_id": "576264",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2027-01-19",
+"security_id": "580377",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2027-02-19",
+"security_id": "582828",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2027-03-19",
+"security_id": "584773",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2027-06-21",
+"security_id": "584774",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2027-09-20",
+"security_id": "584775",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2027-12-17",
+"security_id": "584777",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOIL",
+"expiry": "2028-03-20",
+"security_id": "585909",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2026-10-19",
+"security_id": "569901",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2026-11-19",
+"security_id": "573423",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2026-12-18",
+"security_id": "576265",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2027-01-19",
+"security_id": "580378",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2027-02-19",
+"security_id": "582833",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2027-03-19",
+"security_id": "584776",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2027-06-21",
+"security_id": "584778",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2027-09-20",
+"security_id": "584779",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2027-12-17",
+"security_id": "584780",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "CRUDEOILM",
+"expiry": "2028-03-20",
+"security_id": "585910",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLD",
+"expiry": "2026-12-04",
+"security_id": "495213",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLD",
+"expiry": "2027-02-05",
+"security_id": "559933",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLD",
+"expiry": "2027-04-05",
+"security_id": "569424",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLD",
+"expiry": "2027-06-04",
+"security_id": "575691",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLD",
+"expiry": "2027-08-05",
+"security_id": "582365",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLD",
+"expiry": "2027-10-05",
+"security_id": "588144",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLDM",
+"expiry": "2026-11-05",
+"security_id": "571445",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLDM",
+"expiry": "2026-12-04",
+"security_id": "575011",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLDM",
+"expiry": "2027-01-05",
+"security_id": "578779",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLDM",
+"expiry": "2027-02-05",
+"security_id": "581880",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLDM",
+"expiry": "2027-03-05",
+"security_id": "584500",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "GOLDM",
+"expiry": "2027-04-05",
+"security_id": "587325",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATGASMINI",
+"expiry": "2026-10-27",
+"security_id": "570751",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATGASMINI",
+"expiry": "2026-11-24",
+"security_id": "574320",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATGASMINI",
+"expiry": "2026-12-28",
+"security_id": "578250",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATGASMINI",
+"expiry": "2027-01-25",
+"security_id": "581136",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATGASMINI",
+"expiry": "2027-02-23",
+"security_id": "583830",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATGASMINI",
+"expiry": "2027-03-25",
+"security_id": "586585",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATURALGAS",
+"expiry": "2026-10-27",
+"security_id": "570750",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATURALGAS",
+"expiry": "2026-11-24",
+"security_id": "574319",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATURALGAS",
+"expiry": "2026-12-28",
+"security_id": "578249",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATURALGAS",
+"expiry": "2027-01-25",
+"security_id": "581135",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATURALGAS",
+"expiry": "2027-02-23",
+"security_id": "583829",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NATURALGAS",
+"expiry": "2027-03-25",
+"security_id": "586586",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVER",
+"expiry": "2026-12-04",
+"security_id": "495214",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVER",
+"expiry": "2027-03-05",
+"security_id": "564619",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVER",
+"expiry": "2027-05-05",
+"security_id": "572772",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVER",
+"expiry": "2027-07-05",
+"security_id": "579304",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVER",
+"expiry": "2027-09-03",
+"security_id": "585027",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVERM",
+"expiry": "2026-11-30",
+"security_id": "483080",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVERM",
+"expiry": "2027-02-26",
+"security_id": "564620",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVERM",
+"expiry": "2027-04-30",
+"security_id": "572773",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVERM",
+"expiry": "2027-06-30",
+"security_id": "579305",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVERM",
+"expiry": "2027-08-31",
+"security_id": "585026",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SILVERM",
+"expiry": "2027-11-30",
+"security_id": "588145",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ZINC",
+"expiry": "2026-10-30",
+"security_id": "574834",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ZINC",
+"expiry": "2026-11-30",
+"security_id": "578638",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ZINC",
+"expiry": "2026-12-31",
+"security_id": "581719",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ZINC",
+"expiry": "2027-01-29",
+"security_id": "587164",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ZINC",
+"expiry": "2027-03-31",
+"security_id": "584330",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ZINC",
+"expiry": "2027-06-30",
+"security_id": "584329",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "ZINC",
+"expiry": "2027-09-30",
+"security_id": "587172",
+"instrument": "FUTCOM",
+"exchange": "MCX",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "BANKEX",
+"expiry": "2026-10-29",
+"security_id": "865646",
+"instrument": "FUTIDX",
+"exchange": "BSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "BANKEX",
+"expiry": "2026-11-26",
+"security_id": "1102569",
+"instrument": "FUTIDX",
+"exchange": "BSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "BANKEX",
+"expiry": "2026-12-31",
+"security_id": "1147517",
+"instrument": "FUTIDX",
+"exchange": "BSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "BANKNIFTY",
+"expiry": "2026-10-27",
+"security_id": "48699",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "BANKNIFTY",
+"expiry": "2026-11-23",
+"security_id": "61466",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "BANKNIFTY",
+"expiry": "2026-12-29",
+"security_id": "58872",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "FINNIFTY",
+"expiry": "2026-10-27",
+"security_id": "48702",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "FINNIFTY",
+"expiry": "2026-11-23",
+"security_id": "61469",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "FINNIFTY",
+"expiry": "2026-12-29",
+"security_id": "58873",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "MIDCPNIFTY",
+"expiry": "2026-10-27",
+"security_id": "48703",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "MIDCPNIFTY",
+"expiry": "2026-11-23",
+"security_id": "61470",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "MIDCPNIFTY",
+"expiry": "2026-12-29",
+"security_id": "58874",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NIFTY",
+"expiry": "2026-10-27",
+"security_id": "48704",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NIFTY",
+"expiry": "2026-11-23",
+"security_id": "61471",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "NIFTY",
+"expiry": "2026-12-29",
+"security_id": "58875",
+"instrument": "FUTIDX",
+"exchange": "NSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SENSEX",
+"expiry": "2026-10-29",
+"security_id": "864571",
+"instrument": "FUTIDX",
+"exchange": "BSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SENSEX",
+"expiry": "2026-11-26",
+"security_id": "1100929",
+"instrument": "FUTIDX",
+"exchange": "BSE",
+"first_seen": "2026-10-19"
+},
+{
+"symbol": "SENSEX",
+"expiry": "2026-12-31",
+"security_id": "1145756",
+"instrument": "FUTIDX",
+"exchange": "BSE",
+"first_seen": "2026-10-19"
+}
+]

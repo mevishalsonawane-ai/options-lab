@@ -23,7 +23,7 @@ import json, os, re, sys
 import numpy as np, pandas as pd
 
 JUMP = 1.5  # "more than 50%": the larger price is more than 1.5x the smaller one
-MCX = {"CRUDEOIL", "NATURALGAS", "GOLD", "GOLDM", "SILVER", "SILVERM"}
+MCX = {"CRUDEOIL", "NATURALGAS", "GOLD", "GOLDM", "SILVER", "SILVERM", "CRUDEOILM", "NATGASMINI", "COPPER", "ZINC"}  # 4 added 19 Oct 2026
 SESSION_OPEN = {"NSE": 9 * 60 + 15, "MCX": 9 * 60}
 EARLY_MINUTES = {"NSE": 90, "MCX": 105}  # both end at 10:45 IST
 

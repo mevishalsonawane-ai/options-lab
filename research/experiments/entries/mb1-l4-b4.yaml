@@ -1,0 +1,36 @@
+id: mb1-l4-b4
+title: 'MCX brain L4 B4: size-edge straddle: predicted range / ATM-IV implied range top decile/fifth, buy the ATM straddle'
+family: mcx-crypto
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: When the brain expects more movement than the options price, buying the straddle pays.
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLDM
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- brain forecasts (L1-L3, walk-forward test folds)
+- MCX future minute closes
+- ATM IV (B4)
+model_or_rule: 'B4: size-edge straddle: predicted range / ATM-IV implied range top decile/fifth, buy the ATM straddle. Signal
+  on the MCX future; traded as one mini-future lot (B1-B3) or the ATM straddle (B4)'
+settings: research/brain/mcx/l4.py, PREREG section 7; results/l4_design.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design (forecasts from walk-forward test folds, ~150 sessions): GOLDM 110 trades net Rs -82,368 (gross -19,425),
+    twin p 0.323 q 0.796, wf Rs -53,775, top-5 removed Rs -116,951: fail; SILVERM 315 trades net Rs -447,385 (gross -180,048),
+    twin p 0.726 q 0.906, wf Rs -361,811, top-5 removed Rs -476,817: fail; CRUDEOIL 472 trades net Rs -391,466 (gross -11,520),
+    twin p 0.945 q 0.976, wf Rs -375,369, top-5 removed Rs -443,137: fail; NATURALGAS 308 trades net Rs -177,332 (gross -58,188),
+    twin p 0.821 q 0.911, wf Rs -161,049, top-5 removed Rs -198,237: fail.'
+  costs: Zerodha MCX futures/options charges (R53), R53 half-spreads, 0.02% stop slippage (R83)
+holdout_read: false
+verdict: rejected
+notes: No rule passed the design gate, so the holdout was not read for rules (PREREG section 7). Stays a note.

@@ -1,0 +1,37 @@
+id: mb1-l2-encoder
+title: 'MCX brain L2: 120-minute sequence autoencoder (16-number market state) added to L1'
+family: ml
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: The self-supervised 16-number market state improves the size (MAE >= 1%) or direction (AUC +0.01) specialists.
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLD
+- GOLDM
+- SILVER
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- '120-minute window: 24 x (5-min return / vol, position, IV z, IV mask, clock sin/cos)'
+model_or_rule: MLP autoencoder 144-64-16-64-144 per fold, pooled symbols; PCA-16 baseline
+settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_metrics.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design: 0 of 12 pass. GOLD size gain 0.0024 (PCA 0.0096), direction AUC gain 0.007; GOLDM size gain 0.0033 (PCA
+    -0.0005), direction AUC gain -0.003; SILVER size gain -0.0006 (PCA 0.0057), direction AUC gain 0.004; SILVERM size gain
+    0.0029 (PCA -0.0010), direction AUC gain 0.003; CRUDEOIL size gain 0.0007 (PCA -0.0028), direction AUC gain -0.002; NATURALGAS
+    size gain 0.0079 (PCA 0.0040), direction AUC gain -0.007. 2025-11-21: autoencoder MSE 0.122 vs PCA 0.124 on 22296 windows;
+    2026-01-15: autoencoder MSE 0.120 vs PCA 0.124 on 33454 windows; 2026-03-11: autoencoder MSE 0.115 vs PCA 0.119 on 40000
+    windows; 2026-05-04: autoencoder MSE 0.112 vs PCA 0.116 on 40000 windows.'
+  costs: none (forecasts, no trades)
+holdout_read: false
+verdict: rejected
+notes: The state adds nothing the 56 features do not already carry; kept as a stored representation (tensors) and for the
+  market-state cards.
