@@ -45,6 +45,11 @@ class LiveSelfTestTest : RobolectricTest() {
     private val quick = LiveSelfTest.Limits(windowMs = 400, sampleMs = 20, streamTimeoutMs = 600, reconnectTimeoutMs = 1_500)
 
     @Before fun up() {
+        // 19 Oct: the market clock runs at noon of today's IST date (still ticking), so "a minute ago" or "10 minutes ago"
+        // stays on today's date. On the real clock, a run just after midnight IST put those bars on yesterday and failed.
+        val realNow = java.time.ZonedDateTime.now(com.optionslab.engine.IST)
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
+            java.time.Duration.between(realNow, realNow.toLocalDate().atTime(12, 0).atZone(com.optionslab.engine.IST)))
         kite = FakeKite()
         kite.keepAlive = true
         stream = FakeLiveSources()
@@ -55,6 +60,7 @@ class LiveSelfTestTest : RobolectricTest() {
     }
 
     @After fun down() {
+        Market.testClock = null
         stream.close()
         kite.close()
         BrokerArea.phoneIp(null)
@@ -72,7 +78,7 @@ class LiveSelfTestTest : RobolectricTest() {
         keysAndLogin()
         StaticIp.registered = "13.235.10.20"
         BrokerArea.phoneIp("13.235.10.20")
-        val bar = System.currentTimeMillis() / 60_000 * 60 - 60
+        val bar = Market.now().toEpochSecond() / 60 * 60 - 60
         kite.candles = JSONArray().put(JSONArray().put(java.time.Instant.ofEpochSecond(bar).atZone(com.optionslab.engine.IST).toOffsetDateTime().toString())
             .put(24_470.0).put(24_490.0).put(24_460.0).put(24_480.0).put(0).put(0))
         stream.upstox = listOf(Upstox.Bar(bar, 24_470.0, 24_490.0, 24_460.0, 24_480.0, 0, 0))
@@ -438,7 +444,7 @@ class LiveSelfTestTest : RobolectricTest() {
 
     @Test fun staleFeedsAndAFarClockFail() {
         allGood()
-        val old = System.currentTimeMillis() / 1000 - 600
+        val old = Market.now().toEpochSecond() - 600
         stream.upstox = listOf(Upstox.Bar(old, 1.0, 1.0, 1.0, 1.0, 0, 0))
         stream.offset = 3_000L to "Zerodha's server clock"
         val (out, _) = run()
