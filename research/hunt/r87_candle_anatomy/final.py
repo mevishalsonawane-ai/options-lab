@@ -92,8 +92,15 @@ def main() -> None:
         tr.to_csv(cfg.RESULTS / f"rules_final_trades_{rule['id']}.csv", index=False, float_format="%.4f")
         rr.append(dict(id=rule["id"], read=True, stop=stop, **s, twin_mean=float(tw.mean()), twin_p=p, final_pass=ok))
     res["rules"] = rr
-    from . import futcheck
-    res["futures_check"] = [futcheck.check(u) for u in cfg.UNDS]   # descriptive only (PREREG section 1)
+    from . import futcheck, wickcheck
+    try:
+        res["futures_check"] = [futcheck.check(u) for u in cfg.UNDS]   # descriptive only (PREREG section 1)
+    except Exception as e:                                             # a descriptive extra must not end the read
+        res["futures_check"] = f"failed: {type(e).__name__}: {e}"
+    try:
+        (cfg.RESULTS / "wick_check_final.json").write_text(json.dumps(wickcheck.run(cfg.FINAL_START, cfg.END), indent=1))
+    except Exception as e:
+        res["wick_check"] = f"failed: {type(e).__name__}: {e}"
     (cfg.RESULTS / "final_summary.json").write_text(json.dumps(res, indent=1, default=str))
     print(json.dumps(res, indent=1, default=str))
 
