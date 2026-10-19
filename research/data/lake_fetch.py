@@ -12,7 +12,8 @@ Usage:  python -I lake_fetch.py RAW_DIR [--only-missing LAKE_DIR] [--before YYYY
                            (they are fetched again, to pick up the newer days).
   --before DATE            only request chunks whose window ends before DATE (e.g. today during market hours)
   --since DATE             only request chunks whose window ends on or after DATE (e.g. to append new days)
-Groups: idx_daily idx_1m fut_daily fut_1m eq_daily opt_<UNDERLYING>_<WEEK|MONTH> mcxopt
+Groups: idx_daily idx_1m fut_daily fut_1m (fut_1m_mcx, fut_1m_index: one half) eq_daily opt_<UNDERLYING>_<WEEK|MONTH>
+        mcxopt (all MCX option underlyings) mcxopt_<SYM>[,<SYM>...]
         eq_1m stkfut_daily stkfut_1m stkopt   (constituents of NIFTY 50 + NIFTY BANK)
 """
 import os, sys, csv, glob, io, json, time, datetime as dt, concurrent.futures as cf
@@ -28,7 +29,13 @@ INDICES = {  # name: (security id, exchange segment)
     "SENSEX": (51, "IDX_I"), "BANKEX": (69, "IDX_I"), "INDIAVIX": (21, "IDX_I")}
 OPT_UND = {"NIFTY": (13, "NSE_FNO"), "BANKNIFTY": (25, "NSE_FNO"), "FINNIFTY": (27, "NSE_FNO"),
            "MIDCPNIFTY": (442, "NSE_FNO"), "SENSEX": (51, "BSE_FNO"), "BANKEX": (69, "BSE_FNO")}
-MCX_UND = {"CRUDEOIL": 294, "NATURALGAS": 401, "GOLD": 114, "GOLDM": 117, "SILVER": 115, "SILVERM": 122}
+MCX_UND = {"CRUDEOIL": 294, "NATURALGAS": 401, "GOLD": 114, "GOLDM": 117, "SILVER": 115, "SILVERM": 122,
+           # added 19 Oct 2026 (options listed on MCX for these too; ALUMINIUM has none)
+           "CRUDEOILM": 556, "NATGASMINI": 596, "COPPER": 152, "ZINC": 378}
+MCX_FUT = {**MCX_UND, "ALUMINIUM": 358}  # 1-minute and daily futures (19 Oct 2026: 11 commodities)
+# Every futures contract ever seen in Dhan's scrip master (symbol, expiry, security id, instrument, exchange), kept in
+# git so a contract that has expired and left the master is still asked for (19 Oct 2026). Metadata only, no prices.
+CONTRACTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "FUT_CONTRACTS.json")
 IST = "Asia/Kolkata"
 RD = ["open", "high", "low", "close", "iv", "volume", "strike", "oi", "spot"]
 MASTER_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
@@ -43,6 +50,13 @@ def arrays_df(js):
         return pd.DataFrame()
     cols = [k for k, v in js.items() if isinstance(v, list) and len(v) == len(js["timestamp"])]
     return pd.DataFrame({k: js[k] for k in cols})
+
+
+def to_date(b):
+    """Intraday toDate for a window ending on day b. Dhan returns the newest day's minutes only when toDate is a later
+    day (checked 19/20 Oct 2026: toDate 19 Oct 23:59:59 gave nothing for 19 Oct, toDate 20 Oct gave all of it), so a
+    window that reaches today asks up to the end of tomorrow."""
+    return f"{b + dt.timedelta(days=1) if b >= TODAY else b} 23:59:59"
 
 
 def windows(start, end, days):
@@ -124,13 +138,20 @@ def jobs_for(group, raw):
             for a, b in windows(dt.date(2015, 1, 1), TODAY, 85):
                 J.append(Job(f"{raw}/idx_1m/{n}/{a}", "/charts/intraday", dict(
                     securityId=str(sid), exchangeSegment=seg, instrument="INDEX", interval="1", oi=False,
-                    fromDate=f"{a} 00:00:00", toDate=f"{b} 23:59:59")))
-    elif group in ("fut_daily", "fut_1m"):
+                    fromDate=f"{a} 00:00:00", toDate=to_date(b))))
+    elif group in ("fut_daily", "fut_1m", "fut_1m_mcx", "fut_1m_index"):
         rows = master(raw)
-        want = {"FUTIDX": set(OPT_UND), "FUTCOM": set(MCX_UND)}
-        live = sorted((r["UNDERLYING_SYMBOL"], r["SM_EXPIRY_DATE"], r["SECURITY_ID"], r["INSTRUMENT"], r["EXCH_ID"])
+        want = {"FUTIDX": set(OPT_UND), "FUTCOM": set(MCX_FUT)}
+        if group == "fut_1m_mcx":
+            want = {"FUTCOM": set(MCX_FUT)}
+        elif group == "fut_1m_index":
+            want = {"FUTIDX": set(OPT_UND)}
+        live = sorted((r["UNDERLYING_SYMBOL"], r["SM_EXPIRY_DATE"][:10], r["SECURITY_ID"], r["INSTRUMENT"], r["EXCH_ID"])
                       for r in rows if r["INSTRUMENT"] in want and r["UNDERLYING_SYMBOL"] in want[r["INSTRUMENT"]]
                       and r["SEGMENT"] in ("D", "M"))
+        if group != "fut_daily":  # also contracts seen earlier that have left the master since (expired)
+            live = sorted(set(live) | {c for c in known_contracts(live)
+                                       if c[3] in want and c[0] in want[c[3]]})
         seg = lambda ex, ins: "MCX_COMM" if ex == "MCX" else ("BSE_FNO" if ex == "BSE" else "NSE_FNO")
         if group == "fut_daily":  # continuous series by expiry code (0 = near, 1 = next, 2 = far)
             first = {}
@@ -141,12 +162,13 @@ def jobs_for(group, raw):
                     J.append(Job(f"{raw}/fut_daily/{s}/c{code}", "/charts/historical", dict(
                         securityId=sid, exchangeSegment=seg(ex, ins), instrument=ins, expiryCode=code, oi=True,
                         fromDate="2000-01-01", toDate=(TODAY + dt.timedelta(days=1)).isoformat())))
-        else:  # live contracts only (Dhan does not serve expired futures)
+        else:  # contracts in the master or seen earlier; windows from 600 days before today, or before expiry
             for s, e, sid, ins, ex in live:
-                for a, b in windows(TODAY - dt.timedelta(days=400), TODAY, 85):
+                end = min(TODAY, dt.date.fromisoformat(e[:10]))
+                for a, b in windows(end - dt.timedelta(days=600), end, 85):
                     J.append(Job(f"{raw}/fut_1m/{s}/{e}_{sid}/{a}", "/charts/intraday", dict(
                         securityId=sid, exchangeSegment=seg(ex, ins), instrument=ins, interval="1", oi=True,
-                        fromDate=f"{a} 00:00:00", toDate=f"{b} 23:59:59")))
+                        fromDate=f"{a} 00:00:00", toDate=to_date(b))))
     elif group in ("eq_daily", "eq_1m"):
         for s, sid in constituents(raw).items():
             if group == "eq_daily":
@@ -157,7 +179,7 @@ def jobs_for(group, raw):
                 for a, b in windows(dt.date(2015, 1, 1), TODAY, 85):
                     J.append(Job(f"{raw}/eq_1m/{s}/{a}", "/charts/intraday", dict(
                         securityId=sid, exchangeSegment="NSE_EQ", instrument="EQUITY", interval="1", oi=False,
-                        fromDate=f"{a} 00:00:00", toDate=f"{b} 23:59:59")))
+                        fromDate=f"{a} 00:00:00", toDate=to_date(b))))
     elif group in ("stkfut_daily", "stkfut_1m"):
         cons = constituents(raw)
         live = sorted((r["UNDERLYING_SYMBOL"], r["SM_EXPIRY_DATE"], r["SECURITY_ID"]) for r in master(raw)
@@ -176,7 +198,7 @@ def jobs_for(group, raw):
                 for a, b in windows(TODAY - dt.timedelta(days=400), TODAY, 85):
                     J.append(Job(f"{raw}/stkfut_1m/{s}/{e}_{sid}/{a}", "/charts/intraday", dict(
                         securityId=sid, exchangeSegment="NSE_FNO", instrument="FUTSTK", interval="1", oi=True,
-                        fromDate=f"{a} 00:00:00", toDate=f"{b} 23:59:59")))
+                        fromDate=f"{a} 00:00:00", toDate=to_date(b))))
     elif group == "stkopt":
         fno = {r["UNDERLYING_SYMBOL"] for r in master(raw) if r["EXCH_ID"] == "NSE" and r["INSTRUMENT"] == "OPTSTK"}
         for s, sid in constituents(raw).items():
@@ -202,8 +224,9 @@ def jobs_for(group, raw):
                         securityId=sid, exchangeSegment=seg, instrument="OPTIDX", expiryFlag=flag, expiryCode=1,
                         strike=strike, drvOptionType=side, requiredData=RD, fromDate=a.isoformat(),
                         toDate=b.isoformat(), interval="1"), key=key))
-    elif group == "mcxopt":
-        for und, sid in MCX_UND.items():
+    elif group == "mcxopt" or group.startswith("mcxopt_"):
+        pick = MCX_UND if group == "mcxopt" else {u: MCX_UND[u] for u in group.split("_", 1)[1].split(",")}
+        for und, sid in pick.items():
             for off in range(-5, 6):
                 strike = "ATM" if off == 0 else f"ATM{off:+d}"
                 for side, key in (("CALL", "ce"), ("PUT", "pe")):
@@ -214,10 +237,27 @@ def jobs_for(group, raw):
                                  fromDate=a.isoformat(), toDate=b.isoformat(), interval="1"), key=key))
     else:
         raise SystemExit(f"unknown group {group}")
-    if group in ("stkopt", "mcxopt") or group.startswith("opt_"):
+    if group == "stkopt" or group.startswith(("mcxopt", "opt_")):
         # nearest strikes first (stable: then series and date), so a partial run is still a usable near-ATM set
         J.sort(key=lambda j: abs(int(j.path.split("/")[-2][:-1])))
     return J
+
+
+def known_contracts(live, path=None):
+    """Merge the contracts in `live` ((symbol, expiry, security id, instrument, exchange) tuples from today's master)
+    into the registry file and return every contract in it. A registry entry is never removed."""
+    path = path or CONTRACTS
+    reg = json.load(open(path)) if os.path.exists(path) else []
+    have = {(c["symbol"], c["expiry"], str(c["security_id"]), c["instrument"], c["exchange"]) for c in reg}
+    new = [c for c in live if tuple(map(str, c)) not in have]
+    if new:
+        reg += [dict(symbol=s, expiry=e[:10], security_id=str(sid), instrument=ins, exchange=ex,
+                     first_seen=TODAY.isoformat()) for s, e, sid, ins, ex in new]
+        reg.sort(key=lambda c: (c["instrument"], c["symbol"], c["expiry"], c["security_id"]))
+        tmp = path + ".tmp"
+        json.dump(reg, open(tmp, "w"), indent=0)
+        os.replace(tmp, path)
+    return [(c["symbol"], c["expiry"], c["security_id"], c["instrument"], c["exchange"]) for c in reg]
 
 
 CAP_N = 50  # this many answers in a row with one of these = Dhan refuses all data calls (daily cap, expired token): stop
@@ -256,7 +296,7 @@ def window(j):
     return (dt.date.fromisoformat(str(j.body["fromDate"])[:10]), dt.date.fromisoformat(str(j.body["toDate"])[:10]))
 
 
-SEEDABLE = ("stkopt", "mcxopt", "idx_1m", "fut_1m")
+SEEDABLE = ("stkopt", "mcxopt", "idx_1m", "fut_1m", "fut_1m_mcx", "fut_1m_index")
 _PUB = {}
 
 
@@ -278,7 +318,7 @@ def published(lake, group, sid):
         sym = os.path.basename(sid)
         fs = sorted(f for f in glob.glob(f"{lake}/index_1m_{sym}_*.parquet") if year(f))
         return fs, _read(fs), [], f"{sid}.seed_qa.json", ("rows_dropped_symbol_total", "duplicates_dropped_symbol_total")
-    if group == "fut_1m":
+    if group.startswith("fut_1m"):
         sym, es = sid.split("/")[-2:]
         exp, secid = es.split("_")
         fs = [f for f in (f"{lake}/fut_1m_live_index.parquet", f"{lake}/fut_1m_live_mcx.parquet") if os.path.exists(f)]
@@ -308,7 +348,7 @@ def seed(raw, lake, group, J=None, upto_last=False):
     reads it, the chunk still counts as not done, and fetching it later replaces it. Returns {"seeded": n,
     "missing": m} (m = jobs still to fetch), plus "stand_in" with upto_last."""
     J = jobs_for(group, raw) if J is None else J
-    opt = not group.endswith("_1m")
+    opt = group == "stkopt" or group.startswith(("mcxopt", "opt_"))
     series = {}
     for j in J:
         sid = os.path.dirname(j.path)
@@ -377,7 +417,7 @@ def main():
     threads = int(os.environ.get("LAKE_THREADS", "5"))
     for g in groups:
         J = jobs_for(g, raw)
-        if lake and (g in SEEDABLE or g.startswith("opt_")):
+        if lake and (g in SEEDABLE or g.startswith(("opt_", "mcxopt_"))):
             log(f"[{g}] seeded from {lake}:", seed(raw, lake, g, J))
         J = todo(J, before, since)
         log(f"[{g}] {len(J)} chunks to fetch")
