@@ -415,7 +415,12 @@ internal object Autopilot {
             }
             // 16 Oct (Boss: "T7 supertrend agree"): R73 T7's Supertrend filter on R51 Donchian 20 ([logPassedSupertrendOn]): its Undo
             // switches it off for new breaks (back to the plain rules). Paper only, never Zerodha: no PIN either way; not logged again.
-            AutoChange.Kind.PAPER_FILTER -> {
+            // 19 Oct (Boss: "Resolve the issues"): the same-direction cap on the automatic paper entries ([logSameDirCapOn]): its Undo
+            // switches it off for paper (or back on). Paper only (live stays in shadow behind its own switch): no PIN; not logged again.
+            AutoChange.Kind.PAPER_FILTER -> if (c.target == AutoChange.SAME_DIR_TARGET) {
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                com.optionslab.app.data.ExposureCapHost.setPaperOn(c.to == AutoChange.ON, log = false)
+            } else {
                 if (c.target != AutoChange.ST_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setSupertrend(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
@@ -883,6 +888,36 @@ internal object Autopilot {
     fun logPassedL25On() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedL25(true), "the 16 Oct update (your choice: \"Select the best\"); paper only - never live")
+    }
+
+    /**
+     * 19 Oct (Boss: "Resolve the issues"): the same-direction cap ([com.optionslab.ira.SameDirectionCap]) on for the automatic PAPER
+     * entries by this update - logged once as Boss's ask (kept) so the change log and "Today's changes" show it; one tap undoes it.
+     */
+    fun logSameDirCapOn(max: Int) {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.sameDirCap(true, max), "the 19 Oct update (your ask: \"Resolve the issues\"); paper only - live only logs what it would refuse")
+    }
+
+    /**
+     * Boss flipped the same-direction cap's paper switch in Bot settings ([com.optionslab.app.data.ExposureCapHost.setPaperOn]):
+     * logged as Boss's (kept); one tap undoes it (only the newest flip undoes). Paper only, no PIN. On Autopilot's own worker.
+     */
+    fun logSameDirCap(on: Boolean, max: Int) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): the same-direction cap") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, AutoChange.sameDirCap(on, max), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "your choice", note = "from Bot settings; paper only").first
+                    save()
+                }
+            }
+        }
     }
 
     /**

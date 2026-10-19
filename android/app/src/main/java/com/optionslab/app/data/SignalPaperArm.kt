@@ -369,7 +369,7 @@ object SignalPaperArm {
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", s.lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return done("refused by the account guard: " + refusals.joinToString(" "))
         // A LIMIT BUY on the PAPER account (1% above the price at most); not filled at once, cancelled and tried next pass.
-        val res = Paper.place(c, "BUY", s.lots, "LIMIT", "MIS", limit, null, known = q)
+        val res = Paper.place(c, "BUY", s.lots, "LIMIT", "MIS", limit, null, known = q, auto = SignalPaperRules.OWNER)
         val fill = res.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill != null) return bought(b, r, c, res.orderId, fill.quantity, fill.price, now)
         val id = res.orderId?.takeIf { res.ok } ?: return say(b, chat, "limit ${CallParser.num(limit)} for ${c.symbol} refused (${res.message}); tried again")

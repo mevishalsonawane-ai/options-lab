@@ -56,10 +56,19 @@ object WhatsNew {
     private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
     private val OCT17: LocalDate = LocalDate.of(2026, 10, 17)
     private val OCT18: LocalDate = LocalDate.of(2026, 10, 18)
+    private val OCT19: LocalDate = LocalDate.of(2026, 10, 19)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-19-exposure-speed", OCT19, "Faster paper orders and a cap on same-way bets",
+            "Paper orders now go in well under a second, because saving the books no longer holds them up. " +
+                "At most two automatic paper option positions may bet the same way on the indices at once. " +
+                "Later ones are refused with the reason and kept as would-be trades, so every record still compares. " +
+                "Exits and your own orders are never capped, and Liquidity's refused entries are counted apart. " +
+                "On live it only logs what it would refuse, until you switch it on. " +
+                "R51 and R72 no longer buy the same option twice; the second is kept as a would-be trade.",
+            "Settings → Bot settings → Same-direction cap; undo it in the Autopilot change log"),
         Entry("2026-10-18-arms-live", OCT18, "Every paper strategy can trade live, starting in Shadow",
             "Every paper strategy now has its own Trade live switch, so it can trade live too. " +
                 "Each one starts in Shadow: it records what it would do and sends nothing to Zerodha. " +

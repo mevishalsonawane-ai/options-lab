@@ -314,7 +314,7 @@ object VixDivArm {
         val flow = FlowGate.gate(VixDivRules.SOURCE, u, sig.side, false, "$today ${hhmm(sig.check)}", right.name, contract = c)
         if (flow.skip) return Decision(true, flow.pausedWhy?.let { "vix_$it ($said)" } ?: "vix_${FlowGate.SKIPPED} ($said)")
         runCatching { LiveRecorder.signal(VixDivRules.LABEL, c.symbol, u, right.name, q?.ltp, paper = true) }
-        val r = Paper.place(c, "BUY", VixDivRules.LOTS, "MARKET", "MIS", null, null)
+        val r = Paper.place(c, "BUY", VixDivRules.LOTS, "MARKET", "MIS", null, null, auto = VixDivRules.LABEL)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }

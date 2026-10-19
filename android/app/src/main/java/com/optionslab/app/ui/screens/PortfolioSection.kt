@@ -174,6 +174,36 @@ internal fun PortfolioSettingCard() {
     }
 }
 
+/**
+ * Bot settings: the same-direction cap (19 Oct, Boss: "Resolve the issues"): its paper switch (on by default; each flip logged in
+ * the Autopilot change log, one tap undoes it), its number, its live switch (off: live only logs what it would refuse), the
+ * automatic index options open now, and today's refused entries by arm (Liquidity's counted apart).
+ */
+@Composable
+internal fun SameDirectionCapCard() {
+    val view by com.optionslab.app.data.ExposureCapHost.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ExposureCapHost.refresh() } } }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
+    LedgerCard(title = "Same-direction cap") {
+        Note("At most this many automatic option positions may bet the same way on the indices at once (long calls up, long puts " +
+            "down), across all arms. A later entry is refused and kept as a would-be trade. Exits and your own orders are never capped.")
+        ToggleRow("Cap automatic paper entries", if (view.paperOn) "On: at most ${view.max} the same way" else "Off: any number may open the same way", view.paperOn) { on ->
+            save { com.optionslab.app.data.ExposureCapHost.setPaperOn(on) }
+        }
+        ParamTokens("Most open the same way", com.optionslab.ira.SameDirectionCap.CHOICES.map { "$it" to (it == view.max) }) { i ->
+            save { com.optionslab.app.data.ExposureCapHost.setMax(com.optionslab.ira.SameDirectionCap.CHOICES[i]) }
+        }
+        ToggleRow("Also refuse the bots' live entries", if (view.liveOn) "On: live entries past the cap are refused" else "Off: live only logs what it would refuse", view.liveOn) { on ->
+            save { com.optionslab.app.data.ExposureCapHost.setLiveOn(on) }
+        }
+        if (view.openNow.isNotEmpty()) Note("Open now (paper): " + view.openNow.joinToString(", "), Modifier.padding(top = 4.dp))
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
 /** Bot settings: the market history kept on the phone, its use and its cap (TODO S5). */
 @Composable
 internal fun HistoryVaultCard() {

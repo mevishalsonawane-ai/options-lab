@@ -196,6 +196,8 @@ object Diag {
         // Liquidity BANKNIFTY's paper test (12 Oct): its fill quality, its freeze, the live stop rule and the go-live checklist's count.
         if (!com.optionslab.app.BuildConfig.GOLD) {
             append(runCatching { LiquidityTest.diagLine() }.getOrElse { "Liquidity fill quality: could not read" }).append('\n')
+            // 19 Oct: the same-direction cap - today's refused (paper) and would-be refused (live, in shadow) entries, by arm.
+            append(runCatching { ExposureCapHost.line() }.getOrElse { "Same-direction cap: could not read" }).append('\n')
             append("Liquidity BANKNIFTY: ").append(runCatching { LiquidityTest.note() }.getOrElse { "freeze could not be read" }).append(' ')
                 .append(runCatching { com.optionslab.ira.LiquidityStopRule.line(OrbArms.liquidityStopHint, live = true) }.getOrElse { "" }).append('\n')
         }

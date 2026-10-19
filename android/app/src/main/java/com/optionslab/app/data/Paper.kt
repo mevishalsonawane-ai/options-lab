@@ -70,7 +70,15 @@ object Paper {
 
     /** [why]: why the app cancelled an order (order id -> a reason key, see [cancel]); the newest [WHY_KEPT] only. */
     private data class Book(val state: SandboxState, val capital: BigDecimal, val contracts: Map<String, Contract>,
-                            val why: Map<String, String> = emptyMap())
+                            val why: Map<String, String> = emptyMap(),
+                            /**
+                             * 19 Oct (the same-direction cap, [com.optionslab.ira.SameDirectionCap]): the automatic entries' order ids
+                             * (order id -> the arm that placed it; the newest [AUTO_KEPT] only). Boss's own orders are never here.
+                             */
+                            val auto: Map<String, String> = emptyMap())
+
+    /** How many automatic entries' order ids are kept (the newest). */
+    private const val AUTO_KEPT = 400
 
     /** How many cancel reasons are kept (the newest). */
     private const val WHY_KEPT = 300
@@ -160,7 +168,10 @@ object Paper {
             val w = o.optJSONObject("cancelWhy")
             val why = LinkedHashMap<String, String>()
             if (w != null) for (k in w.keys()) why[k] = w.optString(k)
-            Book(SandboxJson.decode(o.getString("state")), BigDecimal(o.getString("capital")), contracts, why)
+            val a = o.optJSONObject("auto")
+            val auto = LinkedHashMap<String, String>()
+            if (a != null) for (k in a.keys()) auto[k] = a.optString(k)
+            Book(SandboxJson.decode(o.getString("state")), BigDecimal(o.getString("capital")), contracts, why, auto)
         }.getOrNull()
         // An unreadable account is set aside, never silently overwritten.
         if (loaded == null && file.exists()) file.renameTo(File(file.parentFile, "paper.unreadable.${System.currentTimeMillis()}"))
@@ -175,10 +186,30 @@ object Paper {
     /** One vault write at a time, in order; taken BEFORE this object's lock, never inside it. */
     private val writeLock = Any()
 
-    /** [block] under this object's lock, then the book it saved written to disk outside the lock ([flush]). */
+    /**
+     * [block] under this object's lock, then the book it saved written to disk outside the lock, on the paper writer's own thread
+     * ([writer]). 19 Oct (Boss's diagnostics: "Paper orders took 5.7 s typical from decision to sent today (18 orders)"): the
+     * caller used to wait for that write (a Keystore encryption and two disk syncs, a second or more on a Pixel's StrongBox), so
+     * an arm's entry waited on the snapshot's write, then the order's own, and the next index's entry waited behind both. Now
+     * an order is answered from memory; the write follows on the writer at once (a process killed in that moment loses at
+     * most the last change, which the next look writes again; the open positions are on disk within the second).
+     */
     private inline fun <T> locked(block: () -> T): T {
-        try { return synchronized(this) { block() } } finally { flush() }
+        try { return synchronized(this) { block() } } finally { writer.kick() }
     }
+
+    /** The paper book's own writer thread ([locked]): one write at a time, the newest book last ([flush]). */
+    private val writer = com.optionslab.ira.WriteBehind(com.optionslab.ira.WriteBehind.thread("paper-writer")) { flush() }
+
+    /**
+     * TEST ONLY: the vault write runs on the caller's thread again (the tests that read the file right after an order). False in
+     * the app; the order-speed tests turn it off. Throws unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var writeInlineForTest = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v; writer.inline = v }
+
+    /** Every change made so far written to disk now (a wipe, a test), waiting [timeoutMs] at most. Never on the order path. */
+    internal fun awaitWrites(timeoutMs: Long = 10_000L): Boolean = writer.await(timeoutMs).also { flush() }
 
     /**
      * Writes the newest saved book to the vault, outside this object's lock (readers and other orders go on meanwhile); one
@@ -201,8 +232,9 @@ object Paper {
         val cs = JSONArray()
         b.contracts.values.forEach { cs.put(JSONArray().put(it.symbol).put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.feedKey).put(it.exchange)) }
         val why = JSONObject(); b.why.forEach { (k, v) -> why.put(k, v) }
+        val auto = JSONObject(); b.auto.forEach { (k, v) -> auto.put(k, v) }
         Vault.writeFile(file, JSONObject().put("state", SandboxJson.encode(b.state)).put("capital", b.capital.toPlainString())
-            .put("contracts", cs).put("cancelWhy", why).toString().toByteArray(Charsets.UTF_8))
+            .put("contracts", cs).put("cancelWhy", why).put("auto", auto).toString().toByteArray(Charsets.UTF_8))
     }
 
     private fun fresh(capital: BigDecimal, contracts: Map<String, Contract>) =
@@ -553,7 +585,9 @@ object Paper {
 
     // ---- actions -----------------------------------------------------------------
 
-    data class Result(val ok: Boolean, val message: String, val events: List<SandboxEvent>, val orderId: String? = null)
+    /** [capped]: refused by the same-direction cap (19 Oct): nothing was placed; the caller may keep it as a would-be entry. */
+    data class Result(val ok: Boolean, val message: String, val events: List<SandboxEvent>, val orderId: String? = null,
+                      val capped: Boolean = false)
 
     private fun describe(r: OrderResult, events: List<SandboxEvent>): Result {
         val fill = events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
@@ -727,9 +761,13 @@ object Paper {
         com.optionslab.engine.sandbox.PaperSpread.dayLine(t.sumOf { it.spread }, t.count { it.spread > 0 })
     }
 
-    /** [known]: the contract's quote when the caller has just read it (read here otherwise). */
+    /**
+     * [known]: the contract's quote when the caller has just read it (read here otherwise). [auto]: the arm placing it, for an
+     * automatic entry (19 Oct: the same-direction cap counts and may refuse it); null for Boss's own orders and every exit -
+     * those are never capped.
+     */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
-                      known: Quote? = null): Result {
+                      known: Quote? = null, auto: String? = null): Result {
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
         // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than
@@ -737,6 +775,17 @@ object Paper {
         // only (logged in to Zerodha), Zerodha's own quote, waited [FILL_FRESH_MS] at most. An exit never waits on the network
         // here: the stream's fresh tick, else the caller's [known] quote, as before. Timed from before that read; the price
         // age is the exchange stamp of the tick actually used (none for a REST quote, read just now).
+        // 19 Oct: an automatic entry the same-direction cap refuses now is refused before any price read (memory only); the
+        // same check is made again inside the book's lock below, with the place, where it counts.
+        if (auto != null && action.equals("BUY", true) && runCatching { opens(c.symbol, action) }.getOrDefault(false)) {
+            val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
+            val why = d?.let { capCheck(book(), it) }
+            if (d != null && why != null) {
+                runCatching { ExposureCapHost.refused(auto, c.symbol, d, known?.ltp ?: runCatching { streamQuote(c, kept = true) ?: lastQuotes[c.symbol]?.second }.getOrNull()?.ltp,
+                    live = false, applied = true, why = why) }
+                return Result(false, why, emptyList(), capped = true)
+            }
+        }
         val token = runCatching { kiteToken(c) }.getOrNull()
         val freshTick = token?.let { tok -> runCatching { KiteStream.touch(listOf(tok)); KiteStream.freshTick(tok) }.getOrNull() }?.takeIf { it.last > 0 }
         val reRead = freshTick == null && token != null && Broker.loggedIn && runCatching { opens(c.symbol, action) }.getOrDefault(false)
@@ -761,20 +810,68 @@ object Paper {
         val q = x.quote
         x.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         val entry = runCatching { opens(c.symbol, action) }.getOrDefault(true)
+        // 19 Oct: an automatic BUY that opens an index option is counted by the same-direction cap ([capCheck]); its way (+1 a
+        // call, -1 a put). Exits, sells, Boss's own orders and anything but the index options: null, never asked.
+        val capDir = if (auto != null && action.equals("BUY", true) && entry)
+            com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) else null
         val r = locked {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
+            // The cap asked inside the book's lock, with the place: the first entry to reach it is the one that goes (two arms
+            // on the same bar can never both take the last place). Memory only.
+            if (capDir != null) capCheck(b0, capDir)?.let { why -> return@locked Result(false, why, emptyList(), capped = true) }
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
             val out = engine(b.capital, b.contracts).place(b.state,
                 OrderRequest(c.symbol, c.exchange, action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
-            save(b.copy(state = out.state))
+            val id = out.result.orderId
+            val autoNow = if (capDir != null && out.result.ok && id != null) (b.auto + (id to auto!!)).let { m ->
+                if (m.size > AUTO_KEPT) m.entries.drop(m.size - AUTO_KEPT).associate { it.key to it.value } else m } else b.auto
+            save(b.copy(state = out.state, auto = autoNow))
             describe(out.result, out.events)
         }
+        // A refused automatic entry is kept as a would-be entry (its arm, option, way and the price it would have filled at).
+        if (r.capped && capDir != null) runCatching { ExposureCapHost.refused(auto!!, c.symbol, capDir, q?.ltp, live = false, applied = true, why = r.message) }
         timed(r, t0)
         // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
         val limit = priceType.equals("LIMIT", true) && price != null
         modelled(r, entry, if (limit) price else q?.ltp?.takeIf { it > 0 }, limit)
         return r
+    }
+
+    /**
+     * The same-direction cap's answer for an automatic entry betting [dir] (19 Oct): null when it may go, else the reason (the
+     * caller records the would-be entry once out of the lock, [ExposureCapHost.refused]). The automatic entries open now are read
+     * from [b] itself: its fills first in, first out, what it holds, and its working automatic BUY orders. Memory only; called
+     * under the book's lock. A failure to judge lets the entry go (the cap only ever refuses).
+     */
+    private fun capCheck(b: Book, dir: Int): String? = runCatching {
+        val max = ExposureCapHost.paperMax() ?: return@runCatching null
+        com.optionslab.ira.SameDirectionCap.refusal(capOpen(b), dir, max)
+    }.getOrNull()
+
+    /** The automatic index-option entries open in [b] ([com.optionslab.ira.SameDirectionCap.openEntries]). */
+    private fun capOpen(b: Book): List<com.optionslab.ira.SameDirectionCap.Open> {
+        if (b.auto.isEmpty()) return emptyList()
+        val st = b.state
+        val held = HashMap<String, Int>()
+        for (p in st.positions) held[p.symbol] = (held[p.symbol] ?: 0) + p.quantity
+        val fills = st.trades.map { com.optionslab.ira.SameDirectionCap.Fill(it.orderId, it.symbol, it.action.equals("BUY", true), it.quantity, it.timestamp) }
+        val working = st.orders.filter { (it.status == "open" || it.status == "trigger pending") && it.action.equals("BUY", true) }.map { it.orderId to it.symbol }
+        return com.optionslab.ira.SameDirectionCap.openEntries(fills, held, working, { s ->
+            b.contracts[s]?.let { c -> com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) }
+        }) { b.auto[it] }
+    }
+
+    /** The automatic index-option entries open now in the paper book, from memory (Bot settings' line; empty before it is read). */
+    fun capOpenNow(): List<com.optionslab.ira.SameDirectionCap.Open> = cache?.let { runCatching { capOpen(it) }.getOrNull() }.orEmpty()
+
+    /**
+     * [c] remembered in the book's contracts without an order (19 Oct: a would-be entry the cap or a twin arm kept off the
+     * account still needs its contract for its own would-be exits). Memory at once; written in the background.
+     */
+    fun rememberContract(c: Contract) {
+        if (book().contracts[c.symbol] == c) return
+        locked { val b = book(); if (b.contracts[c.symbol] != c) save(b.copy(contracts = b.contracts + (c.symbol to c))) }
     }
 
     /** Each paper fill in [r] measured against [intended] ([FillSlippage.paper]: kept in the background, never the book's). */
@@ -1081,7 +1178,7 @@ object Paper {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
 
     /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
-    internal fun forgetForTest() { flush(); synchronized(this) { cache = null; savedAtMs = 0L } }
+    internal fun forgetForTest() { awaitWrites(); synchronized(this) { cache = null; savedAtMs = 0L } }
 
     fun wipe() {
         // The write lock first (as [flush] takes it): a write on its way never puts the file back after the delete.

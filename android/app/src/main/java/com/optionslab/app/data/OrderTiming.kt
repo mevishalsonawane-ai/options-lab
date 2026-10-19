@@ -107,6 +107,21 @@ object OrderTiming {
         }
     }
 
+    /**
+     * [block] as ONE order's own decision (19 Oct): an arm that buys on several indices in one run (R51 Donchian 20 on five, one
+     * after another) timed every later order's "decision -> sent" from the run's FIRST decision, so the fourth index's order
+     * carried the three before it. Here the decision is now: a copy of the run's [Trigger] (the same signal time, price stamp and
+     * source) with its own decision time, so "signal -> decision" says how long this order waited and "decision -> sent" only
+     * its own checks. Counted as a decision. Outside a [Trigger]: just [block].
+     */
+    suspend fun <T> ownDecision(block: suspend () -> T): T {
+        val t = currentCoroutineContext()[Trigger] ?: return block()
+        val mine = Trigger(t.triggerMs, t.exchMs, t.source).also { it.startedAt = t.startedAt; it.candlesTold = t.candlesTold }
+        mine.decidedAt = System.currentTimeMillis()
+        runCatching { count(mine.source) }
+        return kotlinx.coroutines.withContext(mine) { block() }
+    }
+
     /** One decision taken on a price from [src] (memory; written with the next order step). */
     private fun count(src: OrderSpeed.Source) {
         synchronized(lock) { withBook().decidedFrom(src) }

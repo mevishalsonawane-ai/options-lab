@@ -42,6 +42,15 @@ class TestApp : Application() {
         // The fake candle feeds are a few fixed minutes of the morning: the 08 Oct feed checks (a stale price never fills an
         // entry, Pine's thin-option check and its best price from the minute highs) are off unless a test turns them on.
         Paper.testSkipFeedChecks = true
+        // 19 Oct: the paper book's and the passed arms' vault writes on the caller's thread, as before, so a test can read the file
+        // right after an order; the order-speed tests (ExposureSpeedTest) turn this off to measure the app's background writes.
+        Paper.writeInlineForTest = true
+        com.optionslab.app.data.PassedArmsHost.writeInlineForTest = true
+        Strategies.writeInlineForTest = true
+        com.optionslab.app.security.Vault.testWriteDelayMs = 0L
+        // The same-direction cap off for every other test (their arms' many same-way entries are not what they test); its own
+        // tests switch it on.
+        com.optionslab.app.data.ExposureCapHost.resetForTest(paperOn = false)
         IdleSampler.install()
         NetworkGuard.install()
         NetworkGuard.blocked.clear()

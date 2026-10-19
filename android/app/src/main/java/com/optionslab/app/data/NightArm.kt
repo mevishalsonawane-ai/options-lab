@@ -355,7 +355,7 @@ object NightArm {
         val flow = FlowGate.gate(NightRules.SOURCE, u, d.side, false, now.withSecond(0).withNano(0).toString(), right.name, contract = c)
         if (flow.skip) return "${flow.pausedWhy ?: FlowGate.SKIPPED} ($facts)"
         runCatching { LiveRecorder.signal(NightRules.LABEL, c.symbol, u, right.name, null, paper = true) }
-        val r = Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null)
+        val r = Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, auto = NightRules.LABEL)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }

@@ -1878,7 +1878,7 @@ object OrbArms {
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, expected), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
+        val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, auto = ownerOf(arm))
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · entry") }
         FlowGate.taken(flow, buy.orderId)
@@ -2279,7 +2279,7 @@ object OrbArms {
         if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
         // Never a market order on these strikes: a LIMIT BUY on the PAPER account. Not filled at once, it is cancelled
         // (nothing held), and the arm may decide again on a later bar until 14:45.
-        val buy = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q)
+        val buy = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q, auto = HeroRules.OWNER)
         val fill = filledOrCancelled(buy) ?: return kept("order_refused: " +
             (if (buy.ok) "the limit %.2f did not fill; the order was cancelled".format(Locale.ENGLISH, limit) else buy.message), pick, limit, lots)
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · entry") }
@@ -2994,7 +2994,7 @@ object OrbArms {
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         val sentMs = System.currentTimeMillis()
-        val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
+        val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, auto = ownerOf(arm))
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         // The fill against the signal's price (the stream's last at the signal, else the price read just before the order).
         runCatching { LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.ENTRY, System.currentTimeMillis(), arm, c.symbol, false, fill.price,

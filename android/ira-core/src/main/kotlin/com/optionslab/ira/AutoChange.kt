@@ -622,6 +622,24 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "R51 Donchian 20's Supertrend filter (paper)")
 
+    /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
+    const val SAME_DIR_TARGET = "filter:same_direction_cap"
+
+    /**
+     * 19 Oct (Boss: "Resolve the issues", after about 11 index puts on one 09:30 move lost Rs 18,121 on paper): the same-direction
+     * cap switched [on] for the automatic PAPER entries - at most [max] automatic open index options betting the same way, across
+     * all arms; a later one is refused and kept as a would-be entry - or off again. It only refuses entries, so on lowers risk.
+     * Paper only: live stays in shadow (logged only) behind its own switch, off by default. No PIN either way.
+     */
+    fun sameDirCap(on: Boolean, max: Int = SameDirectionCap.DEFAULT_MAX): Change = Change(Kind.PAPER_FILTER, SAME_DIR_TARGET,
+        if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (19 Oct, \"Resolve the issues\"): at most $max automatic paper option positions betting the same way on the " +
+            "index options, across all arms; a later entry is refused and kept as a would-be entry (Liquidity's counted apart); exits " +
+            "and your own orders are never capped; live only logs what it would refuse"
+        else "the same-direction cap is off for paper: automatic entries are no longer refused by it",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "the same-direction cap on automatic paper entries")
+
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
         val back = c.copy(from = c.to, to = c.from, reason = reason, risk = Risk.NEUTRAL_SHADOW, revert = true)

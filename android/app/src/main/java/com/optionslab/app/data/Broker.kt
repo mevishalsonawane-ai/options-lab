@@ -170,6 +170,11 @@ object Broker {
             // only blocks. Review R1: another arm's entry and a saved strategy's basket leg (no arm) are never refused here.
             if (o.tag != "iraalgostrat")
                 runCatching { PortfolioHost.doorRefusal(arm, o.tradingSymbol, o.side == Kite.Side.BUY) }.getOrNull()?.let { return it }
+            // 19 Oct: the same-direction cap on the bots' live index-option entries - in SHADOW by default (what it would refuse is
+            // only recorded; nothing changes) until Boss switches it on in Bot settings. Memory only; it only ever refuses. A saved
+            // strategy's basket leg is never asked (refusing one leg of a hedged basket could leave the rest unhedged).
+            if (o.tag != "iraalgostrat")
+                runCatching { ExposureCapHost.liveCheck(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag) }.getOrNull()?.let { return it }
         }
         return null
     }
@@ -807,6 +812,8 @@ object Broker {
         }
         passBook.put(ticket, at, r.value)
         keptBook = Kept(r.startedAt, gen, r.value)
+        // 19 Oct: the same-direction cap's live count follows what Zerodha holds (a stop that filled there closes its entry).
+        ExposureCapHost.livePositions(r.value.net.groupBy { it.symbol }.mapValues { e -> e.value.sumOf { it.qty } }, r.startedAt)
         runCatching { AppState.publishPositions(r.value, r.startedAt) }
         return r.value
     }
@@ -1313,11 +1320,15 @@ object Broker {
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.
         if (exit) return com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }
+            .also { if (o.side == Kite.Side.SELL) ExposureCapHost.liveExited(o.tradingSymbol) }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) {
             com.optionslab.app.work.TradingBusy.during { sendChecked(o, false, arm, intended) } }) {
-            is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
+            is com.optionslab.ira.EntryGate.Outcome.Went -> r.value.also {
+                // 19 Oct: a bot's live index-option entry counted by the same-direction cap until it closes (memory only).
+                if (o.tag in BOT_TAGS && o.tag != "iraalgostrat") ExposureCapHost.liveEntered(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag)
+            }
             is com.optionslab.ira.EntryGate.Outcome.Refused -> {
                 // The paper-only period's refusal inside the door: told and typed as at the door's front ([paperOnlyRefused]).
                 if (PaperOnly.isRefusal(r.why)) { paperOnlyRefused(o, r.why); throw KiteError("paper_only", r.why) }

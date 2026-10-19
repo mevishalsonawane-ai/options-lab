@@ -500,7 +500,7 @@ object HeroTicketArm {
         if (refusals.isNotEmpty()) return done("refused by the account guard: " + refusals.joinToString(" "))
         runCatching { LiveRecorder.signal(HeroTicketRules.LABEL, c.symbol, u, right.name, limit, paper = true) }
         // A LIMIT BUY on the PAPER account; not filled at once, it is cancelled and tried again on the next pass until 12:33.
-        val r = Paper.place(c, "BUY", HeroTicketRules.LOTS, "LIMIT", "MIS", limit, null, known = q)
+        val r = Paper.place(c, "BUY", HeroTicketRules.LOTS, "LIMIT", "MIS", limit, null, known = q, auto = HeroTicketRules.OWNER)
         val filled = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (filled != null) return bought(b, u, right, key, c, r.orderId, filled.quantity, filled.price, now)
         val id = r.orderId?.takeIf { r.ok }

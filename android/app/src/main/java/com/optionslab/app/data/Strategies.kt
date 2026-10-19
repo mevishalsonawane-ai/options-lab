@@ -209,6 +209,53 @@ object Strategies {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        val bytes = encode(b)
+        // 19 Oct: one order of writes with [saveSoon]: a write it left pending is dropped (this newer book carries it).
+        synchronized(writeOrder) { saveSeq++; ownersPending = null; written.write(file, bytes) }
+        cache = b
+        hint(b)
+    }
+
+    /**
+     * [save], with the vault write on this book's own writer thread (19 Oct, order speed: [tagOwner] - every arm's entry and exit
+     * labels its order here - wrote the whole book, up to 3,000 labels, under [lock] before the arm went on, and the next entry's
+     * [stoppedToday] waited for that lock). In memory at once; written next unless a newer [save] wrote first. Never older over newer.
+     */
+    private fun saveSoon(b: Book) {
+        val bytes = encode(b)
+        synchronized(writeOrder) { saveSeq++; ownersPending = PendingWrite(saveSeq, bytes) }
+        cache = b
+        hint(b)
+        ownersWriter.kick()
+    }
+
+    private class PendingWrite(val seq: Long, val bytes: ByteArray)
+    /** Orders the vault writes of [save] and [saveSoon]; guards [saveSeq] and [ownersPending]. */
+    private val writeOrder = Any()
+    private var saveSeq = 0L
+    private var ownersPending: PendingWrite? = null
+    private val ownersWriter = com.optionslab.ira.WriteBehind(com.optionslab.ira.WriteBehind.thread("strategies-writer")) { flushSoon() }
+
+    private fun flushSoon() {
+        synchronized(writeOrder) {
+            val p = ownersPending ?: return
+            ownersPending = null
+            if (p.seq != saveSeq) return
+            try { written.write(file, p.bytes) } catch (e: Exception) {
+                if (ownersPending == null) ownersPending = p
+                runCatching { Diag.record("strategies", "The strategies' book could not be written (${e.javaClass.simpleName}); it is written again with the next change") }
+            }
+        }
+    }
+
+    /** TEST ONLY: [saveSoon]'s write on the caller's thread (tests that read the file at once). Throws unless BuildConfig.DEBUG. */
+    @Volatile internal var writeInlineForTest = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v; ownersWriter.inline = v }
+
+    /** Every [saveSoon] on disk now (a test), [timeoutMs] at most. Never on the order path. */
+    internal fun awaitWrites(timeoutMs: Long = 10_000L): Boolean = ownersWriter.await(timeoutMs).also { flushSoon() }
+
+    private fun encode(b: Book): ByteArray {
         val o = JSONObject()
         o.put("defs", JSONArray().apply { b.defs.forEach { put(StrategyCodec.encode(it)) } })
         o.put("runs", JSONObject().apply { b.runs.forEach { (k, v) -> put(k.toString(), RunStateCodec.encode(v)) } })
@@ -224,9 +271,7 @@ object Strategies {
         b.stoppedDay?.let { o.put("stoppedDay", it) }
         b.stoppedWhy?.let { o.put("stoppedWhy", it) }
         o.put("legStops", JSONObject().apply { b.legStops.forEach { (k, v) -> put(k, v) } })
-        written.write(file, o.toString().toByteArray(Charsets.UTF_8))
-        cache = b
-        hint(b)
+        return o.toString().toByteArray(Charsets.UTF_8)
     }
 
     // ---- reading ---------------------------------------------------------------------
@@ -409,7 +454,7 @@ object Strategies {
     suspend fun tagOwner(key: String, label: String) = lock.withLock {
         // The book unreadable just now: the label is skipped, never a throw on the caller's order path (18 Oct, review).
         val b = runCatching { book() }.getOrNull() ?: return@withLock
-        b.owners[key] = label; save(b)
+        b.owners[key] = label; saveSoon(b)
     }
 
     /**
@@ -1048,7 +1093,10 @@ object Strategies {
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }
 
-    fun wipe() { cache = null; runningHint = false; exposureHint = emptyList(); stopHintDay = null; file.delete() }
+    fun wipe() {
+        synchronized(writeOrder) { ownersPending = null; saveSeq++ }
+        cache = null; runningHint = false; exposureHint = emptyList(); stopHintDay = null; file.delete()
+    }
 
     /** TEST ONLY: the book read from its file again on the next call (as after a restart); the file is kept. */
     internal fun forgetCacheForTest() { cache = null }

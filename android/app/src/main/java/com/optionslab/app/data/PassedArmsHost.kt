@@ -89,7 +89,7 @@ object PassedArmsHost {
     private fun mirrorLegs(): List<ArmLive.PaperLeg>? {
         if (cache == null) return null
         val v = _view.value
-        return (v.open + v.today.filter { !it.open }).map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0) }
+        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0) }
     }
 
     /** [p]'s own stop on the premium at its entry (-15% and the like); null for S1 (its stop is on the index). */
@@ -182,6 +182,13 @@ object PassedArmsHost {
          * (10, 3)); false for the other arms and for Donchian's plain-rules trades, so the two records stay apart.
          */
         val st: Boolean = false,
+        /**
+         * 19 Oct: a WOULD-BE trade, never on the paper account - [SHADOW_TWIN]: R51 Donchian 20 or R72 Breadth Donchian already
+         * held this very option (Boss: no duplicate Donchian contracts); [SHADOW_CAP]: the same-direction cap refused it. Bought
+         * and sold at the prices seen, with estimated charges, by the arm's own exits, so its record (and the R72-vs-R51
+         * comparison) still counts it; labelled apart everywhere; never mirrored live. Null: a real paper trade.
+         */
+        val shadow: String? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -386,7 +393,8 @@ object PassedArmsHost {
             LocalDateTime.parse(p.getString("entryTime")), p.optString("orderId").ifEmpty { null }, p.optString("setup").ifEmpty { null },
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
-            p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false))
+            p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
+            p.optString("shadow").ifEmpty { null })
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -400,6 +408,7 @@ object PassedArmsHost {
             p.breadth?.let { put("breadth", it) }
             p.soldBy?.let { put("soldBy", it) }
             if (p.st) put("st", true)
+            p.shadow?.let { put("shadow", it) }
         }
 
     private val written = Vault.LastWrite()
@@ -423,9 +432,38 @@ object PassedArmsHost {
         o.put("donchianST", b.stOn)
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
-        runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
+        // 19 Oct (order speed): written on this book's own writer thread ([writer]), never under [lock] on the caller's - an
+        // entry booked here ([record]) used to wait for the vault write before the next index's entry, and the 15-second stop
+        // check's exits ([manageOnly]) waited for the lock behind it. The newest book is always the last written.
+        pendingBytes.set(o.toString().toByteArray(Charsets.UTF_8))
+        writer.kick()
         publish(b)
     }
+
+    /** The newest book not yet on disk ([save]); [flushBook] writes it. */
+    private val pendingBytes = java.util.concurrent.atomic.AtomicReference<ByteArray?>(null)
+    private val writeLock = Any()
+    private val writer = com.optionslab.ira.WriteBehind(com.optionslab.ira.WriteBehind.thread("passed-arms-writer")) { flushBook() }
+
+    /** The newest saved book to the vault, one write at a time; a failed write is kept for the next one (said in diagnostics). */
+    private fun flushBook() {
+        synchronized(writeLock) {
+            val bytes = pendingBytes.getAndSet(null) ?: return
+            try {
+                written.write(file, bytes)
+            } catch (e: Exception) {
+                pendingBytes.compareAndSet(null, bytes)
+                runCatching { Diag.record("passed", "The passed arms' book could not be written (${e.javaClass.simpleName}); it is written again with the next change") }
+            }
+        }
+    }
+
+    /** TEST ONLY: the vault write on the caller's thread (tests that read the file at once). Throws unless BuildConfig.DEBUG. */
+    @Volatile internal var writeInlineForTest = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v; writer.inline = v }
+
+    /** Every saved book on disk now (a test, a wipe), [timeoutMs] at most. Never on the order path. */
+    internal fun awaitWrites(timeoutMs: Long = 10_000L): Boolean = writer.await(timeoutMs).also { flushBook() }
 
     private fun soloBase(b: Book): SoloMidday.Baseline = b.soloBase?.split('|')?.let { runCatching { SoloMidday.Baseline(it[0].toInt(), it[1].toDouble()) }.getOrNull() }
         ?: SoloMidday.Baseline()
@@ -774,6 +812,9 @@ object PassedArmsHost {
         try {
             val reads = runCatching { reads(now, v) }.getOrNull() ?: return
             val (work, n0, log0, sc0) = lock.withLock { val b = book(); Quad(b.copy(), b.positions.size, b.log.size, b.scores.size) }
+            // 19 Oct (order speed): this bar's due Donchian options priced side by side first, not one after another inside each
+            // index's entry (each a network wait when the stream does not have the option yet). Memory and reads only.
+            runCatching { prewarm(work, now, reads) }
             val st0 = HashMap(work.status)
             var changed = false
             if (work.armed[DonchianArm.SOURCE] == true) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
@@ -798,8 +839,38 @@ object PassedArmsHost {
 
     private data class Quad(val a: Book, val b: Int, val c: Int, val d: Int)
 
+    /** How long the entries wait at most for [prewarm]'s reads (each read is also capped by the quick feed's own timeouts). */
+    private const val PREWARM_MS = 3_000L
+
+    /**
+     * The options R51 Donchian 20's and R72 Breadth Donchian's breaks due now (not decided yet, inside their fill window) would
+     * buy, priced side by side ([Paper.recentQuote]: the stream's tick, a price read in the last seconds, else one read), at most
+     * [PREWARM_MS]; [buyOne] then finds each price in memory. Decides nothing: the entries still make every check.
+     */
+    private suspend fun prewarm(b: Book, now: LocalDateTime, reads: Reads) {
+        val r51 = b.armed[DonchianArm.SOURCE] == true
+        val r72 = b.armed[BreadthDonchianArm.SOURCE] == true
+        if (!r51 && !r72) return
+        val today = now.toLocalDate()
+        val all = seriesAll(today, reads)
+        val sigs = ArrayList<Pair<String, DonchianArm.Signal>>()
+        if (r51) for (u in DonchianArm.UNDERLYINGS) all[u]?.let { ser -> DonchianArm.signals(u, ser, today).forEach { sigs += DonchianArm.SOURCE to it } }
+        if (r72) runCatching { BreadthDonchianArm.signals(all, today) }.getOrDefault(emptyList()).forEach { sigs += BreadthDonchianArm.SOURCE to it }
+        val due = sigs.filter { (src, x) -> "$today|$src|${x.underlying}|${x.bar.b}|${x.side}" !in b.decided && !now.isBefore(x.entryTime) && DonchianArm.mayFill(x, now) }
+        if (due.isEmpty()) return
+        val contracts = due.mapNotNull { (_, x) ->
+            val exp = OrbRules.expiryAfter(today, listed(x.underlying).map { it.expiry }.distinct()) ?: return@mapNotNull null
+            Paper.ticketContract(x.underlying, exp, x.strike.toDouble(), if (x.side > 0) Right.CE else Right.PE)
+        }.distinctBy { it.symbol }
+        kotlinx.coroutines.withTimeoutOrNull(PREWARM_MS) {
+            kotlinx.coroutines.coroutineScope {
+                contracts.map { c -> async(Dispatchers.IO) { runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) } } }.forEach { it.await() }
+            }
+        }
+    }
+
     /** The same trade: one paper order (or, with none, the same option bought at the same time). */
-    private fun same(a: Pos, b: Pos): Boolean = a.symbol == b.symbol && if (a.orderId != null || b.orderId != null) a.orderId == b.orderId else a.entryTime == b.entryTime
+    private fun same(a: Pos, b: Pos): Boolean = a.symbol == b.symbol && a.arm == b.arm && if (a.orderId != null || b.orderId != null) a.orderId == b.orderId else a.entryTime == b.entryTime
 
     /** The options an entry is buying now (between its order and its booking): the safety net never takes them for orphans. */
     private val inFlight: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
@@ -807,7 +878,7 @@ object PassedArmsHost {
     internal const val ADOPT_FILL = "fill"
 
     /** The options these arms hold or are buying now (memory only): the safety net's ([OrphanWatch]) "watched here". */
-    fun claims(): Set<String> = _view.value.open.map { it.symbol }.toSet() + inFlight
+    fun claims(): Set<String> = _view.value.open.filter { it.shadow == null }.map { it.symbol }.toSet() + inFlight
 
     /** Closed trades kept: the last [CLOSED_KEPT] of each arm; the forward bars' baselines move with what is dropped. */
     private fun prune(b: Book): Boolean {
@@ -903,54 +974,116 @@ object PassedArmsHost {
         for (k in strikes) {
             val c = Paper.ticketContract(u, expiry, k.toDouble(), right) ?: run { why = "$k ${right.name} not listed"; null } ?: continue
             if (c.lotSize <= 0) { why = "lot size unknown"; continue }
-            // One contract, one arm: never two of these arms holding the same option (each one's exits read its own lot) - except
-            // R51 and R72, which run side by side on the same breaks ([mayShare]); never the same arm twice.
-            b.positions.firstOrNull { it.open && it.symbol == c.symbol && !mayShare(arm, it.arm) }?.let { why = "${c.symbol} is held by ${label(it.arm)}"; return null to why }
+            // One contract, one arm: never two of these arms holding the same option (each one's exits read its own lot); a
+            // would-be trade holds nothing, so it never blocks one.
+            b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }?.let { why = "${c.symbol} is held by ${label(it.arm)}"; return null to why }
             // (and the book itself: one the safety net took back since this pass's copy was made)
-            if (_view.value.open.any { it.symbol == c.symbol && !mayShare(arm, it.arm) }) { why = "${c.symbol} is held by these arms"; return null to why }
-            val q = runCatching { Paper.quote(c) }.getOrNull()
-            val ref = q?.ltp?.takeIf { it > 0 } ?: run { why = "${c.symbol}: no fresh price"; null } ?: continue
-            // 16 Oct: the account guard's view shares prices read in the last [Paper.SHARED_QUOTE_MS] (it re-read every held
-            // symbol before each entry); the fill itself is priced fresh in Paper.place (2 s at most).
-            val snap = runCatching { Paper.snapshot(reuseQuotesMs = Paper.SHARED_QUOTE_MS) }.getOrNull()
-            val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref), snap?.let { Guard.paperAccount(it) }, paper = true)
-            if (refusals.isNotEmpty()) return null to "refused by the account guard: " + refusals.joinToString(" ")
-            runCatching { LiveRecorder.signal(label(arm), c.symbol, u, right.name, ref, paper = true) }
-            inFlight += c.symbol
-            val p: Pos = (try {
-                val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q)
-                val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
-                if (fill == null) {
-                    r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
-                    why = "${c.symbol} not filled (${r.message})"
-                    null
-                } else {
-                    val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
-                    val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
-                        l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn)
-                    b.positions += pos
-                    b.marks[c.symbol] = fill.price
-                    b.decided += keys
-                    // 16 Oct (the unwatched re-entry): booked in the book itself at once, never only on the entries' copy until the
-                    // end of the pass - its stop, target and time exit run from the next minute-lane look, and a pass cut short or
-                    // a restart after the fill can never leave it held with no record here. Not cancellable between the two.
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys) }
-                    // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
-                    // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
-                    runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos))) }
-                    r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(arm)} · entry") } }
-                    runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
-                    pos
-                }
-            } finally { inFlight -= c.symbol }) ?: continue
-            runCatching { Notifier.post(app, NOTICE + SOURCES.indexOf(arm) * 5 + ALL_INDICES.indexOf(u).coerceAtLeast(0), Notifier.BUY,
-                "${label(arm)} bought ${c.symbol} · Paper",
-                "Bought %d @ %s. %s. %s.".format(Locale.ENGLISH, p.qty, px(p.entry), exitWords(p), PassedArms.PASSED), "almanac") }
-            note(b, "${label(arm)} bought ${c.symbol} ${p.qty} @ ${px(p.entry)} · paper" + (setup?.let { " ($it)" } ?: ""))
-            return p to "bought"
+            if (_view.value.open.any { it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }) { why = "${c.symbol} is held by these arms"; return null to why }
+            // 19 Oct (Boss: no duplicate Donchian contracts): R51 Donchian 20 and R72 Breadth Donchian no longer both buy one option -
+            // the second is kept as a would-be trade (its record and the R72-vs-R51 comparison still count it). R51 decides
+            // first on a bar both break, so R51 holds it and R72 records the would-be; the other way round when R72 held it first.
+            val twin = b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
+                ?: _view.value.open.firstOrNull { it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
+            // 19 Oct (order speed): each order timed from its own decision ([OrderTiming.ownDecision]), not the run's first.
+            val step = OrderTiming.ownDecision { buyOne(b, arm, u, c, right, now, setup, idx, atr, keys, breadth, twin) }
+            why = step.why
+            if (step.pos != null || step.stop) return step.pos to step.why
         }
         return null to why
     }
+
+    /** One strike's try ([buyOne]): the trade (a real one, or a would-be one), why not, and whether to stop trying strikes. */
+    private class BuyStep(val pos: Pos?, val why: String, val stop: Boolean)
+
+    /**
+     * [c] for [arm]: its price, a would-be trade when [twin] holds it, the account guard, the MARKET buy (the same-direction cap
+     * may refuse it: a would-be trade), and the trade booked at once. Run as its own decision ([buy]).
+     */
+    private suspend fun buyOne(b: Book, arm: String, u: String, c: Paper.Contract, right: Right, now: LocalDateTime, setup: String?, idx: Double?,
+                               atr: Double?, keys: List<String>, breadth: Boolean?, twin: Pos?): BuyStep {
+        // 19 Oct: the price read in the last few seconds when there is one ([prewarm] read this bar's options side by side before
+        // the entries); the fill itself is priced fresh in Paper.place (2 s at most), as before.
+        val q = runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) }.getOrNull()
+        val ref = q?.ltp?.takeIf { it > 0 } ?: return BuyStep(null, "${c.symbol}: no fresh price", false)
+        if (twin != null) {
+            val p = wouldBe(b, arm, u, c, right, ref, now, setup, idx, atr, keys, breadth, SHADOW_TWIN, "${label(twin.arm)} already holds ${c.symbol}")
+            return BuyStep(p, "would-be", true)
+        }
+        // 16 Oct: the account guard's view shares prices read in the last [Paper.SHARED_QUOTE_MS] (it re-read every held
+        // symbol before each entry); the fill itself is priced fresh in Paper.place (2 s at most).
+        val snap = runCatching { Paper.snapshot(reuseQuotesMs = Paper.SHARED_QUOTE_MS) }.getOrNull()
+        val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref), snap?.let { Guard.paperAccount(it) }, paper = true)
+        if (refusals.isNotEmpty()) return BuyStep(null, "refused by the account guard: " + refusals.joinToString(" "), true)
+        runCatching { LiveRecorder.signal(label(arm), c.symbol, u, right.name, ref, paper = true) }
+        inFlight += c.symbol
+        var why = ""
+        val p: Pos = (try {
+            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm))
+            // 19 Oct: the same-direction cap refused it: nothing was bought; kept as a would-be trade at the price seen.
+            if (r.capped) return BuyStep(wouldBe(b, arm, u, c, right, ref, now, setup, idx, atr, keys, breadth, SHADOW_CAP, r.message), r.message, true)
+            val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
+            if (fill == null) {
+                r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
+                why = "${c.symbol} not filled (${r.message})"
+                null
+            } else {
+                val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
+                val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
+                    l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn)
+                b.positions += pos
+                b.marks[c.symbol] = fill.price
+                b.decided += keys
+                // 16 Oct (the unwatched re-entry): booked in the book itself at once, never only on the entries' copy until the
+                // end of the pass - its stop, target and time exit run from the next minute-lane look, and a pass cut short or
+                // a restart after the fill can never leave it held with no record here. Not cancellable between the two.
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys) }
+                // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
+                // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
+                runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos))) }
+                r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(arm)} · entry") } }
+                runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
+                pos
+            }
+        } finally { inFlight -= c.symbol }) ?: return BuyStep(null, why, false)
+        runCatching { Notifier.post(app, NOTICE + SOURCES.indexOf(arm) * 5 + ALL_INDICES.indexOf(u).coerceAtLeast(0), Notifier.BUY,
+            "${label(arm)} bought ${c.symbol} · Paper",
+            "Bought %d @ %s. %s. %s.".format(Locale.ENGLISH, p.qty, px(p.entry), exitWords(p), PassedArms.PASSED), "almanac") }
+        note(b, "${label(arm)} bought ${c.symbol} ${p.qty} @ ${px(p.entry)} · paper" + (setup?.let { " ($it)" } ?: ""))
+        return BuyStep(p, "bought", true)
+    }
+
+    /** [Pos.shadow]: R51 or R72 already held the option (no duplicate Donchian contracts, 19 Oct). */
+    const val SHADOW_TWIN = "twin"
+    /** [Pos.shadow]: the same-direction cap refused the entry (19 Oct). */
+    const val SHADOW_CAP = "cap"
+
+    /** Why a would-be trade was not bought, in words. */
+    fun shadowWords(p: Pos): String = when (p.shadow) {
+        SHADOW_TWIN -> "would-be: the other Donchian arm already held this option"
+        SHADOW_CAP -> "would-be: refused by the same-direction cap"
+        else -> ""
+    }
+
+    /**
+     * A WOULD-BE trade of [arm] in [c] at [ref] (19 Oct, [Pos.shadow] = [kind]): nothing is bought; booked here like a real trade
+     * (its decision made, its caps counted, its exits run on the prices seen), never mirrored live, no notice. [because]: why.
+     */
+    private suspend fun wouldBe(b: Book, arm: String, u: String, c: Paper.Contract, right: Right, ref: Double, now: LocalDateTime, setup: String?,
+                                idx: Double?, atr: Double?, keys: List<String>, breadth: Boolean?, kind: String, because: String): Pos {
+        runCatching { Paper.rememberContract(c) }
+        val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
+            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind)
+        b.positions += pos
+        if (c.symbol !in b.marks) b.marks[c.symbol] = ref
+        b.decided += keys
+        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys) }
+        note(b, "${label(arm)} would-be ${c.symbol} ${pos.qty} @ ${px(ref)} (not bought: $because) · labelled apart")
+        return pos
+    }
+
+    /** What the arm's status says for a trade it just took (a would-be one labelled as such). */
+    private fun takenWords(p: Pos, what: String): String =
+        if (p.shadow == null) "bought ${p.symbol} @ ${px(p.entry)} ($what)" else "would-be ${p.symbol} @ ${px(p.entry)} ($what; ${shadowWords(p)})"
 
     /**
      * [p] (just filled, on the entries' copy) booked in the book itself, with its decisions [keys]; saved. One the safety net
@@ -1088,7 +1221,7 @@ object PassedArmsHost {
             if (skip != null) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} break skipped: $skip") || changed; continue }
             val (p, why) = buy(b, src, u, s.side, listOf(s.strike), now, keys = listOf(dk), breadth = confirm(s))
             changed = true
-            if (p != null) { b.decided += dk; say(b, key, "bought ${p.symbol} @ ${px(p.entry)} (${s.entryTime.toLocalTime()} break)") }
+            if (p != null) { b.decided += dk; say(b, key, takenWords(p, "${s.entryTime.toLocalTime()} break")) }
             else say(b, key, "${s.entryTime.toLocalTime()} break: $why; tried again until ${s.entryTime.plusMinutes(DonchianArm.FILL_SLACK_MINUTES).toLocalTime()}")
         }
         return changed
@@ -1118,7 +1251,7 @@ object PassedArmsHost {
             if (side == 0) { b.decided += dk; changed = say(b, key, "opened inside (or at) yesterday's value area: no trade today") || changed; continue }
             val (p, why) = buy(b, src, u, side, listOf(OovArm.strike(u, side, first)), now, keys = listOf(dk))
             changed = true
-            if (p != null) { b.decided += dk; say(b, key, "bought ${p.symbol} @ ${px(p.entry)} (opened outside value)") }
+            if (p != null) { b.decided += dk; say(b, key, takenWords(p, "opened outside value")) }
             else say(b, key, "$why; tried again until 09:22")
         }
         return changed
@@ -1192,8 +1325,8 @@ object PassedArmsHost {
             changed = true
             if (p != null) {
                 b.decided += ck; b.decided += dayKey
-                b.scores += "$today|${c.key.replace('|', ':')}|$words: bought ${p.symbol}$because"
-                say(b, src, "bought ${p.symbol} @ ${px(p.entry)}: ${Solo2.why(c, sc.score, m)}", final = true)
+                b.scores += "$today|${c.key.replace('|', ':')}|$words: ${if (p.shadow == null) "bought" else "would-be"} ${p.symbol}$because"
+                say(b, src, takenWords(p, Solo2.why(c, sc.score, m)), final = true)
                 return true
             }
             // R57 takes the day's first passing candidate and nothing more that day: one that cannot be bought ends the day too.
@@ -1246,7 +1379,8 @@ object PassedArmsHost {
         }
         // Gone from the paper book without this host selling it (the loss limit, Boss, a square-off): closed there. (An option
         // two arms hold is settled before this, by [sharedSoldElsewhere]; a trade alone on its option is judged here as before.)
-        val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
+        // A would-be trade (19 Oct) holds nothing on the account: only its own exits close it.
+        val held = if (p.shadow != null) Int.MAX_VALUE else Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
         if (held <= 0) {
             // 16 Oct (R72 review): a sale another trade's record already took wholly (another arm's own exit) is never this one's.
             val took = taken(b)
@@ -1285,9 +1419,9 @@ object PassedArmsHost {
             }.exit?.kind?.why
         } ?: if (stopped) "operator_stop" else null
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
-        runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
+        if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
         if (why == null) return false
-        val next = sell(b, p, c, why, ltp)
+        val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight) else sell(b, p, c, why, ltp)
         if (next != p) { b.positions[i] = next; return true }
         return false
     }
@@ -1309,7 +1443,7 @@ object PassedArmsHost {
      */
     private fun sharedSoldElsewhere(b: Book, now: LocalDateTime): Boolean {
         var changed = false
-        val groups = b.positions.withIndex().filter { it.value.open }.groupBy { it.value.symbol }.filterValues { it.size > 1 }
+        val groups = b.positions.withIndex().filter { it.value.open && it.value.shadow == null }.groupBy { it.value.symbol }.filterValues { it.size > 1 }
         if (groups.isEmpty()) return false
         val state = Paper.state
         for ((symbol, rows) in groups) {
@@ -1360,10 +1494,29 @@ object PassedArmsHost {
     }
 
     /**
+     * A would-be trade's exit (19 Oct, [Pos.shadow]): nothing is sold - booked at the price seen ([ltp]; a target at the target at
+     * most, as [sell] books it), with the charges a real round trip would have paid. No price: tried again next look (an
+     * overnight one closes at its last mark, else its entry).
+     */
+    private fun sellWouldBe(b: Book, p: Pos, why: String, ltp: Double?, overnight: Boolean): Pos {
+        val at = ltp ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
+        val target = PassedArms.targetLevel(p.entry, exitsOf(p))
+        val booked = if (why == PassedArms.ExitKind.TARGET.why) PassedArms.booked(PassedArms.ExitKind.TARGET, at, target) else at
+        val charges = runCatching {
+            com.optionslab.engine.sandbox.SandboxCosts.charge("BUY", java.math.BigDecimal(p.entry), p.qty).toDouble() +
+                com.optionslab.engine.sandbox.SandboxCosts.charge("SELL", java.math.BigDecimal(booked), p.qty).toDouble()
+        }.getOrDefault(0.0)
+        val done = p.copy(exit = booked, exitTime = now0(), why = why, charges = charges, exitRef = ltp)
+        closed(b, done)
+        return done
+    }
+
+    /**
      * 16 Oct (R72): the book's key of [p]'s earned lock - its option's symbol, as before, or "arm|symbol" for R72 Breadth Donchian's,
      * which may hold the very option R51 Donchian 20 holds (the same break, [mayShare]): each trade keeps its own lock.
      */
-    private fun lockKey(p: Pos): String = if (p.arm == BreadthDonchianArm.SOURCE) "${p.arm}|${p.symbol}" else p.symbol
+    private fun lockKey(p: Pos): String = if (p.shadow != null) "${p.shadow}|${p.arm}|${p.symbol}"
+        else if (p.arm == BreadthDonchianArm.SOURCE) "${p.arm}|${p.symbol}" else p.symbol
 
     /**
      * 16 Oct (R72): R51 Donchian 20 and R72 Breadth Donchian may hold the same option at once - most of R72's breaks are R51's own,
@@ -1381,6 +1534,13 @@ object PassedArmsHost {
     private fun closed(b: Book, p: Pos) {
         // 16 Oct: on every way out (closed elsewhere too), so a later trade on the same option never reads this one's lock.
         forget(b, p)
+        if (p.shadow != null) {
+            // 19 Oct: a would-be trade closed - its record only (never live, no notice).
+            b.status["${p.arm}|${p.index}"] = "would-be ${p.symbol} closed: ${p.why}"
+            note(b, "%s: would-be %s closed (%s) @ %s, %s after estimated charges (%s)".format(Locale.ENGLISH, label(p.arm), p.symbol, p.why,
+                px(p.exit ?: 0.0), rs(p.net ?: 0.0), shadowWords(p)))
+            return
+        }
         // 18 Oct: its live trade, if any, is sold on the next look ([ArmLive]; memory only).
         runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
         b.status["${p.arm}|${p.index}"] = "closed ${p.symbol}: ${p.why}"
@@ -1413,7 +1573,7 @@ object PassedArmsHost {
             // Left so on purpose, paper only: it needs a crash between the fill and [record] (which books the fill at once), the
             // option stays watched with R51's stop, target and time exit while R51 holds it, and the paper account's own 15:15 MIS
             // square-off sells whatever is left. Splitting one symbol's quantity between owners would change the net for every arm.
-            if (b.positions.any { it.open && it.symbol == o.symbol }) return@withLock null
+            if (b.positions.any { it.open && it.shadow == null && it.symbol == o.symbol }) return@withLock null
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
                 adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On, st = arm == DonchianArm.SOURCE && b.stOn)
@@ -1459,15 +1619,27 @@ object PassedArmsHost {
 
     /** The ladder a trade entered with, labelled so each record stays separable (the research exits, A4, A4 + L25). */
     private fun lockTag(p: Pos): String = (if (!p.lock) "" else if (p.l25) " · 30-60-100 lock + L25" else " · 30-60-100 lock") +
-        if (p.st) " · Supertrend filter" else ""
+        (if (p.st) " · Supertrend filter" else "") + (if (p.shadow != null) " · ${shadowWords(p)}" else "")
 
     /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
-    internal fun wipe() { cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear() }
+    internal fun wipe() {
+        synchronized(writeLock) { pendingBytes.set(null) }
+        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear()
+    }
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */
     internal suspend fun addClosedForTest(list: List<Pos>) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "a test seam" }
         lock.withLock { val b = book(); b.positions += list; save(b) }
+    }
+
+    /**
+     * TEST ONLY: [p] booked as an open trade, as a book carried over from before 19 Oct may hold one (R72 beside R51 on the same
+     * option, each with its own paper lot). Debug builds only.
+     */
+    internal suspend fun addOpenForTest(p: Pos) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "a test seam" }
+        lock.withLock { val b = book(); b.positions += p; b.marks[p.symbol] = p.entry; save(b) }
     }
 
     /** For tests: the model forgotten (read again on the next pass). */

@@ -77,7 +77,15 @@ object Vault {
      */
     fun writeFile(file: File, plain: ByteArray) = MainWrites.guard({ "Vault.writeFile ${file.name}" }) { writeFileNow(file, plain) }
 
+    /**
+     * TEST ONLY (19 Oct, order speed): every vault file write takes this long more (ms), as a Pixel's StrongBox can - so a test can
+     * show a slow write never holds an order. 0 in the app; set only in debug builds.
+     */
+    @Volatile internal var testWriteDelayMs = 0L
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     private fun writeFileNow(file: File, plain: ByteArray) {
+        testWriteDelayMs.takeIf { it > 0 }?.let { Thread.sleep(it) }
         file.parentFile?.mkdirs()
         val blob = encrypt(plain)   // before the file is opened: a Keystore failure leaves nothing half-written
         val tmp = File(file.parentFile, file.name + ".tmp")

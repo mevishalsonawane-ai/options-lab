@@ -685,6 +685,8 @@ fun RiskPage(model: AppModel) {
         // Risk across the arms, the event days learning leaves out and the market history kept on the phone (TODO S5, S11, S12).
         if (!com.optionslab.app.BuildConfig.GOLD) {
             item { PortfolioSettingCard() }
+            // 19 Oct: the same-direction cap on automatic entries (paper on, live logged only until switched on).
+            item { SameDirectionCapCard() }
             item { EventCalendarCard() }
             // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
             item { EventShieldSwitchCard() }

@@ -517,7 +517,7 @@ internal object IraSolo {
             }
             runCatching { com.optionslab.app.data.LiveRecorder.signal("Solo", c.symbol, s.underlying, right.name, q.ltp, paper = true) }
             // PAPER ONLY: the paper account's MARKET buy, 1 lot - there is no Zerodha path here.
-            val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q)
+            val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q, auto = "Jarvis Solo")
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 // Not filled now (a stale quote): cancelled, never left to fill later with no record.

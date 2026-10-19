@@ -90,6 +90,8 @@ class IraAlgoApp : Application() {
         Broker.init(this)
         com.optionslab.app.data.StaticIp.init(this)
         com.optionslab.app.data.Paper.init(this)
+        // 19 Oct: the same-direction cap's switches and record, read on a background thread (the order path reads memory only).
+        com.optionslab.app.data.ExposureCapHost.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
         // 18 Oct (Boss: every paper strategy present for live too): the paper strategies' live path, before the arms register with it.

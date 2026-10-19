@@ -676,7 +676,7 @@ object ShadowArms {
                 com.optionslab.engine.orb.ArmPriority.rankOf(v.arms), trader = AutoExposure.SHADOW) != null) return null
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         if (Guard.check(Guard.paperOrder(c, "BUY", 1, base.entry), snap?.let { Guard.paperAccount(it) }, paper = true).isNotEmpty()) return null
-        val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
+        val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, auto = "${ShadowRules.armName(v)} (${v.name})")
         val (qty, px) = filled(buy) ?: return null
         val label = "${ShadowRules.armName(v)} (${v.name})"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "$label · entry") }
