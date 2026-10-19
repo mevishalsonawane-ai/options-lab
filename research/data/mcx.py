@@ -8,9 +8,11 @@ downloaded are missing (see README "Known gaps").
 
 Continuous series (one contract per day, the roll recorded):
   * rule "volume" (default, the file `fut_1m_mcx_continuous.parquet`): on each trading day the series holds the contract
-    that traded the most lots on the PREVIOUS trading day among contracts not yet expired, never stepping back to an
-    earlier expiry. The choice uses only data known at the day's open, so there is no look-ahead.
+    that traded the most lots on the PREVIOUS trading day among contracts not yet expired. The choice uses only data known at the day's open, so there is no look-ahead.
   * rule "expiry": the nearest contract not yet expired (switches the day after expiry, like Dhan's daily expiryCode 0).
+  Column `near_share` = the held contract's volume that day / Dhan's near-month daily volume: about 1 while the series
+  holds the near month. Before `near_month_from` (per symbol, in the file's QA) it holds a FAR month, because the near
+  contracts of that time expired before the lake first downloaded them: use the series from that day on.
   Every switch is a row of the rolls table: date, from/to contract, both contracts' closes at the last minute both
   traded before the switch, and the gap (to - from). `back_adjust` subtracts nothing from the newest prices and shifts
   older prices by the later gaps (additive), for indicators that must not see roll jumps.
@@ -96,7 +98,8 @@ def choose(daily: pd.DataFrame, rule: str = "volume") -> pd.Series:
 
     daily: one row per (day, expiry) with the day's volume, for contracts that have a bar that day. Returns a Series
     day -> expiry. "volume": the contract with the most volume on the previous trading day among contracts with
-    expiry >= day, never earlier than the one held before; on the first day (no previous day) the nearest expiry.
+    expiry >= day (it may step back to a nearer expiry: early in the lake's history only far months exist, and the
+    near month must win once it is the busiest); on the first day (no previous day) the nearest expiry.
     "expiry": the nearest expiry >= day that has a bar that day."""
     days = sorted(daily.day.unique())
     by_day = {d: g for d, g in daily.groupby("day")}
@@ -114,13 +117,10 @@ def choose(daily: pd.DataFrame, rule: str = "volume") -> pd.Series:
             if prev is not None:
                 y = by_day[prev]
                 y = y[(y.expiry >= d) & y.expiry.isin(alive.expiry)]
-                if held is not None:
-                    y = y[y.expiry >= held]
                 if len(y) and y.volume.max() > 0:
                     cand = y.sort_values(["volume", "expiry"], ascending=[False, True]).expiry.iloc[0]
             if cand is None:  # first day, or nothing traded yesterday: keep the held contract if alive, else nearest
-                ok = alive.expiry[alive.expiry >= held] if held is not None else alive.expiry
-                cand = held if held in set(alive.expiry) else (ok.min() if len(ok) else alive.expiry.min())
+                cand = held if held in set(alive.expiry) else alive.expiry.min()
             held = cand
         out[d] = held
         prev = d
@@ -146,7 +146,8 @@ def continuous(fut: pd.DataFrame, symbol: str, rule: str = "volume") -> tuple[pd
     for i in np.flatnonzero(m.roll.to_numpy()):
         a, b = m.iloc[i - 1], m.iloc[i]
         both = f[(f.expiry.isin([a.expiry, b.expiry])) & (f.ts < b.ts)].pivot_table(
-            index="ts", columns="expiry", values="close", aggfunc="last").dropna()
+            index="ts", columns="expiry", values="close", aggfunc="last")
+        both = both[[a.expiry, b.expiry]].dropna() if {a.expiry, b.expiry} <= set(both.columns) else both.iloc[:0]
         if len(both):
             at = both.index[-1]
             fc, tc = float(both.loc[at, a.expiry]), float(both.loc[at, b.expiry])
@@ -155,6 +156,29 @@ def continuous(fut: pd.DataFrame, symbol: str, rule: str = "volume") -> tuple[pd
         rolls.append(dict(day=b.day, from_expiry=a.expiry, to_expiry=b.expiry, from_security_id=int(a.security_id),
                           to_security_id=int(b.security_id), at=at, from_close=fc, to_close=tc, gap=tc - fc))
     return m.drop(columns=["day"]), pd.DataFrame(rolls, columns=cols)
+
+
+def near_share(minutes: pd.DataFrame, daily: pd.DataFrame | None) -> pd.Series:
+    """Per minute row: the held contract's volume that day / Dhan's near-month (expiryCode 0) daily volume that day
+    (same units, lots; checked equal on 12-16 Oct 2026). About 1 when the series holds the near month; near 0 when it
+    holds a far month because the near contracts of that time had expired before they could be downloaded. NaN when
+    the daily series has no volume for that day."""
+    if daily is None or not len(minutes):
+        return pd.Series(np.nan, index=minutes.index, dtype="float32")
+    d = minutes.ts.dt.tz_convert(IST).dt.date
+    held = minutes.groupby(d).volume.sum()
+    dv = daily.assign(_d=pd.to_datetime(daily.date).dt.date).groupby("_d").volume.sum()
+    ratio = (held / dv.reindex(held.index)).where(lambda x: np.isfinite(x))
+    return d.map(ratio).astype("float32")
+
+
+def near_month_from(minutes: pd.DataFrame, share: float = 0.5):
+    """First day on which the held contract traded at least `share` of the near month's volume (None if never)."""
+    if "near_share" not in minutes or not len(minutes):
+        return None
+    d = minutes.ts.dt.tz_convert(IST).dt.date
+    ok = minutes.near_share.groupby(d).first() >= share
+    return min(ok.index[ok]) if ok.any() else None
 
 
 def back_adjust(minutes: pd.DataFrame, rolls: pd.DataFrame) -> pd.DataFrame:
@@ -203,6 +227,10 @@ def build(lake: str, out: str | None = None) -> dict:
     import lake_build as LB
     out = out or lake
     fut = load_futures(lake)
+    dfs = _find(lake, "fut_daily_continuous.parquet")
+    daily = pd.read_parquet(dfs[0]) if dfs else None
+    if daily is not None:
+        daily = daily[daily.expiry_code == 0] if "expiry_code" in daily else daily
     parts, rparts, stats = [], [], {}
     outside = 0
     for s in sorted(fut.symbol.unique()):
@@ -210,9 +238,13 @@ def build(lake: str, out: str | None = None) -> dict:
         ok = in_session(f.ts)
         outside += int((~ok).sum())
         m, r = continuous(f[ok], s)
+        m["near_share"] = near_share(m, None if daily is None else daily[daily.symbol.astype(str) == s])
         parts.append(m)
         rparts.append(r.assign(symbol=s))
-        stats[s] = dict(rows=int(len(m)), first=str(m.ts.min()), last=str(m.ts.max()), rolls=int(len(r)))
+        nf = near_month_from(m)
+        stats[s] = dict(rows=int(len(m)), first=str(m.ts.min()), last=str(m.ts.max()), rolls=int(len(r)),
+                        near_month_from=str(nf) if nf else None,
+                        rows_from_near_month=int((m.ts.dt.tz_convert(IST).dt.date >= nf).sum()) if nf else 0)
     cont = pd.concat(parts, ignore_index=True)
     cont["symbol"] = cont["symbol"].astype("category")
     cont["expiry"] = cont["expiry"].astype(str)

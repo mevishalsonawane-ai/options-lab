@@ -55,7 +55,7 @@ def test_volume_roll_uses_previous_day_only():
     # 15 Oct: Nov traded more ON 15 Oct, but the choice uses 14 Oct volume (Oct) -> still Oct; switch on 16 Oct
     assert held[D(2026, 10, 15)] == D(2026, 10, 19)
     assert held[D(2026, 10, 16)] == D(2026, 11, 19)
-    assert held[D(2026, 10, 19)] == D(2026, 11, 19)              # never steps back to the older contract
+    assert held[D(2026, 10, 19)] == D(2026, 11, 19)              # Oct traded less on 16 Oct: stays on Nov
     assert len(r) == 1 and r.day.iloc[0] == D(2026, 10, 16)
     assert r.gap.iloc[0] == pytest.approx(3.0) and r.from_security_id.iloc[0] == 1 and r.to_security_id.iloc[0] == 2
     assert m.roll.sum() == 1 and m.loc[m.roll, "ts"].iloc[0].date() == D(2026, 10, 16)
@@ -104,8 +104,10 @@ def test_build_and_load_roundtrip(tmp_path):
     f = pd.concat([f, late], ignore_index=True)
     os.makedirs(tmp_path / "fut_1m_live_mcx")
     f.assign(expiry=f.expiry.astype(str)).to_parquet(tmp_path / "fut_1m_live_mcx" / "fut_1m_live_mcx.parquet")
+    pd.DataFrame(dict(symbol="CRUDEOIL", expiry_code=0, date=pd.to_datetime(["2026-10-13"]), volume=[930.0])
+                 ).to_parquet(tmp_path / "fut_daily_continuous.parquet")
     st = mcx.build(str(tmp_path))
-    assert st["CRUDEOIL"]["rolls"] == 1
+    assert st["CRUDEOIL"]["rolls"] == 1 and st["CRUDEOIL"]["near_month_from"] == "2026-10-13"
     qa = json.load(open(tmp_path / "_qa" / f"{mcx.CONT_FILE}.json"))
     assert qa["qa"]["rows_dropped"]["outside_mcx_session"] == 2
     m, r = mcx.load_continuous(str(tmp_path), "CRUDEOIL")
@@ -173,3 +175,38 @@ def test_to_date_asks_one_day_past_today_only_for_the_newest_window(monkeypatch)
     assert lf.to_date(D(2026, 10, 19)) == "2026-10-20 23:59:59"
     assert lf.to_date(D(2026, 10, 16)) == "2026-10-16 23:59:59"
     assert lf.to_date(D(2026, 10, 25)) == "2026-10-26 23:59:59"
+
+
+def test_roll_to_a_contract_with_no_earlier_bar_has_unknown_gap():
+    f = pd.concat([bars("ZINC", "2026-10-30", 1, "2026-10-30", 90, 250),
+                   bars("ZINC", "2026-11-30", 2, "2026-11-02", 90, 252)], ignore_index=True)
+    m, r = mcx.continuous(f, "ZINC", rule="expiry")
+    assert list(r.day) == [D(2026, 11, 2)] and np.isnan(r.gap.iloc[0]) and pd.isna(r["at"].iloc[0])
+    m, r = mcx.continuous(f, "ZINC")
+    assert len(r) == 1 and np.isnan(r.gap.iloc[0])
+
+
+def test_near_share_marks_far_month_days():
+    m, _ = mcx.continuous(fut_two_contracts(), "CRUDEOIL")
+    daily = pd.DataFrame(dict(date=pd.to_datetime(["2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16"]),
+                              volume=[900 * 10, 900, 900, 900]))     # 13 Oct: the near month (not held) traded 10x
+    m["near_share"] = mcx.near_share(m, daily)
+    by = m.groupby(m.ts.dt.date).near_share.first()
+    assert by[D(2026, 10, 13)] == pytest.approx(0.1) and by[D(2026, 10, 14)] == pytest.approx(1.0)
+    assert np.isnan(by[D(2026, 10, 19)])                             # no daily row that day
+    assert mcx.near_month_from(m) == D(2026, 10, 14)
+    assert mcx.near_share(m, None).isna().all()
+
+
+def test_volume_rule_returns_to_the_busy_near_month():
+    """Early history: only a far month exists, then the near month appears and trades more: the series must move to
+    it (on the real lake COPPER held Mar-2027 with 9 lots a day under the earlier never-step-back rule)."""
+    f = pd.concat([bars("COPPER", "2027-03-31", 9, "2026-09-01", 30, 900),
+                   bars("COPPER", "2027-03-31", 9, "2026-09-02", 9, 901),
+                   bars("COPPER", "2026-10-30", 5, "2026-09-02", 9000, 880),
+                   bars("COPPER", "2027-03-31", 9, "2026-09-03", 9, 902),
+                   bars("COPPER", "2026-10-30", 5, "2026-09-03", 9000, 881)], ignore_index=True)
+    m, r = mcx.continuous(f, "COPPER")
+    held = m.groupby(m.ts.dt.date).expiry.first()
+    assert held[D(2026, 9, 2)] == D(2027, 3, 31) and held[D(2026, 9, 3)] == D(2026, 10, 30)
+    assert list(r.day) == [D(2026, 9, 3)] and r.gap.iloc[0] == pytest.approx(880 - 901)
