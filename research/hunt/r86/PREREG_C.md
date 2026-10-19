@@ -59,3 +59,31 @@ straddle tracking of the SAME strike while the rolling offset changes; the optio
 index confirming); the detector's features at 12:00 with a look-ahead guard (minutes after the decision changed -> the
 same decision). One `research/experiments/entries/r86c-*.yaml` per idea; a FINDINGS section; the write-up
 `research/HUNT_R86C_CATCH_THEM.md`.
+
+## Amendment C-A1 (19 Oct, Boss: "can't you find all the patterns when the seller is selling, so that we could catch it")
+
+Written BEFORE any R86c outcome is computed. Adds idea 6; the BH family becomes 12 tests.
+
+R86b showed selling days are front-loaded (61% of NIFTY's move by 10:15), so a seller can only be caught EARLY.
+
+**6a. Seller pattern catalogue (descriptive, design years 2019-2024).** Label FII-SELL = the FII change in index-futures
+net in the bottom 10% of its previous 250 days (R86b); also Client-BUY (the crowd buying what institutions sell). For each
+pattern below, measured from 09:15 to 09:44 (known at 09:45): how often it happens, the share of FII-SELL days among
+the days with it vs the base rate (lift, with a Fisher exact p; BH within the catalogue), and the index's average move
+09:45 -> 11:15 and 09:45 -> 15:15 on days with vs without it.
+- P1 gap down <= -0.5%; P2 gap down and the first 30 minutes also down (no recovery); P3 09:15-09:44 move <= -0.4%;
+- P4 at least one DOWN basket burst (R86b definition) by 09:44; P5 >= 80% of the basket stocks below their 09:15 open
+  at 09:44 (breadth sell-off); P6 first-30-minute turnover >= 1.5x its 20-session median (heavy open);
+- P7 every 5-minute bar 09:15-09:44 makes a lower low (staircase down); P8 the 09:44 close in the bottom 20% of the
+  09:15-09:44 range (closing at the lows); P9 INDIAVIX at 09:44 up >= 5% on the previous close (fear bid);
+- P10 BANKNIFTY falls more than NIFTY 09:15-09:44 (banks lead the selling; NIFTY only);
+- P11 a failed bounce: a 5-minute bar up after 09:20 whose gain is fully lost by 09:44;
+- P12 the down-move's minutes carry more turnover than the up-move's minutes (selling on volume).
+
+**6b. C6-NIFTY, C6-BANKNIFTY: a learned "seller at work" detector.** At 09:45: logistic regression (standardised,
+C = 1) on the 12 pattern flags plus the gap %, the 09:15-09:44 move %, the turnover ratio and VIX change, trained on all
+days before the fold year (labels FII-SELL vs not). Go SHORT the index future at the 09:45 open when P(FII-SELL) is in
+the top 10% of the training days' probabilities AND the 09:15-09:44 move is down; stop = entry + 0.5 x the 09:15-09:44
+range (at least 0.15%); exit 11:15 (selling is mostly done by then) or the stop. Signal source: the underlying (index and
+constituents). Twins: random sessions of the same fold years (same count), short at 09:45, same stop %, exit 11:15.
+Same pass rule. Reported, not gated: walk-forward AUC; the same detector's trade held to 15:15.
