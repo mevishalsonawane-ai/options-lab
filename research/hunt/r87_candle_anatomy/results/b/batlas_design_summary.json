@@ -1,0 +1,17 @@
+{
+ "B1": {
+  "cells": 315,
+  "tested": 200,
+  "bh_pass": 0
+ },
+ "B2seq": {
+  "cells": 26,
+  "tested": 25,
+  "bh_pass": 0
+ },
+ "B2cl": {
+  "cells": 144,
+  "tested": 144,
+  "bh_pass": 1
+ }
+}
