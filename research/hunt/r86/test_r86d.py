@@ -47,4 +47,5 @@ def test_put_pnl_same_strike():
     tr = pd.DataFrame({"day": [pd.Timestamp("2025-03-03")], "xi": [2]})
     s = R.put_pnl(opts, _Bk(), tr)
     lot = 30                                              # BANKNIFTY lot in Mar 2025
-    assert s["n"] == 1 and s["net"] == pytest.approx((400 * 0.9995 - 0.05 - (300 * 1.0005 + 0.05)) * lot, abs=60)
+    gross = (400 * 0.9995 - 0.05 - (300 * 1.0005 + 0.05)) * lot          # held the 50,000 put, not the new ATM
+    assert s["n"] == 1 and gross - 120 < s["net"] < gross               # minus dated charges (~Rs 70)
