@@ -34,16 +34,24 @@ SEL_FILE = cfg.RESULTS / "rules_selected.json"
 
 # ------------------------------------------------------------------------------------------------ cost screen
 def cost_points(und: str, frm: date, to: date) -> dict:
-    """An option buyer's round trip in INDEX points (PREREG 8.1): median 1-ITM call premium P at 10:30 over the days,
-    cost per unit = 2 x 5 bps x P + 2 ticks + charges(P in, P out) / lot; points = cost / delta 0.6."""
-    o = D.option_minutes(und)
-    o = o[(o.ts.dt.date >= frm) & (o.ts.dt.date <= to) & (o.offset == -1) & (o.side == "C")]
-    r = (o.ts.dt.hour * 60 + o.ts.dt.minute - cfg.OPEN_MIN)
-    p = o[r == COST_ROW].c
-    P = float(p.median())
+    """An option buyer's round trip in INDEX points (PREREG 8.1 with A1's modelled premium): the median MODELLED 1-ITM
+    call premium P at 10:30 over the days, cost per unit = 2 x 5 bps x P + 2 ticks + charges(P in, P out) / lot;
+    points = cost / delta 0.6."""
+    mk = Market(und, "model")
+    ps = []
+    for d in mk.days(frm, to):
+        c, atm, con, _ = mk.day(d)
+        if not np.isfinite(c[COST_ROW]):
+            continue
+        k = S.strike_1itm(und, np.nan, c[COST_ROW], True)
+        A = con.get(("C", k))
+        if A is not None and np.isfinite(A[3, COST_ROW]):
+            ps.append(A[3, COST_ROW])
+    P = float(np.median(ps))
     qty = cfg.lot(und, to)
     unit = 2 * S.BPS_MKT * P + 2 * S.TICK + S.charges(und, P, P, qty, to) / qty
-    return dict(und=und, premium=P, days=int(len(p)), lot=qty, unit_cost=unit, points=unit / COST_DELTA)
+    return dict(und=und, premium=P, days=int(len(ps)), lot=qty, unit_cost=unit, points=unit / COST_DELTA,
+                pricing="modelled premium (A1)")
 
 
 # ------------------------------------------------------------------------------------------------ selection
@@ -74,7 +82,8 @@ def select(p1: pd.DataFrame, p2: pd.DataFrame, cost: dict, k: int = 3) -> list[d
             if r.family in fams:
                 continue
             fams.add(r.family)
-            picked.append(dict(id=f"R87-{len(picked) + 1}", und=r.und, tf=int(r.tf), family=r.family, cond=r.cond,
+            picked.append(dict(id=f"R87-{len(picked) + 1}", und=r.und, tf=int(r.tf), family=r.family,
+                               cond=r.cond if isinstance(r.cond, str) else "",
                                src=r.src, long=bool(r.eff > 0), eff=float(r.eff), z=float(r.z), q=float(r.q),
                                n=int(r.n), fold_same=int(r.fold_same), rw_n=int(r.rw_n),
                                dir_pts=float(r.dir_pts), cost_pts=float(r.cost_pts), screen=label))

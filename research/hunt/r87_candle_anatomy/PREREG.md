@@ -193,3 +193,23 @@ keep weekdays with >= 120 minutes and fewer than half the minutes flat (high == 
 (including two real budget weekend sessions and three short special sessions) and Muhurat. After the fix the largest
 |5-candle move| is 78 ATR on 1m (a real shock), 19 on 5m, 14 on 15m. Every v0 table is discarded and the atlas re-run
 unchanged otherwise. Disclosure: v0 results were seen; nothing else in the method changes because of them.
+
+## Amendment A3 (19 Oct 2026, after the design atlas, BEFORE any rule P&L): the frozen rules
+
+The cost screen of section 8.1 used the real 1-ITM premium, which A1 replaced by the modelled one for pricing; the
+first `rules select` run therefore had no cost (NaN) and labelled every cell "fails the cost screen". Fixed so the cost
+screen uses the same modelled premium as the trades (median modelled 1-ITM call at 10:30 over the 223 rules-window
+days): NIFTY Rs 137.2 -> 1.87 index points a round trip, BANKNIFTY Rs 740.3 (monthly) -> 5.96, SENSEX Rs 494.4 -> 6.41.
+The mechanical selection (`results/rules_selected.json`) then gives exactly these three, each passing every screen:
+
+| rule | signal (index candle at its close) | design n / effect / q / folds | rules-window move vs cost | trade |
+|---|---|---|---|---|
+| R87-1 | NIFTY 5m **three white soldiers** (3 green, each closing higher, bodies >= 50%) | 893 / +0.173 ATR / 0.040 / 4 of 4 | +3.8 pts (217) vs 1.87 | BUY NIFTY 1-ITM call |
+| R87-2 | NIFTY 15m **stop run above the day's high** (wick above the day high so far, close back below it) | 1,666 / +0.129 ATR / 0.065 / 4 of 4 | +8.4 pts (326) vs 1.87 | BUY NIFTY 1-ITM call |
+| R87-3 | SENSEX 15m **gravestone doji** (body <= 10%, upper wick >= 60%, lower <= 15%) | 205 / -0.295 ATR / 0.093 / 3 of 4 | -48.0 pts (70) vs 6.41 | BUY SENSEX 1-ITM put |
+
+- Signal source of all three: the index's own candle (spot). No option chart. Option bought by the strike rule.
+- R87-2 is the opposite of the textbook reading (a failed break of the high is usually called bearish); the data says
+  the index went on UP more than matched candles, in line with R86 ("stop runs do not reverse"). It is tested as found.
+- Exits, variants (premium stop 15% / 25%), walk-forward, twins and gates exactly as section 8, priced on the modelled
+  premium (A1), with the real-premium checks reported beside.
