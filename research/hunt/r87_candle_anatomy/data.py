@@ -84,7 +84,8 @@ def chain_minute(opt: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["ts", "act", "coi", "poi", "atm", "straddle"])
     opt = opt[opt.offset == 0]
     g = opt.groupby("ts")
-    act = g.v.sum(min_count=1)
+    both = g.side.nunique() == 2                       # A1: activity only where BOTH ATM sides printed
+    act = g.v.sum(min_count=1).where(both)
     coi = opt[opt.side == "C"].groupby("ts").oi.sum(min_count=1)
     poi = opt[opt.side == "P"].groupby("ts").oi.sum(min_count=1)
     a = opt[opt.offset == 0]

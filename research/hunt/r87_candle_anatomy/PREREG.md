@@ -157,3 +157,28 @@ window). Consequences, all in the direction of LESS information, none chosen aft
 - Option trades (1-ITM) and the ATM strike need only offsets -1, 0, +1, so Part 2 is unchanged. A held contract drops
   out of the data once the index moves more than one strike away; its exit then takes the last known print ("stale",
   counted and reported).
+
+## Amendment A1 (19 Oct 2026, BEFORE any statistic): what the option data can carry; modelled premiums for the rules
+
+After A0 the rolling-option endpoint slowed further (one 30-day chunk every 1-3 minutes, HTTP 429 / 504), so the option
+history will not be complete in this session. At this point the cache holds NIFTY ATM minutes for parts of 2021-2026 and
+a handful of BANKNIFTY / SENSEX months. Decided now, before any statistic:
+
+1. **The atlas runs on what exists.** Every index-candle family, context and outcome uses the complete index minutes.
+   The option-derived columns (activity, OI shift, the ATM OI tilt, the activity-weighted VWAP / profile, the order-flow
+   proxies) are NaN where the ATM pair is missing (`act` needs BOTH ATM sides printed in the minute), so their
+   conditions and footprints are tested only where data exists (the n >= 50 rule decides) and the write-up states the
+   coverage per instrument. Where `act` is missing, VWAP falls back to the time-weighted mean of the typical price
+   (as `context.minute_context` already does).
+2. **The rules are priced on a MODELLED premium (`model.py`)**: Black-Scholes on the index minute with sigma = INDIA VIX
+   x the index's point-in-time realised-vol ratio to NIFTY, T to the next expiry, 1 tick + 5 bps fills (stops 2 ticks +
+   10 bps), dated charges. Everything else in section 8 is unchanged (selection, exits, walk-forward, twins, gates).
+   Labelled "modelled premium" in every table. Two checks, reported beside the result: (a) model vs real ATM premium
+   at 10:30 on every day with real ATM minutes (median ratio and error); (b) the rule's trades re-priced on the real
+   1-ITM minutes where those exist. A rule that passes on the model is NOT a paper candidate until it is re-run on real
+   option minutes (a follow-up once the lake is reachable); it is reported as "passed on modelled premiums only".
+3. The expiry calendar is `research/brain/calendar`; for SENSEX after its last listed expiry (8 Oct 2026) the next
+   Thursdays (its weekday since Sep 2025) are used.
+4. The option table is built ONCE (`data.option_minutes` caches it) right after this amendment is committed; the
+   atlas, the real-premium checks and the holdout all use that snapshot (listed in the write-up). Later downloads are
+   not used and nothing is re-run because more data arrived.

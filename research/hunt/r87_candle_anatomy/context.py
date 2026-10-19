@@ -274,6 +274,5 @@ FOOTPRINTS = ("fp_absorption", "fp_climax", "fp_stop_run_up", "fp_stop_run_down"
 
 
 def expiry_set(und: str, frm: date, to: date) -> set:
-    from research.brain import calendar as cal
-    e = cal.expiries(und, frm, to)
-    return set(e["date"]) if len(e) else set()
+    from .model import expiry_dates            # research/brain/calendar + the SENSEX Thursday fallback (A1)
+    return {d for d in expiry_dates(und, frm, to) if frm <= d <= to}

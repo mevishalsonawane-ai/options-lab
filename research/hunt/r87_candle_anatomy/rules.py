@@ -19,6 +19,7 @@ import pandas as pd
 from . import build as B
 from . import cfg
 from . import data as D
+from . import model as MO
 from . import sim as S
 from . import stats as ST
 
@@ -81,20 +82,43 @@ def select(p1: pd.DataFrame, p2: pd.DataFrame, cost: dict, k: int = 3) -> list[d
 
 
 # ------------------------------------------------------------------------------------------------ market of one instrument
-class Market:
-    """Index closes, ATM strike and option contracts of one instrument by day (lazy, cached)."""
+class _ModelCon:
+    """dict-like: (side, strike) -> modelled (5, 375) contract, built on first use (model.py)."""
 
-    def __init__(self, und: str):
-        self.und = und
+    def __init__(self, d, ohlc, vix, scale, exp):
+        self.d, self.ohlc, self.vix, self.scale, self.exp, self.c = d, ohlc, vix, scale, exp, {}
+
+    def get(self, key):
+        if self.exp is None:
+            return None
+        if key not in self.c:
+            self.c[key] = MO.contract(key[0], key[1], self.d, self.ohlc, self.vix, self.scale, self.exp)
+        return self.c[key]
+
+
+class Market:
+    """Index minutes and option contracts of one instrument by day (lazy, cached). mode 'model' (PREREG A1, the
+    rules' pricing): modelled premiums for every day; 'real': the Dhan option minutes (ATM-1..+1) where they exist."""
+
+    def __init__(self, und: str, mode: str = "model"):
+        self.und, self.mode = und, mode
         m = D.index_minutes(und)
         self.r = (m.ts.dt.hour * 60 + m.ts.dt.minute - cfg.OPEN_MIN).to_numpy()
         self.m = m.assign(d=m.ts.dt.date, r=self.r)
-        o = D.option_minutes(und)
-        self.o = o.assign(d=o.ts.dt.date)
-        self.ogrp = self.o.groupby("d").indices
         self.mgrp = self.m.groupby("d").indices
-        from .context import expiry_set
-        self.exp = expiry_set(und, cfg.START, cfg.END)
+        self.exps = MO.expiry_dates(und, cfg.START, cfg.END)
+        self.exp = set(self.exps)
+        if mode == "real":
+            o = D.option_minutes(und)
+            self.o = o.assign(d=o.ts.dt.date)
+            self.ogrp = self.o.groupby("d").indices
+        else:
+            v = D.index_minutes("INDIAVIX")
+            self.vix = v.assign(d=v.ts.dt.date, r=(v.ts.dt.hour * 60 + v.ts.dt.minute - cfg.OPEN_MIN))
+            self.vgrp = self.vix.groupby("d").indices
+            self.daily = {u: D.index_minutes(u).assign(d=lambda x: x.ts.dt.date).groupby("d").c.last()
+                          for u in {"NIFTY", und}}
+            self.ogrp = {d: None for d in self.mgrp if d in self.vgrp}
         self._c = {}
 
     def days(self, frm: date, to: date) -> list[date]:
@@ -102,16 +126,29 @@ class Market:
 
     def day(self, d: date):
         if d not in self._c:
+            if len(self._c) > 400:
+                self._c.clear()
             mi = self.m.iloc[self.mgrp[d]]
-            c = np.full(cfg.NROWS, np.nan)
-            c[mi.r.to_numpy()] = mi.c.to_numpy()
-            oi = self.o.iloc[self.ogrp[d]] if d in self.ogrp else self.o.iloc[:0]
+            ohlc = np.full((4, cfg.NROWS), np.nan)
+            for j, col in enumerate("ohlc"):
+                ohlc[j, mi.r.to_numpy()] = mi[col].to_numpy()
+            c = ohlc[3]
             atm = np.full(cfg.NROWS, np.nan)
-            a = oi[(oi.offset == 0)].drop_duplicates("ts")
-            ar = (a.ts.dt.hour * 60 + a.ts.dt.minute - cfg.OPEN_MIN).to_numpy()
-            atm[ar] = a.strike.to_numpy()
-            atm = pd.Series(atm).ffill().to_numpy()
-            self._c[d] = (c, atm, D.option_day(oi), d in self.exp)
+            if self.mode == "real":
+                oi = self.o.iloc[self.ogrp[d]] if d in self.ogrp else self.o.iloc[:0]
+                a = oi[(oi.offset == 0)].drop_duplicates("ts")
+                ar = (a.ts.dt.hour * 60 + a.ts.dt.minute - cfg.OPEN_MIN).to_numpy()
+                atm[ar] = a.strike.to_numpy()
+                atm = pd.Series(atm).ffill().to_numpy()
+                con = D.option_day(oi)
+            else:
+                vi = self.vix.iloc[self.vgrp[d]]
+                vx = np.full(cfg.NROWS, np.nan)
+                ok = (vi.r >= 0) & (vi.r < cfg.NROWS)
+                vx[vi.r[ok].to_numpy()] = vi.c[ok].to_numpy()
+                vx = pd.Series(vx).ffill().bfill().to_numpy()      # bfill only fills 09:15 before VIX's first print
+                con = _ModelCon(d, ohlc, vx, MO.iv_scale(self.daily, self.und, d), MO.next_expiry(self.exps, d))
+            self._c[d] = (c, atm, con, d in self.exp)
         return self._c[d]
 
 
@@ -134,7 +171,7 @@ def run(rule: dict, mk: Market, sig: pd.DataFrame, stop: float) -> pd.DataFrame:
     """Walk the signals in time; one open trade per rule (a signal while a trade is open is skipped)."""
     out, busy_until = [], (None, -1)
     hold = 5 * rule["tf"]
-    have = set(mk.ogrp)
+    have = set(mk.ogrp) & set(mk.mgrp)
     for s in sig.itertuples(index=False):
         if s.day not in have:
             continue
@@ -211,6 +248,56 @@ def walk_forward(rule: dict, mk: Market, sig: pd.DataFrame) -> dict:
     return res, allt[frozen]
 
 
+def model_check(und: str, frm: date, to: date) -> dict:
+    """How close is the modelled premium to the real one? ATM call and put at 10:30 on days with real ATM minutes
+    (both sides printed): median model / real ratio and median absolute % error (PREREG A1)."""
+    mr, mm = Market(und, "real"), Market(und, "model")
+    rows = []
+    r0 = COST_ROW
+    for d in mr.days(frm, to):
+        if d not in mm.ogrp:
+            continue
+        c, atm, con, _ = mr.day(d)
+        cm, _, conm, _ = mm.day(d)
+        k = atm[r0]
+        if not np.isfinite(k):
+            continue
+        for side in ("C", "P"):
+            A = con.get((side, float(k)))
+            B_ = conm.get((side, float(k)))
+            if A is None or B_ is None or not np.isfinite(A[3, r0]) or not np.isfinite(B_[3, r0]) or A[3, r0] <= 0:
+                continue
+            rows.append(B_[3, r0] / A[3, r0])
+    r = np.array(rows)
+    return dict(und=und, n=int(len(r)), median_ratio=float(np.median(r)) if len(r) else None,
+                median_abs_err_pct=float(np.median(np.abs(r - 1)) * 100) if len(r) else None)
+
+
+def reprice_real(rule: dict, tr: pd.DataFrame, stop: float) -> dict:
+    """The same trades re-priced on the real option minutes where the 1-ITM contract printed (A1 check)."""
+    if tr.empty:
+        return dict(n=0)
+    mr = Market(rule["und"], "real")
+    hold = 5 * rule["tf"]
+    out = []
+    for t in tr.itertuples(index=False):
+        if t.day not in mr.ogrp:
+            continue
+        c, atm, con, ex = mr.day(t.day)
+        A = con.get((t.side, float(t.strike)))
+        if A is None:
+            continue
+        sr = int(t.er) - 1
+        q = S.price_trade(rule["und"], t.day, {(t.side, float(t.strike)): A}, c, np.full(cfg.NROWS, t.strike +
+                          (cfg.STEP[rule["und"]] if t.side == "C" else -cfg.STEP[rule["und"]])), sr, t.side == "C",
+                          float(t.und_stop), hold, stop, ex)
+        if q is not None:
+            out.append((t.net, q["net"]))
+    a = np.array(out)
+    return dict(n=int(len(a)), model_net=float(a[:, 0].sum()) if len(a) else 0.0,
+                real_net=float(a[:, 1].sum()) if len(a) else 0.0)
+
+
 def design() -> None:
     sel = json.loads(SEL_FILE.read_text())
     rules = sel["rules"]
@@ -223,10 +310,13 @@ def design() -> None:
         tw = twins(r, mk, tr, days, res["frozen_stop"])
         net = res[f"design_{int(res['frozen_stop'] * 100)}"]["net"]
         res.update(rule=r, signals=int(len(sig)), twin_mean=float(tw.mean()),
-                   twin_p=float((1 + (tw >= net).sum()) / (len(tw) + 1)))
+                   twin_p=float((1 + (tw >= net).sum()) / (len(tw) + 1)),
+                   real_check=reprice_real(r, tr, res["frozen_stop"]), pricing="modelled premium (PREREG A1)")
         tr.to_csv(cfg.RESULTS / f"rules_design_trades_{r['id']}.csv", index=False, float_format="%.4f")
         out.append(res)
         print(r["id"], res["wf_net"], net, res["twin_p"], flush=True)
+    checks = [model_check(u, cfg.RULE_START, cfg.DESIGN_END) for u in cfg.UNDS]
+    (cfg.RESULTS / "model_check_design.json").write_text(json.dumps(checks, indent=1))
     q = ST.bh([o["twin_p"] for o in out])
     for o, qq in zip(out, q):
         d = o[f"design_{int(o['frozen_stop'] * 100)}"]

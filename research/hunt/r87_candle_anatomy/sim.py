@@ -130,6 +130,6 @@ def price_trade(und: str, d: date, con: dict, idx_c: np.ndarray, atm: np.ndarray
     if r is None:
         return None
     ch = charges(und, r["fill"], r["real_x"], qty, d)
-    r.update(und=und, day=d, side="C" if long else "P", strike=k, qty=qty, charges=ch,
+    r.update(und=und, day=d, side="C" if long else "P", strike=k, qty=qty, charges=ch, und_stop=und_stop,
              net=(r["real_x"] - r["fill"]) * qty - ch, gross=(r["X"] - r["E"]) * qty)
     return r
