@@ -1264,3 +1264,19 @@ lot inside MCX hours. Daily: the MCX continuous future (copper: COMEX x INR). De
 - Same signal, option vs mini future (real MCX): the option was worse in 4 of 7 replays, every crude one.
 - Not tested: API Tuesday (after MCX hours), zinc and aluminium (no data; Dhan token expired), trend-arm roll timing (no
   next-month prices).
+
+## Breadth Donchian, how many positions per signal (R84, 19 Oct 2026) - 0 of 8 pass
+Full study: `HUNT_R84_BREADTH_RISK.md` (pre-registered `hunt/r84/PREREG.md`, commit 5693400; amendment A1 b5053cb).
+Signal source: the indices' own 5-minute bars (R72 C1, 4 of 5); R75's C harness, design 20 Nov 2024 - 31 Mar 2026
+(936 signals, 3,071 trades, K0 Rs 2,16,929 reproduced to the rupee); final window not read (nothing passed).
+- Holding fewer of one signal's correlated positions (2 first, 2 or 1 strongest, BANKNIFTY only, a Rs 5k risk budget,
+  skipping NIFTY shock bars > 5x, or the app's cap of 2 open) cuts the worst day 32-77% but the max DD only 0-36%, and
+  keeps 28% of the net at best (X-skip). None beats a random subset of the same size (best p 0.13, BH q 0.91+).
+- The edge is in the wide signals: 4-5 positions made Rs 3.45 lakh, 1-3 lost Rs 1.28 lakh. The biggest break in ATR is
+  the worst pick (Rs 15k on 936 trades). NIFTY shock bars 5-10x usual are Breadth's best (+Rs 1.44 lakh on 142); calm
+  bars (<= 2x) lose (-Rs 1.97 lakh on 250), a post-hoc note only.
+- A per-signal cap does not cap exposure: C1 keeps firing, and the indices left out enter a bar later and lose.
+- 19 Oct (index side rebuilt from Yahoo): 5 of 5 broke at 09:30 on a 14.5x NIFTY move. As now -Rs 9,722; the app's cap
+  -Rs 5,049; X-skip Rs 0. About 2 signals a month lose Rs 9.7k or more (36 in design): normal for this arm.
+- The app's same-direction cap on Breadth alone turns design +Rs 2.17 lakh into -Rs 19k. Recommendation: Breadth
+  record-only on paper (or uncapped, Boss's call); not a live candidate at 1 lot x 5 indices (account stop breached).

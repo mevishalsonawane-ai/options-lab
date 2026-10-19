@@ -1,0 +1,46 @@
+id: r84-k2-open
+title: 'R84 K2-open: Breadth Donchian, at most 2 Breadth positions open the same way at any time (the app''s cap) (post hoc,
+  amendment A1)'
+family: sizing-execution
+date: '2026-10-19'
+doc: research/HUNT_R84_BREADTH_RISK.md
+hypothesis: 'Boss (19 Oct, after -Rs 9,721 on one Breadth Donchian signal): at most 2 Breadth positions open the same way
+  at any time (the app''s cap) cuts R72 Breadth Donchian''s design worst day and max drawdown by >= 30% while keeping >= 70%
+  of its net in design and walk-forward, beats a random-subset twin (p < 0.10, BH q < 0.10) and is not carried by its top
+  5 trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK, files of 15 Oct), R51 Amendment A clean
+  stores; 19 Oct index side from Yahoo 1-minute bars
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: '1 Apr - 13 Oct 2026 NOT read: no variant passed design + walk-forward (PREREG section 7); the window was already
+    read by R72, R73, R75'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the indices'' own 5-minute bars (R72 C1, 4 of 5); the variant reads break size in the index''s 5-minute
+  ATR, NIFTY''s 10-minute move, or (RB) the option''s last price as a size input only; no option chart'
+model_or_rule: 'R75''s C (R72 C1 Breadth Donchian, 1-ITM, exits P) + K2-open: at most 2 Breadth positions open the same way
+  at any time (the app''s cap)'
+settings: research/hunt/r84/r84rules.py, research/hunt/r84/r84study.py; PREREG.md
+prereg: research/hunt/r84/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 1755 trades, net -Rs 19,377, win 45%, worst day -Rs 22,220, worst signal -Rs 13,786, max DD Rs 1,72,230,
+    green days 43%, months < -13k 7, DD > 40k episodes 1, net without top 5 -Rs 74,126; K0 design: 3071 trades, net Rs 2,16,929,
+    win 47%, worst day -Rs 58,613, worst signal -Rs 26,277, max DD Rs 1,99,077, green days 46%, months < -13k 5, DD > 40k
+    episodes 5, net without top 5 Rs 1,60,476. Walk-forward pooled net Rs 1,12,723 vs K0 Rs 3,35,883; beat K0 on net and worst
+    day in 0 of 4 quarters. Dropped 1545 K0 trades (809 losers, Rs 11,43,442; 736 winners, Rs 12,91,555), took 229 later entries
+    K0 did not (-Rs 88,193). Random-subset twin mean -Rs 18,258, p 0.523, BH q 0.998 over 8. 19 Oct (app''s paper losses of
+    the positions kept): -Rs 5,049 vs K0 -Rs 9,722. Verdict: FAIL (worst day and max DD not both cut >= 30% in design; keeps
+    < 70% of K0''s net (design or walk-forward); no better than its random-subset twin (p or BH q >= 0.10); carried by its
+    top 5 trades).'
+  costs: 'R75''s: dated charges, R17 liquidity fills, next-minute fills, stops on the minute low with gap fills at the worse
+    open, one held contract, 1 lot in force'
+holdout_read: false
+verdict: rejected
+notes: 'Signal on the underlying (the indices). Risk shaping, not signal tuning. Research only; nothing changes paper or live.
+  Post hoc: PREREG amendment A1, added after the design results.'
