@@ -102,6 +102,11 @@ def bh(p: np.ndarray) -> np.ndarray:
     return q
 
 
+def cond_name_tested(cname: str) -> bool:
+    """The colour-matched test of the plain colour cell ("all") is zero by construction: not tested."""
+    return cname != "all"
+
+
 def in_range(days, a: date, b: date) -> np.ndarray:
     d = np.asarray(days, dtype=object)
     return np.array([a <= x <= b for x in d], dtype=bool)
@@ -121,6 +126,16 @@ def cell_table(cd: pd.DataFrame, inst: str, tf: str, conds: dict, buckets, horiz
         base_c = {b: float(np.mean(s[ok & (cd.bucket.values == b)] > 0)) if (ok & (cd.bucket.values == b)).any()
                   else np.nan for b in set(cd.bucket.values)}
         bs = np.array([base_s.get(b, np.nan) for b in cd.bucket.values])
+        # colour-matched baseline (NOTES.md deviation D1): every candle of the SAME colour, instrument, timeframe and
+        # bucket, so a market drifting one way does not make one colour look like it "continues"
+        cv = cd.colour.values
+        bkt = cd.bucket.values
+        base_cm = {}
+        for b in set(bkt):
+            for cc in (1, -1):
+                w = ok & (bkt == b) & (cv == cc)
+                base_cm[(b, cc)] = float(np.mean(s[w])) if w.any() else np.nan
+        bcm = np.array([base_cm.get((b, cc), np.nan) for b, cc in zip(bkt, cv)])
         bc = np.array([base_c.get(b, np.nan) for b in cd.bucket.values])
         rng = cd[f"fwd_rng{h}"].values
         for cname, mask in conds.items():
@@ -145,6 +160,11 @@ def cell_table(cd: pd.DataFrame, inst: str, tf: str, conds: dict, buckets, horiz
                     if n >= MIN_N and np.isfinite(se) and se > 0:
                         z = eff / se
                         row.update(z=float(z), p=float(2 * stats.norm.sf(abs(z))))
+                    xc = s[sel] - bcm[sel]
+                    effc, sec = clustered_mean_se(xc, day[sel])
+                    row.update(effect_cm=effc, base_cm=float(np.nanmean(bcm[sel])))
+                    if n >= MIN_N and np.isfinite(sec) and sec > 0 and cond_name_tested(cname):
+                        row.update(p_cm=float(2 * stats.norm.sf(abs(effc / sec))))
                     for k, hm in (("h1", ~half2), ("h2", half2)):
                         ss = sel & hm
                         row[f"effect_{k}"] = float(np.mean(s[ss] - bs[ss])) if ss.any() else np.nan
@@ -196,52 +216,68 @@ def describe(cd: pd.DataFrame, inst: str, tf: str) -> list[dict]:
     return out
 
 
-def run(instruments=INSTRUMENTS, tfs=TFS, with_daily=True):
-    RESULTS.mkdir(parents=True, exist_ok=True)
+def one_instrument(inst: str, tfs=TFS, with_daily=True) -> tuple[list, list]:
+    """All cells and descriptive rows of one instrument (design only)."""
     rows, desc = [], []
     buckets = ("ALL",) + K.BUCKETS
-    for inst in instruments:
-        for tf in tfs:
-            cd = instrument_candles(inst, tf, upto=DESIGN[1])
-            cd = cd[in_range(cd.day.values, *DESIGN)].reset_index(drop=True)
-            tfn = f"{tf}m"
-            desc += describe(cd, inst, tfn)
-            conds = contexts(cd)
-            shapes = SHAPES_1M if tf == 1 else SHAPES
-            for s in shapes:
-                conds[s] = cd[s].values.astype(bool)
-            if tf == 1:
-                for k in ("close_top20", "close_bottom20"):    # close-only 1m candles have no wicks
-                    conds.pop(k)
-            rows += cell_table(cd, inst, tfn, conds, buckets)
-            print(inst, tfn, len(cd), flush=True)
-        if with_daily:
-            dd = daily_for(inst)
-            for part, (a, b) in (("design", DAY_DESIGN), ("confirm", DAY_CONFIRM)):
-                x = dd[in_range(dd.day.values, a, b)].reset_index(drop=True)
-                conds = contexts(x)
-                for s in SHAPES:
-                    conds[s] = x[s].values.astype(bool)
-                for k in ("above_mean_1atr", "below_mean_1atr", "activity_high", "activity_low", "event_day",
-                          "expiry_week", "dte_11_20", "bigbody_activity_high"):
-                    conds.pop(k)
-                r = cell_table(x, inst, f"day_{part}", conds, ("ALL",))
-                rows += r
-                desc += describe(x.assign(bucket="DAY"), inst, f"day_{part}")
-            print(inst, "day", len(dd), flush=True)
+    for tf in tfs:
+        cd = instrument_candles(inst, tf, upto=DESIGN[1])
+        cd = cd[in_range(cd.day.values, *DESIGN)].reset_index(drop=True)
+        tfn = f"{tf}m"
+        desc += describe(cd, inst, tfn)
+        conds = contexts(cd)
+        shapes = SHAPES_1M if tf == 1 else SHAPES
+        for s in shapes:
+            conds[s] = cd[s].values.astype(bool)
+        if tf == 1:
+            for k in ("close_top20", "close_bottom20"):    # close-only 1m candles have no wicks
+                conds.pop(k)
+        rows += cell_table(cd, inst, tfn, conds, buckets)
+        print(inst, tfn, len(cd), flush=True)
+    if with_daily:
+        dd = daily_for(inst)
+        for part, (a, b) in (("design", DAY_DESIGN), ("confirm", DAY_CONFIRM)):
+            x = dd[in_range(dd.day.values, a, b)].reset_index(drop=True)
+            conds = contexts(x)
+            for s in SHAPES:
+                conds[s] = x[s].values.astype(bool)
+            for k in ("above_mean_1atr", "below_mean_1atr", "activity_high", "activity_low", "event_day",
+                      "expiry_week", "dte_11_20", "bigbody_activity_high"):
+                conds.pop(k)
+            rows += cell_table(x, inst, f"day_{part}", conds, ("ALL",))
+            desc += describe(x.assign(bucket="DAY"), inst, f"day_{part}")
+        print(inst, "day", len(dd), flush=True)
+    return rows, desc
+
+
+def run(instruments=INSTRUMENTS, procs=4):
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    lake_ready()
+    from multiprocessing import Pool
+    with Pool(procs) as pool:
+        parts = pool.map(one_instrument, instruments)
+    rows = [r for p in parts for r in p[0]]
+    desc = [r for p in parts for r in p[1]]
     T = pd.DataFrame(rows)
     # BH families: intraday design per horizon; day design per horizon (confirm rows are not tested)
     T["q"] = np.nan
+    T["q_cm"] = np.nan
+    if "p_cm" not in T:
+        T["p_cm"] = np.nan
     intr = ~T.tf.str.startswith("day")
     for h in K.HORIZONS:
         for fam in (intr, T.tf == "day_design"):
             sel = fam & (T.h == h) & T.p.notna()
             T.loc[sel, "q"] = bh(T.loc[sel, "p"].values)
+            sel = fam & (T.h == h) & T.p_cm.notna()
+            T.loc[sel, "q_cm"] = bh(T.loc[sel, "p_cm"].values)
     T.to_csv(RESULTS / "part1_cells.csv.gz", index=False, float_format="%.5g")
     pd.DataFrame(desc).to_csv(RESULTS / "part1_describe.csv", index=False, float_format="%.5g")
     prim = T[intr & (T.h == PRIMARY_H)]
     summ = {"tested_primary": int(prim.p.notna().sum()), "q_lt_0.10": int((prim.q < Q_GATE).sum()),
             "q_lt_0.10_both_halves": int(((prim.q < Q_GATE) & (np.sign(prim.effect_h1) == np.sign(prim.effect_h2))).sum()),
+            "q_lt_0.10_and_colour_matched_q_lt_0.10": int(((prim.q < Q_GATE) & (prim.q_cm < Q_GATE)).sum()),
+            "colour_matched_q_lt_0.10": int((prim.q_cm < Q_GATE).sum()),
             "day_tested": int(T[(T.tf == "day_design") & (T.h == PRIMARY_H)].p.notna().sum()),
             "day_q_lt_0.10": int((T[(T.tf == "day_design") & (T.h == PRIMARY_H)].q < Q_GATE).sum())}
     (RESULTS / "part1_summary.json").write_text(json.dumps(summ, indent=1))

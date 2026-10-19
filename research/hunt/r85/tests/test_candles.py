@@ -215,3 +215,19 @@ def test_cell_table_finds_a_planted_continuation_and_not_noise():
     assert p_plant < 1e-4
     assert (t[t.cond == "plant"].effect > 0.3).all()
     assert (t[t.cond == "noise"].p > 0.001).all()
+
+
+def test_colour_matched_effect_removes_market_drift():
+    """A market drifting up makes every red candle 'reverse' against the pooled baseline; the colour-matched effect
+    of a random subset of red candles must stay near zero (deviation D1)."""
+    rng = np.random.default_rng(5)
+    n = 6000
+    days = np.repeat(pd.date_range("2025-09-01", periods=200).date, n // 200)
+    col = rng.choice([1, -1], n)
+    u3 = rng.normal(0.3, 1, n)                        # forward move drifts up whatever the colour
+    cd = pd.DataFrame({"day": days, "colour": col, "bucket": "MORNING", "fwd_s3": col * u3, "fwd_rng3": 1.0})
+    sub = rng.random(n) < 0.3
+    t = pd.DataFrame(A.cell_table(cd, "X", "5m", {"subset": sub}, ("ALL",), horizons=(3,)))
+    red = t[t.colour == "red"].iloc[0]
+    assert red.effect < -0.2 and red.p < 1e-3        # the pooled test is fooled by the drift
+    assert abs(red.effect_cm) < 0.1 and red.p_cm > 0.01

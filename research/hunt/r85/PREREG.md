@@ -117,3 +117,29 @@ Per instrument (6) x timeframe (5m, 15m, 1h; 1m direction only; day):
 One experiments entry per Part 2 rule (failures included) and one "not-a-test" entry for Part 1, family `mcx-crypto`,
 so Benjamini-Hochberg counts with the sibling "MCX Data Brain" session. Write-up: `research/HUNT_R85_MCX_CANDLES.md`;
 a FINDINGS line; RESULT.md at the repo root.
+
+## Amendment A1 (19 Oct 2026, after Part 1 on design data, BEFORE any Part 2 P&L): the frozen rules
+
+Part 1 (design only, `results/part1_report.md`): 7,564 cells tested at h = 3; 59 pass BH q < 0.10 on the
+pre-registered baseline; 18 also pass the colour-matched baseline (NOTES.md D1, stricter); 4 of the 18 have a mean move
+larger than an option buyer's round trip (1 lot 1-ITM, evening spread, delta 0.6). No 1-minute cell comes close to
+the cost (the cost is 1.5-4.5 one-minute ATRs). So Part 2 tests exactly these 4 rules, nothing else:
+
+| rule | signal (underlying future, candle close) | direction | option bought | hold | underlying stop |
+|---|---|---|---|---|---|
+| R1 | SILVER 5m red candle, body >= 1 ATR AND option activity >= 2x usual, LATE bucket | reversal | SILVERM 1-ITM CALL | 15 min (3 candles) | the candle's low |
+| R2 | GOLDM 5m red candle in the high-volatility regime (5m ATR > 1.3x its 100-candle median), LULL 14:00-17:00 | reversal | GOLDM 1-ITM CALL | 15 min | the candle's low |
+| R3 | SILVERM 15m red outside bar, PRE-US bucket (17:00 - US open) | continuation | SILVERM 1-ITM PUT | 45 min (3 candles) | the candle's high |
+| R4 | SILVERM 5m red hammer (lower wick >= 60% of range), US-OPEN bucket | reversal | SILVERM 1-ITM CALL | 15 min | the candle's low |
+
+- Signal source of every rule: the MCX future (`spot` of the lake option rows), close-only candles. R1's signal is
+  the big SILVER future, traded through the SILVERM option book (SILVER options are too thin); R2-R4 trade the option
+  on their own future. Option activity (R1) is option-chain context around an underlying signal (CLAUDE.md allows it).
+- One open trade per rule; a signal while a trade is open is skipped. No trade on an option expiry day.
+- Variants (walk-forward picks among them; all counted): premium stop X in {10%, 5%} x profit lock L in {10%, 5%};
+  primary X = 10%, L = 10% (lock: at +L the stop rises to entry + L/2, then trails at peak - L/2).
+- Exits, costs, twins and gates exactly as section 4. BH across the 4 rules on the final twin p. Frozen variant for
+  the final = the best design net (ties -> primary). The final is read once for all 4 rules together.
+- Expected weakness, written down now: 3 of the 4 rules buy calls after red candles on gold / silver, and design
+  (Aug 2025 - Mar 2026) was a strong rally. The colour-matched test removes the simple drift, but a regime change in
+  the final (e.g. silver's July 2026 fall) is the obvious way these can fail.

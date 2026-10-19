@@ -1,0 +1,9 @@
+{
+ "tested_primary": 7564,
+ "q_lt_0.10": 59,
+ "q_lt_0.10_both_halves": 59,
+ "q_lt_0.10_and_colour_matched_q_lt_0.10": 18,
+ "colour_matched_q_lt_0.10": 25,
+ "day_tested": 259,
+ "day_q_lt_0.10": 7
+}

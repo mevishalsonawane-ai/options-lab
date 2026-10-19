@@ -70,13 +70,13 @@ def event_days(sym: str, start: date, end: date) -> set:
 # ------------------------------------------------------------------------------------------------ minutes
 def minutes_from_market(m) -> pd.DataFrame:
     """One row per grid minute: ts, day (date), tod, F, seg (contract segment), act (printed option volume of the
-    ATM-3..+3 legs that minute), exp_day (bool)."""
+    ATM-3..+3 legs that minute), exp_day (bool), gi (the Market grid index, for trading a candle signal)."""
     act = np.zeros(len(m.ts))
     for ii, V in m.legs.values():
         np.add.at(act, ii, V[:, 4])
     t = pd.DatetimeIndex(m.ts)
     return pd.DataFrame({"ts": t, "day": t.date, "tod": m.tod.astype(int), "F": m.F.astype(float),
-                         "seg": m.seg.astype(int), "act": act, "exp_day": m.is_exp})
+                         "seg": m.seg.astype(int), "act": act, "exp_day": m.is_exp, "gi": np.arange(len(m.ts))})
 
 
 def session_minutes(mn: pd.DataFrame) -> pd.DataFrame:
@@ -109,7 +109,10 @@ def build_candles(mn: pd.DataFrame, tf: int) -> pd.DataFrame:
         cs = F[ix]
         rows.append((d, OPEN_M + bb * tf, o, max(o, cs.max()), min(o, cs.min()), cs[-1], len(ix),
                      mn.act.values[ix].sum(), mn.seg.values[ix[-1]], bool(mn.exp_day.values[ix[-1]]), int(ix[-1])))
-    return pd.DataFrame(rows, columns=["day", "start", "o", "h", "l", "c", "n", "act", "seg", "exp_day", "i_last"])
+    cd = pd.DataFrame(rows, columns=["day", "start", "o", "h", "l", "c", "n", "act", "seg", "exp_day", "i_last"])
+    if "gi" in mn:
+        cd["gi"] = mn.gi.values[cd.i_last.values] if len(cd) else []
+    return cd
 
 
 def _ema(x: np.ndarray, span: int) -> np.ndarray:
