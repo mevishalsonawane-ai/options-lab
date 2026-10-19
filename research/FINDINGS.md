@@ -1330,3 +1330,12 @@ Full study: `HUNT_R86C_CATCH_THEM.md` (pre-registered `hunt/r86/PREREG_C.md`, co
 - Buying the VWAP dip on slow-buying days (C1), fading the month-end close (C2), straddles on predicted busy afternoons
   (C3; buying the 11:30 straddle every day lost Rs 124-135 a day) and following unusual OTM option volume (C4: -Rs 1.71
   lakh / -Rs 1.38 lakh on 215 / 256 trades, worse than random minutes) all fail.
+
+## The BANKNIFTY seller detector, improved, on unseen data (R86d, 19 Oct 2026) - 0 of 4 pass; it recognises sellers but does not pay
+Full study: `HUNT_R86D_SELLER_DETECTOR.md` (pre-registered `hunt/r86/PREREG_D.md`, commit 544ddd5; post-hoc design
+committed a9624bc before the one read of 1 Jan 2025 - 14 Oct 2026). Signal on the underlying; short at 09:45.
+- On the unseen window the detector still ranks heavy FII-selling mornings well (AUC 0.72-0.74), but shorting them lost:
+  R86c's C6 as it was -Rs 10,477 on 23 trades (it made +Rs 36,188 on 13 in 2023-24); pooled training -Rs 50,470 (31);
+  hold to 15:15 -Rs 5,084 (23); the plain gap-down rule -Rs 16,336 (25); combined -Rs 41,361 (62). Win rate 32-39%.
+- Bought as an ATM put, three versions were +Rs 7.5k to +Rs 17.7k, all negative without their top 5. Rejected: a seller
+  at work at 09:45 has usually finished its push; the bounce hits the stop.
