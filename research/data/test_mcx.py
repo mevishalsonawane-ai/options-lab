@@ -210,3 +210,31 @@ def test_volume_rule_returns_to_the_busy_near_month():
     held = m.groupby(m.ts.dt.date).expiry.first()
     assert held[D(2026, 9, 2)] == D(2027, 3, 31) and held[D(2026, 9, 3)] == D(2026, 10, 30)
     assert list(r.day) == [D(2026, 9, 3)] and r.gap.iloc[0] == pytest.approx(880 - 901)
+
+
+class _Resp:
+    status_code, ok = 504, False
+
+    def json(self):
+        return {}
+
+
+def test_dhan_retries_follow_the_setting(monkeypatch):
+    import dhan_client as dh
+    calls = []
+
+    class S:
+        def post(self, *a, **k):
+            calls.append(1)
+            return _Resp()
+
+    monkeypatch.setattr(dh, "_TOK", "t"); monkeypatch.setattr(dh, "_CID", "c")
+    monkeypatch.setattr(dh._S, "s", S(), raising=False)
+    monkeypatch.setattr(dh.time, "sleep", lambda s: None)
+    monkeypatch.setattr(dh, "PACE", dh.Pacer(0))
+    monkeypatch.setattr(dh, "RETRIES", 2)
+    st, js, err = dh.post("/x", {})
+    assert st == -1 and "504" in err and len(calls) == 2
+    calls.clear()
+    dh.post("/x", {}, retries=3)
+    assert len(calls) == 3

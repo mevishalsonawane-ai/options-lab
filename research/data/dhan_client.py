@@ -50,8 +50,12 @@ PACE = Pacer(float(os.environ.get("DHAN_GAP", "0.25")))
 _S = threading.local()
 
 
-def post(path, body, retries=6):
-    """Returns (status, json or None, error string ''/short)."""
+RETRIES = int(os.environ.get("DHAN_RETRIES", "6"))  # 20 Oct 2026: 2 fails fast on 504s; a later pass retries them
+
+
+def post(path, body, retries=None):
+    """Returns (status, json or None, error string ''/short). retries defaults to DHAN_RETRIES (6)."""
+    retries = RETRIES if retries is None else retries
     if not _TOK or not _CID:
         return 0, None, "credentials missing"
     if not hasattr(_S, "s"):
