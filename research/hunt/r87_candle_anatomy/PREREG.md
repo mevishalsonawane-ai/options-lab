@@ -182,3 +182,14 @@ a handful of BANKNIFTY / SENSEX months. Decided now, before any statistic:
 4. The option table is built ONCE (`data.option_minutes` caches it) right after this amendment is committed; the
    atlas, the real-premium checks and the holdout all use that snapshot (listed in the write-up). Later downloads are
    not used and nothing is re-run because more data arrived.
+
+## Amendment A2 (19 Oct 2026, AFTER the first design atlas run, BEFORE rule selection): drop non-sessions
+
+The first design run (`results/atlas_design_v0_summary.json`: P1 23 of 349 cells passed BH, P2 0 of 4,068, P3 0 of 373)
+showed impossible baselines (e.g. NIFTY 1m gravestone doji baseline -1.96 ATR). Cause: Dhan serves weekend mock / test
+sessions with frozen prints (e.g. Sat 7 Aug 2021, 21 Aug 2021, Muhurat 4 Nov 2021), where ATR falls near zero and the
+next real move becomes thousands of "ATR". This is a data bug, not a finding. Fix (`data.clean_sessions`, tested):
+keep weekdays with >= 120 minutes and fewer than half the minutes flat (high == low). Dropped: 13 weekend days per index
+(including two real budget weekend sessions and three short special sessions) and Muhurat. After the fix the largest
+|5-candle move| is 78 ATR on 1m (a real shock), 19 on 5m, 14 on 15m. Every v0 table is discarded and the atlas re-run
+unchanged otherwise. Disclosure: v0 results were seen; nothing else in the method changes because of them.

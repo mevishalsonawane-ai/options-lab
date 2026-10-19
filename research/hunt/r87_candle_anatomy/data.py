@@ -44,9 +44,20 @@ def index_minutes(und: str, refresh: bool = False) -> pd.DataFrame:
     d = session_only(d[["ts", "o", "h", "l", "c"]]).drop_duplicates("ts", keep="last").sort_values("ts")
     d = d[(d.ts.dt.date >= cfg.START) & (d.ts.dt.date <= cfg.END)]
     d = d[(d[["o", "h", "l", "c"]] > 0).all(axis=1)].reset_index(drop=True)
+    d = clean_sessions(d)
     p.parent.mkdir(parents=True, exist_ok=True)
     d.to_parquet(p, compression="zstd")
     return d
+
+
+def clean_sessions(d: pd.DataFrame) -> pd.DataFrame:
+    """PREREG amendment A2: keep regular sessions only. Dhan serves weekend mock / test sessions with frozen prints
+    (e.g. Sat 7 Aug 2021), which give a near-zero ATR and absurd moves. Kept: weekdays with >= 120 minutes and fewer
+    than half the minutes flat (high == low). Dropped as a side effect: the two budget weekend sessions and Muhurat."""
+    day = d.ts.dt.normalize()
+    g = pd.DataFrame(dict(n=d.groupby(day).size(), flat=(d.h == d.l).groupby(day).mean()))
+    ok = g[(g.index.dayofweek < 5) & (g.n >= 120) & (g.flat < 0.5)].index
+    return d[day.isin(ok)].reset_index(drop=True)
 
 
 def option_minutes(und: str, refresh: bool = False) -> pd.DataFrame:

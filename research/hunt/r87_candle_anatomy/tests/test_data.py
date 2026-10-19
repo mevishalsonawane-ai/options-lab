@@ -39,3 +39,15 @@ def test_gex_tilt_sign():
     assert (g.gex_ratio > 0).all()                            # call OI > put OI at ATM -> positive tilt
     o2 = o.assign(oi=np.where(o.side == "C", 100.0, 900.0))
     assert (D.gex_sign_proxy(o2[o2.offset == 0]).gex_ratio < 0).all()
+
+
+def test_clean_sessions_drops_frozen_and_weekend_days():
+    rows = []
+    for d, flat, n in (("2021-08-06", False, 375), ("2021-08-07", False, 375), ("2021-08-09", True, 375),
+                       ("2021-08-10", False, 60)):
+        for r in range(n):
+            ts = pd.Timestamp(d) + pd.Timedelta(minutes=cfg.OPEN_MIN + r)
+            px = 100.0 if flat else 100.0 + r % 3
+            rows.append(dict(ts=ts, o=px, h=px + (0 if flat else 1), l=px, c=px))
+    out = D.clean_sessions(pd.DataFrame(rows))
+    assert sorted(out.ts.dt.date.astype(str).unique()) == ["2021-08-06"]
