@@ -92,6 +92,8 @@ def main() -> None:
         tr.to_csv(cfg.RESULTS / f"rules_final_trades_{rule['id']}.csv", index=False, float_format="%.4f")
         rr.append(dict(id=rule["id"], read=True, stop=stop, **s, twin_mean=float(tw.mean()), twin_p=p, final_pass=ok))
     res["rules"] = rr
+    from . import futcheck
+    res["futures_check"] = [futcheck.check(u) for u in cfg.UNDS]   # descriptive only (PREREG section 1)
     (cfg.RESULTS / "final_summary.json").write_text(json.dumps(res, indent=1, default=str))
     print(json.dumps(res, indent=1, default=str))
 

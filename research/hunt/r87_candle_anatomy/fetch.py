@@ -5,7 +5,7 @@ dhan_client.py (token only from the env vars DHAN_ACCESS_TOKEN / DHAN_CLIENT_ID,
 
     python -I research/hunt/r87_candle_anatomy/fetch.py idx        # NIFTY, BANKNIFTY, SENSEX, INDIAVIX 1-minute spot
     python -I research/hunt/r87_candle_anatomy/fetch.py opt        # rolling options ATM-1..ATM+1, nearest expiry
-    python -I research/hunt/r87_candle_anatomy/fetch.py fut        # 1-minute futures, contracts live today (index + MCX)
+    python -I research/hunt/r87_candle_anatomy/fetch.py fut        # 1-minute index futures, contracts live today
 
 Why these and not the Drive lake: the lake (gdrive:IraAlgo-data-lake) is not reachable from this session and its
 GitHub release is not published (404), so the same Dhan endpoints the lake was built from are called directly.
@@ -64,7 +64,7 @@ def jobs(group: str) -> list:
         J.sort(key=lambda j: abs(int(j.path.split("/")[-2][:-1])))
     elif group == "fut":
         rows = LF.master(str(RAW))
-        want = {"FUTIDX": {"NIFTY", "BANKNIFTY", "SENSEX"}, "FUTCOM": {"CRUDEOIL", "NATURALGAS", "GOLD", "SILVER"}}
+        want = {"FUTIDX": {"NIFTY", "BANKNIFTY", "SENSEX"}}   # MCX candles are R85's (reused, not re-fetched)
         live = sorted((r["UNDERLYING_SYMBOL"], r["SM_EXPIRY_DATE"], r["SECURITY_ID"], r["INSTRUMENT"], r["EXCH_ID"])
                       for r in rows if r["INSTRUMENT"] in want and r["UNDERLYING_SYMBOL"] in want[r["INSTRUMENT"]]
                       and r["SEGMENT"] in ("D", "M"))
