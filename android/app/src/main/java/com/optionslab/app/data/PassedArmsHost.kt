@@ -859,7 +859,11 @@ object PassedArmsHost {
         val due = sigs.filter { (src, x) -> "$today|$src|${x.underlying}|${x.bar.b}|${x.side}" !in b.decided && !now.isBefore(x.entryTime) && DonchianArm.mayFill(x, now) }
         if (due.isEmpty()) return
         val contracts = due.mapNotNull { (_, x) ->
-            val exp = OrbRules.expiryAfter(today, listed(x.underlying).map { it.expiry }.distinct()) ?: return@mapNotNull null
+            // Only a list already saved today (never a download started from here: the entries themselves ask for one).
+            val l = runCatching { if (x.underlying == Paper.BFO_UNDERLYING) Market.cachedBfoContracts() else Market.cachedContracts() }.getOrNull()
+                ?.takeIf { it.first == today }?.second?.filter { it.underlying == x.underlying }.orEmpty()
+            if (l.isEmpty()) return@mapNotNull null
+            val exp = OrbRules.expiryAfter(today, l.map { it.expiry }.distinct()) ?: return@mapNotNull null
             Paper.ticketContract(x.underlying, exp, x.strike.toDouble(), if (x.side > 0) Right.CE else Right.PE)
         }.distinctBy { it.symbol }
         // Read on the background scope, so the entries wait [PREWARM_MS] at most even when a read ignores cancellation.
