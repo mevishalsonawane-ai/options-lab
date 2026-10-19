@@ -123,12 +123,13 @@ class PassedArmsHostTest : RobolectricTest() {
         PassedArmsHost.testNoAutoOn = false
         PassedArmsHost.wipe(); bookFile.delete()
         val v = view()
-        assertTrue(PassedArmsHost.SOURCES.all { v.on(it) })
+        // 19 Oct (Boss: "Yes, keep only breadth donchain"): R51 is then set to record only by the 19 Oct update; the others stay on.
+        assertTrue(PassedArmsHost.SOURCES.all { v.on(it) || (it == DonchianArm.SOURCE && v.recording(it)) })
         assertEquals(3, v.log.count { "switched on once by the 15 Oct update" in it && PassedArms.PASSED in it })
         assertTrue(PassedArmsHost.diagLine().contains("on (paper only)") && PassedArmsHost.diagLine().contains(PassedArms.PASSED))
         assertEquals("${DonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, false) })
         AutomationSupport.reloadFromDisk(PassedArmsHost)
-        assertFalse(view().on(DonchianArm.SOURCE))
+        assertFalse(view().on(DonchianArm.SOURCE)); assertFalse(view().recording(DonchianArm.SOURCE))
         assertTrue(view().on(OovArm.SOURCE))
         // Three by the 15 Oct update, R72 Breadth Donchian by its own (16 Oct): four lines, never again.
         assertEquals(4, view().log.count { "switched on once" in it })
@@ -780,6 +781,187 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    // ---- 19 Oct: R51 record only (Boss: "Yes, keep only breadth donchain") ------------------------------------------------------
+
+    private fun recordOnlyR51() {
+        bothDonchians()
+        assertEquals("${DonchianArm.LABEL} is record only: would-be trades, nothing bought.",
+            runBlocking { PassedArmsHost.setMode(DonchianArm.SOURCE, PassedArmsHost.Mode.RECORD, log = false) })
+    }
+
+    private fun buyTitles(label: String) = com.optionslab.app.testing.Background.notifications(context).allNotifications
+        .mapNotNull { com.optionslab.app.testing.Background.title(it) }.filter { it.startsWith("$label bought") }
+
+    /**
+     * R51 record only, R72 on, four indices breaking together: R51's break is a would-be trade (no paper order, no notice, never in
+     * the same-direction cap, here at most 1); R72 on the same bar still buys the same option for real; each closes by its own stop.
+     */
+    @Test fun aRecordOnlyR51BreakIsAWouldBeTradeAndR72StillBuysTheSameBarForReal() {
+        com.optionslab.app.testing.Background.grantNotifications(context)
+        ExposureCapHost.resetForTest(paperOn = true); ExposureCapHost.setMax(1)
+        recordOnlyR51()
+        val v0 = view()
+        assertFalse(v0.on(DonchianArm.SOURCE)); assertTrue(v0.recording(DonchianArm.SOURCE))
+        assertEquals(PassedArmsHost.Mode.RECORD, v0.mode(DonchianArm.SOURCE)); assertEquals(PassedArmsHost.Mode.ON, v0.mode(BreadthDonchianArm.SOURCE))
+        assertEquals("${DonchianArm.LABEL} is already record only (paper only).",
+            runBlocking { PassedArmsHost.setMode(DonchianArm.SOURCE, PassedArmsHost.Mode.RECORD, log = false) })
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        assertEquals(open.toString(), 2, open.size)
+        val dn = open.single { it.arm == DonchianArm.SOURCE }
+        val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
+        assertEquals("R51's is a would-be trade", PassedArmsHost.SHADOW_OFF, dn.shadow)
+        assertNull("never a paper order", dn.orderId)
+        assertTrue("priced at the ask or the last price", dn.entry >= 100.0)
+        assertNull("R72's is a real paper trade", br.shadow)
+        assertTrue(br.orderId != null)
+        assertEquals(dn.symbol, br.symbol)
+        assertEquals("R72's lot only", 65, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
+        assertEquals(1, Paper.state.orders.count { it.symbol == br.symbol && it.action == "BUY" })
+        assertTrue("the would-be trade is never counted by the same-direction cap", ExposureCapHost.today().isEmpty())
+        assertTrue("no buy notice for R51", buyTitles(DonchianArm.LABEL).isEmpty())
+        assertEquals("R72's buy notice", 1, buyTitles(BreadthDonchianArm.LABEL).size)
+        assertTrue(PassedArmsHost.view.value.status.toString(),
+            PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty().let { it.startsWith("would-be ") && "switched to record only" in it })
+        assertTrue(PassedArmsHost.tradeLine(dn, emptyMap()).contains("would-be: switched to record only"))
+        assertEquals("the position popup lists R72's only", listOf(BreadthDonchianArm.LABEL), com.optionslab.ira.ArmExits.of(false, br.symbol).map { it.label })
+        // Decided once: the next pass adds nothing.
+        market(LocalTime.of(9, 21)); breadthMarket(setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
+        assertEquals(2, PassedArmsHost.view.value.open.size)
+        // 09:24 trades at 84 (under -15%): R72's stop sells its lot; R51's would-be closes by its own stop at the price seen.
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        val closed = view().closed
+        val wb = closed.single { it.arm == DonchianArm.SOURCE }
+        assertEquals("stop", wb.why); assertEquals(PassedArmsHost.SHADOW_OFF, wb.shadow); assertEquals(84.0, wb.exit!!, 1e-9)
+        assertTrue("estimated charges of a real round trip", wb.charges > 0)
+        assertEquals("stop", closed.single { it.arm == BreadthDonchianArm.SOURCE }.why)
+        assertEquals(0, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
+        assertEquals("only R72's lot was ever sold", 1, Paper.state.orders.count { it.symbol == br.symbol && it.action == "SELL" })
+        // Counted apart in its record, the diagnostics and Jarvis; read back from its own file.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        val v = view()
+        assertTrue(v.recording(DonchianArm.SOURCE))
+        assertEquals(PassedArmsHost.SHADOW_OFF, v.wouldBeOf(DonchianArm.SOURCE).single().shadow)
+        assertTrue(v.wouldBeOf(BreadthDonchianArm.SOURCE).isEmpty())
+        val d = PassedArmsHost.diagLine()
+        assertTrue(d, d.contains("${DonchianArm.LABEL}: record only (would-be trades, nothing bought) · open 0 · 1 closed -"))
+        assertTrue(d, d.contains("of them 1 would-be -"))
+        val said = PassedArmsHost.facts(v).arms.single { it.source == DonchianArm.SOURCE }
+        assertTrue(said.recordOnly && said.on == false); assertEquals(1, said.wouldBe)
+        assertTrue(com.optionslab.ira.PassedArmsTalk.armWords(said).startsWith("${DonchianArm.LABEL}: record only (would-be trades, nothing bought)."))
+        assertNothingAtZerodha()
+    }
+
+    /** Record only is never mirrored live, even with R51's own Trade live on and out of shadow (Live, AI trades on). */
+    @Test fun aRecordOnlyBreakIsNeverMirroredLiveEvenWithItsTradeLiveOn() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        com.optionslab.app.data.ArmLive.testSync = true
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false) }
+        val sym = "NIFTY26OCT25050CE"
+        kite.instruments += FakeKite.Ins(26_000_001, sym, "NIFTY", day.plusDays(7), 25_050.0, "CE", 65)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        File(context.filesDir, "kite_instruments.json").delete()
+        runBlocking { Broker.instruments() }
+        kite.requests.clear()
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setMode(DonchianArm.SOURCE, PassedArmsHost.Mode.RECORD, log = false) }
+        assertTrue("its pass still runs while record only", PassedArmsHost.wantsPass(9 * 60 + 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        assertEquals(PassedArmsHost.SHADOW_OFF, PassedArmsHost.view.value.open.single().shadow)
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
+        val lv = com.optionslab.app.data.ArmLive.view.value
+        assertTrue(lv.open.none { it.key == DonchianArm.SOURCE } && lv.openShadow.none { it.key == DonchianArm.SOURCE })
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        assertEquals("stop", view().closed.single().why)
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(com.optionslab.app.data.ArmLive.view.value.shadowClosed.none { it.key == DonchianArm.SOURCE })
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * The 19 Oct update sets R51 to record only once (Boss's choice), R72 and the others untouched; a restart never does it again;
+     * an older book (no record-only field) reads as before; the change log's entry is Boss's ask and one tap puts R51 back on.
+     */
+    @Test fun the19OctUpdateSetsR51ToRecordOnlyOnceAndOneTapPutsItBackOn() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val settings = AppSettings.load()
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        val v = view()
+        assertTrue(v.recording(DonchianArm.SOURCE)); assertFalse(v.on(DonchianArm.SOURCE))
+        for (s in listOf(BreadthDonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE)) assertTrue(s, v.on(s))
+        val line = v.log.single { "set to record only by the 19 Oct update" in it }
+        assertTrue(line, "Yes, keep only breadth donchain" in line && "${BreadthDonchianArm.LABEL} stays on" in line)
+        assertEquals("no setting, guard or day lock touched", settings, AppSettings.load())
+        // Once: a restart never sets it again; Boss puts it on, and it stays on.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().recording(DonchianArm.SOURCE))
+        assertTrue(runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) }.contains("paper only"))
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().on(DonchianArm.SOURCE)); assertFalse(view().recording(DonchianArm.SOURCE))
+        assertEquals(1, view().log.count { "set to record only by the 19 Oct update" in it })
+        // The change log's Undo through Autopilot's own setter: record only -> on -> record only (paper only, no PIN).
+        val rec = AutoChange.passedArmRecordOnly(DonchianArm.SOURCE, DonchianArm.LABEL, AutoChange.ON, AutoChange.CHOICE_KEEP_BREADTH)
+        assertTrue(Autopilot.apply(rec, false)!!.contains("record only"))
+        assertTrue(view().recording(DonchianArm.SOURCE))
+        assertTrue(Autopilot.apply(AutoChange.inverse(rec, "undone by you"), false)!!.contains("paper only"))
+        assertTrue(view().on(DonchianArm.SOURCE))
+        assertNull(Autopilot.apply(rec.copy(to = "sideways"), false))
+        // The update's own entry: Boss's ask, kept, once; its Undo puts R51 back on.
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        PassedArmsHost.wipe(); bookFile.delete(); view()
+        fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON &&
+            it.change.target == "paperarm:${DonchianArm.SOURCE}" && it.change.to == AutoChange.RECORD_ONLY }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (entries().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val e = entries().single()
+        assertEquals(AutoChange.Status.KEPT, e.status)
+        assertEquals("your choice", e.by)
+        assertTrue(e.change.reason, e.change.reason.contains("Yes, keep only breadth donchain"))
+        assertTrue(e.note, e.note.contains("${BreadthDonchianArm.LABEL} stays on"))
+        assertFalse("no PIN: paper only", Autopilot.undoNeedsPin(e.id))
+        AutomationSupport.reloadFromDisk(PassedArmsHost); view(); Thread.sleep(200)
+        assertEquals("logged once", 1, entries().size)
+        assertTrue(Autopilot.undo(e.id).startsWith("Undone"))
+        assertTrue(view().on(DonchianArm.SOURCE)); assertFalse(view().recording(DonchianArm.SOURCE))
+        assertTrue("R72 untouched", view().on(BreadthDonchianArm.SOURCE))
+    }
+
+    /** A book from before 19 Oct (no record-only field): read as it was; then the update sets R51 to record only, once. */
+    @Test fun anOlderBookIsReadAsBeforeAndRecordOnlyNeverSitsBesideOn() {
+        val done = listOf(PassedArmsHost.AUTO_ON, PassedArmsHost.LOCK_ON, PassedArmsHost.L25_ON, PassedArmsHost.BREADTH_ON, PassedArmsHost.ST_ON)
+        fun old(extra: org.json.JSONObject.() -> Unit = {}) {
+            PassedArmsHost.wipe()
+            com.optionslab.app.security.Vault.writeFile(bookFile, org.json.JSONObject()
+                .put("armed", org.json.JSONObject().put(DonchianArm.SOURCE, true).put(BreadthDonchianArm.SOURCE, true).put(OovArm.SOURCE, false))
+                .put("migrated", org.json.JSONArray(done)).put("lock306100", true).apply(extra).toString().toByteArray())
+            AutomationSupport.reloadFromDisk(PassedArmsHost)
+        }
+        // With the tests' seam (the update does not act): R51 on, nothing record only.
+        old()
+        view().let { v -> assertTrue(v.on(DonchianArm.SOURCE)); assertTrue(v.recordOnly.isEmpty()); assertTrue(v.on(BreadthDonchianArm.SOURCE)); assertTrue(v.lockOn) }
+        // Record only beside on in a book: on wins (the two never both); an unknown arm is dropped.
+        old { put("recordOnly", org.json.JSONArray(listOf(DonchianArm.SOURCE, "nope", OovArm.SOURCE))) }
+        view().let { v -> assertTrue(v.on(DonchianArm.SOURCE)); assertEquals(setOf(OovArm.SOURCE), v.recordOnly); assertTrue(v.recording(OovArm.SOURCE)) }
+        // The update itself (IraAlgo): R51 on in the older book -> record only, once; R72 untouched.
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        PassedArmsHost.testNoAutoOn = false
+        old()
+        view().let { v -> assertTrue(v.recording(DonchianArm.SOURCE)); assertTrue(v.on(BreadthDonchianArm.SOURCE)) }
+        assertTrue(PassedArmsHost.R51_RECORD in String(com.optionslab.app.security.Vault.readFileSteady(bookFile)!!, Charsets.UTF_8))
+        // R51 already off in an older book: left off.
+        PassedArmsHost.wipe()
+        com.optionslab.app.security.Vault.writeFile(bookFile, org.json.JSONObject().put("armed", org.json.JSONObject().put(DonchianArm.SOURCE, false))
+            .put("migrated", org.json.JSONArray(done)).toString().toByteArray())
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        view().let { v -> assertFalse(v.on(DonchianArm.SOURCE)); assertFalse(v.recording(DonchianArm.SOURCE)) }
+    }
+
     // ---- R72 Breadth Donchian (16 Oct, Boss: "Okay add it") --------------------------------------------------------------------
 
     private val indexKeys = mapOf("NIFTY" to niftyKey, "BANKNIFTY" to "NSE_INDEX|Nifty Bank", "FINNIFTY" to "NSE_INDEX|Nifty Fin Service",
@@ -813,7 +995,8 @@ class PassedArmsHostTest : RobolectricTest() {
         // Never in IraGoldAlgo (its passes never run there either); in IraAlgo on at once, on paper, beside Donchian.
         assertEquals(!com.optionslab.app.BuildConfig.GOLD, v.on(BreadthDonchianArm.SOURCE))
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
-        assertTrue(v.on(DonchianArm.SOURCE))
+        // 19 Oct (Boss: "Yes, keep only breadth donchain"): R51 beside it is record only now (its breaks kept as would-be trades).
+        assertTrue(v.recording(DonchianArm.SOURCE))
         val line = v.log.single { "switched on once by the 16 Oct update" in it }
         for (w in listOf(BreadthDonchianArm.LABEL, PassedArms.PASSED, BreadthDonchianArm.RESEARCH_ID, "Okay add it", "beside ${DonchianArm.LABEL}", BreadthDonchianArm.RISK))
             assertTrue(w, w in line)
@@ -824,7 +1007,7 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertFalse(view().on(BreadthDonchianArm.SOURCE))
-        assertTrue(view().on(DonchianArm.SOURCE))
+        assertTrue(view().recording(DonchianArm.SOURCE))
         assertEquals(1, view().log.count { "switched on once by the 16 Oct update" in it })
         assertEquals("the switch-on day is kept", day, view().breadthSince)
         // A book where the update ran without switching it on (here the tests' own seam) never switches it later; nor an unreadable one.

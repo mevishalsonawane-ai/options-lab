@@ -163,4 +163,29 @@ class PassedArmsTalkTest {
         // Its undo is the arm back on: a paper raise, Boss's tap, no PIN.
         assertEquals(AutoChange.ON, AutoChange.inverse(off, "").to)
     }
+
+    /** 19 Oct (Boss: "Yes, keep only breadth donchain"): record only is said by Jarvis, and its change-log entry is paper, Boss's, no PIN. */
+    @Test fun recordOnlyIsSaidAndItsChangeLogEntryLowersRiskAndUndoesBackOn() {
+        val rec = arm.copy(on = false, recordOnly = true, wouldBe = 2, wouldBeNet = -1_500.0)
+        val w = PassedArmsTalk.answer(PassedArmsTalk.Topic.DONCHIAN, PassedArmsTalk.Facts(listOf(rec), emptyList(), true))
+        assertTrue(w.startsWith("R51 Donchian 20: record only (would-be trades, nothing bought). "), w)
+        assertTrue("(of them 2 would-be, never bought: −₹1,500)" in w, w)
+        assertTrue(PassedArmsTalk.armWords(rec, full = false).startsWith("R51 Donchian 20: record only (would-be trades, nothing bought)."))
+        // Plain off and plain on are said as before; no would-be words without would-be trades.
+        assertTrue(PassedArmsTalk.armWords(arm.copy(on = false)).startsWith("R51 Donchian 20: off."))
+        assertFalse("would-be" in PassedArmsTalk.armWords(arm))
+        val c = AutoChange.passedArmRecordOnly(DonchianArm.SOURCE, DonchianArm.LABEL, AutoChange.ON, AutoChange.CHOICE_KEEP_BREADTH)
+        assertEquals(AutoChange.Kind.PAPER_ARM_ON, c.kind)
+        assertEquals("paperarm:r51_donchian20", c.target)
+        assertEquals(AutoChange.ON to AutoChange.RECORD_ONLY, c.from to c.to)
+        assertEquals(AutoChange.Scope.PAPER, c.scope)
+        assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(c))
+        assertTrue(AutoChange.bossOwn(c.kind))
+        assertFalse(AutoChange.undoNeedsPin(c))
+        assertTrue(c.reason.startsWith("your \"Yes, keep only breadth donchain\" (19 Oct): R51 Donchian 20 set to record only"), c.reason)
+        assertTrue("nothing is bought" in c.reason && "never live" in c.reason, c.reason)
+        // Its undo puts it back on (a paper raise, no PIN); from off, back off.
+        assertEquals(AutoChange.ON, AutoChange.inverse(c, "").to)
+        assertEquals(AutoChange.SWITCHED_OFF, AutoChange.inverse(AutoChange.passedArmRecordOnly(OovArm.SOURCE, OovArm.LABEL, AutoChange.SWITCHED_OFF, "your choice"), "").to)
+    }
 }

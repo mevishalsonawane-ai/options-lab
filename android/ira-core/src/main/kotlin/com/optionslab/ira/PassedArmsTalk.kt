@@ -73,7 +73,14 @@ object PassedArmsTalk {
          * paper book - and its Trade live / Shadow switches, in words; null when not read.
          */
         val live: String? = null,
+        /** 19 Oct (Boss: "Yes, keep only breadth donchain"): set to record only - would-be trades, nothing bought ([on] is false). */
+        val recordOnly: Boolean = false,
+        /** 19 Oct: of [closed], the would-be trades (never bought: record only, the twin rule or the same-direction cap), and their net. */
+        val wouldBe: Int = 0, val wouldBeNet: Double = 0.0,
     )
+
+    /** 19 Oct: a passed arm set to record only, in words (its row, the diagnostics, Jarvis). */
+    const val RECORD_ONLY_WORDS = "record only (would-be trades, nothing bought)"
 
     data class Facts(val arms: List<Arm>, val watch: List<String>, val watchOn: Boolean?, val modelLoaded: Boolean? = null,
                      /** 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock, R66's +5% once +25%), in words; null: unknown. */
@@ -139,7 +146,7 @@ object PassedArmsTalk {
     /** One arm, plain: the label, the switch, the rules, today, the record, the bar. */
     fun armWords(a: Arm, full: Boolean = true): String = buildString {
         append("${label(a.source)}: ")
-        append(when (a.on) { true -> "on (paper book)"; false -> "off"; null -> "its switch could not be read just now" })
+        append(when (a.on) { true -> "on (paper book)"; false -> if (a.recordOnly) RECORD_ONLY_WORDS else "off"; null -> "its switch could not be read just now" })
         a.pausedWhy?.let { append(" (it switched itself off: $it)") }
         append(". ${PassedArms.PASSED}. ")
         // 16 Oct (R73 review): R51's rules with its Supertrend filter when on; the short answer still says the filter is on, and
@@ -152,6 +159,8 @@ object PassedArmsTalk {
         if (a.scores.isNotEmpty()) append(" Today's candidates: ").append(a.scores.joinToString("; ")).append(".")
         append(" Its own record: ")
         append(if (a.closed == 0) "no closed trade yet" else "${a.closed} trade${if (a.closed == 1) "" else "s"}, ${a.wins} won, ${rs(a.net)} after charges")
+        // 19 Oct: the would-be trades (nothing bought) said apart within that record.
+        if (a.wouldBe > 0) append(" (of them ${a.wouldBe} would-be, never bought: ${rs(a.wouldBeNet)})")
         append("; ${apart(a.source)} apart: ${a.apartTrades} trade${if (a.apartTrades == 1) "" else "s"}, ${rs(a.apartNet)}. ")
         append(a.forward).append(". ")
         if (full) append(bar(a.source)).append(". ").append(record(a.source)).append(".")

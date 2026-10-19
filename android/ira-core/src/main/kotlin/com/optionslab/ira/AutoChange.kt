@@ -443,6 +443,11 @@ object AutoChange {
 
     /** The target of a passed-research paper arm's switch ([Kind.PAPER_ARM_ON]): "paperarm:" + its source. */
     const val PAPER_ARM = "paperarm:"
+    /**
+     * 19 Oct (Boss: "Yes, keep only breadth donchain"): a passed paper arm set to RECORD ONLY ([Kind.PAPER_ARM_ON]'s "to"): its breaks are
+     * still decided, each kept as a would-be trade, and nothing is bought. Less risk than on (nothing on the account).
+     */
+    const val RECORD_ONLY = "record only"
 
     /**
      * 15 Oct (Boss: "Both"): the paper arm [source] ([label]) PASSED every research gate ([research]), so under CLAUDE.md's
@@ -454,6 +459,19 @@ object AutoChange {
         "$choice: $label passed every research gate ($research), so under the PAPER rule it trades on paper at once - " +
             "1 lot, its own record, never live; it never carries over to live by itself",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "$label's switch (paper)")
+
+    /**
+     * 19 Oct: the passed paper arm [source] ([label]) set to record only ([RECORD_ONLY]) from [from] ("on" or "off"), on [choice] (Boss's
+     * words): its breaks are kept as would-be trades, nothing is bought. Logged as Boss's (kept); one tap undoes it (back to [from]).
+     * Paper only, no PIN either way; it never carries over to live by itself.
+     */
+    fun passedArmRecordOnly(source: String, label: String, from: String, choice: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, from, RECORD_ONLY,
+        "$choice: $label set to record only - its signals are still decided on the index and each is kept as a would-be trade " +
+            "(its own record, labelled apart); nothing is bought, never live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** 19 Oct: Boss's answer that set R51 Donchian 20 to record only, beside R72 Breadth Donchian (quoted as Boss wrote it). */
+    const val CHOICE_KEEP_BREADTH = "your \"Yes, keep only breadth donchain\" (19 Oct)"
 
     /** The 15 Oct update's words: Boss's "Both" (R51, R52, Solo 2.0). */
     const val CHOICE_BOTH = "your \"Both\" (15 Oct)"

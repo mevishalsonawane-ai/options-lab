@@ -360,9 +360,15 @@ internal object Autopilot {
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.SignalPaperArm.setOnId(id, c.to == AutoChange.ON, log = false) }
             } else if (c.target != AutoChange.TICKET_TARGET) {
                 val source = c.target.removePrefix(AutoChange.PAPER_ARM)
-                if (!c.target.startsWith(AutoChange.PAPER_ARM) || source !in com.optionslab.app.data.PassedArmsHost.SOURCES ||
-                    (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
-                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setArmed(source, c.to == AutoChange.ON, log = false) }
+                // 19 Oct: "record only" (Boss: "Yes, keep only breadth donchain") is the arm's third state: its Undo puts back what it was.
+                val mode = when (c.to) {
+                    AutoChange.ON -> com.optionslab.app.data.PassedArmsHost.Mode.ON
+                    AutoChange.SWITCHED_OFF -> com.optionslab.app.data.PassedArmsHost.Mode.OFF
+                    AutoChange.RECORD_ONLY -> com.optionslab.app.data.PassedArmsHost.Mode.RECORD
+                    else -> null
+                }
+                if (!c.target.startsWith(AutoChange.PAPER_ARM) || source !in com.optionslab.app.data.PassedArmsHost.SOURCES || mode == null) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setMode(source, mode, log = false) }
                 said.takeIf { !it.contains("not ready") }
             } else {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
@@ -1028,7 +1034,7 @@ internal object Autopilot {
      * can never flip it later); on records "off → on" as Boss's (kept, undone in one tap). One lane, in the order Boss flipped it.
      * 16 Oct (R72 review): its words name the arm's own choice ([AutoChange.passedArmChoice]: R72's "Okay add it", not "Both").
      */
-    fun passedArmSwitchedByBoss(source: String, label: String, research: String, on: Boolean) {
+    fun passedArmSwitchedByBoss(source: String, label: String, research: String, on: Boolean, from: String = AutoChange.SWITCHED_OFF) {
         if (!enabled()) return
         scope.launch(trailLane) {
             runCatching {
@@ -1040,8 +1046,48 @@ internal object Autopilot {
                     val target = AutoChange.PAPER_ARM + source
                     val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
                     if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
-                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.passedArmOn(source, label, research, AutoChange.passedArmChoice(source)), AutoChange.Status.KEPT,
-                        System.currentTimeMillis(), today, by = "your choice", note = "switched on from its row; paper only - never live").first
+                    // 19 Oct: on from record only says so, so its Undo puts record only back.
+                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.passedArmOn(source, label, research, AutoChange.passedArmChoice(source)).copy(from = from),
+                        AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = "switched on from its row; paper only - never live").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * 19 Oct: Boss set the passed-research paper arm [source] to record only from its row (from [from]: "on" or "off"): the newest
+     * kept entry of that arm is closed (so its Undo can never flip it later) and "[from] → record only" recorded as Boss's (kept,
+     * undone in one tap). Paper only. One lane with the on / off flips, in the order Boss picked them.
+     */
+    fun passedArmRecordOnlyByBoss(source: String, label: String, from: String) {
+        logRecordOnly(AutoChange.passedArmRecordOnly(source, label, from, "your choice"), "picked on its row; paper only - nothing is bought", once = false)
+    }
+
+    /**
+     * 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): R51 Donchian 20 set to record only once by the update - its breaks are
+     * kept as would-be trades, nothing bought, so it can still be compared with R72 Breadth Donchian (which stays on). Logged once as
+     * Boss's ask (kept); one tap undoes it (back on, paper only, no PIN). Its earlier "on" entry is closed. On Autopilot's own worker.
+     */
+    fun logPassedArmRecordOnly(source: String, label: String) {
+        logRecordOnly(AutoChange.passedArmRecordOnly(source, label, AutoChange.ON, AutoChange.CHOICE_KEEP_BREADTH),
+            "the 19 Oct update (your ask: \"Yes, keep only breadth donchain\"); paper only - ${com.optionslab.engine.orb.BreadthDonchianArm.LABEL} stays on", once = true)
+    }
+
+    /** [c] (an arm set to record only) recorded as Boss's (kept), the arm's newest kept entry closed first; [once]: never twice. */
+    private fun logRecordOnly(c: AutoChange.Change, note: String, once: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    if (once && _book.value.entries.any { it.change.kind == c.kind && it.change.target == c.target && it.change.reason == c.reason }) return@synchronized
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == c.target }
+                    if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()
                 }
             }

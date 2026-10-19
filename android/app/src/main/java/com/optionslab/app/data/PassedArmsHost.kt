@@ -46,6 +46,11 @@ import java.util.Locale
  *    same five 5-minute series Donchian builds (no extra read), its trades in its own rows with Donchian's exits.
  * Every row, notice and answer says [PassedArms.PASSED].
  *
+ * 19 Oct (Boss: "Yes, keep only breadth donchain"): each arm is ON, RECORD ONLY or OFF ([Mode]). Record only: its signals are
+ * decided exactly as when on, but nothing is bought - each becomes a would-be trade ([SHADOW_OFF]) closed by its own exits, never
+ * mirrored live, never on the paper account (so never in the same-direction cap), no notice. The 19 Oct update set R51 Donchian 20
+ * to record only once ([R51_RECORD]), so only R72 Breadth Donchian buys the Donchian breaks and the two can still be compared.
+ *
  * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
  * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
  * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
@@ -123,6 +128,15 @@ object PassedArmsHost {
         "${BreadthDonchianArm.RISK} - its paper book never live; its live copy goes by its own Trade live and Shadow switches"
     /** 16 Oct (Boss: "Update normal Donchian ... T7 supertrend agree"): R73 T7 switched on once for R51 Donchian 20's new entries ([setSupertrend]). */
     internal const val ST_ON = "donchian_st_2026-10-16"
+    /**
+     * 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): R51 Donchian 20 set to record only once, when it was on
+     * ([Book.recordOnly]); R72 Breadth Donchian stays on. Logged as Boss's ask; one tap undoes it (back on).
+     */
+    internal const val R51_RECORD = "r51_record_only_2026-10-19"
+
+    /** An arm's switch: on (paper trades), record only (would-be trades, nothing bought), or off (19 Oct). */
+    enum class Mode { ON, RECORD, OFF }
+
     /** A filtered break Supertrend could not judge (skipped): its status words, counted on the row and in the diagnostics. */
     internal const val ST_UNJUDGED = "Supertrend cannot be judged yet (no earlier session in), so not taken"
     /**
@@ -184,7 +198,8 @@ object PassedArmsHost {
         val st: Boolean = false,
         /**
          * 19 Oct: a WOULD-BE trade, never on the paper account - [SHADOW_TWIN]: R51 Donchian 20 or R72 Breadth Donchian already
-         * held this very option (Boss: no duplicate Donchian contracts); [SHADOW_CAP]: the same-direction cap refused it. Bought
+         * held this very option (Boss: no duplicate Donchian contracts); [SHADOW_CAP]: the same-direction cap refused it;
+         * [SHADOW_OFF]: the arm is set to record only. Bought
          * and sold at the prices seen, with estimated charges, by the arm's own exits, so its record (and the R72-vs-R51
          * comparison) still counts it; labelled apart everywhere; never mirrored live. Null: a real paper trade.
          */
@@ -230,10 +245,15 @@ object PassedArmsHost {
         var stOn: Boolean = false,
         /** 16 Oct: the day R72 Breadth Donchian was first switched on (Boss's comparison counts from it); null: never on. */
         var breadthSince: LocalDate? = null,
+        /** 19 Oct: the arms set to record only ([Mode.RECORD]): never also in [armed] as on. */
+        val recordOnly: MutableSet<String> = HashSet(),
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), HashMap(status), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly))
+
+        /** [source]'s entries run this pass: on, or record only. */
+        fun active(source: String): Boolean = armed[source] == true || source in recordOnly
     }
 
     /** What the rows and Jarvis read (memory only). */
@@ -254,8 +274,15 @@ object PassedArmsHost {
         val breadthSince: LocalDate? = null,
         /** 16 Oct (R73 review): today's R51 breaks the Supertrend filter skipped because it could not judge them. */
         val stUnjudged: Int = 0,
+        /** 19 Oct: the arms set to record only (would-be trades, nothing bought). */
+        val recordOnly: Set<String> = emptySet(),
     ) {
         fun on(source: String): Boolean = armed[source] == true
+        /** 19 Oct: [source] is record only (its breaks kept as would-be trades, nothing bought). */
+        fun recording(source: String): Boolean = !on(source) && source in recordOnly
+        fun mode(source: String): Mode = if (on(source)) Mode.ON else if (recording(source)) Mode.RECORD else Mode.OFF
+        /** 19 Oct: [source]'s closed would-be trades (record only, the twin rule, the cap: never bought), within [closedOf]. */
+        fun wouldBeOf(source: String): List<Pos> = closedOf(source).filter { it.shadow != null }
         fun closedOf(source: String): List<Pos> = all.filter { it.arm == source }
         fun todayOf(source: String): List<Pos> = today.filter { it.arm == source }
         /** Today's running P&L of [source]: closed after charges, open at the last price before charges. */
@@ -317,6 +344,8 @@ object PassedArmsHost {
             b.l25On = o.optBoolean("lockL25", false)
             b.breadthSince = o.optString("breadthSince").ifEmpty { null }?.let { LocalDate.parse(it) }
             b.stOn = o.optBoolean("donchianST", false)
+            // 19 Oct: absent in an older book (no arm record only); never beside "on" (on wins).
+            o.optJSONArray("recordOnly")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { it in SOURCES && b.armed[it] != true }?.let { b.recordOnly += it } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
         cache = b
         // 15 Oct (the PAPER rule): on once, on paper. A book that could not be read is never switched on by itself (Boss may
@@ -384,6 +413,23 @@ object PassedArmsHost {
             }
             save(b)
         }
+        // 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): only R72 Breadth Donchian buys the Donchian breaks on paper; R51
+        // Donchian 20, when on, is set to record only once - its breaks still decided, each kept as a would-be trade (nothing bought),
+        // so the two can still be compared. Logged as Boss's ask in the change timeline (one tap puts it back on). R72, Liquidity, the
+        // daily loss limit, the day lock and every guard are not touched. Same care: never an unreadable book, never in Gold.
+        if (R51_RECORD !in b.migrated) {
+            b.migrated += R51_RECORD
+            val s = DonchianArm.SOURCE
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && b.armed[s] == true) {
+                b.armed[s] = false
+                b.recordOnly += s
+                note(b, "${label(s)} set to record only by the 19 Oct update, your \"Yes, keep only breadth donchain\": its breaks are kept as " +
+                    "would-be trades, nothing is bought; ${BreadthDonchianArm.LABEL} stays on" +
+                    if (b.positions.any { it.arm == s && it.open && it.shadow == null }) "; what it holds still closes by its own exits" else "")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedArmRecordOnly(s, label(s)) }
+            }
+            save(b)
+        }
         return b
     }
 
@@ -430,6 +476,7 @@ object PassedArmsHost {
         o.put("lockL25", b.l25On)
         b.breadthSince?.let { o.put("breadthSince", it.toString()) }
         o.put("donchianST", b.stOn)
+        o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         // 19 Oct (order speed): written on this book's own writer thread ([writer]), never under [lock] on the caller's - an
@@ -473,7 +520,7 @@ object PassedArmsHost {
         val closed = b.positions.filter { !it.open }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
-            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today))
+            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet())
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -539,11 +586,11 @@ object PassedArmsHost {
     fun holding(): Boolean = _view.value.open.isNotEmpty()
 
     /**
-     * The watch needs this host's pass now (memory only): a position is held, or an arm is on and the time is 09:19 .. 15:16
+     * The watch needs this host's pass now (memory only): a position is held, or an arm is on (or record only, 19 Oct) and the time is 09:19 .. 15:16
      * (the entries run 09:20 .. 15:10; the 15:15 square-off). Outside that it costs the watch nothing.
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean =
-        holding() || (_view.value.armed.values.any { it } && minute in WAKE_FROM until WAKE_UNTIL)
+        holding() || ((_view.value.armed.values.any { it } || _view.value.recordOnly.isNotEmpty()) && minute in WAKE_FROM until WAKE_UNTIL)
 
     private const val WAKE_FROM = 9 * 60 + 19
     private const val WAKE_UNTIL = 15 * 60 + 17
@@ -553,23 +600,50 @@ object PassedArmsHost {
      * from the row (Autopilot's change log is told); false for the change log's own Undo. On after the forward bar switched it
      * off: the bar counts from now ([Book.base] / Solo 2.0's baseline).
      */
-    suspend fun setArmed(source: String, on: Boolean, log: Boolean = true): String {
+    suspend fun setArmed(source: String, on: Boolean, log: Boolean = true): String = setMode(source, if (on) Mode.ON else Mode.OFF, log)
+
+    /**
+     * 19 Oct: [source] on, record only or off ([Mode]) - on paper, always; on and record only never both. Record only: its signals are
+     * decided as when on, each kept as a would-be trade, nothing bought. Leaving on sells nothing it holds (its own exits still close
+     * it). [log]: Boss's pick from the row (the change log is told, like [setArmed]); false for the change log's own Undo.
+     */
+    suspend fun setMode(source: String, mode: Mode, log: Boolean = true): String {
         if (!ready() || source !in SOURCES) return "${label(source)} is not ready yet."
         return lock.withLock {
             val b = book()
-            if ((b.armed[source] == true) == on) return@withLock "${label(source)} is already ${if (on) "on" else "off"} (paper only)."
-            b.armed[source] = on
-            if (on && source == BreadthDonchianArm.SOURCE && b.breadthSince == null) b.breadthSince = runCatching { Market.today() }.getOrElse { LocalDate.now() }
-            if (on && b.paused.remove(source) != null) {
+            val was = if (b.armed[source] == true) Mode.ON else if (source in b.recordOnly) Mode.RECORD else Mode.OFF
+            if (was == mode) return@withLock "${label(source)} is already ${modeWord(mode)} (paper only)."
+            b.armed[source] = mode == Mode.ON
+            if (mode == Mode.RECORD) b.recordOnly += source else b.recordOnly -= source
+            if (mode == Mode.ON && source == BreadthDonchianArm.SOURCE && b.breadthSince == null) b.breadthSince = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+            if (mode == Mode.ON && b.paused.remove(source) != null) {
                 val nets = b.positions.filter { it.arm == source && !it.open }.map { it.net ?: 0.0 }
                 if (source == Solo2.SOURCE) SoloMidday.baseline(nets).let { b.soloBase = "${it.from}|${it.peak}" } else b.base[source] = nets.size
             }
-            note(b, "${label(source)} " + if (on) "switched on, paper only" else "switched off" +
-                if (b.positions.any { it.arm == source && it.open }) "; what it holds still closes by its own exits" else "")
+            val holds = if (b.positions.any { it.arm == source && it.open && it.shadow == null }) "; what it holds still closes by its own exits" else ""
+            note(b, "${label(source)} " + when (mode) {
+                Mode.ON -> "switched on, paper only"
+                Mode.RECORD -> "set to record only: its breaks are kept as would-be trades, nothing is bought$holds"
+                Mode.OFF -> "switched off$holds"
+            })
             save(b)
-            if (log) runCatching { com.optionslab.app.ira.Autopilot.passedArmSwitchedByBoss(source, label(source), research(source), on) }
-            if (on) "${label(source)} on, paper only. ${PassedArms.PASSED}." else "${label(source)} off."
+            if (log) runCatching {
+                if (mode == Mode.RECORD) com.optionslab.app.ira.Autopilot.passedArmRecordOnlyByBoss(source, label(source), modeChange(was))
+                else com.optionslab.app.ira.Autopilot.passedArmSwitchedByBoss(source, label(source), research(source), mode == Mode.ON, modeChange(was))
+            }
+            when (mode) {
+                Mode.ON -> "${label(source)} on, paper only. ${PassedArms.PASSED}."
+                Mode.RECORD -> "${label(source)} is record only: would-be trades, nothing bought."
+                Mode.OFF -> "${label(source)} off."
+            }
         }
+    }
+
+    private fun modeWord(m: Mode): String = when (m) { Mode.ON -> "on"; Mode.RECORD -> "record only"; Mode.OFF -> "off" }
+
+    /** [m] as the change log's "from" / "to" ([com.optionslab.ira.AutoChange]). */
+    private fun modeChange(m: Mode): String = when (m) {
+        Mode.ON -> com.optionslab.ira.AutoChange.ON; Mode.RECORD -> com.optionslab.ira.AutoChange.RECORD_ONLY; Mode.OFF -> com.optionslab.ira.AutoChange.SWITCHED_OFF
     }
 
     /** R64's lock in words (the notes, the notices). */
@@ -640,8 +714,13 @@ object PassedArmsHost {
         return SOURCES.joinToString("\n") { s ->
             val c = v.closedOf(s)
             val ap = c.filter { it.index == apart(s) }
-            "${label(s)}: ${if (v.on(s)) "on (paper only)" else "off"}${v.paused[s]?.let { " (switched itself off: $it)" } ?: ""} · open ${v.open.count { it.arm == s }} · " +
-                "${c.size} closed %,.0f after charges · ${apart(s)} ${ap.size} %,.0f · ".format(Locale.ENGLISH, c.sumOf { it.net ?: 0.0 }, ap.sumOf { it.net ?: 0.0 }) +
+            val wb = v.wouldBeOf(s)
+            "${label(s)}: ${if (v.on(s)) "on (paper only)" else if (v.recording(s)) com.optionslab.ira.PassedArmsTalk.RECORD_ONLY_WORDS else "off"}" +
+                "${v.paused[s]?.let { " (switched itself off: $it)" } ?: ""} · open ${v.open.count { it.arm == s }} · " +
+                "${c.size} closed %,.0f after charges · ".format(Locale.ENGLISH, c.sumOf { it.net ?: 0.0 }) +
+                // 19 Oct: the would-be trades (nothing bought) counted apart within that record.
+                (if (wb.isNotEmpty()) "of them ${wb.size} would-be %,.0f · ".format(Locale.ENGLISH, wb.sumOf { it.net ?: 0.0 }) else "") +
+                "${apart(s)} ${ap.size} %,.0f · ".format(Locale.ENGLISH, ap.sumOf { it.net ?: 0.0 }) +
                 v.forwardLine(s) + " · 30-60-100 lock ${if (v.lockOn) "on" else "off"} for new trades, ${c.count { it.lock }} closed on it " +
                     "%,.0f, ${c.count { !it.lock }} on the research exits %,.0f".format(Locale.ENGLISH, c.filter { it.lock }.sumOf { it.net ?: 0.0 },
                         c.filter { !it.lock }.sumOf { it.net ?: 0.0 }) +
@@ -750,7 +829,7 @@ object PassedArmsHost {
     }
 
     private suspend fun reads(now: LocalDateTime, v: View): Reads {
-        val want = SOURCES.filter { v.on(it) }.flatMap { underlyings(it) }.distinct()
+        val want = SOURCES.filter { v.on(it) || v.recording(it) }.flatMap { underlyings(it) }.distinct()
         val minute = now.withSecond(0).withNano(0)
         // 16 Oct ("Signal to order took up to 6.5 s"): the underlyings' minutes and the VIX are read side by side, not one
         // after another (each read was a network wait the entry stood behind). Same reads, same bars.
@@ -762,7 +841,7 @@ object PassedArmsHost {
                 }
             }
             val vix = async(kotlinx.coroutines.Dispatchers.IO) {
-                if (v.on(Solo2.SOURCE)) runCatching { minutes(Upstox.INDEX_KEYS.getValue("INDIAVIX"), now) }.getOrNull() else null
+                if (v.on(Solo2.SOURCE) || v.recording(Solo2.SOURCE)) runCatching { minutes(Upstox.INDEX_KEYS.getValue("INDIAVIX"), now) }.getOrNull() else null
             }
             val out = HashMap<String, List<Bar>?>()
             for ((u, d) in reads) out[u] = d.await()
@@ -807,20 +886,21 @@ object PassedArmsHost {
             if (changed) save(b) else publish(b)
         }
         val v = _view.value
-        if (!v.armed.values.any { it } || !entryMinute(now.toLocalTime())) return
+        if ((!v.armed.values.any { it } && v.recordOnly.isEmpty()) || !entryMinute(now.toLocalTime())) return
         if (!entryLock.tryLock()) return
         try {
             val reads = runCatching { reads(now, v) }.getOrNull() ?: return
             val (work, n0, log0, sc0) = lock.withLock { val b = book(); Quad(b.copy(), b.positions.size, b.log.size, b.scores.size) }
+            // 19 Oct: an arm set to record only runs here too (its breaks become would-be trades in [buyOne]).
             // 19 Oct (order speed): this bar's due Donchian options priced side by side first, not one after another inside each
             // index's entry (each a network wait when the stream does not have the option yet). Memory and reads only.
             runCatching { prewarm(work, now, reads) }
             val st0 = HashMap(work.status)
             var changed = false
-            if (work.armed[DonchianArm.SOURCE] == true) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
-            if (work.armed[OovArm.SOURCE] == true) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
-            if (work.armed[Solo2.SOURCE] == true) changed = runCatching { solo2(work, now, reads) }.getOrElse { work.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
-            if (work.armed[BreadthDonchianArm.SOURCE] == true) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (work.active(DonchianArm.SOURCE)) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (work.active(OovArm.SOURCE)) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (work.active(Solo2.SOURCE)) changed = runCatching { solo2(work, now, reads) }.getOrElse { work.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (!changed) return
             lock.withLock {
                 val b = book()
@@ -848,8 +928,8 @@ object PassedArmsHost {
      * [PREWARM_MS]; [buyOne] then finds each price in memory. Decides nothing: the entries still make every check.
      */
     private suspend fun prewarm(b: Book, now: LocalDateTime, reads: Reads) {
-        val r51 = b.armed[DonchianArm.SOURCE] == true
-        val r72 = b.armed[BreadthDonchianArm.SOURCE] == true
+        val r51 = b.active(DonchianArm.SOURCE)
+        val r72 = b.active(BreadthDonchianArm.SOURCE)
         if (!r51 && !r72) return
         val today = now.toLocalDate()
         val all = seriesAll(today, reads)
@@ -1010,6 +1090,12 @@ object PassedArmsHost {
         // the entries); the fill itself is priced fresh in Paper.place (2 s at most), as before.
         val q = runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) }.getOrNull()
         val ref = q?.ltp?.takeIf { it > 0 } ?: return BuyStep(null, "${c.symbol}: no fresh price", false)
+        // 19 Oct (Boss: "Yes, keep only breadth donchain"): an arm set to record only buys nothing - its entry is a would-be trade,
+        // priced at the ask when the quote has one (a buyer pays it), else the last price, as the cap's. Never mirrored live, never
+        // on the account (so never counted by the same-direction cap and never a twin for R72), no notice.
+        if (arm in b.recordOnly && b.armed[arm] != true)
+            return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_OFF,
+                "switched to record only"), "would-be", true)
         if (twin != null) {
             // Priced at the twin's own real fill (its spread and slippage paid), never a better price than the account got.
             val p = wouldBe(b, arm, u, c, right, twin.entry, now, setup, idx, atr, keys, breadth, SHADOW_TWIN, "${label(twin.arm)} already holds ${c.symbol}")
@@ -1064,11 +1150,14 @@ object PassedArmsHost {
     const val SHADOW_TWIN = "twin"
     /** [Pos.shadow]: the same-direction cap refused the entry (19 Oct). */
     const val SHADOW_CAP = "cap"
+    /** [Pos.shadow]: the arm is set to record only (19 Oct, Boss: "Yes, keep only breadth donchain"). */
+    const val SHADOW_OFF = "off"
 
     /** Why a would-be trade was not bought, in words. */
     fun shadowWords(p: Pos): String = when (p.shadow) {
         SHADOW_TWIN -> "would-be: the other Donchian arm already held this option"
         SHADOW_CAP -> "would-be: refused by the same-direction cap"
+        SHADOW_OFF -> "would-be: switched to record only"
         else -> ""
     }
 
@@ -1614,7 +1703,8 @@ object PassedArmsHost {
                 c.count { (it.net ?: 0.0) > 0 }, ap.size, ap.sumOf { it.net ?: 0.0 }, v.forwardLine(s), v.paused[s],
                 if (s == Solo2.SOURCE) v.scores else emptyList(), stOn = s == DonchianArm.SOURCE && v.stOn,
                 stUnjudged = if (s == DonchianArm.SOURCE) v.stUnjudged else 0,
-                live = runCatching { ArmLive.armLine(s) }.getOrNull())
+                live = runCatching { ArmLive.armLine(s) }.getOrNull(), recordOnly = v.recording(s),
+                wouldBe = v.wouldBeOf(s).size, wouldBeNet = v.wouldBeOf(s).sumOf { it.net ?: 0.0 })
         }
         val w = runCatching { WatchlistHost.cards() }.getOrDefault(emptyList()).map { com.optionslab.engine.orb.Watchlist.line(it) }
         return com.optionslab.ira.PassedArmsTalk.Facts(arms, w, runCatching { WatchlistHost.on() }.getOrNull(), v.modelLoaded,

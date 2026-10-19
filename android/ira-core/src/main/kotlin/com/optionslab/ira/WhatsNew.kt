@@ -61,6 +61,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 19 Oct (Boss: "Yes, keep only breadth donchain").
+        Entry("2026-10-19-r51-record-only", OCT19, "R51 Donchian 20 records only; R72 trades",
+            "Only R72 Breadth Donchian now buys the Donchian breaks on paper, as you asked. " +
+                "R51 Donchian 20 is set to record only. " +
+                "It still decides every break, but buys nothing; each one is kept as a would-be trade. " +
+                "Would-be trades close by their own stop, target and time exit, and are counted apart. " +
+                "So the two can still be compared on the same days. " +
+                "Each passed arm's row now offers on, record only or off. " +
+                "The change is in the Autopilot change log, and one tap puts R51 back on.",
+            "Home → Strategies → R51 Donchian 20 (Record only); undo it in the Autopilot change log",
+            ask = "how is the donchian arm doing", jarvisOnly = true),
         Entry("2026-10-19-exposure-speed", OCT19, "Faster paper orders and a cap on same-way bets",
             "Paper orders now go in well under a second, because saving the books no longer holds them up. " +
                 "At most two automatic paper option positions may bet the same way on the indices at once. " +

@@ -42,11 +42,12 @@ class PassedArmRowsTest {
 
     private val t0 = LocalDateTime.of(2026, 10, 20, 9, 20, 20)
 
-    private fun show(v: PassedArmsHost.View, w: WatchlistHost.View = WatchlistHost.View(), onArm: (String, Boolean) -> Unit = { _, _ -> }, onWatch: (Boolean) -> Unit = {}) =
+    private fun show(v: PassedArmsHost.View, w: WatchlistHost.View = WatchlistHost.View(), onArm: (String, Boolean) -> Unit = { _, _ -> }, onWatch: (Boolean) -> Unit = {},
+                     onRecord: (String) -> Unit = {}) =
         compose.setContent {
             IraAlgoTheme("light") {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    PassedArmsHost.SOURCES.forEach { s -> PassedArmRowContent(s, v) { onArm(s, it) } }
+                    PassedArmsHost.SOURCES.forEach { s -> PassedArmRowContent(s, v, onRecordOnly = { onRecord(s) }) { onArm(s, it) } }
                     WatchlistCardContent(w, onWatch)
                 }
             }
@@ -80,6 +81,41 @@ class PassedArmRowsTest {
         compose.onNodeWithContentDescription("Paper only: switch ${OovArm.LABEL}").assertIsOff().performClick()
         compose.waitForIdle()
         assertEquals(listOf(DonchianArm.SOURCE to false, OovArm.SOURCE to true), asked)
+    }
+
+    /**
+     * 19 Oct (Boss: "Yes, keep only breadth donchain"): R51 record only - its row says so, its switch is off, "Record only" is picked; its
+     * would-be trades are counted apart in its numbers; any row can pick on, record only or off.
+     */
+    @Test fun aRecordOnlyRowSaysSoAndOffersOnRecordOnlyAndOff() {
+        val armed = ArrayList<Pair<String, Boolean>>()
+        val rec = ArrayList<String>()
+        val wb = PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "NIFTY20OCT2625050CE", "CE", 65, 100.0, t0, null, shadow = PassedArmsHost.SHADOW_OFF)
+        val done = PassedArmsHost.Pos(DonchianArm.SOURCE, "FINNIFTY", "FINNIFTY20OCT2624000PE", "PE", 65, 50.0, t0, null, exit = 60.0,
+            exitTime = t0.plusMinutes(10), why = "target", charges = 50.0, shadow = PassedArmsHost.SHADOW_OFF)
+        val v = PassedArmsHost.View(armed = mapOf(DonchianArm.SOURCE to false, BreadthDonchianArm.SOURCE to true), recordOnly = setOf(DonchianArm.SOURCE),
+            open = listOf(wb), today = listOf(wb, done), all = listOf(done))
+        show(v, onArm = { s, on -> armed += s to on }, onRecord = { rec += it })
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("Record only (would-be trades, nothing bought) · holding 1 (1 would-be)")).assertExists()
+        compose.onNodeWithText(keepNumbersWhole("On · paper · no trade today")).assertExists()
+        compose.onNodeWithContentDescription("Paper only: switch ${DonchianArm.LABEL}").assertIsOff()
+        compose.onNodeWithContentDescription("Record only, nothing bought: ${DonchianArm.LABEL}").assertIsOn()
+        compose.onNodeWithContentDescription("Record only, nothing bought: ${BreadthDonchianArm.LABEL}").assertIsOff()
+        // Its numbers count the would-be trades apart; its dialog says what record only means.
+        compose.onNodeWithContentDescription("About ${DonchianArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(keepNumbersWhole("1 closed (1 would-be, +₹600), +₹600 · FINNIFTY +₹600 · forward test 1/40.")).assertExists()
+        compose.onNodeWithText("Nothing is bought, never live", substring = true).assertExists()
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        // Picking: R72 record only; R51 back on with its switch; R51's ticked "Record only" tapped again: off.
+        compose.onNodeWithContentDescription("Record only, nothing bought: ${BreadthDonchianArm.LABEL}").performClick()
+        compose.onNodeWithContentDescription("Paper only: switch ${DonchianArm.LABEL}").performClick()
+        compose.onNodeWithContentDescription("Record only, nothing bought: ${DonchianArm.LABEL}").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(BreadthDonchianArm.SOURCE), rec)
+        assertEquals(listOf(DonchianArm.SOURCE to true, DonchianArm.SOURCE to false), armed)
     }
 
     @Test fun tappingTheNameOpensTheExplanationAndOkClosesIt() {
