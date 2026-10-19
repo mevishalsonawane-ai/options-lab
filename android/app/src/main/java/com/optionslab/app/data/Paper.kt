@@ -764,10 +764,11 @@ object Paper {
     /**
      * [known]: the contract's quote when the caller has just read it (read here otherwise). [auto]: the arm placing it, for an
      * automatic entry (19 Oct: the same-direction cap counts and may refuse it); null for Boss's own orders and every exit -
-     * those are never capped.
+     * those are never capped. [mirror]: the arm's own live key (ArmLive), when it has one: the cap only logs while that arm's
+     * entry could also be mirrored live (19 Oct review).
      */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
-                      known: Quote? = null, auto: String? = null): Result {
+                      known: Quote? = null, auto: String? = null, mirror: String? = null): Result {
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
         // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than
@@ -780,7 +781,12 @@ object Paper {
         if (auto != null && action.equals("BUY", true) && runCatching { opens(c.symbol, action) }.getOrDefault(false)) {
             val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
             val why = d?.let { capCheck(book(), it) }
-            if (d != null && why != null) {
+            // 19 Oct review: while this entry could also be mirrored live, the cap only logs (a refusal here would skip the live
+            // mirror too); the live door applies the cap to the live order itself.
+            if (d != null && why != null && ExposureCapHost.liveMirrorPossible(mirror)) {
+                runCatching { ExposureCapHost.refused(auto, c.symbol, d, known?.ltp, live = false, applied = false,
+                    why = "$why (logged only: this entry may also go live)") }
+            } else if (d != null && why != null) {
                 runCatching { ExposureCapHost.refused(auto, c.symbol, d, known?.ltp ?: runCatching { streamQuote(c, kept = true) ?: lastQuotes[c.symbol]?.second }.getOrNull()?.ltp,
                     live = false, applied = true, why = why) }
                 return Result(false, why, emptyList(), capped = true)
@@ -812,7 +818,7 @@ object Paper {
         val entry = runCatching { opens(c.symbol, action) }.getOrDefault(true)
         // 19 Oct: an automatic BUY that opens an index option is counted by the same-direction cap ([capCheck]); its way (+1 a
         // call, -1 a put). Exits, sells, Boss's own orders and anything but the index options: null, never asked.
-        val capDir = if (auto != null && action.equals("BUY", true) && entry)
+        val capDir = if (auto != null && action.equals("BUY", true) && entry && !ExposureCapHost.liveMirrorPossible(mirror))
             com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) else null
         val r = locked {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.

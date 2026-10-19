@@ -916,6 +916,30 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     /**
+     * 19 Oct review (CLAUDE.md's LIVE rule): while R72's own entry could also go live (Live, AI trades on, its "Trade live" on and
+     * out of shadow), the no-twin rule steps aside - keeping R72 off the option would skip its live trade too - so both buy, as
+     * before. An arm still in shadow (R51 here) is never live-mirrored, so the rule (and the cap) apply to it.
+     */
+    @Test fun whileBreadthCanGoLiveItsTwinIsBoughtAsBeforeSoItsLiveTradeIsNeverSkipped() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        runBlocking {
+            com.optionslab.app.data.ArmLive.setLive(BreadthDonchianArm.SOURCE, true, pinConfirmed = true, log = false)
+            com.optionslab.app.data.ArmLive.setShadow(BreadthDonchianArm.SOURCE, false, pinConfirmed = true, log = false)
+        }
+        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
+        com.optionslab.app.data.ArmLive.liveFlags()
+        assertTrue(ExposureCapHost.liveMirrorPossible(BreadthDonchianArm.SOURCE))
+        assertFalse("R51 is still in shadow", ExposureCapHost.liveMirrorPossible(DonchianArm.SOURCE))
+        bothDonchians()
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        assertEquals(open.toString(), 2, open.size)
+        assertTrue("both real paper trades", open.all { it.shadow == null && it.orderId != null })
+        assertEquals(130, Paper.state.positions.filter { it.symbol == open.first().symbol }.sumOf { it.quantity })
+    }
+
+    /**
      * A book carried over from before 19 Oct: R51's trade (bought by the arm at 09:20) and R72's own lot of the very same option
      * (each with its own paper lot), as the arms bought them then. Today the arms never buy one option twice (the test above).
      */

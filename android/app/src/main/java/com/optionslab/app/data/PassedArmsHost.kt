@@ -475,7 +475,7 @@ object PassedArmsHost {
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today))
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
-        runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
+        runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
 
     /**
@@ -862,11 +862,9 @@ object PassedArmsHost {
             val exp = OrbRules.expiryAfter(today, listed(x.underlying).map { it.expiry }.distinct()) ?: return@mapNotNull null
             Paper.ticketContract(x.underlying, exp, x.strike.toDouble(), if (x.side > 0) Right.CE else Right.PE)
         }.distinctBy { it.symbol }
-        kotlinx.coroutines.withTimeoutOrNull(PREWARM_MS) {
-            kotlinx.coroutines.coroutineScope {
-                contracts.map { c -> async(Dispatchers.IO) { runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) } } }.forEach { it.await() }
-            }
-        }
+        // Read on the background scope, so the entries wait [PREWARM_MS] at most even when a read ignores cancellation.
+        val reads = contracts.map { c -> background.async { runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) } } }
+        kotlinx.coroutines.withTimeoutOrNull(PREWARM_MS) { reads.forEach { it.await() } }
     }
 
     /** The same trade: one paper order (or, with none, the same option bought at the same time). */
@@ -982,8 +980,11 @@ object PassedArmsHost {
             // 19 Oct (Boss: no duplicate Donchian contracts): R51 Donchian 20 and R72 Breadth Donchian no longer both buy one option -
             // the second is kept as a would-be trade (its record and the R72-vs-R51 comparison still count it). R51 decides
             // first on a bar both break, so R51 holds it and R72 records the would-be; the other way round when R72 held it first.
-            val twin = b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
-                ?: _view.value.open.firstOrNull { it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
+            // 19 Oct review (CLAUDE.md's LIVE rule): only while this arm's entry cannot also be mirrored live - skipping it would
+            // skip its live trade too; then both buy, as before.
+            val twin = if (ExposureCapHost.liveMirrorPossible(arm)) null
+                else b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
+                    ?: _view.value.open.firstOrNull { it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
             // 19 Oct (order speed): each order timed from its own decision ([OrderTiming.ownDecision]), not the run's first.
             val step = OrderTiming.ownDecision { buyOne(b, arm, u, c, right, now, setup, idx, atr, keys, breadth, twin) }
             why = step.why
@@ -1006,7 +1007,8 @@ object PassedArmsHost {
         val q = runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) }.getOrNull()
         val ref = q?.ltp?.takeIf { it > 0 } ?: return BuyStep(null, "${c.symbol}: no fresh price", false)
         if (twin != null) {
-            val p = wouldBe(b, arm, u, c, right, ref, now, setup, idx, atr, keys, breadth, SHADOW_TWIN, "${label(twin.arm)} already holds ${c.symbol}")
+            // Priced at the twin's own real fill (its spread and slippage paid), never a better price than the account got.
+            val p = wouldBe(b, arm, u, c, right, twin.entry, now, setup, idx, atr, keys, breadth, SHADOW_TWIN, "${label(twin.arm)} already holds ${c.symbol}")
             return BuyStep(p, "would-be", true)
         }
         // 16 Oct: the account guard's view shares prices read in the last [Paper.SHARED_QUOTE_MS] (it re-read every held
@@ -1018,9 +1020,11 @@ object PassedArmsHost {
         inFlight += c.symbol
         var why = ""
         val p: Pos = (try {
-            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm))
+            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm), mirror = arm)
             // 19 Oct: the same-direction cap refused it: nothing was bought; kept as a would-be trade at the price seen.
-            if (r.capped) return BuyStep(wouldBe(b, arm, u, c, right, ref, now, setup, idx, atr, keys, breadth, SHADOW_CAP, r.message), r.message, true)
+            // Priced at the ask when the quote has one (a buyer pays it), else the last price.
+            if (r.capped) return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth,
+                SHADOW_CAP, r.message), r.message, true)
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
@@ -1499,7 +1503,9 @@ object PassedArmsHost {
      * overnight one closes at its last mark, else its entry).
      */
     private fun sellWouldBe(b: Book, p: Pos, why: String, ltp: Double?, overnight: Boolean): Pos {
-        val at = ltp ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
+        // A seller gets the bid: the stream's fresh bid when it has one, else the price seen.
+        val bid = runCatching { Paper.contractOf(p.symbol)?.let { Paper.bookNow(it) }?.takeIf { it.ageMs <= FRESH_MS }?.bid }.getOrNull()?.takeIf { it > 0 }
+        val at = (if (ltp != null) bid?.let { minOf(it, ltp) } ?: ltp else null) ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
         val target = PassedArms.targetLevel(p.entry, exitsOf(p))
         val booked = if (why == PassedArms.ExitKind.TARGET.why) PassedArms.booked(PassedArms.ExitKind.TARGET, at, target) else at
         val charges = runCatching {

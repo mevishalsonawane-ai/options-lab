@@ -211,7 +211,10 @@ object Strategies {
     private fun save(b: Book) {
         val bytes = encode(b)
         // 19 Oct: one order of writes with [saveSoon]: a write it left pending is dropped (this newer book carries it).
-        synchronized(writeOrder) { saveSeq++; ownersPending = null; written.write(file, bytes) }
+        synchronized(ioLock) {
+            synchronized(writeOrder) { saveSeq++; ownersPending = null }
+            written.write(file, bytes)
+        }
         cache = b
         hint(b)
     }
@@ -230,19 +233,20 @@ object Strategies {
     }
 
     private class PendingWrite(val seq: Long, val bytes: ByteArray)
-    /** Orders the vault writes of [save] and [saveSoon]; guards [saveSeq] and [ownersPending]. */
+    /** Guards [saveSeq] and [ownersPending]; held only for a moment, never through a write ([saveSoon] never waits on one). */
     private val writeOrder = Any()
+    /** Held through each vault write, taken before [writeOrder]: one write at a time, so the newest book is the last on disk. */
+    private val ioLock = Any()
     private var saveSeq = 0L
     private var ownersPending: PendingWrite? = null
     private val ownersWriter = com.optionslab.ira.WriteBehind(com.optionslab.ira.WriteBehind.thread("strategies-writer")) { flushSoon() }
 
     private fun flushSoon() {
-        synchronized(writeOrder) {
-            val p = ownersPending ?: return
-            ownersPending = null
-            if (p.seq != saveSeq) return
+        synchronized(ioLock) {
+            // Taken under [writeOrder] for a moment: the newest pending book, unless a [save] wrote a newer one since.
+            val p = synchronized(writeOrder) { ownersPending.also { ownersPending = null }?.takeIf { it.seq == saveSeq } } ?: return
             try { written.write(file, p.bytes) } catch (e: Exception) {
-                if (ownersPending == null) ownersPending = p
+                synchronized(writeOrder) { if (ownersPending == null && p.seq == saveSeq) ownersPending = p }
                 runCatching { Diag.record("strategies", "The strategies' book could not be written (${e.javaClass.simpleName}); it is written again with the next change") }
             }
         }
@@ -1094,7 +1098,7 @@ object Strategies {
     suspend fun anyRunning(): Boolean = all().any { it.running }
 
     fun wipe() {
-        synchronized(writeOrder) { ownersPending = null; saveSeq++ }
+        synchronized(ioLock) { synchronized(writeOrder) { ownersPending = null; saveSeq++ } }
         cache = null; runningHint = false; exposureHint = emptyList(); stopHintDay = null; file.delete()
     }
 

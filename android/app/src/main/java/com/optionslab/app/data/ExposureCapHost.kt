@@ -60,7 +60,9 @@ object ExposureCapHost {
             max = SecurePrefs.getInt(K_MAX, SameDirectionCap.DEFAULT_MAX).coerceIn(1, SameDirectionCap.CHOICES.max())
             liveOn = SecurePrefs.getBoolean(K_LIVE, false)
             val log = SecurePrefs.getString(K_LOG).orEmpty().lines().mapNotNull { SameDirectionCap.decode(it) }
-            synchronized(lock) { if (blocked.isEmpty()) blocked = log }
+            // Merged with any refusal kept before this read (never thrown away), oldest first.
+            synchronized(lock) { blocked = (log + blocked).distinct().sortedBy { it.atMs }.takeLast(300) }
+            runCatching { ArmLive.liveFlags() }
         }
         loaded = true
         publish()
@@ -68,6 +70,25 @@ object ExposureCapHost {
 
     /** The paper cap's number while it is on, null while it is off. Memory only (the order path). */
     fun paperMax(): Int? = if (paperOn) max else null
+
+    /**
+     * Whether an arm's paper entry may be mirrored to Zerodha right now (19 Oct review, CLAUDE.md's LIVE rule): the app in Live
+     * with "AI trades go live" on and no paper-only period. While it may, the paper cap and the no-twin rule only LOG what they
+     * would refuse - refusing the paper entry would also skip its live mirror, and a new rule that skips live trades starts in
+     * shadow; the live door applies the cap itself (shadow unless its own switch is on). Memory only: the kept flags (warmed in
+     * the background, [load]) and the period in memory. Unknown flags count as not live (the paper-only period refuses every
+     * live entry at the door anyway until it is read).
+     */
+    fun liveMirrorPossible(mirror: String? = null): Boolean = runCatching {
+        val (app, ai) = ArmLive.liveFlagsKept() ?: return@runCatching false
+        if (!app || !ai || PaperOnly.entryRefusal() != null) return@runCatching false
+        // [mirror]: the arm's own live key, when the caller knows it - its "Trade live" off or its Shadow on sends nothing live.
+        if (mirror == null) return@runCatching true
+        val v = ArmLive.view.value
+        // Its book not read yet (the first seconds after a start, before the positions step reads it): its switches unknown, and
+        // the live mirror itself waits for that read before it sends anything.
+        v.loaded && v.on(mirror) && !v.shadowOn(mirror)
+    }.getOrDefault(false)
 
     /**
      * An entry by [owner] on [symbol] betting [dir] at [price] was refused ([applied]) or, live in shadow, would have been: kept as
@@ -110,7 +131,7 @@ object ExposureCapHost {
     }
 
     /** Re-reads what Bot settings shows (the screen opening; a worker thread). */
-    fun refresh() { if (!loaded) load() else publish() }
+    fun refresh() { if (!loaded) load() else { runCatching { ArmLive.liveFlags() }; publish() } }
 
     // ---- Bot settings -------------------------------------------------------------------------------------------------
 

@@ -539,6 +539,13 @@ object ArmLive {
      * them was written ([SecurePrefs.liveHint]) or the settings were reloaded ([SecurePrefs.generationHint]), as the entry door
      * keeps its kill switch. A read that fails says Paper (nothing goes), and is not kept.
      */
+    /**
+     * [liveFlags] as last read, never reading anything (19 Oct: the same-direction cap asks it on the order path); null when the
+     * settings changed since or it was never read.
+     */
+    internal fun liveFlagsKept(): Pair<Boolean, Boolean>? =
+        liveKept?.takeIf { it.first == SecurePrefs.generationHint && it.second == SecurePrefs.liveHint }?.third
+
     internal fun liveFlags(): Pair<Boolean, Boolean> {
         val g = SecurePrefs.generationHint
         val l = SecurePrefs.liveHint

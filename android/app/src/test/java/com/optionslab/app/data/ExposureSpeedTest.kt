@@ -131,6 +131,7 @@ class ExposureSpeedTest : RobolectricTest() {
 
     @Test fun elevenSameBarPutsLetTwoInAndRefuseNineEachKeptAsAWouldBeEntry() {
         ExposureCapHost.resetForTest(paperOn = true)
+        assertFalse("in Paper no entry can be mirrored live: the cap refuses", ExposureCapHost.liveMirrorPossible())
         val results = nineThirty.map { (arm, c) -> arm to buy(c, arm) }
         val went = results.filter { it.second.ok }
         assertEquals("first to reach the door wins", listOf("R51 Donchian 20", "R51 Donchian 20"), went.map { it.first })

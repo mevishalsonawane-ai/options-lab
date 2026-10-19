@@ -1320,7 +1320,9 @@ object Broker {
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.
         if (exit) return com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }
-            .also { if (o.side == Kite.Side.SELL) ExposureCapHost.liveExited(o.tradingSymbol) }
+            // 19 Oct review: a resting stop (SL / SL-M) is not a close - only a MARKET or LIMIT exit frees a place; a stop that
+            // fills at Zerodha is caught by the next positions read ([ExposureCapHost.livePositions]).
+            .also { if (o.side == Kite.Side.SELL && !o.hasTrigger) ExposureCapHost.liveExited(o.tradingSymbol) }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) {
