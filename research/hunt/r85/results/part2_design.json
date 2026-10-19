@@ -1,0 +1,491 @@
+{
+ "R1": {
+  "desc": "SILVER 5m big red body + option activity >= 2x, LATE -> SILVERM call",
+  "design": {
+   "X05_L05": {
+    "avg_loss": -441.34366315000005,
+    "avg_win": 590.8413149160715,
+    "cost": 3781.9224270874997,
+    "days": 14,
+    "exits": {
+     "fut_stop": 9,
+     "lock": 4,
+     "opt_stop": 1,
+     "time": 3
+    },
+    "fut_gross": 1620.0,
+    "gross": 3504.375,
+    "max_dd": 3324.5772573,
+    "months_below_13k": 0,
+    "net": -277.5474270875002,
+    "net_per_day": -19.824816220535727,
+    "stale": 1,
+    "top5_removed": -3963.52361145,
+    "top5_share": null,
+    "trades": 17,
+    "win_rate": 0.4117647058823529,
+    "worst_day": -1774.89546085,
+    "worst_month": -1774.89546085
+   },
+   "X05_L10": {
+    "avg_loss": -441.34366315000005,
+    "avg_win": 677.5293720039286,
+    "cost": 3784.3560274725,
+    "days": 14,
+    "exits": {
+     "fut_stop": 9,
+     "lock": 1,
+     "opt_stop": 1,
+     "time": 6
+    },
+    "fut_gross": 3300.0,
+    "gross": 4113.625,
+    "max_dd": 3324.5772573,
+    "months_below_13k": 0,
+    "net": 329.2689725274997,
+    "net_per_day": 23.51921232339284,
+    "stale": 1,
+    "top5_removed": -3887.05099065,
+    "top5_share": 12.805093449323907,
+    "trades": 17,
+    "win_rate": 0.4117647058823529,
+    "worst_day": -1774.89546085,
+    "worst_month": -1774.89546085
+   },
+   "X10_L05": {
+    "avg_loss": -435.118628275,
+    "avg_win": 590.8413149160715,
+    "cost": 3782.1720783375,
+    "days": 14,
+    "exits": {
+     "fut_stop": 10,
+     "lock": 4,
+     "time": 3
+    },
+    "fut_gross": 645.0,
+    "gross": 3566.875,
+    "max_dd": 3262.32690855,
+    "months_below_13k": 0,
+    "net": -215.29707833750012,
+    "net_per_day": -15.378362738392866,
+    "stale": 1,
+    "top5_removed": -3901.2732627,
+    "top5_share": null,
+    "trades": 17,
+    "win_rate": 0.4117647058823529,
+    "worst_day": -1774.89546085,
+    "worst_month": -1774.89546085
+   },
+   "X10_L10": {
+    "avg_loss": -435.118628275,
+    "avg_win": 677.5293720039286,
+    "cost": 3784.6056787225,
+    "days": 14,
+    "exits": {
+     "fut_stop": 10,
+     "lock": 1,
+     "time": 6
+    },
+    "fut_gross": 2325.0,
+    "gross": 4176.125,
+    "max_dd": 3262.3269085499996,
+    "months_below_13k": 0,
+    "net": 391.5193212774998,
+    "net_per_day": 27.9656658055357,
+    "stale": 1,
+    "top5_removed": -3824.8006419000003,
+    "top5_share": 10.76912360140988,
+    "trades": 17,
+    "win_rate": 0.4117647058823529,
+    "worst_day": -1774.89546085,
+    "worst_month": -1774.89546085
+   }
+  },
+  "design_twin_mean": -2605.28323033814,
+  "design_twin_p": 0.13572854291417166,
+  "frozen": "X10_L10",
+  "signals": 69,
+  "walk_forward": {
+   "design_net": {
+    "X05_L05": -277.54742708750007,
+    "X05_L10": 329.26897252750007,
+    "X10_L05": -215.2970783375,
+    "X10_L10": 391.5193212775001
+   },
+   "frozen": "X10_L10",
+   "wf_net": -879.1011030274997,
+   "wf_picks": [
+    "X05_L05",
+    "X10_L10",
+    "X10_L10"
+   ]
+  }
+ },
+ "R2": {
+  "desc": "GOLDM 5m red candle, high-volatility regime, LULL -> GOLDM call",
+  "design": {
+   "X05_L05": {
+    "avg_loss": -713.3725019961538,
+    "avg_win": 815.1488555014287,
+    "cost": 38532.086664220005,
+    "days": 33,
+    "exits": {
+     "fut_stop": 56,
+     "lock": 7,
+     "opt_stop": 1,
+     "time": 22
+    },
+    "fut_gross": 39390.0,
+    "gross": 9281.0,
+    "max_dd": 30185.485660277496,
+    "months_below_13k": 0,
+    "net": -29251.086664219998,
+    "net_per_day": -886.3965655824242,
+    "stale": 3,
+    "top5_removed": -38313.74568012,
+    "top5_share": null,
+    "trades": 86,
+    "win_rate": 0.2441860465116279,
+    "worst_day": -9063.52754702,
+    "worst_month": -12355.358310520001
+   },
+   "X05_L10": {
+    "avg_loss": -701.6813337330769,
+    "avg_win": 1239.2490922333334,
+    "cost": 37095.30303245,
+    "days": 33,
+    "exits": {
+     "fut_stop": 56,
+     "opt_stop": 1,
+     "time": 26
+    },
+    "fut_gross": 37550.0,
+    "gross": 13792.5,
+    "max_dd": 24766.34987695,
+    "months_below_13k": 0,
+    "net": -23302.80303245,
+    "net_per_day": -706.1455464378788,
+    "stale": 3,
+    "top5_removed": -38257.64780775,
+    "top5_share": null,
+    "trades": 83,
+    "win_rate": 0.21686746987951808,
+    "worst_day": -9054.70517385,
+    "worst_month": -12346.53593735
+   },
+   "X10_L05": {
+    "avg_loss": -747.4784244169231,
+    "avg_win": 815.1488555014287,
+    "cost": 38516.47162157,
+    "days": 33,
+    "exits": {
+     "fut_stop": 56,
+     "lock": 7,
+     "opt_stop": 1,
+     "time": 22
+    },
+    "fut_gross": 39390.0,
+    "gross": 7048.5,
+    "max_dd": 32402.370617627494,
+    "months_below_13k": 1,
+    "net": -31467.971621569995,
+    "net_per_day": -953.5748976233332,
+    "stale": 3,
+    "top5_removed": -40530.63063747001,
+    "top5_share": null,
+    "trades": 86,
+    "win_rate": 0.2441860465116279,
+    "worst_day": -11280.41250437,
+    "worst_month": -14572.243267869999
+   },
+   "X10_L10": {
+    "avg_loss": -735.7872561538461,
+    "avg_win": 1239.2490922333334,
+    "cost": 37079.6879898,
+    "days": 33,
+    "exits": {
+     "fut_stop": 56,
+     "opt_stop": 1,
+     "time": 26
+    },
+    "fut_gross": 37550.0,
+    "gross": 11560.0,
+    "max_dd": 26983.234834299998,
+    "months_below_13k": 1,
+    "net": -25519.687989799997,
+    "net_per_day": -773.3238784787878,
+    "stale": 3,
+    "top5_removed": -40474.53276509999,
+    "top5_share": null,
+    "trades": 83,
+    "win_rate": 0.21686746987951808,
+    "worst_day": -11271.590131199999,
+    "worst_month": -14563.4208947
+   }
+  },
+  "design_twin_mean": -14636.083163904,
+  "design_twin_p": 0.9281437125748503,
+  "frozen": "X05_L10",
+  "signals": 291,
+  "walk_forward": {
+   "design_net": {
+    "X05_L05": -29251.08666422,
+    "X05_L10": -23302.80303245,
+    "X10_L05": -31467.97162157,
+    "X10_L10": -25519.6879898
+   },
+   "frozen": "X05_L10",
+   "wf_net": -21300.8052836,
+   "wf_picks": [
+    "X10_L10",
+    "X10_L10",
+    "X10_L10"
+   ]
+  }
+ },
+ "R3": {
+  "desc": "SILVERM 15m red outside bar, PRE-US -> SILVERM put",
+  "design": {
+   "X05_L05": {
+    "avg_loss": -1199.1895583075,
+    "avg_win": 839.66997914375,
+    "cost": 7003.791275042499,
+    "days": 21,
+    "exits": {
+     "fut_stop": 4,
+     "lock": 8,
+     "opt_stop": 2,
+     "time": 7
+    },
+    "fut_gross": 18100.0,
+    "gross": 6287.125,
+    "max_dd": 7118.6501344675,
+    "months_below_13k": 0,
+    "net": -716.6662750424995,
+    "net_per_day": -34.12696547821426,
+    "stale": 6,
+    "top5_removed": -8104.41861407125,
+    "top5_share": null,
+    "trades": 21,
+    "win_rate": 0.5714285714285714,
+    "worst_day": -2396.2678099,
+    "worst_month": -2884.9003824
+   },
+   "X05_L10": {
+    "avg_loss": -1074.0726300822728,
+    "avg_win": 1136.0580126192501,
+    "cost": 7004.843804712501,
+    "days": 21,
+    "exits": {
+     "fut_stop": 4,
+     "lock": 3,
+     "opt_stop": 3,
+     "time": 11
+    },
+    "fut_gross": 32810.0,
+    "gross": 6550.625,
+    "max_dd": 7332.240191555,
+    "months_below_13k": 0,
+    "net": -454.2188047125004,
+    "net_per_day": -21.62946689107145,
+    "stale": 7,
+    "top5_removed": -8892.278051912499,
+    "top5_share": null,
+    "trades": 21,
+    "win_rate": 0.47619047619047616,
+    "worst_day": -2396.2678099,
+    "worst_month": -2884.9003824
+   },
+   "X10_L05": {
+    "avg_loss": -1121.90218695625,
+    "avg_win": 820.0417828826922,
+    "cost": 7013.424318175,
+    "days": 21,
+    "exits": {
+     "fut_stop": 5,
+     "lock": 8,
+     "time": 8
+    },
+    "fut_gross": 23480.0,
+    "gross": 8698.75,
+    "max_dd": 4716.6581776,
+    "months_below_13k": 0,
+    "net": 1685.3256818250002,
+    "net_per_day": 80.25360389642859,
+    "stale": 6,
+    "top5_removed": -5702.42665720375,
+    "top5_share": 4.383575482590834,
+    "trades": 21,
+    "win_rate": 0.6190476190476191,
+    "worst_day": -2396.2678099,
+    "worst_month": -2884.9003824
+   },
+   "X10_L10": {
+    "avg_loss": -1045.3031375833334,
+    "avg_win": 1040.4973103087502,
+    "cost": 7019.010514545001,
+    "days": 21,
+    "exits": {
+     "fut_stop": 5,
+     "lock": 4,
+     "time": 12
+    },
+    "fut_gross": 39920.0,
+    "gross": 10097.25,
+    "max_dd": 4340.666071150001,
+    "months_below_13k": 0,
+    "net": 3078.2394854550002,
+    "net_per_day": 146.5828326407143,
+    "stale": 7,
+    "top5_removed": -5359.819761745,
+    "top5_share": 2.7411964816482612,
+    "trades": 21,
+    "win_rate": 0.5714285714285714,
+    "worst_day": -2396.2678099,
+    "worst_month": -2884.9003824
+   }
+  },
+  "design_twin_mean": -5058.76060032956,
+  "design_twin_p": 0.021956087824351298,
+  "frozen": "X10_L10",
+  "signals": 57,
+  "walk_forward": {
+   "design_net": {
+    "X05_L05": -716.6662750425002,
+    "X05_L10": -454.2188047125003,
+    "X10_L05": 1685.325681825,
+    "X10_L10": 3078.239485455
+   },
+   "frozen": "X10_L10",
+   "wf_net": -134.44552445000022,
+   "wf_picks": [
+    "X10_L10",
+    "X10_L10",
+    "X10_L10"
+   ]
+  }
+ },
+ "R4": {
+  "desc": "SILVERM 5m red hammer, US-OPEN -> SILVERM call",
+  "design": {
+   "X05_L05": {
+    "avg_loss": -1156.3320281525785,
+    "avg_win": 809.589520745625,
+    "cost": 18074.300651935002,
+    "days": 41,
+    "exits": {
+     "fut_stop": 18,
+     "lock": 4,
+     "opt_stop": 3,
+     "time": 19
+    },
+    "fut_gross": 5060.0,
+    "gross": -9213.250000000007,
+    "max_dd": 30118.422819032512,
+    "months_below_13k": 1,
+    "net": -27287.550651935013,
+    "net_per_day": -665.550015900854,
+    "stale": 7,
+    "top5_removed": -34898.76772298251,
+    "top5_share": null,
+    "trades": 44,
+    "win_rate": 0.2727272727272727,
+    "worst_day": -4229.3903071,
+    "worst_month": -15689.503596332508
+   },
+   "X05_L10": {
+    "avg_loss": -1188.3636381172798,
+    "avg_win": 782.814791495,
+    "cost": 18053.090781037503,
+    "days": 41,
+    "exits": {
+     "fut_stop": 18,
+     "lock": 2,
+     "opt_stop": 4,
+     "time": 20
+    },
+    "fut_gross": 1095.0,
+    "gross": -14523.125000000007,
+    "max_dd": 35225.31692978502,
+    "months_below_13k": 1,
+    "net": -32576.215781037514,
+    "net_per_day": -794.5418483179882,
+    "stale": 7,
+    "top5_removed": -39244.72996968752,
+    "top5_share": null,
+    "trades": 44,
+    "win_rate": 0.22727272727272727,
+    "worst_day": -6312.091433525007,
+    "worst_month": -20572.296451585007
+   },
+   "X10_L05": {
+    "avg_loss": -1286.09677076875,
+    "avg_win": 809.589520745625,
+    "cost": 18057.6474156525,
+    "days": 41,
+    "exits": {
+     "fut_stop": 20,
+     "lock": 4,
+     "time": 20
+    },
+    "fut_gross": 2545.0,
+    "gross": -13382.375,
+    "max_dd": 34323.060375002504,
+    "months_below_13k": 1,
+    "net": -31440.022415652507,
+    "net_per_day": -766.8298150159148,
+    "stale": 7,
+    "top5_removed": -39051.239486700004,
+    "top5_share": null,
+    "trades": 44,
+    "win_rate": 0.2727272727272727,
+    "worst_day": -6066.7005587525,
+    "worst_month": -19894.1411523025
+   },
+   "X10_L10": {
+    "avg_loss": -1391.632997497353,
+    "avg_win": 782.814791495,
+    "cost": 18025.373999960004,
+    "days": 41,
+    "exits": {
+     "fut_stop": 20,
+     "lock": 2,
+     "opt_stop": 1,
+     "time": 21
+    },
+    "fut_gross": -2500.0,
+    "gross": -21462.0,
+    "max_dd": 42188.64094096,
+    "months_below_13k": 1,
+    "net": -39487.37399996,
+    "net_per_day": -963.1066829258536,
+    "stale": 7,
+    "top5_removed": -46155.88818861001,
+    "top5_share": null,
+    "trades": 44,
+    "win_rate": 0.22727272727272727,
+    "worst_day": -13708.17986921,
+    "worst_month": -27535.620462760002
+   }
+  },
+  "design_twin_mean": -10280.420879291747,
+  "design_twin_p": 0.9860279441117764,
+  "frozen": "X05_L05",
+  "signals": 113,
+  "walk_forward": {
+   "design_net": {
+    "X05_L05": -27287.55065193501,
+    "X05_L10": -32576.21578103751,
+    "X10_L05": -31440.022415652504,
+    "X10_L10": -39487.37399996
+   },
+   "frozen": "X05_L05",
+   "wf_net": -31982.201467602506,
+   "wf_picks": [
+    "X10_L05",
+    "X10_L05",
+    "X05_L05"
+   ]
+  }
+ }
+}

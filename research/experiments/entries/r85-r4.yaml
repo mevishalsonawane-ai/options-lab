@@ -1,0 +1,30 @@
+id: r85-r4
+title: 'R85 R4: SILVERM 5m red hammer, US-OPEN -> SILVERM call'
+family: mcx-crypto
+date: '2026-10-19'
+doc: research/HUNT_R85_MCX_CANDLES.md
+hypothesis: SILVERM 5m red hammer, US-OPEN -> SILVERM call (Part 1 design cell, q < 0.10 on both baselines) earns after strict
+  MCX option costs, 1 lot, in walk-forward and the final.
+data_version: Drive lake options_rolling_1m opt_<SYM>_MONTH_2025/2026 (MCX near future = spot, option minutes ATM-3..+3),
+  fut_daily_continuous; 5 Aug 2025 - 13 Oct 2026 (/dev/shm, not committed)
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-13 (final, read once)
+instruments:
+- SILVERM
+- SILVERM options
+features:
+- 'signal source: the MCX future (close-only candles), option activity as context (R1)'
+model_or_rule: buy the 1-ITM call at the next printed minute; stop premium -X% or the future back through the candle's far
+  end; lock at +L%, trail; hold 3 candles
+settings: research/hunt/r85/PREREG.md amendment A1
+prereg: research/hunt/r85/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Design (5 Aug 2025 - 31 Mar 2026), frozen X05_L05: 44 trades, net Rs -27,288 (gross Rs -9,213, costs Rs -18,074;
+    futures move over the same windows Rs +5,060, diagnostic only); walk-forward (Nov 2025 - Mar 2026) Rs -31,982; design
+    twin p 0.986.'
+  costs: McxCosts option charges + premium half-spread CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90%, GOLDM/SILVERM 0.30/0.60%
+    (from/before 17:00 IST), entry and exit
+holdout_read: false
+verdict: inconclusive
