@@ -1,0 +1,1118 @@
+[
+ {
+  "symbol": "CRUDEOIL",
+  "tf": "1m",
+  "candles": 13049,
+  "days": 15,
+  "first_day": "2026-09-22",
+  "last_day": "2026-10-13",
+  "green": 0.4620277415893938,
+  "red": 0.4468541650701203,
+  "doji": 0.09111809334048586,
+  "median_upper_wick": 0.1111111111111111,
+  "median_lower_wick": 0.125,
+  "close_only_range_share": 0.6,
+  "baseline_cont3": 0.4527215779226276,
+  "baseline_s3": -0.032693198009983035,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 3169,
+    "cont3": 0.4704954244241086,
+    "mean_s3_atr": 0.0074084366276944485
+   },
+   "long unwinding (red, OI down)": {
+    "n": 2670,
+    "cont3": 0.4363295880149813,
+    "mean_s3_atr": -0.060289084649289844
+   },
+   "short build-up (red, OI up)": {
+    "n": 2799,
+    "cont3": 0.4451589853519114,
+    "mean_s3_atr": -0.06686679743175826
+   },
+   "short covering (green, OI down)": {
+    "n": 2520,
+    "cont3": 0.45436507936507936,
+    "mean_s3_atr": -0.03421566396704069
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 1812,
+    "cont3": 0.46688741721854304,
+    "mean_s3_atr": 0.018083148940817938
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 554,
+    "cont3": 0.47653429602888087,
+    "mean_s3_atr": 0.008327193487051918
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 1708,
+    "cont3": 0.45784543325526933,
+    "mean_s3_atr": -0.01977613558219227
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 54,
+    "cont3": 0.3888888888888889,
+    "mean_s3_atr": -0.15582805269347844
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 82,
+    "cont3": 0.5,
+    "mean_s3_atr": -0.19831405767552554
+   },
+   "session MORNING": {
+    "n": 1565,
+    "cont3": 0.44217252396166135,
+    "mean_s3_atr": -0.05673524240731559
+   },
+   "session MIDDAY": {
+    "n": 2451,
+    "cont3": 0.46960424316605465,
+    "mean_s3_atr": -0.026969871096250736
+   },
+   "session LULL": {
+    "n": 2469,
+    "cont3": 0.4637505062778453,
+    "mean_s3_atr": 0.009398594779637674
+   },
+   "session PREUS": {
+    "n": 1649,
+    "cont3": 0.4493632504548211,
+    "mean_s3_atr": -0.05644917653000617
+   },
+   "session USOPEN": {
+    "n": 2079,
+    "cont3": 0.45646945646945647,
+    "mean_s3_atr": -0.03398061638335366
+   },
+   "session LATE": {
+    "n": 1600,
+    "cont3": 0.41875,
+    "mean_s3_atr": -0.056741047887201995
+   }
+  }
+ },
+ {
+  "symbol": "CRUDEOIL",
+  "tf": "5m",
+  "candles": 2610,
+  "days": 15,
+  "first_day": "2026-09-22",
+  "last_day": "2026-10-13",
+  "green": 0.45977011494252873,
+  "red": 0.43831417624521074,
+  "doji": 0.10191570881226053,
+  "median_upper_wick": 0.2,
+  "median_lower_wick": 0.22727272727272727,
+  "close_only_range_share": 0.7727272727272727,
+  "baseline_cont3": 0.4830434782608696,
+  "baseline_s3": 0.043449452217448094,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 608,
+    "cont3": 0.5115131578947368,
+    "mean_s3_atr": 0.06593308152333827
+   },
+   "long unwinding (red, OI down)": {
+    "n": 518,
+    "cont3": 0.47876447876447875,
+    "mean_s3_atr": 0.04384931378038583
+   },
+   "short build-up (red, OI up)": {
+    "n": 590,
+    "cont3": 0.44745762711864406,
+    "mean_s3_atr": -0.03845830099893113
+   },
+   "short covering (green, OI down)": {
+    "n": 549,
+    "cont3": 0.4899817850637523,
+    "mean_s3_atr": 0.08889251884645506
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 292,
+    "cont3": 0.523972602739726,
+    "mean_s3_atr": 0.1749274090475
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 99,
+    "cont3": 0.4444444444444444,
+    "mean_s3_atr": -0.1314710905113624
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 235,
+    "cont3": 0.4851063829787234,
+    "mean_s3_atr": 0.00950814598947247
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 7,
+    "cont3": 0.2857142857142857,
+    "mean_s3_atr": -0.20945999659928533
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 16,
+    "cont3": 0.5625,
+    "mean_s3_atr": -0.1447255485387311
+   },
+   "session MORNING": {
+    "n": 326,
+    "cont3": 0.450920245398773,
+    "mean_s3_atr": -0.0014798147430907752
+   },
+   "session MIDDAY": {
+    "n": 482,
+    "cont3": 0.5062240663900415,
+    "mean_s3_atr": 0.08835356740531305
+   },
+   "session LULL": {
+    "n": 492,
+    "cont3": 0.508130081300813,
+    "mean_s3_atr": 0.05875129509170259
+   },
+   "session PREUS": {
+    "n": 319,
+    "cont3": 0.438871473354232,
+    "mean_s3_atr": -0.08783351522132692
+   },
+   "session USOPEN": {
+    "n": 410,
+    "cont3": 0.47317073170731705,
+    "mean_s3_atr": -0.004313259043400323
+   },
+   "session LATE": {
+    "n": 271,
+    "cont3": 0.5018450184501845,
+    "mean_s3_atr": 0.2166473453700998
+   }
+  }
+ },
+ {
+  "symbol": "GOLD",
+  "tf": "1m",
+  "candles": 5219,
+  "days": 6,
+  "first_day": "2026-10-06",
+  "last_day": "2026-10-13",
+  "green": 0.37229354282429583,
+  "red": 0.38915501053841733,
+  "doji": 0.23855144663728683,
+  "median_upper_wick": 0.0,
+  "median_lower_wick": 0.0,
+  "close_only_range_share": 1.0,
+  "baseline_cont3": 0.4568682013660511,
+  "baseline_s3": -0.09096465247594032,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 765,
+    "cont3": 0.4013071895424837,
+    "mean_s3_atr": -0.24160131718545527
+   },
+   "long unwinding (red, OI down)": {
+    "n": 727,
+    "cont3": 0.45667125171939477,
+    "mean_s3_atr": -0.11616479173421877
+   },
+   "short build-up (red, OI up)": {
+    "n": 775,
+    "cont3": 0.4735483870967742,
+    "mean_s3_atr": -0.018877248562810315
+   },
+   "short covering (green, OI down)": {
+    "n": 675,
+    "cont3": 0.4785185185185185,
+    "mean_s3_atr": -0.023478638706871998
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 1237,
+    "cont3": 0.4333063864187551,
+    "mean_s3_atr": -0.23677030347190525
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 120,
+    "cont3": 0.4,
+    "mean_s3_atr": -0.32686946997326
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 278,
+    "cont3": 0.4352517985611511,
+    "mean_s3_atr": -0.1731719076650783
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 16,
+    "cont3": 0.3125,
+    "mean_s3_atr": -0.6299480017572661
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 26,
+    "cont3": 0.5384615384615384,
+    "mean_s3_atr": 0.11964761898311192
+   },
+   "session MORNING": {
+    "n": 600,
+    "cont3": 0.4666666666666667,
+    "mean_s3_atr": -0.06759913317304454
+   },
+   "session MIDDAY": {
+    "n": 840,
+    "cont3": 0.4654761904761905,
+    "mean_s3_atr": -0.13013675244364603
+   },
+   "session LULL": {
+    "n": 803,
+    "cont3": 0.44956413449564137,
+    "mean_s3_atr": -0.0484152233293619
+   },
+   "session PREUS": {
+    "n": 560,
+    "cont3": 0.4589285714285714,
+    "mean_s3_atr": 0.011396425194790323
+   },
+   "session USOPEN": {
+    "n": 669,
+    "cont3": 0.445440956651719,
+    "mean_s3_atr": -0.19328878989444856
+   },
+   "session LATE": {
+    "n": 481,
+    "cont3": 0.4553014553014553,
+    "mean_s3_atr": -0.09959104494204056
+   }
+  }
+ },
+ {
+  "symbol": "GOLD",
+  "tf": "5m",
+  "candles": 1044,
+  "days": 6,
+  "first_day": "2026-10-06",
+  "last_day": "2026-10-13",
+  "green": 0.4760536398467433,
+  "red": 0.4578544061302682,
+  "doji": 0.06609195402298851,
+  "median_upper_wick": 0.10432213930348258,
+  "median_lower_wick": 0.09796081567373051,
+  "close_only_range_share": 0.941913963653094,
+  "baseline_cont3": 0.44712041884816756,
+  "baseline_s3": -0.08091161942321722,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 232,
+    "cont3": 0.4827586206896552,
+    "mean_s3_atr": -0.1024928634208558
+   },
+   "long unwinding (red, OI down)": {
+    "n": 163,
+    "cont3": 0.43558282208588955,
+    "mean_s3_atr": -0.2579738669744985
+   },
+   "short build-up (red, OI up)": {
+    "n": 256,
+    "cont3": 0.4765625,
+    "mean_s3_atr": 0.19158531748194874
+   },
+   "short covering (green, OI down)": {
+    "n": 216,
+    "cont3": 0.4166666666666667,
+    "mean_s3_atr": -0.19621657723500543
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 134,
+    "cont3": 0.4701492537313433,
+    "mean_s3_atr": -0.02563153227953245
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 14,
+    "cont3": 0.42857142857142855,
+    "mean_s3_atr": -0.2812377120434767
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 38,
+    "cont3": 0.5,
+    "mean_s3_atr": -0.020406239424009057
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 1,
+    "cont3": 0.0,
+    "mean_s3_atr": -3.131378935939196
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 5,
+    "cont3": 0.8,
+    "mean_s3_atr": 0.15933130076856328
+   },
+   "session MORNING": {
+    "n": 129,
+    "cont3": 0.3798449612403101,
+    "mean_s3_atr": -0.13602834046358653
+   },
+   "session MIDDAY": {
+    "n": 203,
+    "cont3": 0.4433497536945813,
+    "mean_s3_atr": -0.140280601422232
+   },
+   "session LULL": {
+    "n": 208,
+    "cont3": 0.4807692307692308,
+    "mean_s3_atr": -0.042593739234546006
+   },
+   "session PREUS": {
+    "n": 133,
+    "cont3": 0.48120300751879697,
+    "mean_s3_atr": 0.19342617876476922
+   },
+   "session USOPEN": {
+    "n": 166,
+    "cont3": 0.42771084337349397,
+    "mean_s3_atr": -0.1990560983778838
+   },
+   "session LATE": {
+    "n": 116,
+    "cont3": 0.45689655172413796,
+    "mean_s3_atr": -0.12990388124876473
+   }
+  }
+ },
+ {
+  "symbol": "GOLDM",
+  "tf": "1m",
+  "candles": 5219,
+  "days": 6,
+  "first_day": "2026-10-06",
+  "last_day": "2026-10-13",
+  "green": 0.4372485150411956,
+  "red": 0.44625407166123776,
+  "doji": 0.11649741329756659,
+  "median_upper_wick": 0.075,
+  "median_lower_wick": 0.06666666666666667,
+  "close_only_range_share": 0.5909090909090909,
+  "baseline_cont3": 0.4699738903394256,
+  "baseline_s3": -0.07502737315267262,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 1243,
+    "cont3": 0.4907481898632341,
+    "mean_s3_atr": -0.03383773269646108
+   },
+   "long unwinding (red, OI down)": {
+    "n": 894,
+    "cont3": 0.4664429530201342,
+    "mean_s3_atr": -0.08269534225008411
+   },
+   "short build-up (red, OI up)": {
+    "n": 1261,
+    "cont3": 0.47581284694686754,
+    "mean_s3_atr": -0.05960239317301987
+   },
+   "short covering (green, OI down)": {
+    "n": 861,
+    "cont3": 0.41579558652729387,
+    "mean_s3_atr": -0.1981180673237056
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 704,
+    "cont3": 0.4303977272727273,
+    "mean_s3_atr": -0.17216290160871878
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 45,
+    "cont3": 0.4,
+    "mean_s3_atr": -0.4075575116275369
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 138,
+    "cont3": 0.4420289855072464,
+    "mean_s3_atr": -0.20888072937592955
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 5,
+    "cont3": 0.2,
+    "mean_s3_atr": -0.6654785047061198
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 11,
+    "cont3": 0.2727272727272727,
+    "mean_s3_atr": -0.6747771746988134
+   },
+   "session MORNING": {
+    "n": 633,
+    "cont3": 0.4755134281200632,
+    "mean_s3_atr": -0.06590224312823431
+   },
+   "session MIDDAY": {
+    "n": 948,
+    "cont3": 0.47151898734177217,
+    "mean_s3_atr": -0.103860694308938
+   },
+   "session LULL": {
+    "n": 947,
+    "cont3": 0.4720168954593453,
+    "mean_s3_atr": -0.053190620698297275
+   },
+   "session PREUS": {
+    "n": 649,
+    "cont3": 0.49768875192604006,
+    "mean_s3_atr": 0.008809311178857514
+   },
+   "session USOPEN": {
+    "n": 811,
+    "cont3": 0.468557336621455,
+    "mean_s3_atr": -0.06482732887438049
+   },
+   "session LATE": {
+    "n": 608,
+    "cont3": 0.4309210526315789,
+    "mean_s3_atr": -0.17667847095609568
+   }
+  }
+ },
+ {
+  "symbol": "GOLDM",
+  "tf": "5m",
+  "candles": 1044,
+  "days": 6,
+  "first_day": "2026-10-06",
+  "last_day": "2026-10-13",
+  "green": 0.4578544061302682,
+  "red": 0.43582375478927204,
+  "doji": 0.10632183908045977,
+  "median_upper_wick": 0.2384506041222459,
+  "median_lower_wick": 0.20204637044015283,
+  "close_only_range_share": 0.7904105656043641,
+  "baseline_cont3": 0.44638949671772427,
+  "baseline_s3": -0.065063705032093,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 263,
+    "cont3": 0.49429657794676807,
+    "mean_s3_atr": -0.11015694985981586
+   },
+   "long unwinding (red, OI down)": {
+    "n": 159,
+    "cont3": 0.46540880503144655,
+    "mean_s3_atr": -0.05109799442015119
+   },
+   "short build-up (red, OI up)": {
+    "n": 283,
+    "cont3": 0.40636042402826855,
+    "mean_s3_atr": 0.014868849682141413
+   },
+   "short covering (green, OI down)": {
+    "n": 195,
+    "cont3": 0.4358974358974359,
+    "mean_s3_atr": -0.12051655834761783
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 100,
+    "cont3": 0.5,
+    "mean_s3_atr": 0.16849983955098277
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 6,
+    "cont3": 0.5,
+    "mean_s3_atr": -0.28239788323620113
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 12,
+    "cont3": 0.4166666666666667,
+    "mean_s3_atr": -0.11180885593124884
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 1,
+    "cont3": 1.0,
+    "mean_s3_atr": 0.8438030560271648
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 2,
+    "cont3": 0.5,
+    "mean_s3_atr": -0.01034825371336813
+   },
+   "session MORNING": {
+    "n": 130,
+    "cont3": 0.3923076923076923,
+    "mean_s3_atr": -0.07832707129827218
+   },
+   "session MIDDAY": {
+    "n": 192,
+    "cont3": 0.4270833333333333,
+    "mean_s3_atr": -0.09466199416883364
+   },
+   "session LULL": {
+    "n": 194,
+    "cont3": 0.5515463917525774,
+    "mean_s3_atr": -0.030129227137477517
+   },
+   "session PREUS": {
+    "n": 126,
+    "cont3": 0.4523809523809524,
+    "mean_s3_atr": 0.15594790324732907
+   },
+   "session USOPEN": {
+    "n": 159,
+    "cont3": 0.41509433962264153,
+    "mean_s3_atr": -0.15919378415377464
+   },
+   "session LATE": {
+    "n": 113,
+    "cont3": 0.39823008849557523,
+    "mean_s3_atr": -0.17347927711667452
+   }
+  }
+ },
+ {
+  "symbol": "NATURALGAS",
+  "tf": "1m",
+  "candles": 9569,
+  "days": 11,
+  "first_day": "2026-09-28",
+  "last_day": "2026-10-13",
+  "green": 0.37422928205664124,
+  "red": 0.3749608109520326,
+  "doji": 0.25080990699132616,
+  "median_upper_wick": 0.0,
+  "median_lower_wick": 0.0,
+  "close_only_range_share": 0.5000000000001421,
+  "baseline_cont3": 0.3791993281075028,
+  "baseline_s3": -0.12287291265150303,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 1802,
+    "cont3": 0.38235294117647056,
+    "mean_s3_atr": -0.07457829046542538
+   },
+   "long unwinding (red, OI down)": {
+    "n": 1381,
+    "cont3": 0.37002172338884864,
+    "mean_s3_atr": -0.1819832780481828
+   },
+   "short build-up (red, OI up)": {
+    "n": 2098,
+    "cont3": 0.3856053384175405,
+    "mean_s3_atr": -0.10476281777313015
+   },
+   "short covering (green, OI down)": {
+    "n": 1660,
+    "cont3": 0.38012048192771086,
+    "mean_s3_atr": -0.13079265512182106
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 1287,
+    "cont3": 0.37839937839937837,
+    "mean_s3_atr": -0.14058316619763442
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 399,
+    "cont3": 0.37092731829573933,
+    "mean_s3_atr": -0.13670902791077458
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 1271,
+    "cont3": 0.3886703383162864,
+    "mean_s3_atr": -0.07792697729070319
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 52,
+    "cont3": 0.40384615384615385,
+    "mean_s3_atr": 0.034009753075001606
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 61,
+    "cont3": 0.4098360655737705,
+    "mean_s3_atr": -0.0477341878599721
+   },
+   "session MORNING": {
+    "n": 841,
+    "cont3": 0.3222354340071344,
+    "mean_s3_atr": -0.14855350886009977
+   },
+   "session MIDDAY": {
+    "n": 1356,
+    "cont3": 0.33112094395280234,
+    "mean_s3_atr": -0.22517370268696596
+   },
+   "session LULL": {
+    "n": 1425,
+    "cont3": 0.35578947368421054,
+    "mean_s3_atr": -0.17082153955821097
+   },
+   "session PREUS": {
+    "n": 1126,
+    "cont3": 0.4689165186500888,
+    "mean_s3_atr": 0.02666152432738706
+   },
+   "session USOPEN": {
+    "n": 1383,
+    "cont3": 0.4164859002169197,
+    "mean_s3_atr": -0.08971002381346643
+   },
+   "session LATE": {
+    "n": 1013,
+    "cont3": 0.37314906219151034,
+    "mean_s3_atr": -0.10865376680713842
+   }
+  }
+ },
+ {
+  "symbol": "NATURALGAS",
+  "tf": "5m",
+  "candles": 1914,
+  "days": 11,
+  "first_day": "2026-09-28",
+  "last_day": "2026-10-13",
+  "green": 0.4278996865203762,
+  "red": 0.4430512016718913,
+  "doji": 0.1290491118077325,
+  "median_upper_wick": 0.24999999999992895,
+  "median_lower_wick": 0.24999999999992895,
+  "close_only_range_share": 0.750000000000071,
+  "baseline_cont3": 0.4338235294117647,
+  "baseline_s3": -0.014409222380186913,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 431,
+    "cont3": 0.46635730858468677,
+    "mean_s3_atr": 0.07344641248811706
+   },
+   "long unwinding (red, OI down)": {
+    "n": 317,
+    "cont3": 0.47318611987381703,
+    "mean_s3_atr": -0.038331945046372155
+   },
+   "short build-up (red, OI up)": {
+    "n": 507,
+    "cont3": 0.4240631163708087,
+    "mean_s3_atr": -0.024051093515768767
+   },
+   "short covering (green, OI down)": {
+    "n": 365,
+    "cont3": 0.38082191780821917,
+    "mean_s3_atr": -0.08348473854859077
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 242,
+    "cont3": 0.4090909090909091,
+    "mean_s3_atr": -0.04408236419437
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 74,
+    "cont3": 0.43243243243243246,
+    "mean_s3_atr": 0.20582686146813342
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 225,
+    "cont3": 0.48444444444444446,
+    "mean_s3_atr": 0.05383527227473784
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 13,
+    "cont3": 0.5384615384615384,
+    "mean_s3_atr": 0.8812707094158837
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 11,
+    "cont3": 0.7272727272727273,
+    "mean_s3_atr": 0.26780128140005766
+   },
+   "session MORNING": {
+    "n": 210,
+    "cont3": 0.37142857142857144,
+    "mean_s3_atr": -0.09040760588899906
+   },
+   "session MIDDAY": {
+    "n": 328,
+    "cont3": 0.375,
+    "mean_s3_atr": -0.09497062195631409
+   },
+   "session LULL": {
+    "n": 351,
+    "cont3": 0.4472934472934473,
+    "mean_s3_atr": 0.057334875452706456
+   },
+   "session PREUS": {
+    "n": 240,
+    "cont3": 0.4583333333333333,
+    "mean_s3_atr": -0.07727598999184092
+   },
+   "session USOPEN": {
+    "n": 306,
+    "cont3": 0.5,
+    "mean_s3_atr": 0.114601255296732
+   },
+   "session LATE": {
+    "n": 197,
+    "cont3": 0.4416243654822335,
+    "mean_s3_atr": -0.05089430199371744
+   }
+  }
+ },
+ {
+  "symbol": "SILVER",
+  "tf": "1m",
+  "candles": 22140,
+  "days": 26,
+  "first_day": "2026-09-07",
+  "last_day": "2026-10-13",
+  "green": 0.41359530261969285,
+  "red": 0.4158988256549232,
+  "doji": 0.17050587172538392,
+  "median_upper_wick": 0.0,
+  "median_lower_wick": 0.0,
+  "close_only_range_share": 0.8875,
+  "baseline_cont3": 0.4802951626127357,
+  "baseline_s3": -0.045301966141158896,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 3558,
+    "cont3": 0.462619449128724,
+    "mean_s3_atr": -0.1389949692570406
+   },
+   "long unwinding (red, OI down)": {
+    "n": 2828,
+    "cont3": 0.4833804809052334,
+    "mean_s3_atr": -0.02693264346668567
+   },
+   "short build-up (red, OI up)": {
+    "n": 4653,
+    "cont3": 0.49344508918977004,
+    "mean_s3_atr": 0.008511210127989041
+   },
+   "short covering (green, OI down)": {
+    "n": 3739,
+    "cont3": 0.4875635196576625,
+    "mean_s3_atr": 0.015729015825205975
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 4614,
+    "cont3": 0.4609882964889467,
+    "mean_s3_atr": -0.09866935261294439
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 1616,
+    "cont3": 0.4412128712871287,
+    "mean_s3_atr": -0.14676410182003413
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 4506,
+    "cont3": 0.4636040834442965,
+    "mean_s3_atr": -0.06631776072835967
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 270,
+    "cont3": 0.4444444444444444,
+    "mean_s3_atr": 0.021650075282894848
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 286,
+    "cont3": 0.4755244755244755,
+    "mean_s3_atr": -0.19457618315298353
+   },
+   "session MORNING": {
+    "n": 2547,
+    "cont3": 0.4895956026698076,
+    "mean_s3_atr": 0.004745216843877324
+   },
+   "session MIDDAY": {
+    "n": 3710,
+    "cont3": 0.4865229110512129,
+    "mean_s3_atr": -0.05432459927376353
+   },
+   "session LULL": {
+    "n": 3673,
+    "cont3": 0.47236591342227063,
+    "mean_s3_atr": -0.07925568275140986
+   },
+   "session PREUS": {
+    "n": 2641,
+    "cont3": 0.49072321090496024,
+    "mean_s3_atr": -0.018441713592795374
+   },
+   "session USOPEN": {
+    "n": 3335,
+    "cont3": 0.4761619190404798,
+    "mean_s3_atr": -0.06359593342226375
+   },
+   "session LATE": {
+    "n": 2389,
+    "cont3": 0.4671410632063625,
+    "mean_s3_atr": -0.03660031320236259
+   }
+  }
+ },
+ {
+  "symbol": "SILVER",
+  "tf": "5m",
+  "candles": 4428,
+  "days": 26,
+  "first_day": "2026-09-07",
+  "last_day": "2026-10-13",
+  "green": 0.4528003613369467,
+  "red": 0.46070460704607047,
+  "doji": 0.08649503161698284,
+  "median_upper_wick": 0.145,
+  "median_lower_wick": 0.151252408477842,
+  "close_only_range_share": 0.8849315068493151,
+  "baseline_cont3": 0.4680100755667506,
+  "baseline_s3": -0.04059419427841402,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 912,
+    "cont3": 0.44627192982456143,
+    "mean_s3_atr": -0.11568816308944654
+   },
+   "long unwinding (red, OI down)": {
+    "n": 703,
+    "cont3": 0.4822190611664296,
+    "mean_s3_atr": -0.0244542549639979
+   },
+   "short build-up (red, OI up)": {
+    "n": 1194,
+    "cont3": 0.4815745393634841,
+    "mean_s3_atr": -0.0023472237181287226
+   },
+   "short covering (green, OI down)": {
+    "n": 923,
+    "cont3": 0.46045503791982667,
+    "mean_s3_atr": -0.048118029148349464
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 597,
+    "cont3": 0.4438860971524288,
+    "mean_s3_atr": -0.04016291557515552
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 196,
+    "cont3": 0.4489795918367347,
+    "mean_s3_atr": -0.07286506128085768
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 574,
+    "cont3": 0.4651567944250871,
+    "mean_s3_atr": -0.05279320979938766
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 29,
+    "cont3": 0.3448275862068966,
+    "mean_s3_atr": -0.39608874356592905
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 29,
+    "cont3": 0.3793103448275862,
+    "mean_s3_atr": -0.09389381822062237
+   },
+   "session MORNING": {
+    "n": 544,
+    "cont3": 0.48161764705882354,
+    "mean_s3_atr": -0.017127557026692428
+   },
+   "session MIDDAY": {
+    "n": 822,
+    "cont3": 0.4732360097323601,
+    "mean_s3_atr": -0.048969545340159085
+   },
+   "session LULL": {
+    "n": 832,
+    "cont3": 0.46634615384615385,
+    "mean_s3_atr": -0.05185690259445048
+   },
+   "session PREUS": {
+    "n": 565,
+    "cont3": 0.4814159292035398,
+    "mean_s3_atr": 0.025819246149372355
+   },
+   "session USOPEN": {
+    "n": 709,
+    "cont3": 0.459802538787024,
+    "mean_s3_atr": -0.023080243926856956
+   },
+   "session LATE": {
+    "n": 498,
+    "cont3": 0.44377510040160645,
+    "mean_s3_atr": -0.1338707473189623
+   }
+  }
+ },
+ {
+  "symbol": "SILVERM",
+  "tf": "1m",
+  "candles": 25621,
+  "days": 30,
+  "first_day": "2026-09-01",
+  "last_day": "2026-10-13",
+  "green": 0.4513875336637914,
+  "red": 0.45630537449748254,
+  "doji": 0.09230709183872604,
+  "median_upper_wick": 0.10256410256410256,
+  "median_lower_wick": 0.11267605633802817,
+  "close_only_range_share": 0.5925925925925926,
+  "baseline_cont3": 0.47776196022604717,
+  "baseline_s3": -0.03023640511703304,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 5521,
+    "cont3": 0.47183481253396126,
+    "mean_s3_atr": -0.046330724368577235
+   },
+   "long unwinding (red, OI down)": {
+    "n": 4252,
+    "cont3": 0.4818908748824083,
+    "mean_s3_atr": -0.04505391925057349
+   },
+   "short build-up (red, OI up)": {
+    "n": 6575,
+    "cont3": 0.4868441064638783,
+    "mean_s3_atr": 0.006672292706011753
+   },
+   "short covering (green, OI down)": {
+    "n": 5218,
+    "cont3": 0.4737447297815255,
+    "mean_s3_atr": -0.034884407689636764
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 3544,
+    "cont3": 0.4579571106094808,
+    "mean_s3_atr": -0.0774708853747441
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 1375,
+    "cont3": 0.44363636363636366,
+    "mean_s3_atr": -0.07588851098455461
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 4364,
+    "cont3": 0.458295142071494,
+    "mean_s3_atr": -0.07325080143099189
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 211,
+    "cont3": 0.46445497630331756,
+    "mean_s3_atr": 0.13950290365510631
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 211,
+    "cont3": 0.43601895734597157,
+    "mean_s3_atr": -0.10445289696334949
+   },
+   "session MORNING": {
+    "n": 3134,
+    "cont3": 0.49393746011486916,
+    "mean_s3_atr": 0.017231228642407795
+   },
+   "session MIDDAY": {
+    "n": 4775,
+    "cont3": 0.46722513089005235,
+    "mean_s3_atr": -0.04594644357161296
+   },
+   "session LULL": {
+    "n": 4694,
+    "cont3": 0.4774179804005113,
+    "mean_s3_atr": -0.04080319403097037
+   },
+   "session PREUS": {
+    "n": 3270,
+    "cont3": 0.4764525993883792,
+    "mean_s3_atr": -0.05693354393021535
+   },
+   "session USOPEN": {
+    "n": 4123,
+    "cont3": 0.484841135095804,
+    "mean_s3_atr": -0.03067650483959253
+   },
+   "session LATE": {
+    "n": 3185,
+    "cont3": 0.4703296703296703,
+    "mean_s3_atr": -0.0098387436866493
+   }
+  }
+ },
+ {
+  "symbol": "SILVERM",
+  "tf": "5m",
+  "candles": 5124,
+  "days": 30,
+  "first_day": "2026-09-01",
+  "last_day": "2026-10-13",
+  "green": 0.4521857923497268,
+  "red": 0.45491803278688525,
+  "doji": 0.09289617486338798,
+  "median_upper_wick": 0.20323029433502893,
+  "median_lower_wick": 0.21108319374651033,
+  "close_only_range_share": 0.7808700645518989,
+  "baseline_cont3": 0.46614069690992765,
+  "baseline_s3": -0.055061520239454695,
+  "groups": {
+   "long build-up (green, OI up)": {
+    "n": 1180,
+    "cont3": 0.46016949152542375,
+    "mean_s3_atr": -0.09398547254011219
+   },
+   "long unwinding (red, OI down)": {
+    "n": 857,
+    "cont3": 0.46091015169194866,
+    "mean_s3_atr": -0.060182262888760246
+   },
+   "short build-up (red, OI up)": {
+    "n": 1378,
+    "cont3": 0.49129172714078373,
+    "mean_s3_atr": 0.0009175636255051199
+   },
+   "short covering (green, OI down)": {
+    "n": 1038,
+    "cont3": 0.44315992292870904,
+    "mean_s3_atr": -0.08148577792650553
+   },
+   "big candle (range >= 1.5 ATR)": {
+    "n": 583,
+    "cont3": 0.4665523156089194,
+    "mean_s3_atr": -0.036779087590208474
+   },
+   "big candle on volume >= 2x usual": {
+    "n": 241,
+    "cont3": 0.4190871369294606,
+    "mean_s3_atr": -0.17473799132516174
+   },
+   "any candle on volume >= 2x usual": {
+    "n": 671,
+    "cont3": 0.4202682563338301,
+    "mean_s3_atr": -0.14379624410361036
+   },
+   "big green candle on volume >= 2x after 19:00": {
+    "n": 33,
+    "cont3": 0.30303030303030304,
+    "mean_s3_atr": -0.4186944168895534
+   },
+   "big red candle on volume >= 2x after 19:00": {
+    "n": 34,
+    "cont3": 0.38235294117647056,
+    "mean_s3_atr": -0.23699989320023995
+   },
+   "session MORNING": {
+    "n": 631,
+    "cont3": 0.47385103011093505,
+    "mean_s3_atr": -0.02659634662355664
+   },
+   "session MIDDAY": {
+    "n": 930,
+    "cont3": 0.47634408602150535,
+    "mean_s3_atr": -0.04514230859102161
+   },
+   "session LULL": {
+    "n": 948,
+    "cont3": 0.4641350210970464,
+    "mean_s3_atr": -0.052108276325613365
+   },
+   "session PREUS": {
+    "n": 655,
+    "cont3": 0.467175572519084,
+    "mean_s3_atr": -0.08491057195668633
+   },
+   "session USOPEN": {
+    "n": 813,
+    "cont3": 0.4698646986469865,
+    "mean_s3_atr": -0.04191116484100075
+   },
+   "session LATE": {
+    "n": 586,
+    "cont3": 0.43856655290102387,
+    "mean_s3_atr": -0.09111301627896382
+   }
+  }
+ }
+]

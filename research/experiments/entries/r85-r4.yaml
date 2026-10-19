@@ -23,8 +23,10 @@ variants_tried: 4
 results:
   summary: 'Design (5 Aug 2025 - 31 Mar 2026), frozen X05_L05: 44 trades, net Rs -27,288 (gross Rs -9,213, costs Rs -18,074;
     futures move over the same windows Rs +5,060, diagnostic only); walk-forward (Nov 2025 - Mar 2026) Rs -31,982; design
-    twin p 0.986.'
+    twin p 0.986. Final (2026-04-01..2026-10-13, read once): 56 trades, net Rs -30,122, win 23%, max DD Rs -30,122, worst
+    day Rs -2,730, months < -Rs 13k: 0, without top 5 Rs -35,770; twin p 0.866, BH q 0.866 (4 rules). Gates failed: bh_q,
+    final_pos, top5, twin_p, wf_pos.'
   costs: McxCosts option charges + premium half-spread CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90%, GOLDM/SILVERM 0.30/0.60%
     (from/before 17:00 IST), entry and exit
-holdout_read: false
-verdict: inconclusive
+holdout_read: true
+verdict: rejected

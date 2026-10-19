@@ -22,8 +22,11 @@ prereg: research/hunt/r85/PREREG.md
 variants_tried: 4
 results:
   summary: 'Design (5 Aug 2025 - 31 Mar 2026), frozen X10_L10: 17 trades, net Rs +392 (gross Rs +4,176, costs Rs -3,785; futures
-    move over the same windows Rs +2,325, diagnostic only); walk-forward (Nov 2025 - Mar 2026) Rs -879; design twin p 0.136.'
+    move over the same windows Rs +2,325, diagnostic only); walk-forward (Nov 2025 - Mar 2026) Rs -879; design twin p 0.136.
+    Final (2026-04-01..2026-10-13, read once): 80 trades, net Rs -17,053, win 24%, max DD Rs -18,993, worst day Rs -2,260,
+    months < -Rs 13k: 0, without top 5 Rs -24,091; twin p 0.188, BH q 0.750 (4 rules). Gates failed: bh_q, final_pos, top5,
+    twin_p, wf_pos.'
   costs: McxCosts option charges + premium half-spread CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90%, GOLDM/SILVERM 0.30/0.60%
     (from/before 17:00 IST), entry and exit
-holdout_read: false
-verdict: inconclusive
+holdout_read: true
+verdict: rejected

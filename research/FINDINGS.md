@@ -1280,3 +1280,21 @@ Signal source: the indices' own 5-minute bars (R72 C1, 4 of 5); R75's C harness,
   -Rs 5,049; X-skip Rs 0. About 2 signals a month lose Rs 9.7k or more (36 in design): normal for this arm.
 - The app's same-direction cap on Breadth alone turns design +Rs 2.17 lakh into -Rs 19k. Recommendation: Breadth
   record-only on paper (or uncapped, Boss's call); not a live candidate at 1 lot x 5 indices (account stop breached).
+
+## MCX candle anatomy and option-buying rules from it (R85, 19 Oct 2026) - 0 of 4 pass; nothing goes to paper
+Full study: `HUNT_R85_MCX_CANDLES.md` (pre-registered `hunt/r85/PREREG.md`, commit 4ec89fc; amendment A1 6c5e7f3 froze the
+rules before any P&L; deviation D1 in `hunt/r85/NOTES.md`). Signal source: the MCX future itself (lake `spot` = the
+nearest option's underlying, close-only candles), trade = BUY the 1-ITM call / put (Boss, 19 Oct: options buying only).
+Real MCX minutes, GOLD/GOLDM/SILVER/SILVERM/CRUDEOIL/NATURALGAS; design 5 Aug 2025 - 31 Mar 2026, final 1 Apr - 13 Oct 2026
+read once.
+- Part 1: 7,564 candle cells (11 shapes, 22 contexts, 7 sessions, 1m-1h) at h = 3; 59 BH q < 0.10, but most are the
+  2025-26 metals rally (red candles "reverse" in any up-trend). 18 survive a same-colour (drift-neutral) baseline; on day
+  candles (2010-2022) none does. After 1 Apr the 18 kept their sign 15 times but shrank to about a quarter (median 0.28 ->
+  0.08 ATR); the survivors are mostly 1-minute effects, far below an option round trip (1.5-4.5 one-minute ATRs).
+- Part 2 (the 4 cells larger than option costs): final R1 SILVER big red 5m on 2x option activity -> SILVERM call
+  -Rs 17,053 (80 trades); R2 GOLDM red 5m in a high-volatility lull -> GOLDM call -Rs 29,131 (74); R3 SILVERM red 15m
+  outside bar pre-US -> put -Rs 18,125 (28); R4 SILVERM red 5m hammer at the US open -> call -Rs 30,122 (56). Twin p
+  0.19-0.87, walk-forward negative for all. No month below -Rs 13k (worst -Rs 7.6k).
+- Hammer, shooting star, engulfing, inside/outside bars, marubozu and three-in-a-row carry no tradable meaning on MCX.
+  OI classes (long build-up etc.) do not separate the next 15 minutes (Sep-Oct 2026 true futures, descriptive).
+- Candles are largest in the US-open hour (GOLDM 15m 1.7x the 14:00-17:00 lull; natural gas from 17:00 2-3x its morning).
