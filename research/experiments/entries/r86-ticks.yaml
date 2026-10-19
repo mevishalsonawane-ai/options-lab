@@ -1,0 +1,25 @@
+id: r86-ticks
+title: 'R86 idea 7: large prints and absorption on the phone''s own tick recordings - not run'
+family: flow-oi
+date: '2026-10-19'
+doc: research/HUNT_R86_BIG_PLAYERS.md
+hypothesis: Large prints / absorption in the phone's tick recordings precede moves (idea 7 of the R86 brief).
+data_version: 'none: the private data repo mevishalsonawane-ai/IraAlgo was not reachable from this session'
+period:
+  design: none
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- tick recordings (none read)
+model_or_rule: none
+settings: research/hunt/r86/PREREG.md section 6
+prereg: research/hunt/r86/PREREG.md
+variants_tried: null
+results:
+  summary: 'Not run: no recordings reachable (OF1 found 0 releases on 14 Oct). R8''s one 34-minute MCX evening is an anecdote,
+    not a test.'
+  costs: none
+holdout_read: null
+verdict: inconclusive
+notes: Re-open when the phone has uploaded a few weeks of NSE recordings; hunt/of1/footprints.py is ready.

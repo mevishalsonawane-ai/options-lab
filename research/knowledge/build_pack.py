@@ -124,6 +124,8 @@ TAGS = {
     "trade-manager": r"trade manager|specialists?",
     "direction": r"\bdirection(al)?\b|up or down",
     "traps": r"\btraps?\b|trap guard|stop hunt",
+    # R86 (19 Oct 2026): footprints of the big players (FII/FPI positioning, CFTC managed money, dealers, stop runs)
+    "big-players": r"big players?|\binstitution(al|s)?\b|\bfpis?\b|managed money|commitments of traders|\bcot\b|\bdealers?\b|market.makers?|stop.?runs?|participant.(wise|oi|data)",
     "sizing": r"\blots?\b|position siz|kelly|capital|drawdown",
     "pine": r"\bpine\b",
     "pattern": r"pattern|inside day|nr4|nr7|\bcpr\b",

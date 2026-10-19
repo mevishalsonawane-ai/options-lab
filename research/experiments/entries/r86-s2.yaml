@@ -1,0 +1,33 @@
+id: r86-s2
+title: 'R86 S2: Stop run at round numbers (NIFTY 100s, BANKNIFTY 500s) -> fade'
+family: liquidity
+date: '2026-10-19'
+doc: research/HUNT_R86_BIG_PLAYERS.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG.md): Stop run at round numbers (NIFTY 100s, BANKNIFTY 500s) -> fade
+  beats random twins in walk-forward design (net > 0 and > twins, twin p < 0.10, BH q < 0.10 over R86''s 23 tests, not carried
+  by the top 5), then in the final window read once.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (participants/, index_daily, index_1m, equity_1m, derived/r28_gex, fut_daily_continuous;
+  files of 13-15 Oct 2026); CFTC Disaggregated Futures-Only history files downloaded 19 Oct 2026
+period:
+  design: data start - 2024 (folds 2022, 2023, 2024)
+  holdout: 'final window NOT read: no R86 test passed design (PREREG section 2)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the underlying (index / MCX future) or positioning data about it; no option chart'
+- 'index 1-minute bars: round levels, failed poke as S1'
+model_or_rule: as S1
+settings: research/hunt/r86/r86study.py, r86lib.py; PREREG.md
+prereg: research/hunt/r86/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Design walk-forward. S2-NIFTY: 721 trades, net Rs -528,361, win 0.313, without top 5 Rs -556,067, random twins
+    mean Rs -515,252, twin p 0.621, BH q 0.952; S2-BANKNIFTY: 528 trades, net Rs -352,217, win 0.341, without top 5 Rs -389,310,
+    random twins mean Rs -417,253, twin p 0.082, BH q 0.376. Verdict: FAIL (no test passed the design gates; final window
+    not read).'
+  costs: NSE index futures as the index + Rs 40 brokerage, dated STT on the sell leg, exchange, SEBI, stamp, GST, 0.02% slippage
+    a side (0.04% on stops), 5.5%/yr carry (longs pay, shorts receive); 1 lot in force
+holdout_read: false
+verdict: rejected
+notes: Understanding the big players' footprints (Boss, 19 Oct). Research only; nothing changes paper or live.

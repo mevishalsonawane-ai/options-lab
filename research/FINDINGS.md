@@ -1280,3 +1280,23 @@ Signal source: the indices' own 5-minute bars (R72 C1, 4 of 5); R75's C harness,
   -Rs 5,049; X-skip Rs 0. About 2 signals a month lose Rs 9.7k or more (36 in design): normal for this arm.
 - The app's same-direction cap on Breadth alone turns design +Rs 2.17 lakh into -Rs 19k. Recommendation: Breadth
   record-only on paper (or uncapped, Boss's call); not a live candidate at 1 lot x 5 indices (account stop breached).
+
+## The big players' footprints: FII positioning, CFTC managed money, stop runs, VWAP algos, dealer gamma, rolls (R86, 19 Oct 2026) - 0 of 23 pass
+Full study: `HUNT_R86_BIG_PLAYERS.md` (pre-registered `hunt/r86/PREREG.md`, commit 65267ec); the cited guide to who the
+big players are and how they work: `BIG_PLAYERS_GUIDE.md`. Signal source: the underlying or positioning data about it;
+trades on the underlying's future with real costs and a stop. BH over 23 tests; final windows not read (nothing passed).
+- FII positioning levels, 5-day shifts and option stance (NSE participant OI, 2015-2022 walk-forward) did not call NIFTY's
+  next 5 days: 120-184 trades per rule, Rs -0.65 to -5.31 lakh, none significantly better than random days (twin p 0.37-0.99). Client option writing and
+  FII crowding add nothing to a VIX-based 5-day range forecast (1,972 forecasts).
+- CFTC managed-money extremes (COT index, 4 weeks) leaned contrarian on MCX silver: +Rs 2.14 lakh on 47 SILVERM trades,
+  twin p 0.006, but -Rs 27,528 without the top 5 and BH q 0.115. Not proven. Weekly COT changes carry nothing.
+- Stop runs: a poke beyond yesterday's high/low, a round number or the opening range that closes back within 10 minutes
+  is not followed by a reversal (-2.9 to +1.4 bps in 60 minutes). Fading it lost on all 6 level x index tests (295-804
+  trades, Rs -2.3 to -5.5 lakh, 2022-24). Keep trading breaks, not fades.
+- VWAP: a midday stretch from NIFTY's turnover-weighted VWAP tends to continue, least on busy days (1,465 days
+  2019-2024); the fade to VWAP on busy days lost Rs 64,786 on 71 trades. Early turnover predicts a busy day (corr 0.67).
+- Dealer gamma adds nothing to the rest-of-day range forecast once VIX and the morning range are known (492 days per
+  index, 0.95-2.8% worse error). Size stops from VIX and the range, not GEX.
+- Gold moves about 14% more in the 5 sessions before a GOLDM contract roll (620 sessions 2012-2022, p 0.010, q 0.115):
+  a size fact, not proven. NIFTY rollover % does not call next month (32 trades, carried by its top 5).
+- The phone's tick recordings (large prints, absorption) were not reachable: idea 7 not run.
