@@ -1300,3 +1300,18 @@ trades on the underlying's future with real costs and a stop. BH over 23 tests; 
 - Gold moves about 14% more in the 5 sessions before a GOLDM contract roll (620 sessions 2012-2022, p 0.010, q 0.115):
   a size fact, not proven. NIFTY rollover % does not call next month (32 trades, carried by its top 5).
 - The phone's tick recordings (large prints, absorption) were not reachable: idea 7 not run.
+
+## How the big players trade, read backwards from index and constituent minutes (R86b, 19 Oct 2026) - footprints yes; 0 of 8 follow rules pass
+Full study: `HUNT_R86B_HOW_BIG_PLAYERS_TRADE.md` (pre-registered `hunt/r86/PREREG_B.md`, commit 155f3f2). Data: NIFTY /
+BANKNIFTY 1-minute bars and the 59 current index stocks' minute turnover, 2019-2024 (design); final 2025-26 not read.
+- Big selling is fast, big buying is slow: on FIIs' heaviest index-futures selling days NIFTY made about 61% of its move
+  by 10:15 (gap 37%, first hour 24%) and 6% in the last hour (169 days); on their heaviest buying days 40% by 10:15 and
+  16% in the last hour, with a busier close (18.3% vs 16.1% of turnover in the last 30 minutes; 179 days). Clients'
+  heavy-buying days look like FII-selling days (they take the other side).
+- Funds trade at the close on benchmark days: the last 30 minutes carry 26.7% of NIFTY's turnover at month-end (72 days)
+  and 23.2% on monthly expiry days, vs 16.1% on all days (1,480).
+- Basket bursts (>= 80% of the stocks one way on 3x turnover) happen ~0.7 a day on NIFTY, 2.4x as often on FII-selling
+  days, and agree with the day's direction 65% of the time, but the 15-60 minutes after one move no more than after a
+  random minute (997 bursts). Absorption at the day's extreme (heavy volume, no move) was almost never seen (2 + 4 cases).
+- Following any of these early (steady morning drift, bursts, absorption fades, a heavy last hour held overnight): 0 of 8
+  pass (best q 0.319). The steady-drift follow on NIFTY broke even (+Rs 3,403 on 82 trades, all in its top 5).

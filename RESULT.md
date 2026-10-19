@@ -1,8 +1,8 @@
-1. R86 (19 Oct), how the big players work: the guide is research/BIG_PLAYERS_GUIDE.md: who they are (FIIs, funds, prop/HFT, option dealers, hedgers, COMEX speculators), how they work, what SEBI forbids, with sources.
-2. We tested 23 new footprint ideas on our own data, with real costs and stops: none passed, so the locked final period was not opened.
-3. FII positioning (extremes, sharp 5-day shifts, option stance) did not tell NIFTY's next 5 days; every rule lost after costs.
-4. "Stop runs" (a poke past yesterday's high/low, a round number or the opening range that snaps back) do not reverse: fading them lost on NIFTY and BANKNIFTY.
-5. Price does not snap back to VWAP at midday even on busy days, and dealer gamma adds nothing to the range forecast beyond VIX and the morning range.
-6. Near misses, not proven: leaning against crowded COMEX silver/gold speculators (carried by 5 trades) and gold being ~14% busier before a GOLDM contract roll.
-7. For the bot: nothing new to switch on; keep signals on the index, keep Liquidity trading breaks, size stops from VIX and the range.
-8. The phone's own tick recordings could not be reached from here; that test waits until weeks of NSE recordings are uploaded.
+1. R86 + R86b (19 Oct), how the big players work and trade: guide research/BIG_PLAYERS_GUIDE.md, results in HUNT_R86_BIG_PLAYERS.md and HUNT_R86B_HOW_BIG_PLAYERS_TRADE.md.
+2. Their trading IS visible in the index: big selling is fast (FII-sell days make ~61% of NIFTY's move by 10:15), big buying is slow (spread over the day, finished at the close).
+3. Funds trade at the closing price: at month-end the last 30 minutes carry 27% of the day's turnover (16% normally); expiry days 23%.
+4. "Whole-index" orders (80% of the stocks moving together on 3x volume) follow the day's direction, but nothing extra happens after them.
+5. "Absorption at the top" (heavy volume, no move) almost never shows up on index data; it is mostly folklore.
+6. By the time a footprint shows, its move is already in the price: 0 of 8 "spot it and follow" rules and 0 of 23 positioning tests (FII, COT, stop runs, VWAP, gamma) beat random after costs.
+7. For the bot: nothing new to switch on; treat heavy-selling openings and month-end/expiry closes as the riskiest windows (wider swings, slippage).
+8. Nearest misses, not proven: crowded COMEX silver speculators (contrarian) and gold being ~14% busier before a GOLDM contract roll.
