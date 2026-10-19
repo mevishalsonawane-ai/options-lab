@@ -46,6 +46,18 @@ formed at the same time of day, in the same trend and volatility, with the same 
 - **MCX (R85, reused, not repeated):** 18 of 7,564 MCX candle cells passed a colour-matched test in design; the 4
   option rules built from them all lost in the final (-Rs 17,053 to -Rs 30,122 each).
 
+**R87B enhancement (Boss: "Can we enhance it", 19 Oct; pre-registration `PREREG_B.md`, commit ac182c7, amendment B-A1
+4776a91):** bigger candles (30m, 60m, daily since 2015) and 3-candle sequences show nothing either (0 of 200 and 0 of 25
+cells), with one exception: on **SENSEX 15m, two medium green candles followed by a medium red one (a pullback after
+a rise) is followed by MORE upside**: +0.18 ATR over 5 candles in design (n 840, q 0.034, 4 of 4 years) and +0.26 ATR
+(+22 points, up 57% vs 49%, n 182, one-sided p 0.005) in the holdout. It is the first R87 shape fact that held out of
+sample above an option's cost in points, but bought as a call with the pre-registered exits it LOST (-Rs 21,127 on 162
+trades: the stop under the red candle's low was hit on 117 of them). Exiting the opening-range-breakout arm on a big
+wick against the trade helped in design (+Rs 47,606, 813 trades, q 0.092) and again in the holdout (+Rs 16,107, 912
+trades) but not significantly (p 0.40), and the ORB arm itself lost money in both windows. **Real option prices could
+not be fetched for the design window (Dhan was degraded); everything is still priced on the calibrated model**, with
+real 1-ITM prices only for SENSEX's last 3 months.
+
 **For the bot and Jarvis: do not add a candle-shape arm or a candle filter.** Use the knowledge pack to EXPLAIN candles
 (what the shape means, the textbook reason, and the honest number that it does not predict direction), and to stop
 Jarvis or an agent from treating a wick as support/resistance. Signals stay on the underlying's trend/breakout rules
@@ -187,6 +199,78 @@ ticks). **Priced on a modelled premium** (Black-Scholes, INDIA VIX x the index's
   Rs 11,407 and the net rests on 5 trades. Not a candidate; it can be re-checked if a year of real SENSEX option minutes
   arrives (a note, not a pass).
 
+## R87B: real option prices, bigger timeframes, sequences, candles as exits
+
+*Pre-registered in `research/hunt/r87_candle_anatomy/PREREG_B.md` (commit ac182c7, before any R87B statistic); amendment
+B-A1 (4776a91) froze the rule and recorded the option coverage before any rule P&L. Code: `batlas.py`, `exits.py`,
+`brules.py`, `bfinal.py`; results `results/b/`. Holdout (15 Oct 2025 - 16 Oct 2026) read once for R87B's cells.*
+
+### Real option prices (B4): mostly not obtained
+
+Dhan's option-history endpoint was degraded all evening (80 s to 5.5 minutes a request, HTTP 504; the fetcher stalled at
+21:37 UTC). At the pre-registered cutoff (23:30 UTC) the snapshot held real 1-ITM prices only for SENSEX's holdout
+months (51 days) and the NIFTY ATM pair (199 design days). So the design window is still priced by the calibrated model:
+real entry prints were 0.7-0.8% of the exit-study trades and 0-6% of the rule trades. Re-pricing R87's three rules
+this way (real where printed, model elsewhere): R87-1 +Rs 4,936 (160 trades; 6% real entries), R87-2 -Rs 39,235 (270),
+R87-3 +Rs 14,373 (71; no real SENSEX design prices, so unchanged). None changes R87's verdict. **This remains the main
+open item: re-run R87/R87B on the full Drive lake (real 1-ITM minutes) when it is reachable.**
+
+### B1: 30-minute, 60-minute and daily candles
+
+| | design: tested / BH pass | holdout: tested / BH pass |
+|---|---|---|
+| 30m (primary: next 3 candles, same session) | 97 / 0 | |
+| 60m (next 3 candles, same session) | 78 / 0 | |
+| daily, 2015 - Oct 2025 (next 5 days) | 25 / 0 | |
+| B1 total | 200 / 0 (best q 1.0) | 107 / 0 |
+
+Bigger candles are no more informative: after every tested shape the next 3 candles (or 5 days) went up 37-67% of the
+time with small samples (daily shapes: n 53-538 each), and none survives multiple testing.
+
+### B2: 3-candle sequences and data-driven clusters
+
+- Named sequences (each candle coded by colour, body size and wick tilt; n >= 200): 25 tested, 0 pass (best q 0.31:
+  three strong green 5m candles on NIFTY, up 59% vs 51% matched, n 221). Holdout: 22 tested, 0 pass.
+- Clusters (k-means, 24 per timeframe, fitted on design only): 144 tested, 1 passes in design:
+
+| | design | holdout |
+|---|---|---|
+| SENSEX 15m cluster 13: green, green, red; each ~0.8 ATR with ~55% bodies and ~20% wicks | n 840, +0.184 ATR (+18 pts), up 58% vs 52%, q 0.034, 4 of 4 years | n 182, +0.259 ATR (+22 pts), up 57% vs 49%, one-sided p 0.005: **held** |
+
+Mechanism (a hypothesis): a shallow red pullback after two steady up candles is profit-taking inside a trend, not a
+reversal; the trend resumes. It fits R87's broader picture (trend continuation beats reversal shapes). The same
+cluster on NIFTY and BANKNIFTY 15m pointed the same way but weakly (+0.06 ATR each, n 831 / 767, q 0.86), so it
+is strongest on SENSEX and not proven elsewhere.
+
+### B4: the rule built on it (R87B-1) lost
+
+R87B-1 = buy the SENSEX 1-ITM call at the close of that cluster's third candle, out after 75 minutes; stop 15% / 25%,
+lock, underlying stop under the red candle's low. Design (20 Nov 2024 - 14 Oct 2025, model-priced): 162 trades, win
+22%, -Rs 21,127 (gross -Rs 9,143, charges Rs 10,160), walk-forward -Rs 17,894 (all 3 folds negative), twin p 0.75.
+The underlying stop closed 117 of 162 trades: the red candle's low is too close for an option buyer. The holdout was not
+read for it. Testing the same signal with a wider stop would be a NEW idea (a new pre-registration), not a re-run.
+
+### B3: candles as exits (paper arms, reconstructed)
+
+| arm x overlay | design trades / exits fired | design net base -> with overlay | q | holdout |
+|---|---|---|---|---|
+| ORB + exit on a big wick against | 813 / 130 | -Rs 50,071 -> -Rs 2,465 (+47,606; max DD 89k -> 53k) | 0.092 (pass) | 912 trades: -Rs 1,09,274 -> -Rs 93,166 (+16,107), p 0.40: **fails** |
+| ORB + exit on a marubozu against | 813 / 130 | -> -Rs 82,960 (-32,888) | 0.092 (worse) | not read |
+| ORB + exit on an engulfing against | 813 / 254 | -> -Rs 92,801 (-42,729) | 0.18 | not read |
+| DON + big wick against | 1,722 / 229 | Rs 33,012 -> Rs 43,658 (+10,647) | 0.53 | not read |
+| DON + marubozu against | 1,722 / 175 | -> Rs 18,755 (-14,257) | 0.30 | not read |
+| DON + engulfing against | 1,722 / 309 | -> Rs 3,067 (-29,944) | 0.13 | not read |
+
+- A big wick against the position is the only candle exit that ever helped (both arms, both windows, every index in
+  the holdout), but its holdout gain is not significant, so it is **not** a paper candidate. Exiting on a strong
+  opposite candle (marubozu, engulfing) HURT: after a strong candle against you, price tends to come back.
+- Signal source: the index's 5m candles; arms are reconstructions, not the app's exact Donchian / ORB arms.
+
+### What R87B adds to the knowledge pack
+
+`knowledge/candle_pack.json` now carries an `r87b` block: the bigger-timeframe and sequence results, the SENSEX cluster
+fact (with its failed option rule), and the exit-overlay table.
+
 ## What changes
 
 Nothing in the app. For Jarvis and the agents: the pack (`knowledge/candle_pack.*`) gives, per candle family, its
@@ -196,8 +280,8 @@ and educate; never as a trade trigger or a stop level.
 
 ## Honesty notes
 
-- Tests: P1 349 + P2 4,049 + P3 373 cells in design; 3 rules x 2 stop variants; all logged in
-  `research/experiments/entries/r87-*.yaml`. The holdout was read once (atlas only; the rules failed design).
+- Tests: P1 349 + P2 4,049 + P3 373 cells in design; 3 rules x 2 stop variants; R87B 369 atlas cells, 6 exit
+  overlays, 1 rule x 2 variants; all logged in `research/experiments/entries/r87-*.yaml` and `r87b-*.yaml`. The holdout was read once (atlas only; the rules failed design).
 - The distance-matched wick check and the futures cross-check were added after the design atlas (labelled post-hoc,
   descriptive, no test).
 - The holdout window overlaps windows read by other studies (R51-R86 finals); none ran these cells or rules.

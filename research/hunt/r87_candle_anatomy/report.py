@@ -15,6 +15,19 @@ from . import cfg
 from .meaning import COND, MEANING
 
 KDIR = cfg.HERE / "knowledge"
+B_MD = """## R87B additions (bigger timeframes, sequences, candles as exits)
+
+- 30m, 60m and daily candles (daily since 2015): 0 of 200 shape cells pass in design, 0 of 107 in the holdout.
+- Named 3-candle sequences (colour, body size, wick tilt): 0 of 25 pass; the best was three strong green 5m candles on
+  NIFTY (up 59% vs 51% matched, n 221, q 0.31).
+- **SENSEX 15m: two medium green candles, then a medium red one** was followed by more upside: +0.18 ATR over 5 candles
+  in design (n 840, q 0.034, all 4 years) and +0.26 ATR (+22 points, up 57% vs 49%) in the holdout (n 182): it held. On
+  NIFTY / BANKNIFTY the same cluster leaned the same way but weakly (+0.06 ATR, q 0.86). Bought as a 1-ITM call with a
+  stop under the red candle it lost (-Rs 21,127 on 162 trades): a fact to explain, not a trade.
+- Exiting an opening-range breakout on a 5m big wick against the trade helped in design (+Rs 47,606, 813 trades) and in
+  the holdout (+Rs 16,107, 912 trades) but not significantly (p 0.40). Exiting on a strong opposite candle (marubozu or
+  engulfing) made both arms WORSE.
+"""
 
 
 def _r(x, d=2):
@@ -150,7 +163,44 @@ def write_pack(cards: list, meta: dict) -> None:
                          + (", held out of sample" if w.get("holds_oos") else
                             (", did NOT hold" if w.get("holds_oos") is False else "")) + ")")
         L.append("")
+    if meta.get("r87b"):
+        L.append(B_MD.rstrip())
     (KDIR / "candle_pack.md").write_text("\n".join(L) + "\n")
+
+
+def r87b_block() -> dict | None:
+    """R87B summary for the pack (results/b), or None before R87B ran."""
+    b = cfg.RESULTS / "b"
+    if not (b / "batlas_design_summary.json").exists():
+        return None
+    out = dict(doc="research/HUNT_R87_CANDLE_ANATOMY.md (R87B section)", prereg="research/hunt/r87_candle_anatomy/PREREG_B.md",
+               design=json.loads((b / "batlas_design_summary.json").read_text()))
+    if (b / "boos_findings.csv").exists():
+        o = pd.read_csv(b / "boos_findings.csv")
+        out["findings_out_of_sample"] = [{k: (_r(v, 4) if isinstance(v, float) else v) for k, v in r.items()}
+                                         for r in o.to_dict("records")]
+    if (b / "exits_design.json").exists():
+        out["exit_overlays_design"] = [dict(arm=e["arm"], overlay=e["overlay"], trades=e["trades"], delta=_r(e["delta"], 0),
+                                            q=_r(e["q"], 3), passed=e["pass"])
+                                       for e in json.loads((b / "exits_design.json").read_text())]
+    if (b / "bfinal_summary.json").exists():
+        f = json.loads((b / "bfinal_summary.json").read_text())
+        out["holdout"] = dict(atlas=f["atlas"], design_findings=f["design_findings"], held=f["holds"],
+                              exits=[dict(arm=e["arm"], overlay=e["overlay"], trades=e["trades"], delta=_r(e["delta"], 0),
+                                          p=_r(e["p"], 3), passed=e["final_pass"]) for e in f["exits"]]
+                              if isinstance(f["exits"], list) else f["exits"])
+    if (b / "brules_design.json").exists():
+        out["rules_design"] = []
+        for o in json.loads((b / "brules_design.json").read_text()):
+            d = o[f"design_{int(o['frozen_stop'] * 100)}"]
+            out["rules_design"].append(dict(id=o["rule"]["id"], family=o["rule"]["family"], und=o["rule"]["und"],
+                                            trades=d["trades"], net=_r(d["net"], 0), twin_p=_r(o["twin_p"], 3),
+                                            passed=o.get("design_pass"), pricing="hybrid (mostly modelled)"))
+    out["plain"] = ("SENSEX 15m: two medium green candles then a medium red one was followed by more upside (+0.18 ATR "
+                    "design n 840; +0.26 ATR holdout n 182, held); bought as a call with a stop under the red candle it "
+                    "lost (-Rs 21,127, 162 trades). 30m / 60m / daily shapes and named 3-candle sequences: no edge. "
+                    "Exiting a breakout on a big wick against it helped but not significantly out of sample.")
+    return out
 
 
 def main() -> None:
@@ -173,6 +223,7 @@ def main() -> None:
     for c in cards:
         if c["family"] in wk:
             c["wick_levels_vs_same_distance"] = wk[c["family"]]
+    meta["r87b"] = r87b_block()
     write_pack(cards, meta)
 
 

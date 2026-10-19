@@ -535,3 +535,15 @@
 - NIFTY 5m: n 1,492; up after 5 candles 49% vs 51% matched; effect -0.042 ATR (-1.0 pts raw), q 0.8111; low broken within 10: 75% vs 67%; high broken: 86% vs 89%
 - NIFTY 15m: n 154; up after 5 candles 44% vs 53% matched; effect -0.074 ATR (+0.2 pts raw), q 0.9126; low broken within 10: 71% vs 62%; high broken: 84% vs 87%
 
+## R87B additions (bigger timeframes, sequences, candles as exits)
+
+- 30m, 60m and daily candles (daily since 2015): 0 of 200 shape cells pass in design, 0 of 107 in the holdout.
+- Named 3-candle sequences (colour, body size, wick tilt): 0 of 25 pass; the best was three strong green 5m candles on
+  NIFTY (up 59% vs 51% matched, n 221, q 0.31).
+- **SENSEX 15m: two medium green candles, then a medium red one** was followed by more upside: +0.18 ATR over 5 candles
+  in design (n 840, q 0.034, all 4 years) and +0.26 ATR (+22 points, up 57% vs 49%) in the holdout (n 182): it held. On
+  NIFTY / BANKNIFTY the same cluster leaned the same way but weakly (+0.06 ATR, q 0.86). Bought as a 1-ITM call with a
+  stop under the red candle it lost (-Rs 21,127 on 162 trades): a fact to explain, not a trade.
+- Exiting an opening-range breakout on a 5m big wick against the trade helped in design (+Rs 47,606, 813 trades) and in
+  the holdout (+Rs 16,107, 912 trades) but not significantly (p 0.40). Exiting on a strong opposite candle (marubozu or
+  engulfing) made both arms WORSE.

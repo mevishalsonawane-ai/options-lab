@@ -6,3 +6,8 @@
 6. The 3 pre-registered option rules all failed their design gates (SENSEX 15m gravestone doji -> put was a near miss: +Rs 14,373 on 71 trades but negative walk-forward); priced on modelled premiums because Dhan's option download was too slow.
 7. For the bot: no candle arm or candle filter. For Jarvis: a candle knowledge pack (research/hunt/r87_candle_anatomy/knowledge/) to explain candles honestly. MCX candles are R85's (0 of 4 rules).
 8. Volume/order-flow parts rest on a weak option-activity proxy; a real test needs the phone's tick recordings.
+9. R87B (enhancement, 20 Oct): bigger candles (30m, 60m, daily since 2015) and 3-candle sequences also show no edge (0 of 225).
+10. One pattern held out of sample: on SENSEX 15m, two medium green candles then a medium red one is followed by more upside (+22 points on average in the last 12 months, 182 cases). But buying a call on it with a stop under the red candle lost money (-Rs 21,127, 162 trades).
+11. Exiting the opening-range breakout on a big wick against the trade helped in both periods but not significantly in the last 12 months; exiting on a strong opposite candle made things worse. Nothing new to switch on.
+12. Real option prices for Nov 2024 - Oct 2025 could not be downloaded (Dhan was degraded); results are still on modelled premiums. Re-run on the Drive lake when reachable.
+

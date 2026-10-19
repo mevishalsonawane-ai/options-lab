@@ -27,6 +27,170 @@
   "design_findings": 17,
   "held": 2
  },
+ "r87b": {
+  "doc": "research/HUNT_R87_CANDLE_ANATOMY.md (R87B section)",
+  "prereg": "research/hunt/r87_candle_anatomy/PREREG_B.md",
+  "design": {
+   "B1": {
+    "cells": 315,
+    "tested": 200,
+    "bh_pass": 0
+   },
+   "B2seq": {
+    "cells": 26,
+    "tested": 25,
+    "bh_pass": 0
+   },
+   "B2cl": {
+    "cells": 144,
+    "tested": 144,
+    "bh_pass": 1
+   }
+  },
+  "findings_out_of_sample": [
+   {
+    "fam": "B2cl",
+    "und": "SENSEX",
+    "tf": 15,
+    "family": "cluster15:13",
+    "d_eff": 0.1841,
+    "d_n": 840,
+    "d_q": 0.0338,
+    "h_n": 182,
+    "h_eff": 0.2592,
+    "h_p1": 0.0049,
+    "h_move_pts": 22.0209,
+    "h_up_rate": 0.5714,
+    "h_base_up_rate": 0.491,
+    "h_q": 0.0049,
+    "holds": true
+   }
+  ],
+  "exit_overlays_design": [
+   {
+    "arm": "DON",
+    "overlay": "X1",
+    "trades": 1722,
+    "delta": 10647.0,
+    "q": 0.53,
+    "passed": false
+   },
+   {
+    "arm": "DON",
+    "overlay": "X2",
+    "trades": 1722,
+    "delta": -14257.0,
+    "q": 0.302,
+    "passed": false
+   },
+   {
+    "arm": "DON",
+    "overlay": "X3",
+    "trades": 1722,
+    "delta": -29944.0,
+    "q": 0.13,
+    "passed": false
+   },
+   {
+    "arm": "ORB",
+    "overlay": "X1",
+    "trades": 813,
+    "delta": 47606.0,
+    "q": 0.092,
+    "passed": true
+   },
+   {
+    "arm": "ORB",
+    "overlay": "X2",
+    "trades": 813,
+    "delta": -32888.0,
+    "q": 0.092,
+    "passed": false
+   },
+   {
+    "arm": "ORB",
+    "overlay": "X3",
+    "trades": 813,
+    "delta": -42729.0,
+    "q": 0.184,
+    "passed": false
+   }
+  ],
+  "holdout": {
+   "atlas": {
+    "B1": {
+     "cells": 315,
+     "tested": 107,
+     "bh_pass": 0
+    },
+    "B2seq": {
+     "cells": 25,
+     "tested": 22,
+     "bh_pass": 0
+    },
+    "B2cl": {
+     "cells": 144,
+     "tested": 144,
+     "bh_pass": 0
+    }
+   },
+   "design_findings": 1,
+   "held": 1,
+   "exits": [
+    {
+     "arm": "ORB",
+     "overlay": "X1",
+     "trades": 912,
+     "delta": 16107.0,
+     "p": 0.402,
+     "passed": false
+    }
+   ]
+  },
+  "rules_design": [
+   {
+    "id": "R87B-1",
+    "family": "cluster15:13",
+    "und": "SENSEX",
+    "trades": 162,
+    "net": -21127.0,
+    "twin_p": 0.752,
+    "passed": false,
+    "pricing": "hybrid (mostly modelled)"
+   },
+   {
+    "id": "R87-1",
+    "family": "three_white",
+    "und": "NIFTY",
+    "trades": 160,
+    "net": 4936.0,
+    "twin_p": 0.154,
+    "passed": null,
+    "pricing": "hybrid (mostly modelled)"
+   },
+   {
+    "id": "R87-2",
+    "family": "fp_stop_run_up",
+    "und": "NIFTY",
+    "trades": 270,
+    "net": -39235.0,
+    "twin_p": 0.629,
+    "passed": null,
+    "pricing": "hybrid (mostly modelled)"
+   },
+   {
+    "id": "R87-3",
+    "family": "gravestone_doji",
+    "und": "SENSEX",
+    "trades": 71,
+    "net": 14373.0,
+    "twin_p": 0.026,
+    "passed": null,
+    "pricing": "hybrid (mostly modelled)"
+   }
+  ],
+  "plain": "SENSEX 15m: two medium green candles then a medium red one was followed by more upside (+0.18 ATR design n 840; +0.26 ATR holdout n 182, held); bought as a call with a stop under the red candle it lost (-Rs 21,127, 162 trades). 30m / 60m / daily shapes and named 3-candle sequences: no edge. Exiting a breakout on a big wick against it helped but not significantly out of sample."
+ },
  "families": [
   {
    "family": "doji",

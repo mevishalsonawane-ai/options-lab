@@ -1299,3 +1299,9 @@ A0-A3). Signal source: the index's own 1m / 5m / 15m candle (NIFTY, BANKNIFTY, S
   above the day high -> call -Rs 25,064 (270); SENSEX 15m gravestone doji -> put +Rs 14,373 (71; twin p 0.026) but
   walk-forward -Rs 1,923 and negative without its top 5. Holdout not read for rules. Volume / order-flow results rest on
   an ATM-option activity proxy that correlates only 0.07-0.15 with true futures volume. MCX: see R85 (0 of 4).
+- R87B (20 Oct; `PREREG_B.md`): 30m / 60m / daily shapes and named 3-candle sequences: 0 of 225 pass. One data-driven
+  cluster held out of sample: SENSEX 15m green, green, then a medium red (a pullback after a rise) -> more upside (+0.18
+  ATR design n 840; +0.26 ATR / +22 points holdout n 182). As a 1-ITM call with a stop under the red candle it lost
+  (-Rs 21,127, 162 trades). Exiting an ORB breakout on a big wick against it helped in both windows but not
+  significantly out of sample (+Rs 16,107, p 0.40); exits on a strong opposite candle made arms worse. Real option
+  prices could not be fetched for the design window (Dhan degraded): still model-priced.
