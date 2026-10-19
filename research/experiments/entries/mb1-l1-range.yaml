@@ -1,0 +1,35 @@
+id: mb1-l1-range
+title: 'MCX brain L1-A: size of the next 60 minutes (log close range), 6 MCX futures'
+family: ml
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: Point-in-time features forecast the next hour's close range better than the best of the time-of-day, last-hour
+  and ATM-IV baselines (skill >= 5%, BH q <= 0.05).
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLD
+- GOLDM
+- SILVER
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- all 56 MCX L4 features
+model_or_rule: HistGradientBoosting (primary) and ridge per symbol, walk-forward 4 folds
+settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_metrics.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 18
+results:
+  summary: 'Design: 5 of 6 pass. GOLD skill 0.139 vs b_iv (q 0.004, 4720 rows / 146 sessions, pass); GOLDM skill 0.191 vs
+    b_iv (q 0.004, 7359 rows / 150 sessions, pass); SILVER skill 0.177 vs b_last (q 0.004, 4041 rows / 130 sessions, pass);
+    SILVERM skill 0.182 vs b_iv (q 0.004, 6693 rows / 149 sessions, pass); CRUDEOIL skill 0.040 vs b_iv (q 0.240, 7628 rows
+    / 150 sessions, fail); NATURALGAS skill 0.175 vs b_tod (q 0.004, 7628 rows / 150 sessions, pass).'
+  costs: none (forecasts, no trades)
+holdout_read: false
+verdict: inconclusive
+notes: Information only (a size forecast for stops/targets and context); nothing trades. Same finding as the India brain B1.

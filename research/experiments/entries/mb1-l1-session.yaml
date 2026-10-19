@@ -1,0 +1,36 @@
+id: mb1-l1-session
+title: 'MCX brain L1-D: the US cash open (size of the next 150 minutes; does it continue the day?)'
+family: ml
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: At the US open the brain forecasts the next 150 minutes' range better than the previous-20-day mean, and whether
+  the US session continues the day's move.
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLD
+- GOLDM
+- SILVER
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- all 56 MCX L4 features at the bar ending at 09:30 New York
+model_or_rule: HistGradientBoosting and ridge/logistic per symbol, walk-forward
+settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_metrics.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design: 0 of 12 pass. GOLD size skill 0.082 (87 days, fail), continue rate 0.471 AUC 0.464 (fail); GOLDM size
+    skill 0.058 (145 days, fail), continue rate 0.462 AUC 0.517 (fail); SILVER size skill -0.167 (74 days, fail), continue
+    rate 0.479 AUC 0.531 (fail); SILVERM size skill -0.101 (136 days, fail), continue rate 0.489 AUC 0.476 (fail); CRUDEOIL
+    size skill -0.309 (149 days, fail), continue rate 0.531 AUC 0.430 (fail); NATURALGAS size skill -0.051 (149 days, fail),
+    continue rate 0.524 AUC 0.511 (fail).'
+  costs: none (forecasts, no trades)
+holdout_read: false
+verdict: rejected
+notes: 'One row a day (73-149 test days a symbol): small samples.'

@@ -1,0 +1,35 @@
+id: mb1-l3-committee
+title: 'MCX brain L3: calibrated committee that abstains (direction at p >= 0.55 / <= 0.45; size band)'
+family: ml
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: When the calibrated committee acts, it is right >= 53% of the time on >= 300 acted rows (BH q <= 0.05).
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLD
+- GOLDM
+- SILVER
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- L1-B and L1-C probabilities
+- L2 state
+model_or_rule: logistic stack + isotonic on the inner 30% of each training fold
+settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_metrics.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 6
+results:
+  summary: 'Design: 1 of 6 pass. GOLD acted 2728 hit 0.514 (q 0.236, fail); size band coverage 0.728; GOLDM acted 4042 hit
+    0.506 (q 0.483, fail); size band coverage 0.800; SILVER acted 2888 hit 0.509 (q 0.429, fail); size band coverage 0.766;
+    SILVERM acted 3586 hit 0.532 (q 0.004, pass); size band coverage 0.647; CRUDEOIL acted 5220 hit 0.499 (q 0.970, fail);
+    size band coverage 0.718; NATURALGAS acted 3835 hit 0.511 (q 0.240, fail); size band coverage 0.779.'
+  costs: none (forecasts, no trades)
+holdout_read: false
+verdict: inconclusive
+notes: A 53% hit rate does not cover MCX costs on a one-hour hold (L4 B1 lost on every symbol).
