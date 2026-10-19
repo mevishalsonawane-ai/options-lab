@@ -126,35 +126,42 @@ def atlas(df: pd.DataFrame, folds=None, rule_window=None) -> dict:
         df["_fold"] = fold_of(df.day, folds)
     if rule_window is not None:
         df["_rulewin"] = (df.day.dt.date >= rule_window[0]).to_numpy()
-    bases = compute_bases(df)
+    bases_all = compute_bases(df)
     und, tf = df.und.to_numpy(), df.tf.to_numpy()
     res = {"P1": [], "P2": [], "P3": []}
     for u in cfg.UNDS:
         for t in cfg.TFS:
             sel = (und == u) & (tf == t)
+            if not sel.any():
+                continue
+            sub = df[sel].reset_index(drop=True)              # baselines were computed on the whole period
+            bases = {kk: v[sel] for kk, v in bases_all.items()}
             for f in FAMS:
-                res["P1"].append(run_family(df, bases, lambda d, f=f, sel=sel: sel & d[f].to_numpy(bool),
+                res["P1"].append(run_family(sub, bases, lambda d, f=f: d[f].to_numpy(bool),
                                             dict(und=u, tf=int(t), family=f, cond=""), folds, rule_window))
             if t == 1:
                 continue
             for f in FAMS:
-                fm = sel & df[f].to_numpy(bool)
+                fm = sub[f].to_numpy(bool)
                 if fm.sum() < cfg.MIN_N:
                     continue
                 for cnd in CX.CONDITIONS:
-                    mm = fm & df["c_" + cnd].to_numpy(bool)
+                    mm = fm & sub["c_" + cnd].to_numpy(bool)
                     if mm.sum() < cfg.MIN_N:
                         continue
-                    res["P2"].append(run_family(df, bases, lambda d, mm=mm: mm,
+                    res["P2"].append(run_family(sub, bases, lambda d, mm=mm: mm,
                                                 dict(und=u, tf=int(t), family=f, cond=cnd), folds, rule_window))
-            cells = df.loc[sel, "cell"].value_counts()
+            cells = sub["cell"].value_counts()
             for cell in cells[cells >= cfg.MIN_N_GRID].index:
-                mm = sel & (df.cell.to_numpy() == cell)
-                res["P3"].append(run_family(df, bases, lambda d, mm=mm: mm,
+                mm = sub.cell.to_numpy() == cell
+                res["P3"].append(run_family(sub, bases, lambda d, mm=mm: mm,
                                             dict(und=u, tf=int(t), family=cell, cond="grid"), folds, rule_window))
     out = {}
     for fam, rows in res.items():
         t = pd.DataFrame(rows)
+        if t.empty:
+            out[fam] = pd.DataFrame(columns=["und", "tf", "family", "cond", "n", "eff", "z", "p", "q", "tested"])
+            continue
         t["tested"] = t.n >= (cfg.MIN_N_GRID if fam == "P3" else cfg.MIN_N)
         t["q"] = np.nan
         t.loc[t.tested, "q"] = ST.bh(t.loc[t.tested, "p"].to_numpy())

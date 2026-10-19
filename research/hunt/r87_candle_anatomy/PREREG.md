@@ -147,10 +147,13 @@ candle knowledge pack (`research/hunt/r87_candle_anatomy/knowledge/candle_pack.j
 
 Dhan rate-limits the rolling-option endpoint (HTTP 429 DH-904; about 10 thirty-day chunks a minute), so ATM-3..+3 for
 2021-2026 would take hours. The option download is narrowed to **ATM-1..+1** (6 series a minute), newest windows first.
-Consequences, all in the direction of LESS information, none chosen after seeing a result:
-- `act` (the activity proxy) = volume of the 6 series ATM-1..+1 (not 14); OI sums and PCR = ATM-1..+1.
-- The dealer-gamma proxy uses ATM-1..+1 only: it is a near-the-money gamma tilt, a cruder proxy than R28 / brain.gex.
-  The two gamma conditions stay in P2 as pre-registered, labelled "very rough".
+A first try at ATM-1..+1 for all years was still too slow (one 30-day request takes about 7 s and Dhan refuses
+concurrent ones), so: **the ATM pair (offset 0) for every year, offsets -1 / +1 only from 1 Nov 2024** (the option-rules
+window). Consequences, all in the direction of LESS information, none chosen after seeing a result:
+- `act` (the activity proxy) = ATM call + put volume per minute (not 14 series), the same definition in every year;
+  OI change, "OI shift" and PCR = the ATM call / put OI.
+- The dealer-gamma proxy is computed from the ATM pair only, so its sign reduces to the ATM call-vs-put OI tilt. The
+  two gamma conditions stay in P2 as pre-registered, reported as "ATM OI tilt (gamma proxy, very rough)".
 - Option trades (1-ITM) and the ATM strike need only offsets -1, 0, +1, so Part 2 is unchanged. A held contract drops
   out of the data once the index moves more than one strike away; its exit then takes the last known print ("stale",
   counted and reported).

@@ -3,8 +3,9 @@
 index minutes   ts (naive IST, minute start), o, h, l, c; 09:15-15:29 only; duplicates dropped (last wins)
 option minutes  ts, offset (-1..1; PREREG amendment A0), side C/P, o, h, l, c, iv, v (volume, units), strike, oi, spot; the nearest expiry
                 (BANKNIFTY: weekly to 20 Nov 2024, monthly from 21 Nov 2024)
-chain minute    per ts: act (option volume of the 6 series ATM-1..+1, the index's activity proxy: the index itself has no
-                volume), coi / poi (call / put OI summed over ATM-1..+1), atm (offset-0 strike), straddle (ATM C + P)
+chain minute    per ts, from the ATM pair only (offset 0, the only offset kept for every year, PREREG A0): act (ATM call +
+                put volume, the index's activity proxy: the index itself has no volume), coi / poi (ATM call / put
+                OI), atm (offset-0 strike), straddle (ATM C + P)
 """
 from __future__ import annotations
 
@@ -81,6 +82,7 @@ def chain_minute(opt: pd.DataFrame) -> pd.DataFrame:
     """Per-minute chain summary from option minutes (see module doc)."""
     if opt.empty:
         return pd.DataFrame(columns=["ts", "act", "coi", "poi", "atm", "straddle"])
+    opt = opt[opt.offset == 0]
     g = opt.groupby("ts")
     act = g.v.sum(min_count=1)
     coi = opt[opt.side == "C"].groupby("ts").oi.sum(min_count=1)
@@ -94,7 +96,8 @@ def chain_minute(opt: pd.DataFrame) -> pd.DataFrame:
 
 
 def gex_sign_proxy(opt: pd.DataFrame) -> pd.DataFrame:
-    """Per-minute dealer-gamma proxy from ATM-1..+1 only (labelled an approximation): customers are assumed long
+    """Per-minute dealer-gamma proxy (labelled an approximation; build.py passes the ATM pair only, PREREG A0, so the
+    sign reduces to the ATM call-vs-put OI tilt): customers are assumed long
     calls and long puts (dealers short both is the textbook sign convention used by R28/brain.gex: calls +, puts -).
     Gamma per strike ~ phi(d) / (S * s), d = ln(S/K) / s, with s = sigma*sqrt(T) read from the ATM straddle
     (straddle ~ 0.8 * S * s), so no expiry date or rate is needed. Returns ts, gex (sign carries the meaning),

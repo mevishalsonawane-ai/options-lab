@@ -46,3 +46,24 @@ def test_summary_top5_and_drawdown():
     assert s["trades"] == 10 and np.isclose(s["net"], 90)
     assert np.isclose(s["top5_removed"], 90 - (200 + 100 + 50 + 40 + 30))
     assert np.isclose(s["max_dd"], 300) and s["worst_day"] == -300
+
+
+def test_atlas_runs_on_synthetic_tables_and_finds_a_planted_effect():
+    """End-to-end on synthetic candles: a planted 'hammer -> up' effect is found; a no-effect family is not."""
+    from research.hunt.r87_candle_anatomy import atlas as AT
+    from research.hunt.r87_candle_anatomy import build as B
+    from research.hunt.r87_candle_anatomy import cfg
+    from research.hunt.r87_candle_anatomy import context as CX
+    from research.hunt.r87_candle_anatomy.tests import synth
+    m = CX.minute_context(synth.minutes(days=40, seed=9), "NIFTY")
+    k = B.candle_table(m, "NIFTY", 5, set())
+    rng = np.random.default_rng(1)
+    plant = rng.random(len(k)) < 0.15
+    k["hammer"] = plant
+    k.loc[plant, "f_ret5"] = k.loc[plant, "f_ret5"] + 1.5
+    k["dkey"] = "NIFTY|" + k.day.dt.strftime("%Y-%m-%d")
+    out = AT.atlas(k)
+    p1 = out["P1"].set_index("family")
+    assert p1.loc["hammer", "q"] < 0.01 and p1.loc["hammer", "eff"] > 1.0
+    assert not (p1.loc["green", "q"] < 0.10)
+    assert set(out) == {"P1", "P2", "P3"} and len(out["P2"]) > 0      # P3 needs >= 200 a cell: too few here

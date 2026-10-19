@@ -23,7 +23,7 @@ def minutes(und: str) -> pd.DataFrame:
     o = D.option_minutes(und)
     if len(o):
         ch = D.chain_minute(o)
-        gx = D.gex_sign_proxy(o)
+        gx = D.gex_sign_proxy(o[o.offset == 0])           # PREREG A0: the ATM pair only, for every year
         m = m.merge(ch, on="ts", how="left").merge(gx[["ts", "gex_ratio"]], on="ts", how="left")
     return m
 

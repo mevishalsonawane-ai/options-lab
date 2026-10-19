@@ -30,7 +30,8 @@ IDX = {"NIFTY": (13, "IDX_I"), "BANKNIFTY": (25, "IDX_I"), "SENSEX": (51, "IDX_I
 OPT = (("NIFTY", "WEEK", dt.date(2021, 8, 1), END), ("SENSEX", "WEEK", dt.date(2021, 8, 1), END),
        ("BANKNIFTY", "WEEK", dt.date(2021, 8, 1), dt.date(2024, 11, 30)),
        ("BANKNIFTY", "MONTH", dt.date(2024, 11, 1), END))
-OFFS = range(-1, 2)          # ATM-1..+1 (PREREG amendment A0: Dhan rate limits, ~10 chunks a minute)
+OFFS = range(-1, 2)          # ATM-1..+1 (PREREG amendment A0: Dhan rate limits, ~8 chunks a minute)
+OFF1_FROM = dt.date(2024, 11, 1)   # offsets -1 / +1 only from here (the option-rules window); ATM for all years
 
 
 def jobs(group: str) -> list:
@@ -51,6 +52,8 @@ def jobs(group: str) -> list:
                 strike = "ATM" if off == 0 else f"ATM{off:+d}"
                 for side, key in (("CALL", "ce"), ("PUT", "pe")):
                     for a, b in LF.windows(a0, b0, 30):
+                        if off != 0 and b < OFF1_FROM:           # +-1 only for the rules window (A0)
+                            continue
                         J.append(LF.Job(f"{RAW}/opt/{und}/{flag}/{off:+03d}{side[0]}/{a}", "/charts/rollingoption",
                                         dict(securityId=sid, exchangeSegment=seg, instrument="OPTIDX", expiryFlag=flag,
                                              expiryCode=1, strike=strike, drvOptionType=side, requiredData=LF.RD,
