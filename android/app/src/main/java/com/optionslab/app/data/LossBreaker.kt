@@ -53,7 +53,13 @@ object LossBreaker {
         // next pass reads again.
         val live = if (Broker.loggedIn) Broker.within(Broker.READ_BUDGET_MS) { Broker.positionBook().m2m } else null
         // 20 Oct, enhancement round 1 (idea 4): the same read is today's figure for the account stop rule (memory; written later).
-        if (live != null) runCatching { AccountStopHost.dayRead(live) }
+        // 20 Oct, enhancement round 2 (idea 6): less today's charges (Zerodha's exact figure when kept, else the estimate from the
+        // day's kept trades; both from memory or the vault, never a network read here), so it reads the arms' net figure.
+        if (live != null) runCatching {
+            val d = Market.today()
+            val charges = runCatching { TradeBook.exactChargesOn(d) ?: TradeBook.liveChargesOn(d) }.getOrNull()
+            AccountStopHost.dayRead(live, charges = charges)
+        }
         // The day lock on the same figures (08 Oct): an account up by the Bot settings amount makes no new automatic entry today.
         runCatching { DayLockGuard.update(context, paper, live) }
         val hit = when {

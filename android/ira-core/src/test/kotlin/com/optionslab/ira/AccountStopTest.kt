@@ -95,4 +95,20 @@ class AccountStopTest {
         assertEquals(r, AccountStop.decodeReached(AccountStop.encodeReached(r)))
         assertNull(AccountStop.decodeReached(null)); assertNull(AccountStop.decodeReached("junk"))
     }
+
+    /** 20 Oct, enhancement round 2 (idea 6): the day's figure less the day's charges, as the arms' own rule reads it. */
+    @Test fun theDaysFigureIsAfterCharges() {
+        assertEquals(-12_600.0, AccountStop.afterCharges(-12_000.0, 600.0))
+        assertEquals(400.0, AccountStop.afterCharges(1_000.0, 600.0), "charges larger than a small gain turn it down, never up")
+        assertEquals(-12_000.0, AccountStop.afterCharges(-12_000.0, null), "charges not known: before charges, as before")
+        assertEquals(-12_000.0, AccountStop.afterCharges(-12_000.0, -50.0), "odd charges ignored")
+        assertEquals(-12_000.0, AccountStop.afterCharges(-12_000.0, Double.NaN))
+        assertNull(AccountStop.afterCharges(Double.NaN, 10.0))
+        assertEquals(-0.01, AccountStop.afterCharges(0.0, 0.011), "to the paisa")
+        // The month's -Rs 13,000 is reached on the net figure: -12,600 before and -13,100 after charges.
+        val d = LocalDate.of(2026, 10, 20)
+        val days = AccountStop.record(emptyList(), d, AccountStop.afterCharges(-12_600.0, 500.0)!!)
+        assertTrue(AccountStop.status(days, d).stopped)
+        assertTrue(AccountStop.line(AccountStop.status(days, d), false, 0).contains("after charges"))
+    }
 }

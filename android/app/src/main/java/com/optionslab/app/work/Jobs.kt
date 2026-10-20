@@ -1583,7 +1583,15 @@ class WatchService : Service() {
      * run is still open.
      */
     private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.foClose() ||
-        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning())) || eveningLookDue()
+        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning())) || eveningLookDue() || mcxEveningLookDue()
+
+    /**
+     * 20 Oct, enhancement round 2 (idea 3): up to half an hour past MCX's close (23:30, or 23:55 in US winter time; past midnight
+     * too) while a carried live MCX protection still waits for its overnight GTT (memory only): the watch stays for that look.
+     */
+    private fun mcxEveningLookDue(): Boolean = runCatching {
+        com.optionslab.app.data.McxMarket.eveningLookDue(com.optionslab.app.data.Protections.mcxOvernightHint)
+    }.getOrDefault(false)
 
     /**
      * 20 Oct, enhancement round 1 (idea 2): up to half an hour past F&O's close while a carried live protection still waits for
@@ -1648,7 +1656,10 @@ class WatchService : Service() {
             // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
             // 20 Oct, enhancement round 1 (idea 2): past the close, only the stops-and-targets look while a carried protection waits
             // for its overnight GTT (a strategy still open past the close keeps its full pass, which looks at them too).
-            if (Market.minuteNow() > Market.foClose() && eveningLookDue() && !runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false)) {
+            // 20 Oct, enhancement round 2 (idea 3): the same look after MCX's close for a carried MCX protection (MCX's pass, while it is
+            // due, looks at them itself).
+            if ((Market.minuteNow() > Market.foClose() && eveningLookDue() && !runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false)) ||
+                (mcxEveningLookDue() && !mcxDue())) {
                 Heartbeat.stepBegin("evening stops and targets")
                 try { com.optionslab.app.data.Protections.tick() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                     Tasks.stepFailed("evening stops and targets", e)

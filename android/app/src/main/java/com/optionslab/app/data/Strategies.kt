@@ -525,72 +525,77 @@ object Strategies {
                 // protection's stop, the owner's own limit), in whole lots, and at most the run's quantity: a leg
                 // part-closed by hand still gets the rest closed, and two exits never add up to a new position.
                 var qty = order.quantity
-                if (exit) {
-                    // 18 Oct: the leg's own stop resting at Zerodha ([restLegStops]) comes out FIRST, confirmed out - else both could
-                    // fill. One that already filled IS this exit (its fill is booked as this order's).
-                    val sk = b.runs[def.id]?.runId?.let { legKey(it, order.legId) }
-                    val rest = sk?.let { b.legStops[it] }
-                    if (sk != null && rest != null) {
-                        // Taken out and confirmed out: an SL order cancelled (one of an earlier session is gone with it), a GTT
-                        // deleted (a fired one's own orders cancelled). Its state, and its fill when it filled meanwhile.
-                        val out = legStopOut(rest)
-                        val st = out?.second
-                        val sid = out?.second?.orderId ?: rest.substringBefore('|')
-                        when (out?.first) {
-                            "COMPLETE" -> {
-                                val st = st ?: return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be read; tried again next look")
-                                b.legStops.remove(sk)
-                                b.owners["kite:$sid"] = ownerLabel(def, order)
-                                Notifier.orderFilled(app, side.name, st.filled, kiteSym, st.avgPrice, "Live", "${def.name} · leg ${order.legId} stop at Zerodha", sid)
-                                return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
-                            }
-                            "CANCELLED", "REJECTED" -> {
-                                b.legStops.remove(sk)
-                                // Part of it filled before it came out: that part is this exit's (the run asks again for the rest).
-                                if (st != null && st.filled > 0) {
-                                    b.owners["kite:$sid"] = ownerLabel(def, order)
-                                    return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", st.status, st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
-                                }
-                            }
-                            else -> return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be confirmed out yet; tried again next look")
-                        }
-                    }
-                    // 20 Oct, review: the orders first, then the positions (as [McxGuard] and [ExpirySquareOff]). The other way round,
-                    // a protection's or the expiry exit's order filling between the two reads showed the position still held and
-                    // nothing working, and this exit doubled it. In this order such a fill shows as still working: nothing more sent.
-                    val working = runCatching { Broker.orders() }.getOrNull()
-                        ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
-                    val net = runCatching { Broker.positionBook().net }.getOrNull()
-                        ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
-                    val held = net.filter { it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product }.sumOf { it.qty }
-                    val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
-                    if (!closes) return@runBlocking StrategyHost.Placed.Refused(
-                        "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} would not close it; not sent")
-                    val busy = working.filter { it.working && it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product && it.side == side.name }
-                        .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-                    qty = com.optionslab.engine.risk.ExitQty.sendable(held, busy, order.quantity, ref.lot)
-                    if (qty <= 0) return@runBlocking StrategyHost.Placed.Refused(
-                        "Zerodha shows $kiteSym ${order.product} net $held with $busy already on its way out; nothing more sent")
-                }
-                val last = runCatching { Broker.quotes(listOf("${ref.exchange}:$kiteSym"))["${ref.exchange}:$kiteSym"]?.last }.getOrNull()
-                val o = Kite.Order(kiteSym, side, qty, ref.lot, order.product, "MARKET", null, ref.tick, ref.exchange, "iraalgostrat")
-                // The account-wide guard, on a fresh read of the account.
-                val acct = Broker.accountNow()      // positions, funds and orders read in parallel
-                // 20 Oct, review: no quote is an UNKNOWN price (NaN), not 0. At 0 the guard's order-value and exposure limits saw
-                // a zero-value order and let a MARKET entry of any size through; the guard refuses an entry it cannot price
-                // (its existing rule, as ORB, Pine and the arms do: "never enter blind"). An exit never needs one.
-                Guard.check(Guard.liveOrder(o).copy(price = last ?: Double.NaN), acct, exit).takeIf { it.isNotEmpty() }
-                    ?.let { return@runBlocking StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
-                val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
-                if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
+                // 20 Oct, enhancement round 2: an exit is read and sent in the contract's one exit turn, from an orders read that shows
+                // every exit sent from here ([ExitCoordinator]): another sender's exit sent a moment ago is subtracted, never doubled.
+                val pass = if (exit) ExitCoordinator.enter(ref.exchange, kiteSym, "strategy ${def.name}") else null
                 val id = try {
-                    Broker.placeOrder(o, exit)
-                } catch (e: Exception) {
-                    if (Broker.definite(e)) return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
-                    // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
-                    runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
-                        ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
-                }
+                    if (exit) {
+                        // 18 Oct: the leg's own stop resting at Zerodha ([restLegStops]) comes out FIRST, confirmed out - else both could
+                        // fill. One that already filled IS this exit (its fill is booked as this order's).
+                        val sk = b.runs[def.id]?.runId?.let { legKey(it, order.legId) }
+                        val rest = sk?.let { b.legStops[it] }
+                        if (sk != null && rest != null) {
+                            // Taken out and confirmed out: an SL order cancelled (one of an earlier session is gone with it), a GTT
+                            // deleted (a fired one's own orders cancelled). Its state, and its fill when it filled meanwhile.
+                            val out = legStopOut(rest)
+                            val st = out?.second
+                            val sid = out?.second?.orderId ?: rest.substringBefore('|')
+                            when (out?.first) {
+                                "COMPLETE" -> {
+                                    val st = st ?: return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be read; tried again next look")
+                                    b.legStops.remove(sk)
+                                    b.owners["kite:$sid"] = ownerLabel(def, order)
+                                    Notifier.orderFilled(app, side.name, st.filled, kiteSym, st.avgPrice, "Live", "${def.name} · leg ${order.legId} stop at Zerodha", sid)
+                                    return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                                }
+                                "CANCELLED", "REJECTED" -> {
+                                    b.legStops.remove(sk)
+                                    // Part of it filled before it came out: that part is this exit's (the run asks again for the rest).
+                                    if (st != null && st.filled > 0) {
+                                        b.owners["kite:$sid"] = ownerLabel(def, order)
+                                        return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", st.status, st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                                    }
+                                }
+                                else -> return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be confirmed out yet; tried again next look")
+                            }
+                        }
+                        // 20 Oct, review: the orders first, then the positions (as [McxGuard] and [ExpirySquareOff]). The other way round,
+                        // a protection's or the expiry exit's order filling between the two reads showed the position still held and
+                        // nothing working, and this exit doubled it. In this order such a fill shows as still working: nothing more sent.
+                        val working = runCatching { ExitCoordinator.orders(ref.exchange, kiteSym, "strategy ${def.name}") }.getOrNull()
+                            ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
+                        val net = runCatching { Broker.positionBook().net }.getOrNull()
+                            ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
+                        val held = net.filter { it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product }.sumOf { it.qty }
+                        val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
+                        if (!closes) return@runBlocking StrategyHost.Placed.Refused(
+                            "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} would not close it; not sent")
+                        val busy = working.filter { it.working && it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product && it.side == side.name }
+                            .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+                        qty = com.optionslab.engine.risk.ExitQty.sendable(held, busy, order.quantity, ref.lot)
+                        if (qty <= 0) return@runBlocking StrategyHost.Placed.Refused(
+                            "Zerodha shows $kiteSym ${order.product} net $held with $busy already on its way out; nothing more sent")
+                    }
+                    val last = runCatching { Broker.quotes(listOf("${ref.exchange}:$kiteSym"))["${ref.exchange}:$kiteSym"]?.last }.getOrNull()
+                    val o = Kite.Order(kiteSym, side, qty, ref.lot, order.product, "MARKET", null, ref.tick, ref.exchange, "iraalgostrat")
+                    // The account-wide guard, on a fresh read of the account.
+                    val acct = Broker.accountNow()      // positions, funds and orders read in parallel
+                    // 20 Oct, review: no quote is an UNKNOWN price (NaN), not 0. At 0 the guard's order-value and exposure limits saw
+                    // a zero-value order and let a MARKET entry of any size through; the guard refuses an entry it cannot price
+                    // (its existing rule, as ORB, Pine and the arms do: "never enter blind"). An exit never needs one.
+                    Guard.check(Guard.liveOrder(o).copy(price = last ?: Double.NaN), acct, exit).takeIf { it.isNotEmpty() }
+                        ?.let { return@runBlocking StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
+                    val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
+                    if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
+                    try {
+                        Broker.placeOrder(o, exit)
+                    } catch (e: Exception) {
+                        if (Broker.definite(e)) return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
+                        // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
+                        runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
+                            ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
+                    }
+                } finally { pass?.leave() }
                 b.owners["kite:$id"] = ownerLabel(def, order)
                 FlowGate.outcome(flow, "entered_live")
                 // From here the order exists at Zerodha: never report it as refused. An unknown

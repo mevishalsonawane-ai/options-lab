@@ -159,6 +159,13 @@ class FakeKite : Closeable {
         return false
     }
 
+    /**
+     * 20 Oct, enhancement round 2: the next order placed is left out of the order book's list (GET /orders) for this many reads,
+     * as Zerodha's book can trail a POST by a moment. Its own history (GET /orders/{id}) shows it at once.
+     */
+    @Volatile var trailReads = 0
+    private val trailing = HashMap<String, Int>()
+
     fun nextPlace(s: Scenario) = synchronized(lock) { scenarios.addLast(s) }
     fun nextPlace(reply: Reply = Reply.OK, outcome: Outcome = Outcome.FILL, partialQty: Int = 0, message: String = "") =
         nextPlace(Scenario(reply, outcome, partialQty, message))
@@ -327,7 +334,7 @@ class FakeKite : Closeable {
             m == "GET" && path == "/portfolio/positions" -> ok(positionsJson())
             m == "GET" && path == "/portfolio/holdings" -> ok(holdingsJson())
             m == "GET" && path == "/trades" -> ok(tradesJson())
-            m == "GET" && path == "/orders" -> ok(JSONArray().apply { orders.values.forEach { put(orderJson(it)) } })
+            m == "GET" && path == "/orders" -> ok(JSONArray().apply { orders.values.filter { o -> shownInBook(o.id) }.forEach { put(orderJson(it)) } })
             m == "POST" && path == "/orders/regular" -> place(parseForm(body))
             m == "GET" && path.startsWith("/orders/") && path.count { it == '/' } == 2 -> history(path.substringAfterLast('/'))
             m == "DELETE" && path.startsWith("/orders/") -> cancel(path.substringAfterLast('/'))
@@ -430,6 +437,7 @@ class FakeKite : Closeable {
         val px = s.fillPrice ?: o.price.takeIf { it > 0 } ?: quotes["${o.exchange}:${o.symbol}"]?.first ?: 0.0
         o.fillPrice = px
         orders[id] = o
+        if (trailReads > 0) { trailing[id] = trailReads; trailReads = 0 }
         // Stop orders rest until triggered (fill(id)), whatever the scenario says about fills.
         // A limit away from the quoted market rests (a target), as at the exchange; with no quote it fills.
         val q = quotes["${o.exchange}:${o.symbol}"]
@@ -452,6 +460,13 @@ class FakeKite : Closeable {
                 .setBody("<html><body><h1>502 Bad Gateway</h1></body></html>")
             else -> ok(JSONObject().put("order_id", id))
         }
+    }
+
+    /** False while [id] is still trailing the book ([trailReads]); each list read counts down. */
+    private fun shownInBook(id: String): Boolean {
+        val n = trailing[id] ?: return true
+        if (n <= 1) trailing.remove(id) else trailing[id] = n - 1
+        return false
     }
 
     private fun history(id: String): MockResponse {

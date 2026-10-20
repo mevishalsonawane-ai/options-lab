@@ -121,49 +121,55 @@ object ExpirySquareOff {
             // Exits already working at Zerodha (an earlier pass's order resting in a thin book, or one whose
             // reply was lost; read above, before the positions) are subtracted first, so a retry never sends a second exit.
             for (p in open) {
-                val i = ins.getValue(p.symbol)
-                val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
-                val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
-                // Any other resting exit on it (a protection's stop or target, a strategy's stop) would keep the
-                // market exit from ever going out: cancel them first; the exit goes on the next pass.
-                // Second review: at the backstop, an arm's own exit still working on it (its market sell, or its stop it is about to
-                // replace with one) is its closing in progress: never cancelled here (it would only rest it again, and the two
-                // could both sell). The arm is left to finish; this pass sends nothing for it and says so once.
-                if (backstop && runCatching { armOwns(p.symbol) }.getOrDefault(false) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
-                    tellOnce(context, "arm closing ${p.symbol}", "${p.symbol} expires today and its arm is still closing it at Zerodha; watch it in Trade.")
-                    continue
-                }
-                val others = same.filter { it.tag != "iraalgoexpiry" }
-                if (others.isNotEmpty()) {
-                    others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
-                    continue
-                }
-                val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-                val qty = com.optionslab.engine.risk.ExitQty.sendable(p.qty, pending, abs(p.qty), i.lotSize)
-                if (qty <= 0) continue                                      // still closing; checked again next pass
-                // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
-                val orders = Kite.slices(qty, i.lotSize, Kite.freezeQuantity(p.exchange, p.symbol))
-                    .map { Kite.Order(p.symbol, side, it, i.lotSize, p.product, "MARKET", null, i.tickSize, p.exchange, "iraalgoexpiry") }
-                val bad = orders.flatMap { Kite.refusals(it, s.limits(), Broker.sentToday(), false, exit = true) }.distinct()
-                if (bad.isNotEmpty()) {
-                    tellOnce(context, "refused ${p.symbol}", "${p.symbol} expires today and its exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade.")
-                    continue
-                }
-                val placed = ArrayList<String>()
-                for (o in orders) {
-                    try {
-                        placed += Broker.placeOrder(o, exit = true).also { runCatching { Strategies.tagOwner("kite:$it", Origins.EXPIRY) } }
-                    } catch (e: Exception) {
-                        if (Broker.definite(e)) {
-                            tellOnce(context, "rejected ${p.symbol} ${e.message}", "Zerodha refused the expiry exit of ${p.symbol}: ${e.message}. Retrying every pass until 15:30; close it yourself if it keeps failing.")
+                // 20 Oct, enhancement round 2: each contract in its one exit turn ([ExitCoordinator]); an exit sent from here since this
+                // pass read the orders (an arm's, a protection's, Boss's own) leaves the contract to the next pass, which reads again.
+                val pass = ExitCoordinator.enter(p.exchange, p.symbol, "expiry square-off")
+                try {
+                    if (ExitCoordinator.stale(p.exchange, p.symbol, "expiry square-off")) continue
+                    val i = ins.getValue(p.symbol)
+                    val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
+                    val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
+                    // Any other resting exit on it (a protection's stop or target, a strategy's stop) would keep the
+                    // market exit from ever going out: cancel them first; the exit goes on the next pass.
+                    // Second review: at the backstop, an arm's own exit still working on it (its market sell, or its stop it is about to
+                    // replace with one) is its closing in progress: never cancelled here (it would only rest it again, and the two
+                    // could both sell). The arm is left to finish; this pass sends nothing for it and says so once.
+                    if (backstop && runCatching { armOwns(p.symbol) }.getOrDefault(false) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
+                        tellOnce(context, "arm closing ${p.symbol}", "${p.symbol} expires today and its arm is still closing it at Zerodha; watch it in Trade.")
+                        continue
+                    }
+                    val others = same.filter { it.tag != "iraalgoexpiry" }
+                    if (others.isNotEmpty()) {
+                        others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+                        continue
+                    }
+                    val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+                    val qty = com.optionslab.engine.risk.ExitQty.sendable(p.qty, pending, abs(p.qty), i.lotSize)
+                    if (qty <= 0) continue                                      // still closing; checked again next pass
+                    // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
+                    val orders = Kite.slices(qty, i.lotSize, Kite.freezeQuantity(p.exchange, p.symbol))
+                        .map { Kite.Order(p.symbol, side, it, i.lotSize, p.product, "MARKET", null, i.tickSize, p.exchange, "iraalgoexpiry") }
+                    val bad = orders.flatMap { Kite.refusals(it, s.limits(), Broker.sentToday(), false, exit = true) }.distinct()
+                    if (bad.isNotEmpty()) {
+                        tellOnce(context, "refused ${p.symbol}", "${p.symbol} expires today and its exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade.")
+                        continue
+                    }
+                    val placed = ArrayList<String>()
+                    for (o in orders) {
+                        try {
+                            placed += Broker.placeOrder(o, exit = true).also { runCatching { Strategies.tagOwner("kite:$it", Origins.EXPIRY) } }
+                        } catch (e: Exception) {
+                            if (Broker.definite(e)) {
+                                tellOnce(context, "rejected ${p.symbol} ${e.message}", "Zerodha refused the expiry exit of ${p.symbol}: ${e.message}. Retrying every pass until 15:30; close it yourself if it keeps failing.")
+                                break
+                            }
+                            // The reply was lost, not necessarily the order: look for it before trying again.
+                            runCatching { Broker.findRecentRetrying(o, placed + working.map { it.id }) }.getOrNull()?.let { placed += it }
                             break
                         }
-                        // The reply was lost, not necessarily the order: look for it before trying again.
-                        runCatching { Broker.findRecentRetrying(o, placed + working.map { it.id }) }.getOrNull()?.let { placed += it }
-                        break
                     }
-                }
-                if (placed.isNotEmpty()) closed += "live ${p.symbol}"
+                    if (placed.isNotEmpty()) closed += "live ${p.symbol}"
+                } finally { pass.leave() }
             }
         }.onFailure { unread = true }
         // 18 Oct, review: a linked account with no session now (the morning's token not renewed yet, or dropped by Zerodha)

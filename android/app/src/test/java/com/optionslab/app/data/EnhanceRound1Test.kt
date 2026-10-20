@@ -55,6 +55,16 @@ class EnhanceRound1Test : RobolectricTest() {
         assertTrue(AccountStopHost.view.value.reached)
     }
 
+    /** 20 Oct, enhancement round 2 (idea 6): the day's figure is read less the day's charges, so it is reached on the net figure. */
+    @Test fun theRuleReadsTheDayLessItsCharges() {
+        session(10, 0)
+        AccountStopHost.dayRead(-12_600.0, charges = 500.0)
+        AccountStopHost.setOn(true)
+        val why = Broker.entryRecheck(order("iraorb"), "orb")
+        assertNotNull("-Rs 13,100 after charges: reached", why)
+        assertTrue(AccountStopHost.line(), AccountStopHost.line().contains("after charges"))
+    }
+
     /** Boss's own orders, and a saved strategy's basket leg (its start is asked instead), are never refused at the door. */
     @Test fun bosssOwnOrderAndABasketLegAreNeverRefused() {
         session(10, 0)

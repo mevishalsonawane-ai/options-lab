@@ -216,6 +216,8 @@ object Diag {
             append(runCatching { com.optionslab.app.work.WatchWorkers.slowestLine(8) }.getOrElse { "Slowest steps today: could not read" }).append('\n')
             // 20 Oct, enhancement round 1: the 15-second stop check's real gaps and what counts as held now ([round1Watch]).
             append(round1Watch())
+            // 20 Oct, enhancement round 2: the exit coordinator's day ([round2Exits]).
+            append(round2Exits())
             append(runCatching { Broker.sharingLine() }.getOrElse { "Zerodha requests: could not read" }).append('\n')
             append(runCatching { AppState.line() }.getOrElse { "Shared state: could not read" }).append('\n')
             append("One-index claims standing: ").append(runCatching { AutoExposure.claims().ifEmpty { listOf("none") }.joinToString("; ") }.getOrElse { "could not read" }).append('\n')
@@ -352,6 +354,9 @@ object Diag {
         append(runCatching { LiquidityTest.twinLine() }.getOrElse { "Liquidity no-twin rule: could not read" }).append('\n')
         append(runCatching { AccountStopHost.line() }.getOrElse { "Account stop rule: could not read" }).append('\n')
     }
+
+    /** 20 Oct, enhancement round 2 (idea 1): the exit coordinator's day. Its own function (the report's one is near the compiler's limit). */
+    private fun round2Exits(): String = (runCatching { ExitCoordinator.line() }.getOrElse { "Exit coordinator: could not read" }) + "\n"
 
     /** 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7). */
     private fun round1Watch(): String = buildString {

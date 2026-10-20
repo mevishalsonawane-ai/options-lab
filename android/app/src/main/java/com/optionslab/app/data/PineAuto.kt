@@ -1222,28 +1222,35 @@ object PineAuto {
         suspend fun restop(left: Held) {
             if (tookStop && left.qty > 0) b.held[id] = placeLiveStop(item, left.copy(stop = null), left.stopAt)
         }
-        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull() ?: return
-        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
-            h.qty, spec.lotSize)
-        if (qty <= 0) {
-            note(b, id, if (h.unconfirmed) "$sym: the buy is not confirmed yet and nothing of it is held to sell; checked again next pass"
-                else "$sym: other exits already working at Zerodha cover what is held; checked again next pass")
-            return
-        }
-        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")
-        val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
-        if (bad.isNotEmpty()) {
-            com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "Pine live")
-            restop(h)
-            return
-        }
-        val orderId = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite() + orders.map { it.id }) }.getOrNull()
-            found ?: run {
-                com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit failed (${e.message}); retrying on the next pass.", "Pine live")
+        // 20 Oct, enhancement round 2: read and sent in the contract's one exit turn, from an orders read that shows every exit sent
+        // from here ([ExitCoordinator]); and the orders first, then the positions read again (an exit filling between the two reads
+        // shows as still working, never as still held with nothing on its way out).
+        val orderId = ExitCoordinator.turn("NFO", sym, "Pine ${label(item)}") {
+            val working = runCatching { ExitCoordinator.orders("NFO", sym, "Pine ${label(item)}").filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull() ?: return
+            val heldNow = runCatching { Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } }
+                .getOrNull() ?: return
+            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
+            val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
+                h.qty, spec.lotSize)
+            if (qty <= 0) {
+                note(b, id, if (h.unconfirmed) "$sym: the buy is not confirmed yet and nothing of it is held to sell; checked again next pass"
+                    else "$sym: other exits already working at Zerodha cover what is held; checked again next pass")
+                return
+            }
+            val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")
+            val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
+            if (bad.isNotEmpty()) {
+                com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "Pine live")
                 restop(h)
                 return
+            }
+            try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+                val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite() + orders.map { it.id }) }.getOrNull()
+                found ?: run {
+                    com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit failed (${e.message}); retrying on the next pass.", "Pine live")
+                    restop(h)
+                    return
+                }
             }
         }
         ownerTag("kite:$orderId", "${label(item)} · $why")

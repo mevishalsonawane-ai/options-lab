@@ -80,4 +80,23 @@ class StopCadenceTest {
         assertFalse(EveningLook.due(close + 5, close, tradingDay = false, pending = true), "a holiday")
         assertFalse(EveningLook.due(9 * 60 + 30, close, true, true), "never in the session")
     }
+
+    /** 20 Oct, enhancement round 2 (idea 3): MCX's look after its 23:30 (23:55) close, which runs past midnight. */
+    @Test fun theMcxLookAfterItsCloseRunsPastMidnightForHalfAnHour() {
+        val summer = 23 * 60 + 30
+        val winter = 23 * 60 + 55
+        assertFalse(EveningLook.dueAfter(summer, summer, true, true), "the close minute itself")
+        assertTrue(EveningLook.dueAfter(summer + 1, summer, true, true))
+        assertTrue(EveningLook.dueAfter(0, summer, true, true), "midnight")
+        assertFalse(EveningLook.dueAfter(1, summer, true, true), "past half an hour")
+        assertTrue(EveningLook.dueAfter(0, winter, true, true))
+        assertTrue(EveningLook.dueAfter(25, winter, true, true), "00:25 after a 23:55 close")
+        assertFalse(EveningLook.dueAfter(26, winter, true, true))
+        assertFalse(EveningLook.dueAfter(21 * 60, summer, true, true), "never in the session")
+        assertFalse(EveningLook.dueAfter(summer + 5, summer, sessionDay = false, pending = true), "no session that day")
+        assertFalse(EveningLook.dueAfter(summer + 5, summer, true, pending = false), "nothing waiting")
+        assertFalse(EveningLook.dueAfter(-1, summer, true, true)); assertFalse(EveningLook.dueAfter(24 * 60, summer, true, true))
+        // A shortened session (a holiday's evening-only window closing at 19:00): from its own close.
+        assertTrue(EveningLook.dueAfter(19 * 60 + 10, 19 * 60, true, true))
+    }
 }

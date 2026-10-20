@@ -2786,26 +2786,30 @@ object OrbArms {
         // orders are ever cancelled here: another sell resting on the symbol (the other arm's stop, a protection, the
         // owner's own order, an earlier pass's sell whose reply was lost) is subtracted instead, so both filling never
         // turns the long into a short.
-        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull()
-            ?: return p.copy(stopOrderId = null) to null
-        val still = heldAtZerodha(sym) ?: return p.copy(stopOrderId = null) to null
-        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
-            p.qty, spec.lotSize)
-        if (qty <= 0) return p.copy(stopOrderId = null) to null                   // gone, or covered by what is working: next pass
-        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "iraorb")
-        val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
-        if (bad.isNotEmpty()) {
-            com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
-            return unsold()
-        }
-        val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            val definite = Broker.definite(e)
-            val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
-            found ?: run {
-                com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
-                // Refused outright: nothing went, so the stop goes back. A lost reply with no order found may still have gone.
-                return if (definite) unsold() else p.copy(stopOrderId = null) to null
+        // 20 Oct, enhancement round 2: read and sent in the contract's one exit turn, from a read that shows every exit sent from
+        // here ([ExitCoordinator]): another sender's exit sent a moment ago is subtracted, never sold again.
+        val id = ExitCoordinator.turn("NFO", sym, label) {
+            val working = runCatching { ExitCoordinator.orders("NFO", sym, label).filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull()
+                ?: return p.copy(stopOrderId = null) to null
+            val still = heldAtZerodha(sym) ?: return p.copy(stopOrderId = null) to null
+            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
+            val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
+                p.qty, spec.lotSize)
+            if (qty <= 0) return p.copy(stopOrderId = null) to null                   // gone, or covered by what is working: next pass
+            val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "iraorb")
+            val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
+            if (bad.isNotEmpty()) {
+                com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
+                return unsold()
+            }
+            try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+                val definite = Broker.definite(e)
+                val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
+                found ?: run {
+                    com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
+                    // Refused outright: nothing went, so the stop goes back. A lost reply with no order found may still have gone.
+                    return if (definite) unsold() else p.copy(stopOrderId = null) to null
+                }
             }
         }
         Strategies.tagOwner("kite:$id", "$label · $why")

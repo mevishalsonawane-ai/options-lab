@@ -7,7 +7,8 @@ import kotlin.math.abs
 /**
  * 20 Oct, enhancement round 1 (idea 4): Boss's account stop rule (-Rs 40,000 from the best, or -Rs 13,000 in a calendar
  * month; CLAUDE.md) over the WHOLE Zerodha account, not only the arms' live record ([LiquidityStopRule] in ArmLive and the ORB
- * family). Each trading day's figure is Zerodha's own day P&L (the positions' m2m, before charges) as last read by the app;
+ * family). Each trading day's figure is Zerodha's own day P&L (the positions' m2m) as last read by the app, less the day's
+ * charges (20 Oct, enhancement round 2, idea 6: [afterCharges], so it reads the same net figure as the arms' own rule);
  * the walk is the same as [LiquidityStopRule.check] with one "trade" a day.
  *
  * It only ever blocks a bot's NEW live entry, never an exit, never Boss's own order, and never sizes anything. In shadow by
@@ -15,8 +16,19 @@ import kotlin.math.abs
  * would refuse, until Boss switches it on. Pure.
  */
 object AccountStop {
-    /** One trading day: Zerodha's day P&L as last read ([net], rupees before charges). */
+    /** One trading day: Zerodha's day P&L as last read less the day's charges ([net], rupees). */
     data class Day(val day: LocalDate, val net: Double)
+
+    /**
+     * 20 Oct, enhancement round 2 (idea 6): the day's figure the rule keeps: Zerodha's [m2m] (before charges) less the day's
+     * [charges] (Zerodha's exact contract note when known, else the estimate). Charges unknown, negative or not a number: 0 (the
+     * figure before charges, as before). Null when [m2m] is not a number.
+     */
+    fun afterCharges(m2m: Double, charges: Double?): Double? {
+        if (!m2m.isFinite()) return null
+        val c = charges?.takeIf { it.isFinite() && it > 0 } ?: 0.0
+        return Math.round((m2m - c) * 100) / 100.0
+    }
 
     /** Days kept (a little over a year: the month and the drawdown since the first day kept). */
     const val KEEP = 400
@@ -63,7 +75,7 @@ object AccountStop {
     fun line(st: LiquidityStopRule.Status, on: Boolean, shadowRefused: Int): String {
         val mode = if (on) "on: the bots' new live entries are refused once it is reached" else "in shadow: logged only"
         val now = if (st.trades == 0) "no Zerodha day recorded yet"
-            else "drawdown ${rs(st.drawdown)} of -Rs 40,000, this month ${rs(st.month)} of -Rs 13,000 (${st.trades} day${if (st.trades == 1) "" else "s"}, Zerodha's figures before charges)"
+            else "drawdown ${rs(st.drawdown)} of -Rs 40,000, this month ${rs(st.month)} of -Rs 13,000 (${st.trades} day${if (st.trades == 1) "" else "s"}, Zerodha's figures after charges)"
         val reached = if (st.stopped) "; REACHED on ${st.day} (${st.why})" else ""
         val would = if (!on && shadowRefused > 0) "; $shadowRefused live ${if (shadowRefused == 1) "entry" else "entries"} would have been refused today" else ""
         return "Account stop rule ($mode): $now$reached$would."

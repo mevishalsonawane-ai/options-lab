@@ -689,6 +689,8 @@ fun RiskPage(model: AppModel) {
             item { SameDirectionCapCard() }
             // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
             item { AccountStopCard(model) }
+            // 20 Oct, enhancement round 2: one exit at a time per contract (in shadow until switched on).
+            item { ExitCoordinatorCard() }
             item { EventCalendarCard() }
             // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
             item { EventShieldSwitchCard() }

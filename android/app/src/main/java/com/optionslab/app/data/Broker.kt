@@ -858,6 +858,8 @@ object Broker {
             rows(call("GET", "/orders") as JSONArray).map(::orderRow).sortedByDescending { it.placedAt }
         }
         val list = r.value
+        // 20 Oct, enhancement round 2: the exits sent from here that this read shows are ticked off (memory only).
+        ExitCoordinator.ordersRead(list)
         // A resting stop that filled between the stream's updates is measured from the book (memory only; most reads skip it).
         runCatching { if (FillSlippage.anyWaiting()) list.forEach { if (FillSlippage.waiting(it.id)) FillSlippage.ended(it.id, it.status, it.avg, it.filled) } }
         keptOrders = Kept(r.startedAt, gen, list)
@@ -1347,7 +1349,17 @@ object Broker {
         // sold, Boss's own sale or an exit Zerodha then rejected each freed a whole place while the position was still held, and
         // the cap undercounted all day. A place is freed only when a positions read shows the position closed
         // ([ExposureCapHost.livePositions], on every read): until then it is counted one too many, which only lowers risk.
-        if (exit) return com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }
+        // 20 Oct, enhancement round 2: every exit sent is noted by the exit coordinator (memory only) until a read of the book shows
+        // it, so the next exit sender on the same contract never reads the book without it ([ExitCoordinator]).
+        if (exit) {
+            val ticket = ExitCoordinator.sending(o)
+            return try {
+                com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }.also { ExitCoordinator.answered(ticket, it) }
+            } catch (e: Exception) {
+                ExitCoordinator.failed(ticket, e !is kotlinx.coroutines.CancellationException && definite(e))
+                throw e
+            }
+        }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
         // 19 Oct: a bot's live index-option entry counted by the same-direction cap until it closes (memory only).
@@ -1505,7 +1517,7 @@ object Broker {
                 it.optString("order_type") == o.orderType &&
                 it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false &&
                 (!afterError || adoptableAfterError(o, it))
-        }?.optString("order_id")?.also { countSent(); noteSent(it) }
+        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it) }
     }
 
     /**
@@ -1596,7 +1608,7 @@ object Broker {
             rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
             rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
             rows(g.optJSONArray("orders")).map { it.optString("product") })
-    }.sortedByDescending { it.created }
+    }.sortedByDescending { it.created }.also { ExitCoordinator.gttsRead(it) }
 
     /** Places a GTT. Callers must have had the owner confirm it. */
     /**
@@ -1615,7 +1627,16 @@ object Broker {
         }
     }
 
-    suspend fun placeGtt(g: Kite.Gtt): Long = (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id")
+    suspend fun placeGtt(g: Kite.Gtt): Long {
+        // 20 Oct, enhancement round 2: noted by the exit coordinator until a read of the GTT list shows it ([ExitCoordinator]).
+        val ticket = ExitCoordinator.sendingGtt(g)
+        return try {
+            (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id").also { ExitCoordinator.answered(ticket, it.toString()) }
+        } catch (e: Exception) {
+            ExitCoordinator.failed(ticket, e !is kotlinx.coroutines.CancellationException && definite(e))
+            throw e
+        }
+    }
 
     suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id") }
 

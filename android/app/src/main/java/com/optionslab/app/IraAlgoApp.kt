@@ -94,6 +94,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.ExposureCapHost.init(this)
         // 20 Oct, enhancement round 1 (idea 4): the account stop rule (in shadow by default), read in the background.
         com.optionslab.app.data.AccountStopHost.init(this)
+        // 20 Oct, enhancement round 2 (idea 1): the exit coordinator's switch (in shadow by default), read in the background.
+        com.optionslab.app.data.ExitCoordinator.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
         // 18 Oct (Boss: every paper strategy present for live too): the paper strategies' live path, before the arms register with it.

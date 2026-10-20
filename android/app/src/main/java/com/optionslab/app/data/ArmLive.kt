@@ -843,12 +843,18 @@ object ArmLive {
         val trigger = at ?: return p
         if (!LiveMirror.mayRest(trigger, ltp, p.tick, p.side)) return p.copy(stopTrigger = trigger)
         val exitSide = if (p.side > 0) Kite.Side.SELL else Kite.Side.BUY
+        // 20 Oct, enhancement round 2: read and rested in the contract's one exit turn ([ExitCoordinator]; re-entrant when an exit
+        // that did not go puts its stop back).
+        return ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label} stop") { restStopInTurn(p, trigger, ltp, spec, exitSide) }
+    }
+
+    private suspend fun restStopInTurn(p: Pos, trigger: Double, ltp: Double, spec: LiveMirror.Spec, exitSide: Kite.Side): Pos {
         // Every exit already resting on the contract: working orders and active GTTs (review: a GTT left out here let a second one
         // rest beside it, and the two could fire together into a short).
         val covered = runCatching {
-            Broker.orders().filter { it.working && it.symbol == p.symbol && it.side == exitSide.name && it.product == p.product }
+            ExitCoordinator.orders(p.exchange, p.symbol, "arm ${p.label} stop").filter { it.working && it.symbol == p.symbol && it.side == exitSide.name && it.product == p.product }
                 .sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) } +
-                Broker.gtts().filter { it.symbol == p.symbol && it.exchange == p.exchange }.sumOf { it.covers(exitSide.name, p.product) }
+                ExitCoordinator.gtts(p.exchange, p.symbol, "arm ${p.label} stop").filter { it.symbol == p.symbol && it.exchange == p.exchange }.sumOf { it.covers(exitSide.name, p.product) }
         }.getOrNull()
         val heldNow = runCatching {
             Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty } * p.side
@@ -1052,18 +1058,22 @@ object ArmLive {
             else -> x
         }
         // 3. The sale: what Zerodha holds less what is on its way out, now that the stop is out or shrunk.
-        val working = runCatching { mineOf(Broker.orders(), emptySet()) }.getOrNull() ?: return closed + back(cur)
-        val held = runCatching { heldNow(cur) }.getOrNull() ?: return closed + back(cur)
-        val sendable = ExitQty.sendable(held.coerceAtLeast(0), working.sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) }, minOf(toSell, cur.qty), p.lot)
-        if (sendable <= 0) return closed + back(cur)
-        val o = Kite.Order(p.symbol, exitSide, sendable, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG, multiplier = p.multiplier)
-        val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known() + working.map { it.id }) }.getOrNull()
-            found ?: run {
-                com.optionslab.app.work.Alerts.post("${p.label}: the live exit failed (${e.message?.take(160)}); retrying on the next look.",
-                    com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
-                // Refused outright: the stop goes back now. A lost reply with no order found may still have gone: next look.
-                return closed + (if (Broker.definite(e)) back(cur) else cur)
+        // 20 Oct, enhancement round 2: read and sent in the contract's one exit turn, from a read that shows every exit sent from
+        // here ([ExitCoordinator]): another sender's exit sent a moment ago is subtracted, never sold again.
+        val id = ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label}") {
+            val working = runCatching { mineOf(ExitCoordinator.orders(p.exchange, p.symbol, "arm ${p.label}"), emptySet()) }.getOrNull() ?: return closed + back(cur)
+            val held = runCatching { heldNow(cur) }.getOrNull() ?: return closed + back(cur)
+            val sendable = ExitQty.sendable(held.coerceAtLeast(0), working.sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) }, minOf(toSell, cur.qty), p.lot)
+            if (sendable <= 0) return closed + back(cur)
+            val o = Kite.Order(p.symbol, exitSide, sendable, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG, multiplier = p.multiplier)
+            try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+                val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known() + working.map { it.id }) }.getOrNull()
+                found ?: run {
+                    com.optionslab.app.work.Alerts.post("${p.label}: the live exit failed (${e.message?.take(160)}); retrying on the next look.",
+                        com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
+                    // Refused outright: the stop goes back now. A lost reply with no order found may still have gone: next look.
+                    return closed + (if (Broker.definite(e)) back(cur) else cur)
+                }
             }
         }
         runCatching { Strategies.tagOwner("kite:$id", "${p.label} · live $why") }

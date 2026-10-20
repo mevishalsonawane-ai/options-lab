@@ -90,13 +90,16 @@ object AccountStopHost {
     }
 
     /**
-     * Zerodha's day P&L as just read ([net]; the daily loss limit's own read, in the watch pass). Recorded for today on a trading
+     * Zerodha's day P&L as just read ([m2m]; the daily loss limit's own read, in the watch pass), less today's [charges] (null:
+     * not known, the figure before charges as before). Recorded for today on a trading
      * day once the market has opened; written in the background at most once a minute (and at once when the rule is reached),
      * and only once the saved days were read.
      */
-    fun dayRead(net: Double, now: Long = System.currentTimeMillis()) {
+    fun dayRead(m2m: Double, now: Long = System.currentTimeMillis(), charges: Double? = null) {
         runCatching {
-            if (!net.isFinite() || !Market.isTradingDay() || Market.minuteNow() < Market.OPEN) return
+            // 20 Oct, enhancement round 2 (idea 6): less the day's charges ([AccountStop.afterCharges]).
+            val net = AccountStop.afterCharges(m2m, charges) ?: return
+            if (!Market.isTradingDay() || Market.minuteNow() < Market.OPEN) return
             // The watch pass, never the order path: the saved days are read here first if the start's read has not landed.
             if (!loaded) load()
             val d = today()

@@ -327,4 +327,51 @@ class ProtectionsGttTest : RobolectricTest() {
         tick()
         assertNotNull("the GTT rests once the read works", one().gttId)
     }
+
+    /**
+     * 20 Oct, enhancement round 2 (idea 3): a carried MCX protection. MCX's DAY stop and target end at its 23:30 close (23:55 in US
+     * winter time), after NSE's evening look is long over: the watch keeps a look past MCX's close while it waits, and the GTT rests
+     * then; at MCX's next open (09:00) the GTT goes first and the day's orders come back, as on NSE.
+     */
+    @Test fun aCarriedMcxProtectionRestsAsAGttAfterMcxsCloseAndComesBackAtItsOpen() {
+        val m = "CRUDEOIL26NOVFUT"
+        kite.instruments += FakeKite.Ins(55_001, m, "CRUDEOIL", LocalDate.now().plusDays(30), 0.0, "FUT", 1, tick = 1.0, exchange = "MCX")
+        kite.position(m, 2, 5_000.0, exchange = "MCX")
+        kite.quote("MCX:$m", 5_000.0, 4_999.0, 5_001.0)
+        val cal = McxMarket.calendar()
+        var d = LocalDate.now(com.optionslab.engine.IST).plusDays(1)
+        while (cal.window(d)?.close?.let { it.hour == 23 } != true || cal.window(d.plusDays(1)) == null) d = d.plusDays(1)
+        val close = cal.window(d)!!.close
+        fun at(day: LocalDate, h: Int, mi: Int) {
+            val t = day.atTime(h, mi).atZone(com.optionslab.engine.IST).toInstant()
+            Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), t))
+        }
+        at(d, 21, 0)
+        val msg = runBlocking { Protections.protectLive(m, "MCX", "NRML", 2, 5_000.0, 4_900.0, null, 5_200.0) }
+        assertTrue(msg, msg.startsWith("Protected $m"))
+        val p = runBlocking { Protections.active() }.single { it.symbol == m }
+        assertTrue("a carried MCX protection waits for its overnight GTT", Protections.mcxOvernightHint)
+        assertTrue("not NSE's look", !Protections.overnightHint)
+        assertTrue("the look is not due while MCX trades", !McxMarket.eveningLookDue(true))
+        // MCX's close: Zerodha cancels the DAY exits; the look after it is due (and only while something waits).
+        at(d, close.hour, close.minute + 3)
+        listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { kite.order(it).status = "CANCELLED" }
+        assertTrue(McxMarket.eveningLookDue(true))
+        assertTrue(!McxMarket.eveningLookDue(false))
+        tick()
+        val g = kite.gtts.values.single()
+        assertEquals(m, g.getJSONObject("condition").getString("tradingsymbol"))
+        assertEquals("MCX", g.getJSONObject("condition").getString("exchange"))
+        assertEquals(2, g.getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+        assertTrue("nothing waits now: the look ends", !Protections.mcxOvernightHint)
+        // MCX's next open: the GTT out first, then the day's stop and target.
+        kite.orders.clear()
+        at(d.plusDays(1), 9, 5)
+        kite.requests.clear()
+        tick()
+        val writes = kite.requests.filter { it.method != "GET" }
+        assertEquals("DELETE", writes.first().method)
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertTrue(kite.gtts.isEmpty())
+    }
 }

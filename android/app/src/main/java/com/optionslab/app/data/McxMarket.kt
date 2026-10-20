@@ -83,6 +83,19 @@ object McxMarket {
     /** [isOpen], or null when it cannot be told now (20 Oct: a failed read is not "closed" for what runs only after the close). */
     fun openOrNull(): Boolean? = runCatching { calendar().isOpen(now()) }.getOrNull()
 
+    /**
+     * 20 Oct, enhancement round 2 (idea 3): whether the watch's look after MCX's close is due ([com.optionslab.ira.EveningLook.dueAfter]):
+     * a carried live MCX protection still waits for its overnight GTT ([pending]) within half an hour of the session's close
+     * (after midnight: yesterday's session). Memory and the calendar only.
+     */
+    fun eveningLookDue(pending: Boolean): Boolean = runCatching {
+        if (!pending) return@runCatching false
+        val t = now()
+        val d = if (t.hour < 12) t.toLocalDate().minusDays(1) else t.toLocalDate()
+        val w = calendar().window(d) ?: return@runCatching false
+        com.optionslab.ira.EveningLook.dueAfter(t.hour * 60 + t.minute, w.close.hour * 60 + w.close.minute, true, true)
+    }.getOrDefault(false)
+
     /** Today's MCX session, or null when MCX does not trade today. */
     fun todayWindow(): McxSession.Window? = runCatching { calendar().window(Market.today()) }.getOrNull()
 

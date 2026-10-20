@@ -111,6 +111,8 @@ object Protections {
         liveKeysHint = list.filter { it.active && it.live }.map { "${it.exchange}:${it.symbol}" }.distinct()
         overnightHint = list.any { it.active && it.live && it.product != "MIS" && it.exchange != "MCX" && it.gttId == null && it.note != REMOVING &&
             (it.stop != null || it.target != null) && (gttTries[it.id] ?: 0) < GTT_TRIES }
+        mcxOvernightHint = list.any { it.active && it.live && it.product != "MIS" && it.exchange == "MCX" && it.gttId == null && it.note != REMOVING &&
+            (it.stop != null || it.target != null) && (gttTries[it.id] ?: 0) < GTT_TRIES }
     }
 
     /**
@@ -118,6 +120,13 @@ object Protections {
      * the last load or save - the watch keeps its evening look ([com.optionslab.ira.EveningLook]) while it is true. Memory only.
      */
     @Volatile var overnightHint: Boolean = false
+        private set
+
+    /**
+     * 20 Oct, enhancement round 2 (idea 3): the same for a carried live MCX protection: MCX's DAY stop and target end at its 23:30
+     * (23:55) close, and the watch keeps a look after that close while it is true ([McxMarket.eveningLookDue]). Memory only.
+     */
+    @Volatile var mcxOvernightHint: Boolean = false
         private set
 
     /** True while a fast look decides from the stream (round 2, set under [lock] by [tick]): Zerodha's books as last read. */
@@ -360,12 +369,20 @@ object Protections {
      * already through the stop, within 0.25% of it): said plainly, and tried again at most [GTT_TRIES] times. Unchanged when it
      * cannot be placed now; with its id once placed.
      */
-    private suspend fun restOvernight(p: Item, net: Int): Item {
+    private suspend fun restOvernight(p: Item, net0: Int): Item {
         if (!p.live || p.gttId != null || p.product == "MIS" || p.note == REMOVING || (p.stop == null && p.target == null) || streamLook) return p
         if ((gttTries[p.id] ?: 0) >= GTT_TRIES) return p
+        // 20 Oct, enhancement round 2: read and rested in the contract's one exit turn, from reads that show every exit sent from here
+        // ([ExitCoordinator]), the orders and GTTs first and then the position read again (an exit filling meanwhile is never doubled).
+        return ExitCoordinator.turn(p.exchange, p.symbol, "protection") { restOvernightInTurn(p, net0) }
+    }
+
+    private suspend fun restOvernightInTurn(p: Item, net0: Int): Item {
         val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
-        val gtts = runCatching { Broker.gtts() }.getOrNull() ?: return p
-        val orders = runCatching { Broker.orders() }.getOrNull() ?: return p
+        val gtts = runCatching { ExitCoordinator.gtts(p.exchange, p.symbol, "protection") }.getOrNull() ?: return p
+        val orders = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "protection") }.getOrNull() ?: return p
+        val net = heldAgain(p) ?: return p
+        if (net == 0 || net.sign() != net0.sign()) return p                // closed meanwhile: the next look ends it
         // Review: a GTT of this protection's own that went through but was never recorded (a lost reply, a save that did not land)
         // is adopted, never counted as "another exit": counted busy, the open would place the day's orders beside it.
         val want = listOfNotNull(p.stop, p.target).map { Math.round(Math.round(it / p.tick) * p.tick * 100) / 100.0 }.sorted()   // as [Kite.protect]
@@ -418,17 +435,27 @@ object Protections {
      * [p]'s stop and target placed again at their levels (an earlier day's DAY orders ended): the protection carried on under
      * a new id (today's: [cancelOrders] knows its orders are today's). Null when the stop could not be placed (the caller says so).
      */
-    private suspend fun restAgain(p0: Item, net: Int = p0.qty): Item? {
-        val side = if (p0.qty > 0) Kite.Side.SELL else Kite.Side.BUY
-        val known = listOfNotNull(p0.stopOrderId, p0.targetOrderId)
+    private suspend fun restAgain(p0: Item, net0: Int = p0.qty): Item? =
+        // 20 Oct, enhancement round 2: read and placed in the contract's one exit turn ([ExitCoordinator]), as [restOvernight].
+        ExitCoordinator.turn(p0.exchange, p0.symbol, "protection") { restAgainInTurn(p0, net0) }
+
+    private suspend fun restAgainInTurn(p00: Item, net0: Int): Item? {
+        val side = if (p00.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        val known = listOfNotNull(p00.stopOrderId, p00.targetOrderId)
         // Second review: an exit already resting on it (Boss's own after-market order, another owner's) is subtracted first, so
         // the two together never sell more than is held. All of it covered: nothing placed, and said. 20 Oct, enhancement round 1:
         // an active GTT on it (an arm's own, or one of ours not recorded) counts too, against all that is held ([net]).
         val busy = runCatching {
-            Broker.orders().filter { it.working && it.symbol == p0.symbol && it.exchange == p0.exchange && it.product == p0.product &&
+            ExitCoordinator.orders(p00.exchange, p00.symbol, "protection").filter { it.working && it.symbol == p00.symbol && it.exchange == p00.exchange && it.product == p00.product &&
                 it.side == side.name && it.id !in known }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
-                Broker.gtts().filter { it.symbol == p0.symbol && it.exchange == p0.exchange }.sumOf { it.covers(side.name, p0.product) }
-        }.getOrNull() ?: return p0                                       // the books not read: asked again next look
+                ExitCoordinator.gtts(p00.exchange, p00.symbol, "protection").filter { it.symbol == p00.symbol && it.exchange == p00.exchange }.sumOf { it.covers(side.name, p00.product) }
+        }.getOrNull() ?: return p00                                       // the books not read: asked again next look
+        // 20 Oct, enhancement round 2: what is held read again AFTER the books (an exit that filled since the caller's read shows
+        // here, not as still held with nothing on its way out); never more than the caller saw.
+        val again = heldAgain(p00) ?: return p00
+        if (again == 0 || again.sign() != net0.sign()) return p00         // closed meanwhile: the next look ends it
+        val net = if (abs(again) < abs(net0)) again else net0
+        val p0 = if (abs(p00.qty) > abs(net)) p00.copy(qty = net.sign() * abs(net)) else p00
         val qty = com.optionslab.engine.risk.ExitQty.sendable(net, busy, abs(p0.qty), p0.lotSize)
         if (qty <= 0) {
             Alerts.post("${p0.symbol}: an exit already resting at Zerodha covers it, so its stop and target were not placed again.",
@@ -464,6 +491,11 @@ object Protections {
             Alerts.Kind.SUCCESS, "Protection")
         return next
     }
+
+    /** 20 Oct, enhancement round 2: [p]'s contract as Zerodha holds it now (net, this product); null when it could not be read. */
+    private suspend fun heldAgain(p: Item): Int? = runCatching {
+        Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
+    }.getOrNull()
 
     /**
      * Place one exit. A lost reply is looked up in the order book (not adopting any of [known]), so an
@@ -784,7 +816,7 @@ object Protections {
     /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */
     suspend fun resetPaper(): Unit = lock.withLock { save(load().filter { it.live }) }
 
-    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; gttTries.clear(); if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; gttTries.clear(); if (::file.isInitialized) file.delete() }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */
     internal fun forgetMemoryForTest() { cache = null; gttTries.clear() }

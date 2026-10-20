@@ -230,10 +230,41 @@ internal const val ACCOUNT_STOP_RESTART = "Restart the count (PIN)"
 internal fun AccountStopCardContent(view: com.optionslab.app.data.AccountStopHost.View, said: String?, onSwitch: (Boolean) -> Unit, onRestart: () -> Unit) {
     LedgerCard(title = "Account stop rule") {
         Note("Your rule: once the Zerodha account is -Rs 40,000 from its best or -Rs 13,000 in a calendar month (Zerodha's day " +
-            "figures, before charges), the bots take no new live entry. Your own orders and every exit always go.")
+            "figures, less the day's charges), the bots take no new live entry. Your own orders and every exit always go.")
         ToggleRow("Refuse the bots' live entries once reached", if (view.on) "On: refused once reached" else "Off: live only logs what it would refuse", view.on, keepSub = true, onChange = onSwitch)
         if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
         if (view.reached) BrassButton(ACCOUNT_STOP_RESTART, Modifier.fillMaxWidth().padding(top = 4.dp)) { onRestart() }
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
+/**
+ * 20 Oct, enhancement round 2 (idea 1): Bot settings' exit coordinator. Off by default (shadow: what it would do is only logged);
+ * on, two automatic exits on one contract never read Zerodha's books at once, and a read missing an exit just sent is read again.
+ * It never refuses or resizes an exit, and past a short wait an exit always goes.
+ */
+@Composable
+internal fun ExitCoordinatorCard() {
+    val view by com.optionslab.app.data.ExitCoordinator.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ExitCoordinator.refresh() } } }
+    ExitCoordinatorCardContent(view, said) { on ->
+        scope.launch(Dispatchers.IO) {
+            val m = runCatching { com.optionslab.app.data.ExitCoordinator.setOn(on) }.getOrElse { "Could not save that." }
+            withContext(Dispatchers.Main) { said = m }
+        }
+    }
+}
+
+/** The card from plain state (tests drive it). */
+@Composable
+internal fun ExitCoordinatorCardContent(view: com.optionslab.app.data.ExitCoordinator.View, said: String?, onSwitch: (Boolean) -> Unit) {
+    LedgerCard(title = "One exit at a time") {
+        Note("When two of the app's exits (an arm, a stop, the expiry square-off, a strategy) want to sell the same contract at once, " +
+            "each waits its turn and reads Zerodha's books again, so one contract is never sold twice. Your own exits never wait.")
+        ToggleRow("Make exits take turns", if (view.on) "On: one exit at a time per contract" else "Off: only logs what it would do", view.on, keepSub = true, onChange = onSwitch)
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
 }
