@@ -165,7 +165,10 @@ class SecureBlobsTest : RobolectricTest() {
         Vault.testWriteDelayMs = 1_500L
         try {
             val writer = Thread { SecureBlobs.put(big, bulk(20)) }.apply { start() }
-            Thread.sleep(300)                                    // the write is under way (sleeping in the vault)
+            // The write is under way: the writer sleeps inside the vault's write (polled, never a fixed guess).
+            val until = System.currentTimeMillis() + 10_000
+            while (writer.state != Thread.State.TIMED_WAITING && System.currentTimeMillis() < until) Thread.sleep(5)
+            assertEquals(Thread.State.TIMED_WAITING, writer.state)
             val t0 = System.nanoTime()
             assertTrue(SecureBlobs.putSoon(big, bulk(30)))
             val ms = (System.nanoTime() - t0) / 1_000_000

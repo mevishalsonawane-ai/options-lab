@@ -292,7 +292,7 @@ object AppHealth {
     fun diagLine(): String { ensureLoaded(); return HealthBook.diagLine(book, today(), ::hhmm) }
 
     /** [day]'s line (20 Oct: the diagnostics' catch-up reads the day it is for, not the morning after). */
-    fun diagLine(day: LocalDate): String { ensureLoaded(); return HealthBook.diagLine(book, day, ::hhmm) }
+    fun diagLine(day: LocalDate): String { ensureLoaded(); return HealthBook.diagLine(book, day, ::hhmm, if (day == today()) "today" else "that day") }
 
     /** "Is the app healthy?" */
     fun sayHealthy(): String { ensureLoaded(); return HealthBook.sayHealthy(book, today()) }

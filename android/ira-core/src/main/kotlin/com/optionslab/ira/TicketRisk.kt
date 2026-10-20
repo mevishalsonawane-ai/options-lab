@@ -12,7 +12,7 @@ import java.util.Locale
  * misread, but the notices were wrong in two ways:
  *  - each was said once per watch run (a set in memory), so the 13:33 restart said both again;
  *  - below the breakeven the words said "-0.12% above" instead of "below".
- * Now each notice is said once per ticket ([key]: the notice and the ticket's session), the keys kept across a restart by
+ * Now each notice (nearing, below, in the money) is said once per ticket ([key]: the notice and the ticket's session), the keys kept across a restart by
  * the app; below the breakeven it says so; and a ticket past its expiry (left unsettled) is not watched as if still live.
  * Pure: the app gives the ticket, the index price and the keys already said; nothing here places or closes anything.
  */
@@ -22,6 +22,7 @@ object TicketRisk {
 
     const val NEAR = "risk.near"
     const val ITM = "risk.itm"
+    const val BELOW = "risk.below"
 
     /** The key a notice is said once under: one per ticket (its session), so a new ticket is warned again. */
     fun key(kind: String, session: LocalDate): String = "$kind|$session"
@@ -39,12 +40,14 @@ object TicketRisk {
         val out = ArrayList<Notice>()
         val cushion = (spot - breakeven) / spot
         val near = key(NEAR, session)
-        if (cushion <= riskPct && near !in said) {
+        val below = key(BELOW, session)
+        if (cushion <= riskPct) {
             val pct = "%.2f%%".format(Locale.ENGLISH, 100 * kotlin.math.abs(cushion))
             val at = "$underlying ${n1(spot)} is $pct"
-            out += if (cushion >= 0) Notice(near, 3001, "Index nearing your breakeven",
+            // Nearing it and then below it are two steps, each said once (review: one key hid the "losing" step).
+            if (cushion >= 0 && near !in said) out += Notice(near, 3001, "Index nearing your breakeven",
                 "$at above the ${n1(breakeven)} breakeven of the ${fmtG(strike)} put.")
-            else Notice(near, 3001, "Index below your breakeven",
+            if (cushion < 0 && below !in said) out += Notice(below, 3001, "Index below your breakeven",
                 "$at below the ${n1(breakeven)} breakeven of the ${fmtG(strike)} put: the paper ticket is losing.")
         }
         val itm = key(ITM, session)

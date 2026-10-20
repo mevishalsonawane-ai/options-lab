@@ -191,11 +191,14 @@ object HealthBook {
 
     private fun crashes(e: Exit) = e.kind == ExitKind.CRASH || e.kind == ExitKind.NATIVE_CRASH
 
-    /** The diagnostics' line: stalls today, the last ANR and crash and where, the tuner's adjustments now. */
-    fun diagLine(b: Book, today: LocalDate, hhmm: (Long) -> String): String {
+    /**
+     * The diagnostics' line: stalls today, the last ANR and crash and where, the tuner's adjustments now. [dayWord]: "that day"
+     * for an earlier day's line (the diagnostics' catch-up; its ANR and tuner are as now).
+     */
+    fun diagLine(b: Book, today: LocalDate, hhmm: (Long) -> String, dayWord: String = "today"): String {
         val d = b.day(today)
-        val stalls = if (d == null || d.stalls == 0) "no stalls today" else
-            "${plural(d.stalls, "stall")} today (longest ${sec(d.longestMs)}, most in ${d.places.maxWithOrNull(compareBy<Map.Entry<String, Int>> { it.value }.thenByDescending { it.key })?.key})"
+        val stalls = if (d == null || d.stalls == 0) "no stalls $dayWord" else
+            "${plural(d.stalls, "stall")} $dayWord (longest ${sec(d.longestMs)}, most in ${d.places.maxWithOrNull(compareBy<Map.Entry<String, Int>> { it.value }.thenByDescending { it.key })?.key})"
         // 20 Oct: with that day's stalls when the book still holds them (where the screen's thread was slow before it).
         val anr = b.exits.firstOrNull { it.kind == ExitKind.ANR }?.let { e ->
             val that = b.day(dayOf(e.atMs))?.takeIf { it.stalls > 0 }?.let { d ->

@@ -317,13 +317,15 @@ object DiagDay {
      * diagnostics, says "last 7 closed -2,340 after charges"; the file keeps the count, never the amount). [scrub] runs after.
      */
     fun otherArmLine(line: String): String =
-        NET_AFTER_PHRASE.replace(NET_AFTER_TRADES.replace(NET_AFTER_CHARGES.replace(line, "(net hidden)")) { m -> m.groupValues[1] }) { m ->
-            m.groupValues[1] + " (net hidden)" }
+        NET_AFTER_APART.replace(NET_AFTER_PHRASE.replace(NET_AFTER_TRADES.replace(NET_AFTER_CHARGES.replace(line, "(net hidden)")) { m ->
+            m.groupValues[1] }) { m -> m.groupValues[1] + " (net hidden)" }) { m -> m.groupValues[1] + " (net hidden)" }
 
     /**
      * 20 Oct (Boss's 19 Oct file kept "9 closed on it -10,947, 10 on the research exits -1,049"): the passed arms' nets after
      * their phrases. The app now writes "(net hidden)" there itself; this is the second guard.
      */
+    /** The apart index's count and net ("· FINNIFTY 3 2,173 ·", the 19 Oct file): the count kept. */
+    private val NET_AFTER_APART = Regex("\\b((?:NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX|BANKEX) \\d{1,4}) [-+−]?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?(?= ·|$)")
     private val NET_AFTER_PHRASE = Regex("(?i)(closed on it|on the research exits|on the plain rules|\\d+ would-be)\\s+[-+−]?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?")
 
     /**

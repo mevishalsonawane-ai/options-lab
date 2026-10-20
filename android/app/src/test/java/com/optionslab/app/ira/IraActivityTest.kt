@@ -16,6 +16,9 @@ class IraActivityTest : RobolectricTest() {
     @After fun down() { Vault.testWriteDelayMs = 0L }
 
     @Test fun anAddNeverWaitsOnASlowVaultWrite() {
+        // Jarvis's log exists only in a build with Jarvis (CI also runs the app's tests without him); the store-level
+        // proof is SecureBlobsTest.aSlowWriteNeverHoldsAPutOfTheSameKey.
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
         Vault.testWriteDelayMs = 1_500L
         val t0 = System.nanoTime()
         val other = Thread { IraActivity.add("Answered a question (test).") }.apply { start() }

@@ -25,6 +25,9 @@ class TicketNoticesTest : RobolectricTest() {
         // A restart: memory gone, the vault read again - nothing is said twice.
         Tasks.TicketNotices.resetForTest()
         assertEquals(first.map { it.key }.toSet(), Tasks.TicketNotices.said())
-        assertTrue(TicketRisk.due("NIFTY", "SELL", "PE", 25_200.0, 25_000.0, day, day, day, 24_950.0, 0.0025, Tasks.TicketNotices.said()).isEmpty())
+        assertTrue(TicketRisk.due("NIFTY", "SELL", "PE", 25_200.0, 25_000.0, day, day, day, 25_020.0, 0.0025, Tasks.TicketNotices.said()).isEmpty())
+        // Below the breakeven later: that step only, once.
+        assertEquals(listOf("risk.below|2026-10-19"),
+            TicketRisk.due("NIFTY", "SELL", "PE", 25_200.0, 25_000.0, day, day, day, 24_950.0, 0.0025, Tasks.TicketNotices.said()).map { it.key })
     }
 }

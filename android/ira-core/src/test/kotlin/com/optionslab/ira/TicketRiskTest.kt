@@ -22,13 +22,17 @@ class TicketRiskTest {
         assertEquals("Index nearing your breakeven", n[0].title)
         assertEquals("NIFTY 25,050.0 is 0.20% above the 25,000.0 breakeven of the 25200 put.", n[0].text)
         assertEquals("NIFTY 25,050.0 is below the 25200 strike. The loss is unbounded below here.", n[1].text)
-        // Said already (kept across the 13:33 restart): nothing again, even lower.
-        assertTrue(due(24_970.0, n.map { it.key }.toSet()).isEmpty())
+        // Said already (kept across the 13:33 restart): nothing again while still above the breakeven.
+        assertTrue(due(25_020.0, n.map { it.key }.toSet()).isEmpty())
+        // Below it: the next step, said once.
+        val below = due(24_970.0, n.map { it.key }.toSet())
+        assertEquals(listOf("risk.below|2026-10-19"), below.map { it.key })
+        assertTrue(due(24_900.0, (n + below).map { it.key }.toSet()).isEmpty())
     }
 
     @Test fun belowTheBreakevenSaysBelowNeverMinusAbove() {
         val n = due(24_970.0, setOf("risk.itm|2026-10-19"))
-        assertEquals(1, n.size)
+        assertEquals(listOf("risk.below|2026-10-19"), n.map { it.key })
         assertEquals("Index below your breakeven", n[0].title)
         assertEquals("NIFTY 24,970.0 is 0.12% below the 25,000.0 breakeven of the 25200 put: the paper ticket is losing.", n[0].text)
         assertTrue("-" !in n[0].text.substringBefore(" below"))

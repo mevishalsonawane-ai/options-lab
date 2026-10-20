@@ -15,9 +15,12 @@ internal object IraTools {
     private fun prefs() = com.optionslab.app.security.SecurePrefs
 
     /**
-     * 20 Oct (the 17 Oct ANR): the writes made under this object's lock go to the settings' background writer, readable at
-     * once: the screen's thread (Jarvis's speech callbacks, onResume's alert) takes the same lock and must never wait for the
-     * Keystore's encryption behind it.
+     * 20 Oct (the 17 Oct ANR): what is noted under this object's lock (mistakes, learned wordings, notes, habits, routines)
+     * goes to the settings' background writer, readable at once: the screen's thread (Jarvis's speech callbacks, onResume's
+     * alert) takes the same lock and must never wait for the Keystore's encryption behind it. Forgetting a whole list
+     * ([forgetLearned], [forgetMemory], [forgetRoutine], [forgetHabits]) stays a write to disk at once (rare, off the screen's
+     * thread, outside this lock but [forgetRoutine]'s), so it cannot come back after a kill; one word or note forgotten is
+     * written by the background writer within moments.
      */
     private fun putSoon(k: String, v: String?) = prefs().putAllSoon(mapOf(k to v))
 
@@ -400,7 +403,7 @@ internal object IraTools {
         (0 until a.length()).map { a.getJSONObject(it).let { o -> java.time.LocalDate.parse(o.getString("d")) to o.getString("w") } }
     }.getOrDefault(emptyList())
 
-    fun forgetLearned() { putSoon(LEARNED, null); awaiting = null; missedLast = null; offeredOnce.clear() }
+    fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null; offeredOnce.clear() }
 
     /**
      * The words Jarvis could not place on the last day before [day] that had any (at most 4 days back), for his
@@ -460,7 +463,7 @@ internal object IraTools {
         return item
     }
 
-    fun forgetMemory() { runCatching { putSoon(MEMORY, null) } }
+    fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }
 
     // ---- Boss's habits ----------------------------------------------------------------------------------------------
 
@@ -503,7 +506,7 @@ internal object IraTools {
             }
         }
         val p = runCatching { noteRoutine(question, now, afterLoss, writes) }.getOrNull()
-        if (writes.isNotEmpty()) runCatching { prefs().putAll(writes) }
+        if (writes.isNotEmpty()) runCatching { prefs().putAllSoon(writes) }
         return p
     }
 
@@ -544,7 +547,7 @@ internal object IraTools {
     }.getOrDefault(emptyMap())
 
     private fun saveKept(all: List<com.optionslab.ira.Routine.Kept>) {
-        prefs().put(ROUTINE_KEPT, JSONArray(all.map { com.optionslab.ira.Routine.encode(it) }).toString())
+        putSoon(ROUTINE_KEPT, JSONArray(all.map { com.optionslab.ira.Routine.encode(it) }).toString())
     }
 
     /** [question] noted in Boss's routine; what to write is added to [writes] (the caller writes it once). */
@@ -579,7 +582,7 @@ internal object IraTools {
 
     /** "Forget my routine": what was noted and kept, all dropped. */
     @Synchronized fun forgetRoutine() {
-        runCatching { prefs().put(ROUTINE_LOG, null); prefs().put(ROUTINE_KEPT, null); putSoon(ROUTINE_OFFERED, null) }
+        runCatching { prefs().put(ROUTINE_LOG, null); prefs().put(ROUTINE_KEPT, null); prefs().put(ROUTINE_OFFERED, null) }
         IraActivity.add("Forgot Boss's routine, as he asked.")
     }
 

@@ -269,6 +269,11 @@ class DiagDayTest {
         assertEquals("R51 Donchian 20: off · open 0 · 19 closed (net hidden) · of them 2 would-be (net hidden) · " +
             "30-60-100 lock on for new trades, 9 closed on it (net hidden), 10 on the research exits (net hidden) · L25 +5% once +25% on for new trades, " +
             "5 closed on it (net hidden) · Supertrend filter (R73 T7) on for new breaks, 3 closed on it (net hidden), 4 on the plain rules (net hidden)", out)
+        // The apart index's count and net (19 Oct: "FINNIFTY 3 2,173"): the count kept, the net hidden; an index level stays.
+        assertEquals("R51: off · FINNIFTY 3 (net hidden) · Forward test", DiagDay.otherArmLine("R51: off · FINNIFTY 3 2,173 · Forward test"))
+        assertEquals("x · NIFTY 0 (net hidden)", DiagDay.otherArmLine("x · NIFTY 0 -950"))
+        assertEquals("gamma 10:00: NIFTY negative (call wall 25000, put wall 24800, 42 options)",
+            DiagDay.otherArmLine("gamma 10:00: NIFTY negative (call wall 25000, put wall 24800, 42 options)"))
         // The app's own hidden form passes unchanged.
         val hidden = "9 closed on it (net hidden), 10 on the research exits (net hidden)"
         assertEquals(hidden, DiagDay.otherArmLine(hidden))

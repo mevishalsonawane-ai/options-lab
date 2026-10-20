@@ -85,7 +85,8 @@ object Diag {
         runCatching { writer.execute {
             keep(head + redact(text.replace('\n', ' ')))
             // 12 Oct: the day's errors counted by kind on this thread (the order review and the app's health read them; no agent read the diary).
-            runCatching { errors.add(java.time.LocalDate.now(com.optionslab.engine.IST), area, redact(text)) }
+            // 20 Oct: scrubbed as the diagnostics file scrubs the diary's lines, so one event has one kind in both counts.
+            runCatching { errors.add(java.time.LocalDate.now(com.optionslab.engine.IST), area, com.optionslab.ira.DiagDay.scrub(redact(text))) }
         } }
     }
 

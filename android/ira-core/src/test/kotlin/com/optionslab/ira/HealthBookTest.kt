@@ -172,6 +172,7 @@ class HealthBookTest {
         b = HealthBook.trim(b, at(d0.plusDays(1), 2))
         assertTrue("stream reconnects 15" in HealthBook.diagLine(b, d0, ::hhmm))
         assertTrue("stream reconnects 0" in HealthBook.diagLine(b, d0.plusDays(1), ::hhmm))
+        assertTrue(HealthBook.diagLine(b, d0, ::hhmm, "that day").startsWith("Health: no stalls that day"))
     }
 
     @Test fun theDiagnosticsLineAndJarvisWords() {

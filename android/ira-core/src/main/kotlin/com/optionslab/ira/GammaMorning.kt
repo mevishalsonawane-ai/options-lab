@@ -227,7 +227,6 @@ object GammaMorning {
 
     // ---- when -------------------------------------------------------------------------------------------------------
 
-    /** The line is due at [now]: a trading day, 10:00 to [LATE], not made yet today ([doneOn]). */
     /** Why no reading was made in the window (20 Oct; for the diagnostics): no chain on the phone. */
     const val NO_CHAIN = "no option chain on the phone 10:00-10:15"
     const val SWITCHED_OFF = "switched off"
@@ -242,6 +241,7 @@ object GammaMorning {
 
     fun keep(day: LocalDate, text: String): String = "$day|${text.replace('\n', ' ')}"
 
+    /** The line is due at [now]: a trading day, 10:00 to [LATE], not made yet today ([doneOn]). */
     fun due(now: LocalDateTime, tradingDay: Boolean, doneOn: LocalDate?): Boolean =
         tradingDay && doneOn != now.toLocalDate() && !now.toLocalTime().isBefore(AT) && now.toLocalTime().isBefore(LATE)
 
