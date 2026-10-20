@@ -1468,6 +1468,16 @@ class WatchService : Service() {
                 com.optionslab.app.data.SmartWorkers.refresh(app)
             }
         }
+        // The Candle agent (20 Oct): its own worker in the analysis group, a batch every 5 minutes in session (never per tick),
+        // cut at its time limit, restarted fresh after repeated failures. Knowledge only: it reads and explains, never orders.
+        if (com.optionslab.app.data.CandleAgentHost.enabled()) {
+            val app = this@WatchService
+            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.CANDLES, "analysis", timeoutMs = 2 * 60_000L,
+                cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.CandleAgentHost.delayMs(app) },
+                restart = com.optionslab.ira.SelfHeal.Restart())) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.CandleAgentHost.batch(app) }
+            }
+        }
         try {
             watchLoop(s, workers)
         } finally {

@@ -57,10 +57,21 @@ object WhatsNew {
     private val OCT17: LocalDate = LocalDate.of(2026, 10, 17)
     private val OCT18: LocalDate = LocalDate.of(2026, 10, 18)
     private val OCT19: LocalDate = LocalDate.of(2026, 10, 19)
+    private val OCT20: LocalDate = LocalDate.of(2026, 10, 20)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 20 Oct (Boss: "add a new agent in the application who will only study the candle patterns").
+        Entry("2026-10-20-candle-agent", OCT20, "Candle agent: every candle read and explained",
+            "A new Candle agent studies each closed candle on NIFTY, BANKNIFTY, SENSEX and four MCX futures. " +
+                "It says why a candle is green or red, and where its support and resistance came from. " +
+                "It adds what that kind of candle did in our research, with the sample size. " +
+                "Where the research found no edge, it says so plainly. " +
+                "It shares its reads with the other agents and hears theirs: regime, OI, gamma, news and big players. " +
+                "Its own counts become Jarvis's lessons; any proposal stays a note for you. " +
+                "It never trades, and it is let go first when memory is short.",
+            "Research → Candles", ask = "why was that candle green"),
         // 19 Oct (Boss: "Yes, keep only breadth donchain").
         Entry("2026-10-19-r51-record-only", OCT19, "R51 Donchian 20 records only; R72 trades",
             "Only R72 Breadth Donchian now buys the Donchian breaks on paper, as you asked. " +

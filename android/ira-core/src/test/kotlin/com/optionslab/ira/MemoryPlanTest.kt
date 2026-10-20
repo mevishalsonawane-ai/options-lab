@@ -35,7 +35,7 @@ class MemoryPlanTest {
 
     @Test fun eachLevelLetsGoWhatItShould() {
         assertEquals(emptyList(), MemoryPlan.releases(0))
-        assertEquals(listOf(MemoryPlan.Item.MODEL, MemoryPlan.Item.TELEGRAM, MemoryPlan.Item.ANSWER_CACHE, MemoryPlan.Item.MOVE_SUMMARIES), MemoryPlan.releases(MemoryPlan.RUNNING_MODERATE))
+        assertEquals(listOf(MemoryPlan.Item.MODEL, MemoryPlan.Item.CANDLE_AGENT, MemoryPlan.Item.TELEGRAM, MemoryPlan.Item.ANSWER_CACHE, MemoryPlan.Item.MOVE_SUMMARIES), MemoryPlan.releases(MemoryPlan.RUNNING_MODERATE))
         // The screen hidden: only the model (the biggest; the screen that used it is gone).
         assertEquals(listOf(MemoryPlan.Item.MODEL), MemoryPlan.releases(MemoryPlan.UI_HIDDEN))
         for (l in listOf(MemoryPlan.RUNNING_LOW, MemoryPlan.RUNNING_CRITICAL, MemoryPlan.BACKGROUND, MemoryPlan.MODERATE, MemoryPlan.COMPLETE))

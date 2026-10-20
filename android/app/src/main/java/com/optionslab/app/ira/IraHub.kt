@@ -1792,6 +1792,7 @@ object IraHub {
                 com.optionslab.ira.VixNext.asked(q) != null || com.optionslab.ira.SplitDays.asked(q) != null ||
                 com.optionslab.ira.RoundCloses.asked(q) != null || com.optionslab.ira.MonthTurns.asked(q) != null ||
                 com.optionslab.ira.LunchRange.asked(q) != null || com.optionslab.ira.OpenHighLow.asked(q) != null ||
+                com.optionslab.ira.CandleAgent.asked(q) != null ||
                 com.optionslab.ira.BigCandles.asked(q) != null || com.optionslab.ira.ExtremeCloses.asked(q) != null || com.optionslab.ira.WeekRange.asked(q) != null ||
                 com.optionslab.ira.RelativeMove.asked(q) != null || com.optionslab.ira.Comebacks.asked(q) != null || com.optionslab.ira.VixBand.asked(q) != null ||
                 com.optionslab.ira.Overnight.asked(q) != null || com.optionslab.ira.DayAfter.asked(q) != null || com.optionslab.ira.OpenReach.asked(q) != null || com.optionslab.ira.MultiDay.asked(q) != null ||
@@ -4691,6 +4692,20 @@ object IraHub {
                 else com.optionslab.ira.OpenHighLow.answer(openEndsAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the open-high and open-low record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "Why was that candle green?", "what does this candle mean?", "where is support for this candle?" (20 Oct): the Candle
+        // agent's newest read ([com.optionslab.app.data.CandleAgentHost]) - who won the candle, where it closed, its nearest
+        // support / resistance and where each came from, what that kind of candle did in the research with its n. Market data and
+        // the research; on a locked phone the other agents' trade results are left out. A read, never advice; nothing acts.
+        val candleAgentAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.CandleAgent.asked(q) }.getOrNull() else null
+        if (candleAgentAsk != null) {
+            val locked = runCatching { phoneLocked() }.getOrDefault(true)
+            val said = runCatching { com.optionslab.app.data.CandleAgentHost.answer(candleAgentAsk, com.optionslab.ira.CandleAgent.instrument(q), locked) }
+                .getOrElse { "I could not read the Candle agent just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true

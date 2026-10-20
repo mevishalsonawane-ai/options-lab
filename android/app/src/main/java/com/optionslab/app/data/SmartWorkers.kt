@@ -806,6 +806,7 @@ object SmartWorkers {
         runCatching { TradeManagerHost.diagLines() }.getOrDefault(emptyList()).forEach { out += "  $it" }
         if (com.optionslab.app.ira.JarvisLearning.enabled()) runCatching { out += "  " + com.optionslab.app.ira.JarvisLearning.diagLine() }
         if (SharedKnowledgeHost.enabled()) runCatching { out += "  " + SharedKnowledgeHost.diagLine() }
+        if (CandleAgentHost.enabled()) runCatching { out += "  " + CandleAgentHost.diagLine() }
         if (com.optionslab.app.ira.Autopilot.enabled()) runCatching { out += "  " + com.optionslab.app.ira.Autopilot.diagLine() }
         return out
     }

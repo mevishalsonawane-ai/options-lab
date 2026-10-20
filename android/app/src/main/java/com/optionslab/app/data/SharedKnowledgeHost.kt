@@ -238,7 +238,7 @@ object SharedKnowledgeHost {
     }
 
     /** The agents that read and write the shared knowledge, as the sheet names them. */
-    val AGENTS = listOf("Jarvis", "Trade manager", "Order review", "Order flow", "Liquidity paper test", "Slippage record", "Market study", "Strategy lab")
+    val AGENTS = listOf("Jarvis", "Trade manager", "Order review", "Order flow", "Liquidity paper test", "Slippage record", "Market study", "Strategy lab", "Candle agent")
 
     private fun publish() { runCatching { _lines.value = agentLines() } }
 

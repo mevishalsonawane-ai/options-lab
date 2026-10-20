@@ -33,6 +33,8 @@ object Findings {
         BIG_MOVE("big move"), STRONG_CLOSE("strong close"), VIX_SPIKE("VIX spike"), NEWS_WINDOW("news window"),
         ENTRY("entry"), STOP_HIT("stop hit"), TARGET_HIT("target hit"), DRIFT("drifting from its backtest"),
         DATA_UNRELIABLE("data unreliable"), DATA_HEALTH("data health"), OTHER("note"),
+        /** The Candle agent's read of a notable candle (20 Oct): knowledge only, always posted with no direction. */
+        CANDLE("candle read"),
     }
 
     /** Any instrument (a market-wide finding: the data's health, a news window for all). */

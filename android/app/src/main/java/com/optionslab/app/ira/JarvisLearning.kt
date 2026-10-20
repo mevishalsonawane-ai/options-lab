@@ -218,8 +218,10 @@ internal object JarvisLearning {
         // 13 Oct (the shared knowledge): the slippage record, the Liquidity paper test and the market study write to the lessons too.
         val exec = runCatching { execResults() }.getOrDefault(emptyList())
         val study = runCatching { studyResults(today) }.getOrDefault(emptyList())
+        // 20 Oct: the Candle agent's shapes, its own count against the research (never above building, never a proposal).
+        val candles = appContext?.let { c -> runCatching { com.optionslab.app.data.CandleAgentHost.lessons(c, today) }.getOrDefault(emptyList()) }.orEmpty()
         return AgentLessons.Inputs(today, keptTrips, regime, drift, keptManaged, flow, findingsKept(), incidents, moves, muted, paused, modes, orders = orders,
-            exec = exec, study = study)
+            exec = exec, study = study, candles = candles)
     }
 
     /**

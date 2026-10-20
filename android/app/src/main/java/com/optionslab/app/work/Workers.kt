@@ -73,6 +73,9 @@ object WatchWorkers {
     /** The shared market brain's worker (10 Oct): regime, windows, traps, health, findings, the daily self-review. */
     const val BRAIN = "Market brain"
 
+    /** The Candle agent's worker (20 Oct): a batch of candle reads every 5 minutes in session; knowledge only, never orders. */
+    const val CANDLES = "Candle agent"
+
     /** Today's date as text, worked out once a minute (the hot paths time every step: no date arithmetic per step). */
     @Volatile private var dayKept: Pair<Long, String>? = null
 

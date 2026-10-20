@@ -56,6 +56,8 @@ object AgentLessons {
         EXECUTION("Execution", "fills"),
         /** Jarvis's nightly market study (13 Oct): which setups held in both years of candles. */
         STUDY("Market study", "days counted"),
+        /** The Candle agent's own counts per candle shape against the research (20 Oct): a nightly snapshot, like the study's. */
+        CANDLES("Candle agent", "candles counted"),
     }
 
     enum class Confidence(val word: String) { WEAK("weak"), BUILDING("building"), STRONG("strong") }
@@ -178,6 +180,8 @@ object AgentLessons {
         val exec: List<ExecResult> = emptyList(),
         /** The nightly market study's setups (13 Oct: [Study.Finding]s as [StudyResult]s). */
         val study: List<StudyResult> = emptyList(),
+        /** The Candle agent's shapes, its own count against the research (20 Oct: [CandleBook.results]). */
+        val candles: List<CandleResult> = emptyList(),
     )
 
     /**
@@ -194,6 +198,13 @@ object AgentLessons {
      * daily review (a snapshot), never added up night after night.
      */
     data class StudyResult(val day: LocalDate, val key: String, val name: String, val days: Int, val held: Boolean, val tags: List<String> = emptyList())
+
+    /**
+     * One candle shape of the Candle agent (20 Oct): on [day] its own count of [key] ("nifty:5:big_lower_wick") had [n] settled
+     * candles and [agrees] with the research (R87 / R85) or not. Its counts are cumulative and re-read each night, so this is the
+     * latest of a daily review (a snapshot), and it stays at building at most ([ceiling]): never a proposal, never an action.
+     */
+    data class CandleResult(val day: LocalDate, val key: String, val name: String, val n: Int, val agrees: Boolean, val tags: List<String> = emptyList())
 
     /**
      * One recurring order flaw on one day (the order review, 12 Oct): [key] "orb_fresh:paper:gb", [n] the strategy's orders or
@@ -314,7 +325,8 @@ object AgentLessons {
      * counts re-read the same two years of candles, so night after night agreeing is not independent evidence - it never becomes
      * strong, so never a passed test in the shared knowledge, never a proposal, never sent to research as a confirmed finding.
      */
-    fun ceiling(topic: Topic, c: Confidence): Confidence = if (topic == Topic.STUDY && c == Confidence.STRONG) Confidence.BUILDING else c
+    fun ceiling(topic: Topic, c: Confidence): Confidence =
+        if ((topic == Topic.STUDY || topic == Topic.CANDLES) && c == Confidence.STRONG) Confidence.BUILDING else c
 
     /** [confidence], with strong also needing the night's q-value [q] at or under [BH_Q] (null: not tested yet - not strong). */
     fun confidence(e: Evidence, q: Double?): Confidence {
@@ -473,6 +485,7 @@ object AgentLessons {
             "order" -> if (pos) "has become rare" else "keeps happening"
             "exec" -> if (pos) "stay near the research's baseline" else "are often off the research's baseline"
             "study" -> if (pos) "held in both years of my study" else "was a coin toss in my study"
+            "candle" -> if (pos) "behaves as the research says in the Candle agent's own count" else "differs from the research in the Candle agent's own count"
             else -> if (pos) "goes well" else "goes badly"
         }
         return "${l.name} $verb" + (condWords(l.cond)?.let { " $it" } ?: "")
@@ -497,6 +510,7 @@ object AgentLessons {
                 else -> "trouble on ${e.hits} of ${e.n} days watched"
             }
             Kind.SNAPSHOT -> if (p == "study") "${e.n} days counted, held on ${e.of - e.hits} of ${e.of} nightly counts"
+                else if (p == "candle") "${e.n} candles counted, agreed with the research on ${e.of - e.hits} of ${e.of} nightly counts"
                 else "${e.n} trades judged, drifting on ${e.hits} of ${e.of} daily reviews, latest ${rs(e.rs)} a trade"
         }
         return "$body, $span, $from" + (l.q?.let { ", " + qWords(it) } ?: "") +
@@ -565,6 +579,7 @@ object AgentLessons {
     private const val A_LAB = "the strategy lab"
     private const val A_ORDERS = "the order review"
     private const val A_STUDY = "the market study"
+    private const val A_CANDLES = "the Candle agent"
 
     private val SKIP_OWNERS = setOf("", "manual", "protection")
     private val SLOTS = listOf("morning", "midday", "afternoon", "evening")
@@ -760,6 +775,12 @@ object AgentLessons {
             if (r.days <= 0 || r.key.isBlank()) continue
             acc("study:${r.key}", Topic.STUDY, Kind.SNAPSHOT, r.name, (r.tags + listOf("study")).distinct(), A_STUDY)
                 .add(r.day.toEpochDay(), r.days, 0.0, if (r.held) 0 else 1)
+        }
+        // The Candle agent (20 Oct): each shape's own count against the research, the latest of a daily review.
+        for (r in i.candles) {
+            if (r.n <= 0 || r.key.isBlank()) continue
+            acc("candle:${r.key}", Topic.CANDLES, Kind.SNAPSHOT, r.name, (r.tags + listOf("candles", "candle")).distinct(), A_CANDLES)
+                .add(r.day.toEpochDay(), r.n, 0.0, if (r.agrees) 0 else 1)
         }
         // The self-review: each strategy's health against its backtest, one reading a day.
         for (r in i.drift) {
@@ -1012,13 +1033,13 @@ object AgentLessons {
     /** The prefixes whose evidence counts toward each topic's skill without counting a trade twice. */
     private val SKILL_BASE = mapOf(Topic.STRATEGY to "strat", Topic.MANAGER to "mgr", Topic.SPECIALIST to "spec", Topic.ORDER_FLOW to "flow",
         Topic.REGIME to "regime", Topic.TIME_OF_DAY to "tod", Topic.DATA_HEALTH to "health", Topic.LAB to "lab", Topic.ORDERS to "order",
-        Topic.EXECUTION to "exec", Topic.STUDY to "study")
+        Topic.EXECUTION to "exec", Topic.STUDY to "study", Topic.CANDLES to "candle")
 
     /** Each topic's level (its best active lesson's confidence) and its evidence count. */
     fun skills(book: Book): List<Skill> = Topic.entries.map { t ->
         val mine = active(book).filter { it.topic == t }
         val base = SKILL_BASE.getValue(t)
-        val n = if (t == Topic.DATA_HEALTH || t == Topic.STUDY) book.lessons.filter { prefix(it.id) == base }.maxOfOrNull { evidence(it).n } ?: 0
+        val n = if (t == Topic.DATA_HEALTH || t == Topic.STUDY || t == Topic.CANDLES) book.lessons.filter { prefix(it.id) == base }.maxOfOrNull { evidence(it).n } ?: 0
             else book.lessons.filter { prefix(it.id) == base }.sumOf { evidence(it).n }
         Skill(t, mine.maxOfOrNull { it.confidence.ordinal }?.let { Confidence.entries[it] }, n, mine.size)
     }
@@ -1238,6 +1259,7 @@ object AgentLessons {
         if (Regex("^ (order review|orders|order flaws|flaws|my fills|fills|execution|order execution) $").containsMatchIn(r)) return Topic.ORDERS to null
         if (Regex(" (slippage|spreads?|fill quality|the baseline) ").containsMatchIn(r)) return Topic.EXECUTION to null
         if (Regex(" (study|market study|the study|setups) ").containsMatchIn(r)) return Topic.STUDY to null
+        if (Regex(" (candle agent|candle shapes?|the candles?) ").containsMatchIn(r)) return Topic.CANDLES to null
         if (Regex("^ (strategies|bots|agents|arms|my bots|the bots|the agents) $").containsMatchIn(r)) return Topic.STRATEGY to null
         return null
     }
@@ -1358,6 +1380,7 @@ object AgentLessons {
                     (l.q?.let { ", and ${qWords(it)} across all my lessons (the bar is ${fmtQ(BH_Q)})" } ?: "")
                 Confidence.BUILDING -> "building: ${e.n} so far" + (if (e.splits.size == SPLITS) ", ${e.agreeing} of $SPLITS periods agree" else "") +
                     (if (l.topic == Topic.STUDY) "; a market-study lesson stays at building: each night counts the same two years again, so the nights are not independent"
+                    else if (l.topic == Topic.CANDLES) "; a Candle agent lesson stays at building: it compares running counts with the research and never changes anything"
                     else if (confidence(e) == Confidence.STRONG) "; ${l.q?.let { qWords(it) } ?: "q not worked out yet"} is above the bar of ${fmtQ(BH_Q)}, so with this many lessons it could be luck"
                     else "; strong needs $STRONG_N, agreement over time and q at most ${fmtQ(BH_Q)}")
                 Confidence.WEAK -> contradiction(l)?.let { "not trusted: it $it" } ?: "weak: only ${e.n} so far"

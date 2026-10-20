@@ -180,6 +180,7 @@ class CollisionTest {
         "MonthTurns" to { q -> MonthTurns.asked(q) != null },
         "LunchRange" to { q -> LunchRange.asked(q) != null },
         "OpenHighLow" to { q -> OpenHighLow.asked(q) != null },
+        "CandleAgent" to { q -> CandleAgent.asked(q) != null },
         "BigCandles" to { q -> BigCandles.asked(q) != null },
         "ExtremeCloses" to { q -> ExtremeCloses.asked(q) != null },
         "WeekRange" to { q -> WeekRange.asked(q) != null },
@@ -808,6 +809,9 @@ class CollisionTest {
         "after a big 5-minute candle in the first hour does the day continue" to "BigCandles", "big candle record for banknifty" to "BigCandles",
         "how often does a big green candle in the morning follow through" to "BigCandles", "subah bada candle aane ke baad nifty kya karta hai" to "BigCandles",
         "what happens after a 0.4% 5-minute candle" to "BigCandles", "large first hour candles record for finnifty" to "BigCandles",
+        // ---- CandleAgent: one candle explained by the Candle agent (20 Oct), never the big-candle record or a named pattern ----
+        "why was that candle green" to "CandleAgent", "what does this candle mean" to "CandleAgent", "where is support for this candle" to "CandleAgent",
+        "explain the last 5 minute candle on nifty" to "CandleAgent", "why did the last candle turn red" to "CandleAgent",
         // Its neighbours: the first move of the day, a sharp move explained, which candle patterns work.
         "does the first half hour decide the day for sensex" to "FirstMove", "which candle patterns work on nifty" to "PatternCalls", "how often do opening range breaks hold for sensex" to "RangeBreaks",
         // ---- ExtremeCloses: closes at the ends of the day's range and what the next day did (round 29) ----
@@ -1641,7 +1645,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "SelfTalk", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SignalTalk", "TrendTalk", "PassedArmsTalk", "SoloDay", "HeroTicketTalk", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "LiveCheck", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "GammaMorning", "OiWallBlast", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
-        "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "CandleAgent", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve", "Knowledge")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {

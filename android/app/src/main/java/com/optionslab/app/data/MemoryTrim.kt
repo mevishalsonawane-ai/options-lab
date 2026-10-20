@@ -48,6 +48,8 @@ object MemoryTrim {
         for (i in items) runCatching {
             when (i) {
                 MemoryPlan.Item.MODEL -> com.optionslab.app.ira.IraModel.releaseForMemory()
+                // 20 Oct: the Candle agent goes early (knowledge only); its counts are on disk already.
+                MemoryPlan.Item.CANDLE_AGENT -> CandleAgentHost.releaseForMemory()
                 // 15 Oct: the Signal tester's Telegram reader closes (its next round starts it again once the pressure has passed).
                 // 16 Oct: a login Boss is in the middle of is kept through a mild trim (then it is not counted as let go).
                 MemoryPlan.Item.TELEGRAM -> if (!TelegramCapture.releaseForMemory(level)) return@runCatching

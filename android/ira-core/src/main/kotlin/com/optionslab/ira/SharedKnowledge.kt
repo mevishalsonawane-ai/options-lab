@@ -167,6 +167,7 @@ object SharedKnowledge {
             AgentLessons.Topic.ORDER_FLOW -> "order-flow"; AgentLessons.Topic.REGIME -> "regime"; AgentLessons.Topic.TIME_OF_DAY -> "time-of-day"
             AgentLessons.Topic.DATA_HEALTH -> "data-health"; AgentLessons.Topic.LAB -> "lab"; AgentLessons.Topic.ORDERS -> "orders"
             AgentLessons.Topic.EXECUTION -> "costs"; AgentLessons.Topic.STUDY -> "study"
+            AgentLessons.Topic.CANDLES -> "candles"
         }
         val extra = when (p) {
             "trap" -> listOf("traps"); "spec" -> listOfNotNull(SPEC_TOPICS[l.id.substringAfterLast(':')]); "order" -> listOf("orders")
@@ -186,7 +187,7 @@ object SharedKnowledge {
         val verdict = when { l.sign > 0 -> Verdict.WORKS; l.sign < 0 -> Verdict.FAILS; else -> Verdict.CONTEXT }
         // A market-study lesson is never a passed or failed test (13 Oct review): its nightly counts re-read the same two years,
         // so they are not independent agreement ([AgentLessons.ceiling] keeps it at building; this holds for an older book too).
-        val gate = if (l.confidence == AgentLessons.Confidence.STRONG && l.topic != AgentLessons.Topic.STUDY) (if (l.sign > 0) Gate.PASS else Gate.FAIL) else Gate.NONE
+        val gate = if (l.confidence == AgentLessons.Confidence.STRONG && l.topic != AgentLessons.Topic.STUDY && l.topic != AgentLessons.Topic.CANDLES) (if (l.sign > 0) Gate.PASS else Gate.FAIL) else Gate.NONE
         val effect = e.hitRate?.let { it - 0.5 }
         return Item("jarvis:${l.id}", lessonTopics(l), arm, null, l.cond?.takeIf { it.startsWith("tod:") }?.substringAfter(':'),
             l.cond?.takeIf { it.startsWith("regime:") }?.substringAfter(':'), p == "exec" || p == "order" || l.topic == AgentLessons.Topic.EXECUTION,
@@ -199,6 +200,7 @@ object SharedKnowledge {
         Findings.Kind.STOP_HUNT to "traps", Findings.Kind.BIG_MOVE to "moves", Findings.Kind.STRONG_CLOSE to "candles", Findings.Kind.VIX_SPIKE to "vix",
         Findings.Kind.NEWS_WINDOW to "news", Findings.Kind.ENTRY to "strategy", Findings.Kind.STOP_HIT to "stop", Findings.Kind.TARGET_HIT to "target",
         Findings.Kind.DRIFT to "drift", Findings.Kind.DATA_UNRELIABLE to "data-health", Findings.Kind.DATA_HEALTH to "data-health", Findings.Kind.OTHER to "note",
+        Findings.Kind.CANDLE to "candles",
     )
 
     /** The recent findings counted by kind (how many posts on how many days): one context item a kind. */
@@ -562,7 +564,7 @@ object SharedKnowledge {
 
     private val TOPIC_WORDS = linkedMapOf("order flow" to "order-flow", "trap" to "traps", "slippage" to "costs", "spread" to "costs",
         "charges" to "costs", "re-?entr" to "reentry", "vix" to "vix", "expiry" to "expiry", "gap" to "gap", "vwap" to "vwap", "oi" to "oi",
-        "trade manager" to "trade-manager", "direction" to "direction")
+        "trade manager" to "trade-manager", "direction" to "direction", "candles?" to "candles")
 
     // ---- the shadow record (never acts) ----------------------------------------------------------------------------------------
 
