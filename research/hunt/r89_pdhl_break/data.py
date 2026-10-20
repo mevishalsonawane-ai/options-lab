@@ -262,7 +262,10 @@ def panel(name: str, rebuild: bool = False) -> Panel:
     if p.exists() and not rebuild:
         with open(p, "rb") as f:
             return pickle.load(f)
-    if name.startswith("OLD_"):
+    if name.startswith("B_OLD_"):
+        from . import store
+        P = nse_from_store(name[6:], store.load(name[6:], "old"))
+    elif name.startswith("OLD_"):
         P = nse_old(name[4:], K.OLD[0], K.OLD[1])
     elif name in K.INDICES:
         from . import store

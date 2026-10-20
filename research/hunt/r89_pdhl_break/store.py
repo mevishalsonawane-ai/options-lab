@@ -19,11 +19,24 @@ import r51cfg as K  # noqa: E402
 
 K.END = date(2026, 10, 19)            # the lake's newest session (R51 stopped at 13 Oct)
 K.OUT = OUT / "stores"
+if os.environ.get("R89_STORE") == "old":
+    # R89B holdout (PREREG_B 1): 2 Aug 2021 - 19 Nov 2024, warm-up from 1 Jun 2021; built in its own folder
+    K.WARM_START, K.START, K.END = date(2021, 6, 1), date(2021, 8, 2), date(2024, 11, 19)
+    K.OUT = OUT / "stores_old"
 import r51data  # noqa: E402,F401
 
+_CACHE: dict = {}
 
-def load(und: str) -> dict:
-    return r51data.load(und)
+
+def load(und: str, which: str = "new") -> dict:
+    """R51 day store of one index: 'new' (20 Nov 2024 - 19 Oct 2026) or 'old' (R89B holdout, Aug 2021 - Nov 2024).
+    Read straight from its pickle so both can be open in one process."""
+    import pickle
+    key = (und, which)
+    if key not in _CACHE:
+        with open(OUT / ("stores_old" if which == "old" else "stores") / f"day_{und}.pkl", "rb") as f:
+            _CACHE[key] = pickle.load(f)
+    return _CACHE[key]
 
 
 if __name__ == "__main__":

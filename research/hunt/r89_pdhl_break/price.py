@@ -149,7 +149,7 @@ def idx_option(P, und: str, trades: list, days_store: dict, sizing: str = "lot")
         lot = float(K51.lot(und, dt))
         sides = ["C" if out[i]["side"] > 0 else "P" for i in ix]
         rows = [int(P.mt[out[i]["t"]]) - K.NSE_OPEN for i in ix]
-        fx = [(int(P.mt[out[i]["xm"]]) - K.NSE_OPEN + 1) if out[i]["why"] in ("stop", "target") else -1 for i in ix]
+        fx = [(int(P.mt[out[i]["xm"]]) - K.NSE_OPEN + 1) if out[i]["why"] != "time" else -1 for i in ix]
         if sizing == "lot":
             q = [lot] * len(ix)
         else:
