@@ -175,6 +175,11 @@ object Broker {
             // strategy's basket leg is never asked (refusing one leg of a hedged basket could leave the rest unhedged).
             if (o.tag != "iraalgostrat")
                 runCatching { ExposureCapHost.liveCheck(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag) }.getOrNull()?.let { return it }
+            // 20 Oct, enhancement round 1 (idea 4): Boss's account stop rule over the whole Zerodha account - in SHADOW by default
+            // (what it would refuse is only recorded) until Boss switches it on in Bot settings. Memory only; it only refuses. A
+            // saved strategy's basket leg is never asked (one leg refused could leave the rest unhedged): its automatic start is.
+            if (o.tag != "iraalgostrat")
+                runCatching { AccountStopHost.doorCheck(o.tradingSymbol, arm ?: o.tag) }.getOrNull()?.let { return it }
         }
         return null
     }

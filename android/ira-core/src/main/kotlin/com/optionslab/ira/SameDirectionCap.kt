@@ -139,7 +139,10 @@ object SameDirectionCap {
      */
     fun line(list: List<Blocked>, today: LocalDate, paperOn: Boolean, max: Int, liveOn: Boolean): String {
         val t = list.filter { it.day == today }
-        val paper = t.filter { !it.live }
+        // 20 Oct, enhancement round 1 (idea 9): a paper entry the cap only LOGGED (it could have gone live, so it was let through)
+        // is counted apart from the ones it refused; before, both read "refused", and a silent bypass like 20 Oct's did not show.
+        val paper = t.filter { !it.live && it.applied }
+        val paperLogged = t.count { !it.live && !it.applied }
         val live = t.filter { it.live }
         val head = "Same-direction cap (paper ${if (paperOn) "on" else "off"}, at most $max; live ${if (liveOn) "on" else "in shadow, logged only"})"
         val p = if (paper.isEmpty()) "no paper entry refused today" else "today ${paper.size} paper ${if (paper.size == 1) "entry" else "entries"} refused (" +
@@ -150,7 +153,17 @@ object SameDirectionCap {
             liveOn -> "live: ${live.count { it.applied }} refused"
             else -> "live: ${live.size} would have been refused (logged only)"
         }
-        return "$head: $p" + (if (liq > 0) "; Liquidity's $liq counted apart from its plain-rules record" else "") + "; $l."
+        val logged = if (paperLogged > 0) "; $paperLogged paper ${if (paperLogged == 1) "entry" else "entries"} only logged (let through: they could go live)" else ""
+        return "$head: $p" + (if (liq > 0) "; Liquidity's $liq counted apart from its plain-rules record" else "") + logged + "; $l."
+    }
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 9): today's entries the cap only LOGGED and let through - paper entries that could go live
+     * ([Blocked.applied] false) and live entries in shadow - for the daily diagnostics. (paper, live).
+     */
+    fun onlyLogged(list: List<Blocked>, today: LocalDate): Pair<Int, Int> {
+        val t = list.filter { it.day == today && !it.applied }
+        return t.count { !it.live } to t.count { it.live }
     }
 
     // ---- live (shadow by default): the bots' live entries kept in memory ------------------------------------------------

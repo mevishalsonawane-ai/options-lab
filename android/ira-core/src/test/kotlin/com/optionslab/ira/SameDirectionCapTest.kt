@@ -200,4 +200,20 @@ class SameDirectionCapTest {
         assertFalse(u.needsPin, "paper only: no PIN to undo")
         assertTrue(AutoChange.sameDirCap(false).reason.contains("off"))
     }
+
+    /** 20 Oct, enhancement round 1 (idea 9): entries the cap only LOGGED are counted apart from the ones it refused. */
+    @Test fun entriesOnlyLoggedAreCountedApartFromRefusals() {
+        fun b(i: Int, live: Boolean, applied: Boolean, owner: String = "R51 Donchian 20", d: java.time.LocalDate = day) =
+            SameDirectionCap.Blocked(i.toLong(), d, owner, "NIFTY$i", -1, 100.0, live = live, applied = applied, why = "cap")
+        val l = listOf(b(1, false, true), b(2, false, false), b(3, false, false, owner = "Liquidity 15+5"), b(4, true, false), b(5, true, true),
+            b(6, false, false, d = day.minusDays(1)))
+        assertEquals(2 to 1, SameDirectionCap.onlyLogged(l, day))
+        assertEquals(1 to 0, SameDirectionCap.onlyLogged(l, day.minusDays(1)))
+        assertEquals(0 to 0, SameDirectionCap.onlyLogged(emptyList(), day))
+        val line = SameDirectionCap.line(l, day, paperOn = true, max = 2, liveOn = false)
+        assertTrue(line.contains("today 1 paper entry refused"), line)
+        assertTrue(line.contains("2 paper entries only logged (let through: they could go live)"), line)
+        // A Liquidity entry only logged was let through: it is in its plain-rules record, so it is not "counted apart".
+        assertFalse(line.contains("Liquidity's"), line)
+    }
 }

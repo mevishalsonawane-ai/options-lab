@@ -204,6 +204,40 @@ internal fun SameDirectionCapCard() {
     }
 }
 
+/**
+ * 20 Oct, enhancement round 1 (idea 4): Bot settings' account stop rule (-Rs 40,000 from the best, -Rs 13,000 a month) over the whole
+ * Zerodha account. Its switch is off by default (shadow: what it would refuse is only logged); on, the bots' new live entries are
+ * refused once it is reached. Boss's own orders and every exit are never refused. Restarting the count after it is reached
+ * takes the PIN.
+ */
+@Composable
+internal fun AccountStopCard(model: com.optionslab.app.ui.AppModel) {
+    val view by com.optionslab.app.data.AccountStopHost.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    var askPin by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.AccountStopHost.refresh() } } }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
+    AccountStopCardContent(view, said, onSwitch = { on -> save { com.optionslab.app.data.AccountStopHost.setOn(on) } }, onRestart = { askPin = true })
+    if (askPin) Reauth(model, onOk = { askPin = false; save { com.optionslab.app.data.AccountStopHost.restart(pinConfirmed = true) } },
+        onCancel = { askPin = false }, why = "Enter your app PIN to restart the account stop rule's count. It then counts again from the next trading day.")
+}
+
+internal const val ACCOUNT_STOP_RESTART = "Restart the count (PIN)"
+
+/** The card from plain state (tests drive it). */
+@Composable
+internal fun AccountStopCardContent(view: com.optionslab.app.data.AccountStopHost.View, said: String?, onSwitch: (Boolean) -> Unit, onRestart: () -> Unit) {
+    LedgerCard(title = "Account stop rule") {
+        Note("Your rule: once the Zerodha account is -Rs 40,000 from its best or -Rs 13,000 in a calendar month (Zerodha's day " +
+            "figures, before charges), the bots take no new live entry. Your own orders and every exit always go.")
+        ToggleRow("Refuse the bots' live entries once reached", if (view.on) "On: refused once reached" else "Off: live only logs what it would refuse", view.on, keepSub = true, onChange = onSwitch)
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        if (view.reached) BrassButton(ACCOUNT_STOP_RESTART, Modifier.fillMaxWidth().padding(top = 4.dp)) { onRestart() }
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
 /** Bot settings: the market history kept on the phone, its use and its cap (TODO S5). */
 @Composable
 internal fun HistoryVaultCard() {

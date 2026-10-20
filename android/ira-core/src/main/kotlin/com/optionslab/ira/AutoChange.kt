@@ -643,6 +643,23 @@ object AutoChange {
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
 
+    /** 20 Oct, enhancement round 1: the target of Liquidity's no-twin rule on paper ([liqNoTwin]; no "liquidity" in it, so the freeze never holds its Undo). */
+    const val NO_TWIN_TARGET = "filter:liq_no_twin"
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 3, [LiquidityTwin]; the 19 Oct triple stop): Liquidity's no-twin rule switched [on] for its
+     * PAPER books - a book's entry on an option another Liquidity book already holds becomes a would-be trade - or off again. It
+     * only skips entries, so on lowers risk. Paper only (live in shadow, logged only); no PIN either way.
+     */
+    fun liqNoTwin(on: Boolean): Change = Change(Kind.PAPER_FILTER, NO_TWIN_TARGET,
+        if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "the 20 Oct update (19 Oct: both Liquidity BANKNIFTY books held the same put and were stopped together): a Liquidity " +
+            "paper entry on an option another Liquidity book already holds becomes a would-be trade, counted apart from the plain-rules " +
+            "record; live only logs what it would skip"
+        else "Liquidity's no-twin rule is off for paper: both books may buy the same option again",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "Liquidity's no-twin rule (paper)")
+
     /**
      * 19 Oct (Boss: "Resolve the issues", after about 11 index puts on one 09:30 move lost Rs 18,121 on paper): the same-direction
      * cap switched [on] for the automatic PAPER entries - at most [max] automatic open index options betting the same way, across

@@ -62,6 +62,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 20 Oct (Boss: "...after that run a loop for enhancement and adding new features in the application"): round 1.
+        Entry("2026-10-20-enhance-round-1", OCT20, "Stops held overnight, no double contracts",
+            "A carried position's stop and target now rest at Zerodha overnight, so a dead phone misses nothing. " +
+                "On paper, the two Liquidity books no longer buy the same option; the second becomes a would-be trade. " +
+                "Your account stop rule now watches the whole Zerodha account; it only logs until you switch it on. " +
+                "The stop checks while holding now run every 15 seconds from start to start, and late ones are counted. " +
+                "Every worker now uses one shared check of what is held, so none slows a stop by mistake. " +
+                "The daily diagnostics count the entries the same-direction cap only logged.",
+            "Bot settings → account stop rule; Home → Automation → Strategy lab (the no-twin rule)"),
         // 20 Oct (Boss: "Deep analysis of the whole application, find if there are any issues and resolve them").
         Entry("2026-10-20-deep-review-fixes", OCT20, "Whole app review: safer exits, honest records",
             "The 15:05 expiry exit reads orders first, so an exit that just filled is never sent twice. " +

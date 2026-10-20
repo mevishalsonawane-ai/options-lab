@@ -2970,6 +2970,19 @@ object OrbArms {
             atSignal, barCloseMs, null, 0)) }
         // The live recording's market snapshot at the signal (a queue add from memory; never changes the entry).
         runCatching { LiveRecorder.signal(arm.label, c.symbol, und, right.name, atSignal?.last, paper = !live) }
+        // 20 Oct, enhancement round 1 (idea 3, the 19 Oct triple stop): another Liquidity book already holds this very option on
+        // this account. On PAPER, with the no-twin rule on (Boss's switch, on by this update), the entry is a would-be trade kept
+        // with its price, never bought. LIVE: shadow only - recorded, and the entry goes on exactly as before.
+        twinOf(b, arm, c.symbol, live)?.let { holder ->
+            val applied = !live && runCatching { LiquidityTest.noTwinOn() }.getOrDefault(false)
+            val words = com.optionslab.ira.LiquidityTwin.words(runCatching { armOf(holder.book).label }.getOrDefault(holder.book), c.symbol, live)
+            runCatching {
+                LiquidityTest.twin(com.optionslab.ira.LiquidityTwin.Rec(System.currentTimeMillis(), day, arm.source, c.symbol, atSignal?.last,
+                    live, applied, holder.book))
+            }
+            runCatching { Diag.record("orb", "${arm.label}: $words") }
+            if (applied) return "${com.optionslab.ira.LiquidityTwin.SKIPPED}: $words"
+        }
         exposureRefusal(b, c, arm, live)?.let { return it }
         // The order flow at this decision (per index; logged, and only ever a skip under CONFIRM), as the ORB's.
         val flow = FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, signalBar.toString(), arm.source, contract = c)
@@ -3028,6 +3041,23 @@ object OrbArms {
                         signalPrice: Double?, q: Paper.BookNow?, barCloseMs: Long?, sentMs: Long?, qty: Int): com.optionslab.ira.FillQuality.Rec =
         com.optionslab.ira.FillQuality.Rec(kind, atMs, arm.source, symbol, live, price, signalPrice, q?.bid, q?.ask, q?.bidQty, q?.askQty,
             q?.bid5, q?.ask5, q?.ageMs, barCloseMs, sentMs, qty)
+
+    /**
+     * 20 Oct, enhancement round 1 ([com.optionslab.ira.LiquidityTwin]): the open position of ANOTHER Liquidity book in [b] on [symbol]
+     * on the same account ([live]), or null. An unconfirmed live buy counts (it may have filled). Memory only (the book in hand).
+     */
+    private fun twinOf(b: Book, arm: Arm, symbol: String, live: Boolean): com.optionslab.ira.LiquidityTwin.Holding? {
+        val open = b.positions.filter { p -> p.open && runCatching { armOf(p.arm).liquidity }.getOrDefault(false) }
+            .map { com.optionslab.ira.LiquidityTwin.Holding(it.arm, it.symbol, it.live) }
+        return com.optionslab.ira.LiquidityTwin.twinOf(arm.source, symbol, live, open + testTwinHolders?.invoke().orEmpty())
+    }
+
+    /**
+     * TEST ONLY: another Liquidity book's open positions beside the book's own (the synthetic test day makes only the 5-minute
+     * book trade). Null in the app, always; its setter throws unless BuildConfig.DEBUG (as [testIndexBars]).
+     */
+    @Volatile internal var testTwinHolders: (() -> List<com.optionslab.ira.LiquidityTwin.Holding>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test twin holders exist only in debug builds" }; field = v }
 
     /** Whether [arm] (a Liquidity BANKNIFTY book) has reached its live stop rule ([liquidityStopHint]). Memory only. */
     private fun liveStopped(arm: Arm): Boolean = arm.source in com.optionslab.engine.orb.ArmPriority.BN_BOOKS && liquidityStopHint.stopped
@@ -3447,6 +3477,8 @@ object OrbArms {
         s == "liquidity_history_loading" -> "Loading the last days' index candles for the liquidity levels."
         s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:00)."
         s == FlowGate.SKIPPED -> "Skipped by the order flow (CONFIRM): the flow did not agree with this entry at the decision."
+        s.startsWith(com.optionslab.ira.LiquidityTwin.SKIPPED) -> "Not bought (a would-be trade, counted apart): " +
+            s.substringAfter(": ").substringAfter("no-twin rule: ") + "."
         s == "liquidity_no_room" -> "Skipped a liquidity break: the next level ahead was closer than one index stop " +
             "(30 BANKNIFTY / 15 FINNIFTY / 8 MIDCPNIFTY points)."
         s.startsWith("hero_") -> describeHero(s) + " ${HeroRules.NOT_PROVEN}."

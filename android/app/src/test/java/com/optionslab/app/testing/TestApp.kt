@@ -54,6 +54,9 @@ class TestApp : Application() {
         // The same-direction cap off for every other test (their arms' many same-way entries are not what they test); its own
         // tests switch it on.
         com.optionslab.app.data.ExposureCapHost.resetForTest(paperOn = false)
+        // 20 Oct, enhancement round 1: the account stop rule in shadow with no days, the drift guard with no looks.
+        com.optionslab.app.data.AccountStopHost.resetForTest()
+        com.optionslab.app.data.WatchClock.resetForTest()
         IdleSampler.install()
         NetworkGuard.install()
         NetworkGuard.blocked.clear()

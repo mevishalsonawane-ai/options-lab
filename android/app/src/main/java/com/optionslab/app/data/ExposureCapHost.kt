@@ -123,8 +123,21 @@ object ExposureCapHost {
         return synchronized(lock) { blocked.filter { it.day == d } }
     }
 
-    /** Liquidity 15+5's paper entries the cap refused today (its record counts them apart). */
-    fun liquidityToday(): Int = today().count { !it.live && SameDirectionCap.isLiquidity(it.owner) }
+    /**
+     * Liquidity 15+5's paper entries the cap refused today (its record counts them apart). 20 Oct, enhancement round 1: only those
+     * it really refused - one it only logged was bought, so it is in the plain-rules record.
+     */
+    fun liquidityToday(): Int = today().count { !it.live && it.applied && SameDirectionCap.isLiquidity(it.owner) }
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 9): the daily diagnostics' count of entries the cap only LOGGED and let through (paper
+     * entries that could go live, live entries in shadow), so a silent bypass like 20 Oct's shows.
+     */
+    fun onlyLoggedLine(): String {
+        val (paper, live) = SameDirectionCap.onlyLogged(synchronized(lock) { blocked }, runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() })
+        return "Same-direction cap, only logged and let through today: $paper paper ${if (paper == 1) "entry" else "entries"} (they could go live), " +
+            "$live live ${if (live == 1) "entry" else "entries"} (shadow)."
+    }
 
     /** The diagnostics' and Bot settings' line. */
     fun line(): String = SameDirectionCap.line(synchronized(lock) { blocked }, runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() },

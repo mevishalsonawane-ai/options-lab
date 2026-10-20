@@ -1612,31 +1612,22 @@ class WatchService : Service() {
     }
 
     /** Something the NSE pass sells by itself is open (the books as the loop reads them): its stops, targets and exits are checked every 15 s. */
+    // 20 Oct, enhancement round 1 (idea 7): the one shared answer ([com.optionslab.app.data.HeldNow], memory only) plus the two
+    // books only the loop reads (ORB's under its lock, Solo's in the vault). It keeps every source this list had and adds an
+    // active stop or target and MCX's positions while MCX trades: more often checked, never less.
     private suspend fun holdingNse(): Boolean =
-        PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
-            com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
-            com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
-            com.optionslab.app.data.Strategies.runningHint ||       // 18 Oct, review: a strategy run's leg stops too
-            com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint ||  // 18 Oct: the paper strategies' live trades
-            (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding()) ||
-            HeldBooks.paperOrMinuteArms()
+        com.optionslab.app.data.HeldNow.any() || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
+            (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
 
     /**
      * 18 Oct, review: an open position or order anywhere (NSE or MCX, paper or live; memory only, unknown counts as held).
      * The pulse keeps the processor awake for it even when a pass is slow to finish (open positions come first).
      */
     private fun holdingAny(): Boolean = runCatching {
-        // Never a lock or a vault read here (a hung pass may hold one): memory copies only - the arms' own hints, the paper
-        // book as loaded (positions and working orders; not loaded yet counts as held), the NSE pass's last answer (Solo's
-        // book is in the vault: read by the loop, never by the pulse), MCX only while it trades.
-        val paper = com.optionslab.app.data.Paper.stateIfLoaded()?.let { st ->
-            st.positions.any { it.quantity != 0 } || st.orders.any { it.status == "open" || it.status == "trigger pending" }
-        } ?: true
-        PositionCards.anyOpen || paper || nseHeldSeen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.OrbArms.liveHint ||
-            com.optionslab.app.data.PineAuto.holding() || com.optionslab.app.data.PassedArmsHost.holding() ||
-            com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
-            com.optionslab.app.data.Strategies.runningHint || com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint ||
-            (com.optionslab.app.data.McxMarket.isOpen() && com.optionslab.app.data.McxMarket.heldQuick())
+        // Never a lock or a vault read here (a hung pass may hold one): memory copies only. 20 Oct, enhancement round 1 (idea 7):
+        // the one shared answer ([com.optionslab.app.data.HeldNow]: the arms' own hints, the paper book as loaded, MCX only while
+        // it trades) and the NSE pass's last answer (Solo's book is in the vault: read by the loop, never by the pulse).
+        nseHeldSeen || com.optionslab.app.data.HeldNow.any()
     }.getOrDefault(true)
 
     /** The NSE pass's last [holdingNse] (memory; for the pulse, which never reads the books itself). */
@@ -1663,6 +1654,8 @@ class WatchService : Service() {
             }
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
             // Jarvis's words-only checks run beside it in the service's scope, never awaited ([Tasks.watchTick]).
+            // The full pass looks at the stops too (its exits): its start is a look for the drift guard (idea 6).
+            runCatching { com.optionslab.app.data.WatchClock.looked(held = nseHeldSeen || com.optionslab.app.data.HeldNow.any()) }
             val t = Tasks.watchTick(this, AppSettings.load(), fired, scope)
             Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
             show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress, t.dest)
@@ -1680,7 +1673,9 @@ class WatchService : Service() {
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
                     com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
                     com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
-                val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
+                // 20 Oct, enhancement round 1 (idea 6): while holding, the window ends 15 s after the last look at the stops STARTED
+                // ([WatchClock.windowEnd]); it ran from the end of the last check, so a 3 s check made the gap 18 s.
+                val waitEnd = if (holding) com.optionslab.app.data.WatchClock.windowEnd() else next
                 // 18 Oct, review: while holding, a bar-close check in this window is followed straight by the stop check (it
                 // went back to the top and waited another 15 s, so the stops were looked at about 30 s apart at each bar close).
                 var barCloseRan = false
@@ -1719,7 +1714,7 @@ class WatchService : Service() {
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
                 if (barCloseRan) Unit else if (holding && streaming) {
-                    val until = System.currentTimeMillis() + 15_000
+                    val until = waitEnd
                     // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
                     // 20 Oct, review: never waited past the 15 s window (a 6 s or 12 s step waited 18 s or 24 s before the stops).
                     val step = Battery.gap(this, 3_000)
@@ -1727,7 +1722,7 @@ class WatchService : Service() {
                         delay(com.optionslab.ira.BatterySaver.nextWait(until - System.currentTimeMillis(), step))
                         runCatching { PositionCards.tickLive(this) }
                     }
-                } else if (holding) delay(15_000) else {
+                } else if (holding) delay((waitEnd - System.currentTimeMillis()).coerceAtLeast(0)) else {
                     // Smart scheduling (10 Oct): nothing held - the wait to the next full pass is cut into the safety-net interval
                     // (Boss's 15-60 s, 30 by default), ended early by an event a worker waits for (an order update, a position
                     // change, a news window); then only the arms the scheduler finds due run (usually none: nothing runs).
@@ -1743,6 +1738,8 @@ class WatchService : Service() {
                 if (holding) {
                     Heartbeat.stepBegin("15-second stop check")
                     val checkAt = System.currentTimeMillis()
+                    // The drift guard: the gap since the last look at the stops, counted and logged when over 16 s (never a wait).
+                    com.optionslab.app.data.WatchClock.looked(held = true, now = checkAt)
                     // Each in its own try: a paper or ORB failure never skips the stops and targets.
                     try { Tasks.safely {
                         try {
@@ -1920,12 +1917,9 @@ class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
  * Memory only (never a lock or a vault read); a paper book not loaded yet counts as held (open positions come first).
  */
 internal object HeldBooks {
+    // 20 Oct, enhancement round 1 (idea 7): read from the one shared gathering ([com.optionslab.app.data.HeldNow]).
     fun paperOrMinuteArms(): Boolean = runCatching {
-        val paper = com.optionslab.app.data.Paper.stateIfLoaded()?.let { st ->
-            st.positions.any { it.quantity != 0 } || st.orders.any { it.status == "open" || it.status == "trigger pending" }
-        } ?: true
-        paper || com.optionslab.app.data.NightArm.view.value.open.isNotEmpty() ||
-            com.optionslab.app.data.VixDivArm.view.value.open.isNotEmpty() ||
-            com.optionslab.app.data.McxPaperArms.view.value.open.isNotEmpty()
+        val s = com.optionslab.app.data.HeldNow.sources()
+        s.paperBook != false || s.night || s.vixDiv || s.mcxArms
     }.getOrDefault(true)
 }

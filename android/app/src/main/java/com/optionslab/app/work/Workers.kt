@@ -46,13 +46,9 @@ object WatchWorkers {
      * Anything open the watch protects, from memory only (no lock, no vault, no network): the cards' positions, the arms'
      * and strategies' holdings, a protection. Unknown counts as held.
      */
-    fun heldQuick(): Boolean = runCatching {
-        PositionCards.anyOpen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.Strategies.runningHint ||
-            com.optionslab.app.data.Protections.activeHint != false || com.optionslab.app.data.PineAuto.holding() ||
-            com.optionslab.app.data.PassedArmsHost.holding() || com.optionslab.app.data.HeroTicketArm.holding() ||
-            com.optionslab.app.data.SignalPaperArm.holding() || com.optionslab.app.data.ArmLive.holdingHint ||
-            com.optionslab.app.data.ArmLive.recoverHint      // final review F1: a book not read yet may hold open live trades
-    }.getOrDefault(true)
+    // 20 Oct, enhancement round 1 (idea 7): the one shared answer ([com.optionslab.app.data.HeldNow]; it keeps every source this
+    // list had, a book not read yet counting as held, and adds the paper book and the minute arms).
+    fun heldQuick(): Boolean = com.optionslab.app.data.HeldNow.any()
 
     /** One watch run's workers: its supervisor and the job they all run under. */
     class Run internal constructor(val supervisor: Supervisor, internal val job: Job)

@@ -321,13 +321,12 @@ object SmartWorkers {
     /** The price is near a level an arm watches (a Liquidity pool, a break level) until [untilMs]: its next look comes sooner. */
     fun nearLevel(untilMs: Long) { nearUntil = maxOf(nearUntil, untilMs); event(WorkerWake.Cause.NEAR_LEVEL) }
 
-    /** Anything held anywhere (memory hints only; anything unreadable counts as held: nothing is skipped on a guess). */
-    fun holdingAny(): Boolean = runCatching {
-        com.optionslab.app.work.PositionCards.anyOpen || OrbArms.holdingHint || PineAuto.holding() || Strategies.runningHint ||
-            NightArm.view.value.open.isNotEmpty() || VixDivArm.view.value.open.isNotEmpty() || McxPaperArms.view.value.open.isNotEmpty() ||
-            HeroTicketArm.view.value.open.isNotEmpty() || PassedArmsHost.view.value.open.isNotEmpty() || SignalPaperArm.view.value.open.isNotEmpty() ||
-            Paper.state.positions.any { it.quantity != 0 } || ArmLive.holdingHint || ArmLive.recoverHint
-    }.getOrDefault(true)
+    /**
+     * Anything held anywhere (memory hints only; anything unreadable counts as held: nothing is skipped on a guess).
+     * 20 Oct, enhancement round 1 (idea 7): the one shared answer ([HeldNow]); it now also counts an active stop or target and the
+     * paper book's working orders, and reads the paper book only once it is loaded (a book not read yet counts as held).
+     */
+    fun holdingAny(): Boolean = HeldNow.any()
 
     private fun heroWindow(): Boolean = runCatching {
         val m = Market.minuteNow()

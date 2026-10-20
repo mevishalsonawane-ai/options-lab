@@ -426,6 +426,11 @@ internal object Autopilot {
             AutoChange.Kind.PAPER_FILTER -> if (c.target == AutoChange.SAME_DIR_TARGET) {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.ExposureCapHost.setPaperOn(c.to == AutoChange.ON, log = false)
+            } else if (c.target == AutoChange.NO_TWIN_TARGET) {
+                // 20 Oct, enhancement round 1: Liquidity's no-twin rule on paper ([logLiqNoTwinOn], [logBossNoTwin]): its Undo flips the
+                // switch back for paper (live stays in shadow). Paper only: no PIN; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                com.optionslab.app.data.LiquidityTest.setNoTwin(c.to == AutoChange.ON, log = false)
             } else {
                 if (c.target != AutoChange.ST_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setSupertrend(c.to == AutoChange.ON, log = false) }
@@ -903,6 +908,34 @@ internal object Autopilot {
     fun logSameDirCapOn(max: Int) {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.sameDirCap(true, max), "the 19 Oct update (your ask: \"Resolve the issues\"); paper only - live only logs what it would refuse")
+    }
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 3): Liquidity's no-twin rule on for its PAPER books by this update - logged once (kept) so the
+     * change log and "Today's changes" show it; one tap undoes it. Paper only.
+     */
+    fun logLiqNoTwinOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.liqNoTwin(true), "the 20 Oct update (19 Oct's triple stop); paper only - live only logs what it would skip")
+    }
+
+    /**
+     * Boss flipped Liquidity's no-twin switch on the Strategy lab card ([com.optionslab.app.data.LiquidityTest.setNoTwin]): logged as
+     * Boss's (kept); one tap undoes it (only the newest flip undoes). Paper only, no PIN. On Autopilot's own worker.
+     */
+    fun logBossNoTwin(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, AutoChange.liqNoTwin(on), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "your choice", note = "from the Strategy lab card; paper only").first
+                    save()
+                }
+            }
+        }
     }
 
     /**

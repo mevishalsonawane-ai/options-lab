@@ -1728,6 +1728,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun liquidityFreeze(unfrozen: Boolean) = strategyDo { com.optionslab.app.data.LiquidityTest.setUnfrozen(unfrozen) }
     /** Boss's own Rs 500 give-back trail on the Liquidity paper books (R19b failed: his choice), from the Strategy lab card. */
     fun liquidityTrail(on: Boolean) = strategyDo { com.optionslab.app.data.LiquidityTest.setTrail(on) }
+    /** 20 Oct, enhancement round 1: Boss's Liquidity no-twin switch (paper only; logged in the change timeline). */
+    fun liquidityNoTwin(on: Boolean) = strategyDo { com.optionslab.app.data.LiquidityTest.setNoTwin(on) }
 
     private fun strategyDo(block: suspend () -> String?) {
         viewModelScope.launch(Dispatchers.IO) {

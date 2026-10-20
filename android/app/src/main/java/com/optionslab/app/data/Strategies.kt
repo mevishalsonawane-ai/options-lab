@@ -823,6 +823,14 @@ object Strategies {
                                 notes += "${def.name}: $side"
                                 continue
                             }
+                            // 20 Oct, enhancement round 1 (idea 4): an automatic LIVE start asks the account stop rule first (in shadow by
+                            // default: only recorded). Boss's own start from the app is never asked.
+                            val acct = if (d.mode == RunMode.LIVE) runCatching { AccountStopHost.doorCheck(def.underlying.uppercase(), def.name) }.getOrNull() else null
+                            if (acct != null) {
+                                record(b, def.name, Event("start_refused", "Scheduled start refused: $acct", "warn"), true)
+                                notes += "${def.name}: $acct"
+                                continue
+                            }
                             val v = venueFor(d.mode)
                             if (v == null) { record(b, def.name, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
                             val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)

@@ -184,6 +184,61 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals(1, row().today.size)
     }
 
+    // ---- 20 Oct, enhancement round 1 (idea 3): the no-twin rule ----------------------------------------------------------
+
+    /** The 13:05 entry's own contract (the 1-ITM call) as the paper account names it. */
+    private fun theCall(): String = Paper.contractFor("BANKNIFTY", day.plusDays(7), 54_000.0, Right.CE)!!.symbol
+
+    /** 19 Oct: both books held one put and were stopped together. Another book holding THIS option: a would-be trade, not bought. */
+    @Test fun anEntryOnAnOptionTheOtherBookHoldsIsAWouldBeTradeOnPaper() {
+        val call = theCall()
+        OrbArms.testTwinHolders = { listOf(com.optionslab.ira.LiquidityTwin.Holding("liquidity15", call, live = false)) }
+        assertTrue("on by this update", LiquidityTest.noTwinOn())
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue("nothing bought", Paper.state.orders.isEmpty())
+        assertTrue(row().today.isEmpty())
+        assertTrue(row().status, row().status.contains("Not bought (a would-be trade, counted apart): Liquidity 15m already holds $call"))
+        val rec = LiquidityTest.twins().single()
+        assertEquals("liquidity5", rec.book); assertEquals(call, rec.symbol); assertTrue(rec.applied); assertFalse(rec.live)
+        assertEquals("liquidity15", rec.by)
+        assertTrue(LiquidityTest.twinLine(), LiquidityTest.twinLine().contains("today 1 would-be trade on paper"))
+        // The bar is decided once: no second would-be record on the next passes.
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 12))
+        assertEquals(1, LiquidityTest.twins().size)
+    }
+
+    /** Boss's switch off (or its Undo): both books may buy the same option again, as before. */
+    @Test fun withTheRuleOffTheSecondBookStillBuys() {
+        val call = theCall()
+        OrbArms.testTwinHolders = { listOf(com.optionslab.ira.LiquidityTwin.Holding("liquidity15", call, live = false)) }
+        LiquidityTest.setNoTwin(false, log = false)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue(row().today.single().open)
+        assertFalse("off: only noted, never applied", LiquidityTest.twins().single().applied)
+        LiquidityTest.setNoTwin(true, log = false)
+    }
+
+    /** Another strike (or the other right) is no twin: bought as before. */
+    @Test fun anotherOptionIsNoTwin() {
+        val put = Paper.contractFor("BANKNIFTY", day.plusDays(7), 54_000.0, Right.PE)!!.symbol
+        OrbArms.testTwinHolders = { listOf(com.optionslab.ira.LiquidityTwin.Holding("liquidity15", put, live = false)) }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue(row().today.single().open)
+        assertTrue(LiquidityTest.twins().isEmpty())
+    }
+
+    /** A live holding beside a paper entry is not a twin (another account): the paper entry goes on. */
+    @Test fun aLiveHoldingIsNoTwinForAPaperEntry() {
+        val call = theCall()
+        OrbArms.testTwinHolders = { listOf(com.optionslab.ira.LiquidityTwin.Holding("liquidity15", call, live = true)) }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue(row().today.single().open)
+    }
+
     @Test fun aBreakThatHoldsRunsToTheSquareOff() {
         failDay = false
         armLiquidity()

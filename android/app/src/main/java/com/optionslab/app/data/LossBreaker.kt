@@ -52,6 +52,8 @@ object LossBreaker {
         // Zerodha's positions held all of them for up to 105 s. Not read in time: this pass decides on paper's figure; the
         // next pass reads again.
         val live = if (Broker.loggedIn) Broker.within(Broker.READ_BUDGET_MS) { Broker.positionBook().m2m } else null
+        // 20 Oct, enhancement round 1 (idea 4): the same read is today's figure for the account stop rule (memory; written later).
+        if (live != null) runCatching { AccountStopHost.dayRead(live) }
         // The day lock on the same figures (08 Oct): an account up by the Bot settings amount makes no new automatic entry today.
         runCatching { DayLockGuard.update(context, paper, live) }
         val hit = when {

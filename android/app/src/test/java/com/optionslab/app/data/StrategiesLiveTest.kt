@@ -462,6 +462,36 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("BUY", buys().single().form["transaction_type"])
     }
 
+    /**
+     * 20 Oct, enhancement round 1 (idea 4): Boss's account stop rule over the whole account. Reached and switched on, an automatic
+     * scheduled LIVE start is refused; in shadow (the default) it is only recorded and the start goes on.
+     */
+    @Test fun theAccountStopRuleRefusesAnAutomaticLiveStartOnlyWhenSwitchedOn() {
+        live()
+        val id = armedLive(automatic = true)
+        at(9, 19); tick()
+        AccountStopHost.dayRead(-14_000.0)                 // Zerodha's day: past -Rs 13,000 this month
+        AccountStopHost.setOn(true)
+        at(9, 21)
+        val notes = tick()
+        assertTrue(notes.toString(), notes.any { it.contains("refused: the account stop rule") })
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertFalse(entry(id).running)
+    }
+
+    @Test fun inShadowTheAccountStopRuleOnlyLogsAndTheStartGoesOn() {
+        live()
+        armedLive(automatic = true)
+        at(9, 19); tick()
+        AccountStopHost.dayRead(-14_000.0)
+        at(9, 21)
+        val notes = tick()
+        assertTrue(notes.toString(), notes.any { it.contains("scheduled live start") })
+        assertEquals("BUY", buys().single().form["transaction_type"])
+        assertTrue(AccountStopHost.line(), AccountStopHost.line().contains("in shadow: logged only"))
+        assertTrue(AccountStopHost.line(), AccountStopHost.line().contains("REACHED"))
+    }
+
     @Test fun anAutomaticLiveArmStartsAtItsTimeAndSquaresOffAtItsExit() {
         live()
         val id = armedLive(automatic = true)

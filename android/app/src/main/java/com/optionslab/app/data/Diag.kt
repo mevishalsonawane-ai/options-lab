@@ -199,6 +199,11 @@ object Diag {
             append(runCatching { LiquidityTest.diagLine() }.getOrElse { "Liquidity fill quality: could not read" }).append('\n')
             // 19 Oct: the same-direction cap - today's refused (paper) and would-be refused (live, in shadow) entries, by arm.
             append(runCatching { ExposureCapHost.line() }.getOrElse { "Same-direction cap: could not read" }).append('\n')
+            // 20 Oct, enhancement round 1 (idea 9): the entries the cap only LOGGED and let through today, so a silent bypass shows.
+            append(runCatching { ExposureCapHost.onlyLoggedLine() }.getOrElse { "Same-direction cap, only logged: could not read" }).append('\n')
+            // 20 Oct, enhancement round 1: Liquidity's no-twin rule (idea 3) and the account stop rule over the whole account (idea 4).
+            append(runCatching { LiquidityTest.twinLine() }.getOrElse { "Liquidity no-twin rule: could not read" }).append('\n')
+            append(runCatching { AccountStopHost.line() }.getOrElse { "Account stop rule: could not read" }).append('\n')
             append("Liquidity BANKNIFTY: ").append(runCatching { LiquidityTest.note() }.getOrElse { "freeze could not be read" }).append(' ')
                 .append(runCatching { com.optionslab.ira.LiquidityStopRule.line(OrbArms.liquidityStopHint, live = true) }.getOrElse { "" }).append('\n')
         }
@@ -212,6 +217,9 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) {
             runCatching { com.optionslab.app.work.WatchWorkers.diagLines() }.getOrElse { listOf("Workers: could not read") }.forEach { append(it).append('\n') }
             append(runCatching { com.optionslab.app.work.WatchWorkers.slowestLine(8) }.getOrElse { "Slowest steps today: could not read" }).append('\n')
+            // 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7).
+            append(runCatching { WatchClock.driftLine() }.getOrElse { "Stop-check gaps: could not read" }).append('\n')
+            append("Held now: ").append(runCatching { com.optionslab.ira.Held.line(HeldNow.sources()) }.getOrElse { "could not read" }).append('\n')
             append(runCatching { Broker.sharingLine() }.getOrElse { "Zerodha requests: could not read" }).append('\n')
             append(runCatching { AppState.line() }.getOrElse { "Shared state: could not read" }).append('\n')
             append("One-index claims standing: ").append(runCatching { AutoExposure.claims().ifEmpty { listOf("none") }.joinToString("; ") }.getOrElse { "could not read" }).append('\n')

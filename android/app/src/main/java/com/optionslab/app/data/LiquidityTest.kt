@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 object LiquidityTest {
     private const val STATE = "liquidity_test.txt"
     private const val FILLS = "liquidity_fills.log"
+    /** 20 Oct, enhancement round 1: the no-twin rule's would-be trades (encrypted lines, as the fills). */
+    private const val TWINS = "liquidity_twins.log"
     /** The wait before buffered fills are written (several records of one entry are written together). */
     private const val FLUSH_MS = 2_000L
 
@@ -59,7 +61,11 @@ object LiquidityTest {
 
     fun init(context: Context) {
         dir = context.applicationContext.noBackupFilesDir
-        scope.launch { runCatching { ensureLoaded() } }
+        scope.launch {
+            runCatching { ensureLoaded() }
+            // 20 Oct, enhancement round 1: the no-twin rule on for paper by this update, logged once in the Autopilot timeline.
+            if (noTwinOn()) runCatching { com.optionslab.app.ira.Autopilot.logLiqNoTwinOn() }
+        }
     }
 
     /** The two files read once (a worker thread). A file that cannot be read leaves the defaults. */
@@ -139,6 +145,80 @@ object LiquidityTest {
         if (log && was != on) runCatching { com.optionslab.app.ira.Autopilot.logBossTrail(on) }
         return said
     }
+
+    // ---- 20 Oct, enhancement round 1 (idea 3): the no-twin rule ([com.optionslab.ira.LiquidityTwin]) -----------------------------
+
+    /** Whether the no-twin rule is on for the paper books (on by this update). Memory only: the order path reads it. */
+    fun noTwinOn(): Boolean = _state.value.noTwin
+
+    /**
+     * Boss's switch from the Strategy lab card (or the change timeline's Undo, [log] false): paper entries that would double a
+     * contract another Liquidity book holds become would-be trades (on) or are bought as before (off). Live trades are never
+     * changed by it (shadow only). Logged in the Autopilot timeline when it really changes; one tap undoes it.
+     */
+    fun setNoTwin(on: Boolean, log: Boolean = true): String {
+        val was = edit { it.copy(noTwin = on) }.noTwin
+        saveSoon()
+        val said = if (on) "Liquidity no-twin rule on: a paper entry on an option another Liquidity book already holds becomes a would-be trade (live is never changed)."
+            else "Liquidity no-twin rule off: both books may buy the same option on paper, as before."
+        runCatching { Diag.record("liquidity", "$said (by you${if (log) "" else ", undone from the change timeline"})") }
+        if (log && was != on) runCatching { com.optionslab.app.ira.Autopilot.logBossNoTwin(on) }
+        return said
+    }
+
+    private val twins = ArrayList<com.optionslab.ira.LiquidityTwin.Rec>()
+    @Volatile private var twinsRead = false
+
+    /**
+     * One would-be trade the rule made (paper, [com.optionslab.ira.LiquidityTwin.Rec.applied]) or would have made (live, shadow):
+     * kept in memory (a list add under a small lock), said in the diagnostics, written encrypted in the background. Never throws.
+     */
+    fun twin(r: com.optionslab.ira.LiquidityTwin.Rec) {
+        runCatching {
+            synchronized(twins) { twins += r; while (twins.size > com.optionslab.ira.LiquidityTwin.KEEP) twins.removeAt(0) }
+            val d = dir ?: return
+            scope.launch {
+                runCatching { readTwins() }
+                runCatching {
+                    val text = synchronized(twins) { ArrayList(twins) }.joinToString("") { t ->
+                        android.util.Base64.encodeToString(Vault.encrypt(t.encode().toByteArray(Charsets.UTF_8)), android.util.Base64.NO_WRAP) + "\n"
+                    }
+                    synchronized(saveLock) {
+                        val f = File(d, TWINS); val tmp = File(d, "$TWINS.tmp")
+                        tmp.writeText(text, Charsets.US_ASCII)
+                        if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+                    }
+                }
+            }
+        }
+    }
+
+    /** The twins file read once (a worker thread), merged with any kept before the read. */
+    private fun readTwins() {
+        if (twinsRead) return
+        val d = dir ?: return
+        val kept = runCatching {
+            File(d, TWINS).takeIf { it.isFile }?.readLines(Charsets.US_ASCII).orEmpty().mapNotNull { l ->
+                if (l.isBlank()) null else runCatching {
+                    com.optionslab.ira.LiquidityTwin.decode(String(Vault.decrypt(android.util.Base64.decode(l, android.util.Base64.NO_WRAP)), Charsets.UTF_8))
+                }.getOrNull()
+            }
+        }.getOrDefault(emptyList())
+        synchronized(twins) {
+            val now = ArrayList(twins)
+            twins.clear(); twins.addAll((kept + now).distinct().sortedBy { it.atMs }.takeLast(com.optionslab.ira.LiquidityTwin.KEEP))
+        }
+        twinsRead = true
+    }
+
+    /** The would-be trades kept, oldest first (the file read once first: call off the main thread). */
+    fun twins(): List<com.optionslab.ira.LiquidityTwin.Rec> {
+        runCatching { readTwins() }
+        return synchronized(twins) { ArrayList(twins) }
+    }
+
+    /** The diagnostics' and the Strategy lab card's line (off the main thread: the file may be read). */
+    fun twinLine(): String = com.optionslab.ira.LiquidityTwin.line(twins(), today(), noTwinOn())
 
     /** Boss's tick: he watched the first live trade with the app open (or took the tick back). */
     fun setWatched(watched: Boolean) {
@@ -224,16 +304,18 @@ object LiquidityTest {
     /** Everything erased (a wipe): memory and files. */
     fun wipe() {
         synchronized(fills) { fills.clear() }
+        synchronized(twins) { twins.clear() }
         _state.value = LiquidityFreeze.State()
-        dir?.let { d -> runCatching { File(d, STATE).delete() }; runCatching { File(d, FILLS).delete() } }
+        dir?.let { d -> runCatching { File(d, STATE).delete() }; runCatching { File(d, FILLS).delete() }; runCatching { File(d, TWINS).delete() } }
     }
 
     /** TEST ONLY: as a fresh start - nothing kept, the defaults, the files read again on the next ask. */
-    internal fun resetForTest() { wipe(); loaded = false; synchronized(edits) { edits.clear(); early = true } }
+    internal fun resetForTest() { wipe(); loaded = false; twinsRead = false; synchronized(edits) { edits.clear(); early = true } }
 
     /** TEST ONLY: memory forgotten (the files kept), as after a restart: the next ask reads the files. */
     internal fun forgetMemoryForTest() {
         synchronized(fills) { fills.clear() }
+        synchronized(twins) { twins.clear() }; twinsRead = false
         _state.value = LiquidityFreeze.State()
         loaded = false
         synchronized(edits) { edits.clear(); early = true }

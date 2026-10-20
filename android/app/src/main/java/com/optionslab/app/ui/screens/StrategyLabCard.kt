@@ -65,6 +65,10 @@ internal fun StrategyLabSection(model: AppModel) {
     val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
     LiquidityFreezeRow(liq, today) { model.liquidityFreeze(it) }
     LiquidityTrailRow(liq) { model.liquidityTrail(it) }
+    // 20 Oct, enhancement round 1: Liquidity's no-twin rule on paper - its count read off the main thread (the record's file).
+    var twinLine by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(liq.noTwin) { twinLine = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.LiquidityTest.twinLine() }.getOrNull() } }
+    LiquidityNoTwinRow(liq, twinLine) { model.liquidityNoTwin(it) }
     open?.let { sel -> StrategyLabDialog(model, sel.ifEmpty { null }) { open = null } }
 }
 
@@ -116,6 +120,25 @@ internal fun LiquidityTrailRow(state: com.optionslab.ira.LiquidityFreeze.State, 
         modifier = Modifier.padding(top = 4.dp).testTag("lab-liq-trail-record"))
     BrassButton(if (state.trail) com.optionslab.ira.LiquidityFreeze.TRAIL_OFF else com.optionslab.ira.LiquidityFreeze.TRAIL_ON,
         Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.trail) }
+}
+
+internal const val NO_TWIN_OFF = "Let both books buy the same option (paper)"
+internal const val NO_TWIN_ON = "Turn the no-twin rule back on (paper)"
+
+/**
+ * 20 Oct, enhancement round 1 ([com.optionslab.ira.LiquidityTwin]): Liquidity's no-twin rule on the PAPER books - on by this update
+ * (19 Oct: both BANKNIFTY books held the same put and were stopped together). One tap off, one tap back on; every flip is in the
+ * change timeline and undone in one tap there. [line]: today's would-be trades (null while it is read). Live is never changed.
+ */
+@Composable
+internal fun LiquidityNoTwinRow(state: com.optionslab.ira.LiquidityFreeze.State, line: String?, onSet: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Text(if (state.noTwin) "No-twin rule on (paper): when one Liquidity book already holds an option, the other book's entry on it " +
+            "is a would-be trade, counted apart. Live only logs it."
+        else "No-twin rule off: both Liquidity books may buy the same option on paper.",
+        style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-liq-twin"))
+    line?.let { Text(it, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp).testTag("lab-liq-twin-line")) }
+    BrassButton(if (state.noTwin) NO_TWIN_OFF else NO_TWIN_ON, Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.noTwin) }
 }
 
 /** What the Strategy lab's name opens. */

@@ -27,7 +27,12 @@ object LiquidityFreeze {
      * books ([trail], research R19b: failed its gates, so off unless he switches it on; see [trailNote]).
      */
     data class State(val unfrozen: Boolean = false, val stopResetAtMs: Long = 0L, val stopTold: String = "", val watched: Boolean = false,
-                     val trail: Boolean = false)
+                     val trail: Boolean = false,
+                     /**
+                      * 20 Oct, enhancement round 1 ([LiquidityTwin]): the no-twin rule on the paper books - on by this update (logged in the
+                      * Autopilot timeline, one tap undoes it). A file from before it has no line: on.
+                      */
+                     val noTwin: Boolean = true)
 
     fun frozen(s: State, today: LocalDate): Boolean = !s.unfrozen && !today.isAfter(UNTIL)
 
@@ -45,13 +50,13 @@ object LiquidityFreeze {
     fun touches(target: String): Boolean = target.contains("liquidity", ignoreCase = true)
 
     fun encode(s: State): String = "v1\nunfrozen=${s.unfrozen}\nstopResetAt=${s.stopResetAtMs}\nstopTold=${s.stopTold.replace('\n', ' ')}\nwatched=${s.watched}\n" +
-        "trail=${s.trail}\n"
+        "trail=${s.trail}\nnoTwin=${s.noTwin}\n"
 
     fun decode(text: String?): State {
         if (text.isNullOrBlank()) return State()
         val m = text.lineSequence().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()
         return State(m["unfrozen"] == "true", m["stopResetAt"]?.toLongOrNull() ?: 0L, m["stopTold"].orEmpty(), m["watched"] == "true",
-            m["trail"] == "true")
+            m["trail"] == "true", m["noTwin"] != "false")
     }
 
     // ---- Boss's Rs 500 give-back trail (R19b, 13 Oct): his own choice, on paper only -----------------------------------------

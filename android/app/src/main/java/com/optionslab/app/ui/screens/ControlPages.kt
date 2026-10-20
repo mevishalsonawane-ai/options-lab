@@ -687,6 +687,8 @@ fun RiskPage(model: AppModel) {
             item { PortfolioSettingCard() }
             // 19 Oct: the same-direction cap on automatic entries (paper on, live logged only until switched on).
             item { SameDirectionCapCard() }
+            // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
+            item { AccountStopCard(model) }
             item { EventCalendarCard() }
             // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
             item { EventShieldSwitchCard() }
