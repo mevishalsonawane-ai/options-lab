@@ -8,7 +8,8 @@ downloaded are missing (see README "Known gaps").
 
 Continuous series (one contract per day, the roll recorded):
   * rule "volume" (default, the file `fut_1m_mcx_continuous.parquet`): on each trading day the series holds the contract
-    that traded the most lots on the PREVIOUS trading day among contracts not yet expired. The choice uses only data known at the day's open, so there is no look-ahead.
+    that traded the most lots on the PREVIOUS trading day among contracts not yet expired (switching away from the
+    held contract only when another traded at least 1.5x its volume, so two thin far months do not flip). The choice uses only data known at the day's open, so there is no look-ahead.
   * rule "expiry": the nearest contract not yet expired (switches the day after expiry, like Dhan's daily expiryCode 0).
   Column `near_share` = the held contract's volume that day / Dhan's near-month daily volume: about 1 while the series
   holds the near month. Before `near_month_from` (per symbol, in the file's QA) it holds a FAR month, because the near
@@ -36,6 +37,7 @@ FUTURES = ("GOLD", "GOLDM", "SILVER", "SILVERM", "CRUDEOIL", "CRUDEOILM", "NATUR
            "COPPER", "ZINC", "ALUMINIUM")
 OPTIONS = ("GOLD", "GOLDM", "SILVER", "SILVERM", "CRUDEOIL", "CRUDEOILM", "NATURALGAS", "NATGASMINI", "COPPER", "ZINC")
 OPEN_MIN = 9 * 60
+SWITCH = 1.5  # leave the held contract only for one that traded at least 1.5x its volume the previous day
 CONT_FILE, CONTRACTS_FILE, ROLLS_FILE = "fut_1m_mcx_continuous.parquet", "fut_mcx_contracts.parquet", "fut_mcx_rolls.parquet"
 
 
@@ -98,7 +100,8 @@ def choose(daily: pd.DataFrame, rule: str = "volume") -> pd.Series:
 
     daily: one row per (day, expiry) with the day's volume, for contracts that have a bar that day. Returns a Series
     day -> expiry. "volume": the contract with the most volume on the previous trading day among contracts with
-    expiry >= day (it may step back to a nearer expiry: early in the lake's history only far months exist, and the
+    expiry >= day, switching away from the held contract only when the other traded at least SWITCH (1.5) times its
+    volume (it may step back to a nearer expiry: early in the lake's history only far months exist, and the
     near month must win once it is the busiest); on the first day (no previous day) the nearest expiry.
     "expiry": the nearest expiry >= day that has a bar that day."""
     days = sorted(daily.day.unique())
@@ -119,6 +122,9 @@ def choose(daily: pd.DataFrame, rule: str = "volume") -> pd.Series:
                 y = y[(y.expiry >= d) & y.expiry.isin(alive.expiry)]
                 if len(y) and y.volume.max() > 0:
                     cand = y.sort_values(["volume", "expiry"], ascending=[False, True]).expiry.iloc[0]
+                    hv = y.volume[y.expiry == held].sum() if held in set(y.expiry) else None
+                    if hv is not None and cand != held and y.volume.max() < SWITCH * hv:
+                        cand = held  # not clearly busier: stay (two thin far months would flip daily)
             if cand is None:  # first day, or nothing traded yesterday: keep the held contract if alive, else nearest
                 cand = held if held in set(alive.expiry) else alive.expiry.min()
             held = cand

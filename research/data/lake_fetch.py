@@ -68,6 +68,9 @@ def windows(start, end, days):
     return out
 
 
+SPLIT_DAYS = 10  # an option window that times out is asked again in pieces of this many days
+
+
 class Job:
     def __init__(self, path, endpoint, body, key=None):
         self.path, self.endpoint, self.body, self.key = path, endpoint, body, key
@@ -75,15 +78,34 @@ class Job:
     def done(self):
         return any(os.path.exists(self.path + s) for s in (".parquet", ".empty"))
 
+    def get(self, body):
+        """(DataFrame, error) for one request."""
+        st, js, err = dh.post(self.endpoint, body)
+        if err:
+            return None, err
+        if self.key:
+            js = ((js or {}).get("data") or {}).get(self.key) or {}
+        return arrays_df(js), ""
+
     def run(self):
-        st, js, err = dh.post(self.endpoint, self.body)
+        df, err = self.get(self.body)
+        if err and "504" in err and self.endpoint == "/charts/rollingoption":
+            # 20 Oct 2026: Dhan times out (504) on many 30-day option windows of 2026 but answers the same days asked
+            # as 10-day pieces; the pieces are joined and saved under the same chunk name
+            a, b = (dt.date.fromisoformat(str(self.body[k])[:10]) for k in ("fromDate", "toDate"))
+            if (b - a).days >= SPLIT_DAYS:
+                parts = []
+                for x, y in windows(a, b, SPLIT_DAYS):
+                    p, err = self.get(dict(self.body, fromDate=x.isoformat(), toDate=y.isoformat()))
+                    if err:
+                        break
+                    parts.append(p)
+                else:
+                    df = pd.concat(parts, ignore_index=True).drop_duplicates(ignore_index=True)
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         if err:
             open(self.path + ".err", "w").write(err)
             return "err", err
-        if self.key:
-            js = ((js or {}).get("data") or {}).get(self.key) or {}
-        df = arrays_df(js)
         if not len(df):
             open(self.path + ".empty", "w").write("")
             res = "empty", 0

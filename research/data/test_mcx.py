@@ -238,3 +238,49 @@ def test_dhan_retries_follow_the_setting(monkeypatch):
     calls.clear()
     dh.post("/x", {}, retries=3)
     assert len(calls) == 3
+
+
+def test_hysteresis_keeps_the_held_contract_unless_clearly_busier():
+    rows = []
+    for day, va, vb in [("2026-07-01", 300, 90), ("2026-07-02", 300, 360), ("2026-07-03", 300, 420),
+                        ("2026-07-06", 300, 480), ("2026-07-07", 300, 480)]:
+        rows += [bars("GOLDM", "2026-11-05", 1, day, va, 100), bars("GOLDM", "2026-12-04", 2, day, vb, 101)]
+    m, r = mcx.continuous(pd.concat(rows, ignore_index=True), "GOLDM")
+    held = m.groupby(m.ts.dt.date).expiry.first()
+    # 2 and 3 Jul: Dec traded 1.2x / 1.4x of Nov the day before -> stay; 6 Jul uses 3 Jul (1.4x) -> stay;
+    # 7 Jul uses 6 Jul (1.6x) -> switch
+    assert list(held) == [D(2026, 11, 5)] * 4 + [D(2026, 12, 4)]
+    assert list(r.day) == [D(2026, 7, 7)]
+
+
+def test_option_window_that_times_out_is_asked_again_in_10_day_pieces(tmp_path, monkeypatch):
+    asked = []
+
+    def post(endpoint, body):
+        a, b = body["fromDate"], body["toDate"]
+        asked.append((a, b))
+        if (D.fromisoformat(b) - D.fromisoformat(a)).days >= 10:
+            return -1, None, "HTTP 504 "
+        t = int(pd.Timestamp(a, tz=mcx.IST).timestamp()) + 9 * 3600
+        return 200, {"data": {"ce": {"timestamp": [t, t + 60], "close": [1.0, 2.0]}}}, ""
+
+    monkeypatch.setattr(lf.dh, "post", post)
+    j = lf.Job(str(tmp_path / "s" / "2026-05-07"), "/charts/rollingoption",
+               dict(fromDate="2026-05-07", toDate="2026-06-05"), key="ce")
+    assert j.run() == ("ok", 6)
+    assert asked == [("2026-05-07", "2026-06-05"), ("2026-05-07", "2026-05-16"), ("2026-05-17", "2026-05-26"),
+                     ("2026-05-27", "2026-06-05")]
+    assert len(pd.read_parquet(str(tmp_path / "s" / "2026-05-07.parquet"))) == 6
+
+
+def test_a_piece_that_fails_leaves_the_chunk_as_err(tmp_path, monkeypatch):
+    def post(endpoint, body):
+        return (-1, None, "HTTP 504 ") if body["fromDate"] != "2026-05-07" or body["toDate"] != "2026-05-16" else \
+            (200, {"data": {"ce": {"timestamp": [1], "close": [1.0]}}}, "")
+
+    monkeypatch.setattr(lf.dh, "post", post)
+    j = lf.Job(str(tmp_path / "s" / "2026-05-07"), "/charts/rollingoption",
+               dict(fromDate="2026-05-07", toDate="2026-06-05"), key="ce")
+    assert j.run()[0] == "err" and os.path.exists(j.path + ".err") and not j.done()
+    j2 = lf.Job(str(tmp_path / "t" / "x"), "/charts/intraday", dict(fromDate="2026-05-07", toDate="2026-06-05"))
+    assert j2.run()[0] == "err"                                   # only option windows are split
