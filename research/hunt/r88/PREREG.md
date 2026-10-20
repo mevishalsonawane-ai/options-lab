@@ -125,4 +125,9 @@ dated amendment below, before the holdout is read; the holdout is read once.
 
 ## Amendments
 
-(none yet)
+- **A1 (20 Oct 2026, before any statistic):** option volumes below 0 are treated as missing. Dhan's per-minute
+  volume wraps past 2^32 on a few expiry-afternoon ATM minutes (16 of 3.9M NIFTY 2025 rows read as about -4.25
+  billion), found while checking factor coverage.
+- **A2 (20 Oct 2026, before any statistic):** F06 (today's gap) is left blank for the first candle of each session:
+  the day's open is part of that candle, so it is not known strictly before it (found by the look-ahead guard). The
+  guard's deletion check skips F18 only, as section 5 allows (the expiry schedule is public in advance).
