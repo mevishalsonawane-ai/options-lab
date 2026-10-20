@@ -329,6 +329,8 @@ class StudyWorker(ctx: android.content.Context, params: androidx.work.WorkerPara
         if (!com.optionslab.app.BuildConfig.JARVIS) return Result.success()
         runCatching { IraHub.nightNews() }
         runCatching { IraStudy.studyIfDue() }
+        // 20 Oct: the Candle agent's 24x7 study of older candles (once a day outside market hours; knowledge only).
+        runCatching { com.optionslab.app.data.CandleAgentHost.studyOffHours(applicationContext) }
         runCatching { IraStudy.reportCardIfDue() }
         // Saturday morning: Liquidity 15+5's weekly patterns, once (the words lane does not run on a closed day).
         runCatching { IraLiquidityInsight.watch() }

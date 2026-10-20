@@ -101,7 +101,7 @@ class LabScreensTest {
         text("Backtests").assertIsSelected()
         val tokens = listOf("Strategies" to "strategies", "Pine scripts" to "pine", "Health" to "health", "Portfolio" to "portfolio", "SIP" to "sip", "Replay" to "replay", "Arms" to "arms", "Candles" to "candles", "Backtests" to "trials")
         for ((label, id) in tokens) {
-            text(label).performClick()
+            text(label).performScrollTo().performClick()
             text("page=$id").assertIsDisplayed()
             text(label).assertIsSelected()
             tokens.filter { it.first != label }.forEach { text(it.first).assertIsNotSelected() }

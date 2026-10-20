@@ -2,10 +2,13 @@ package com.optionslab.app.ui.screens
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.CandleAgentHost
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -28,6 +31,12 @@ class CandleAgentPageTest {
     @After fun down() { CandleAgentHost.resetForTest() }
 
     private val day = LocalDate.of(2026, 10, 19)
+
+    /** The page is a lazy list: a card below the screen is composed once the list scrolls to it. */
+    private fun scrollTo(tag: String) {
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag(tag))
+        compose.waitForIdle()
+    }
 
     private fun agent(): CandleAgent {
         val seed = CandleBook.seed(compose.activity.assets.open("knowledge/candle_seed.json").bufferedReader().use { it.readText() })
@@ -57,33 +66,33 @@ class CandleAgentPageTest {
         compose.setContent { IraAlgoTheme("light") { CandleAgentPage() } }
         compose.waitForIdle()
         compose.onNodeWithText(CANDLE_AGENT_TITLE).assertExists()
-        compose.onNodeWithText("reading candles", substring = true).assertExists()
+        compose.onAllNodesWithText("reading candles", substring = true).onFirst().assertExists()
         // The newest notable candle: tap its name for the whole explanation.
-        compose.onNodeWithText("NIFTY 5m 19 Oct 14:00-14:05", substring = true).performClick()
-        compose.onNodeWithText("Green because", substring = true).assertExists()
-        compose.onNodeWithText("A read, not a signal", substring = true).assertExists()
+        compose.onAllNodesWithText("NIFTY 5m 19 Oct 14:00-14:05", substring = true).onFirst().performClick()
+        compose.onAllNodesWithText("Green because", substring = true).onFirst().assertExists()
+        compose.onAllNodesWithText("A read, not a signal", substring = true).onFirst().assertExists()
         compose.onNodeWithText("OK").performClick()
-        compose.onNodeWithTag("candle-table").performScrollTo()
-        compose.onNodeWithText("big tail (long lower wick)", substring = true).assertExists()
-        compose.onNodeWithText("agrees with the research", substring = true).assertExists()
-        compose.onNodeWithTag("candle-lessons").performScrollTo()
-        compose.onNodeWithText("Big tail (long lower wick) on NIFTY 15m: agrees with the research (200 counted)", substring = true).assertExists()
-        compose.onNodeWithTag("candle-talk").performScrollTo()
-        compose.onNodeWithText("heard the market brain: busy day", substring = true).assertExists()
-        compose.onNodeWithText("shared the findings bus", substring = true).assertExists()
-        compose.onNodeWithText("never count as a vote", substring = true).assertExists()
+        scrollTo("candle-table")
+        compose.onAllNodesWithText("big tail (long lower wick)", substring = true).onFirst().assertExists()
+        compose.onAllNodesWithText("agrees with the research", substring = true).onFirst().assertExists()
+        scrollTo("candle-lessons")
+        compose.onAllNodesWithText("Big tail (long lower wick) on NIFTY 15m: agrees with the research (200 counted)", substring = true).onFirst().assertExists()
+        scrollTo("candle-talk")
+        compose.onAllNodesWithText("heard the market brain: busy day", substring = true).onFirst().assertExists()
+        compose.onAllNodesWithText("shared the findings bus", substring = true).onFirst().assertExists()
+        compose.onAllNodesWithText("never count as a vote", substring = true).onFirst().assertExists()
     }
 
     @Test fun beforeItsFirstBatchAndAfterBeingLetGoItSaysSo() {
         compose.setContent { IraAlgoTheme("light") { CandleAgentContent(CandleAgentHost.View()) } }
-        compose.onNodeWithText("Waiting for its first batch", substring = true).assertExists()
+        compose.onAllNodesWithText("Waiting for its first batch", substring = true).onFirst().assertExists()
         compose.onNodeWithText("No notable candle read yet.").assertExists()
-        compose.onNodeWithTag("candle-talk").performScrollTo()
+        scrollTo("candle-talk")
         compose.onNodeWithText("Nothing shared or heard yet.").assertExists()
     }
 
     @Test fun afterAMemoryTrimThePageSaysPositionsComeFirst() {
         compose.setContent { IraAlgoTheme("light") { CandleAgentContent(CandleAgentHost.View(released = true)) } }
-        compose.onNodeWithText("open positions come first", substring = true).assertExists()
+        compose.onAllNodesWithText("open positions come first", substring = true).onFirst().assertExists()
     }
 }

@@ -78,6 +78,19 @@ class CandleBookTest {
         assertTrue(any > 0)
     }
 
+    @Test fun olderHistoryIsCountedOnlyBeforeTheFirstCandleCounted() {
+        val s = CandleBook.Stats()
+        val t = day.atTime(12, 0)
+        assertTrue(s.countable("NIFTY|5", t))
+        s.counted("NIFTY|5", t); s.counted("NIFTY|5", t.plusMinutes(30))
+        assertFalse(s.countable("NIFTY|5", t.plusMinutes(10)), "already counted")
+        assertTrue(s.countable("NIFTY|5", t.minusMinutes(5)) && s.countable("NIFTY|5", t.plusMinutes(35)))
+        s.counted("NIFTY|5", t.minusDays(2))
+        assertFalse(s.countable("NIFTY|5", t.minusDays(1)))
+        val back = CandleBook.decode(CandleBook.encode(s))
+        assertEquals(s.marks, back.marks); assertEquals(s.firsts, back.firsts)
+    }
+
     @Test fun theStatsStayBounded() {
         val s = CandleBook.Stats()
         for (i in 0 until 3_000) s.cells["NIFTY|5|shape$i|ctx"] = CandleBook.Cell(n5 = i % 7)
@@ -134,6 +147,19 @@ class CandleBookTest {
         assertEquals(66, CandleBook.growth(s))
         assertTrue("1 agree" in CandleBook.growthWords(s, seed) && "1 differ" in CandleBook.growthWords(s, seed))
         assertEquals(0, CandleBook.growth(CandleBook.Stats()))
+    }
+
+    @Test fun aDesignFindingThatFailedOutOfSampleIsNoEdge() {
+        val seed = CandleBook.seed(asset() ?: return)
+        val tw = seed.row("three_white", "NIFTY", 5)!!
+        assertEquals(false, tw.held); assertEquals(0, tw.edge)
+        assertTrue("did NOT hold out of sample, so no edge" in CandleBook.researchLine(seed, "three_white", "NIFTY", 5)!!)
+        // A finding that held keeps its way.
+        assertEquals(1, seed.row("fp_stop_run_down", "NIFTY", 1)!!.edge)
+        val s = CandleBook.Stats()
+        s.cells["NIFTY|5|three_white|all"] = CandleBook.Cell(n5 = 200, up5 = 100)
+        s.cells["NIFTY|5|*G|all"] = CandleBook.Cell(n5 = 2_000, up5 = 1_000)
+        assertEquals(true, CandleBook.compare(s, seed).single().agrees, "its own 'no edge' agrees with the holdout")
     }
 
     @Test fun mcxAndContextCellsAreJudgedAgainstNoEdge() {

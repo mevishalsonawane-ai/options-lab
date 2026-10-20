@@ -66,11 +66,12 @@ object WhatsNew {
         Entry("2026-10-20-candle-agent", OCT20, "Candle agent: every candle read and explained",
             "A new Candle agent studies each closed candle on NIFTY, BANKNIFTY, SENSEX and four MCX futures. " +
                 "It says why a candle is green or red, and where its support and resistance came from. " +
-                "It adds what that kind of candle did in our research, with the sample size. " +
-                "Where the research found no edge, it says so plainly. " +
-                "It shares its reads with the other agents and hears theirs: regime, OI, gamma, news and big players. " +
+                "It finds the earlier level a candle took support from, or the old high a rally ran into. " +
+                "It shows the big players' hand: stop runs, heavy volume, option writers and sweeps. " +
+                "It adds what that kind of candle did in our research, with the sample size and no edge said plainly. " +
+                "It learns around the clock, shares its reads with the other agents and hears theirs. " +
                 "Its own counts become Jarvis's lessons; any proposal stays a note for you. " +
-                "It never trades, and it is let go first when memory is short.",
+                "It never trades, and it is among the first things let go when memory is short.",
             "Research → Candles", ask = "why was that candle green"),
         // 19 Oct (Boss: "Yes, keep only breadth donchain").
         Entry("2026-10-19-r51-record-only", OCT19, "R51 Donchian 20 records only; R72 trades",

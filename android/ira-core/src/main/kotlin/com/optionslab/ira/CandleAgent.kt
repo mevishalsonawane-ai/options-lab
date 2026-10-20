@@ -34,7 +34,15 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         val inst: String, val tf: Int, val bars: List<CandleRead.Bar>, val sessionOpenMin: Int = 9 * 60 + 15,
         /** The newest session is over (the market closed): its last reads settle with what they have. */
         val sessionOver: Boolean = false,
-        val around: (LocalDate) -> CandleRead.Around = { CandleRead.Around() },
+        /** The chain, gamma and expiry known at a candle's start (the app gives today's only to the candles it is fresh for). */
+        val around: (LocalDateTime) -> CandleRead.Around = { CandleRead.Around() },
+        /**
+         * The 24x7 study of older history (Boss, 20 Oct: "agent should be running 24x7 to learn new things from candles"): every
+         * candle read and its outcome counted (only those never counted before), nothing explained or posted.
+         */
+        val deep: Boolean = false,
+        /** Its own market is open now (an index in MCX's evening is not: never called stale then). */
+        val open: Boolean = true,
     )
 
     /** One notable candle explained, for the page and for Jarvis. [atMs]: when the agent read it. */
@@ -87,6 +95,8 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         const val KEEP_PENDING = 400
         /** A notable candle is posted only when it is this fresh (in candles): history is read, not re-announced. */
         const val POST_WITHIN_CANDLES = 2
+        /** 1-minute candles are read and counted, but only 5-minute and longer ones are posted. */
+        const val POST_MIN_TF = 5
         /** The other agents' words stand this long for the agent's reads. */
         const val HEARD_MS = 30 * 60_000L
         /** No candle newer than this many candle lengths while the market is open: the data is stale. */
@@ -144,14 +154,20 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
             if (bars.isEmpty()) continue
             anyBars = true
             val sk = "${s.inst.uppercase(Locale.ENGLISH)}|${s.tf}"
+            val qk = if (s.deep) "$sk|deep" else sk
             val newest = bars.last().t
-            val stale = marketOpen && newest.plusMinutes((STALE_CANDLES * s.tf).toLong()).isBefore(now.minusMinutes(s.tf.toLong()))
+            val stale = marketOpen && s.open && newest.plusMinutes((STALE_CANDLES * s.tf).toLong()).isBefore(now.minusMinutes(s.tf.toLong()))
             if (stale) anyStale = true
-            val fresh = CandleRead.readAll(s.inst.uppercase(Locale.ENGLISH), s.tf, bars, readTo[sk], s.sessionOpenMin, s.around)
-            if (fresh.isNotEmpty()) readTo[sk] = fresh.last().bar.t
+            // The big players' posts during each candle (a sweep, absorption, pulled orders, a stop hunt) become context words too.
+            val fresh = CandleRead.readAll(s.inst.uppercase(Locale.ENGLISH), s.tf, bars, if (s.deep) null else readTo[sk], s.sessionOpenMin, s.around).map { r ->
+                val bp = players(r).map { "bp_" + it.kind.name.lowercase(Locale.ENGLISH) }.distinct()
+                if (bp.isEmpty()) r else r.copy(context = r.context.copy(tags = r.context.tags + bp))
+            }
+            if (fresh.isNotEmpty() && !s.deep) readTo[sk] = fresh.last().bar.t
             reads += fresh.size
-            val q = pending.getOrPut(sk) { ArrayDeque() }
-            for (r in fresh) { q.addLast(r); while (q.size > KEEP_PENDING) q.removeFirst() }
+            val q = pending.getOrPut(qk) { ArrayDeque() }
+            val mark0 = stats.marks[sk]; val first0 = stats.firsts[sk]
+            q.addAll(fresh)
             // Indices move as the history window slides: each pending read is found again by its time.
             val at = HashMap<LocalDateTime, Int>(bars.size * 2)
             for ((i, b) in bars.withIndex()) at[b.t] = i
@@ -160,24 +176,31 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
                 val idx = at[r0.bar.t]
                 if (idx == null) { q.removeFirst(); continue }          // its candle left the window: dropped, never guessed
                 // A candle read before ATR existed (the first 14) has nothing to be measured in: it never settles, so it leaves.
-                if (r0.anatomy.atr == null) { q.removeFirst(); continue }
+                // One already counted (before a restart) leaves too, without being measured again.
+                if (r0.anatomy.atr == null || !CandleBook.countable(mark0, first0, r0.bar.t)) { q.removeFirst(); continue }
                 val r = if (idx == r0.index) r0 else r0.copy(index = idx)
                 val sessionOver = s.sessionOver && r.bar.t.toLocalDate() == newest.toLocalDate()
                 val o = CandleBook.outcome(r, bars, sessionOver) ?: break // in order: the next ones are not settled either
                 q.removeFirst()
-                if (stats.marks[sk]?.let { !r.bar.t.isAfter(it) } == true) continue
                 CandleBook.count(stats, r, o)
-                stats.marks[sk] = r.bar.t
+                stats.counted(sk, r.bar.t)
                 countedN++
             }
+            // Bounded after settling (a first batch reads days of history and settles nearly all of it at once).
+            while (q.size > KEEP_PENDING) q.removeFirst()
+            CandleBook.trim(stats)
+            if (s.deep) { q.clear(); continue }                              // a study pass: counted, never announced
+            var toPost: CandleRead.Read? = null
             for (r in fresh) {
                 if (!r.notable) continue
                 val ex = Explained(r, explain(r, locked = false, nowMs = nowMs), nowMs)
                 latest.addFirst(ex); while (latest.size > KEEP_EXPLAINED) latest.removeLast()
                 explainedN++
                 val age = java.time.Duration.between(r.bar.t.plusMinutes(r.tf.toLong()), now).toMinutes()
-                if (!stale && age <= POST_WITHIN_CANDLES.toLong() * r.tf) posts += post(r, nowMs)
+                if (!stale && r.tf >= POST_MIN_TF && age <= POST_WITHIN_CANDLES.toLong() * r.tf) toPost = r
             }
+            // One post a series a batch at most (its newest fresh notable candle): the bus is shared, its ring is not the agent's.
+            toPost?.let { posts += post(it, nowMs) }
         }
         counted += countedN
         batches++
@@ -252,6 +275,8 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         out += CandleBook.researchLine(seed, r.primary, r.inst, r.tf) ?: if (seed.empty) "History: the research pack is not loaded." else
             "History: the research has no row for this shape on ${r.inst}."
         out += own(r)
+        historyLines(r).forEach { out += it }
+        playersLine(r, locked)?.let { out += it }
         if (!locked) heardLine(r.inst, nowMs)?.let { out += it }
         out += "A read, not a signal: in the research no candle shape predicted the direction by itself, and nothing here trades."
         out
@@ -317,6 +342,65 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         val says = CandleBook.says(cell, base)
         return "My own count (n $n): up after 5 candles ${pc(cell!!.upRate!!)}" + (base?.upRate?.let { " vs ${pc(it)} for any ${if (r.anatomy.colour > 0) "green" else "red"} candle" } ?: "") +
             (cell.heldRate?.let { ", its wick end held ${pc(it)} of ${cell.wickN}" } ?: "") + "; " + says.words + "."
+    }
+
+    /**
+     * The history behind it (Boss, 20 Oct: "it always takes a support from somewhere back, or if there is a green rally, there
+     * is also some history or resistance for that"): the earlier level it took support from or met as resistance, when that
+     * level was made and how often price came back to it, and the rally or fall it is part of.
+     */
+    fun historyLines(r: CandleRead.Read): List<String> {
+        val h = r.context.history ?: return emptyList()
+        val out = ArrayList<String>()
+        val move = h.move5?.let { m ->
+            when { m >= 2.0 -> "part of a rally of ${CandleRead.f1(m)} ATR over the last 5 candles"; m <= -2.0 -> "part of a fall of ${CandleRead.f1(-m)} ATR over the last 5 candles"; else -> null }
+        }
+        val sup = h.support?.let { s ->
+            if (h.held) "it took support at ${s.words()}: its low came within a quarter ATR of that level and it closed above it"
+            else "the nearest earlier level under it is ${s.words()}"
+        }
+        val res = h.resistance?.let { s ->
+            if (h.hit) "it ran into resistance at ${s.words()}: its high reached that level and it closed back under it"
+            else "the nearest earlier level over it is ${s.words()}"
+        }
+        val parts = listOfNotNull(move, sup, res)
+        if (parts.isEmpty()) return emptyList()
+        out += "History behind it: " + parts.joinToString("; ") + "."
+        if (h.held || h.hit) out += "An earlier level is where price paused before, not a wall: our research has not shown such levels hold more often than " +
+            "any level as far away, so the agent counts how often they held (its own count, below in its table)."
+        return out
+    }
+
+    /** The big players' kinds of post the agent reads into a candle. */
+    private val PLAYERS = setOf(Findings.Kind.SWEEP, Findings.Kind.ABSORPTION, Findings.Kind.PULL, Findings.Kind.STOP_HUNT, Findings.Kind.BIG_MOVE)
+
+    /** The epoch ms of a market time (IST). */
+    private fun ms(t: LocalDateTime): Long = t.toInstant(java.time.ZoneOffset.ofHoursMinutes(5, 30)).toEpochMilli()
+
+    /** What the big-player agents (liquidity, order flow, trap guard, move recorder) posted on [r]'s instrument during its candle. */
+    fun players(r: CandleRead.Read): List<Findings.Finding> = synchronized(lock) {
+        val from = ms(r.bar.t); val to = ms(r.bar.t.plusMinutes(r.tf.toLong()))
+        heardOn[r.inst.uppercase(Locale.ENGLISH)].orEmpty().values.filter { it.kind in PLAYERS && it.atMs in from..to }.sortedBy { it.atMs }
+    }
+
+    /**
+     * The big players' hand in the candle (Boss, 20 Oct: "check how the big players have a hand in it"): their footprints in the
+     * candle itself (a stop run, heavy volume with a small or a big range), the option writers' OI added since the last chain
+     * read, and what the big-player agents posted during it (left out when [locked]). With the research's honest verdict.
+     */
+    fun playersLine(r: CandleRead.Read, locked: Boolean = false): String? {
+        val bits = ArrayList<String>()
+        if ("fp_stop_run_up" in r.shapes) bits += "stops above the day's high were taken and price closed back under it"
+        if ("fp_stop_run_down" in r.shapes) bits += "stops under the day's low were taken and price closed back over it"
+        if ("fp_absorption" in r.shapes) bits += "heavy volume (${CandleRead.f1(r.anatomy.volRatio ?: 0.0)}x usual) with a small range: someone absorbed the orders"
+        if ("fp_climax" in r.shapes) bits += "heavy volume (${CandleRead.f1(r.anatomy.volRatio ?: 0.0)}x usual) with a big range: a climax"
+        r.context.callBuild?.let { bits += "call writers added ${"%,d".format(Locale.ENGLISH, it.ceOiChg)} OI at ${CandleRead.px(it.strike)} (building resistance there)" }
+        r.context.putBuild?.let { bits += "put writers added ${"%,d".format(Locale.ENGLISH, it.peOiChg)} OI at ${CandleRead.px(it.strike)} (building support there)" }
+        // The bots' own posts are never said on a locked phone (Findings.LOCKED); the candle's own footprints and the chain are.
+        if (!locked) for (f in players(r).take(3)) bits += "${f.who}: ${f.words.ifEmpty { f.kind.words }.take(80)}"
+        if (bits.isEmpty()) return null
+        return "Big players: " + bits.joinToString("; ") + ". In R86 and R87 these footprints did not predict the next move by themselves " +
+            "(stop runs did not reverse), so they are context, not a signal."
     }
 
     private fun heardLine(inst: String, nowMs: Long): String? {

@@ -125,8 +125,8 @@ class CandleReadTest {
         val todayIdx = bars.indexOfFirst { it.t.toLocalDate() == day }
         val strikes = listOf(CandleRead.Strike(23_900.0, 100, 9_000, ceOiChg = -50, peOiChg = 500), CandleRead.Strike(24_000.0, 3_000, 4_000),
             CandleRead.Strike(24_300.0, 12_000, 200, ceOiChg = -10, peOiChg = 5))
-        val reads = CandleRead.readAll("NIFTY", 5, bars, around = { d ->
-            if (d == day) CandleRead.Around(strikes, gamma = "short", expiry = true) else CandleRead.Around()
+        val reads = CandleRead.readAll("NIFTY", 5, bars, around = { t ->
+            if (t.toLocalDate() == day) CandleRead.Around(strikes, gamma = "short", expiry = true) else CandleRead.Around()
         })
         val first = reads.first { it.bar.t == day.atTime(9, 15) }
         assertNull(first.context.orHigh, "no opening range before 09:30")
@@ -193,6 +193,61 @@ class CandleReadTest {
             val part = CandleRead.readAll("NIFTY", 5, bars.subList(0, cut))
             for (p in part) assertEquals(full[p.bar.t], p, "candle ${p.bar.t} changed when the data was cut at $cut")
         }
+    }
+
+    /** Day one (Fri 16 Oct): calm candles around 100 with two dips to 95 (swing lows), and one spike to 110 (a swing high). */
+    private fun dayOne(): List<CandleRead.Bar> = (0 until 60).map { k ->
+        val t = day.minusDays(3).atTime(9, 15).plusMinutes(k * 5L)
+        when (k) {
+            20 -> CandleSynth.bar(t, 100.0, 101.0, 95.0, 100.5)
+            30 -> CandleSynth.bar(t, 100.0, 101.0, 95.3, 100.5)
+            40 -> CandleSynth.bar(t, 100.0, 110.0, 99.0, 100.5)
+            else -> CandleSynth.bar(t, 100.0, 102.0, 98.0, 100.5)
+        }
+    }
+
+    @Test fun aCandleTakesSupportFromALevelMadeDaysBack() {
+        val two = (0 until 30).map { CandleSynth.bar(day.atTime(9, 15).plusMinutes(it * 5L), 100.0, 102.0, 98.0, 100.5) }
+        val dip = CandleSynth.bar(day.atTime(11, 45), 100.0, 101.0, 95.4, 100.0)
+        val r = CandleRead.readAll("NIFTY", 5, dayOne() + two + dip).last()
+        val h = r.context.history!!
+        assertTrue(h.held, "$h")
+        assertEquals(95.3, h.support!!.price, 1e-9)
+        assertEquals(3, h.support!!.touches, "the two dips and the 16 Oct day low")
+        assertEquals(day.minusDays(3).atTime(9, 15).plusMinutes(100), h.support!!.firstAt)
+        assertTrue("hist_support_held" in r.context.tags)
+        assertTrue("16 Oct 10:55" in h.support!!.words() && "tested 3 times" in h.support!!.words(), h.support!!.words())
+    }
+
+    @Test fun aGreenRallyMeetsTheResistanceOfAnEarlierHigh() {
+        val two = (0 until 30).map { CandleSynth.bar(day.atTime(9, 15).plusMinutes(it * 5L), 100.0, 102.0, 98.0, 100.5) }
+        var px = 100.5
+        val rally = (0 until 5).map { k ->
+            val o = px; val c = if (k < 4) o + 2.2 else 109.4; px = c
+            CandleSynth.bar(day.atTime(11, 45).plusMinutes(k * 5L), o, if (k < 4) c + 0.3 else 110.2, o - 0.3, c)
+        }
+        val r = CandleRead.readAll("NIFTY", 5, dayOne() + two + rally).last()
+        val h = r.context.history!!
+        assertTrue(h.hit, "$h")
+        assertEquals(110.0, h.resistance!!.price, 1e-9)
+        assertTrue(h.move5!! >= 2.0, "${h.move5}")
+        assertTrue("hist_resistance_hit" in r.context.tags)
+        // Nothing from the future: the same candle read with the next day cut off is the same read.
+        assertEquals(r, CandleRead.readAll("NIFTY", 5, dayOne() + two + rally + CandleSynth.bar(day.atTime(12, 10), 109.0, 120.0, 90.0, 115.0)).first { it.bar.t == r.bar.t })
+    }
+
+    @Test fun heavyVolumeFootprintsAndOptionWritersAreRead() {
+        val calm = (0 until 30).map { CandleSynth.bar(day.atTime(9, 15).plusMinutes(it * 5L), 100.0, 102.0, 98.0, 100.5, 1_000.0) }
+        val climax = CandleRead.readAll("CRUDEOIL", 5, calm + CandleSynth.bar(day.atTime(11, 45), 100.0, 108.0, 99.5, 107.5, 3_000.0), sessionOpenMin = 9 * 60).last()
+        assertTrue("fp_climax" in climax.shapes, "${climax.shapes}"); assertEquals("fp_climax", climax.primary)
+        val absorb = CandleRead.readAll("CRUDEOIL", 5, calm + CandleSynth.bar(day.atTime(11, 45), 100.0, 101.0, 99.0, 100.5, 2_500.0), sessionOpenMin = 9 * 60).last()
+        assertTrue("fp_absorption" in absorb.shapes, "${absorb.shapes}")
+        val noVol = CandleRead.readAll("NIFTY", 5, calm.map { it.copy(v = null) } + CandleSynth.bar(day.atTime(11, 45), 100.0, 108.0, 99.5, 107.5)).last()
+        assertFalse("fp_climax" in noVol.shapes, "an index has no volume: no volume footprint is guessed")
+        val strikes = listOf(CandleRead.Strike(110.0, 5_000, 100, ceOiChg = 900), CandleRead.Strike(95.0, 100, 4_000, peOiChg = 300, ceOiChg = -20))
+        val r = CandleRead.readAll("NIFTY", 5, calm, around = { CandleRead.Around(strikes) }).last()
+        assertEquals(110.0, r.context.callBuild!!.strike); assertEquals(95.0, r.context.putBuild!!.strike)
+        assertTrue("call_writing" in r.context.tags && "put_writing" in r.context.tags)
     }
 
     @Test fun timeOfDayAndTheCandlesTimeAreSaidPlainly() {

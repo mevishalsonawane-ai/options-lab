@@ -106,9 +106,27 @@ object CandleBook {
     /** The running statistics: key "INST|tf|shape|context" to its cell. Not thread-safe by itself: the agent guards it. */
     class Stats(val cells: MutableMap<String, Cell> = HashMap(),
                 /** Per "INST|tf": the last candle whose outcome was counted (kept with the counts, so a restart never counts it twice). */
-                val marks: MutableMap<String, java.time.LocalDateTime> = HashMap()) {
+                val marks: MutableMap<String, java.time.LocalDateTime> = HashMap(),
+                /** Per "INST|tf": the first candle counted. The 24x7 study of older history counts only before it (never twice). */
+                val firsts: MutableMap<String, java.time.LocalDateTime> = HashMap()) {
+        /** Not yet counted for [series]: after its last counted candle, or before its first. */
+        fun countable(series: String, t: java.time.LocalDateTime): Boolean = countable(marks[series], firsts[series], t)
+        fun counted(series: String, t: java.time.LocalDateTime) {
+            if (marks[series]?.let { t.isAfter(it) } != false) marks[series] = t
+            if (firsts[series]?.let { t.isBefore(it) } != false) firsts[series] = t
+        }
         val size: Int get() = cells.size
         operator fun get(key: String): Cell? = cells[key]
+    }
+
+    /**
+     * Not yet counted, given the counted span [first]..[mark] (null: nothing counted). A batch judges each candle against the span
+     * as it was when the batch began: counting the oldest candle of a study first must not hide the ones after it.
+     */
+    fun countable(mark: java.time.LocalDateTime?, first: java.time.LocalDateTime?, t: java.time.LocalDateTime): Boolean {
+        val m = mark ?: return true
+        val f = first ?: return t.isAfter(m)
+        return t.isAfter(m) || t.isBefore(f)
     }
 
     fun key(inst: String, tf: Int, shape: String, ctx: String) = "${inst.uppercase(Locale.ENGLISH)}|$tf|$shape|$ctx"
@@ -124,13 +142,14 @@ object CandleBook {
         fun bump(k: String) { s.cells[k] = (s.cells[k] ?: Cell()).add(o, day) }
         for (c in ctxs) { bump(key(read.inst, read.tf, read.primary, c)); bump(baseKey(read.inst, read.tf, read.anatomy.colour, c)) }
         for (sh in read.shapes) if (sh != read.primary && sh != "green" && sh != "red" && sh != "flat") bump(key(read.inst, read.tf, sh, "all"))
-        trim(s)
+        // Bounded by the caller once a batch ([trim]): sorting the cells at every count would cost a sort per candle.
     }
 
     fun trim(s: Stats, max: Int = MAX_CELLS) {
         if (s.cells.size <= max) return
-        // The context cells go before the "all" cells, the thinnest and the oldest first.
-        val drop = s.cells.entries.sortedWith(compareBy<Map.Entry<String, Cell>>({ it.key.endsWith("|all") }, { it.value.n5 }, { it.value.last ?: LocalDate.MIN }))
+        // The context cells go before the "all" cells, the thinnest and the oldest first; the same-colour baselines last of all
+        // (every comparison needs them).
+        val drop = s.cells.entries.sortedWith(compareBy<Map.Entry<String, Cell>>({ it.key.contains("|*") }, { it.key.endsWith("|all") }, { it.value.n5 }, { it.value.last ?: LocalDate.MIN }))
             .take(s.cells.size - max).map { it.key }
         for (k in drop) s.cells.remove(k)
     }
@@ -140,6 +159,7 @@ object CandleBook {
 
     /** One line a cell: "C~key~n5~up5~sum5~sq5~n10~mfe~mae~wickN~wickHeld~last"; one a mark: "M~INST|tf~time". */
     fun encode(s: Stats): String = (s.marks.toSortedMap().entries.map { (k, t) -> "M~${k.replace('\n', ' ')}~$t" } +
+        s.firsts.toSortedMap().entries.map { (k, t) -> "F~${k.replace('\n', ' ')}~$t" } +
         s.cells.toSortedMap().entries.map { (k, c) ->
             listOf("C", k.replace('\n', ' '), c.n5, c.up5, num(c.sum5), num(c.sq5), c.n10, num(c.mfe), num(c.mae), c.wickN, c.wickHeld, c.last?.toString() ?: "")
                 .joinToString("~")
@@ -152,6 +172,7 @@ object CandleBook {
         for (line in text.lineSequence()) {
             val p = line.split('~')
             if (p.size == 3 && p[0] == "M") { runCatching { java.time.LocalDateTime.parse(p[2]) }.getOrNull()?.let { s.marks[p[1]] = it }; continue }
+            if (p.size == 3 && p[0] == "F") { runCatching { java.time.LocalDateTime.parse(p[2]) }.getOrNull()?.let { s.firsts[p[1]] = it }; continue }
             if (p.size != 12 || p[0] != "C") continue
             val c = runCatching {
                 Cell(p[2].toInt(), p[3].toInt(), p[4].toDouble(), p[5].toDouble(), p[6].toInt(), p[7].toDouble(), p[8].toDouble(), p[9].toInt(), p[10].toInt(),
@@ -173,8 +194,15 @@ object CandleBook {
         /** Held out of sample: true, false, or null (not a design finding, so not tested). */
         val held: Boolean?,
     ) {
-        /** A design finding that is up (+1), down (-1), or none (0): BH q under 0.10. */
-        val edge: Int get() = if (q != null && q < 0.10 && effAtr != null && abs(effAtr) > 0) (if (effAtr > 0) 1 else -1) else 0
+        /**
+         * A finding that is up (+1), down (-1), or none (0): BH q under 0.10 in design AND not failed out of sample (a design finding
+         * that did not hold is no edge: R87's holdout). Its way is the up-rate against the matched candles, the agent's own measure.
+         */
+        val edge: Int get() {
+            if (q == null || q >= 0.10 || held == false) return 0
+            val u = up; val b = base
+            return if (u != null && b != null && u != b) (if (u > b) 1 else -1) else if (effAtr != null && effAtr != 0.0) (if (effAtr > 0) 1 else -1) else 0
+        }
     }
 
     data class Family(val key: String, val name: String, val def: String, val why: String, val verdict: String, val rows: List<Row>)
@@ -228,7 +256,7 @@ object CandleBook {
         r.pts?.let { sb.append(String.format(Locale.ENGLISH, " (%+.1f points)", it)) }
         sb.append(when {
             r.edge != 0 && r.held == true -> "; a design finding that held out of sample, but below an option's cost"
-            r.edge != 0 && r.held == false -> "; a design finding that did NOT hold out of sample"
+            r.held == false -> "; a design finding that did NOT hold out of sample, so no edge"
             r.edge != 0 -> "; a design finding (q ${f2(r.q!!)})"
             else -> "; no edge (q ${r.q?.let { f2(it) } ?: "n/a"})"
         })
@@ -262,12 +290,20 @@ object CandleBook {
     data class Compare(val inst: String, val tf: Int, val shape: String, val ctx: String, val cell: Cell, val base: Cell?, val own: Says,
                        val research: Row?, val researchSays: Says, val agrees: Boolean?) {
         fun words(): String {
-            val head = "${inst} ${tf}m ${CandleRead.name(shape)}${if (ctx == "all") "" else " ($ctx)"}"
+            val head = "${inst} ${tf}m ${CandleRead.name(shape)}${if (ctx == "all") "" else " (${ctxWords(ctx)})"}"
             val mine = cell.upRate?.let { "up after 5 candles ${pc(it)} of ${cell.n5}" + (base?.upRate?.let { b -> " vs ${pc(b)} same-colour" } ?: "") } ?: "no outcome yet"
             val res = research?.let { r -> r.up?.let { "research ${pc(it)} vs ${pc(r.base ?: 0.5)} (n ${r.n})" } } ?: "no research row"
             val verdict = when (agrees) { true -> "agrees with the research"; false -> "differs from the research"; null -> "too few to compare" }
             return "$head: $mine; $res; $verdict"
         }
+    }
+
+    /** A context word as said: "hist_support_held" -> "at a support from history", "bp_sweep" -> "big players: sweep". */
+    fun ctxWords(ctx: String): String = when {
+        ctx == "hist_support_held" -> "at a support from history"
+        ctx == "hist_resistance_hit" -> "at a resistance from history"
+        ctx.startsWith("bp_") -> "big players: " + ctx.removePrefix("bp_").replace('_', ' ')
+        else -> ctx.replace('_', ' ')
     }
 
     /** Every "INST|tf|shape|ctx" cell of [s] (baselines aside), compared with the research. */

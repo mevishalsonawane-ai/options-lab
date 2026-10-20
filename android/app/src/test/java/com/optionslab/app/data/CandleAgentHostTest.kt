@@ -30,7 +30,10 @@ class CandleAgentHostTest : RobolectricTest() {
     private val day = LocalDate.of(2026, 10, 19)
 
     @Before fun up() { CandleAgentHost.resetForTest(); MemoryTrim.resetForTest(); SmartWorkers.bus.clear() }
-    @After fun down() { CandleAgentHost.resetForTest(); MemoryTrim.resetForTest(); Market.testClock = null; SmartWorkers.bus.clear(); KiteStream.resetForTest() }
+    @After fun down() {
+        CandleAgentHost.resetForTest(); MemoryTrim.resetForTest(); Market.testClock = null; SmartWorkers.bus.clear(); KiteStream.resetForTest()
+        com.optionslab.app.ira.IraHub.testLabBars = null; com.optionslab.app.work.BackgroundBudget.resetForTest()
+    }
 
     /** A trading day of 5-minute candles ending with a clear green big tail at 14:00. */
     private fun bars(): List<CandleRead.Bar> {
@@ -95,10 +98,11 @@ class CandleAgentHostTest : RobolectricTest() {
         assertNotNull(CandleAgentHost.view.value.status)
     }
 
-    @Test fun itSleepsWhenNoMarketIsOpenAndRunsInBatchesWhenOneIs() {
-        // Sunday noon: NSE and MCX shut, nothing to settle.
+    @Test fun itRunsAroundTheClockInBatchesNeverPerTick() {
+        // Sunday noon: NSE and MCX shut - still a batch an hour (24x7 learning), never sooner.
         Market.testClock = java.time.Clock.fixed(LocalDate.of(2026, 10, 18).atTime(12, 0).atZone(zone).toInstant(), zone)
-        assertNull(CandleAgentHost.delayMs(context))
+        val off = CandleAgentHost.delayMs(context)
+        assertNotNull(off); assertTrue("$off", off!! in 0L..60 * 60_000L)
         // A Monday in NSE's session: a batch now (none yet), then every 5 minutes - never per tick.
         Market.testClock = java.time.Clock.fixed(day.atTime(11, 0).atZone(zone).toInstant(), zone)
         val d = CandleAgentHost.delayMs(context)
@@ -124,6 +128,50 @@ class CandleAgentHostTest : RobolectricTest() {
         assertTrue(sup, "support" in sup)
         val reply = CandleAgentHost.ask("the trade manager", CandleAgent.Ask.Levels("NIFTY"))!!
         assertNotNull(reply.support)
+    }
+
+    @Test fun theDailyStudyOfOlderCandlesRunsOnceOutsideMarketHours() = runBlocking {
+        // 60+ sessions of 5- and 15-minute candles, as the market study's two-year cache holds them.
+        var calls = 0
+        com.optionslab.app.ira.IraHub.testLabBars = { _, minutes ->
+            calls++
+            val r = java.util.Random(minutes.toLong())
+            val out = ArrayList<com.optionslab.ira.Candle>()
+            var d = day.minusDays(100); var px = 24_000.0
+            while (d.isBefore(day)) {
+                if (d.dayOfWeek.value <= 5) {
+                    var t = d.atTime(9, 15)
+                    while (t.isBefore(d.atTime(15, 30))) {
+                        val o = px; val c = o + r.nextGaussian() * 6
+                        out += com.optionslab.ira.Candle(t, o, maxOf(o, c) + 3, minOf(o, c) - 3, c); px = c; t = t.plusMinutes(minutes.toLong())
+                    }
+                }
+                d = d.plusDays(1)
+            }
+            out
+        }
+        com.optionslab.app.work.BackgroundBudget.testPhone = com.optionslab.ira.BudgetRule.Phone(80, true, 30.0, false)
+        Market.testClock = java.time.Clock.fixed(day.atTime(20, 0).atZone(zone).toInstant(), zone)
+        CandleAgentHost.studyOffHours(context)
+        val st = CandleAgentHost.view.value.status
+        assertNotNull(st)
+        assertTrue("${st!!.counted}", st.counted > 1_000)
+        assertTrue(CandleAgentHost.view.value.latest.isEmpty())             // studied, never announced
+        assertEquals(6, calls)                                              // 3 indices x 5 and 15 minutes
+        // Once a day: a second call the same evening reads nothing.
+        CandleAgentHost.studyOffHours(context)
+        assertEquals(6, calls)
+        // The battery saver on: it waits.
+        CandleAgentHost.resetForTest()
+        com.optionslab.app.work.BackgroundBudget.testPhone = com.optionslab.ira.BudgetRule.Phone(80, false, 30.0, true)
+        CandleAgentHost.studyOffHours(context)
+        assertEquals(6, calls)
+        com.optionslab.app.work.BackgroundBudget.testPhone = com.optionslab.ira.BudgetRule.Phone(80, true, 30.0, false)
+        // Never in NSE's session.
+        CandleAgentHost.resetForTest()
+        Market.testClock = java.time.Clock.fixed(day.atTime(11, 0).atZone(zone).toInstant(), zone)
+        CandleAgentHost.studyOffHours(context)
+        if (Market.isOpen()) assertEquals(6, calls)
     }
 
     @Test fun mcxMinutesFoldFromNineWithTheirVolume() {

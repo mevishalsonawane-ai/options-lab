@@ -125,6 +125,15 @@ class CandleAgentTest {
         assertEquals(a.encodeStats(), restarted.encodeStats())
     }
 
+    @Test fun aFirstBatchOfDaysOfOneMinuteCandlesCountsAllOfItsHistory() {
+        val bars = CandleSynth.days(day.minusDays(3), 2, 1, seed = 6, step = 2.0)        // 750 one-minute candles, more than the pending cap
+        val now = day.atTime(16, 0)
+        val a = CandleAgent(seed)
+        val s = a.study(listOf(CandleAgent.Series("NIFTY", 1, bars, sessionOver = true)), emptyList(), ms(now), now, false)
+        // Every candle with ATR (all but the first 14) and a settled outcome: the first day's last ones end with their session.
+        assertEquals(bars.size - CandleRead.ATR_N, s.counted)
+    }
+
     @Test fun pendingReadsSettleAsCandlesArriveInTheirOrder() {
         val all = CandleSynth.days(day, 1, 5, seed = 5)
         val a = CandleAgent(seed)
@@ -140,6 +149,35 @@ class CandleAgentTest {
         assertEquals(b.encodeStats(), a.encodeStats())
     }
 
+    @Test fun theTwentyFourSevenStudyCountsOlderHistoryOnceAndAnnouncesNothing() {
+        val live = CandleSynth.days(day, 1, 5, seed = 12)
+        val older = CandleSynth.days(day.minusDays(10), 5, 5, seed = 13)            // the five sessions before
+        val a = CandleAgent(seed)
+        val now = day.atTime(16, 0)
+        val first = a.study(listOf(CandleAgent.Series("NIFTY", 5, live, sessionOver = true)), emptyList(), ms(now), now, false).counted
+        assertTrue(first > 0)
+        val deep = a.study(listOf(CandleAgent.Series("NIFTY", 5, older + live, sessionOver = true, deep = true)), emptyList(), ms(now), now, false)
+        assertTrue(deep.counted > 300, "${deep.counted}")
+        assertTrue(deep.posts.isEmpty() && deep.explained == 0)
+        // Again: nothing new to count, live or deep.
+        assertEquals(0, a.study(listOf(CandleAgent.Series("NIFTY", 5, older + live, sessionOver = true, deep = true)), emptyList(), ms(now), now, false).counted)
+        assertEquals(0, a.study(listOf(CandleAgent.Series("NIFTY", 5, live, sessionOver = true)), emptyList(), ms(now), now, false).counted)
+    }
+
+    @Test fun theBigPlayersHandInACandleIsSaidAndLearnedButNotOnALockedPhone() {
+        val a = CandleAgent(seed)
+        val bars = dayWithTail()
+        val now = day.atTime(14, 6)
+        val sweep = Findings.Finding("Liquidity 15+5", Findings.Kind.SWEEP, "NIFTY", atMs = ms(day.atTime(14, 2)), words = "sweep taken under the day low", seq = 7)
+        a.study(listOf(CandleAgent.Series("NIFTY", 5, bars)), listOf(sweep), ms(now), now, true)
+        val r = a.latest().first().read
+        assertTrue("bp_sweep" in r.context.tags, "${r.context.tags}")
+        val open = a.answer(CandleAgent.Question.MEANING, "NIFTY", false, ms(now))
+        assertTrue("Big players:" in open && "sweep taken under the day low" in open && "context, not a signal" in open, open)
+        assertFalse("sweep taken" in a.answer(CandleAgent.Question.MEANING, "NIFTY", true, ms(now)))
+        assertTrue(a.historyLines(r).isEmpty() || a.historyLines(r).first().startsWith("History behind it: "))
+    }
+
     @Test fun staleCandlesAreReadButNeverPosted() {
         val a = CandleAgent(seed)
         val bars = dayWithTail()
@@ -147,6 +185,22 @@ class CandleAgentTest {
         val s = a.study(listOf(CandleAgent.Series("NIFTY", 5, bars)), emptyList(), ms(now), now, marketOpen = true)
         assertTrue(s.posts.isEmpty())
         assertEquals(CandleAgent.Health.STALE, a.status().health)
+    }
+
+    @Test fun oneMinuteCandlesAreReadButOnlyFiveMinuteAndLongerArePostedOneASeries() {
+        val a = CandleAgent(seed)
+        val ones = CandleSynth.days(day, 1, 1, seed = 21, step = 3.0).filter { it.t.isBefore(day.atTime(14, 0)) }
+        val now = day.atTime(14, 1)
+        val s = a.study(listOf(CandleAgent.Series("NIFTY", 1, ones), CandleAgent.Series("NIFTY", 5, dayWithTail())), emptyList(), ms(now.plusMinutes(5)), now.plusMinutes(5), true)
+        assertTrue(s.posts.size <= 1, "${s.posts.map { it.words }}")
+        assertTrue(s.posts.all { it.words.startsWith("5m ") })
+    }
+
+    @Test fun anIndexIsNeverStaleWhileItsOwnMarketIsShut() {
+        val a = CandleAgent(seed)
+        val now = day.atTime(19, 0)                                          // MCX's evening: NSE is shut
+        a.study(listOf(CandleAgent.Series("NIFTY", 5, dayWithTail(), open = false)), emptyList(), ms(now), now, marketOpen = true)
+        assertEquals(CandleAgent.Health.OK, a.status().health)
     }
 
     @Test fun noDataOrAHolidayIsSaidPlainly() {

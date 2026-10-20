@@ -66,7 +66,9 @@ internal fun CandleAgentContent(v: CandleAgentHost.View) {
         }
         item {
             LedgerCard(Modifier.testTag("candle-table"), title = "Shapes against the research") {
-                val rows = v.table.filter { it.ctx == "all" }.sortedByDescending { it.cell.n5 }.take(30)
+                // Each shape, plus the ones read at a level from history and with the big players' hand in them (its own counts).
+                val rows = v.table.filter { it.ctx == "all" || it.ctx.startsWith("hist_") || it.ctx.startsWith("bp_") }
+                    .sortedByDescending { it.cell.n5 }.take(30)
                 if (rows.isEmpty()) Text("Nothing counted yet: a candle counts once the 10 candles after it are known.", style = soft)
                 rows.forEachIndexed { i, c ->
                     if (i > 0) Rule()

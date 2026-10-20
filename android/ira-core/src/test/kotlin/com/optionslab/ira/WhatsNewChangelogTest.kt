@@ -45,8 +45,9 @@ class WhatsNewChangelogTest {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-20-candle-agent" }
         assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
         assertEquals(LocalDate.of(2026, 10, 20), x.date)
-        for (w in listOf("why a candle is green or red", "support and resistance", "with the sample size", "no edge, it says so plainly",
-            "shares its reads with the other agents", "stays a note for you", "It never trades", "let go first when memory is short"))
+        for (w in listOf("why a candle is green or red", "support and resistance", "took support from", "the old high a rally ran into",
+            "big players' hand", "with the sample size", "no edge said plainly", "learns around the clock", "shares its reads with the other agents",
+            "stays a note for you", "It never trades", "among the first things let go when memory is short"))
             assertTrue(w in x.what, "$w: ${x.what}")
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
         assertTrue(sentences.size <= 8, x.what)

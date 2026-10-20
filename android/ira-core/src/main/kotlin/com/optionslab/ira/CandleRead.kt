@@ -97,7 +97,29 @@ object CandleRead {
         val support: Level?, val resistance: Level?,
         /** The context words the stats are kept by ([tags]). */
         val tags: List<String>,
+        /** The strike where call OI grew most since the last chain read (writers building resistance), and put OI (support). */
+        val callBuild: Strike? = null, val putBuild: Strike? = null,
+        /** The candle's history: the earlier level it took support from or met as resistance ([historyOf]). */
+        val history: History? = null,
     )
+
+    /**
+     * A level from the candle's past (20 Oct, Boss: "every candle or price has some history with some other candles ... it
+     * always takes a support from somewhere back, or if there is a green rally, there is also some history or resistance for
+     * that"): a swing high or low, or an earlier day's high or low, with when it was first made, how many times price came back
+     * to it (within a quarter ATR), and when last.
+     */
+    data class HistLevel(val price: Double, val kind: String, val firstAt: LocalDateTime, val lastAt: LocalDateTime, val touches: Int) {
+        fun words(): String = "${px(price)}, ${if (kind.startsWith("the")) kind else "a $kind"} first made ${stamp(firstAt)}" +
+            (if (touches > 1) ", tested $touches times (last ${stamp(lastAt)})" else ", not tested since")
+    }
+
+    /**
+     * The history behind one candle: [support] the earlier level under it nearest its low ([held]: the low came within a quarter
+     * ATR of it and the candle closed above), [resistance] the earlier level over it nearest its high ([hit]: the high came within
+     * a quarter ATR and it closed below), and [move5] the move over the last 5 candles in ATR (a rally or a fall into the level).
+     */
+    data class History(val support: HistLevel?, val held: Boolean, val resistance: HistLevel?, val hit: Boolean, val move5: Double?)
 
     /** One read: the candle, its anatomy, shapes (most specific first), the primary shape and its context. */
     data class Read(
@@ -114,7 +136,7 @@ object CandleRead {
 
     /** Most specific first: the shape a read is named by. */
     val PRIORITY = listOf(
-        "fp_stop_run_up", "fp_stop_run_down", "three_white", "three_black", "morning_star", "evening_star", "bull_engulfing", "bear_engulfing",
+        "fp_stop_run_up", "fp_stop_run_down", "fp_climax", "fp_absorption", "three_white", "three_black", "morning_star", "evening_star", "bull_engulfing", "bear_engulfing",
         "bull_harami", "bear_harami", "tweezer_bottom", "tweezer_top", "marubozu_green", "marubozu_red", "hammer", "hanging_man", "inverted_hammer",
         "shooting_star", "hammer_shape_flat", "inverted_shape_flat", "dragonfly_doji", "gravestone_doji", "long_legged_doji", "doji",
         "both_big_wicks", "big_lower_wick", "big_upper_wick", "big_body_green", "big_body_red", "huge_range", "spinning_top", "outside_bar",
@@ -134,6 +156,7 @@ object CandleRead {
         "bull_harami" to "bullish harami", "bear_harami" to "bearish harami", "tweezer_bottom" to "tweezer bottom", "tweezer_top" to "tweezer top",
         "three_white" to "three white soldiers", "three_black" to "three black crows", "morning_star" to "morning star", "evening_star" to "evening star",
         "fp_stop_run_up" to "stop run above the day's high", "fp_stop_run_down" to "stop run below the day's low",
+        "fp_climax" to "climax candle (heavy volume, big range)", "fp_absorption" to "absorption (heavy volume, small range)",
     )
 
     fun name(shape: String): String = NAMES[shape] ?: shape.replace('_', ' ')
@@ -203,6 +226,9 @@ object CandleRead {
         if (u <= 0.10 && w <= 0.10 && s >= 0.5) f += "small_both_wicks"
         if (s < 0.5) f += "tiny_range"
         if (s >= 2.0) f += "huge_range"
+        // The big players' footprints R87 named, where the candle has its own volume (an index has none): heavy volume with a
+        // small range (absorption: effort without result) and heavy volume with a big range (a climax).
+        a.volRatio?.let { vr -> if (vr >= 2.0 && s <= 0.7) f += "fp_absorption"; if (vr >= 2.5 && s >= 1.5) f += "fp_climax" }
         if (dayHighBefore != null && b.h > dayHighBefore && b.c < dayHighBefore) f += "fp_stop_run_up"
         if (dayLowBefore != null && b.l < dayLowBefore && b.c > dayLowBefore) f += "fp_stop_run_down"
         val day = b.t.toLocalDate()
@@ -343,6 +369,8 @@ object CandleRead {
         val pcr = if (ceSum > 0) peSum.toDouble() / ceSum else null
         val dce = around.strikes.sumOf { it.ceOiChg }; val dpe = around.strikes.sumOf { it.peOiChg }
         val oiShift = when { dpe > 0 && dce < 0 -> 1; dce > 0 && dpe < 0 -> -1; else -> 0 }
+        val callBuild = around.strikes.filter { it.ceOiChg > 0 }.maxByOrNull { it.ceOiChg }
+        val putBuild = around.strikes.filter { it.peOiChg > 0 }.maxByOrNull { it.peOiChg }
         val volReg = atr?.let { a ->
             val past = (maxOf(0, i - 100) until i).mapNotNull { atrs[it] }
             if (past.size < 50) null else {
@@ -393,8 +421,10 @@ object CandleRead {
         when (around.gamma) { "short" -> tags += "short_gamma"; "long" -> tags += "long_gamma" }
         when (oiShift) { 1 -> tags += "bull_oi_shift"; -1 -> tags += "bear_oi_shift" }
         when (volReg) { "high" -> tags += "high_vol"; "low" -> tags += "low_vol" }
+        if (callBuild != null) tags += "call_writing"
+        if (putBuild != null) tags += "put_writing"
         return Context(tr, pos50, dh, dl, ph, pl, pc, orh, orl, vwap, vwapFrom, va?.first, va?.second, calls?.strike, puts?.strike, pcr, oiShift,
-            around.gamma, tod, around.expiry, volReg, sup, res, tags)
+            around.gamma, tod, around.expiry, volReg, sup, res, tags, callBuild, putBuild)
     }
 
     /** Swing highs and lows of [c] ([k] candles each side, all inside [c]): indices. */
@@ -406,6 +436,68 @@ object CandleRead {
             if (isHi) hi += i; if (isLo) lo += i
         }
         return hi to lo
+    }
+
+    // ---- the history behind a candle --------------------------------------------------------------------------------------
+
+    /** One point of the past: a swing high / low (3 candles each side) or a day's high / low; [usable] from this candle index on. */
+    class Point(val price: Double, val kind: String, val at: LocalDateTime, val usable: Int, val high: Boolean)
+
+    /** How far back the history is searched (candles). */
+    const val HISTORY_BACK = 3_000
+    /** Within this many ATR a level counts as touched (and two points as one level). */
+    const val TOUCH_ATR = 0.25
+
+    /** Every swing point and each day's high and low of [bars], each usable once it is known (no look-ahead). */
+    fun pastPoints(bars: List<Bar>): List<Point> {
+        val out = ArrayList<Point>()
+        val k = 3
+        for (i in k until bars.size - k) {
+            var hi = true; var lo = true
+            for (j in i - k..i + k) { if (j == i) continue; if (bars[j].h >= bars[i].h) hi = false; if (bars[j].l <= bars[i].l) lo = false }
+            if (hi) out += Point(bars[i].h, "swing high", bars[i].t, i + k + 1, true)
+            if (lo) out += Point(bars[i].l, "swing low", bars[i].t, i + k + 1, false)
+        }
+        // A day's high and low are known once the day is over (from its next day's first candle).
+        var f = 0
+        while (f < bars.size) {
+            val d = bars[f].t.toLocalDate()
+            var e = f
+            while (e + 1 < bars.size && bars[e + 1].t.toLocalDate() == d) e++
+            if (e + 1 < bars.size) {
+                val day = bars.subList(f, e + 1)
+                val h = day.maxByOrNull { it.h }!!; val l = day.minByOrNull { it.l }!!
+                out += Point(h.h, "the ${dayName(h.t)} day high", h.t, e + 1, true)
+                out += Point(l.l, "the ${dayName(l.t)} day low", l.t, e + 1, false)
+            }
+            f = e + 1
+        }
+        return out.sortedBy { it.usable }
+    }
+
+    /**
+     * The history behind candle [i]: the earlier level under it nearest its low and the one over it nearest its high, each with
+     * when it was first made and how often price came back to it; from points already known at [i] only. Null without ATR.
+     */
+    fun historyOf(bars: List<Bar>, i: Int, atr: Double?, points: List<Point>): History? {
+        if (atr == null || atr <= 0) return null
+        val b = bars[i]
+        val tol = TOUCH_ATR * atr
+        val from = i - HISTORY_BACK
+        val known = points.filter { it.usable <= i && it.usable > from }
+        if (known.isEmpty()) return History(null, false, null, false, null)
+        fun level(anchor: Pair<Double, String>, ref: Point): HistLevel {
+            val near = known.filter { abs(it.price - ref.price) <= tol }
+            return HistLevel(ref.price, anchor.second, near.minOf { it.at }, near.maxOf { it.at }, near.size)
+        }
+        val under = known.filter { it.price <= b.c }.minByOrNull { abs(it.price - b.l) }
+        val over = known.filter { it.price >= b.c }.minByOrNull { abs(it.price - b.h) }
+        val sup = under?.let { level(it.price to it.kind, it) }
+        val res = over?.let { level(it.price to it.kind, it) }
+        val held = sup != null && b.l <= sup.price + tol && b.c > sup.price
+        val hit = res != null && b.h >= res.price - tol && b.c < res.price
+        val move5 = if (i >= 5) (b.c - bars[i - 5].c) / atr else null
+        return History(sup, held, res, hit, move5)
     }
 
     // ---- the read ----------------------------------------------------------------------------------------------------------
@@ -420,10 +512,11 @@ object CandleRead {
 
     /**
      * Every closed candle of [bars] after [after] (all when null), read ([Read]); bad rows (non-finite, high under low) and frozen prints are
-     * skipped, never guessed. [around] gives the chain, gamma and expiry per day (null: none known). Pure.
+     * skipped, never guessed. [around] gives the chain, gamma and expiry known at each candle's start (an empty one: none known -
+     * never today's chain for an older candle: that would be look-ahead). Pure.
      */
     fun readAll(inst: String, tf: Int, bars: List<Bar>, after: LocalDateTime? = null, sessionOpenMin: Int = 9 * 60 + 15,
-                around: (LocalDate) -> Around = { Around() }): List<Read> {
+                around: (LocalDateTime) -> Around = { Around() }): List<Read> {
         val clean = bars.filter { it.ok }
         if (clean.isEmpty()) return emptyList()
         val atrs = atrPrev(clean)
@@ -433,13 +526,13 @@ object CandleRead {
         // Only the candles after [after] are read (the ones before were read in an earlier batch); ATR and the trend still
         // come from every candle before them.
         val start = if (after == null) 0 else clean.indexOfFirst { it.t.isAfter(after) }.let { if (it < 0) clean.size else it }
-        val aroundOf = HashMap<LocalDate, Around>()
         val vaCache = HashMap<LocalDate, Pair<Double, Double>?>()
+        val past = if (start < clean.size) pastPoints(clean) else null
         for (i in start until clean.size) {
             if (stale(clean, i)) continue
             val b = clean[i]
             val day = b.t.toLocalDate()
-            val ar = aroundOf.getOrPut(day) { around(day) }
+            val ar = around(b.t)
             val volRatio = b.v?.takeIf { it > 0 }?.let { v ->
                 var f = i; while (f > 0 && clean[f - 1].t.toLocalDate() == day) f--
                 val vols = (f until i).mapNotNull { clean[it].v?.takeIf { x -> x > 0 } }.sorted()
@@ -448,7 +541,10 @@ object CandleRead {
             val a = anatomy(b, atrs[i], volRatio)
             val ctx = context(inst, tf, clean, i, atrs, emas, closes, ar, sessionOpenMin, vaCache)
             val sh = shapes(clean, i, a, ctx.trend, ctx.dayHighBefore, ctx.dayLowBefore, atrs)
-            out += Read(inst, tf, b, i, a, sh, primary(sh), ctx)
+            val hist = past?.let { historyOf(clean, i, atrs[i], it) }
+            val histTags = listOfNotNull(hist?.takeIf { it.held && (it.support?.touches ?: 0) >= 2 }?.let { "hist_support_held" },
+                hist?.takeIf { it.hit && (it.resistance?.touches ?: 0) >= 2 }?.let { "hist_resistance_hit" })
+            out += Read(inst, tf, b, i, a, sh, primary(sh), if (hist == null) ctx else ctx.copy(history = hist, tags = ctx.tags + histTags))
         }
         return out
     }
@@ -459,6 +555,12 @@ object CandleRead {
         val d = "${t.dayOfMonth} ${t.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)}"
         return if (tf <= 1) "$d ${t.format(hm)}" else "$d ${t.format(hm)}-${t.plusMinutes(tf.toLong()).format(hm)}"
     }
+
+    private fun dayName(t: LocalDateTime) = "${t.dayOfMonth} ${t.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)}"
+
+    /** "16 Oct 11:20". */
+    fun stamp(t: LocalDateTime): String = "${t.dayOfMonth} ${t.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)} " +
+        t.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
 
     internal fun px(x: Double): String = String.format(Locale.ENGLISH, "%,.2f", x).removeSuffix(".00")
     internal fun f1(x: Double): String = String.format(Locale.ENGLISH, "%.1f", x)

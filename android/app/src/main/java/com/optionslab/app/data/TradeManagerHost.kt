@@ -63,7 +63,8 @@ object TradeManagerHost {
         subscribed = true
         runCatching {
             SmartWorkers.bus.subscribe(Findings.Sub(emptySet(), emptySet()) { f ->
-                if (!f.who.startsWith(TradeManager.WHO) && live.isNotEmpty() &&
+                // (20 Oct: the Candle agent's reads are knowledge only - they never bring a look forward.)
+                if (!f.who.startsWith(TradeManager.WHO) && f.kind != Findings.Kind.CANDLE && live.isNotEmpty() &&
                     live.values.any { f.instrument == Findings.ALL || it.reg.trade.underlying.equals(f.instrument, ignoreCase = true) })
                     if (!testNoWake) scope.launch { runCatching { onLook() } }
             })
