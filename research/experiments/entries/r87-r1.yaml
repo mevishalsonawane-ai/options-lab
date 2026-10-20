@@ -1,0 +1,33 @@
+id: r87-r1
+title: 'R87-1: NIFTY 5m three white soldiers -> buy NIFTY 1-ITM call'
+family: patterns-indicators
+date: '2026-10-19'
+doc: research/HUNT_R87_CANDLE_ANATOMY.md
+hypothesis: 'Pre-registered (A3, mechanical selection from the design atlas): buying the 1-ITM option on NIFTY 5m three white
+  soldiers (design n 893, +0.173 ATR, q 0.040, 4 of 4 years) is profitable after costs in walk-forward, beats 500 random-entry
+  twins (p < 0.10, BH q < 0.10 over 3 rules), is > 0 without its 5 best trades, >= 30 trades.'
+data_version: 'Dhan v2 direct (lake not reachable): index 1-minute NIFTY/BANKNIFTY/SENSEX/INDIAVIX 4 Aug 2021 - 16 Oct 2026
+  (weekend mock sessions dropped, A2); NIFTY ATM option pair for parts of 2021-2026; index futures 29 Jul - 16 Oct 2026; cache
+  ~/.cache/iraalgo/r87 (not committed)'
+period:
+  design: 20 Nov 2024 - 14 Oct 2025 (walk-forward Feb-Apr, May-Jul, Aug-Oct 2025)
+  holdout: 15 Oct 2025 - 16 Oct 2026 NOT read for this rule (failed design gates)
+instruments:
+- NIFTY
+features:
+- 'signal source: the index''s own candle (spot); no option chart'
+- 'exits: premium stop 15%/25%, lock +20% -> +10% then trail 10%, underlying stop beyond the candle''s far end, 5 candles,
+  15:10 (15:05 expiry)'
+model_or_rule: 'R87-1: NIFTY 5m three white soldiers -> buy NIFTY 1-ITM call; one open trade at a time; entries 09:30-14:30'
+settings: research/hunt/r87_candle_anatomy/rules.py, sim.py, model.py; PREREG.md A3
+prereg: research/hunt/r87_candle_anatomy/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Design 160 trades, win 42%, net -Rs 3,910 (stop 25%), without top 5 -Rs 20,429, worst day -Rs 3,520, max DD Rs
+    14,722; walk-forward -Rs 2,932 (121 trades); random-entry twins mean -Rs 13,308, p 0.236, BH q 0.353. Real-minute re-pricing
+    of 21 trades: model -Rs 19,311 vs real -Rs 26,641. FAIL (walk-forward, twins, top 5).'
+  costs: modelled 1-ITM premium (Black-Scholes, INDIA VIX x realised-vol ratio; PREREG A1), 5 bps + 1 tick fills (stops 10
+    bps + 2 ticks), dated STT/exchange/SEBI/stamp/GST, Rs 20 a side, 1 lot in force; real-minute re-pricing reported beside
+holdout_read: false
+verdict: rejected
+notes: Priced on modelled premiums (A1); NIFTY model/real ATM ratio 0.92 (260 days).

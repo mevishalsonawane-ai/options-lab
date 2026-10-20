@@ -1,0 +1,352 @@
+[
+ {
+  "design_15": {
+   "trades": 162,
+   "net": -21650.20211291808,
+   "win": 0.19753086419753085,
+   "top5_removed": -34224.94219533039,
+   "worst_day": -1918.749680362973,
+   "max_dd": 24782.25437494802,
+   "months_below_13k": 0,
+   "avg": -133.6432229192474,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 112,
+    "lock": 18,
+    "stop": 16,
+    "time": 11,
+    "squareoff": 5
+   }
+  },
+  "design_25": {
+   "trades": 162,
+   "net": -21126.569380808804,
+   "win": 0.21604938271604937,
+   "top5_removed": -33701.309463221114,
+   "worst_day": -1918.749680362973,
+   "max_dd": 23665.40105588882,
+   "months_below_13k": 0,
+   "avg": -130.41092210375805,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 117,
+    "lock": 21,
+    "time": 11,
+    "stop": 8,
+    "squareoff": 5
+   }
+  },
+  "wf_net": -17894.129968425535,
+  "wf_trades": 133,
+  "wf_folds": [
+   {
+    "fold": "2025-02-01..2025-04-30",
+    "stop": 0.15,
+    "net": -10989.757684622868,
+    "trades": 46
+   },
+   {
+    "fold": "2025-05-01..2025-07-31",
+    "stop": 0.15,
+    "net": -3496.285830914525,
+    "trades": 44
+   },
+   {
+    "fold": "2025-08-01..2025-10-14",
+    "stop": 0.25,
+    "net": -3408.086452888142,
+    "trades": 43
+   }
+  ],
+  "frozen_stop": 0.25,
+  "rule": {
+   "id": "R87B-1",
+   "und": "SENSEX",
+   "tf": 15,
+   "family": "cluster15:13",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.184112,
+   "z": 3.67855,
+   "q": 0.0337771,
+   "n": 840,
+   "fold_same": 4,
+   "rw_n": 148,
+   "dir_pts": 15.4232,
+   "cost_pts": 6.4064299294658005,
+   "screen": "passes every screen",
+   "hold": 75
+  },
+  "signals": 165,
+  "twin_mean": -11039.135258657272,
+  "twin_p": 0.7524950099800399,
+  "pricing": "hybrid",
+  "real_entry_share": 0.0,
+  "real_exit_share": 0.0,
+  "r87_repriced": false,
+  "bh_q": 0.7524950099800399,
+  "design_pass": false,
+  "fail_reasons": [
+   "walk-forward net <= 0",
+   "not better than random entries (twin p or BH q >= 0.10)",
+   "carried by its 5 best trades"
+  ]
+ },
+ {
+  "design_15": {
+   "trades": 160,
+   "net": -7895.605409982767,
+   "win": 0.38125,
+   "top5_removed": -39838.69007263967,
+   "worst_day": -5066.731880332139,
+   "max_dd": 25125.536180799616,
+   "months_below_13k": 1,
+   "avg": -49.34753381239229,
+   "stale_exits": 0,
+   "why": {
+    "time": 51,
+    "und_stop": 45,
+    "stop": 33,
+    "lock": 31
+   }
+  },
+  "design_25": {
+   "trades": 160,
+   "net": 4936.438344642669,
+   "win": 0.4125,
+   "top5_removed": -27006.646318014216,
+   "worst_day": -5453.950119486267,
+   "max_dd": 12457.688686582751,
+   "months_below_13k": 0,
+   "avg": 30.85273965401668,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 57,
+    "time": 56,
+    "lock": 35,
+    "stop": 12
+   }
+  },
+  "wf_net": -3605.1576906282503,
+  "wf_trades": 121,
+  "wf_folds": [
+   {
+    "fold": "2025-02-01..2025-04-30",
+    "stop": 0.25,
+    "net": -9950.96232329237,
+    "trades": 41
+   },
+   {
+    "fold": "2025-05-01..2025-07-31",
+    "stop": 0.25,
+    "net": 9546.21949656264,
+    "trades": 47
+   },
+   {
+    "fold": "2025-08-01..2025-10-14",
+    "stop": 0.25,
+    "net": -3200.414863898521,
+    "trades": 33
+   }
+  ],
+  "frozen_stop": 0.25,
+  "rule": {
+   "id": "R87-1",
+   "und": "NIFTY",
+   "tf": 5,
+   "family": "three_white",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.173324,
+   "z": 3.19701,
+   "q": 0.0403847,
+   "n": 893,
+   "fold_same": 4,
+   "rw_n": 217,
+   "dir_pts": 3.79954,
+   "cost_pts": 1.8719950982543347,
+   "screen": "passes every screen"
+  },
+  "signals": 197,
+  "twin_mean": -13169.292381492267,
+  "twin_p": 0.1536926147704591,
+  "pricing": "hybrid",
+  "real_entry_share": 0.0625,
+  "real_exit_share": 0.2,
+  "r87_repriced": true
+ },
+ {
+  "design_15": {
+   "trades": 270,
+   "net": -39234.999464704306,
+   "win": 0.3074074074074074,
+   "top5_removed": -69935.86375905889,
+   "worst_day": -5365.360131172591,
+   "max_dd": 43033.43601586464,
+   "months_below_13k": 1,
+   "avg": -145.31481283223818,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 120,
+    "lock": 61,
+    "stop": 61,
+    "time": 24,
+    "squareoff": 4
+   }
+  },
+  "design_25": {
+   "trades": 269,
+   "net": -42916.61714019782,
+   "win": 0.31970260223048325,
+   "top5_removed": -88440.87304528654,
+   "worst_day": -8684.55520932614,
+   "max_dd": 66733.33779733515,
+   "months_below_13k": 2,
+   "avg": -159.54132765872797,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 146,
+    "lock": 64,
+    "stop": 28,
+    "time": 27,
+    "squareoff": 4
+   }
+  },
+  "wf_net": -63230.136494626546,
+  "wf_trades": 206,
+  "wf_folds": [
+   {
+    "fold": "2025-02-01..2025-04-30",
+    "stop": 0.25,
+    "net": -46374.53983416641,
+    "trades": 75
+   },
+   {
+    "fold": "2025-05-01..2025-07-31",
+    "stop": 0.25,
+    "net": 118.76335056543303,
+    "trades": 67
+   },
+   {
+    "fold": "2025-08-01..2025-10-14",
+    "stop": 0.15,
+    "net": -16974.360011025565,
+    "trades": 64
+   }
+  ],
+  "frozen_stop": 0.15,
+  "rule": {
+   "id": "R87-2",
+   "und": "NIFTY",
+   "tf": 15,
+   "family": "fp_stop_run_up",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.129408,
+   "z": 3.01093,
+   "q": 0.0649265,
+   "n": 1666,
+   "fold_same": 4,
+   "rw_n": 326,
+   "dir_pts": 8.38206,
+   "cost_pts": 1.8719950982543347,
+   "screen": "passes every screen"
+  },
+  "signals": 339,
+  "twin_mean": -30706.318545614453,
+  "twin_p": 0.6287425149700598,
+  "pricing": "hybrid",
+  "real_entry_share": 0.037037037037037035,
+  "real_exit_share": 0.14814814814814814,
+  "r87_repriced": true
+ },
+ {
+  "design_15": {
+   "trades": 71,
+   "net": 9732.292281405451,
+   "win": 0.4225352112676056,
+   "top5_removed": -7361.64520586377,
+   "worst_day": -2433.130283967399,
+   "max_dd": 16986.548076768595,
+   "months_below_13k": 0,
+   "avg": 137.07453917472466,
+   "stale_exits": 0,
+   "why": {
+    "lock": 23,
+    "und_stop": 22,
+    "stop": 14,
+    "time": 9,
+    "squareoff": 3
+   }
+  },
+  "design_25": {
+   "trades": 71,
+   "net": 14372.85488639546,
+   "win": 0.4788732394366197,
+   "top5_removed": -2721.082600873758,
+   "worst_day": -2585.1366457391987,
+   "max_dd": 17220.752631964173,
+   "months_below_13k": 0,
+   "avg": 202.4345758647248,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 27,
+    "lock": 26,
+    "time": 10,
+    "stop": 5,
+    "squareoff": 3
+   }
+  },
+  "wf_net": -1923.4473633068746,
+  "wf_trades": 51,
+  "wf_folds": [
+   {
+    "fold": "2025-02-01..2025-04-30",
+    "stop": 0.25,
+    "net": 3437.3535270973466,
+    "trades": 17
+   },
+   {
+    "fold": "2025-05-01..2025-07-31",
+    "stop": 0.25,
+    "net": -11406.871622065359,
+    "trades": 22
+   },
+   {
+    "fold": "2025-08-01..2025-10-14",
+    "stop": 0.25,
+    "net": 6046.070731661138,
+    "trades": 12
+   }
+  ],
+  "frozen_stop": 0.25,
+  "rule": {
+   "id": "R87-3",
+   "und": "SENSEX",
+   "tf": 15,
+   "family": "gravestone_doji",
+   "cond": "",
+   "src": "P1",
+   "long": false,
+   "eff": -0.29481,
+   "z": -2.81938,
+   "q": 0.0932921,
+   "n": 205,
+   "fold_same": 3,
+   "rw_n": 70,
+   "dir_pts": 48.0124,
+   "cost_pts": 6.4064299294658005,
+   "screen": "passes every screen"
+  },
+  "signals": 73,
+  "twin_mean": -4192.192143427119,
+  "twin_p": 0.02594810379241517,
+  "pricing": "hybrid",
+  "real_entry_share": 0.0,
+  "real_exit_share": 0.0,
+  "r87_repriced": true
+ }
+]
