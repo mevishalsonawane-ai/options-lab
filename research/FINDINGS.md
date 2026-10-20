@@ -1456,3 +1456,8 @@ bought on real prints with real costs, flat 15:15 (15:05 expiry). 11 variants (1
 - Design leader MIDCPNIFTY 15m / day HTF +Rs 48,830 (34, p 0.068) -> holdout -Rs 25,462 (9). Holdout pooled indices:
   1m -Rs 36,278 (214), 5m -Rs 17,573 (42). Trades on the arms' days, near-zero correlation, loses on both kinds of day.
   Keep only as a structure / levels overlay; no signal, no paper arm.
+- R90B (Boss, 20 Oct: 5 one-minute confirmation candles, profit lock, stop trail, profit trail; `PREREG_B.md`): 7 rules x
+  3 charts x 9 instruments, 0 of 189 pass. Confirmation lifts the win rate (1m indices 37% -> 47%) and halves trades and
+  losses, but after-trigger random entries do as well; lock + trails cut the 5m / 60m index loss from -Rs 1.19 lakh to
+  -Rs 16,857 (design), never to a profit. Apr - Oct 2026 (already seen by R90): 5m / 60m indices positive with or without
+  the additions (plain +Rs 19,679 on 92); commodities lose with every combination.

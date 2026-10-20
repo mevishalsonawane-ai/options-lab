@@ -13,3 +13,10 @@ overlay showing structure (swings, trend, BOS / CHoCH), not as a signal.**
 
 Write-up: `research/HUNT_R90_ALMAZOV_BOS.md`. Code and tests: `research/hunt/r90_almazov_bos/`. Signal source of every
 rule: the underlying.
+
+## R90B (Boss: 5 x 1m confirmation, profit lock, stop trail, profit trail)
+
+**Still no.** 0 of 189 cells passed. The confirmation raises the win rate (1m indices 37% -> 47%) and roughly halves the
+losses by trading half as often; lock and trails cut losses further but never to a profit in design. Commodities lose
+with every combination. The 5m / 60m indices made money in Apr - Oct 2026 with or without the additions (plain rule
++Rs 19,679 on 92 trades), after losing Rs 1.19 lakh in design.

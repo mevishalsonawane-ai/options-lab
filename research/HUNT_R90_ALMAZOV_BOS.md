@@ -235,3 +235,52 @@ near-zero daily correlation, and loses on both kinds of day. It would add losses
   risk management, as the chart does.
 - The holdout overlaps periods other studies read for other ideas; 14-19 Oct is new to all.
 - 11 variants is a small declared slice; ATM strikes, premium stops and longer holds were not run.
+
+---
+
+# R90B: 5 one-minute confirmation candles, profit lock, stop trail, profit trail (20 Oct 2026) - 0 of 189 pass
+
+Boss, 20 Oct: "What if at 5 1min candle for direction confirmation, and with profit lock, and stop loss trail, profit
+trail". Plan `hunt/r90_almazov_bos/PREREG_B.md` (commit 2091c54) before any R90B number; code and tests (f536872, 12 tests:
+lock / trail / giveback moves, no intrabar look-ahead, confirmation cases, the base rule reproducing R90's trades exactly,
+look-ahead guard); design (results_b/design.json) committed before the one read of Apr - Oct 2026 (`results_b/final.json`).
+**Signal source of every rule: the underlying**; confirmation, lock and trails are read on the index / future in units of
+R (the initial risk). The trade is the 1-ITM option, 1 lot, real prints and costs.
+
+- Rules: C5 = enter only if, 5 one-minute candles after the trigger, the 5th closes beyond the entry, at least 3 of 5 go
+  the trade's way and the stop was not touched (buy at the 6th minute's open). L = at +1R the stop moves to +0.5R.
+  T = stop trails 1R behind the best price. P = no fixed target; after +1R exit on giving back 50% of the open profit.
+  X0 = R90 as tested; LTP = L + T + P without confirmation; C5L / C5T / C5P / C5LTP. Charts 1m / 4m, 5m / 20m, 5m / 60m.
+- The Apr - Oct 2026 window was already read by R90 for the base rule, so for R90B it is a second look, not unseen data.
+
+## The answer for Boss
+
+**The additions cut the losses but do not make it pay. 0 of 189 cells passed design; no cell passed the multiple-testing
+check in Apr - Oct 2026 either (lowest q 0.126). Nothing goes to paper.**
+
+| five indices, option net (win %, trades) | design X0 | design C5 | design C5LTP | Apr - Oct 2026 X0 | Apr - Oct 2026 C5 | Apr - Oct 2026 C5LTP |
+|---|---|---|---|---|---|---|
+| 1m chart / 4m HTF | -1,05,147 (37%, 590) | -57,241 (47%, 315) | -95,412 (39%, 356) | -36,278 (36%, 214) | -10,282 (42%, 108) | -12,303 (36%, 119) |
+| 5m / 20m (default) | -45,735 (22%, 76) | -27,469 (30%, 44) | -28,072 (33%, 45) | -17,573 (36%, 42) | -23,620 (27%, 22) | -19,327 (27%, 22) |
+| 5m / 60m | -1,19,236 (37%, 231) | -46,170 (41%, 129) | -16,857 (42%, 130) | +19,679 (40%, 92) | +12,968 (40%, 52) | +7,962 (37%, 52) |
+| **four commodities** | | | | | | |
+| 1m / 4m | -2,14,780 (28%, 404) | -1,04,660 (30%, 189) | -96,896 (22%, 219) | -3,37,083 (27%, 628) | -2,10,395 (31%, 300) | -1,62,755 (22%, 343) |
+| 5m / 20m | -44,426 (31%, 94) | -10,570 (44%, 32) | -12,091 (32%, 37) | -72,731 (28%, 93) | -43,875 (30%, 46) | -37,847 (25%, 52) |
+| 5m / 60m | -92,403 (29%, 172) | -56,998 (32%, 76) | -36,291 (36%, 84) | -1,04,340 (28%, 190) | -57,881 (38%, 98) | -32,859 (35%, 111) |
+
+1. **The 5-candle confirmation raises the win rate and halves the trade count**, so losses roughly halve (1m indices:
+   37% -> 47% winners in design). But random entries taken after the signal with the same exits did about as well
+   (after-trigger twins), so the confirmation does not find better trades; it mostly takes fewer of them.
+2. **Lock and trails cut losses further on the 5m / 60m chart** (design -1.19 lakh -> -16,857 with C5LTP) but never to a
+   profit in design. The lock alone (C5L) gives the highest win rate (1m indices 53%) with small wins.
+3. **The 5m / 60m indices profit in Apr - Oct 2026 is not from the additions**: the plain rule (X0) made +Rs 19,679 there
+   too, more than any version with confirmation or trails, after losing Rs 1.19 lakh in design.
+4. **Commodities lose with every combination** in both periods; GOLDM and SILVERM on the 1m chart lose the most.
+5. Per instrument from 24 Apr 2026 (5m / 60m with all additions, C5LTP): NIFTY +19,626 (50%, 8), SENSEX +12,505 (56%,
+   9), SILVERM +6,149 (64%, 14), BANKNIFTY -10,552 (21%, 14), FINNIFTY -3,364 (29%, 7), MIDCPNIFTY -3,655 (33%, 9),
+   GOLDM -4,831 (40%, 25), CRUDEOIL mini -7,825 (31%, 35), NATURALGAS mini -458 (38%, 13). Too few trades to rely on;
+   the same chart lost in design on every index but MIDCPNIFTY.
+
+Limits: MCX options are sold at the exit minute's close in R90B (R53 convention), so MCX base numbers differ slightly from
+R90's. Only one setting of each addition was tried (lock +0.5R at +1R, 1R trail, 50% giveback); the confirmation's 3-of-5
+rule is one reading of "5 one-minute candles for direction".
