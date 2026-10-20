@@ -131,3 +131,7 @@ dated amendment below, before the holdout is read; the holdout is read once.
 - **A2 (20 Oct 2026, before any statistic):** F06 (today's gap) is left blank for the first candle of each session:
   the day's open is part of that candle, so it is not known strictly before it (found by the look-ahead guard). The
   guard's deletion check skips F18 only, as section 5 allows (the expiry schedule is public in advance).
+- **A3 (20 Oct 2026, before any statistic):** implementation details fixed in code before the design run: a
+  categorical level is tested in design when it has >= 200 candles on >= 20 sessions (and >= 200 in the rest); in the
+  holdout a design survivor is re-measured when it has >= 30 candles on >= 5 sessions, else it is reported as "too few
+  holdout candles" (not a hold). Quintile tests need >= 100 design values and distinct Q1/Q5 cut points.

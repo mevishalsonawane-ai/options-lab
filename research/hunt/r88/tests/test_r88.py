@@ -163,3 +163,35 @@ def test_mcx_minutes_session_and_close_only():
                                                        spot=2.0 + i) for i in range(1, 200)]).drop_duplicates("ts"))
     assert d.ts.min() == pd.Timestamp("2026-10-19 09:00") and pd.Timestamp("2026-10-19 23:30") not in set(d.ts)
     assert (d.o == d.c).all() and (d.h == d.c).all()
+
+
+def test_run_parts_on_synthetic_candles():
+    from research.hunt.r88 import run
+    mins, vix, chain, exp = synth(days=40, seed=5)
+    k = C.factors("NIFTY", 15, mins, chain, vix, exp, events=set())
+    k = pd.concat([k, C.concurrent(k, chain, vix, None, 15)], axis=1)
+    k = k[k.B.notna()].reset_index(drop=True)
+    c = run.census(k, "NIFTY", 15, exp, set())
+    assert c["candles"] == len(k) and 0 < c["up_share"] < 1
+    assert c["expiry_days"] == len(set(k.day.dt.date) & exp) == 3   # the first 10 sessions have no baseline
+    t = run.slot_table(k, "NIFTY", 15)
+    assert len(t) == 25 and t.candles.sum() == len(k)
+    b = run.concurrent_ols(k, "NIFTY", 15)
+    assert 0 <= b["r2"] <= 1 and "C_div" in b["beta_bps_per_sd"]
+    X = run.features(k)
+    assert {"F09", "F19", "dte", "slot"} <= set(X.columns) and X.F19.dropna().between(0, 4).all()
+
+
+def test_size_and_direction_scores():
+    from research.hunt.r88 import run
+    rng = np.random.default_rng(2)
+    n, days = 3000, np.repeat(np.arange(100), 30)
+    x = rng.normal(size=n)
+    y = 0.5 * x + rng.normal(size=n)
+    s = run.size_scores(y, 0.5 * x, np.zeros(n), days, n_boot=200)
+    assert s["gain_vs_lin"] > 0.1 and s["gain_vs_lin_ci"][0] > 0
+    up = (x + rng.normal(size=n) > 0).astype(float)
+    d = run.dir_scores(up, x, np.where(up == 1, 3.0, -3.0), days, cost=1.9, n_boot=200)
+    assert d["auc"] > 0.7 and d["auc_ci"][0] > 0.5 and d["top_decile_move_pts"] > 1.9 and d["beats_cost"]
+    d0 = run.dir_scores(up, rng.normal(size=n), np.where(up == 1, 3.0, -3.0), days, n_boot=200)
+    assert 0.45 < d0["auc"] < 0.55 and d0["beats_cost"] is None and d0["auc_ci"][0] < d0["auc"] < d0["auc_ci"][1]
