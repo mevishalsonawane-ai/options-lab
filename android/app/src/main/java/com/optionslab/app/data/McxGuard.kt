@@ -103,7 +103,8 @@ object McxGuard {
             // a resting stop filled at MCX since then left it showing the position, and a market exit sized from it opened a new
             // one. So with an exit due, the orders are read, then the positions fresh (in that order: a stop filling between the
             // two reads shows as still working and is only cancelled, never doubled), and only what is still open is closed.
-            val working = Broker.orders().filter { it.working }
+            val read = Broker.orders()
+            val working = read.filter { it.working }
             val fresh = Broker.positionBook().net
             McxMarket.noteLive(fresh)
             val sendList = freshDue(dueList, fresh)
@@ -111,7 +112,7 @@ object McxGuard {
                 // 20 Oct, enhancement round 2: each contract in its one exit turn ([ExitCoordinator]), as the NSE expiry square-off.
                 val pass = ExitCoordinator.enter(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")
                 try {
-                    if (ExitCoordinator.stale(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")) continue
+                    if (ExitCoordinator.stale(Mcx.EXCHANGE, p.symbol, "MCX expiry exit", read)) continue
                     val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
                     val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
                     // A resting stop or target on it would keep the market exit from going: cancelled first, exit next pass.

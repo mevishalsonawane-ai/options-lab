@@ -61,7 +61,7 @@ class ExitDeskTest {
         val t = reg.sending(ExitRegistry.Kind.ORDER, k, "SELL", 75, "MARKET", "x")
         reg.lost(t)
         // An older identical order (placed two minutes before) is not it; another size, side or type is not it.
-        reg.seen(ExitRegistry.Kind.ORDER, listOf(row("1", at = now - 120_000), row("2", qty = 150), row("3", side = "BUY"), row("4", type = "SL")))
+        reg.seen(ExitRegistry.Kind.ORDER, listOf(row("1", at = now - 120_000), row("2", qty = 150, at = now), row("3", side = "BUY", at = now), row("4", type = "SL", at = now)))
         assertEquals(ExitRegistry.State.LOST, reg.unseen(ExitRegistry.Kind.ORDER, k).single().state)
         reg.seen(ExitRegistry.Kind.ORDER, listOf(row("5", at = now - 2_000)))
         assertTrue(reg.unseen(ExitRegistry.Kind.ORDER, k).isEmpty())
@@ -72,7 +72,7 @@ class ExitDeskTest {
         reg.answered(a, "7")
         val b = reg.sending(ExitRegistry.Kind.ORDER, k, "SELL", 75, "MARKET", "b")
         reg.lost(b)
-        reg.seen(ExitRegistry.Kind.ORDER, listOf(row("7")))
+        reg.seen(ExitRegistry.Kind.ORDER, listOf(row("7", at = now)))
         // Order 7 is a's: b is still looked for.
         assertEquals(listOf(b), reg.unseen(ExitRegistry.Kind.ORDER, k).map { it.ticket })
     }
@@ -103,6 +103,38 @@ class ExitDeskTest {
         assertEquals(1, reg.unseen(ExitRegistry.Kind.ORDER, k).size)
         now += 1
         assertTrue(reg.unseen(ExitRegistry.Kind.ORDER, k).isEmpty())
+    }
+
+    /** Review: whether a read shows an exit is judged on THAT read; a later read that showed it vouches for no other. */
+    @Test fun aReadIsJudgedOnItsOwnRows() {
+        val t = reg.sending(ExitRegistry.Kind.ORDER, k, "SELL", 75, "MARKET", "a")
+        reg.answered(t, "9")
+        reg.seen(ExitRegistry.Kind.ORDER, listOf(row("9")))          // another worker's read showed it
+        assertTrue(reg.pending().isEmpty())
+        assertEquals(listOf(t), reg.missingFrom(ExitRegistry.Kind.ORDER, k, listOf(row("1"))).map { it.ticket }, "an older read without it")
+        assertTrue(reg.missingFrom(ExitRegistry.Kind.ORDER, k, listOf(row("9"))).isEmpty())
+        assertTrue(reg.missingFrom(ExitRegistry.Kind.ORDER, ExitDesk.key("NFO", "OTHER"), emptyList()).isEmpty())
+        now += ExitDesk.KEEP_MS + 1
+        assertTrue(reg.missingFrom(ExitRegistry.Kind.ORDER, k, emptyList()).isEmpty(), "let go after a minute")
+    }
+
+    /** Review: a lost reply is never taken as shown by an earlier identical exit, nor by a row with no time. */
+    @Test fun aLostReplyIsNeverAnEarlierIdenticalExit() {
+        val first = reg.sending(ExitRegistry.Kind.ORDER, k, "SELL", 75, "MARKET", "arm")
+        reg.answered(first, "1")
+        now += 20_000
+        val t = reg.sending(ExitRegistry.Kind.ORDER, k, "SELL", 75, "MARKET", "arm")
+        reg.lost(t)
+        val miss = reg.missingFrom(ExitRegistry.Kind.ORDER, k, listOf(row("1", at = now - 20_000), row("0", at = now - 6_000), row("x", at = null)))
+        assertEquals(listOf(t), miss.map { it.ticket })
+        assertTrue(reg.missingFrom(ExitRegistry.Kind.ORDER, k, listOf(row("1", at = now - 20_000), row("2", at = now - 1_000))).isEmpty())
+    }
+
+    @Test fun aGttDeletedFromHereIsForgotten() {
+        val t = reg.sending(ExitRegistry.Kind.GTT, k, "SELL", 75, "GTT", "x")
+        reg.answered(t, "77")
+        reg.forget(ExitRegistry.Kind.GTT, "77")
+        assertTrue(reg.missingFrom(ExitRegistry.Kind.GTT, k, emptyList()).isEmpty())
     }
 
     @Test fun aRestartStartsEmpty() {
@@ -234,14 +266,46 @@ class ExitDeskTest {
     @Test fun aPassLeftTwiceFreesOnlyOnce() = runBlocking {
         val turns = ExitTurns(waitMs = 50)
         val a = turns.enter(k, "a", true)
-        a.leave(); a.leave()
+        a.leave()
         val b = turns.enter(k, "b", true)
+        a.leave()                                                  // a's second leave, while b holds the contract
         val took = ArrayList<ExitTurns.Took>()
-        // b holds it now: a's second leave did not free b's turn.
         val c = async { turns.turn(k, "c", true, { t, _, _ -> took += t }) { } }
         c.await()
-        assertEquals(listOf(ExitTurns.Took.LET_THROUGH), took)
+        assertEquals(listOf(ExitTurns.Took.LET_THROUGH), took, "b still holds it: a's second leave freed nothing")
         b.leave()
+        assertTrue(turns.busy().isEmpty())
+    }
+
+    /** Review: a sender let through after the longest wait puts its stop back inside the same turn without waiting again. */
+    @Test fun aLetThroughSendersOwnNestedTurnNeverWaitsAgain() = runBlocking {
+        val turns = ExitTurns(waitMs = 50)
+        val stuck = turns.enter(k, "stuck", true)
+        val took = ArrayList<ExitTurns.Took>()
+        val c = async {
+            turns.turn(k, "arm", true, { t, _, _ -> took += t }) {
+                val t0 = System.currentTimeMillis()
+                turns.turn(k, "arm stop", true, { t, _, _ -> took += t }) { }
+                assertTrue(System.currentTimeMillis() - t0 < 40, "no second wait")
+            }
+        }
+        c.await()
+        assertEquals(listOf(ExitTurns.Took.LET_THROUGH, ExitTurns.Took.AGAIN), took)
+        stuck.leave()
+        // Nothing left behind: the next sender takes the lock at once.
+        turns.turn(k, "next", true, { t, _, _ -> took += t }) { }
+        assertEquals(ExitTurns.Took.ALONE, took.last())
+    }
+
+    /** Review: many senders racing the wait never leave the lock taken with nobody inside. */
+    @Test fun turnsRacingTheWaitNeverLeaveTheLockTaken() = runBlocking {
+        val turns = ExitTurns(waitMs = 3)
+        val jobs = (1..200).map { i -> async(kotlinx.coroutines.Dispatchers.Default) { turns.turn(k, "s$i", true) { delay(1) } } }
+        jobs.forEach { it.await() }
+        val took = ArrayList<ExitTurns.Took>()
+        turns.turn(k, "last", true, { t, _, _ -> took += t }) { }
+        assertEquals(listOf(ExitTurns.Took.ALONE), took)
+        assertTrue(turns.busy().isEmpty())
     }
 
     @Test fun differentContractsNeverWaitForEachOther() = runBlocking {

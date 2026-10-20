@@ -243,6 +243,31 @@ class ExitCoordinatorTest : RobolectricTest() {
         assertEquals(0, held())
     }
 
+    /**
+     * Review: the pass reads the books, then an arm (inside its turn) sends its exit and another worker reads the orders, which
+     * shows it. The pass's own read never had it: it must still leave the contract to its next look, never sell beside it.
+     */
+    @Test fun onAnotherWorkersReadNeverVouchesForThePassesOlderRead() = runBlocking {
+        ExitCoordinator.resetForTest(on = true)
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val inside = CompletableDeferred<Unit>()
+        val arm = async(Dispatchers.IO) {
+            ExitCoordinator.turn("NFO", ce, "arm") {
+                inside.complete(Unit)
+                while (kite.requests.none { it.path == "/portfolio/positions" }) kotlinx.coroutines.delay(5)   // the pass has read both books
+                Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraarm"), exit = true)
+                Broker.orders()                                    // another worker's read: it shows the arm's exit
+            }
+        }
+        inside.await()
+        ExpirySquareOff.maybeRun(context, AppSettings.load())
+        arm.await()
+        assertEquals("one sell only", 75, sells())
+        kite.fill(kite.orders.values.single().id)
+        assertEquals(0, held())
+    }
+
     @Test fun inShadowTwoSendersAtOnceAreOnlyCounted() = runBlocking {
         kite.position(ce, 75, 20.0)
         val inside = CompletableDeferred<Unit>()

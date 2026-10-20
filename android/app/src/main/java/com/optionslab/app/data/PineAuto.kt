@@ -1227,8 +1227,9 @@ object PineAuto {
         // shows as still working, never as still held with nothing on its way out).
         val orderId = ExitCoordinator.turn("NFO", sym, "Pine ${label(item)}") {
             val working = runCatching { ExitCoordinator.orders("NFO", sym, "Pine ${label(item)}").filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull() ?: return
+            // Review: the read failing here, after its stop came out, puts the stop back (as every other "not sold" path does).
             val heldNow = runCatching { Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } }
-                .getOrNull() ?: return
+                .getOrNull() ?: run { restop(h); return }
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
             val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
                 h.qty, spec.lotSize)

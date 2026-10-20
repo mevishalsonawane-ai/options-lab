@@ -1658,8 +1658,12 @@ class WatchService : Service() {
             // for its overnight GTT (a strategy still open past the close keeps its full pass, which looks at them too).
             // 20 Oct, enhancement round 2 (idea 3): the same look after MCX's close for a carried MCX protection (MCX's pass, while it is
             // due, looks at them itself).
+            // Review: never while NSE trades (a short MCX session ending in NSE's hours leaves NSE's full pass alone), and MCX's own pass
+            // goes first whenever MCX is due (its stops are checked by it, every 15 s while held).
+            val nseTrading = Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose()
             if ((Market.minuteNow() > Market.foClose() && eveningLookDue() && !runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false)) ||
-                (mcxEveningLookDue() && !mcxDue())) {
+                (mcxEveningLookDue() && !mcxDue() && !nseTrading)) {
+                if (mcxDue()) { mcxPass(); return }
                 Heartbeat.stepBegin("evening stops and targets")
                 try { com.optionslab.app.data.Protections.tick() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                     Tasks.stepFailed("evening stops and targets", e)

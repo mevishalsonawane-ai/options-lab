@@ -35,6 +35,8 @@ object ExitCoordinator {
 
     @Volatile private var on = false
     @Volatile private var loaded = false
+    /** Boss changed the switch in this process (the start's late read never overrides it). */
+    @Volatile private var switched = false
     private val registry = ExitRegistry()
     @Volatile private var turns = ExitTurns()
     private val lock = Any()
@@ -50,7 +52,8 @@ object ExitCoordinator {
 
     /** The switch from the settings vault (a worker thread). Until read it is off: the shadow, as before this round. */
     internal fun load() {
-        runCatching { on = SecurePrefs.getBoolean(K_ON, false); loaded = true }
+        // Review: a switch Boss changed before this read landed is kept (the read never puts the old value back).
+        runCatching { val saved = SecurePrefs.getBoolean(K_ON, false); if (!switched) on = saved; loaded = true }
         publish()
     }
 
@@ -59,11 +62,12 @@ object ExitCoordinator {
     /** Boss's switch (Bot settings). On only makes a sender wait its turn or read its book again; it never refuses an exit. */
     fun setOn(on: Boolean): String {
         this.on = on
+        switched = true
         runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on)) }
         runCatching { Diag.record("exits", "Exit coordinator ${if (on) "on: one exit at a time per contract, books read again until the last exit shows" else "in shadow: logged only"} (by you)") }
         publish()
         return if (on) "Exit coordinator on: two exits on one contract never read the books at once, and a read missing an exit just sent " +
-            "is read again (at most about 6 seconds; past that the exit goes, as before)."
+            "is read again (a few seconds at most; past that the exit goes, as before)."
         else "Exit coordinator in shadow: what it would do is logged, nothing waits."
     }
 
@@ -94,15 +98,19 @@ object ExitCoordinator {
     }.getOrDefault(-1L)
 
     /** A read of the order book: every exit it shows is ticked off. */
-    internal fun ordersRead(rows: List<Broker.OrderRow>) {
-        runCatching { registry.seen(ExitRegistry.Kind.ORDER, rows.map { ExitRegistry.Row(it.id, ExitDesk.key(it.exchange, it.symbol), it.side, it.qty, it.type, placedMs(it.placedAt)) }) }
-    }
+    internal fun ordersRead(rows: List<Broker.OrderRow>) { runCatching { registry.seen(ExitRegistry.Kind.ORDER, orderRows(rows)) } }
 
     /** A read of the GTT list. */
-    internal fun gttsRead(rows: List<Broker.GttRow>) {
-        runCatching { registry.seen(ExitRegistry.Kind.GTT, rows.map { ExitRegistry.Row(it.id.toString(), ExitDesk.key(it.exchange, it.symbol),
-            it.legSides.firstOrNull() ?: "", it.legQtys.firstOrNull() ?: 0, "GTT") }) }
-    }
+    internal fun gttsRead(rows: List<Broker.GttRow>) { runCatching { registry.seen(ExitRegistry.Kind.GTT, gttRows(rows)) } }
+
+    /** A GTT deleted from here ([Broker.deleteGtt]): never looked for again (a deleted GTT may not be listed). */
+    internal fun gttDeleted(id: Long) { runCatching { registry.forget(ExitRegistry.Kind.GTT, id.toString()) } }
+
+    private fun orderRows(rows: List<Broker.OrderRow>) =
+        rows.map { ExitRegistry.Row(it.id, ExitDesk.key(it.exchange, it.symbol), it.side, it.qty, it.type, placedMs(it.placedAt)) }
+
+    private fun gttRows(rows: List<Broker.GttRow>) = rows.map { ExitRegistry.Row(it.id.toString(), ExitDesk.key(it.exchange, it.symbol),
+        it.legSides.firstOrNull() ?: "", it.legQtys.firstOrNull() ?: 0, "GTT", placedMs(it.created)) }
 
     private val PLACED = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     private fun placedMs(s: String): Long? = runCatching { java.time.LocalDateTime.parse(s, PLACED).atZone(IST).toInstant().toEpochMilli() }.getOrNull()
@@ -130,22 +138,24 @@ object ExitCoordinator {
     /** Zerodha's orders for an exit sender on [exchange]:[symbol]: [Broker.orders], read again while it misses an exit sent from here. */
     suspend fun orders(exchange: String, symbol: String, who: String): List<Broker.OrderRow> {
         val key = ExitDesk.key(exchange, symbol)
-        return ExitDesk.settle(on, { Broker.orders() }, { registry.unseen(ExitRegistry.Kind.ORDER, key) }) { s, m -> noteRead(key, who, "orders", s, m) }
+        // Review: what is missing is judged against THIS read's rows (another worker's later read showing the exit never vouches for it).
+        return ExitDesk.settle(on, { Broker.orders() }, { r -> registry.missingFrom(ExitRegistry.Kind.ORDER, key, orderRows(r)) }) { s, m -> noteRead(key, who, "orders", s, m) }
     }
 
     /** Zerodha's GTTs for an exit sender, as [orders] does for the order book. */
     suspend fun gtts(exchange: String, symbol: String, who: String): List<Broker.GttRow> {
         val key = ExitDesk.key(exchange, symbol)
-        return ExitDesk.settle(on, { Broker.gtts() }, { registry.unseen(ExitRegistry.Kind.GTT, key) }) { s, m -> noteRead(key, who, "GTTs", s, m) }
+        return ExitDesk.settle(on, { Broker.gtts() }, { r -> registry.missingFrom(ExitRegistry.Kind.GTT, key, gttRows(r)) }) { s, m -> noteRead(key, who, "GTTs", s, m) }
     }
 
     /**
-     * For a pass that read the books once for many contracts: true when an exit sent from here on [exchange]:[symbol] is not in
-     * that read (on: the pass leaves the contract to its next look, which reads both books again). Off (shadow): logged, false.
+     * For a pass that read the books once for many contracts ([read]: that whole read of the orders, not only the working ones):
+     * true when an exit sent from here on [exchange]:[symbol] is not in it (sent since, or the book trailing; on: the pass leaves
+     * the contract to its next look, which reads both books again). Off (shadow): logged, false.
      */
-    fun stale(exchange: String, symbol: String, who: String): Boolean = runCatching {
+    fun stale(exchange: String, symbol: String, who: String, read: List<Broker.OrderRow>): Boolean = runCatching {
         val key = ExitDesk.key(exchange, symbol)
-        val miss = registry.unseen(ExitRegistry.Kind.ORDER, key)
+        val miss = registry.missingFrom(ExitRegistry.Kind.ORDER, key, orderRows(read))
         if (miss.isEmpty()) return@runCatching false
         if (!on) { noteRead(key, who, "orders", ExitDesk.Settled.SHADOW_MISSED, miss); return@runCatching false }
         count { it.copy(readAgain = it.readAgain + 1) }
@@ -195,6 +205,7 @@ object ExitCoordinator {
     private fun count(f: (ExitDesk.Counts) -> ExitDesk.Counts) {
         val d = today()
         synchronized(lock) { counts = f(if (counts.day == d) counts else ExitDesk.Counts(day = d)) }
+        publish()
     }
 
     /** The diagnostics' and Bot settings' line (today's counts). */
@@ -209,7 +220,7 @@ object ExitCoordinator {
 
     /** TEST ONLY: shadow, nothing noted. */
     internal fun resetForTest(on: Boolean = false) {
-        this.on = on; loaded = true
+        this.on = on; loaded = true; switched = false
         registry.clear()
         turns = ExitTurns()
         synchronized(lock) { counts = ExitDesk.Counts() }

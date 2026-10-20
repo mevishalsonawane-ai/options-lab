@@ -90,7 +90,8 @@ object ExpirySquareOff {
             // exit resting from the last pass that filled between the two reads showed the position still open and no exit
             // working, and a second MARKET sell went out and left the account short on expiry day. In this order a fill
             // between the reads shows as still working (nothing more is sent) and the next pass sees the position gone.
-            val working = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }.filter { it.working }
+            val read = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }
+            val working = read.filter { it.working }
             val book = Broker.positionBook().net.filter { it.qty != 0 }
             // A derivative the app's contract list does not know (BFO, a stock option, a list not loaded yet): its
             // expiry cannot be told here, so the owner is told instead of it being held into settlement unseen.
@@ -125,7 +126,7 @@ object ExpirySquareOff {
                 // pass read the orders (an arm's, a protection's, Boss's own) leaves the contract to the next pass, which reads again.
                 val pass = ExitCoordinator.enter(p.exchange, p.symbol, "expiry square-off")
                 try {
-                    if (ExitCoordinator.stale(p.exchange, p.symbol, "expiry square-off")) continue
+                    if (ExitCoordinator.stale(p.exchange, p.symbol, "expiry square-off", read)) continue
                     val i = ins.getValue(p.symbol)
                     val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
                     val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }

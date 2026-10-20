@@ -88,16 +88,19 @@ object ExitDesk {
 }
 
 /**
- * 20 Oct, enhancement round 2: every exit this phone sent, by contract, until a read of Zerodha's book shows it ([ExitDesk]).
- * Thread-safe; memory only; [clock] in ms. A restart starts it empty: what was sent before is in Zerodha's book by then.
+ * 20 Oct, enhancement round 2: every exit this phone sent in the last [keepMs], by contract ([ExitDesk]). [missingFrom] says which
+ * of them a given read of Zerodha's book does not show; the answer is about THAT read (review: one read showing an exit never
+ * vouches for another read that began before it). Thread-safe; memory only; [clock] in ms. A restart starts it empty: what was
+ * sent before is in Zerodha's book by then.
  */
 class ExitRegistry(private val keepMs: Long = ExitDesk.KEEP_MS, private val clock: () -> Long = System::currentTimeMillis) {
     enum class Kind { ORDER, GTT }
     /** SENDING: its request is on its way. ANSWERED: Zerodha gave its id. LOST: its reply was lost (it may or may not exist). */
     enum class State { SENDING, ANSWERED, LOST }
 
+    /** [seen]: a read has shown it once (kept until [keepMs] all the same, for reads that began before that one). */
     data class Sent(val ticket: Long, val kind: Kind, val key: String, val side: String, val qty: Int, val type: String,
-                    val by: String, val at: Long, val id: String? = null, val state: State = State.SENDING)
+                    val by: String, val at: Long, val id: String? = null, val state: State = State.SENDING, val seen: Boolean = false)
 
     /** One row of a read of Zerodha's book: an order (or a GTT, [Kind.GTT]). [placedAt]: when Zerodha placed it (ms), if known. */
     data class Row(val id: String, val key: String, val side: String, val qty: Int, val type: String, val placedAt: Long? = null)
@@ -129,6 +132,9 @@ class ExitRegistry(private val keepMs: Long = ExitDesk.KEEP_MS, private val cloc
     /** Zerodha refused it (or it was never sent): nothing to look for. */
     fun refused(ticket: Long) = synchronized(lock) { sent.remove(ticket); Unit }
 
+    /** It is gone at Zerodha by the phone's own hand (a GTT deleted): never looked for again. */
+    fun forget(kind: Kind, id: String) = synchronized(lock) { sent.values.removeIf { it.kind == kind && it.id == id }; Unit }
+
     /** A lost reply's order found in the book under [id] (the sender's own look): it is that order now. */
     fun adopted(kind: Kind, key: String, side: String, qty: Int, type: String, id: String) = synchronized(lock) {
         val e = sent.values.firstOrNull { it.state == State.LOST && it.kind == kind && it.key == key && it.side == side.uppercase() &&
@@ -138,36 +144,48 @@ class ExitRegistry(private val keepMs: Long = ExitDesk.KEEP_MS, private val cloc
     }
 
     /**
-     * A read of the book ([rows], of [kind]): every sent one it shows is done with (the book will not lose it). A lost reply is
-     * taken as shown by a row of the same contract, side, size and type placed since a minute before it was sent, whose id is
-     * not another one's.
+     * The row of [rows] that shows [e], or null. An answered one by its id; a lost reply by a row of the same contract, side, size
+     * and type, placed no more than [SKEW_MS] before it was sent, whose id is no other exit's sent from here (review: an earlier
+     * identical exit is never taken for it); one still on its way never.
      */
+    private fun shownBy(e: Sent, rows: Collection<Row>, ids: Set<String>, others: Set<String>): Row? = when (e.state) {
+        State.ANSWERED -> if (e.id in ids) rows.firstOrNull { it.id == e.id } else null
+        State.LOST -> rows.firstOrNull { r -> r.key == e.key && r.side.uppercase() == e.side && r.qty == e.qty && r.type.uppercase() == e.type &&
+            r.id !in others && r.placedAt != null && r.placedAt >= e.at - SKEW_MS }
+        State.SENDING -> null
+    }
+
+    /** A read of the book ([rows], of [kind]): what it shows is marked seen (a lost reply it shows takes that row's id). */
     fun seen(kind: Kind, rows: Collection<Row>) = synchronized(lock) {
+        prune()
         if (sent.isEmpty()) return@synchronized
         val ids = rows.mapTo(HashSet()) { it.id }
         val known = sent.values.mapNotNullTo(HashSet()) { it.id }
-        val gone = ArrayList<Long>()
-        for (e in sent.values) {
+        for (e in sent.values.toList()) {
             if (e.kind != kind) continue
-            when (e.state) {
-                State.ANSWERED -> if (e.id in ids) gone += e.ticket
-                State.LOST -> if (rows.any { r -> r.key == e.key && r.side.uppercase() == e.side && r.qty == e.qty &&
-                        r.type.uppercase() == e.type && r.id !in known && (r.placedAt == null || r.placedAt >= e.at - 60_000) }) gone += e.ticket
-                State.SENDING -> Unit
-            }
+            val r = shownBy(e, rows, ids, known) ?: continue
+            sent[e.ticket] = e.copy(id = r.id, state = State.ANSWERED, seen = true)
         }
-        gone.forEach { sent.remove(it) }
-        prune()
     }
 
-    /** Those of [kind] on contract [key] not shown by a read yet (on their way, or answered but not in the book yet). */
+    /** Those of [kind] on contract [key] that the read [rows] does not show (on their way, answered after it began, or lost). */
+    fun missingFrom(kind: Kind, key: String, rows: Collection<Row>): List<Sent> = synchronized(lock) {
+        prune()
+        val mine = sent.values.filter { it.kind == kind && it.key == key }
+        if (mine.isEmpty()) return@synchronized emptyList()
+        val ids = rows.mapTo(HashSet()) { it.id }
+        val known = sent.values.mapNotNullTo(HashSet()) { it.id }
+        mine.filter { shownBy(it, rows, ids, known) == null }
+    }
+
+    /** Those of [kind] on contract [key] no read has shown yet. */
     fun unseen(kind: Kind, key: String): List<Sent> = synchronized(lock) {
         prune()
-        sent.values.filter { it.kind == kind && it.key == key }
+        sent.values.filter { it.kind == kind && it.key == key && !it.seen }
     }
 
-    /** All not shown yet (any contract). */
-    fun pending(): List<Sent> = synchronized(lock) { prune(); sent.values.toList() }
+    /** All no read has shown yet (any contract). */
+    fun pending(): List<Sent> = synchronized(lock) { prune(); sent.values.filter { !it.seen } }
 
     fun clear() = synchronized(lock) { sent.clear() }
 
@@ -175,6 +193,11 @@ class ExitRegistry(private val keepMs: Long = ExitDesk.KEEP_MS, private val cloc
     private fun prune() {
         val now = clock()
         sent.values.removeIf { now - it.at > keepMs }
+    }
+
+    companion object {
+        /** How much earlier than its send (the phone's clock) Zerodha may stamp a lost reply's order. */
+        const val SKEW_MS = 5_000L
     }
 }
 /**
@@ -190,23 +213,26 @@ class ExitTurns(private val waitMs: Long = WAIT_MS) {
      *  [TWO_AT_ONCE] another was in (shadow: not waited for); [LET_THROUGH] it waited the longest and went anyway. */
     enum class Took { ALONE, AGAIN, WAITED, TWO_AT_ONCE, LET_THROUGH }
 
-    internal class Holder(val job: Job?, val who: String) { var depth = 1 }
+    /** [mutex]: the lock it holds (null: in shadow, or let through without it). */
+    internal class Holder(val job: Job?, val who: String, val mutex: Mutex? = null) { var depth = 1 }
 
     /** A turn taken; [leave] it once (a second call does nothing). */
-    class Pass internal constructor(private val turns: ExitTurns?, private val key: String, private val holder: Holder?,
-                                    private val mutex: Mutex?, val took: Took) {
+    class Pass internal constructor(private val turns: ExitTurns?, private val key: String, private val holder: Holder?, val took: Took) {
         private var left = false
         fun leave() {
             if (left) return
             left = true
             val h = holder ?: return
             if (--h.depth > 0) return
-            turns?.release(key, h, mutex)
+            turns?.release(key, h)
         }
     }
 
     private val locks = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
     private val holders = java.util.concurrent.ConcurrentHashMap<String, Holder>()
+    /** Senders on a contract without its lock (let through after the wait, or two at once in shadow), by contract and job:
+     *  their own nested turns go straight in (review: a let-through sender putting its stop back never waits a second time). */
+    private val guests = java.util.concurrent.ConcurrentHashMap<Pair<String, Job>, Holder>()
 
     /**
      * Contract [key]'s turn for [who]. [on] false (shadow): never waits; another inside is only noted. [note] gets what happened,
@@ -214,34 +240,42 @@ class ExitTurns(private val waitMs: Long = WAIT_MS) {
      */
     suspend fun enter(key: String, who: String, on: Boolean, note: (Took, String?, Long) -> Unit = { _, _, _ -> }): Pass {
         val job = currentCoroutineContext()[Job]
-        holders[key]?.let { h -> if (job != null && h.job === job) { h.depth++; note(Took.AGAIN, null, 0); return Pass(this, key, h, null, Took.AGAIN) } }
+        val again = holders[key]?.takeIf { job != null && it.job === job } ?: job?.let { guests[key to it] }
+        if (again != null) { again.depth++; note(Took.AGAIN, null, 0); return Pass(this, key, again, Took.AGAIN) }
         if (!on) {
             val mine = Holder(job, who)
             val other = holders.putIfAbsent(key, mine)
-            if (other != null) { note(Took.TWO_AT_ONCE, other.who, 0); return Pass(null, key, null, null, Took.TWO_AT_ONCE) }
+            if (other != null) { note(Took.TWO_AT_ONCE, other.who, 0); return Pass(this, key, guest(key, job, who), Took.TWO_AT_ONCE) }
             note(Took.ALONE, null, 0)
-            return Pass(this, key, mine, null, Took.ALONE)
+            return Pass(this, key, mine, Took.ALONE)
         }
         val m = locks.getOrPut(key) { Mutex() }
         val t0 = System.currentTimeMillis()
         val free = m.tryLock()
         val other = if (free) null else holders[key]?.who
-        val got = free || (withTimeoutOrNull(waitMs) { m.lock(); true } ?: false)
+        // Review: the flag is set inside the block, so a timeout firing just as the lock is taken never leaves it locked unseen
+        // (withTimeoutOrNull can drop a block's result after lock() returned).
+        var got = free
+        if (!free) withTimeoutOrNull(waitMs) { m.lock(); got = true }
         val took = when { free -> Took.ALONE; got -> Took.WAITED; else -> Took.LET_THROUGH }
         note(took, other, System.currentTimeMillis() - t0)
-        if (!got) return Pass(null, key, null, null, took)
-        val mine = Holder(job, who)
+        if (!got) return Pass(this, key, guest(key, job, who), took)
+        val mine = Holder(job, who, m)
         holders[key] = mine
-        return Pass(this, key, mine, m, took)
+        return Pass(this, key, mine, took)
     }
 
-    private fun release(key: String, h: Holder, m: Mutex?) {
+    private fun guest(key: String, job: Job?, who: String): Holder? = job?.let { j -> Holder(j, who).also { guests[key to j] = it } }
+
+    internal fun release(key: String, h: Holder) {
+        val j = h.job
+        if (j != null && guests.remove(key to j, h)) return
         holders.remove(key, h)
-        m?.unlock()
+        h.mutex?.unlock()
     }
 
     /** A turn not taken (the sender goes as before): what a failure to take one gives. */
-    fun none(): Pass = Pass(null, "", null, null, Took.LET_THROUGH)
+    fun none(): Pass = Pass(null, "", null, Took.LET_THROUGH)
 
     /** Who is inside each turn now (diagnostics). */
     fun busy(): Map<String, String> = holders.mapValues { it.value.who }

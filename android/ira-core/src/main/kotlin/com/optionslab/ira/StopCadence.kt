@@ -97,11 +97,12 @@ object EveningLook {
     /**
      * 20 Oct, enhancement round 2 (idea 3): the same look after MCX's close ([close], 23:30, or 23:55 in US winter time), which
      * can run past midnight: [minute] is the minute of the day now; [sessionDay] whether the session that closed traded (for a
-     * minute after midnight, yesterday's). Due from the minute after the close for [MINUTES].
+     * minute after midnight, yesterday's). Due from the close minute itself (review: MCX is closed from that minute, and the watch
+     * would end in it) for [MINUTES] more.
      */
     fun dueAfter(minute: Int, close: Int, sessionDay: Boolean, pending: Boolean): Boolean {
         if (!sessionDay || !pending || minute !in 0 until 24 * 60 || close !in 0 until 24 * 60) return false
-        val since = if (minute > close) minute - close else minute + 24 * 60 - close
-        return since in 1..MINUTES
+        val since = if (minute >= close) minute - close else minute + 24 * 60 - close
+        return since in 0..MINUTES
     }
 }

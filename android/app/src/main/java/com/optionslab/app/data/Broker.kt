@@ -1355,8 +1355,8 @@ object Broker {
             val ticket = ExitCoordinator.sending(o)
             return try {
                 com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }.also { ExitCoordinator.answered(ticket, it) }
-            } catch (e: Exception) {
-                ExitCoordinator.failed(ticket, e !is kotlinx.coroutines.CancellationException && definite(e))
+            } catch (e: Throwable) {
+                ExitCoordinator.failed(ticket, e is Exception && e !is kotlinx.coroutines.CancellationException && definite(e))
                 throw e
             }
         }
@@ -1632,13 +1632,13 @@ object Broker {
         val ticket = ExitCoordinator.sendingGtt(g)
         return try {
             (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id").also { ExitCoordinator.answered(ticket, it.toString()) }
-        } catch (e: Exception) {
-            ExitCoordinator.failed(ticket, e !is kotlinx.coroutines.CancellationException && definite(e))
+        } catch (e: Throwable) {
+            ExitCoordinator.failed(ticket, e is Exception && e !is kotlinx.coroutines.CancellationException && definite(e))
             throw e
         }
     }
 
-    suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id") }
+    suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id"); ExitCoordinator.gttDeleted(id) }
 
     /**
      * 18 Oct (the arms' live path, [ArmLive]): an active GTT's trigger and order replaced in place (PUT), so a carried position's

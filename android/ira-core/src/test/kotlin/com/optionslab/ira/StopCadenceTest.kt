@@ -85,7 +85,8 @@ class StopCadenceTest {
     @Test fun theMcxLookAfterItsCloseRunsPastMidnightForHalfAnHour() {
         val summer = 23 * 60 + 30
         val winter = 23 * 60 + 55
-        assertFalse(EveningLook.dueAfter(summer, summer, true, true), "the close minute itself")
+        assertTrue(EveningLook.dueAfter(summer, summer, true, true), "the close minute itself (MCX is closed then; the watch must not end)")
+        assertFalse(EveningLook.dueAfter(summer - 1, summer, true, true), "the last minute of the session")
         assertTrue(EveningLook.dueAfter(summer + 1, summer, true, true))
         assertTrue(EveningLook.dueAfter(0, summer, true, true), "midnight")
         assertFalse(EveningLook.dueAfter(1, summer, true, true), "past half an hour")
