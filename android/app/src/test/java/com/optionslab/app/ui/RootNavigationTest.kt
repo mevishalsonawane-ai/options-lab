@@ -159,6 +159,9 @@ class RootNavigationTest {
         assertEquals(NavState(tab = Tab.PNL), h.home("pnl"))
         // "What's new": the Pine change opens the Pine scripts page; its full list is a Settings page.
         assertEquals(NavState(tab = Tab.LAB, labPage = "pine"), h.home("pine"))
+        // 20 Oct, enhancement round 2: the Candle agent's change opens Research → Candles.
+        assertEquals(NavState(tab = Tab.LAB, labPage = "candles"), h.home("candles"))
+        assertEquals(NavState(tab = Tab.LAB, labPage = "candles"), NavState(tab = Tab.PNL, labPage = "pine").home("candles"))
         assertEquals(NavState(tab = Tab.CABINET, cabinetPage = "whatsnew"), h.home("whatsnew"))
         for (page in listOf("alarms", "broker", "risk", "security", "schedule", "data", "jarvis", "ira")) assertEquals(NavState(tab = Tab.CABINET, cabinetPage = page), h.home(page))
         val away = NavState(tab = Tab.PNL)

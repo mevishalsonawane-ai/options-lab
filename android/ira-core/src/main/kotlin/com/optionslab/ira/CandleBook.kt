@@ -40,6 +40,15 @@ object CandleBook {
      * Thousands of cells tested at |z| >= 2 alone gave dozens of "differs from the research" notes by chance.
      */
     const val FDR_Q = 0.10
+    /**
+     * 20 Oct, enhancement round 2: the timeframes whose counts become lessons (Jarvis's, [results]) and notes for Boss
+     * ([notes]): 5 and 15 minutes only. A 1-minute candle is read and explained (and its own count is said beside it), but it
+     * never becomes a lesson or a note: a minute's candle is mostly noise.
+     */
+    val LESSON_TFS: Set<Int> = setOf(5, 15)
+
+    /** Whether candles of [tf] minutes count into lessons ([LESSON_TFS]); 1-minute ones are explained only. */
+    fun countsAsLesson(tf: Int): Boolean = tf in LESSON_TFS
 
     // ---- outcomes ---------------------------------------------------------------------------------------------------------
 
@@ -380,10 +389,10 @@ object CandleBook {
 
     /**
      * Tonight's lessons for Jarvis ([AgentLessons.CandleResult]): every "all" cell with an own verdict compared, held = agrees.
-     * At most [max], the biggest samples first.
+     * At most [max], the biggest samples first. 5- and 15-minute cells only ([countsAsLesson]; 20 Oct, enhancement round 2).
      */
     fun results(s: Stats, seed: Seed, day: LocalDate, max: Int = 40): List<AgentLessons.CandleResult> = compare(s, seed)
-        .filter { it.ctx == "all" && it.agrees != null }
+        .filter { it.ctx == "all" && it.agrees != null && countsAsLesson(it.tf) }
         .sortedByDescending { it.cell.n5 }.take(max)
         .map { c ->
             AgentLessons.CandleResult(day, "${c.inst.lowercase(Locale.ENGLISH)}:${c.tf}:${c.shape}", "${CandleRead.name(c.shape).replaceFirstChar { it.uppercase() }} on ${c.inst} ${c.tf}m",
@@ -392,11 +401,17 @@ object CandleBook {
 
     /**
      * The agent's proposals: notes for Boss only, never an action. A cell whose own count differs from the research with
-     * [COMPARE_N]+ reads becomes "worth a research re-check"; nothing in any arm, size, stop or order changes.
+     * [COMPARE_N]+ reads becomes "worth a research re-check"; nothing in any arm, size, stop or order changes. 5- and
+     * 15-minute cells only, as the lessons ([countsAsLesson]; 20 Oct, enhancement round 2).
      */
-    fun notes(s: Stats, seed: Seed, max: Int = 5): List<String> = compare(s, seed).filter { it.agrees == false }
+    fun notes(s: Stats, seed: Seed, max: Int = 5): List<String> = noteRows(s, seed, max).map { noteWords(it) }
+
+    /** The cells behind [notes], each with its instrument (the Candles page filters them by it). */
+    fun noteRows(s: Stats, seed: Seed, max: Int = 5): List<Compare> = compare(s, seed).filter { it.agrees == false && countsAsLesson(it.tf) }
         .sortedByDescending { it.cell.n5 }.take(max)
-        .map { "${it.words()}. A note for Boss: worth a research re-check; nothing in any arm, size, stop or order changes." }
+
+    /** One note in words. */
+    fun noteWords(c: Compare): String = "${c.words()}. A note for Boss: worth a research re-check; nothing in any arm, size, stop or order changes."
 
     /**
      * The growth score, 0-100: the share of the shapes it has seen that it has counted [COMPARE_N]+ times, and how many of

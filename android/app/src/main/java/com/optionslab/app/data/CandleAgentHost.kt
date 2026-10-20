@@ -4,6 +4,7 @@ import android.content.Context
 import com.optionslab.ira.AgentLessons
 import com.optionslab.ira.CandleAgent
 import com.optionslab.ira.CandleBook
+import com.optionslab.ira.CandlePage
 import com.optionslab.ira.CandleRead
 import com.optionslab.ira.Candles
 import com.optionslab.ira.GammaRegime
@@ -62,11 +63,14 @@ object CandleAgentHost {
         val status: CandleAgent.Status? = null,
         val latest: List<CandleAgent.Explained> = emptyList(),
         val table: List<CandleBook.Compare> = emptyList(),
-        val lessons: List<String> = emptyList(),
-        val notes: List<String> = emptyList(),
+        /** 20 Oct, enhancement round 2: each lesson and note with its instrument, so the page's chips can filter them. */
+        val lessons: List<CandlePage.Line> = emptyList(),
+        val notes: List<CandlePage.Line> = emptyList(),
         val exchanges: List<CandleAgent.Exchange> = emptyList(),
         val growth: String = "",
         val released: Boolean = false,
+        /** NSE or MCX was open when this view was made (the page's "as of" line until it reads the markets itself). */
+        val open: Boolean = false,
     )
 
     private val _view = MutableStateFlow(View())
@@ -339,8 +343,10 @@ object CandleAgentHost {
         // A batch that finished after the agent was let go never brings it back into view (or into memory).
         if (agent !== a) return
         val day = runCatching { Market.today() }.getOrElse { LocalDate.now() }
-        _view.value = View(a.status(), a.latest(), a.table(), a.lessons(day).map { "${it.name}: ${if (it.agrees) "agrees with" else "differs from"} the research (${it.n} counted)" },
-            a.notes(), a.exchanges(), a.growthWords())
+        // 20 Oct, enhancement round 2: the lessons and notes keep their instrument (the page's chips), and whether a market was open.
+        val open = runCatching { Market.isOpen() }.getOrDefault(false) || runCatching { McxMarket.openOrNull() == true }.getOrDefault(false)
+        _view.value = View(a.status(), a.latest(), a.table(), a.lessons(day).map { CandlePage.lessonLine(it) },
+            a.noteRows().map { CandlePage.Line(it.inst, CandleBook.noteWords(it)) }, a.exchanges(), a.growthWords(), open = open)
     }
 
     /** Memory is short: the agent is let go (its counts are on disk) and read again from its next batch. */

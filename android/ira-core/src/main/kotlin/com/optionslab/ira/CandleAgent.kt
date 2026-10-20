@@ -97,8 +97,13 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         const val KEEP_PENDING = 400
         /** A notable candle is posted only when it is this fresh (in candles): history is read, not re-announced. */
         const val POST_WITHIN_CANDLES = 2
-        /** 1-minute candles are read and counted, but only 5-minute and longer ones are posted. */
+        /**
+         * 1-minute candles are read and counted, but only 5-minute and longer ones are posted; only 5- and 15-minute counts
+         * become lessons and notes ([CandleBook.countsAsLesson], 20 Oct, enhancement round 2).
+         */
         const val POST_MIN_TF = 5
+        /** Said under a 1-minute candle's own count (20 Oct, enhancement round 2). */
+        const val ONE_MINUTE_NOTE = "A 1-minute candle is explained only, never counted as a lesson: lessons come from 5- and 15-minute candles."
         /** The other agents' words stand this long for the agent's reads. */
         const val HEARD_MS = 30 * 60_000L
         /** No candle newer than this many candle lengths while the market is open: the data is stale. */
@@ -350,8 +355,10 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         return "It formed " + bits.joinToString(", ") + "."
     }
 
-    /** Its own count for this shape on this instrument and timeframe. */
-    private fun own(r: CandleRead.Read): String {
+    /** Its own count for this shape on this instrument and timeframe (a 1-minute one says it is never a lesson). */
+    private fun own(r: CandleRead.Read): String = ownCount(r) + if (CandleBook.countsAsLesson(r.tf)) "" else " $ONE_MINUTE_NOTE"
+
+    private fun ownCount(r: CandleRead.Read): String {
         val cell = stats[CandleBook.key(r.inst, r.tf, r.primary, "all")]
         val n = cell?.n5 ?: 0
         if (n < CandleBook.SAY_N) return "My own count: $n settled so far for this shape on ${r.inst} ${r.tf}m, too few to say anything (I need ${CandleBook.SAY_N})."
@@ -499,6 +506,9 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
 
     /** Its proposals: notes for Boss, never an action. */
     fun notes(): List<String> = synchronized(lock) { CandleBook.notes(stats, seed) }
+
+    /** The cells behind [notes], with their instruments (the page filters by them). */
+    fun noteRows(): List<CandleBook.Compare> = synchronized(lock) { CandleBook.noteRows(stats, seed) }
 
     fun table(): List<CandleBook.Compare> = synchronized(lock) { CandleBook.compare(stats, seed) }
 

@@ -35,7 +35,7 @@ class WhatsNewChangelogTest {
                 assertFalse(Regex("\\b[a-z]+[A-Z][A-Za-z]*\\b|\\b[A-Z][a-z]+[A-Z][A-Za-z]*\\b").containsMatchIn(t.replace("BankNifty", "").replace("FinNifty", "").replace("GitHub", "")), "${x.id}: $t")
             for (w in listOf("ATR", "CUSUM", "OrbArms", "IraHub", "ira-core", "Compose", "vault", "regex", "detector"))
                 assertFalse(w in x.what || w in x.where, "${x.id}: $w")
-            x.to?.let { assertTrue(it in setOf("chart", "pnl", "ira", "jarvis", "data", "pine", "strategy"), "${x.id}: $it") }
+            x.to?.let { assertTrue(it in setOf("chart", "pnl", "ira", "jarvis", "data", "pine", "strategy", "candles"), "${x.id}: $it") }
             assertFalse(x.gold, "${x.id}: IraGoldAlgo only talks; none of today's changes is in it")
         }
     }
@@ -83,7 +83,8 @@ class WhatsNewChangelogTest {
         assertTrue(sentences.size <= 8, x.what)
         for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
         assertEquals("Research → Candles", x.where)
-        assertFalse(x.jarvisOnly); assertFalse(x.gold); assertNull(x.to)
+        // 20 Oct, enhancement round 2: a tap on it opens Research → Candles (Home's "candles" shortcut).
+        assertFalse(x.jarvisOnly); assertFalse(x.gold); assertEquals("candles", x.to)
         assertEquals(CandleAgent.Question.WHY_COLOUR, CandleAgent.asked(x.ask!!))
     }
 
