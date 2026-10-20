@@ -1,0 +1,56 @@
+{
+ "atlas": {
+  "B1": {
+   "cells": 315,
+   "tested": 107,
+   "bh_pass": 0
+  },
+  "B2seq": {
+   "cells": 25,
+   "tested": 22,
+   "bh_pass": 0
+  },
+  "B2cl": {
+   "cells": 144,
+   "tested": 144,
+   "bh_pass": 0
+  }
+ },
+ "design_findings": 1,
+ "holds": 1,
+ "exits": [
+  {
+   "arm": "ORB",
+   "overlay": "X1",
+   "trades": 912,
+   "hits": 158,
+   "base": {
+    "net": -109273.58703569023,
+    "worst_day": -14277.967353211865,
+    "max_dd": 138588.04125328484
+   },
+   "variant": {
+    "net": -93166.11217036894,
+    "worst_day": -14277.967353211865,
+    "max_dd": 120086.11090976825
+   },
+   "delta": 16107.47486532131,
+   "delta_mean": 17.661704896185647,
+   "z": 0.8372828354260728,
+   "p": 0.4024336051191083,
+   "folds": [
+    16107.47486532131
+   ],
+   "real_entry_share": 0.04824561403508772,
+   "q": 0.8048672102382165,
+   "pass": false,
+   "final_pass": false
+  }
+ ],
+ "rules": [
+  {
+   "id": "R87B-1",
+   "read": false
+  }
+ ]
+}

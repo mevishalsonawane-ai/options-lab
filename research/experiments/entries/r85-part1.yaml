@@ -1,0 +1,37 @@
+id: r85-part1
+title: 'R85 Part 1: MCX candle anatomy (shape, colour, context -> next 1-10 candles)'
+family: mcx-crypto
+date: '2026-10-19'
+doc: research/HUNT_R85_MCX_CANDLES.md
+hypothesis: Some MCX candle shapes or contexts on the underlying future predict the next 3 candles' direction better than
+  a random time of the same session (design only).
+data_version: Drive lake options_rolling_1m opt_<SYM>_MONTH_2025/2026 (MCX near future = spot, option minutes ATM-3..+3),
+  fut_daily_continuous; 5 Aug 2025 - 13 Oct 2026 (/dev/shm, not committed)
+period:
+  design: 2025-08-05..2026-03-31 (day candles 2010-2022)
+instruments:
+- GOLD
+- GOLDM
+- SILVER
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- colour, body/wick %, range/ATR, close location, 11 shapes
+- trend, session mean distance, day high/low, previous-day levels, volatility regime, option activity, session bucket, events,
+  expiry
+- 'signal source: the MCX future (close-only candles)'
+model_or_rule: cell = instrument x timeframe x condition x colour x session; effect = mean signed 3-candle move minus the
+  same-session baseline; day-clustered z; BH
+settings: research/hunt/r85/PREREG.md section 3; NOTES.md D1 (colour-matched baseline)
+prereg: research/hunt/r85/PREREG.md
+variants_tried: null
+results:
+  summary: '7564 intraday cells tested at h = 3: 59 pass BH q < 0.10 on the pre-registered baseline, 18 also on the drift-neutral
+    colour-matched baseline, 4 of those move more than an option buyer''s round trip. Day candles: 259 tested, 7 q < 0.10.
+    No 1-minute cell beats the option cost.'
+  costs: McxCosts option charges + premium half-spread CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90%, GOLDM/SILVERM 0.30/0.60%
+    (from/before 17:00 IST), entry and exit
+holdout_read: null
+verdict: not-a-test
+notes: Descriptive; the 4 cells that beat costs became R1-R4 (entries r85-r1..r85-r4).

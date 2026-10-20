@@ -1,0 +1,36 @@
+id: mb1-l4-b1
+title: 'MCX brain L4 B1: committee direction, 60-minute hold, stop 1x predicted range'
+family: mcx-crypto
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: Trading the committee's direction pays after MCX costs.
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLDM
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- brain forecasts (L1-L3, walk-forward test folds)
+- MCX future minute closes
+- ATM IV (B4)
+model_or_rule: 'B1: committee direction, 60-minute hold, stop 1x predicted range. Signal on the MCX future; traded as one
+  mini-future lot (B1-B3) or the ATM straddle (B4)'
+settings: research/brain/mcx/l4.py, PREREG section 7; results/l4_design.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design (forecasts from walk-forward test folds, ~150 sessions): GOLDM 710 trades net Rs -189,077 (gross 166,510),
+    twin p 0.154 q 0.617, wf Rs -121,046, top-5 removed Rs -432,078: fail; SILVERM 685 trades net Rs -539,187 (gross -248,355),
+    twin p 0.826 q 0.911, wf Rs -459,389, top-5 removed Rs -881,384: fail; CRUDEOIL 1438 trades net Rs -76,366 (gross 34,580),
+    twin p 0.070 q 0.371, wf Rs -58,668, top-5 removed Rs -106,787: fail; NATURALGAS 628 trades net Rs -41,810 (gross 14,375),
+    twin p 0.358 q 0.796, wf Rs 7,136, top-5 removed Rs -69,584: fail.'
+  costs: Zerodha MCX futures/options charges (R53), R53 half-spreads, 0.02% stop slippage (R83)
+holdout_read: false
+verdict: rejected
+notes: No rule passed the design gate, so the holdout was not read for rules (PREREG section 7). Stays a note.

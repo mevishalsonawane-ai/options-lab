@@ -1,0 +1,31 @@
+id: r86b-t3
+title: 'R86b T3: Absorption at the day''s extreme: fade a heavy, quiet 5-minute bar that makes a new day high/low'
+family: patterns-indicators
+date: '2026-10-19'
+doc: research/HUNT_R86B_HOW_BIG_PLAYERS_TRADE.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG_B.md): Absorption at the day''s extreme: fade a heavy, quiet 5-minute
+  bar that makes a new day high/low beats random twins in design 2022-2024 (net > 0 and > twins, twin p < 0.10, BH q < 0.10
+  over R86b''s 8 tests, not carried by its top 5).'
+data_version: Drive lake gdrive:IraAlgo-data-lake index_1m (NIFTY 2019-, BANKNIFTY Aug 2021-) and equity_1m (59 current NIFTY
+  50 + NIFTY BANK stocks, 2019 - 12 Oct 2026), files of 13-15 Oct 2026; NSE participant OI as labels only
+period:
+  design: 2019 - 2024 (folds 2022, 2023, 2024)
+  holdout: '1 Jan 2025 - 12 Oct 2026 NOT read: no R86b test passed design'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index''s own minutes and its constituents'' minute prices and turnover; no option chart'
+model_or_rule: turnover >= 2x and range <= 0.5x the slot medians, after 10:15; stop beyond the bar, 2R target, 60 minutes
+settings: research/hunt/r86/r86b.py, r86blib.py; PREREG_B.md
+prereg: research/hunt/r86/PREREG_B.md
+variants_tried: 2
+results:
+  summary: 'Design walk-forward. T3-NIFTY: 2 trades, net Rs 465, without top 5 Rs 0, random twins mean Rs -1,492, twin p 0.062,
+    BH q 0.319; T3-BANKNIFTY: 4 trades, net Rs -3,233, without top 5 Rs 0, random twins mean Rs -2,977, twin p 0.655, BH q
+    0.994. Verdict: FAIL.'
+  costs: 'index future: Rs 40 brokerage, dated STT, exchange, SEBI, stamp, GST, 0.02% slippage a side (0.04% on stops); overnight
+    carry 5.5%/yr; 1 lot in force'
+holdout_read: false
+verdict: rejected
+notes: Reverse-engineering how big players trade (Boss, 19 Oct). Research only.

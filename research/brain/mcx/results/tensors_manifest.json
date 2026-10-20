@@ -1,0 +1,327 @@
+{
+ "signature": "4d6b30979116",
+ "features": [
+  "atm_iv",
+  "d_atr14_pct",
+  "d_range_prev_pct",
+  "d_ret_5d",
+  "dist_day_high",
+  "dist_day_low",
+  "dist_ema120",
+  "dist_ema30",
+  "dist_prev_high",
+  "dist_prev_low",
+  "dist_session_mean",
+  "dow",
+  "dte",
+  "ema60_slope_15m",
+  "er_60m",
+  "ev_cpi",
+  "ev_eia",
+  "ev_fomc",
+  "ev_nfp",
+  "ev_storage",
+  "event_window",
+  "fdte",
+  "foi_chg_60m",
+  "fvol_rel_30m",
+  "gap_open",
+  "iv_chg_60m",
+  "iv_range_60m",
+  "iv_z_20d",
+  "log_range_60m",
+  "min_since_open",
+  "min_to_close",
+  "min_to_us_open",
+  "optvol_rel_30m",
+  "pcr_oi",
+  "pos_240m",
+  "pos_60m",
+  "range_240m",
+  "range_30m",
+  "range_60m",
+  "range_day",
+  "ret_15m",
+  "ret_240m",
+  "ret_30m",
+  "ret_5m",
+  "ret_60m",
+  "ret_day",
+  "rv_240m",
+  "rv_30m",
+  "rv_60m",
+  "rv_minus_iv",
+  "rv_ratio_60_240",
+  "straddle_pct",
+  "tod_cos",
+  "tod_logrange_60m",
+  "tod_sin",
+  "us_summer"
+ ],
+ "symbols": {
+  "GOLD": {
+   "rows": 268395,
+   "features": 56,
+   "valid_ends": 197465,
+   "encoder_rows": 11654
+  },
+  "GOLDM": {
+   "rows": 270160,
+   "features": 56,
+   "valid_ends": 251517,
+   "encoder_rows": 14933
+  },
+  "SILVER": {
+   "rows": 270160,
+   "features": 56,
+   "valid_ends": 189384,
+   "encoder_rows": 11185
+  },
+  "SILVERM": {
+   "rows": 270160,
+   "features": 56,
+   "valid_ends": 236575,
+   "encoder_rows": 13985
+  },
+  "CRUDEOIL": {
+   "rows": 270160,
+   "features": 56,
+   "valid_ends": 257823,
+   "encoder_rows": 15339
+  },
+  "CRUDEOILM": {
+   "rows": 17400,
+   "features": 56,
+   "valid_ends": 17280,
+   "encoder_rows": 1033
+  },
+  "NATURALGAS": {
+   "rows": 270160,
+   "features": 56,
+   "valid_ends": 257714,
+   "encoder_rows": 15333
+  },
+  "NATGASMINI": {
+   "rows": 32190,
+   "features": 56,
+   "valid_ends": 31495,
+   "encoder_rows": 1879
+  },
+  "COPPER": {
+   "rows": 30450,
+   "features": 56,
+   "valid_ends": 29755,
+   "encoder_rows": 1775
+  },
+  "ZINC": {
+   "rows": 30450,
+   "features": 56,
+   "valid_ends": 29643,
+   "encoder_rows": 1768
+  },
+  "ALUMINIUM": {
+   "rows": 30450,
+   "features": 56,
+   "valid_ends": 29135,
+   "encoder_rows": 1737
+  },
+  "joint": {
+   "shape": [
+    11,
+    270160,
+    56
+   ]
+  }
+ },
+ "cube_version": 1,
+ "files": {
+  "ALUMINIUM.arrow": {
+   "bytes": 7073370,
+   "sha256": "1491c8b726ce05ccdf7baa7d029911339d80910916279aa2ca62b6f61ef1319f"
+  },
+  "ALUMINIUM.f32.npy": {
+   "bytes": 6820928,
+   "sha256": "d4c9bf04abbd20441ba730d4cbcd1f5b862e40fb7c3698a44d2752d4cec21715"
+  },
+  "ALUMINIUM.ts.npy": {
+   "bytes": 243728,
+   "sha256": "5cc82e4d9caf84b0d810df704781c4efb5b2931c55c6bcd6790db9b8bc9cb972"
+  },
+  "ALUMINIUM.win120.npz": {
+   "bytes": 1248668,
+   "sha256": "ec836f7635af59e517a2ad9bd4c89df2a01f51ac20b955ca65f6e58ba58fbd46"
+  },
+  "COPPER.arrow": {
+   "bytes": 7073370,
+   "sha256": "3826af80fb7d5ee3d952d89d19c57ff42127df284374c330465b25ca29ac1040"
+  },
+  "COPPER.f32.npy": {
+   "bytes": 6820928,
+   "sha256": "bd499086a03c3ce77755fb887973de0f514f847d089e8b20b3c8a4bda1ef6cf6"
+  },
+  "COPPER.ts.npy": {
+   "bytes": 243728,
+   "sha256": "5cc82e4d9caf84b0d810df704781c4efb5b2931c55c6bcd6790db9b8bc9cb972"
+  },
+  "COPPER.win120.npz": {
+   "bytes": 1275820,
+   "sha256": "686346a8cf88893cf2fde499dceab10db2b79768557dbd911d0904ef7b3629c6"
+  },
+  "CRUDEOIL.arrow": {
+   "bytes": 62697514,
+   "sha256": "d1b1b38a0d15f56fe4f9f8f687572cd1192fbf5ddc7eeb56a1ccc428407e5ca9"
+  },
+  "CRUDEOIL.f32.npy": {
+   "bytes": 60515968,
+   "sha256": "f1fdda813fdfa47bcf6fc8bffa443721fce0be177d18358edf44f77dad948dd8"
+  },
+  "CRUDEOIL.ts.npy": {
+   "bytes": 2161408,
+   "sha256": "96a3dfedd3ee61ccf180170c9df21da0b33183ae8030dd7a4616423c39d3c14a"
+  },
+  "CRUDEOIL.win120.npz": {
+   "bytes": 11021740,
+   "sha256": "771c8be6caf538d0887524897c305c8e95ac1df4e56c58b17e8b314f9ae7b056"
+  },
+  "CRUDEOILM.arrow": {
+   "bytes": 4045770,
+   "sha256": "910873a9ebd167d690f64dc4fdc05351b29468fa89fa4c7f4fa1b55a4540294e"
+  },
+  "CRUDEOILM.f32.npy": {
+   "bytes": 3897728,
+   "sha256": "cbebdcf606881c6e1f7c78dc42beeac230ded3d070f7ec71dfc8d3e6711976df"
+  },
+  "CRUDEOILM.ts.npy": {
+   "bytes": 139328,
+   "sha256": "19a69f1d02a2f976a9dbb683ba062da58ad913940687a6353fdb6b43e1b3ef30"
+  },
+  "CRUDEOILM.win120.npz": {
+   "bytes": 742692,
+   "sha256": "b290eacdeaccebad6d1a10b678a5aef9af82c746e12ecbe1068480b68d8a23fa"
+  },
+  "GOLD.arrow": {
+   "bytes": 62288258,
+   "sha256": "e0bbb443c279649bff7df662836c71ff86c1151861846db8a23b05e37ea25afd"
+  },
+  "GOLD.f32.npy": {
+   "bytes": 60120608,
+   "sha256": "bfe9826eb1def96d33ded7da16f6918d38af8086e253b16ee50a0d70f1cb750a"
+  },
+  "GOLD.ts.npy": {
+   "bytes": 2147288,
+   "sha256": "2f352773c2b9aeb8b3a6beb869bc938448075c042a440072a4ef78aca9d34ab7"
+  },
+  "GOLD.win120.npz": {
+   "bytes": 8386836,
+   "sha256": "949be398cfcddf44bc2ab5a843406385e7b2bbe17832b54759d7bfe9243fe18a"
+  },
+  "GOLDM.arrow": {
+   "bytes": 62697514,
+   "sha256": "6d9d8e008ef8c6c8873b65d255f0a2520be8ead55e8b71c878cf730d343ec0fa"
+  },
+  "GOLDM.f32.npy": {
+   "bytes": 60515968,
+   "sha256": "0fbbf271c0b6c2ff322136eed4da760351ec0365716d646ea1806c9ca024e014"
+  },
+  "GOLDM.ts.npy": {
+   "bytes": 2161408,
+   "sha256": "96a3dfedd3ee61ccf180170c9df21da0b33183ae8030dd7a4616423c39d3c14a"
+  },
+  "GOLDM.win120.npz": {
+   "bytes": 10734188,
+   "sha256": "3bb2cce3cafa941d30bb08c18d04e2a876f23a28d6234fc1c49501f0902d336d"
+  },
+  "NATGASMINI.arrow": {
+   "bytes": 7477050,
+   "sha256": "6ae0acec0d40da6bec83e36deb900c6e814a5c629f9be862f5c4019e5ef8ba61"
+  },
+  "NATGASMINI.f32.npy": {
+   "bytes": 7210688,
+   "sha256": "82817c72ac7573d449f37d47ec939577566693a9c32116b337c7de32702b206a"
+  },
+  "NATGASMINI.ts.npy": {
+   "bytes": 257648,
+   "sha256": "b01c4cc2cfa75c5d6e13f01689eaa98f8139df3aadc36840ac1313b3abd94c72"
+  },
+  "NATGASMINI.win120.npz": {
+   "bytes": 1350476,
+   "sha256": "2a0665dffbe413af7332f78e2d9a5706c4fbb570abbf015eea096b8768facb5e"
+  },
+  "NATURALGAS.arrow": {
+   "bytes": 62697514,
+   "sha256": "3bc87f63cb7bb5460da18a6500a73eb68bd286c0746511449dc2c5d54315d862"
+  },
+  "NATURALGAS.f32.npy": {
+   "bytes": 60515968,
+   "sha256": "9cbefeda7e5ec8bc9f73ccb4e78d7507a22a079e8ad591d3b5139f3cfbb513f2"
+  },
+  "NATURALGAS.ts.npy": {
+   "bytes": 2161408,
+   "sha256": "96a3dfedd3ee61ccf180170c9df21da0b33183ae8030dd7a4616423c39d3c14a"
+  },
+  "NATURALGAS.win120.npz": {
+   "bytes": 11017364,
+   "sha256": "761c25d630b1857745634e222dda2de1853554e43150ef5ec2d7204b04f7e376"
+  },
+  "SILVER.arrow": {
+   "bytes": 62697514,
+   "sha256": "7c53d8bcf9e28ae89f1dd1db016ada9caf3c6896f71a7bd6341d06884fcc6718"
+  },
+  "SILVER.f32.npy": {
+   "bytes": 60515968,
+   "sha256": "62c3b5c6864de606a17f78c38fb8bd74b0fd3e218cdd905530febc4a4f23bcfd"
+  },
+  "SILVER.ts.npy": {
+   "bytes": 2161408,
+   "sha256": "96a3dfedd3ee61ccf180170c9df21da0b33183ae8030dd7a4616423c39d3c14a"
+  },
+  "SILVER.win120.npz": {
+   "bytes": 8048292,
+   "sha256": "bb792dcd6a4ff177223d12fe006ba25d44e8d587480820ca016026a7f0d7e622"
+  },
+  "SILVERM.arrow": {
+   "bytes": 62697514,
+   "sha256": "b6b4bc4ac75332a2184f53b42b5c737c6a0b070dde1520a32f1706db5a584948"
+  },
+  "SILVERM.f32.npy": {
+   "bytes": 60515968,
+   "sha256": "0b36f5d023c31e5e6abbdde18541a62d33b2fa11447550b7a7c79989e4a8f1fe"
+  },
+  "SILVERM.ts.npy": {
+   "bytes": 2161408,
+   "sha256": "96a3dfedd3ee61ccf180170c9df21da0b33183ae8030dd7a4616423c39d3c14a"
+  },
+  "SILVERM.win120.npz": {
+   "bytes": 10061020,
+   "sha256": "872251283026134af70d9541e88341a963fb7426b314eaab93b301e7faa2cb7b"
+  },
+  "ZINC.arrow": {
+   "bytes": 7073370,
+   "sha256": "521ce5873d4c418440e3d180923017006052cd3f924a645bc3d4eedaab321867"
+  },
+  "ZINC.f32.npy": {
+   "bytes": 6820928,
+   "sha256": "ef1dc179d5bdaa3985d25d1bbff66fffbdc0537c09d0665287ea6e6d012e51a5"
+  },
+  "ZINC.ts.npy": {
+   "bytes": 243728,
+   "sha256": "5cc82e4d9caf84b0d810df704781c4efb5b2931c55c6bcd6790db9b8bc9cb972"
+  },
+  "ZINC.win120.npz": {
+   "bytes": 1270836,
+   "sha256": "1c20592896589cff02d0382965524be230d5699788c18040576ae37d91aba0f2"
+  },
+  "joint.f32.npy": {
+   "bytes": 665674368,
+   "sha256": "ec8873d8dec85246fb6f0c58120fba958168639bc632abf9d655795a1a4d8b7d"
+  },
+  "joint.json": {
+   "bytes": 933,
+   "sha256": "aa74aceec19954eeb03af10bf32081b8b286c67cbc2fbad80dda904d1a2a5e97"
+  },
+  "joint.ts.npy": {
+   "bytes": 2161408,
+   "sha256": "96a3dfedd3ee61ccf180170c9df21da0b33183ae8030dd7a4616423c39d3c14a"
+  }
+ }
+}

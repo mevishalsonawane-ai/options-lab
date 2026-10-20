@@ -1,0 +1,188 @@
+{
+ "R1": {
+  "bh_q": 0.7504990019960079,
+  "desc": "SILVER 5m big red body + option activity >= 2x, LATE -> SILVERM call",
+  "final": {
+   "avg_loss": -487.7812196081967,
+   "avg_win": 668.5144398981579,
+   "cost": 22419.630038035,
+   "days": 43,
+   "exits": {
+    "fut_stop": 57,
+    "lock": 1,
+    "time": 22
+   },
+   "fut_gross": 4735.0,
+   "gross": 5366.75,
+   "max_dd": 18992.610246585,
+   "months_below_13k": 0,
+   "net": -17052.880038035,
+   "net_per_day": -396.5786055356977,
+   "stale": 0,
+   "top5_removed": -24091.057867049996,
+   "top5_share": null,
+   "trades": 80,
+   "win_rate": 0.2375,
+   "worst_day": -2260.2872973000003,
+   "worst_month": -7464.82241185
+  },
+  "final_twin_mean": -23412.85712439163,
+  "final_twin_p": 0.18762475049900199,
+  "frozen": "X10_L10",
+  "gates": {
+   "bh_q": false,
+   "final_pos": false,
+   "top5": false,
+   "trades30": true,
+   "twin_p": false,
+   "wf_pos": false
+  },
+  "period": [
+   "2026-04-01",
+   "2026-10-13"
+  ],
+  "signals": 132,
+  "verdict": "fail",
+  "wf_net": -879.1011030274997
+ },
+ "R2": {
+  "bh_q": 0.8662674650698603,
+  "desc": "GOLDM 5m red candle, high-volatility regime, LULL -> GOLDM call",
+  "final": {
+   "avg_loss": -611.3559685261288,
+   "avg_win": 731.1248276249999,
+   "cost": 31356.572117120002,
+   "days": 27,
+   "exits": {
+    "fut_stop": 57,
+    "opt_stop": 1,
+    "time": 16
+   },
+   "fut_gross": 5220.0,
+   "gross": 2226.0,
+   "max_dd": 32024.132288819994,
+   "months_below_13k": 0,
+   "net": -29130.57211712,
+   "net_per_day": -1078.9100784118518,
+   "stale": 0,
+   "top5_removed": -36280.13653601999,
+   "top5_share": null,
+   "trades": 74,
+   "win_rate": 0.16216216216216217,
+   "worst_day": -4011.990058,
+   "worst_month": -7642.259935419999
+  },
+  "final_twin_mean": -26215.737321087337,
+  "final_twin_p": 0.7604790419161677,
+  "frozen": "X05_L10",
+  "gates": {
+   "bh_q": false,
+   "final_pos": false,
+   "top5": false,
+   "trades30": true,
+   "twin_p": false,
+   "wf_pos": false
+  },
+  "period": [
+   "2026-04-01",
+   "2026-10-13"
+  ],
+  "signals": 110,
+  "verdict": "fail",
+  "wf_net": -21300.8052836
+ },
+ "R3": {
+  "bh_q": 0.8662674650698603,
+  "desc": "SILVERM 15m red outside bar, PRE-US -> SILVERM put",
+  "final": {
+   "avg_loss": -1677.5276805791666,
+   "avg_win": 1207.068847817,
+   "cost": 8082.559772255001,
+   "days": 25,
+   "exits": {
+    "fut_stop": 11,
+    "lock": 3,
+    "opt_stop": 2,
+    "time": 12
+   },
+   "fut_gross": -10305.0,
+   "gross": -10042.25,
+   "max_dd": 19653.472395855002,
+   "months_below_13k": 0,
+   "net": -18124.809772255,
+   "net_per_day": -724.9923908902,
+   "stale": 1,
+   "top5_removed": -27083.5015593875,
+   "top5_share": null,
+   "trades": 28,
+   "win_rate": 0.35714285714285715,
+   "worst_day": -4048.1095153,
+   "worst_month": -7636.3179862875
+  },
+  "final_twin_mean": -9748.853615568978,
+  "final_twin_p": 0.8223552894211577,
+  "frozen": "X10_L10",
+  "gates": {
+   "bh_q": false,
+   "final_pos": false,
+   "top5": false,
+   "trades30": false,
+   "twin_p": false,
+   "wf_pos": false
+  },
+  "period": [
+   "2026-04-01",
+   "2026-10-13"
+  ],
+  "signals": 39,
+  "verdict": "fail",
+  "wf_net": -134.44552445000022
+ },
+ "R4": {
+  "bh_q": 0.8662674650698603,
+  "desc": "SILVERM 5m red hammer, US-OPEN -> SILVERM call",
+  "final": {
+   "avg_loss": -896.2532594210466,
+   "avg_win": 647.4685597071153,
+   "cost": 15927.4238789125,
+   "days": 44,
+   "exits": {
+    "fut_stop": 26,
+    "lock": 6,
+    "opt_stop": 5,
+    "time": 19
+   },
+   "fut_gross": -23055.0,
+   "gross": -14194.375000000005,
+   "max_dd": 30121.79887891251,
+   "months_below_13k": 0,
+   "net": -30121.79887891251,
+   "net_per_day": -684.5863381571024,
+   "stale": 0,
+   "top5_removed": -35770.06743718125,
+   "top5_share": null,
+   "trades": 56,
+   "win_rate": 0.23214285714285715,
+   "worst_day": -2729.5614407000003,
+   "worst_month": -7398.341804240001
+  },
+  "final_twin_mean": -22069.203690307073,
+  "final_twin_p": 0.8662674650698603,
+  "frozen": "X05_L05",
+  "gates": {
+   "bh_q": false,
+   "final_pos": false,
+   "top5": false,
+   "trades30": true,
+   "twin_p": false,
+   "wf_pos": false
+  },
+  "period": [
+   "2026-04-01",
+   "2026-10-13"
+  ],
+  "signals": 85,
+  "verdict": "fail",
+  "wf_net": -31982.201467602506
+ }
+}

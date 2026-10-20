@@ -1,0 +1,33 @@
+id: r86-e2
+title: 'R86 E2: MCX roll window (5 sessions before a contract roll) is busier: a SIZE fact for GOLDM, SILVERM'
+family: mcx-crypto
+date: '2026-10-19'
+doc: research/HUNT_R86_BIG_PLAYERS.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG.md): MCX roll window (5 sessions before a contract roll) is busier:
+  a SIZE fact for GOLDM, SILVERM beats random twins in walk-forward design (net > 0 and > twins, twin p < 0.10, BH q < 0.10
+  over R86''s 23 tests, not carried by the top 5), then in the final window read once.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (participants/, index_daily, index_1m, equity_1m, derived/r28_gex, fut_daily_continuous;
+  files of 13-15 Oct 2026); CFTC Disaggregated Futures-Only history files downloaded 19 Oct 2026
+period:
+  design: 2012 - 2022
+  holdout: 'final window NOT read: no R86 test passed design (PREREG section 2)'
+instruments:
+- GOLD
+- SILVER
+features:
+- 'signal source: the underlying (index / MCX future) or positioning data about it; no option chart'
+- roll days from the continuous future's OI jump (>= 1.5x)
+- abs roll-adjusted daily return
+model_or_rule: mean abs return inside / outside the window vs random windows (permutation)
+settings: research/hunt/r86/r86study.py, r86lib.py; PREREG.md
+prereg: research/hunt/r86/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Design walk-forward. E2-GOLD: ratio 1.141 (inside 620 / outside 2086 sessions), random windows 1.0, p 0.010, BH
+    q 0.115, without top 5 1.089, 8 of 11 years above 1; E2-SILVER: ratio 1.036 (inside 275 / outside 2451 sessions), random
+    windows 1.005, p 0.343, BH q 0.667, without top 5 0.944, 5 of 11 years above 1. Verdict: FAIL (no test passed the design
+    gates; final window not read).'
+  costs: none (size fact)
+holdout_read: false
+verdict: rejected
+notes: Understanding the big players' footprints (Boss, 19 Oct). Research only; nothing changes paper or live.

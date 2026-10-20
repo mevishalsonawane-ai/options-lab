@@ -1,0 +1,35 @@
+id: mb1-l1-direction
+title: 'MCX brain L1-C: up or down over the next hour'
+family: ml
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: The brain forecasts the sign of the next-60-minute return better than the base rate (AUC >= 0.55, log-loss below
+  the base rate).
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLD
+- GOLDM
+- SILVER
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- all 56 MCX L4 features
+model_or_rule: HistGradientBoosting classifier (primary) and logistic, per symbol
+settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_metrics.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design: 0 of 6 pass. GOLD AUC 0.526 (4471 rows, fail); holdout AUC 0.533 (3856 rows); GOLDM AUC 0.533 (7333 rows,
+    fail); holdout AUC 0.517 (3873 rows); SILVER AUC 0.535 (3870 rows, fail); holdout AUC 0.504 (3844 rows); SILVERM AUC 0.533
+    (6620 rows, fail); holdout AUC 0.525 (3912 rows); CRUDEOIL AUC 0.492 (7499 rows, fail); holdout AUC 0.481 (3886 rows);
+    NATURALGAS AUC 0.500 (7456 rows, fail); holdout AUC 0.523 (3772 rows).'
+  costs: none (forecasts, no trades)
+holdout_read: true
+verdict: rejected
+notes: Direction is not predictable, as in R16 and B1.

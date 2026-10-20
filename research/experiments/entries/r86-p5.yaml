@@ -1,0 +1,31 @@
+id: r86-p5
+title: 'R86 P5: FII crowding (long share far from its median) as a NIFTY 5-day range input'
+family: flow-oi
+date: '2026-10-19'
+doc: research/HUNT_R86_BIG_PLAYERS.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG.md): FII crowding (long share far from its median) as a NIFTY 5-day
+  range input beats random twins in walk-forward design (net > 0 and > twins, twin p < 0.10, BH q < 0.10 over R86''s 23 tests,
+  not carried by the top 5), then in the final window read once.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (participants/, index_daily, index_1m, equity_1m, derived/r28_gex, fut_daily_continuous;
+  files of 13-15 Oct 2026); CFTC Disaggregated Futures-Only history files downloaded 19 Oct 2026
+period:
+  design: 2012 - 2022 (walk-forward years 2015-2022)
+  holdout: 'final window NOT read: no R86 test passed design (PREREG section 2)'
+instruments:
+- NIFTY
+- INDIAVIX
+features:
+- 'signal source: the underlying (index / MCX future) or positioning data about it; no option chart'
+- abs(pct(FII long share) - 0.5)
+- 'baseline: log VIX, log 5-day and 1-day range'
+model_or_rule: OLS log range forecast, walk-forward by year, Diebold-Mariano
+settings: research/hunt/r86/r86study.py, r86lib.py; PREREG.md
+prereg: research/hunt/r86/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design walk-forward. P5: 1972 forecasts, MSE change -0.48% of the baseline''s (positive = better), DM t -0.89,
+    twin p 0.998, p 0.998, BH q 0.998. Verdict: FAIL (no test passed the design gates; final window not read).'
+  costs: none (forecast test)
+holdout_read: false
+verdict: rejected
+notes: Understanding the big players' footprints (Boss, 19 Oct). Research only; nothing changes paper or live.

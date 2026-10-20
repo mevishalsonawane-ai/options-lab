@@ -1,0 +1,1142 @@
+{
+ "built_from": [
+  "design_metrics.json",
+  "l4_design.json",
+  "holdout_metrics.json"
+ ],
+ "cards": [
+  {
+   "symbol": "GOLD",
+   "name": "gold",
+   "modelled": true,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.253,
+     "sessions": 101
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.217,
+     "sessions": 144
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.255,
+     "sessions": 145
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.212,
+     "sessions": 151
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.228,
+     "sessions": 159
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.215,
+     "sessions": 165
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.211,
+     "sessions": 168
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.19,
+     "sessions": 171
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.229,
+     "sessions": 166
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.292,
+     "sessions": 172
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.352,
+     "sessions": 174
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.338,
+     "sessions": 175
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.302,
+     "sessions": 165
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.233,
+     "sessions": 173
+    }
+   ],
+   "size": {
+    "verdict": "pass",
+    "skill_pct": 13.9,
+    "rows": 4720,
+    "sessions": 146,
+    "best_plain_guess": "b_iv",
+    "band80_coverage": 0.728
+   },
+   "direction": {
+    "verdict": "fail",
+    "auc": 0.526,
+    "rows": 4471,
+    "committee_hit_rate": 0.514,
+    "committee_acted": 2728
+   },
+   "holdout": {
+    "size_skill_pct": 12.0,
+    "size_rows": 3917,
+    "direction_auc": 0.533,
+    "direction_rows": 3856,
+    "committee_hit_rate": 0.514,
+    "committee_acted": 2081
+   },
+   "us_open": {
+    "size_skill_pct": 8.2,
+    "days": 87,
+    "continue_rate": 0.471,
+    "continue_auc": 0.464,
+    "verdict_size": "fail",
+    "verdict_continue": "fail"
+   },
+   "events": {
+    "us_macro": {
+     "times_bigger": 1.74,
+     "n": 10,
+     "follow_rate": 0.545,
+     "n_follow": 11,
+     "verdict_bigger": "pass",
+     "verdict_follow": "fail"
+    }
+   }
+  },
+  {
+   "symbol": "GOLDM",
+   "name": "gold mini",
+   "modelled": true,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.309,
+     "sessions": 194
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.259,
+     "sessions": 207
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.289,
+     "sessions": 206
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.245,
+     "sessions": 203
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.247,
+     "sessions": 207
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.226,
+     "sessions": 208
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.23,
+     "sessions": 209
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.203,
+     "sessions": 208
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.266,
+     "sessions": 217
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.325,
+     "sessions": 219
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.403,
+     "sessions": 221
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.372,
+     "sessions": 220
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.317,
+     "sessions": 220
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.255,
+     "sessions": 221
+    }
+   ],
+   "size": {
+    "verdict": "pass",
+    "skill_pct": 19.1,
+    "rows": 7359,
+    "sessions": 150,
+    "best_plain_guess": "b_iv",
+    "band80_coverage": 0.8
+   },
+   "direction": {
+    "verdict": "fail",
+    "auc": 0.533,
+    "rows": 7333,
+    "committee_hit_rate": 0.506,
+    "committee_acted": 4042
+   },
+   "holdout": {
+    "size_skill_pct": 8.4,
+    "size_rows": 3917,
+    "direction_auc": 0.517,
+    "direction_rows": 3873,
+    "committee_hit_rate": 0.528,
+    "committee_acted": 1171
+   },
+   "us_open": {
+    "size_skill_pct": 5.8,
+    "days": 145,
+    "continue_rate": 0.462,
+    "continue_auc": 0.517,
+    "verdict_size": "fail",
+    "verdict_continue": "fail"
+   },
+   "events": {
+    "us_macro": {
+     "times_bigger": 1.6,
+     "n": 17,
+     "follow_rate": 0.5,
+     "n_follow": 18,
+     "verdict_bigger": "pass",
+     "verdict_follow": "fail"
+    }
+   },
+   "rules": {
+    "B1": "fail",
+    "B2": "fail",
+    "B3": "fail",
+    "B4": "fail"
+   }
+  },
+  {
+   "symbol": "SILVER",
+   "name": "silver",
+   "modelled": true,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.413,
+     "sessions": 109
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.405,
+     "sessions": 137
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.488,
+     "sessions": 138
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.449,
+     "sessions": 135
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.453,
+     "sessions": 142
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.442,
+     "sessions": 146
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.389,
+     "sessions": 153
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.364,
+     "sessions": 153
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.455,
+     "sessions": 157
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.584,
+     "sessions": 146
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.726,
+     "sessions": 153
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.711,
+     "sessions": 158
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.53,
+     "sessions": 158
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.455,
+     "sessions": 162
+    }
+   ],
+   "size": {
+    "verdict": "pass",
+    "skill_pct": 17.7,
+    "rows": 4041,
+    "sessions": 130,
+    "best_plain_guess": "b_last",
+    "band80_coverage": 0.766
+   },
+   "direction": {
+    "verdict": "fail",
+    "auc": 0.535,
+    "rows": 3870,
+    "committee_hit_rate": 0.509,
+    "committee_acted": 2888
+   },
+   "holdout": {
+    "size_skill_pct": 9.8,
+    "size_rows": 3917,
+    "direction_auc": 0.504,
+    "direction_rows": 3844,
+    "committee_hit_rate": 0.503,
+    "committee_acted": 2278
+   },
+   "us_open": {
+    "size_skill_pct": -16.7,
+    "days": 74,
+    "continue_rate": 0.479,
+    "continue_auc": 0.531,
+    "verdict_size": "fail",
+    "verdict_continue": "fail"
+   },
+   "events": {
+    "us_macro": {
+     "times_bigger": 1.63,
+     "n": 9,
+     "follow_rate": 0.3,
+     "n_follow": 10,
+     "verdict_bigger": "pass",
+     "verdict_follow": "fail"
+    }
+   }
+  },
+  {
+   "symbol": "SILVERM",
+   "name": "silver mini",
+   "modelled": true,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.502,
+     "sessions": 160
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.473,
+     "sessions": 186
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.56,
+     "sessions": 189
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.474,
+     "sessions": 189
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.486,
+     "sessions": 190
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.467,
+     "sessions": 191
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.458,
+     "sessions": 200
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.419,
+     "sessions": 201
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.504,
+     "sessions": 205
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.691,
+     "sessions": 207
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.789,
+     "sessions": 209
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.798,
+     "sessions": 209
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.612,
+     "sessions": 209
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.523,
+     "sessions": 210
+    }
+   ],
+   "size": {
+    "verdict": "pass",
+    "skill_pct": 18.2,
+    "rows": 6693,
+    "sessions": 149,
+    "best_plain_guess": "b_iv",
+    "band80_coverage": 0.647
+   },
+   "direction": {
+    "verdict": "fail",
+    "auc": 0.533,
+    "rows": 6620,
+    "committee_hit_rate": 0.532,
+    "committee_acted": 3586
+   },
+   "holdout": {
+    "size_skill_pct": 8.2,
+    "size_rows": 3917,
+    "direction_auc": 0.525,
+    "direction_rows": 3912,
+    "committee_hit_rate": 0.471,
+    "committee_acted": 1096
+   },
+   "us_open": {
+    "size_skill_pct": -10.1,
+    "days": 136,
+    "continue_rate": 0.489,
+    "continue_auc": 0.476,
+    "verdict_size": "fail",
+    "verdict_continue": "fail"
+   },
+   "events": {
+    "us_macro": {
+     "times_bigger": 1.15,
+     "n": 17,
+     "follow_rate": 0.556,
+     "n_follow": 18,
+     "verdict_bigger": "pass",
+     "verdict_follow": "fail"
+    }
+   },
+   "rules": {
+    "B1": "fail",
+    "B2": "fail",
+    "B3": "fail",
+    "B4": "fail"
+   }
+  },
+  {
+   "symbol": "CRUDEOIL",
+   "name": "crude oil",
+   "modelled": true,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.316,
+     "sessions": 212
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.285,
+     "sessions": 212
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.393,
+     "sessions": 213
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.504,
+     "sessions": 213
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.537,
+     "sessions": 213
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.688,
+     "sessions": 214
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.598,
+     "sessions": 214
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.589,
+     "sessions": 214
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.57,
+     "sessions": 223
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.716,
+     "sessions": 223
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.79,
+     "sessions": 224
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.804,
+     "sessions": 224
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.696,
+     "sessions": 223
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.585,
+     "sessions": 224
+    }
+   ],
+   "size": {
+    "verdict": "fail",
+    "skill_pct": 4.0,
+    "rows": 7628,
+    "sessions": 150,
+    "best_plain_guess": "b_iv",
+    "band80_coverage": 0.718
+   },
+   "direction": {
+    "verdict": "fail",
+    "auc": 0.492,
+    "rows": 7499,
+    "committee_hit_rate": 0.499,
+    "committee_acted": 5220
+   },
+   "holdout": {
+    "size_skill_pct": 13.1,
+    "size_rows": 3917,
+    "direction_auc": 0.481,
+    "direction_rows": 3886,
+    "committee_hit_rate": 0.512,
+    "committee_acted": 1844
+   },
+   "us_open": {
+    "size_skill_pct": -30.9,
+    "days": 149,
+    "continue_rate": 0.531,
+    "continue_auc": 0.43,
+    "verdict_size": "fail",
+    "verdict_continue": "fail"
+   },
+   "events": {
+    "eia": {
+     "times_bigger": 1.15,
+     "n": 42,
+     "follow_rate": 0.511,
+     "n_follow": 45,
+     "verdict_bigger": "fail",
+     "verdict_follow": "fail"
+    },
+    "us_macro": {
+     "times_bigger": 1.02,
+     "n": 17,
+     "follow_rate": 0.667,
+     "n_follow": 18,
+     "verdict_bigger": "fail",
+     "verdict_follow": "fail"
+    }
+   },
+   "rules": {
+    "B1": "fail",
+    "B2": "fail",
+    "B3": "fail",
+    "B4": "fail"
+   }
+  },
+  {
+   "symbol": "CRUDEOILM",
+   "name": "crude mini",
+   "modelled": false,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.45,
+     "sessions": 20
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.497,
+     "sessions": 20
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.744,
+     "sessions": 20
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.674,
+     "sessions": 20
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.723,
+     "sessions": 20
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.8,
+     "sessions": 20
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.806,
+     "sessions": 20
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.792,
+     "sessions": 20
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.699,
+     "sessions": 20
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 1.101,
+     "sessions": 20
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.952,
+     "sessions": 20
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.835,
+     "sessions": 20
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 1.045,
+     "sessions": 20
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.686,
+     "sessions": 20
+    }
+   ]
+  },
+  {
+   "symbol": "NATURALGAS",
+   "name": "natural gas",
+   "modelled": true,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.474,
+     "sessions": 207
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.5,
+     "sessions": 212
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.768,
+     "sessions": 213
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.624,
+     "sessions": 213
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.541,
+     "sessions": 213
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.539,
+     "sessions": 214
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.681,
+     "sessions": 214
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.853,
+     "sessions": 214
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 1.267,
+     "sessions": 223
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 1.387,
+     "sessions": 223
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 1.318,
+     "sessions": 224
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 1.256,
+     "sessions": 224
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 1.047,
+     "sessions": 223
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.926,
+     "sessions": 224
+    }
+   ],
+   "size": {
+    "verdict": "pass",
+    "skill_pct": 17.5,
+    "rows": 7628,
+    "sessions": 150,
+    "best_plain_guess": "b_tod",
+    "band80_coverage": 0.779
+   },
+   "direction": {
+    "verdict": "fail",
+    "auc": 0.5,
+    "rows": 7456,
+    "committee_hit_rate": 0.511,
+    "committee_acted": 3835
+   },
+   "holdout": {
+    "size_skill_pct": 3.5,
+    "size_rows": 3917,
+    "direction_auc": 0.523,
+    "direction_rows": 3772,
+    "committee_hit_rate": 0.497,
+    "committee_acted": 947
+   },
+   "us_open": {
+    "size_skill_pct": -5.1,
+    "days": 149,
+    "continue_rate": 0.524,
+    "continue_auc": 0.511,
+    "verdict_size": "fail",
+    "verdict_continue": "fail"
+   },
+   "events": {
+    "storage": {
+     "times_bigger": 1.23,
+     "n": 33,
+     "follow_rate": 0.444,
+     "n_follow": 36,
+     "verdict_bigger": "pass",
+     "verdict_follow": "fail"
+    },
+    "us_macro": {
+     "times_bigger": 1.13,
+     "n": 17,
+     "follow_rate": 0.765,
+     "n_follow": 17,
+     "verdict_bigger": "fail",
+     "verdict_follow": "fail"
+    }
+   },
+   "rules": {
+    "B1": "fail",
+    "B2": "fail",
+    "B3": "fail",
+    "B4": "fail"
+   }
+  },
+  {
+   "symbol": "NATGASMINI",
+   "name": "natural gas mini",
+   "modelled": false,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.306,
+     "sessions": 36
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.258,
+     "sessions": 36
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.366,
+     "sessions": 36
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.444,
+     "sessions": 36
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.406,
+     "sessions": 36
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.357,
+     "sessions": 36
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.399,
+     "sessions": 36
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.601,
+     "sessions": 36
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.953,
+     "sessions": 37
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.913,
+     "sessions": 37
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.89,
+     "sessions": 37
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.784,
+     "sessions": 37
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.608,
+     "sessions": 37
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.483,
+     "sessions": 37
+    }
+   ]
+  },
+  {
+   "symbol": "COPPER",
+   "name": "copper",
+   "modelled": false,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.232,
+     "sessions": 33
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.223,
+     "sessions": 34
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.214,
+     "sessions": 34
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.284,
+     "sessions": 34
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.273,
+     "sessions": 34
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.241,
+     "sessions": 34
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.211,
+     "sessions": 34
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.232,
+     "sessions": 34
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.229,
+     "sessions": 35
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.267,
+     "sessions": 35
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.246,
+     "sessions": 35
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.247,
+     "sessions": 35
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.17,
+     "sessions": 35
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.172,
+     "sessions": 35
+    }
+   ]
+  },
+  {
+   "symbol": "ZINC",
+   "name": "zinc",
+   "modelled": false,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.417,
+     "sessions": 22
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.263,
+     "sessions": 34
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.281,
+     "sessions": 34
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.357,
+     "sessions": 34
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.305,
+     "sessions": 34
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.251,
+     "sessions": 34
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.235,
+     "sessions": 34
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.22,
+     "sessions": 34
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.318,
+     "sessions": 35
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.346,
+     "sessions": 35
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.284,
+     "sessions": 35
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.244,
+     "sessions": 35
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.229,
+     "sessions": 35
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.155,
+     "sessions": 35
+    }
+   ]
+  },
+  {
+   "symbol": "ALUMINIUM",
+   "name": "aluminium",
+   "modelled": false,
+   "hourly_range": [
+    {
+     "hour": "09:00",
+     "median_pct": 0.28,
+     "sessions": 17
+    },
+    {
+     "hour": "10:00",
+     "median_pct": 0.216,
+     "sessions": 33
+    },
+    {
+     "hour": "11:00",
+     "median_pct": 0.196,
+     "sessions": 34
+    },
+    {
+     "hour": "12:00",
+     "median_pct": 0.329,
+     "sessions": 34
+    },
+    {
+     "hour": "13:00",
+     "median_pct": 0.242,
+     "sessions": 34
+    },
+    {
+     "hour": "14:00",
+     "median_pct": 0.192,
+     "sessions": 34
+    },
+    {
+     "hour": "15:00",
+     "median_pct": 0.19,
+     "sessions": 34
+    },
+    {
+     "hour": "16:00",
+     "median_pct": 0.221,
+     "sessions": 34
+    },
+    {
+     "hour": "17:00",
+     "median_pct": 0.271,
+     "sessions": 35
+    },
+    {
+     "hour": "18:00",
+     "median_pct": 0.249,
+     "sessions": 35
+    },
+    {
+     "hour": "19:00",
+     "median_pct": 0.228,
+     "sessions": 35
+    },
+    {
+     "hour": "20:00",
+     "median_pct": 0.23,
+     "sessions": 35
+    },
+    {
+     "hour": "21:00",
+     "median_pct": 0.144,
+     "sessions": 35
+    },
+    {
+     "hour": "22:00",
+     "median_pct": 0.158,
+     "sessions": 35
+    }
+   ]
+  }
+ ]
+}

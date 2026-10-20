@@ -1280,3 +1280,120 @@ Signal source: the indices' own 5-minute bars (R72 C1, 4 of 5); R75's C harness,
   -Rs 5,049; X-skip Rs 0. About 2 signals a month lose Rs 9.7k or more (36 in design): normal for this arm.
 - The app's same-direction cap on Breadth alone turns design +Rs 2.17 lakh into -Rs 19k. Recommendation: Breadth
   record-only on paper (or uncapped, Boss's call); not a live candidate at 1 lot x 5 indices (account stop breached).
+
+## MCX candle anatomy and option-buying rules from it (R85, 19 Oct 2026) - 0 of 4 pass; nothing goes to paper
+Full study: `HUNT_R85_MCX_CANDLES.md` (pre-registered `hunt/r85/PREREG.md`, commit 4ec89fc; amendment A1 6c5e7f3 froze the
+rules before any P&L; deviation D1 in `hunt/r85/NOTES.md`). Signal source: the MCX future itself (lake `spot` = the
+nearest option's underlying, close-only candles), trade = BUY the 1-ITM call / put (Boss, 19 Oct: options buying only).
+Real MCX minutes, GOLD/GOLDM/SILVER/SILVERM/CRUDEOIL/NATURALGAS; design 5 Aug 2025 - 31 Mar 2026, final 1 Apr - 13 Oct 2026
+read once.
+- Part 1: 7,564 candle cells (11 shapes, 22 contexts, 7 sessions, 1m-1h) at h = 3; 59 BH q < 0.10, but most are the
+  2025-26 metals rally (red candles "reverse" in any up-trend). 18 survive a same-colour (drift-neutral) baseline; on day
+  candles (2010-2022) none does. After 1 Apr the 18 kept their sign 15 times but shrank to about a quarter (median 0.28 ->
+  0.08 ATR); the survivors are mostly 1-minute effects, far below an option round trip (1.5-4.5 one-minute ATRs).
+- Part 2 (the 4 cells larger than option costs): final R1 SILVER big red 5m on 2x option activity -> SILVERM call
+  -Rs 17,053 (80 trades); R2 GOLDM red 5m in a high-volatility lull -> GOLDM call -Rs 29,131 (74); R3 SILVERM red 15m
+  outside bar pre-US -> put -Rs 18,125 (28); R4 SILVERM red 5m hammer at the US open -> call -Rs 30,122 (56). Twin p
+  0.19-0.87, walk-forward negative for all. No month below -Rs 13k (worst -Rs 7.6k).
+- Hammer, shooting star, engulfing, inside/outside bars, marubozu and three-in-a-row carry no tradable meaning on MCX.
+  OI classes (long build-up etc.) do not separate the next 15 minutes (Sep-Oct 2026 true futures, descriptive).
+- Candles are largest in the US-open hour (GOLDM 15m 1.7x the 14:00-17:00 lull; natural gas from 17:00 2-3x its morning).
+## The big players' footprints: FII positioning, CFTC managed money, stop runs, VWAP algos, dealer gamma, rolls (R86, 19 Oct 2026) - 0 of 23 pass
+Full study: `HUNT_R86_BIG_PLAYERS.md` (pre-registered `hunt/r86/PREREG.md`, commit 65267ec); the cited guide to who the
+big players are and how they work: `BIG_PLAYERS_GUIDE.md`. Signal source: the underlying or positioning data about it;
+trades on the underlying's future with real costs and a stop. BH over 23 tests; final windows not read (nothing passed).
+- FII positioning levels, 5-day shifts and option stance (NSE participant OI, 2015-2022 walk-forward) did not call NIFTY's
+  next 5 days: 120-184 trades per rule, Rs -0.65 to -5.31 lakh, none significantly better than random days (twin p 0.37-0.99). Client option writing and
+  FII crowding add nothing to a VIX-based 5-day range forecast (1,972 forecasts).
+- CFTC managed-money extremes (COT index, 4 weeks) leaned contrarian on MCX silver: +Rs 2.14 lakh on 47 SILVERM trades,
+  twin p 0.006, but -Rs 27,528 without the top 5 and BH q 0.115. Not proven. Weekly COT changes carry nothing.
+- Stop runs: a poke beyond yesterday's high/low, a round number or the opening range that closes back within 10 minutes
+  is not followed by a reversal (-2.9 to +1.4 bps in 60 minutes). Fading it lost on all 6 level x index tests (295-804
+  trades, Rs -2.3 to -5.5 lakh, 2022-24). Keep trading breaks, not fades.
+- VWAP: a midday stretch from NIFTY's turnover-weighted VWAP tends to continue, least on busy days (1,465 days
+  2019-2024); the fade to VWAP on busy days lost Rs 64,786 on 71 trades. Early turnover predicts a busy day (corr 0.67).
+- Dealer gamma adds nothing to the rest-of-day range forecast once VIX and the morning range are known (492 days per
+  index, 0.95-2.8% worse error). Size stops from VIX and the range, not GEX.
+- Gold moves about 14% more in the 5 sessions before a GOLDM contract roll (620 sessions 2012-2022, p 0.010, q 0.115):
+  a size fact, not proven. NIFTY rollover % does not call next month (32 trades, carried by its top 5).
+- The phone's tick recordings (large prints, absorption) were not reachable: idea 7 not run.
+
+## How the big players trade, read backwards from index and constituent minutes (R86b, 19 Oct 2026) - footprints yes; 0 of 8 follow rules pass
+Full study: `HUNT_R86B_HOW_BIG_PLAYERS_TRADE.md` (pre-registered `hunt/r86/PREREG_B.md`, commit 155f3f2). Data: NIFTY /
+BANKNIFTY 1-minute bars and the 59 current index stocks' minute turnover, 2019-2024 (design); final 2025-26 not read.
+- Big selling is fast, big buying is slow: on FIIs' heaviest index-futures selling days NIFTY made about 61% of its move
+  by 10:15 (gap 37%, first hour 24%) and 6% in the last hour (169 days); on their heaviest buying days 40% by 10:15 and
+  16% in the last hour, with a busier close (18.3% vs 16.1% of turnover in the last 30 minutes; 179 days). Clients'
+  heavy-buying days look like FII-selling days (they take the other side).
+- Funds trade at the close on benchmark days: the last 30 minutes carry 26.7% of NIFTY's turnover at month-end (72 days)
+  and 23.2% on monthly expiry days, vs 16.1% on all days (1,480).
+- Basket bursts (>= 80% of the stocks one way on 3x turnover) happen ~0.7 a day on NIFTY, 2.4x as often on FII-selling
+  days, and agree with the day's direction 65% of the time, but the 15-60 minutes after one move no more than after a
+  random minute (997 bursts). Absorption at the day's extreme (heavy volume, no move) was almost never seen (2 + 4 cases).
+- Following any of these early (steady morning drift, bursts, absorption fades, a heavy last hour held overnight): 0 of 8
+  pass (best q 0.319). The steady-drift follow on NIFTY broke even (+Rs 3,403 on 82 trades, all in its top 5).
+
+## Catching the big players, six ways, and every early seller pattern (R86c, 19 Oct 2026) - 0 of 12 pass; sellers recognisable by 09:45
+Full study: `HUNT_R86C_CATCH_THEM.md` (pre-registered `hunt/r86/PREREG_C.md`, commits 6f7c61f and e603e38). Design to
+2024 (folds 2022-2024); final 2025-26 not read. Signal on the underlying except C4 (option-chain trigger, non-default).
+- Seller patterns by 09:45 (2019-2024): a gap down >= 0.5% marks a heavy FII selling day 3.25x more often than chance
+  on NIFTY (132 days) and 2.73x on BANKNIFTY (107); a gap down with no recovery in 30 minutes 3.5x / 3.2x (55 / 45 days);
+  India VIX up >= 5% 2.3x / 2.2x (87 / 87). Closing at the lows, failed bounces, breadth and volume signs are 1.0-1.7x.
+- After a gap down NIFTY tends to bounce from 09:45 (+7 to +21 bps to 11:15); BANKNIFTY keeps falling when the gap is
+  not recovered (-17 bps to 11:15, -23 bps to 15:15, 45 days).
+- Seller detector at 09:45 (C6): BANKNIFTY +Rs 36,188 on 13 shorts, twin p 0.002, q 0.024, but -Rs 12,654 without its
+  top 5: fails. FII-buyer detector at 12:00 (C5): AUC 0.75-0.90 on NIFTY, trade +Rs 28,842 on 40 (q 0.23, carried by
+  the top 5). Both not proven; C6 is worth a fresh pre-registered test on new data.
+- Buying the VWAP dip on slow-buying days (C1), fading the month-end close (C2), straddles on predicted busy afternoons
+  (C3; buying the 11:30 straddle every day lost Rs 124-135 a day) and following unusual OTM option volume (C4: -Rs 1.71
+  lakh / -Rs 1.38 lakh on 215 / 256 trades, worse than random minutes) all fail.
+
+## The BANKNIFTY seller detector, improved, on unseen data (R86d, 19 Oct 2026) - 0 of 4 pass; it recognises sellers but does not pay
+Full study: `HUNT_R86D_SELLER_DETECTOR.md` (pre-registered `hunt/r86/PREREG_D.md`, commit 544ddd5; post-hoc design
+committed a9624bc before the one read of 1 Jan 2025 - 14 Oct 2026). Signal on the underlying; short at 09:45.
+- On the unseen window the detector still ranks heavy FII-selling mornings well (AUC 0.72-0.74), but shorting them lost:
+  R86c's C6 as it was -Rs 10,477 on 23 trades (it made +Rs 36,188 on 13 in 2023-24); pooled training -Rs 50,470 (31);
+  hold to 15:15 -Rs 5,084 (23); the plain gap-down rule -Rs 16,336 (25); combined -Rs 41,361 (62). Win rate 32-39%.
+- Bought as an ATM put, three versions were +Rs 7.5k to +Rs 17.7k, all negative without their top 5. Rejected: a seller
+  at work at 09:45 has usually finished its push; the bounce hits the stop.
+## MCX Data Brain, 5 levels (MB1, 20 Oct 2026) - size of the next hour predictable on 5 of 6 (holdout 8-13%), direction not; 0 of 16 brain rules pass
+Full study: `BRAIN_MCX.md`, rules `HUNT_MB1_MCX_BRAIN.md` (pre-registered `brain/mcx/PREREG.md`, commit 8f1d9f5b). Signal
+source: the MCX future's minute closes (the near future from the 6 option books, Aug 2025 - Oct 2026); ATM IV as
+context. Data stored as Parquet zstd cube / features and float32 tensors (memmap .npy, Arrow, joint [11 x minute x 56],
+120-minute windows) on Drive `derived/mcx_brain/v1/`. Design to 23 Jun 2026 (226 sessions, walk-forward ~150), locked
+holdout 1 Jul - 16 Oct (76 sessions) read once for the predictions only.
+- L1 size of the next 60 minutes beats the best plain guess (often the option market's own IV) by 14-19% in design and
+  8-13% on the holdout on GOLD, GOLDM, SILVER, SILVERM (and crude 13% on the holdout after 4% in design); natural gas
+  17.5% then 3.5% (fails). 3,917 holdout forecasts a symbol.
+- Direction (AUC 0.48-0.54), persistence of the last hour (47-51%), the US open (0 of 12) and follow/fade around
+  releases (0 of 8): not predictable. US CPI/NFP hours are 1.15-1.74x the usual hour on gold/silver (9-17 releases),
+  EIA gas storage 1.23x (33): a risk fact. The L2 autoencoder state adds nothing (0 of 12); the L3 committee's one
+  design pass (SILVERM 53.2% of 3,586) fell to 47.1% of 1,096 on the holdout.
+- L4, 32 variants, real MCX costs: 0 of 16 pass. Only lead: B2 "big-size follow" on SILVERM (+Rs 2.53 lakh, 570 trades)
+  and NATGASMINI (+Rs 20k, 421; q 0.08), both carried by their top 5. Buying the straddle when the brain expects more
+  movement than the IV loses on all four (17-32% winners). Nothing goes to paper; the app is unchanged.
+- Not modelled: CRUDEOILM, NATGASMINI, COPPER, ZINC, ALUMINIUM (20-37 sessions, all after the design end; cards only).
+## Candle anatomy: every candle shape on the indices (R87, 19 Oct 2026) - no shape predicts direction; 0 of 3 rules pass
+Full study: `HUNT_R87_CANDLE_ANATOMY.md` (pre-registered `hunt/r87_candle_anatomy/PREREG.md`, commit faa91cd; amendments
+A0-A3). Signal source: the index's own 1m / 5m / 15m candle (NIFTY, BANKNIFTY, SENSEX spot), design Aug 2021 - 14 Oct
+2025, holdout 15 Oct 2025 - 16 Oct 2026 read once. Knowledge pack for Jarvis: `hunt/r87_candle_anatomy/knowledge/`.
+- After any of 43 shapes / patterns / footprints, the index went up over the next 5 candles 43-62% of the time (92% of
+  234 tested 5m/15m cells within 45-55%) vs ~51% for matched candles (same time, trend, volatility, colour). Big tail,
+  big head, both, small both: no edge on any index (NIFTY 15m q 0.79-0.95; holdout q >= 0.98).
+- A long wick is not a defended level: a big tail's low is broken within 10 candles as often as any low at the same
+  distance (NIFTY 5m 59% vs 57%, n 3,314). Only the green marubozu's low holds a little better (NIFTY 15m 38% vs 42%).
+- "Reversal" shapes at trend extremes mostly mark continuation (NIFTY 15m hammer: -0.47 ATR after 20 candles vs +0.19
+  matched); stop runs above the day's high are followed by more upside, not a reversal (agrees with R86).
+- 4,049 shape x context cells (trend, day/prior-day levels, VWAP, opening range, gap, time, ATM OI, gamma proxy, value
+  area, expiry): 0 pass. 2 of 17 design findings held out of sample, both 1-minute and worth 1.6-1.8 points (< an
+  option round trip of 1.9 NIFTY / 6.4 SENSEX points).
+- Rules on modelled premiums (A1): NIFTY 5m three white soldiers -> call -Rs 3,910 (160 trades); NIFTY 15m stop run
+  above the day high -> call -Rs 25,064 (270); SENSEX 15m gravestone doji -> put +Rs 14,373 (71; twin p 0.026) but
+  walk-forward -Rs 1,923 and negative without its top 5. Holdout not read for rules. Volume / order-flow results rest on
+  an ATM-option activity proxy that correlates only 0.07-0.15 with true futures volume. MCX: see R85 (0 of 4).
+- R87B (20 Oct; `PREREG_B.md`): 30m / 60m / daily shapes and named 3-candle sequences: 0 of 225 pass. One data-driven
+  cluster held out of sample: SENSEX 15m green, green, then a medium red (a pullback after a rise) -> more upside (+0.18
+  ATR design n 840; +0.26 ATR / +22 points holdout n 182). As a 1-ITM call with a stop under the red candle it lost
+  (-Rs 21,127, 162 trades). Exiting an ORB breakout on a big wick against it helped in both windows but not
+  significantly out of sample (+Rs 16,107, p 0.40); exits on a strong opposite candle made arms worse. Real option
+  prices could not be fetched for the design window (Dhan degraded): still model-priced.

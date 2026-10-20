@@ -1,0 +1,32 @@
+id: r87b-r1
+title: 'R87B-1: SENSEX 15m cluster 13 (green, green, red) -> buy SENSEX 1-ITM call, 75 minutes'
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R87_CANDLE_ANATOMY.md
+hypothesis: 'Pre-registered (B-A1, mechanical selection): buying the 1-ITM call on the SENSEX 15m green-green-red cluster
+  is profitable after costs in walk-forward, beats 500 random-entry twins (p < 0.10), > 0 without its 5 best trades, >= 30
+  trades.'
+data_version: 'Dhan v2 direct: index 1-minute (R87, A2-cleaned) and daily (2015-2026); option snapshot of 19 Oct 2026 23:30
+  UTC (real 1-ITM only for SENSEX holdout months; NIFTY ATM 199 design days); hybrid pricing = real where printed, calibrated
+  Black-Scholes/VIX model elsewhere'
+period:
+  design: 20 Nov 2024 - 14 Oct 2025 (walk-forward Feb-Apr, May-Jul, Aug-Oct 2025)
+  holdout: NOT read (failed design gates)
+instruments:
+- SENSEX
+features:
+- 'signal source: the SENSEX index''s own 15m candles; no option chart'
+- 'exits: premium stop 15%/25%, lock, underlying stop under the signal candle''s low, 75 minutes, square-off'
+model_or_rule: R87B-1
+settings: research/hunt/r87_candle_anatomy/brules.py, rules.py, sim.py; PREREG_B.md B-A1
+prereg: research/hunt/r87_candle_anatomy/PREREG_B.md
+variants_tried: 2
+results:
+  summary: 'Design 162 trades, win 22%, net -Rs 21,127 (stop 25%; 15%: -Rs 21,650), gross -Rs 9,143, charges Rs 10,160, without
+    top 5 -Rs 33,701, worst day -Rs 1,919, max DD Rs 23,665; walk-forward -Rs 17,894 (133; folds -10,990 / -3,496 / -3,408);
+    twins mean -Rs 11,039, p 0.752. Underlying stop closed 117 of 162 trades. Real entry prints 0%. FAIL.'
+  costs: hybrid prices (model in practice in design), 5 bps + ticks, dated charges, 1 lot in force
+holdout_read: false
+verdict: rejected
+notes: The underlying signal held out of sample (r87b-atlas); the stop under the red candle was too tight for an option buyer.
+  A wider-stop version would be a new pre-registered idea.

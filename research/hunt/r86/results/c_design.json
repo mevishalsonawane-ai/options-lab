@@ -1,0 +1,881 @@
+{
+ "tests": {
+  "C2-NIFTY": {
+   "n": 84,
+   "net": -5858.0,
+   "win": 0.44,
+   "per_trade": -69.7,
+   "net_wo_top5": -81741.0,
+   "twin_mean": -42425.0,
+   "twin_p": 0.2375249500998004,
+   "by_year": {
+    "2018": 3486.0,
+    "2019": -4165.0,
+    "2020": 17988.0,
+    "2021": 26568.0,
+    "2022": -956.0,
+    "2023": -24424.0,
+    "2024": -24356.0
+   },
+   "n_by_year": {
+    "2018": 12,
+    "2019": 12,
+    "2020": 12,
+    "2021": 12,
+    "2022": 12,
+    "2023": 12,
+    "2024": 12
+   },
+   "p": 0.2375249500998004,
+   "pass_design": false,
+   "month_ends": 84,
+   "fade_hit_rate": 0.44,
+   "bh_q": 0.7125748502994012,
+   "passes": false
+  },
+  "C2-BANKNIFTY": {
+   "n": 40,
+   "net": -10453.0,
+   "win": 0.425,
+   "per_trade": -261.3,
+   "net_wo_top5": -76741.0,
+   "twin_mean": -23481.0,
+   "twin_p": 0.3652694610778443,
+   "by_year": {
+    "2021": 6987.0,
+    "2022": 33702.0,
+    "2023": -9463.0,
+    "2024": -41679.0
+   },
+   "n_by_year": {
+    "2021": 4,
+    "2022": 12,
+    "2023": 12,
+    "2024": 12
+   },
+   "p": 0.3652694610778443,
+   "pass_design": false,
+   "month_ends": 40,
+   "fade_hit_rate": 0.425,
+   "bh_q": 0.7305389221556885,
+   "passes": false
+  },
+  "C1-NIFTY": {
+   "n": 16,
+   "net": -43642.0,
+   "win": 0.125,
+   "per_trade": -2727.6,
+   "net_wo_top5": -40916.0,
+   "twin_mean": -8484.0,
+   "twin_p": 0.998003992015968,
+   "by_year": {
+    "2022": -17053.0,
+    "2023": -9813.0,
+    "2024": -16776.0
+   },
+   "n_by_year": {
+    "2022": 6,
+    "2023": 5,
+    "2024": 5
+   },
+   "p": 0.998003992015968,
+   "pass_design": false,
+   "qualifying_days": 37,
+   "exit_kinds": {
+    "stop": 11,
+    "time": 5
+   },
+   "bh_q": 0.9980039920159681,
+   "passes": false
+  },
+  "C3-NIFTY": {
+   "n": 14,
+   "net": 2156.0,
+   "win": 0.357,
+   "per_trade": 154.0,
+   "net_wo_top5": -13075.0,
+   "twin_mean": -1681.0,
+   "twin_p": 0.22554890219560877,
+   "by_year": {
+    "2022": 0.0,
+    "2023": -1356.0,
+    "2024": 3512.0
+   },
+   "n_by_year": {
+    "2022": 0,
+    "2023": 2,
+    "2024": 12
+   },
+   "p": 0.22554890219560877,
+   "pass_design": false,
+   "all_days_straddle": {
+    "n": 581,
+    "net": -72114.0,
+    "win": 0.301,
+    "per_trade": -124.1,
+    "net_wo_top5": -120881.0
+   },
+   "forecast_mse_full_vs_base": {
+    "full": 0.2154,
+    "base": 0.215,
+    "n": 490
+   },
+   "bh_q": 0.7125748502994012,
+   "passes": false
+  },
+  "C4-NIFTY": {
+   "n": 215,
+   "net": -171410.0,
+   "win": 0.288,
+   "per_trade": -797.3,
+   "net_wo_top5": -191960.0,
+   "twin_mean": -107224.0,
+   "twin_p": 0.9960079840319361,
+   "by_year": {
+    "2022": -42702.0,
+    "2023": -67281.0,
+    "2024": -61427.0
+   },
+   "n_by_year": {
+    "2022": 63,
+    "2023": 76,
+    "2024": 76
+   },
+   "p": 0.9960079840319361,
+   "pass_design": false,
+   "spike_windows": 9451,
+   "label": "option-flow trigger (option-chain volume/OI) confirmed by the underlying: NOT the default class",
+   "bh_q": 0.9980039920159681,
+   "passes": false
+  },
+  "C5-NIFTY": {
+   "n": 40,
+   "net": 28842.0,
+   "win": 0.5,
+   "per_trade": 721.0,
+   "net_wo_top5": -25890.0,
+   "twin_mean": -17094.0,
+   "twin_p": 0.03792415169660679,
+   "by_year": {
+    "2022": 35603.0,
+    "2023": -14323.0,
+    "2024": 7562.0
+   },
+   "n_by_year": {
+    "2022": 21,
+    "2023": 7,
+    "2024": 12
+   },
+   "p": 0.03792415169660679,
+   "pass_design": false,
+   "auc_by_year": {
+    "2022": 0.8954970263381479,
+    "2023": 0.7980903586399627,
+    "2024": 0.7546628407460545
+   },
+   "exit_kinds": {
+    "time": 30,
+    "stop": 10
+   },
+   "bh_q": 0.22754491017964074,
+   "passes": false
+  },
+  "C6-NIFTY": {
+   "n": 16,
+   "net": -7046.0,
+   "win": 0.25,
+   "per_trade": -440.4,
+   "net_wo_top5": -30315.0,
+   "twin_mean": -7773.0,
+   "twin_p": 0.4411177644710579,
+   "by_year": {
+    "2022": 0.0,
+    "2023": -2302.0,
+    "2024": -4744.0
+   },
+   "n_by_year": {
+    "2022": 0,
+    "2023": 4,
+    "2024": 12
+   },
+   "p": 0.4411177644710579,
+   "pass_design": false,
+   "auc_by_year": {
+    "2023": 0.6336270190895742,
+    "2024": 0.6352223816355811
+   },
+   "exit_kinds": {
+    "time": 8,
+    "stop": 8
+   },
+   "held_to_1515": {
+    "n": 16,
+    "net": -6450.0,
+    "win": 0.25,
+    "per_trade": -403.1,
+    "net_wo_top5": -36123.0
+   },
+   "bh_q": 0.756201881950385,
+   "passes": false
+  },
+  "C1-BANKNIFTY": {
+   "n": 31,
+   "net": -21842.0,
+   "win": 0.419,
+   "per_trade": -704.6,
+   "net_wo_top5": -50921.0,
+   "twin_mean": -14818.0,
+   "twin_p": 0.626746506986028,
+   "by_year": {
+    "2022": -11387.0,
+    "2023": -8732.0,
+    "2024": -1723.0
+   },
+   "n_by_year": {
+    "2022": 14,
+    "2023": 9,
+    "2024": 8
+   },
+   "p": 0.626746506986028,
+   "pass_design": false,
+   "qualifying_days": 51,
+   "exit_kinds": {
+    "time": 20,
+    "stop": 11
+   },
+   "bh_q": 0.9401197604790419,
+   "passes": false
+  },
+  "C3-BANKNIFTY": {
+   "n": 9,
+   "net": -6037.0,
+   "win": 0.444,
+   "per_trade": -670.8,
+   "net_wo_top5": -14962.0,
+   "twin_mean": -1375.0,
+   "twin_p": 0.8303393213572854,
+   "by_year": {
+    "2022": 0.0,
+    "2023": 551.0,
+    "2024": -6588.0
+   },
+   "n_by_year": {
+    "2022": 0,
+    "2023": 1,
+    "2024": 8
+   },
+   "p": 0.8303393213572854,
+   "pass_design": false,
+   "all_days_straddle": {
+    "n": 585,
+    "net": -78834.0,
+    "win": 0.287,
+    "per_trade": -134.8,
+    "net_wo_top5": -128318.0
+   },
+   "forecast_mse_full_vs_base": {
+    "full": 0.2418,
+    "base": 0.2454,
+    "n": 490
+   },
+   "bh_q": 0.9964071856287425,
+   "passes": false
+  },
+  "C4-BANKNIFTY": {
+   "n": 256,
+   "net": -138247.0,
+   "win": 0.355,
+   "per_trade": -540.0,
+   "net_wo_top5": -165274.0,
+   "twin_mean": -116369.0,
+   "twin_p": 0.7584830339321357,
+   "by_year": {
+    "2022": -37613.0,
+    "2023": -38865.0,
+    "2024": -61768.0
+   },
+   "n_by_year": {
+    "2022": 94,
+    "2023": 86,
+    "2024": 76
+   },
+   "p": 0.7584830339321357,
+   "pass_design": false,
+   "spike_windows": 11314,
+   "label": "option-flow trigger (option-chain volume/OI) confirmed by the underlying: NOT the default class",
+   "bh_q": 0.9964071856287425,
+   "passes": false
+  },
+  "C5-BANKNIFTY": {
+   "n": 10,
+   "net": 529.0,
+   "win": 0.4,
+   "per_trade": 52.9,
+   "net_wo_top5": -13818.0,
+   "twin_mean": -5066.0,
+   "twin_p": 0.3213572854291417,
+   "by_year": {
+    "2022": 0.0,
+    "2023": 3685.0,
+    "2024": -3156.0
+   },
+   "n_by_year": {
+    "2022": 0,
+    "2023": 4,
+    "2024": 6
+   },
+   "p": 0.3213572854291417,
+   "pass_design": false,
+   "auc_by_year": {
+    "2023": 0.6632510479739171,
+    "2024": 0.6890243902439024
+   },
+   "exit_kinds": {
+    "time": 8,
+    "stop": 2
+   },
+   "bh_q": 0.7305389221556885,
+   "passes": false
+  },
+  "C6-BANKNIFTY": {
+   "n": 13,
+   "net": 36188.0,
+   "win": 0.462,
+   "per_trade": 2783.7,
+   "net_wo_top5": -12654.0,
+   "twin_mean": -6561.0,
+   "twin_p": 0.001996007984031936,
+   "by_year": {
+    "2022": 0.0,
+    "2023": 5490.0,
+    "2024": 30698.0
+   },
+   "n_by_year": {
+    "2022": 0,
+    "2023": 3,
+    "2024": 10
+   },
+   "p": 0.001996007984031936,
+   "pass_design": false,
+   "auc_by_year": {
+    "2023": 0.5367107195301027,
+    "2024": 0.6800573888091822
+   },
+   "exit_kinds": {
+    "time": 9,
+    "stop": 4
+   },
+   "held_to_1515": {
+    "n": 13,
+    "net": 58774.0,
+    "win": 0.538,
+    "per_trade": 4521.1,
+    "net_wo_top5": -11214.0
+   },
+   "bh_q": 0.02395209580838323,
+   "passes": false
+  }
+ },
+ "extra": {
+  "C1-mirror-NIFTY": {
+   "n": 14,
+   "net": -22326.0,
+   "win": 0.357,
+   "per_trade": -1594.7,
+   "net_wo_top5": -30162.0,
+   "twin_mean": -7698.0,
+   "twin_p": 0.9201596806387226,
+   "by_year": {
+    "2022": -10691.0,
+    "2023": 4341.0,
+    "2024": -15976.0
+   },
+   "n_by_year": {
+    "2022": 4,
+    "2023": 4,
+    "2024": 6
+   },
+   "p": 0.9201596806387226,
+   "pass_design": false,
+   "qualifying_days": 45,
+   "exit_kinds": {
+    "time": 9,
+    "stop": 5
+   }
+  },
+  "seller_catalogue-NIFTY": {
+   "P1": {
+    "days": 132,
+    "share_of_days": 0.089,
+    "fii_sell_share": 0.371,
+    "base_rate": 0.114,
+    "lift": 3.25,
+    "fisher_p": 2.1106795250046463e-16,
+    "caught_share_of_sell_days": 0.29,
+    "move_0945_1115_bps": {
+     "with": 7.0,
+     "without": -1.7
+    },
+    "move_0945_1515_bps": {
+     "with": 0.8,
+     "without": -1.4
+    },
+    "client_buy_share": 0.333,
+    "bh_q": 2.5328154300055757e-15
+   },
+   "P2": {
+    "days": 55,
+    "share_of_days": 0.037,
+    "fii_sell_share": 0.4,
+    "base_rate": 0.114,
+    "lift": 3.5,
+    "fisher_p": 2.3792161615030346e-08,
+    "caught_share_of_sell_days": 0.13,
+    "move_0945_1115_bps": {
+     "with": 20.8,
+     "without": -1.7
+    },
+    "move_0945_1515_bps": {
+     "with": 5.5,
+     "without": -1.5
+    },
+    "client_buy_share": 0.273,
+    "bh_q": 1.427529696901821e-07
+   },
+   "P3": {
+    "days": 197,
+    "share_of_days": 0.133,
+    "fii_sell_share": 0.178,
+    "base_rate": 0.114,
+    "lift": 1.55,
+    "fisher_p": 0.0030014423140381865,
+    "caught_share_of_sell_days": 0.207,
+    "move_0945_1115_bps": {
+     "with": 7.7,
+     "without": -2.2
+    },
+    "move_0945_1515_bps": {
+     "with": 10.9,
+     "without": -3.1
+    },
+    "client_buy_share": 0.117,
+    "bh_q": 0.007203461553691648
+   },
+   "P4": {
+    "days": 8,
+    "share_of_days": 0.005,
+    "fii_sell_share": 0.5,
+    "base_rate": 0.114,
+    "lift": 4.37,
+    "fisher_p": 0.007982341362984077,
+    "caught_share_of_sell_days": 0.024,
+    "move_0945_1115_bps": {
+     "with": -32.3,
+     "without": -0.7
+    },
+    "move_0945_1515_bps": {
+     "with": -32.7,
+     "without": -1.0
+    },
+    "client_buy_share": 0.5,
+    "bh_q": 0.015964682725968155
+   },
+   "P5": {
+    "days": 78,
+    "share_of_days": 0.053,
+    "fii_sell_share": 0.192,
+    "base_rate": 0.114,
+    "lift": 1.68,
+    "fisher_p": 0.026245849104193582,
+    "caught_share_of_sell_days": 0.089,
+    "move_0945_1115_bps": {
+     "with": 3.7,
+     "without": -1.1
+    },
+    "move_0945_1515_bps": {
+     "with": 12.7,
+     "without": -2.0
+    },
+    "client_buy_share": 0.192,
+    "bh_q": 0.03936877365629037
+   },
+   "P6": {
+    "days": 89,
+    "share_of_days": 0.06,
+    "fii_sell_share": 0.236,
+    "base_rate": 0.114,
+    "lift": 2.06,
+    "fisher_p": 0.0006095098875002012,
+    "caught_share_of_sell_days": 0.124,
+    "move_0945_1115_bps": {
+     "with": -6.4,
+     "without": -0.5
+    },
+    "move_0945_1515_bps": {
+     "with": -5.5,
+     "without": -0.9
+    },
+    "client_buy_share": 0.213,
+    "bh_q": 0.0018285296625006036
+   },
+   "P7": {
+    "days": 40,
+    "share_of_days": 0.027,
+    "fii_sell_share": 0.2,
+    "base_rate": 0.114,
+    "lift": 1.75,
+    "fisher_p": 0.07725621631216671,
+    "caught_share_of_sell_days": 0.047,
+    "move_0945_1115_bps": {
+     "with": -8.3,
+     "without": -0.7
+    },
+    "move_0945_1515_bps": {
+     "with": -3.8,
+     "without": -1.1
+    },
+    "client_buy_share": 0.15,
+    "bh_q": 0.10300828841622228
+   },
+   "P8": {
+    "days": 321,
+    "share_of_days": 0.217,
+    "fii_sell_share": 0.137,
+    "base_rate": 0.114,
+    "lift": 1.2,
+    "fisher_p": 0.09064239832643295,
+    "caught_share_of_sell_days": 0.26,
+    "move_0945_1115_bps": {
+     "with": 4.1,
+     "without": -2.3
+    },
+    "move_0945_1515_bps": {
+     "with": 8.9,
+     "without": -4.0
+    },
+    "client_buy_share": 0.121,
+    "bh_q": 0.10877087799171954
+   },
+   "P9": {
+    "days": 87,
+    "share_of_days": 0.059,
+    "fii_sell_share": 0.264,
+    "base_rate": 0.114,
+    "lift": 2.31,
+    "fisher_p": 4.895115411441472e-05,
+    "caught_share_of_sell_days": 0.136,
+    "move_0945_1115_bps": {
+     "with": -1.7,
+     "without": -0.8
+    },
+    "move_0945_1515_bps": {
+     "with": 2.8,
+     "without": -1.5
+    },
+    "client_buy_share": 0.207,
+    "bh_q": 0.00019580461645765887
+   },
+   "P10": {
+    "days": 381,
+    "share_of_days": 0.258,
+    "fii_sell_share": 0.113,
+    "base_rate": 0.114,
+    "lift": 0.99,
+    "fisher_p": 0.5744318998318063,
+    "caught_share_of_sell_days": 0.254,
+    "move_0945_1115_bps": {
+     "with": -0.0,
+     "without": -1.2
+    },
+    "move_0945_1515_bps": {
+     "with": 1.6,
+     "without": -2.2
+    },
+    "client_buy_share": 0.102,
+    "bh_q": 0.5744318998318063
+   },
+   "P11": {
+    "days": 451,
+    "share_of_days": 0.305,
+    "fii_sell_share": 0.129,
+    "base_rate": 0.114,
+    "lift": 1.12,
+    "fisher_p": 0.14638801237349555,
+    "caught_share_of_sell_days": 0.343,
+    "move_0945_1115_bps": {
+     "with": -0.3,
+     "without": -1.2
+    },
+    "move_0945_1515_bps": {
+     "with": -1.8,
+     "without": -1.0
+    },
+    "client_buy_share": 0.129,
+    "bh_q": 0.1596960134983588
+   },
+   "P12": {
+    "days": 731,
+    "share_of_days": 0.495,
+    "fii_sell_share": 0.134,
+    "base_rate": 0.114,
+    "lift": 1.17,
+    "fisher_p": 0.011374916521662594,
+    "caught_share_of_sell_days": 0.58,
+    "move_0945_1115_bps": {
+     "with": -1.2,
+     "without": -0.6
+    },
+    "move_0945_1515_bps": {
+     "with": -2.8,
+     "without": 0.3
+    },
+    "client_buy_share": 0.115,
+    "bh_q": 0.019499856894278734
+   },
+   "_n_days": 1478,
+   "_fii_sell_days": 169
+  },
+  "C1-mirror-BANKNIFTY": {
+   "n": 12,
+   "net": -17680.0,
+   "win": 0.333,
+   "per_trade": -1473.3,
+   "net_wo_top5": -32048.0,
+   "twin_mean": -8216.0,
+   "twin_p": 0.6986027944111777,
+   "by_year": {
+    "2022": 6298.0,
+    "2023": -9605.0,
+    "2024": -14373.0
+   },
+   "n_by_year": {
+    "2022": 7,
+    "2023": 2,
+    "2024": 3
+   },
+   "p": 0.6986027944111777,
+   "pass_design": false,
+   "qualifying_days": 43,
+   "exit_kinds": {
+    "time": 8,
+    "stop": 4
+   }
+  },
+  "seller_catalogue-BANKNIFTY": {
+   "P1": {
+    "days": 107,
+    "share_of_days": 0.132,
+    "fii_sell_share": 0.327,
+    "base_rate": 0.12,
+    "lift": 2.73,
+    "fisher_p": 4.3183289868619993e-10,
+    "caught_share_of_sell_days": 0.361,
+    "move_0945_1115_bps": {
+     "with": -9.3,
+     "without": 0.2
+    },
+    "move_0945_1515_bps": {
+     "with": -2.8,
+     "without": 0.3
+    },
+    "client_buy_share": 0.299,
+    "bh_q": 4.750161885548199e-09
+   },
+   "P2": {
+    "days": 45,
+    "share_of_days": 0.055,
+    "fii_sell_share": 0.378,
+    "base_rate": 0.12,
+    "lift": 3.16,
+    "fisher_p": 3.636199436851295e-06,
+    "caught_share_of_sell_days": 0.175,
+    "move_0945_1115_bps": {
+     "with": -16.7,
+     "without": -0.1
+    },
+    "move_0945_1515_bps": {
+     "with": -23.4,
+     "without": 1.3
+    },
+    "client_buy_share": 0.289,
+    "bh_q": 1.9999096902682123e-05
+   },
+   "P3": {
+    "days": 112,
+    "share_of_days": 0.138,
+    "fii_sell_share": 0.125,
+    "base_rate": 0.12,
+    "lift": 1.05,
+    "fisher_p": 0.47540817275271374,
+    "caught_share_of_sell_days": 0.144,
+    "move_0945_1115_bps": {
+     "with": 1.8,
+     "without": -1.5
+    },
+    "move_0945_1515_bps": {
+     "with": 8.6,
+     "without": -1.5
+    },
+    "client_buy_share": 0.089,
+    "bh_q": 0.5864665299694347
+   },
+   "P4": {
+    "days": 29,
+    "share_of_days": 0.036,
+    "fii_sell_share": 0.241,
+    "base_rate": 0.12,
+    "lift": 2.02,
+    "fisher_p": 0.04763672253869004,
+    "caught_share_of_sell_days": 0.072,
+    "move_0945_1115_bps": {
+     "with": -14.3,
+     "without": -0.6
+    },
+    "move_0945_1515_bps": {
+     "with": -4.7,
+     "without": 0.1
+    },
+    "client_buy_share": 0.207,
+    "bh_q": 0.11998376615219215
+   },
+   "P5": {
+    "days": 104,
+    "share_of_days": 0.128,
+    "fii_sell_share": 0.125,
+    "base_rate": 0.12,
+    "lift": 1.05,
+    "fisher_p": 0.47983625179317385,
+    "caught_share_of_sell_days": 0.134,
+    "move_0945_1115_bps": {
+     "with": 4.7,
+     "without": -1.9
+    },
+    "move_0945_1515_bps": {
+     "with": 11.0,
+     "without": -1.7
+    },
+    "client_buy_share": 0.096,
+    "bh_q": 0.5864665299694347
+   },
+   "P6": {
+    "days": 130,
+    "share_of_days": 0.16,
+    "fii_sell_share": 0.138,
+    "base_rate": 0.12,
+    "lift": 1.16,
+    "fisher_p": 0.27682844232362624,
+    "caught_share_of_sell_days": 0.186,
+    "move_0945_1115_bps": {
+     "with": -2.5,
+     "without": -0.8
+    },
+    "move_0945_1515_bps": {
+     "with": -1.8,
+     "without": 0.2
+    },
+    "client_buy_share": 0.154,
+    "bh_q": 0.4350161236514127
+   },
+   "P7": {
+    "days": 24,
+    "share_of_days": 0.03,
+    "fii_sell_share": 0.125,
+    "base_rate": 0.12,
+    "lift": 1.05,
+    "fisher_p": 0.5629953054875105,
+    "caught_share_of_sell_days": 0.031,
+    "move_0945_1115_bps": {
+     "with": -26.4,
+     "without": -0.3
+    },
+    "move_0945_1515_bps": {
+     "with": -19.5,
+     "without": 0.5
+    },
+    "client_buy_share": 0.125,
+    "bh_q": 0.6192948360362616
+   },
+   "P8": {
+    "days": 175,
+    "share_of_days": 0.216,
+    "fii_sell_share": 0.114,
+    "base_rate": 0.12,
+    "lift": 0.96,
+    "fisher_p": 0.6404304178213449,
+    "caught_share_of_sell_days": 0.206,
+    "move_0945_1115_bps": {
+     "with": -2.2,
+     "without": -0.8
+    },
+    "move_0945_1515_bps": {
+     "with": 4.8,
+     "without": -1.5
+    },
+    "client_buy_share": 0.086,
+    "bh_q": 0.6404304178213449
+   },
+   "P9": {
+    "days": 87,
+    "share_of_days": 0.107,
+    "fii_sell_share": 0.264,
+    "base_rate": 0.12,
+    "lift": 2.21,
+    "fisher_p": 6.157856987824438e-05,
+    "caught_share_of_sell_days": 0.237,
+    "move_0945_1115_bps": {
+     "with": -5.7,
+     "without": -0.5
+    },
+    "move_0945_1515_bps": {
+     "with": 2.6,
+     "without": -0.4
+    },
+    "client_buy_share": 0.207,
+    "bh_q": 0.0002257880895535627
+   },
+   "P10": {
+    "days": 0
+   },
+   "P11": {
+    "days": 232,
+    "share_of_days": 0.286,
+    "fii_sell_share": 0.138,
+    "base_rate": 0.12,
+    "lift": 1.15,
+    "fisher_p": 0.1838270365522161,
+    "caught_share_of_sell_days": 0.33,
+    "move_0945_1115_bps": {
+     "with": -6.0,
+     "without": 0.9
+    },
+    "move_0945_1515_bps": {
+     "with": -5.6,
+     "without": 2.1
+    },
+    "client_buy_share": 0.129,
+    "bh_q": 0.3370162336790628
+   },
+   "P12": {
+    "days": 419,
+    "share_of_days": 0.517,
+    "fii_sell_share": 0.138,
+    "base_rate": 0.12,
+    "lift": 1.16,
+    "fisher_p": 0.05453807552372371,
+    "caught_share_of_sell_days": 0.598,
+    "move_0945_1115_bps": {
+     "with": -0.3,
+     "without": -1.9
+    },
+    "move_0945_1515_bps": {
+     "with": 4.0,
+     "without": -4.5
+    },
+    "client_buy_share": 0.115,
+    "bh_q": 0.11998376615219215
+   },
+   "_n_days": 811,
+   "_fii_sell_days": 97
+  }
+ }
+}
