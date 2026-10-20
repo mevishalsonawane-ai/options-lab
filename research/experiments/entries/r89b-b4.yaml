@@ -1,0 +1,28 @@
+id: r89b-b4
+title: 'R89B B4: enhanced previous-day high/low break, B2 + opening-range alignment (from 09:45)'
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R89_PDHL_BREAK.md
+hypothesis: 'Pre-registered (PREREG_B): the enhanced break-and-go rule on the index, buying the 1-ITM option, beats 500 random-entry twins after real costs (p < 0.05, BH q < 0.10 over 45 cells), >= 40 trades, >= 3 of 4 folds, without the top 5, worst month >= -Rs 13k; then the holdout.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy): index_1m + options_rolling_1m WEEK, R51 loader (clean + stale step); design stores to 19 Oct 2026, holdout stores 2 Aug 2021 - 19 Nov 2024'
+period:
+  design: 20 Nov 2024 - 19 Oct 2026
+  holdout: 2 Aug 2021 - 19 Nov 2024 (not yet read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the underlying (index spot 1m OHLC; breadth reads the other indices spot); no option chart'
+model_or_rule: R89B B4
+settings: research/hunt/r89_pdhl_break/rules_b.py, PREREG_B.md, NOTES_B.md
+prereg: research/hunt/r89_pdhl_break/PREREG_B.md
+variants_tried: 9
+results:
+  summary: 'Design 20 Nov 2024 - 19 Oct 2026, 1-ITM option, 1 lot, real prints and costs: NIFTY 204 tr -49,724 (twin p 1.0, after-trigger p 0.8982); BANKNIFTY 188 tr -77,788 (twin p 1.0, after-trigger p 0.98); SENSEX 205 tr -55,690 (twin p 1.0, after-trigger p 0.9741); FINNIFTY 196 tr -36,903 (twin p 1.0, after-trigger p 0.1756); MIDCPNIFTY 213 tr -139,958 (twin p 1.0, after-trigger p 0.996). Pooled 1006 tr -360,063, false breaks 32%.'
+  costs: R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); 1 lot in force
+holdout_read: false
+verdict: rejected
+notes: 'One of 9 variants x 5 indices (45 cells, one BH family), after R89 (180 cells). NOTES_B A1: the pre-registered twins carry hindsight on the day side; an after-trigger twin was added before the holdout read.'

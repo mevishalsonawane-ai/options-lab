@@ -136,3 +136,10 @@ def test_variants_b_declared():
     assert [v.name for v in rules_b.VARIANTS_B] == [f"B{i}" for i in range(9)]
     b8 = rules_b.BY_NAME_B["B8"]
     assert b8.breadth and b8.orf and b8.gap and b8.tf == 15 and b8.exit == "run"
+
+
+def test_carry_rule():
+    g = dict(G1=True, G2=True, G3=False, G4=False, G5=True, G6=True, G7=True, pass_=False)
+    assert study_b.carried(dict(gates=g))
+    g["G6"] = False
+    assert not study_b.carried(dict(gates=g))

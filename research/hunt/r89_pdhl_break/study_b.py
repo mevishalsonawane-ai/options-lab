@@ -60,13 +60,16 @@ def _range(P, lo, hi):
     return (ix[0], ix[-1]) if ix else (1, 0)
 
 
-def twins_b(W: World, u: str, v, trades: list, n: int, rng, kind: str) -> np.ndarray:
+def twins_b(W: World, u: str, v, trades: list, n: int, rng, kind: str, after: bool = False) -> np.ndarray:
+    """Random-entry twins. after (NOTES_B A1): entries only from the trade's own trigger minute on (no hindsight)."""
     P, S = W.P[u], W.S[u]
     first, last = rules_b.window_first(v), K.NSE_LAST
     tot = np.zeros(n)
     for tr in trades:
         d = tr["day"]
         pool = price._pool(P, d, first, last)
+        if after:
+            pool = pool[pool >= tr["t"]]
         if not len(pool):
             continue
         s, sq, dt = tr["side"], int(P.sq[d]), P.days[d]
@@ -124,6 +127,9 @@ def run_cell(W: World, u: str, v, lo: date, hi: date, twins: int = K.TWINS):
         res["opt"] = stats(F, opt_days, "net")
         res["opt"]["twin_mean"] = round(float(tw.mean()), 0)
         res["opt"]["twin_p"] = round((1 + int((tw >= F.net.sum()).sum())) / (twins + 1), 4)
+        twa = twins_b(W, u, v, F.to_dict("records"), twins, np.random.default_rng(K.SEED + 2), "opt", after=True)
+        res["opt"]["twin_after_mean"] = round(float(twa.mean()), 0)
+        res["opt"]["twin_after_p"] = round((1 + int((twa >= F.net.sum()).sum())) / (twins + 1), 4)
         res["opt_risk"] = stats(F, opt_days, "net_risk")
         res["fut"] = stats(T, opt_days, "fnet")
         res["fut"]["twin_mean"] = round(float(twf.mean()), 0)
@@ -200,6 +206,12 @@ def _run(which: str, lo: date, hi: date, spans, tag: str) -> dict:
     return cells
 
 
+def carried(c: dict) -> bool:
+    """NOTES_B A1: every non-twin design gate passes."""
+    g = c["gates"]
+    return all(g[k] for k in ("G1", "G2", "G5", "G6", "G7"))
+
+
 def design():
     cells = _run("new", *DESIGN, FOLDS, "design")
     for c in cells.values():
@@ -207,7 +219,8 @@ def design():
         c["gates"] = gates(c)
     keys = sorted(cells)
     out = dict(written=datetime.now(timezone.utc).isoformat(timespec="seconds"), cells=[cells[k] for k in keys],
-               pooled=pool(cells), passers=[f"{k[0]}|{k[1]}" for k in keys if cells[k]["gates"]["pass"]])
+               pooled=pool(cells), passers=[f"{k[0]}|{k[1]}" for k in keys if cells[k]["gates"]["pass"]],
+               carried=[f"{k[0]}|{k[1]}" for k in keys if carried(cells[k])])
     _save("design.json", out)
 
 
@@ -229,8 +242,16 @@ def final():
               and q < K.GATE_Q and o.get("worst_month", -1e9) >= K.MONTH_STOP
               and sum(s["net"] > 0 for s in c["spans"]) >= 2)
         verdict[f"{k[0]}|{k[1]}"] = dict(q=round(float(q), 4), paper_candidate=bool(ok))
+    leads = {}
+    for name in D.get("carried", []):
+        u, vn = name.split("|")
+        c, o = cells[(u, vn)], cells[(u, vn)]["opt"]
+        ok = (o.get("trades", 0) >= K.MIN_TRADES and o.get("net", 0) > 0 and o.get("twin_after_p", 1) < K.HOLD_P
+              and o.get("worst_month", -1e9) >= K.MONTH_STOP and sum(s["net"] > 0 for s in c["spans"]) >= 2)
+        leads[name] = dict(twin_after_p=o.get("twin_after_p"), twin_p=o.get("twin_p"), holdout_pass=bool(ok),
+                           note="amended lead (NOTES_B A1): forward check needed before any paper use")
     out = dict(written=datetime.now(timezone.utc).isoformat(timespec="seconds"), cells=[cells[k] for k in keys],
-               pooled=pool(cells), design_passers=sorted(passers), verdict=verdict)
+               pooled=pool(cells), design_passers=sorted(passers), verdict=verdict, amended_leads=leads)
     _save("final.json", out)
 
 

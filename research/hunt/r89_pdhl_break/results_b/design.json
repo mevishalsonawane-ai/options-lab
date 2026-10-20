@@ -1,5 +1,5 @@
 {
- "written": "2026-10-20T09:46:05+00:00",
+ "written": "2026-10-20T09:49:59+00:00",
  "cells": [
   {
    "inst": "BANKNIFTY",
@@ -24,7 +24,9 @@
     "worst_month_name": "2025-05",
     "green_months": "5/24",
     "twin_mean": -100780.0,
-    "twin_p": 0.1856
+    "twin_p": 0.1856,
+    "twin_after_mean": -118558.0,
+    "twin_after_p": 0.0459
    },
    "opt_risk": {
     "trades": 843,
@@ -135,7 +137,9 @@
     "worst_month_name": "2025-02",
     "green_months": "7/24",
     "twin_mean": 70937.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -70122.0,
+    "twin_after_p": 0.7505
    },
    "opt_risk": {
     "trades": 356,
@@ -246,7 +250,9 @@
     "worst_month_name": "2025-02",
     "green_months": "5/24",
     "twin_mean": 152334.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -48235.0,
+    "twin_after_p": 0.986
    },
    "opt_risk": {
     "trades": 491,
@@ -357,7 +363,9 @@
     "worst_month_name": "2025-02",
     "green_months": "10/24",
     "twin_mean": 71179.0,
-    "twin_p": 0.998
+    "twin_p": 0.998,
+    "twin_after_mean": -19975.0,
+    "twin_after_p": 0.9521
    },
    "opt_risk": {
     "trades": 275,
@@ -468,7 +476,9 @@
     "worst_month_name": "2025-02",
     "green_months": "8/24",
     "twin_mean": 153465.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -30874.0,
+    "twin_after_p": 0.98
    },
    "opt_risk": {
     "trades": 188,
@@ -579,7 +589,9 @@
     "worst_month_name": "2025-02",
     "green_months": "6/24",
     "twin_mean": 85134.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -67601.0,
+    "twin_after_p": 0.992
    },
    "opt_risk": {
     "trades": 373,
@@ -690,7 +702,9 @@
     "worst_month_name": "2025-02",
     "green_months": "10/24",
     "twin_mean": 22680.0,
-    "twin_p": 0.9222
+    "twin_p": 0.9222,
+    "twin_after_mean": -136508.0,
+    "twin_after_p": 0.0559
    },
    "opt_risk": {
     "trades": 640,
@@ -801,7 +815,9 @@
     "worst_month_name": "2025-09",
     "green_months": "9/24",
     "twin_mean": 109.0,
-    "twin_p": 0.8503
+    "twin_p": 0.8503,
+    "twin_after_mean": -75986.0,
+    "twin_after_p": 0.1956
    },
    "opt_risk": {
     "trades": 353,
@@ -912,7 +928,9 @@
     "worst_month_name": "2025-02",
     "green_months": "9/24",
     "twin_mean": 44598.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -26820.0,
+    "twin_after_p": 0.9102
    },
    "opt_risk": {
     "trades": 94,
@@ -1023,7 +1041,9 @@
     "worst_month_name": "2025-01",
     "green_months": "6/24",
     "twin_mean": -91852.0,
-    "twin_p": 0.016
+    "twin_p": 0.016,
+    "twin_after_mean": -102914.0,
+    "twin_after_p": 0.006
    },
    "opt_risk": {
     "trades": 767,
@@ -1134,7 +1154,9 @@
     "worst_month_name": "2025-02",
     "green_months": "8/24",
     "twin_mean": 18391.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -96950.0,
+    "twin_after_p": 0.4331
    },
    "opt_risk": {
     "trades": 354,
@@ -1245,7 +1267,9 @@
     "worst_month_name": "2025-02",
     "green_months": "12/24",
     "twin_mean": 151174.0,
-    "twin_p": 0.998
+    "twin_p": 0.998,
+    "twin_after_mean": -67399.0,
+    "twin_after_p": 0.0699
    },
    "opt_risk": {
     "trades": 494,
@@ -1356,7 +1380,9 @@
     "worst_month_name": "2025-02",
     "green_months": "11/24",
     "twin_mean": 86576.0,
-    "twin_p": 0.996
+    "twin_p": 0.996,
+    "twin_after_mean": -29539.0,
+    "twin_after_p": 0.5549
    },
    "opt_risk": {
     "trades": 273,
@@ -1467,7 +1493,9 @@
     "worst_month_name": "2025-02",
     "green_months": "10/24",
     "twin_mean": 116645.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -57945.0,
+    "twin_after_p": 0.1756
    },
    "opt_risk": {
     "trades": 196,
@@ -1578,7 +1606,9 @@
     "worst_month_name": "2025-02",
     "green_months": "10/24",
     "twin_mean": 107096.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -82090.0,
+    "twin_after_p": 0.2196
    },
    "opt_risk": {
     "trades": 383,
@@ -1689,7 +1719,9 @@
     "worst_month_name": "2025-12",
     "green_months": "11/24",
     "twin_mean": 86483.0,
-    "twin_p": 0.7545
+    "twin_p": 0.7545,
+    "twin_after_mean": -110182.0,
+    "twin_after_p": 0.002
    },
    "opt_risk": {
     "trades": 630,
@@ -1800,7 +1832,9 @@
     "worst_month_name": "2025-01",
     "green_months": "14/24",
     "twin_mean": 57960.0,
-    "twin_p": 0.3114
+    "twin_p": 0.3114,
+    "twin_after_mean": -30914.0,
+    "twin_after_p": 0.002
    },
    "opt_risk": {
     "trades": 314,
@@ -1911,7 +1945,9 @@
     "worst_month_name": "2025-02",
     "green_months": "6/23",
     "twin_mean": 53772.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -32788.0,
+    "twin_after_p": 0.5569
    },
    "opt_risk": {
     "trades": 98,
@@ -2022,7 +2058,9 @@
     "worst_month_name": "2025-07",
     "green_months": "2/24",
     "twin_mean": -158382.0,
-    "twin_p": 0.8204
+    "twin_p": 0.8204,
+    "twin_after_mean": -173571.0,
+    "twin_after_p": 0.6826
    },
    "opt_risk": {
     "trades": 892,
@@ -2133,7 +2171,9 @@
     "worst_month_name": "2025-02",
     "green_months": "9/24",
     "twin_mean": 121332.0,
-    "twin_p": 0.998
+    "twin_p": 0.998,
+    "twin_after_mean": -57599.0,
+    "twin_after_p": 0.5309
    },
    "opt_risk": {
     "trades": 394,
@@ -2244,7 +2284,9 @@
     "worst_month_name": "2026-02",
     "green_months": "7/24",
     "twin_mean": 194463.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -61727.0,
+    "twin_after_p": 0.976
    },
    "opt_risk": {
     "trades": 549,
@@ -2355,7 +2397,9 @@
     "worst_month_name": "2026-02",
     "green_months": "10/24",
     "twin_mean": 120369.0,
-    "twin_p": 0.998
+    "twin_p": 0.998,
+    "twin_after_mean": -16419.0,
+    "twin_after_p": 0.7465
    },
    "opt_risk": {
     "trades": 273,
@@ -2466,7 +2510,9 @@
     "worst_month_name": "2026-04",
     "green_months": "4/24",
     "twin_mean": 116064.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -54264.0,
+    "twin_after_p": 0.996
    },
    "opt_risk": {
     "trades": 213,
@@ -2577,7 +2623,9 @@
     "worst_month_name": "2025-02",
     "green_months": "10/24",
     "twin_mean": 166488.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -45152.0,
+    "twin_after_p": 0.9182
    },
    "opt_risk": {
     "trades": 417,
@@ -2688,7 +2736,9 @@
     "worst_month_name": "2026-04",
     "green_months": "9/24",
     "twin_mean": 119590.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -77635.0,
+    "twin_after_p": 0.9002
    },
    "opt_risk": {
     "trades": 693,
@@ -2799,7 +2849,9 @@
     "worst_month_name": "2025-09",
     "green_months": "9/24",
     "twin_mean": 24815.0,
-    "twin_p": 0.8802
+    "twin_p": 0.8802,
+    "twin_after_mean": -41453.0,
+    "twin_after_p": 0.479
    },
    "opt_risk": {
     "trades": 332,
@@ -2910,7 +2962,9 @@
     "worst_month_name": "2026-02",
     "green_months": "9/21",
     "twin_mean": 61172.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -6670.0,
+    "twin_after_p": 0.98
    },
    "opt_risk": {
     "trades": 71,
@@ -3021,7 +3075,9 @@
     "worst_month_name": "2025-04",
     "green_months": "5/24",
     "twin_mean": -64229.0,
-    "twin_p": 0.5908
+    "twin_p": 0.5908,
+    "twin_after_mean": -85605.0,
+    "twin_after_p": 0.3154
    },
    "opt_risk": {
     "trades": 811,
@@ -3132,7 +3188,9 @@
     "worst_month_name": "2026-05",
     "green_months": "6/24",
     "twin_mean": 102138.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -70745.0,
+    "twin_after_p": 1.0
    },
    "opt_risk": {
     "trades": 342,
@@ -3243,7 +3301,9 @@
     "worst_month_name": "2026-05",
     "green_months": "6/24",
     "twin_mean": 163453.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -46592.0,
+    "twin_after_p": 0.98
    },
    "opt_risk": {
     "trades": 487,
@@ -3354,7 +3414,9 @@
     "worst_month_name": "2026-02",
     "green_months": "12/24",
     "twin_mean": 113432.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": 147.0,
+    "twin_after_p": 0.6866
    },
    "opt_risk": {
     "trades": 282,
@@ -3465,7 +3527,9 @@
     "worst_month_name": "2026-02",
     "green_months": "8/24",
     "twin_mean": 152595.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -16114.0,
+    "twin_after_p": 0.8982
    },
    "opt_risk": {
     "trades": 204,
@@ -3576,7 +3640,9 @@
     "worst_month_name": "2025-03",
     "green_months": "10/24",
     "twin_mean": 147277.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -31140.0,
+    "twin_after_p": 0.7066
    },
    "opt_risk": {
     "trades": 390,
@@ -3687,7 +3753,9 @@
     "worst_month_name": "2026-05",
     "green_months": "9/24",
     "twin_mean": 122555.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -80658.0,
+    "twin_after_p": 0.9481
    },
    "opt_risk": {
     "trades": 638,
@@ -3798,7 +3866,9 @@
     "worst_month_name": "2026-05",
     "green_months": "9/24",
     "twin_mean": 64538.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -19135.0,
+    "twin_after_p": 0.982
    },
    "opt_risk": {
     "trades": 357,
@@ -3909,7 +3979,9 @@
     "worst_month_name": "2026-02",
     "green_months": "13/21",
     "twin_mean": 94173.0,
-    "twin_p": 0.988
+    "twin_p": 0.988,
+    "twin_after_mean": 16296.0,
+    "twin_after_p": 0.3593
    },
    "opt_risk": {
     "trades": 100,
@@ -4020,7 +4092,9 @@
     "worst_month_name": "2025-04",
     "green_months": "6/24",
     "twin_mean": -61579.0,
-    "twin_p": 0.493
+    "twin_p": 0.493,
+    "twin_after_mean": -75717.0,
+    "twin_after_p": 0.2475
    },
    "opt_risk": {
     "trades": 822,
@@ -4131,7 +4205,9 @@
     "worst_month_name": "2026-01",
     "green_months": "5/24",
     "twin_mean": 117234.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -34714.0,
+    "twin_after_p": 1.0
    },
    "opt_risk": {
     "trades": 343,
@@ -4242,7 +4318,9 @@
     "worst_month_name": "2026-05",
     "green_months": "6/24",
     "twin_mean": 149069.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -54456.0,
+    "twin_after_p": 0.9721
    },
    "opt_risk": {
     "trades": 481,
@@ -4353,7 +4431,9 @@
     "worst_month_name": "2026-05",
     "green_months": "12/24",
     "twin_mean": 94924.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -1197.0,
+    "twin_after_p": 0.9162
    },
    "opt_risk": {
     "trades": 284,
@@ -4464,7 +4544,9 @@
     "worst_month_name": "2025-01",
     "green_months": "7/24",
     "twin_mean": 137517.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -16158.0,
+    "twin_after_p": 0.9741
    },
    "opt_risk": {
     "trades": 205,
@@ -4575,7 +4657,9 @@
     "worst_month_name": "2025-01",
     "green_months": "6/24",
     "twin_mean": 127000.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -42725.0,
+    "twin_after_p": 0.7864
    },
    "opt_risk": {
     "trades": 377,
@@ -4686,7 +4770,9 @@
     "worst_month_name": "2026-05",
     "green_months": "9/24",
     "twin_mean": 82205.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": -87545.0,
+    "twin_after_p": 0.8283
    },
    "opt_risk": {
     "trades": 641,
@@ -4797,7 +4883,9 @@
     "worst_month_name": "2026-05",
     "green_months": "10/24",
     "twin_mean": 49986.0,
-    "twin_p": 0.984
+    "twin_p": 0.984,
+    "twin_after_mean": -8473.0,
+    "twin_after_p": 0.8802
    },
    "opt_risk": {
     "trades": 363,
@@ -4908,7 +4996,9 @@
     "worst_month_name": "2025-01",
     "green_months": "9/22",
     "twin_mean": 76115.0,
-    "twin_p": 1.0
+    "twin_p": 1.0,
+    "twin_after_mean": 8573.0,
+    "twin_after_p": 0.8723
    },
    "opt_risk": {
     "trades": 104,
@@ -5071,5 +5161,8 @@
    "false_break": 0.3148
   }
  },
- "passers": []
+ "passers": [],
+ "carried": [
+  "FINNIFTY|B7"
+ ]
 }
