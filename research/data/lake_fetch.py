@@ -69,6 +69,7 @@ def windows(start, end, days):
 
 
 SPLIT_DAYS = 10  # an option window that times out is asked again in pieces of this many days
+SPLIT_FIRST = os.environ.get("LAKE_SPLIT_FIRST") == "1"  # ask option windows in pieces straight away
 
 
 class Job:
@@ -88,11 +89,12 @@ class Job:
         return arrays_df(js), ""
 
     def run(self):
-        df, err = self.get(self.body)
+        a, b = (dt.date.fromisoformat(str(self.body.get(k, "1970-01-01"))[:10]) for k in ("fromDate", "toDate"))
+        first = SPLIT_FIRST and self.endpoint == "/charts/rollingoption" and (b - a).days >= SPLIT_DAYS
+        df, err = (None, "HTTP 504 (split first)") if first else self.get(self.body)
         if err and "504" in err and self.endpoint == "/charts/rollingoption":
             # 20 Oct 2026: Dhan times out (504) on many 30-day option windows of 2026 but answers the same days asked
             # as 10-day pieces; the pieces are joined and saved under the same chunk name
-            a, b = (dt.date.fromisoformat(str(self.body[k])[:10]) for k in ("fromDate", "toDate"))
             if (b - a).days >= SPLIT_DAYS:
                 parts = []
                 for x, y in windows(a, b, SPLIT_DAYS):

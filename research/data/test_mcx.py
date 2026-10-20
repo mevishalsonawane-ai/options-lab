@@ -284,3 +284,21 @@ def test_a_piece_that_fails_leaves_the_chunk_as_err(tmp_path, monkeypatch):
     assert j.run()[0] == "err" and os.path.exists(j.path + ".err") and not j.done()
     j2 = lf.Job(str(tmp_path / "t" / "x"), "/charts/intraday", dict(fromDate="2026-05-07", toDate="2026-06-05"))
     assert j2.run()[0] == "err"                                   # only option windows are split
+
+
+def test_split_first_skips_the_long_request(tmp_path, monkeypatch):
+    asked = []
+
+    def post(endpoint, body):
+        asked.append((body["fromDate"], body["toDate"]))
+        return 200, {"data": {"ce": {"timestamp": [len(asked)], "close": [1.0]}}}, ""
+
+    monkeypatch.setattr(lf.dh, "post", post)
+    monkeypatch.setattr(lf, "SPLIT_FIRST", True)
+    j = lf.Job(str(tmp_path / "s" / "a"), "/charts/rollingoption", dict(fromDate="2026-05-07", toDate="2026-06-05"),
+               key="ce")
+    assert j.run() == ("ok", 3) and len(asked) == 3 and ("2026-05-07", "2026-06-05") not in asked
+    asked.clear()
+    j = lf.Job(str(tmp_path / "s" / "b"), "/charts/rollingoption", dict(fromDate="2026-10-13", toDate="2026-10-19"),
+               key="ce")
+    assert j.run() == ("ok", 1) and asked == [("2026-10-13", "2026-10-19")]   # short window: asked as it is
