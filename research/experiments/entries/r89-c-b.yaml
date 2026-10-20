@@ -1,0 +1,33 @@
+id: r89-c-b
+title: 'R89 C-B: Boss previous-day high/low 1m break, break and go (long after an up-break, put after a down-break), base: PDH/PDL, close break, 1m, no HTF filter, fractal N=5, min RR 1, 09:16-14:45 incl. expiry, max 3 a day'
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R89_PDHL_BREAK.md
+hypothesis: 'Pre-registered: buying the 1-ITM option on Boss rule (signal on the underlying: break of a previous-day level, a same-colour candle beyond / back over it, entry on a break of that candle, stop at its other end, target the nearest swing with min RR) beats 500 random-entry twins after real costs (p < 0.05, BH q < 0.10 over 180 cells), >= 40 trades, walk-forward, without the top 5, worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market, close-only near future)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (not yet read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart'
+- previous-day high / low (SR: nearest 15m swing levels), TF candles, fractal swings, daily SMA20 / 15m EMA20 (HTF)
+model_or_rule: R89 C-B
+settings: research/hunt/r89_pdhl_break/cfg.py, rules.py, PREREG.md, NOTES.md
+prereg: research/hunt/r89_pdhl_break/PREREG.md
+variants_tried: 20
+results:
+  summary: 'Design option net (1 lot, 1-ITM, real prints, costs): NIFTY 570 tr -60,012 (p 0.7605, q 1.00); BANKNIFTY 591 tr -51,868 (p 0.2854, q 1.00); SENSEX 575 tr -57,192 (p 0.8024, q 1.00); FINNIFTY 561 tr -3,470 (p 0.004, q 0.18); MIDCPNIFTY 628 tr -134,763 (p 0.8323, q 1.00); GOLDM 47 tr -43,715 (p 1.0, q 1.00); SILVERM 42 tr -45,817 (p 1.0, q 1.00); CRUDEOIL (mini) 129 tr -12,943 (p 1.0, q 1.00); NATURALGAS (mini) 93 tr -9,886 (p 0.4511, q 1.00). Pooled indices 2925 tr -307,305 (twin mean -313,431, futures -2,328,369, false breaks 34%); MCX 311 tr -112,361. Design passers: 0 of 9.'
+  costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); MCX R53 charges + R85 strict half-spread; 1 lot in force
+holdout_read: false
+verdict: rejected
+notes: 'One of 20 variants x 9 instruments (180 cells, one BH family). Futures-only and fixed-risk (Rs 2,000, 1-3 lots) shown in the doc, not gated.'

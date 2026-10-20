@@ -1,0 +1,33 @@
+id: r89-r-t3
+title: 'R89 R-T3: Boss previous-day high/low 1m break, break and reclaim (long after a down-break closed back above, put mirrored), 3-minute candles'
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R89_PDHL_BREAK.md
+hypothesis: 'Pre-registered: buying the 1-ITM option on Boss rule (signal on the underlying: break of a previous-day level, a same-colour candle beyond / back over it, entry on a break of that candle, stop at its other end, target the nearest swing with min RR) beats 500 random-entry twins after real costs (p < 0.05, BH q < 0.10 over 180 cells), >= 40 trades, walk-forward, without the top 5, worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market, close-only near future)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (not yet read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart'
+- previous-day high / low (SR: nearest 15m swing levels), TF candles, fractal swings, daily SMA20 / 15m EMA20 (HTF)
+model_or_rule: R89 R-T3
+settings: research/hunt/r89_pdhl_break/cfg.py, rules.py, PREREG.md, NOTES.md
+prereg: research/hunt/r89_pdhl_break/PREREG.md
+variants_tried: 20
+results:
+  summary: 'Design option net (1 lot, 1-ITM, real prints, costs): NIFTY 340 tr -50,835 (p 0.5928, q 1.00); BANKNIFTY 399 tr -71,188 (p 0.8244, q 1.00); SENSEX 367 tr -34,903 (p 0.8144, q 1.00); FINNIFTY 356 tr -41,712 (p 0.3054, q 1.00); MIDCPNIFTY 404 tr -33,526 (p 0.2076, q 1.00); GOLDM 72 tr -63,008 (p 1.0, q 1.00); SILVERM 52 tr -45,535 (p 0.996, q 1.00); CRUDEOIL (mini) 193 tr -14,484 (p 0.5549, q 1.00); NATURALGAS (mini) 204 tr -26,507 (p 0.9162, q 1.00). Pooled indices 1866 tr -232,164 (twin mean -219,779, futures -1,350,070, false breaks 28%); MCX 521 tr -149,534. Design passers: 0 of 9.'
+  costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); MCX R53 charges + R85 strict half-spread; 1 lot in force
+holdout_read: false
+verdict: rejected
+notes: 'One of 20 variants x 9 instruments (180 cells, one BH family). Futures-only and fixed-risk (Rs 2,000, 1-3 lots) shown in the doc, not gated.'

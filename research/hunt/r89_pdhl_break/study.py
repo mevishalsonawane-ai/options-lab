@@ -336,8 +336,33 @@ def run_final():
     _save("final.json", out)
 
 
+def run_points(tag: str):
+    """Descriptive: underlying points a trade at the exact levels (entry at the signal candle's extreme, stop / target
+    at their levels, the session end at its open; no slippage, no charges) and the same for an option buyer's
+    round-trip cost in points (net - gross over lot), per cell, from the cached trades."""
+    out = []
+    for name in K.INSTRUMENTS:
+        P = data.panel(name)
+        for v in K.VARIANTS:
+            p = _trades_path(tag, name, v.name)
+            if not p.exists():
+                continue
+            T = pd.read_parquet(p)
+            s = T.side.values
+            pts = np.where(T.why == "target", T.reward, np.where(T.why == "stop", -T.risk,
+                           s * (P.mc[T.xm.values] if P.kind == "mcx" else P.mo[T.xm.values]) - s * T.entry))
+            f = T[T.filled]
+            out.append(dict(inst=name, variant=v.name, trades=int(len(T)), pts_mean=round(float(np.mean(pts)), 2),
+                            pts_win=round(float((pts > 0).mean()), 4), risk=round(float(T.risk.mean()), 2),
+                            opt_gross_pts=round(float((f.gross / f.lot).mean()), 2) if len(f) else None,
+                            opt_cost_pts=round(float(((f.gross - f.net) / f.lot).mean()), 2) if len(f) else None))
+    _save(f"points_{tag}.json", out)
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "design"
+    if cmd == "points":
+        run_points(sys.argv[2] if len(sys.argv) > 2 else "design")
     if cmd == "design":
         run_design(tuple(sys.argv[2:]) or K.INSTRUMENTS)
     elif cmd == "old":

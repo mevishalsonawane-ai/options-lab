@@ -1,0 +1,1802 @@
+[
+ {
+  "inst": "NIFTY",
+  "variant": "C-B",
+  "trades": 570,
+  "pts_mean": 0.36,
+  "pts_win": 0.4386,
+  "risk": 12.81,
+  "opt_gross_pts": -0.34,
+  "opt_cost_pts": 1.17
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-SR",
+  "trades": 805,
+  "pts_mean": 0.21,
+  "pts_win": 0.4634,
+  "risk": 13.74,
+  "opt_gross_pts": -0.41,
+  "opt_cost_pts": 1.17
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-WK",
+  "trades": 573,
+  "pts_mean": 0.95,
+  "pts_win": 0.4433,
+  "risk": 13.32,
+  "opt_gross_pts": 0.06,
+  "opt_cost_pts": 1.17
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-T3",
+  "trades": 472,
+  "pts_mean": 0.66,
+  "pts_win": 0.4174,
+  "risk": 20.57,
+  "opt_gross_pts": -0.85,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-T5",
+  "trades": 397,
+  "pts_mean": 2.37,
+  "pts_win": 0.4257,
+  "risk": 26.64,
+  "opt_gross_pts": 0.81,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-HTF",
+  "trades": 205,
+  "pts_mean": -1.58,
+  "pts_win": 0.3561,
+  "risk": 12.39,
+  "opt_gross_pts": -1.19,
+  "opt_cost_pts": 1.18
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-N3",
+  "trades": 576,
+  "pts_mean": 0.14,
+  "pts_win": 0.4549,
+  "risk": 12.9,
+  "opt_gross_pts": -0.46,
+  "opt_cost_pts": 1.17
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-RR2",
+  "trades": 557,
+  "pts_mean": 0.59,
+  "pts_win": 0.316,
+  "risk": 12.49,
+  "opt_gross_pts": -0.64,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-WIN",
+  "trades": 386,
+  "pts_mean": 1.28,
+  "pts_win": 0.4689,
+  "risk": 11.0,
+  "opt_gross_pts": 0.2,
+  "opt_cost_pts": 1.2
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "C-F1",
+  "trades": 247,
+  "pts_mean": -0.46,
+  "pts_win": 0.4332,
+  "risk": 15.82,
+  "opt_gross_pts": -0.35,
+  "opt_cost_pts": 1.19
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-B",
+  "trades": 466,
+  "pts_mean": 1.27,
+  "pts_win": 0.4635,
+  "risk": 14.41,
+  "opt_gross_pts": 0.02,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-SR",
+  "trades": 720,
+  "pts_mean": 1.13,
+  "pts_win": 0.4736,
+  "risk": 15.56,
+  "opt_gross_pts": -0.26,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-WK",
+  "trades": 541,
+  "pts_mean": 1.52,
+  "pts_win": 0.4677,
+  "risk": 14.79,
+  "opt_gross_pts": -0.22,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-T3",
+  "trades": 340,
+  "pts_mean": 1.87,
+  "pts_win": 0.4412,
+  "risk": 24.61,
+  "opt_gross_pts": -0.76,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-T5",
+  "trades": 286,
+  "pts_mean": -1.98,
+  "pts_win": 0.3706,
+  "risk": 31.08,
+  "opt_gross_pts": -3.36,
+  "opt_cost_pts": 1.14
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-HTF",
+  "trades": 167,
+  "pts_mean": -1.77,
+  "pts_win": 0.3533,
+  "risk": 14.18,
+  "opt_gross_pts": -2.04,
+  "opt_cost_pts": 1.17
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-N3",
+  "trades": 467,
+  "pts_mean": 1.46,
+  "pts_win": 0.4818,
+  "risk": 14.41,
+  "opt_gross_pts": 0.1,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-RR2",
+  "trades": 450,
+  "pts_mean": 2.81,
+  "pts_win": 0.3667,
+  "risk": 14.16,
+  "opt_gross_pts": 0.48,
+  "opt_cost_pts": 1.16
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-WIN",
+  "trades": 334,
+  "pts_mean": 0.3,
+  "pts_win": 0.4491,
+  "risk": 13.15,
+  "opt_gross_pts": -0.41,
+  "opt_cost_pts": 1.21
+ },
+ {
+  "inst": "NIFTY",
+  "variant": "R-F1",
+  "trades": 188,
+  "pts_mean": -0.06,
+  "pts_win": 0.4309,
+  "risk": 16.14,
+  "opt_gross_pts": -0.41,
+  "opt_cost_pts": 1.18
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-B",
+  "trades": 591,
+  "pts_mean": 3.48,
+  "pts_win": 0.4484,
+  "risk": 34.62,
+  "opt_gross_pts": 0.67,
+  "opt_cost_pts": 3.49
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-SR",
+  "trades": 820,
+  "pts_mean": 4.33,
+  "pts_win": 0.4756,
+  "risk": 38.97,
+  "opt_gross_pts": 1.11,
+  "opt_cost_pts": 3.49
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-WK",
+  "trades": 595,
+  "pts_mean": 2.92,
+  "pts_win": 0.4403,
+  "risk": 35.84,
+  "opt_gross_pts": 0.88,
+  "opt_cost_pts": 3.49
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-T3",
+  "trades": 482,
+  "pts_mean": 4.26,
+  "pts_win": 0.4336,
+  "risk": 56.3,
+  "opt_gross_pts": 0.74,
+  "opt_cost_pts": 3.47
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-T5",
+  "trades": 410,
+  "pts_mean": 3.76,
+  "pts_win": 0.422,
+  "risk": 68.83,
+  "opt_gross_pts": -0.6,
+  "opt_cost_pts": 3.46
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-HTF",
+  "trades": 225,
+  "pts_mean": 0.53,
+  "pts_win": 0.4356,
+  "risk": 32.66,
+  "opt_gross_pts": -1.95,
+  "opt_cost_pts": 3.46
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-N3",
+  "trades": 597,
+  "pts_mean": 3.3,
+  "pts_win": 0.4673,
+  "risk": 35.38,
+  "opt_gross_pts": 0.73,
+  "opt_cost_pts": 3.49
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-RR2",
+  "trades": 576,
+  "pts_mean": 3.94,
+  "pts_win": 0.3142,
+  "risk": 34.3,
+  "opt_gross_pts": 0.12,
+  "opt_cost_pts": 3.5
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-WIN",
+  "trades": 502,
+  "pts_mean": 2.95,
+  "pts_win": 0.4522,
+  "risk": 29.57,
+  "opt_gross_pts": 0.61,
+  "opt_cost_pts": 3.53
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "C-F1",
+  "trades": 250,
+  "pts_mean": 7.0,
+  "pts_win": 0.468,
+  "risk": 41.02,
+  "opt_gross_pts": 1.92,
+  "opt_cost_pts": 3.52
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-B",
+  "trades": 486,
+  "pts_mean": 0.6,
+  "pts_win": 0.4424,
+  "risk": 38.7,
+  "opt_gross_pts": -1.94,
+  "opt_cost_pts": 3.45
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-SR",
+  "trades": 751,
+  "pts_mean": 2.19,
+  "pts_win": 0.4767,
+  "risk": 42.71,
+  "opt_gross_pts": -0.67,
+  "opt_cost_pts": 3.48
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-WK",
+  "trades": 602,
+  "pts_mean": 2.77,
+  "pts_win": 0.4535,
+  "risk": 38.58,
+  "opt_gross_pts": -0.04,
+  "opt_cost_pts": 3.48
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-T3",
+  "trades": 399,
+  "pts_mean": -0.51,
+  "pts_win": 0.396,
+  "risk": 60.51,
+  "opt_gross_pts": -2.2,
+  "opt_cost_pts": 3.43
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-T5",
+  "trades": 319,
+  "pts_mean": 2.96,
+  "pts_win": 0.4138,
+  "risk": 79.17,
+  "opt_gross_pts": -0.08,
+  "opt_cost_pts": 3.39
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-HTF",
+  "trades": 199,
+  "pts_mean": -7.18,
+  "pts_win": 0.3668,
+  "risk": 35.71,
+  "opt_gross_pts": -4.12,
+  "opt_cost_pts": 3.44
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-N3",
+  "trades": 486,
+  "pts_mean": 0.28,
+  "pts_win": 0.4609,
+  "risk": 38.69,
+  "opt_gross_pts": -1.92,
+  "opt_cost_pts": 3.45
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-RR2",
+  "trades": 479,
+  "pts_mean": 3.72,
+  "pts_win": 0.3278,
+  "risk": 38.28,
+  "opt_gross_pts": -1.08,
+  "opt_cost_pts": 3.47
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-WIN",
+  "trades": 424,
+  "pts_mean": -2.77,
+  "pts_win": 0.4009,
+  "risk": 35.66,
+  "opt_gross_pts": -3.42,
+  "opt_cost_pts": 3.54
+ },
+ {
+  "inst": "BANKNIFTY",
+  "variant": "R-F1",
+  "trades": 202,
+  "pts_mean": 3.74,
+  "pts_win": 0.4505,
+  "risk": 42.92,
+  "opt_gross_pts": 1.14,
+  "opt_cost_pts": 3.46
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-B",
+  "trades": 575,
+  "pts_mean": 2.6,
+  "pts_win": 0.4296,
+  "risk": 40.16,
+  "opt_gross_pts": -1.24,
+  "opt_cost_pts": 3.71
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-SR",
+  "trades": 814,
+  "pts_mean": -0.76,
+  "pts_win": 0.4324,
+  "risk": 44.13,
+  "opt_gross_pts": -3.17,
+  "opt_cost_pts": 3.74
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-WK",
+  "trades": 581,
+  "pts_mean": 2.34,
+  "pts_win": 0.4355,
+  "risk": 41.82,
+  "opt_gross_pts": -0.9,
+  "opt_cost_pts": 3.71
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-T3",
+  "trades": 470,
+  "pts_mean": -0.66,
+  "pts_win": 0.4191,
+  "risk": 65.68,
+  "opt_gross_pts": -5.33,
+  "opt_cost_pts": 3.67
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-T5",
+  "trades": 414,
+  "pts_mean": 4.38,
+  "pts_win": 0.413,
+  "risk": 84.28,
+  "opt_gross_pts": 0.99,
+  "opt_cost_pts": 3.67
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-HTF",
+  "trades": 205,
+  "pts_mean": 0.66,
+  "pts_win": 0.4244,
+  "risk": 40.21,
+  "opt_gross_pts": -1.92,
+  "opt_cost_pts": 3.64
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-N3",
+  "trades": 576,
+  "pts_mean": 1.78,
+  "pts_win": 0.4479,
+  "risk": 40.45,
+  "opt_gross_pts": -1.84,
+  "opt_cost_pts": 3.71
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-RR2",
+  "trades": 564,
+  "pts_mean": 4.15,
+  "pts_win": 0.3227,
+  "risk": 39.64,
+  "opt_gross_pts": -0.94,
+  "opt_cost_pts": 3.7
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-WIN",
+  "trades": 392,
+  "pts_mean": 3.6,
+  "pts_win": 0.4286,
+  "risk": 31.5,
+  "opt_gross_pts": -0.89,
+  "opt_cost_pts": 3.8
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "C-F1",
+  "trades": 259,
+  "pts_mean": 2.59,
+  "pts_win": 0.4093,
+  "risk": 48.68,
+  "opt_gross_pts": -0.04,
+  "opt_cost_pts": 3.74
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-B",
+  "trades": 473,
+  "pts_mean": 4.3,
+  "pts_win": 0.4672,
+  "risk": 46.12,
+  "opt_gross_pts": 0.31,
+  "opt_cost_pts": 3.65
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-SR",
+  "trades": 724,
+  "pts_mean": 4.68,
+  "pts_win": 0.4903,
+  "risk": 50.43,
+  "opt_gross_pts": -0.67,
+  "opt_cost_pts": 3.73
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-WK",
+  "trades": 560,
+  "pts_mean": 1.08,
+  "pts_win": 0.4482,
+  "risk": 46.61,
+  "opt_gross_pts": -2.07,
+  "opt_cost_pts": 3.67
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-T3",
+  "trades": 367,
+  "pts_mean": 8.59,
+  "pts_win": 0.4659,
+  "risk": 77.25,
+  "opt_gross_pts": -1.39,
+  "opt_cost_pts": 3.64
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-T5",
+  "trades": 301,
+  "pts_mean": 4.15,
+  "pts_win": 0.402,
+  "risk": 99.59,
+  "opt_gross_pts": 0.48,
+  "opt_cost_pts": 3.63
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-HTF",
+  "trades": 180,
+  "pts_mean": 0.48,
+  "pts_win": 0.4556,
+  "risk": 43.47,
+  "opt_gross_pts": -5.15,
+  "opt_cost_pts": 3.56
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-N3",
+  "trades": 475,
+  "pts_mean": 3.96,
+  "pts_win": 0.4905,
+  "risk": 46.18,
+  "opt_gross_pts": 0.58,
+  "opt_cost_pts": 3.65
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-RR2",
+  "trades": 460,
+  "pts_mean": 8.97,
+  "pts_win": 0.363,
+  "risk": 45.88,
+  "opt_gross_pts": 0.21,
+  "opt_cost_pts": 3.65
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-WIN",
+  "trades": 336,
+  "pts_mean": 6.2,
+  "pts_win": 0.4821,
+  "risk": 38.92,
+  "opt_gross_pts": 0.07,
+  "opt_cost_pts": 3.77
+ },
+ {
+  "inst": "SENSEX",
+  "variant": "R-F1",
+  "trades": 198,
+  "pts_mean": 8.87,
+  "pts_win": 0.5,
+  "risk": 50.43,
+  "opt_gross_pts": 4.13,
+  "opt_cost_pts": 3.71
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-B",
+  "trades": 570,
+  "pts_mean": 3.45,
+  "pts_win": 0.4614,
+  "risk": 15.99,
+  "opt_gross_pts": 1.71,
+  "opt_cost_pts": 1.78
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-SR",
+  "trades": 831,
+  "pts_mean": 2.93,
+  "pts_win": 0.4657,
+  "risk": 17.65,
+  "opt_gross_pts": 1.45,
+  "opt_cost_pts": 1.79
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-WK",
+  "trades": 578,
+  "pts_mean": 4.25,
+  "pts_win": 0.4775,
+  "risk": 16.84,
+  "opt_gross_pts": 2.09,
+  "opt_cost_pts": 1.78
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-T3",
+  "trades": 479,
+  "pts_mean": 7.43,
+  "pts_win": 0.4843,
+  "risk": 26.09,
+  "opt_gross_pts": 3.59,
+  "opt_cost_pts": 1.76
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-T5",
+  "trades": 395,
+  "pts_mean": 4.2,
+  "pts_win": 0.438,
+  "risk": 32.2,
+  "opt_gross_pts": 2.35,
+  "opt_cost_pts": 1.77
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-HTF",
+  "trades": 220,
+  "pts_mean": 4.28,
+  "pts_win": 0.4455,
+  "risk": 14.28,
+  "opt_gross_pts": 1.97,
+  "opt_cost_pts": 1.77
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-N3",
+  "trades": 572,
+  "pts_mean": 3.06,
+  "pts_win": 0.4808,
+  "risk": 16.11,
+  "opt_gross_pts": 1.32,
+  "opt_cost_pts": 1.78
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-RR2",
+  "trades": 553,
+  "pts_mean": 3.37,
+  "pts_win": 0.3309,
+  "risk": 15.73,
+  "opt_gross_pts": 1.47,
+  "opt_cost_pts": 1.78
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-WIN",
+  "trades": 473,
+  "pts_mean": 1.67,
+  "pts_win": 0.444,
+  "risk": 13.39,
+  "opt_gross_pts": 0.91,
+  "opt_cost_pts": 1.81
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "C-F1",
+  "trades": 253,
+  "pts_mean": 5.0,
+  "pts_win": 0.4625,
+  "risk": 18.9,
+  "opt_gross_pts": 2.45,
+  "opt_cost_pts": 1.78
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-B",
+  "trades": 451,
+  "pts_mean": 1.46,
+  "pts_win": 0.4568,
+  "risk": 17.9,
+  "opt_gross_pts": 0.16,
+  "opt_cost_pts": 1.79
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-SR",
+  "trades": 741,
+  "pts_mean": 1.22,
+  "pts_win": 0.4737,
+  "risk": 19.71,
+  "opt_gross_pts": -0.46,
+  "opt_cost_pts": 1.8
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-WK",
+  "trades": 556,
+  "pts_mean": 1.92,
+  "pts_win": 0.4604,
+  "risk": 18.25,
+  "opt_gross_pts": 0.23,
+  "opt_cost_pts": 1.8
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-T3",
+  "trades": 363,
+  "pts_mean": 1.14,
+  "pts_win": 0.4298,
+  "risk": 28.28,
+  "opt_gross_pts": -0.08,
+  "opt_cost_pts": 1.77
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-T5",
+  "trades": 285,
+  "pts_mean": 2.97,
+  "pts_win": 0.4246,
+  "risk": 37.32,
+  "opt_gross_pts": 0.37,
+  "opt_cost_pts": 1.76
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-HTF",
+  "trades": 195,
+  "pts_mean": -0.9,
+  "pts_win": 0.3692,
+  "risk": 16.67,
+  "opt_gross_pts": -0.27,
+  "opt_cost_pts": 1.76
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-N3",
+  "trades": 451,
+  "pts_mean": 1.31,
+  "pts_win": 0.4812,
+  "risk": 17.88,
+  "opt_gross_pts": -0.16,
+  "opt_cost_pts": 1.79
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-RR2",
+  "trades": 442,
+  "pts_mean": 1.56,
+  "pts_win": 0.3394,
+  "risk": 17.59,
+  "opt_gross_pts": 0.08,
+  "opt_cost_pts": 1.79
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-WIN",
+  "trades": 395,
+  "pts_mean": 1.23,
+  "pts_win": 0.4405,
+  "risk": 15.64,
+  "opt_gross_pts": 0.29,
+  "opt_cost_pts": 1.81
+ },
+ {
+  "inst": "FINNIFTY",
+  "variant": "R-F1",
+  "trades": 194,
+  "pts_mean": -0.31,
+  "pts_win": 0.4072,
+  "risk": 20.92,
+  "opt_gross_pts": -1.3,
+  "opt_cost_pts": 1.77
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-B",
+  "trades": 629,
+  "pts_mean": 0.36,
+  "pts_win": 0.442,
+  "risk": 10.55,
+  "opt_gross_pts": -0.64,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-SR",
+  "trades": 830,
+  "pts_mean": 0.82,
+  "pts_win": 0.4771,
+  "risk": 12.09,
+  "opt_gross_pts": -0.2,
+  "opt_cost_pts": 1.08
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-WK",
+  "trades": 640,
+  "pts_mean": 0.28,
+  "pts_win": 0.4359,
+  "risk": 10.96,
+  "opt_gross_pts": -0.7,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-T3",
+  "trades": 523,
+  "pts_mean": 2.52,
+  "pts_win": 0.4359,
+  "risk": 15.89,
+  "opt_gross_pts": 0.44,
+  "opt_cost_pts": 1.08
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-T5",
+  "trades": 453,
+  "pts_mean": 1.11,
+  "pts_win": 0.4194,
+  "risk": 19.73,
+  "opt_gross_pts": -0.62,
+  "opt_cost_pts": 1.09
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-HTF",
+  "trades": 273,
+  "pts_mean": -0.23,
+  "pts_win": 0.3956,
+  "risk": 9.28,
+  "opt_gross_pts": -1.15,
+  "opt_cost_pts": 1.08
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-N3",
+  "trades": 629,
+  "pts_mean": 0.28,
+  "pts_win": 0.4579,
+  "risk": 10.57,
+  "opt_gross_pts": -0.51,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-RR2",
+  "trades": 617,
+  "pts_mean": 1.07,
+  "pts_win": 0.3339,
+  "risk": 10.47,
+  "opt_gross_pts": -0.8,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-WIN",
+  "trades": 513,
+  "pts_mean": 0.42,
+  "pts_win": 0.4425,
+  "risk": 8.38,
+  "opt_gross_pts": -0.69,
+  "opt_cost_pts": 1.1
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "C-F1",
+  "trades": 264,
+  "pts_mean": 0.15,
+  "pts_win": 0.4432,
+  "risk": 13.09,
+  "opt_gross_pts": -1.06,
+  "opt_cost_pts": 1.08
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-B",
+  "trades": 510,
+  "pts_mean": 1.57,
+  "pts_win": 0.502,
+  "risk": 11.54,
+  "opt_gross_pts": -0.62,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-SR",
+  "trades": 758,
+  "pts_mean": 1.71,
+  "pts_win": 0.5119,
+  "risk": 13.52,
+  "opt_gross_pts": -0.23,
+  "opt_cost_pts": 1.08
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-WK",
+  "trades": 599,
+  "pts_mean": 0.76,
+  "pts_win": 0.4624,
+  "risk": 11.99,
+  "opt_gross_pts": -0.64,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-T3",
+  "trades": 404,
+  "pts_mean": 2.65,
+  "pts_win": 0.4604,
+  "risk": 19.64,
+  "opt_gross_pts": 0.4,
+  "opt_cost_pts": 1.08
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-T5",
+  "trades": 343,
+  "pts_mean": 0.67,
+  "pts_win": 0.4315,
+  "risk": 24.42,
+  "opt_gross_pts": -0.49,
+  "opt_cost_pts": 1.08
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-HTF",
+  "trades": 232,
+  "pts_mean": 1.2,
+  "pts_win": 0.4569,
+  "risk": 10.08,
+  "opt_gross_pts": -0.56,
+  "opt_cost_pts": 1.09
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-N3",
+  "trades": 512,
+  "pts_mean": 1.48,
+  "pts_win": 0.5176,
+  "risk": 11.53,
+  "opt_gross_pts": -0.54,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-RR2",
+  "trades": 499,
+  "pts_mean": 1.05,
+  "pts_win": 0.3387,
+  "risk": 11.41,
+  "opt_gross_pts": -1.26,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-WIN",
+  "trades": 439,
+  "pts_mean": 1.88,
+  "pts_win": 0.5103,
+  "risk": 10.14,
+  "opt_gross_pts": -0.2,
+  "opt_cost_pts": 1.11
+ },
+ {
+  "inst": "MIDCPNIFTY",
+  "variant": "R-F1",
+  "trades": 209,
+  "pts_mean": 1.13,
+  "pts_win": 0.4928,
+  "risk": 14.2,
+  "opt_gross_pts": -1.2,
+  "opt_cost_pts": 1.07
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-B",
+  "trades": 97,
+  "pts_mean": -2.78,
+  "pts_win": 0.1237,
+  "risk": 65.87,
+  "opt_gross_pts": -53.72,
+  "opt_cost_pts": 39.29
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-SR",
+  "trades": 166,
+  "pts_mean": -16.11,
+  "pts_win": 0.1265,
+  "risk": 47.56,
+  "opt_gross_pts": -44.94,
+  "opt_cost_pts": 46.57
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-WK",
+  "trades": 97,
+  "pts_mean": -2.78,
+  "pts_win": 0.1237,
+  "risk": 65.87,
+  "opt_gross_pts": -53.72,
+  "opt_cost_pts": 39.29
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-T3",
+  "trades": 247,
+  "pts_mean": 38.64,
+  "pts_win": 0.4534,
+  "risk": 98.85,
+  "opt_gross_pts": -18.41,
+  "opt_cost_pts": 36.46
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-T5",
+  "trades": 218,
+  "pts_mean": 21.15,
+  "pts_win": 0.4312,
+  "risk": 127.88,
+  "opt_gross_pts": -43.51,
+  "opt_cost_pts": 38.32
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-HTF",
+  "trades": 15,
+  "pts_mean": 20.47,
+  "pts_win": 0.2667,
+  "risk": 73.4,
+  "opt_gross_pts": -14.78,
+  "opt_cost_pts": 35.12
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-N3",
+  "trades": 103,
+  "pts_mean": -1.26,
+  "pts_win": 0.1262,
+  "risk": 63.28,
+  "opt_gross_pts": -51.35,
+  "opt_cost_pts": 40.18
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-RR2",
+  "trades": 95,
+  "pts_mean": 0.17,
+  "pts_win": 0.1053,
+  "risk": 62.78,
+  "opt_gross_pts": -46.58,
+  "opt_cost_pts": 38.73
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-WIN",
+  "trades": 93,
+  "pts_mean": 1.83,
+  "pts_win": 0.129,
+  "risk": 63.97,
+  "opt_gross_pts": -56.88,
+  "opt_cost_pts": 38.27
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "C-F1",
+  "trades": 44,
+  "pts_mean": -35.11,
+  "pts_win": 0.0682,
+  "risk": 78.68,
+  "opt_gross_pts": -82.86,
+  "opt_cost_pts": 44.41
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-B",
+  "trades": 82,
+  "pts_mean": -15.22,
+  "pts_win": 0.122,
+  "risk": 89.13,
+  "opt_gross_pts": -80.57,
+  "opt_cost_pts": 39.45
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-SR",
+  "trades": 162,
+  "pts_mean": 18.48,
+  "pts_win": 0.1358,
+  "risk": 73.27,
+  "opt_gross_pts": -71.78,
+  "opt_cost_pts": 46.0
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-WK",
+  "trades": 82,
+  "pts_mean": -15.22,
+  "pts_win": 0.122,
+  "risk": 89.13,
+  "opt_gross_pts": -80.57,
+  "opt_cost_pts": 39.45
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-T3",
+  "trades": 207,
+  "pts_mean": 33.02,
+  "pts_win": 0.4444,
+  "risk": 134.86,
+  "opt_gross_pts": -46.51,
+  "opt_cost_pts": 41.0
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-T5",
+  "trades": 177,
+  "pts_mean": 18.81,
+  "pts_win": 0.4576,
+  "risk": 179.95,
+  "opt_gross_pts": -49.92,
+  "opt_cost_pts": 40.14
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-HTF",
+  "trades": 13,
+  "pts_mean": 46.08,
+  "pts_win": 0.3846,
+  "risk": 91.38,
+  "opt_gross_pts": -67.1,
+  "opt_cost_pts": 41.23
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-N3",
+  "trades": 89,
+  "pts_mean": -9.62,
+  "pts_win": 0.1348,
+  "risk": 86.47,
+  "opt_gross_pts": -75.62,
+  "opt_cost_pts": 39.84
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-RR2",
+  "trades": 81,
+  "pts_mean": -12.89,
+  "pts_win": 0.1235,
+  "risk": 89.35,
+  "opt_gross_pts": -80.57,
+  "opt_cost_pts": 39.45
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-WIN",
+  "trades": 80,
+  "pts_mean": -11.68,
+  "pts_win": 0.125,
+  "risk": 87.44,
+  "opt_gross_pts": -75.34,
+  "opt_cost_pts": 39.41
+ },
+ {
+  "inst": "GOLDM",
+  "variant": "R-F1",
+  "trades": 40,
+  "pts_mean": 13.72,
+  "pts_win": 0.175,
+  "risk": 109.6,
+  "opt_gross_pts": -106.16,
+  "opt_cost_pts": 39.54
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-B",
+  "trades": 115,
+  "pts_mean": 342.5,
+  "pts_win": 0.113,
+  "risk": 185.56,
+  "opt_gross_pts": -95.79,
+  "opt_cost_pts": 122.39
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-SR",
+  "trades": 209,
+  "pts_mean": 88.85,
+  "pts_win": 0.1292,
+  "risk": 170.9,
+  "opt_gross_pts": -211.66,
+  "opt_cost_pts": 121.68
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-WK",
+  "trades": 115,
+  "pts_mean": 342.5,
+  "pts_win": 0.113,
+  "risk": 185.56,
+  "opt_gross_pts": -95.79,
+  "opt_cost_pts": 122.39
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-T3",
+  "trades": 219,
+  "pts_mean": 137.99,
+  "pts_win": 0.4658,
+  "risk": 384.95,
+  "opt_gross_pts": -79.45,
+  "opt_cost_pts": 108.16
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-T5",
+  "trades": 196,
+  "pts_mean": 178.15,
+  "pts_win": 0.4898,
+  "risk": 531.82,
+  "opt_gross_pts": -57.66,
+  "opt_cost_pts": 104.26
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-HTF",
+  "trades": 20,
+  "pts_mean": -167.9,
+  "pts_win": 0.0,
+  "risk": 167.9,
+  "opt_gross_pts": -402.9,
+  "opt_cost_pts": 152.28
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-N3",
+  "trades": 129,
+  "pts_mean": 307.66,
+  "pts_win": 0.1163,
+  "risk": 173.75,
+  "opt_gross_pts": -92.41,
+  "opt_cost_pts": 116.42
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-RR2",
+  "trades": 113,
+  "pts_mean": 317.15,
+  "pts_win": 0.0885,
+  "risk": 174.25,
+  "opt_gross_pts": -105.57,
+  "opt_cost_pts": 122.32
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-WIN",
+  "trades": 108,
+  "pts_mean": 372.69,
+  "pts_win": 0.1204,
+  "risk": 187.42,
+  "opt_gross_pts": -65.26,
+  "opt_cost_pts": 121.04
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "C-F1",
+  "trades": 56,
+  "pts_mean": -37.5,
+  "pts_win": 0.0893,
+  "risk": 225.86,
+  "opt_gross_pts": -169.89,
+  "opt_cost_pts": 139.53
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-B",
+  "trades": 96,
+  "pts_mean": 418.92,
+  "pts_win": 0.1562,
+  "risk": 250.68,
+  "opt_gross_pts": -61.13,
+  "opt_cost_pts": 129.09
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-SR",
+  "trades": 191,
+  "pts_mean": 454.12,
+  "pts_win": 0.1571,
+  "risk": 253.06,
+  "opt_gross_pts": -137.34,
+  "opt_cost_pts": 128.11
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-WK",
+  "trades": 96,
+  "pts_mean": 418.92,
+  "pts_win": 0.1562,
+  "risk": 250.68,
+  "opt_gross_pts": -61.13,
+  "opt_cost_pts": 129.09
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-T3",
+  "trades": 153,
+  "pts_mean": 153.85,
+  "pts_win": 0.4641,
+  "risk": 540.94,
+  "opt_gross_pts": -73.74,
+  "opt_cost_pts": 101.39
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-T5",
+  "trades": 143,
+  "pts_mean": 367.74,
+  "pts_win": 0.5105,
+  "risk": 633.59,
+  "opt_gross_pts": -124.7,
+  "opt_cost_pts": 119.89
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-HTF",
+  "trades": 17,
+  "pts_mean": -175.12,
+  "pts_win": 0.0588,
+  "risk": 212.71,
+  "opt_gross_pts": -225.92,
+  "opt_cost_pts": 157.49
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-N3",
+  "trades": 104,
+  "pts_mean": 390.35,
+  "pts_win": 0.1538,
+  "risk": 247.42,
+  "opt_gross_pts": -72.89,
+  "opt_cost_pts": 125.18
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-RR2",
+  "trades": 95,
+  "pts_mean": 410.45,
+  "pts_win": 0.1263,
+  "risk": 251.02,
+  "opt_gross_pts": -94.13,
+  "opt_cost_pts": 130.76
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-WIN",
+  "trades": 91,
+  "pts_mean": 449.3,
+  "pts_win": 0.1538,
+  "risk": 253.95,
+  "opt_gross_pts": -55.12,
+  "opt_cost_pts": 132.47
+ },
+ {
+  "inst": "SILVERM",
+  "variant": "R-F1",
+  "trades": 45,
+  "pts_mean": 103.64,
+  "pts_win": 0.1111,
+  "risk": 319.69,
+  "opt_gross_pts": -56.79,
+  "opt_cost_pts": 148.66
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-B",
+  "trades": 133,
+  "pts_mean": 3.13,
+  "pts_win": 0.1429,
+  "risk": 3.51,
+  "opt_gross_pts": -2.4,
+  "opt_cost_pts": 7.63
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-SR",
+  "trades": 253,
+  "pts_mean": 2.06,
+  "pts_win": 0.1344,
+  "risk": 2.85,
+  "opt_gross_pts": -1.46,
+  "opt_cost_pts": 8.03
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-WK",
+  "trades": 133,
+  "pts_mean": 3.13,
+  "pts_win": 0.1429,
+  "risk": 3.51,
+  "opt_gross_pts": -2.4,
+  "opt_cost_pts": 7.63
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-T3",
+  "trades": 245,
+  "pts_mean": 3.83,
+  "pts_win": 0.5878,
+  "risk": 8.22,
+  "opt_gross_pts": 0.24,
+  "opt_cost_pts": 7.66
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-T5",
+  "trades": 224,
+  "pts_mean": 2.81,
+  "pts_win": 0.5,
+  "risk": 9.61,
+  "opt_gross_pts": -0.38,
+  "opt_cost_pts": 7.67
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-HTF",
+  "trades": 21,
+  "pts_mean": -0.24,
+  "pts_win": 0.1429,
+  "risk": 5.52,
+  "opt_gross_pts": -2.79,
+  "opt_cost_pts": 7.45
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-N3",
+  "trades": 139,
+  "pts_mean": 3.53,
+  "pts_win": 0.1583,
+  "risk": 3.48,
+  "opt_gross_pts": -2.03,
+  "opt_cost_pts": 7.62
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-RR2",
+  "trades": 133,
+  "pts_mean": 3.14,
+  "pts_win": 0.1353,
+  "risk": 3.47,
+  "opt_gross_pts": -2.41,
+  "opt_cost_pts": 7.63
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-WIN",
+  "trades": 126,
+  "pts_mean": 2.48,
+  "pts_win": 0.127,
+  "risk": 3.55,
+  "opt_gross_pts": -2.81,
+  "opt_cost_pts": 7.58
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "C-F1",
+  "trades": 63,
+  "pts_mean": 7.0,
+  "pts_win": 0.1746,
+  "risk": 3.71,
+  "opt_gross_pts": -1.89,
+  "opt_cost_pts": 7.76
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-B",
+  "trades": 111,
+  "pts_mean": 6.69,
+  "pts_win": 0.1532,
+  "risk": 4.23,
+  "opt_gross_pts": -0.34,
+  "opt_cost_pts": 7.59
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-SR",
+  "trades": 240,
+  "pts_mean": 3.49,
+  "pts_win": 0.15,
+  "risk": 4.25,
+  "opt_gross_pts": 0.02,
+  "opt_cost_pts": 8.01
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-WK",
+  "trades": 111,
+  "pts_mean": 6.69,
+  "pts_win": 0.1532,
+  "risk": 4.23,
+  "opt_gross_pts": -0.34,
+  "opt_cost_pts": 7.59
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-T3",
+  "trades": 204,
+  "pts_mean": 5.69,
+  "pts_win": 0.5343,
+  "risk": 11.17,
+  "opt_gross_pts": -0.03,
+  "opt_cost_pts": 7.47
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-T5",
+  "trades": 171,
+  "pts_mean": 4.26,
+  "pts_win": 0.5263,
+  "risk": 12.02,
+  "opt_gross_pts": -0.48,
+  "opt_cost_pts": 7.43
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-HTF",
+  "trades": 18,
+  "pts_mean": 8.72,
+  "pts_win": 0.1667,
+  "risk": 4.28,
+  "opt_gross_pts": 1.28,
+  "opt_cost_pts": 7.07
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-N3",
+  "trades": 116,
+  "pts_mean": 6.53,
+  "pts_win": 0.1638,
+  "risk": 4.23,
+  "opt_gross_pts": -0.24,
+  "opt_cost_pts": 7.59
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-RR2",
+  "trades": 109,
+  "pts_mean": 6.88,
+  "pts_win": 0.1468,
+  "risk": 4.22,
+  "opt_gross_pts": -0.3,
+  "opt_cost_pts": 7.61
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-WIN",
+  "trades": 109,
+  "pts_mean": 7.0,
+  "pts_win": 0.156,
+  "risk": 4.12,
+  "opt_gross_pts": -0.2,
+  "opt_cost_pts": 7.59
+ },
+ {
+  "inst": "CRUDEOILM",
+  "variant": "R-F1",
+  "trades": 55,
+  "pts_mean": 10.53,
+  "pts_win": 0.1636,
+  "risk": 4.42,
+  "opt_gross_pts": 1.71,
+  "opt_cost_pts": 7.73
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-B",
+  "trades": 98,
+  "pts_mean": 0.46,
+  "pts_win": 0.1531,
+  "risk": 0.3,
+  "opt_gross_pts": 0.06,
+  "opt_cost_pts": 0.49
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-SR",
+  "trades": 184,
+  "pts_mean": 0.32,
+  "pts_win": 0.1359,
+  "risk": 0.28,
+  "opt_gross_pts": 0.02,
+  "opt_cost_pts": 0.51
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-WK",
+  "trades": 98,
+  "pts_mean": 0.46,
+  "pts_win": 0.1531,
+  "risk": 0.3,
+  "opt_gross_pts": 0.06,
+  "opt_cost_pts": 0.49
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-T3",
+  "trades": 253,
+  "pts_mean": 0.33,
+  "pts_win": 0.5415,
+  "risk": 0.58,
+  "opt_gross_pts": -0.01,
+  "opt_cost_pts": 0.48
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-T5",
+  "trades": 235,
+  "pts_mean": 0.19,
+  "pts_win": 0.434,
+  "risk": 0.79,
+  "opt_gross_pts": -0.12,
+  "opt_cost_pts": 0.47
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-HTF",
+  "trades": 12,
+  "pts_mean": 0.12,
+  "pts_win": 0.1667,
+  "risk": 0.32,
+  "opt_gross_pts": -0.18,
+  "opt_cost_pts": 0.48
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-N3",
+  "trades": 119,
+  "pts_mean": 0.45,
+  "pts_win": 0.1681,
+  "risk": 0.31,
+  "opt_gross_pts": 0.04,
+  "opt_cost_pts": 0.5
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-RR2",
+  "trades": 97,
+  "pts_mean": 0.45,
+  "pts_win": 0.134,
+  "risk": 0.3,
+  "opt_gross_pts": 0.06,
+  "opt_cost_pts": 0.49
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-WIN",
+  "trades": 96,
+  "pts_mean": 0.46,
+  "pts_win": 0.1562,
+  "risk": 0.3,
+  "opt_gross_pts": 0.05,
+  "opt_cost_pts": 0.47
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "C-F1",
+  "trades": 45,
+  "pts_mean": 0.63,
+  "pts_win": 0.1778,
+  "risk": 0.3,
+  "opt_gross_pts": 0.22,
+  "opt_cost_pts": 0.49
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-B",
+  "trades": 83,
+  "pts_mean": 0.22,
+  "pts_win": 0.1807,
+  "risk": 0.42,
+  "opt_gross_pts": -0.09,
+  "opt_cost_pts": 0.48
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-SR",
+  "trades": 165,
+  "pts_mean": 0.37,
+  "pts_win": 0.1879,
+  "risk": 0.38,
+  "opt_gross_pts": 0.04,
+  "opt_cost_pts": 0.5
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-WK",
+  "trades": 83,
+  "pts_mean": 0.22,
+  "pts_win": 0.1807,
+  "risk": 0.42,
+  "opt_gross_pts": -0.09,
+  "opt_cost_pts": 0.48
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-T3",
+  "trades": 214,
+  "pts_mean": 0.19,
+  "pts_win": 0.4673,
+  "risk": 0.77,
+  "opt_gross_pts": -0.04,
+  "opt_cost_pts": 0.48
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-T5",
+  "trades": 199,
+  "pts_mean": 0.16,
+  "pts_win": 0.4673,
+  "risk": 1.05,
+  "opt_gross_pts": -0.09,
+  "opt_cost_pts": 0.47
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-HTF",
+  "trades": 8,
+  "pts_mean": -0.31,
+  "pts_win": 0.125,
+  "risk": 0.82,
+  "opt_gross_pts": -0.64,
+  "opt_cost_pts": 0.41
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-N3",
+  "trades": 101,
+  "pts_mean": 0.39,
+  "pts_win": 0.2079,
+  "risk": 0.42,
+  "opt_gross_pts": -0.02,
+  "opt_cost_pts": 0.49
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-RR2",
+  "trades": 80,
+  "pts_mean": 0.2,
+  "pts_win": 0.1375,
+  "risk": 0.42,
+  "opt_gross_pts": -0.1,
+  "opt_cost_pts": 0.48
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-WIN",
+  "trades": 82,
+  "pts_mean": 0.24,
+  "pts_win": 0.1829,
+  "risk": 0.4,
+  "opt_gross_pts": -0.06,
+  "opt_cost_pts": 0.48
+ },
+ {
+  "inst": "NATGASMINI",
+  "variant": "R-F1",
+  "trades": 40,
+  "pts_mean": 0.62,
+  "pts_win": 0.275,
+  "risk": 0.44,
+  "opt_gross_pts": 0.17,
+  "opt_cost_pts": 0.48
+ }
+]
