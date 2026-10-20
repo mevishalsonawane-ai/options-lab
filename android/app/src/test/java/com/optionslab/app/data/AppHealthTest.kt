@@ -92,7 +92,8 @@ class AppHealthTest : RobolectricTest() {
         AppHealth.setForTest(b)
         val line = AppHealth.diagLine()
         assertTrue(line, line.startsWith("Health: 2 stalls today (longest 1.1 s, most in MoveRecorder.write) · last ANR "))
-        assertTrue(line, "in Input dispatching timed out · no crash seen · tuner: nothing adjusted" in line)
+        // 20 Oct: with that day's stalls (where the screen's thread was slow on the ANR's day).
+        assertTrue(line, "in Input dispatching timed out (that day 2 stalls, most in MoveRecorder.write) · no crash seen · tuner: nothing adjusted" in line)
         val report = Diag.report()
         assertTrue(report.lines().any { it.startsWith("Health: 2 stalls today") })
     }

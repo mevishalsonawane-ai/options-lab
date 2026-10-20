@@ -855,7 +855,8 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(up, up.contains("closed on it (net hidden)") && up.contains("on the research exits (net hidden)"))
         assertFalse(up, Regex("₹|\\bRs\\b").containsMatchIn(up))
         assertFalse(up, Regex("(closed|would-be|exits|rules|on it)\\s+[-+−]?\\d").containsMatchIn(up))
-        assertFalse(up, Regex("\\d,\\d{3}").containsMatchIn(up))
+        // A comma-grouped figure is a rupee net here; the research's trade counts in brackets ("(1,029)") are not.
+        assertFalse(up, Regex("(?<![(\\d,])\\d{1,3}(,\\d{2,3})+(?![\\d)])").containsMatchIn(up))
         val said = PassedArmsHost.facts(v).arms.single { it.source == DonchianArm.SOURCE }
         assertTrue(said.recordOnly && said.on == false); assertEquals(1, said.wouldBe)
         assertTrue(com.optionslab.ira.PassedArmsTalk.armWords(said).startsWith("${DonchianArm.LABEL}: record only (would-be trades, nothing bought)."))
