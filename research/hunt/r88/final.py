@@ -20,7 +20,7 @@ def main() -> None:
         raise SystemExit(f"the holdout was already read ({cfg.FINAL_FLAG.read_text().strip()}); it is read once")
     design = pd.read_csv(cfg.RESULTS / "partC_design.csv")
     cuts = json.load(open(cfg.RESULTS / "cuts.json"))
-    cfg.FINAL_FLAG.write_text(datetime.now().isoformat(timespec="seconds") + " IST holdout opened by final.py\n")
+    cfg.FINAL_FLAG.write_text(datetime.now().isoformat(timespec="seconds") + " UTC holdout opened by final.py\n")
     ev = run.events()
     cen, conc, hold, models = [], [], [], []
     surv = design[design.design_pass]

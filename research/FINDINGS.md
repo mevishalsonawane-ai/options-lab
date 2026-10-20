@@ -1397,3 +1397,16 @@ A0-A3). Signal source: the index's own 1m / 5m / 15m candle (NIFTY, BANKNIFTY, S
   (-Rs 21,127, 162 trades). Exiting an ORB breakout on a big wick against it helped in both windows but not
   significantly out of sample (+Rs 16,107, p 0.40); exits on a strong opposite candle made arms worse. Real option
   prices could not be fetched for the design window (Dhan degraded): still model-priced.
+
+## What moves the candle: 22 parameters vs the next candle's size and direction, 5 indices + 10 MCX (R88, 20 Oct 2026) - size yes (225 of 305 hold), direction no (0 of 8)
+Full study: `HUNT_R88_WHAT_MOVES_THE_CANDLE.md` (pre-registered `hunt/r88/PREREG.md`, commit 8eb9206; holdout 1 Jun -
+19 Oct 2026 read once). Signal source: the underlying; the option chain is context only.
+- Size of the next 5m/15m candle is predictable out of sample: previous candle big 1.5x (indices) / 1.65x (MCX), recent
+  volatility 1.4x / 1.7x, yesterday's range 1.3x / 1.4x, high VIX/IV 1.3x, high PCR 1.4x (indices), expiry day 1.27x;
+  rich implied vs realised 0.85-0.9x, call-heavy volume 0.87x. A model of all of them beats the time-of-day baseline by
+  19-22% (index 5m) but the simple "last size + recent volatility" rule does most of it (model +2-7%).
+- Direction: 8 of 841 design tests passed, 0 held; model AUC 0.485-0.535; best top-decile moves (SENSEX 5m +3.3 pts)
+  are below an option round trip (6.4).
+- With the candle (not a forecast): NIFTY's same candle explains 51-90% of the other indices' candles; VIX falls on up
+  candles; on MCX the PCR falls on up candles (crude 20-28%).
+- Use: size stops, targets and position size by expected candle size; never PCR/OI/skew/volume as a direction signal.

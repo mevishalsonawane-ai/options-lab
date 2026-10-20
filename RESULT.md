@@ -1,3 +1,25 @@
+# R88, 20 Oct 2026: what moves the candle (every candle, every parameter): RESULT
+
+Boss: "deep study each and every candle, the behaviour, and the other parameters which affect the candle movement".
+Write-up: `research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md`. Pre-registered (`research/hunt/r88/PREREG.md`, 8eb9206) before
+any statistic; holdout 1 Jun - 19 Oct 2026 read once. 5 indices (Nov 2024 on) and 10 MCX contracts (Aug 2025 on), 5m
+and 15m candles of the underlying, 22 parameters including the full option chain.
+
+- **Size: predictable.** 225 of 305 size effects held out of sample: big candles follow big candles (1.5x), volatile
+  hours follow volatile hours (1.4-1.7x), high VIX/IV, high PCR, option-volume rushes and expiry days mean bigger
+  candles; calm, call-heavy, near-the-high markets smaller ones.
+- **Direction: not predictable.** 0 of 8 design direction effects held; the all-parameters model's AUC is 0.485-0.535
+  and its best calls move less than an option round trip.
+- **With the candle:** the indices move together (NIFTY explains 51-90% of the others' candles); VIX falls on up
+  candles; on MCX the PCR falls on up candles.
+- **When:** the first 15 minutes on NSE and the US-open hours on MCX are 2-4x a normal candle; SENSEX expiry days
+  +25-29%.
+- Nothing in the app changed; no rule proposed. Checks: all 459 tests in research/hunt/r88 (incl. the look-ahead
+  guard), research/brain and research/data pass with the pinned library versions; features catalog check and
+  experiments validate pass.
+
+---
+
 # Data fill, 19–20 Oct 2026: RESULT
 
 **Done.** MCX (the priority), index and stock-option data are in the lake on Google Drive up to **19 Oct 2026**,
