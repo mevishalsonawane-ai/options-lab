@@ -1441,3 +1441,23 @@ window, first trade) x 9 instruments, BH over 180, random-entry twins.
   a little (ATR halves false breaks, 33% -> 14%); breadth cut losses 62% / 76% but never turned positive. The one lead,
   FINNIFTY 5m ATR + run + breadth, +Rs 78,202 (314 trades) in design, lost Rs 40,647 (401) in 2021-24. Method lesson:
   twins that keep the day's side carry hindsight on long holds; use after-trigger twins.
+
+## The "Almazov Trade: MTF Structure & BOS Entries" indicator (R90, 20 Oct 2026) - 0 of 99 pass; a chart overlay only
+Full study: `HUNT_R90_ALMAZOV_BOS.md` (pre-registered `hunt/r90_almazov_bos/PREREG.md`, commit 439876c; notes N1). Signal
+source: the underlying (index spot 1m; MCX near future, close-only): swings, CHoCH / BOS structure on the chart and a
+higher timeframe, buy-stop at the chart swing, stop at the opposite chart swing, target the HTF swing. The 1-ITM option
+bought on real prints with real costs, flat 15:15 (15:05 expiry). 11 variants (1/3/5/15m charts with 4x HTF, 5m+60m,
+15m+75m, 15m+day, swing 3, RR 2, no fill before 09:30, daily trend) x 9 instruments, BH over 99, after-trigger twins.
+- As written (bar fills, no costs, held for days) the indices look positive on 9 of 11 settings (5m/60m +Rs 3.30 lakh,
+  223 trades); flat by 15:15 the target (about 2x risk away) is rarely reached (5m: 3 of 76 index trades) and the option
+  bleeds time value: design option -Rs 1.19 lakh to +Rs 41,833 pooled per setting, no better than random entry minutes.
+- Signals are rare (5m: 0.03-0.06 a day per index); 79 of 99 cells under 40 trades. Few false breaks (0-9% of index
+  trades stopped within 3 bars): the loss is slow, not whipsaw. MCX lost on every setting in both windows.
+- Design leader MIDCPNIFTY 15m / day HTF +Rs 48,830 (34, p 0.068) -> holdout -Rs 25,462 (9). Holdout pooled indices:
+  1m -Rs 36,278 (214), 5m -Rs 17,573 (42). Trades on the arms' days, near-zero correlation, loses on both kinds of day.
+  Keep only as a structure / levels overlay; no signal, no paper arm.
+- R90B (Boss, 20 Oct: 5 one-minute confirmation candles, profit lock, stop trail, profit trail; `PREREG_B.md`): 7 rules x
+  3 charts x 9 instruments, 0 of 189 pass. Confirmation lifts the win rate (1m indices 37% -> 47%) and halves trades and
+  losses, but after-trigger random entries do as well; lock + trails cut the 5m / 60m index loss from -Rs 1.19 lakh to
+  -Rs 16,857 (design), never to a profit. Apr - Oct 2026 (already seen by R90): 5m / 60m indices positive with or without
+  the additions (plain +Rs 19,679 on 92); commodities lose with every combination.
