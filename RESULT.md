@@ -68,6 +68,9 @@ moved by +1.
   touched and related app classes (20 classes, 321 tests, 0 failed, 7 skipped by design, including ProtectionsLiveTest,
   OrderPathRound2Test, ExposureSpeedTest, TickPathReviewTest, JobsTest, ArmsWaitTest, BatteryRestTest) green with CI's
   flags. The full app suite (4 shards), Build APK and the rest run in CI.
+- **CI:** green on `2d2fafc` (all four app test shards, Build APK, engine parity, the PC harness; Research green too). The
+  first push's Build APK failed: Jarvis's build compiles the diagnostics report as one very long function, and the five
+  new lines overflowed the compiler's stack. They now sit in two small functions of their own.
 
 ## Review
 
