@@ -1,0 +1,26 @@
+id: r88-a
+title: 'R88 Part A: candle census, 5 indices and 10 MCX underlyings (size, body, wicks, colour, time of day, expiry, events)'
+family: market-facts
+date: '2026-10-20'
+doc: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+hypothesis: Describe every 1/5/15-minute candle of the underlying (no test).
+data_version: Drive lake as of 20 Oct 2026 (index_1m to 19 Oct, options_rolling_1m ATM+-10 / MCX ATM+-5 to 19 Oct), cached
+  under ~/.cache/iraalgo/r88, not committed
+period:
+  design: 2024-11-20..2026-05-31 (MCX 2025-08-05..2026-05-31)
+  holdout: 2026-06-01..2026-10-19
+instruments: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, GOLD, GOLDM, SILVER, SILVERM, CRUDEOIL, CRUDEOILM, NATURALGAS,
+  NATGASMINI, COPPER, ZINC]
+features: [range, body/range, wicks, colour, time-of-day slot, weekday, expiry day, event day, 'signal source: the underlying']
+model_or_rule: descriptive
+settings: research/hunt/r88/PREREG.md section 3; run.py census, slot_table
+prereg: research/hunt/r88/PREREG.md
+variants_tried: null
+results:
+  summary: 'Indices: 5m median range NIFTY 7.8 bps (27,975 candles, 373 sessions), BANKNIFTY 9.7, SENSEX 7.7; first 15 min
+    2.5-3x midday (NIFTY 15m 36 vs 11-12 bps); SENSEX expiry days +25% (design) / +29% (holdout, 98 sessions). Colour ~50%
+    green; return lag-1 autocorrelation -0.04..+0.06; log-range autocorrelation 0.30-0.80. MCX: US-open hours 2-4x the morning
+    (GOLDM 15m 18 vs 9 bps; crude 37 vs 12; natural gas 68 vs 18).'
+  costs: none (descriptive)
+holdout_read: true
+verdict: not-a-test

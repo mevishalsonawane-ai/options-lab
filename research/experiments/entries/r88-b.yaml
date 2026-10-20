@@ -1,0 +1,25 @@
+id: r88-b
+title: 'R88 Part B: what moves WITH the candle (same-candle option-chain, VIX and leader-index changes)'
+family: market-facts
+date: '2026-10-20'
+doc: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+hypothesis: Measure how much of a candle's return moves together with same-candle changes of ATM IV, PCR, call/put OI,
+  option volume imbalance, VIX and the leader index (concurrent, not a forecast).
+data_version: as r88-a
+period:
+  design: 2024-11-20..2026-05-31 (MCX 2025-08-05..2026-05-31)
+  holdout: 2026-06-01..2026-10-19
+instruments: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, GOLD, GOLDM, SILVER, SILVERM, CRUDEOIL, CRUDEOILM, NATURALGAS,
+  NATGASMINI, COPPER, ZINC]
+features: [ATM IV change, PCR change, call OI change, put OI change, call-put volume imbalance, VIX change, leader index same candle]
+model_or_rule: OLS of the candle return (bps) on standardised same-candle changes, per instrument x timeframe
+settings: research/hunt/r88/PREREG.md section 4; run.py concurrent_ols
+prereg: research/hunt/r88/PREREG.md
+variants_tried: null
+results:
+  summary: 'Holdout R2 (5m/15m): NIFTY''s same candle alone explains 88-90% of SENSEX, 78-79% FINNIFTY, 67-68% BANKNIFTY,
+    51-52% MIDCPNIFTY (7,350 / 2,450 candles, 98 sessions); VIX change alone 17-36% (falls on up candles). MCX: PCR change
+    alone 20-28% of crude (falls on up candles), 4-22% gold/silver; partly mechanical (rolling ATM window).'
+  costs: none (descriptive)
+holdout_read: true
+verdict: not-a-test

@@ -1,0 +1,26 @@
+id: r88-d
+title: 'R88 Part D: all factors together (gradient boosting) for the next candle''s size and direction'
+family: ml
+date: '2026-10-20'
+doc: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+hypothesis: All factors together predict the next candle's size better than a simple last-size + realised-volatility rule,
+  and its direction with AUC > 0.5 and a top-decile move above an option round trip.
+data_version: as r88-a
+period:
+  design: 2024-11-20..2026-05-31 (monthly walk-forward; MCX from 2025-08-05)
+  holdout: 2026-06-01..2026-10-19
+instruments: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, GOLD, GOLDM, SILVER, SILVERM, CRUDEOIL, CRUDEOILM, NATURALGAS,
+  NATGASMINI, COPPER, ZINC]
+features: [F01-F22b, slot, days to expiry]
+model_or_rule: sklearn HistGradientBoosting (200 iterations, lr 0.05, seed 88); baselines time-of-day and OLS on F02+F03
+settings: research/hunt/r88/PREREG.md section 6; run.py walk_forward; final.py holdout_model
+prereg: research/hunt/r88/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Holdout size: 19-22% better than time of day on index 5m (13-19% 15m), 2-7% better than the simple rule with CI
+    above 0 in 23 of 30 cells (ZINC worse). Direction: AUC 0.485-0.535; top-decile move SENSEX 5m +3.3 points vs 6.4 cost,
+    NIFTY 5m +0.2 vs 1.9; GOLDM 5m AUC 0.533 (15,253 candles) with +5.7 points per call (Rs 57 a lot vs Rs 340-450 cost).'
+  costs: option round trip in points (NIFTY 1.9, SENSEX 6.4 from R87; MCX from R85); no P&L
+holdout_read: true
+verdict: rejected
+notes: Size is predictable (a fact for sizing stops/targets in a future pre-registered study); direction is not tradable.

@@ -5,7 +5,7 @@ For every option file given: the lake spike metric (spikes.py: one-minute spikes
 the lakeclean checks (research/hunt/lakeclean.py: foreign rows, stray opens, capped highs, stale repeated prints), on
 the rows from --since on (the newly fetched part; all rows for a new book). Foreign rows are judged against the index
 close (index_1m files) for NSE/BSE books and, for MCX books, against the median `spot` of the book's own rows at that
-minute (the underlying future; there is no separate MCX index). For MCX futures (fut_1m_live_mcx.parquet): the same
+minute (the underlying future; there is no separate MCX index; for stock options, the stock). For MCX futures (fut_1m_live_mcx.parquet): the same
 spike rule on contract-minute closes, a tighter futures rule (a close more than 2% from both neighbours that are within
 0.5% of each other) and the share of padded minutes (flat bar, zero volume, same close as the minute before).
 
@@ -81,6 +81,8 @@ def option_file(lake: str, fn: str, since=None) -> dict:
             closes = spot_closes(df, LC.NROWS)
         else:
             closes = index_closes(lake, und, set(df.day))
+            if not closes:  # stock options: no index file; the book's own spot is the stock price
+                closes, mcx = spot_closes(df, LC.NROWS), True
         _, _, log = LC.clean(df, closes, stale=True)
     finally:
         LC.NROWS = old
@@ -89,7 +91,7 @@ def option_file(lake: str, fn: str, since=None) -> dict:
     bad = c["stray_open"] + c["stale_run"]
     c["bad_tick_share"] = round(bad / len(df), 8)
     c["foreign_share"] = round(c["foreign"] / len(df), 8)
-    c["foreign_ref"] = "median spot of the book" if mcx else ("index_1m close" if closes else "none (no index file)")
+    c["foreign_ref"] = "median spot of the book" if mcx else "index_1m close"
     out["lakeclean"] = c
     return out
 

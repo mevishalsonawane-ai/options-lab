@@ -1,14 +1,14 @@
 {
- "release_tag": "data-20261014",
- "release_name": "Data lake 2026-10-14 (Dhan API v2)",
+ "release_tag": "data-20261020",
+ "release_name": "Data lake 2026-10-20 (Dhan API v2)",
  "repo": "mevishalsonawane-ai/options-lab",
  "release_published": false,
- "download_date": "2026-10-14",
+ "download_date": "2026-10-20",
  "timezone": "Asia/Kolkata (IST)",
  "format": "Parquet, zstd level 9",
  "release_notes": "Historical index, futures, equity and expired-option data from Dhan API v2. See research/data/README.md and research/data/VALIDATION.md.",
- "total_bytes": 6121919643,
- "total_rows": 389758927,
+ "total_bytes": 8400715117,
+ "total_rows": 495672359,
  "files": [
   {
    "file": "equity_1m_2017.parquet",
@@ -477,11 +477,11 @@
   {
    "file": "fut_1m_live_index.parquet",
    "dataset": "fut_1m_live_index",
-   "rows": 152382,
+   "rows": 168689,
    "first": "2026-07-29 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 1668051,
-   "sha256": "f55e9e8ae6dd031c8e77ac6b3f105f119107e93bc342d578f4f9ac426d3b054a",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 1588586,
+   "sha256": "1795d15baeb2af4d9d933bc5aee5aa05d0a444189666c329a4a5d816e96ea0de",
    "source": "Dhan /v2/charts/intraday (live contracts only)",
    "columns": [
     "symbol",
@@ -503,16 +503,16 @@
     "open_outside_hl": 0,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 54,
+    "trading_days": 57,
     "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 10,
-    "series_days_total": 423,
+    "series_days_lt_50pct_median": 12,
+    "series_days_total": 468,
     "duplicates_dropped": {
-     "identical": 1576016,
-     "conflicting_removed": 16
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped": {
-     "outside_session": 7440,
+     "outside_session": 600,
      "nonpositive_or_missing_price": 0,
      "date_not_a_trading_day_or_after_last_daily_close": 0
     }
@@ -521,11 +521,11 @@
   {
    "file": "fut_1m_live_mcx.parquet",
    "dataset": "fut_1m_live_mcx",
-   "rows": 1434299,
+   "rows": 2493209,
    "first": "2025-10-20 09:08:00+05:30",
-   "last": "2026-10-14 23:29:00+05:30",
-   "bytes": 10489553,
-   "sha256": "516e3f94e05ca2615ca668366155453050d9f6121be87367cc18b0b63d394988",
+   "last": "2026-10-19 23:30:00+05:30",
+   "bytes": 18495236,
+   "sha256": "a12260f76f3add555a24f785670d72d48e96f4cdb4ef2429d5cf3f3c8fec2430",
    "source": "Dhan /v2/charts/intraday (live contracts only)",
    "columns": [
     "symbol",
@@ -547,17 +547,17 @@
     "open_outside_hl": 2,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 252,
+    "trading_days": 255,
     "bars_per_day_median": 869.0,
-    "series_days_lt_50pct_median": 128,
-    "series_days_total": 1788,
+    "series_days_lt_50pct_median": 197,
+    "series_days_total": 3095,
     "duplicates_dropped": {
-     "identical": 1576016,
-     "conflicting_removed": 16
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped": {
      "nonpositive_or_missing_price": 0,
-     "weekend": 0
+     "weekend": 414
     }
    }
   },
@@ -605,13 +605,53 @@
    }
   },
   {
+   "file": "fut_1m_mcx_continuous.parquet",
+   "dataset": "fut_1m_mcx_continuous",
+   "rows": 974604,
+   "first": "2025-10-20 09:08:00+05:30",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 9369937,
+   "sha256": "d8219d62a9522d9b49a0f693eda61b3371fec81e3d391bab2d00e3147d00dbc5",
+   "source": "built from fut_1m_live_mcx.parquet",
+   "columns": [
+    "symbol",
+    "expiry",
+    "security_id",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "oi",
+    "ts",
+    "roll",
+    "near_share"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 2,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 255,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 2805,
+    "rows_dropped": {
+     "outside_mcx_session": 412
+    }
+   }
+  },
+  {
    "file": "fut_daily_continuous.parquet",
    "dataset": "fut_daily_continuous",
-   "rows": 35451,
+   "rows": 49417,
    "first": "2009-03-30 00:00:00",
-   "last": "2026-10-14 00:00:00",
-   "bytes": 895925,
-   "sha256": "9243abbcd0409df476f2b8023e8852155becbdbcf8cbdfbc2ff84aa87119ce51",
+   "last": "2026-10-19 00:00:00",
+   "bytes": 1189255,
+   "sha256": "a714b7027271422c847625d1591e9c413f5354a0f1ca2737890b875a1533fb02",
    "source": "Dhan /v2/charts/historical",
    "columns": [
     "symbol",
@@ -628,17 +668,61 @@
     "nonpositive_price_rows": 0,
     "nan_price_rows": 0,
     "high_lt_low": 0,
-    "close_outside_hl": 140,
+    "close_outside_hl": 277,
     "open_outside_hl": 0,
-    "weekend_rows": 592,
+    "weekend_rows": 872,
     "duplicates_dropped": {
-     "identical": 17,
-     "conflicting_removed": 220
+     "identical": 29,
+     "conflicting_removed": 434
     },
     "rows_dropped": {
      "nonpositive_or_missing_price": 91
     }
    }
+  },
+  {
+   "file": "fut_mcx_contracts.parquet",
+   "dataset": "fut_mcx_contracts",
+   "rows": 55,
+   "first": null,
+   "last": null,
+   "bytes": 6893,
+   "sha256": "b6db5d88e0f2d1f86f9ee48fbf9b5040563d54871e63224d511d97772b1d5c7a",
+   "source": "mcx.py build",
+   "columns": [
+    "symbol",
+    "expiry",
+    "security_id",
+    "first",
+    "last",
+    "minutes",
+    "traded_minutes",
+    "volume"
+   ],
+   "qa": {}
+  },
+  {
+   "file": "fut_mcx_rolls.parquet",
+   "dataset": "fut_mcx_rolls",
+   "rows": 8,
+   "first": null,
+   "last": null,
+   "bytes": 6536,
+   "sha256": "924d79e4a7200704cb2a5f23aaed8f11d5d6ad1cf30a72c10a06305d287ab294",
+   "source": "mcx.py build",
+   "columns": [
+    "day",
+    "from_expiry",
+    "to_expiry",
+    "from_security_id",
+    "to_security_id",
+    "at",
+    "from_close",
+    "to_close",
+    "gap",
+    "symbol"
+   ],
+   "qa": {}
   },
   {
    "file": "index_1m_BANKEX_2021.parquet",
@@ -858,11 +942,11 @@
   {
    "file": "index_1m_BANKEX_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72750,
+   "rows": 73875,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 2073108,
-   "sha256": "f4ed491467486846b0bd0a0db579d9df5e13d391930ccbdc22f3a92e9e776b23",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 2473695,
+   "sha256": "219600316e31709326f5c32842421ad69ce69620926aa9a8680b972dd7c46209",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -881,17 +965,17 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 194,
+    "series_days_total": 197,
     "duplicates_dropped_symbol_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 41114,
      "date_not_a_trading_day_or_after_last_daily_close": 1145,
+     "outside_session": 41114,
      "nonpositive_or_missing_price": 0
     }
    },
@@ -1116,11 +1200,11 @@
   {
    "file": "index_1m_BANKNIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72750,
+   "rows": 73875,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 1887412,
-   "sha256": "44ad431388638549e474dd1b94677eb64e0c41b178fe2ea9faf195f547f06f9b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 2263840,
+   "sha256": "268598438087af76a48d2d36fa829f59c32dd66b021d20e17b990d79034d6116",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1139,17 +1223,17 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 194,
+    "series_days_total": 197,
     "duplicates_dropped_symbol_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63442,
      "date_not_a_trading_day_or_after_last_daily_close": 1350,
+     "outside_session": 63442,
      "nonpositive_or_missing_price": 0
     }
    },
@@ -1374,11 +1458,11 @@
   {
    "file": "index_1m_FINNIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72750,
+   "rows": 73875,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 1720561,
-   "sha256": "bfaa20238d89996664bc3fc58667f0ee1661206b537b402b00a89e256300c2da",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 2104088,
+   "sha256": "c0f1b7786c8a0bb38f6f7377bcd1e8d39ada2f38472150e83ecd01508996fc7d",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1397,17 +1481,17 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 194,
+    "series_days_total": 197,
     "duplicates_dropped_symbol_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63327,
      "date_not_a_trading_day_or_after_last_daily_close": 1350,
+     "outside_session": 63327,
      "nonpositive_or_missing_price": 0
     }
    },
@@ -1632,11 +1716,11 @@
   {
    "file": "index_1m_INDIAVIX_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72750,
+   "rows": 73875,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 730725,
-   "sha256": "fae82ad66121b248feb0f7e1f4cc54d6dc522172eb40962aeb3a61d7efa451a4",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 1038063,
+   "sha256": "025b96ec49788f236b8d60990a3e56e19929cfcbf9c86adca546c67a6ed2727c",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1655,17 +1739,17 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 194,
+    "series_days_total": 197,
     "duplicates_dropped_symbol_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 68842,
      "date_not_a_trading_day_or_after_last_daily_close": 1357,
+     "outside_session": 68842,
      "nonpositive_or_missing_price": 0
     }
    },
@@ -1847,11 +1931,11 @@
   {
    "file": "index_1m_MIDCPNIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72750,
+   "rows": 73875,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 1603249,
-   "sha256": "cd902160d4fabc1c119cee680db3547f9aa1f29405850757ec511e1031608fd9",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 1976368,
+   "sha256": "e0551847b3160672533fe0d2c734546f89abf4dfc3280c62dd7a82dcc6e418ed",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -1870,17 +1954,17 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 194,
+    "series_days_total": 197,
     "duplicates_dropped_symbol_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 25527,
      "date_not_a_trading_day_or_after_last_daily_close": 511,
+     "outside_session": 25527,
      "nonpositive_or_missing_price": 0
     }
    },
@@ -2277,11 +2361,11 @@
   {
    "file": "index_1m_NIFTY_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72750,
+   "rows": 73875,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 1664360,
-   "sha256": "3629b4a219f89f2163c1980429a99fbcca750ed9a16840f1093dfddcbde82b90",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 2041832,
+   "sha256": "b2240c709b4c82debeb96b18ca9e0306f8832cac5a5c8693db466bc1e814112d",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -2300,17 +2384,17 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 194,
+    "series_days_total": 197,
     "duplicates_dropped_symbol_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 63451,
      "date_not_a_trading_day_or_after_last_daily_close": 1346,
+     "outside_session": 63451,
      "nonpositive_or_missing_price": 0
     }
    },
@@ -2535,11 +2619,11 @@
   {
    "file": "index_1m_SENSEX_2026.parquet",
    "dataset": "index_1m",
-   "rows": 72750,
+   "rows": 73875,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 2057033,
-   "sha256": "bd1632eedbb60152eec109950530f1e6be456823fe094c330d71cbb1a1ccb4f4",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 2456486,
+   "sha256": "f76bf270ffa21886472ddb823e55f63d4158217b9f55e1cce7788b3ab1a351fb",
    "source": "Dhan /v2/charts/intraday",
    "columns": [
     "open",
@@ -2558,17 +2642,17 @@
     "outside_session_rows": 0,
     "weekend_rows": 375,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 194,
+    "series_days_total": 197,
     "duplicates_dropped_symbol_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_symbol_total": {
-     "outside_session": 44725,
      "date_not_a_trading_day_or_after_last_daily_close": 1468,
+     "outside_session": 44725,
      "nonpositive_or_missing_price": 0
     }
    },
@@ -2578,11 +2662,11 @@
   {
    "file": "index_daily.parquet",
    "dataset": "index_daily",
-   "rows": 31600,
+   "rows": 31621,
    "first": "2006-01-02 00:00:00",
-   "last": "2026-10-14 00:00:00",
-   "bytes": 830684,
-   "sha256": "e868eea23944f64180ac59ecd65de00f102c9b0510827a628ef63bceb3638da4",
+   "last": "2026-10-19 00:00:00",
+   "bytes": 850874,
+   "sha256": "a9fc9f993f85876116de7a9f542ba5b73314ffc204724e72b622ab5a536233fb",
    "source": "Dhan /v2/charts/historical",
    "columns": [
     "symbol",
@@ -2936,11 +3020,11 @@
   {
    "file": "opt_BANKNIFTY_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 3034573,
+   "rows": 3097561,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-13 15:29:00+05:30",
-   "bytes": 62193599,
-   "sha256": "c515a38fa254f999703a796aa6c7c12833aabd132b8c23b34ef659ed16a984ed",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 60084666,
+   "sha256": "51ad57ac7c173ab7595c7e3ba484c8a6e05e4da402c83733e3ef8d6e04f7421d",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -2965,38 +3049,40 @@
     "outside_session_rows": 0,
     "weekend_rows": 15745,
     "nonzero_seconds": 0,
-    "trading_days": 193,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 3,
-    "series_days_total": 8106,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 38752,
      "date_not_a_trading_day_or_after_last_daily_close": 0,
+     "outside_session": 43372,
      "nonpositive_or_missing_price": 0
     },
     "iv_null_or_zero": 29329,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3034573,
+     "minutes": 3097561,
      "spikes": 243,
-     "share": 8.008e-05,
-     "early_minutes": 726038,
+     "share": 7.845e-05,
+     "early_minutes": 741146,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 2308535,
+     "late_minutes": 2356415,
      "late_spikes": 243,
-     "late_share": 0.00010526
+     "late_share": 0.00010312
     }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "MONTH",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
-   "year": 2026
+   "year": 2026,
+   "same_contract_as": "opt_BANKNIFTY_WEEK_2026.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of BANKNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
   },
   {
    "file": "opt_BANKNIFTY_WEEK_2021.parquet",
@@ -3328,11 +3414,11 @@
   {
    "file": "opt_BANKNIFTY_WEEK_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 3047698,
+   "rows": 3097561,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 62578553,
-   "sha256": "4cb175942db100f5e5744f03adfe520ae7d52bdc6ba9c6f697febc58c7fd6ad2",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 60084666,
+   "sha256": "51ad57ac7c173ab7595c7e3ba484c8a6e05e4da402c83733e3ef8d6e04f7421d",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -3357,37 +3443,291 @@
     "outside_session_rows": 0,
     "weekend_rows": 15745,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 3,
-    "series_days_total": 8141,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 45368,
      "date_not_a_trading_day_or_after_last_daily_close": 0,
+     "outside_session": 49988,
      "nonpositive_or_missing_price": 0
     },
     "iv_null_or_zero": 29329,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3047698,
+     "minutes": 3097561,
      "spikes": 243,
-     "share": 7.973e-05,
-     "early_minutes": 729188,
+     "share": 7.845e-05,
+     "early_minutes": 741146,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 2318510,
+     "late_minutes": 2356415,
      "late_spikes": 243,
-     "late_share": 0.00010481
+     "late_share": 0.00010312
     }
    },
    "underlying": "BANKNIFTY",
    "expiry_flag": "WEEK",
    "expiry_code": 1,
    "offsets": "ATM-10..ATM+10",
+   "year": 2026,
+   "same_contract_as": "opt_BANKNIFTY_MONTH_2026.parquet",
+   "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of BANKNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
+  },
+  {
+   "file": "opt_COPPER_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1147907,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 11819401,
+   "sha256": "5e24ad1656c2586a7011b71a8ae9088426023ca82aa64f4244cd2dfe8cc3d29d",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 149,
+    "series_days_total": 1456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 38,
+     "weekend": 1862
+    },
+    "iv_null_or_zero": 50338,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1147907,
+     "spikes": 25,
+     "share": 2.178e-05,
+     "early_minutes": 127842,
+     "early_spikes": 1,
+     "early_share": 7.82e-06,
+     "late_minutes": 1020065,
+     "late_spikes": 24,
+     "late_share": 2.353e-05
+    }
+   },
+   "underlying": "COPPER",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_COPPER_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1694577,
+   "first": "2026-01-01 09:00:00+05:30",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 27871507,
+   "sha256": "e5964b564d31a02d3e9884e11f8af9dcaab128cf68c79888464020781f7e2415",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 205,
+    "bars_per_day_median": 649.0,
+    "series_days_lt_50pct_median": 533,
+    "series_days_total": 2870,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 38,
+     "weekend": 1862
+    },
+    "iv_null_or_zero": 8325,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1694577,
+     "spikes": 184,
+     "share": 0.00010858,
+     "early_minutes": 162763,
+     "early_spikes": 1,
+     "early_share": 6.14e-06,
+     "late_minutes": 1531814,
+     "late_spikes": 183,
+     "late_share": 0.00011947
+    }
+   },
+   "underlying": "COPPER",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
+   "file": "opt_CRUDEOILM_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1235418,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 21774525,
+   "sha256": "28f9ddd209426f7a3559b0597ed8f31147801cfd4d6d876c5ade35de3aaf67dc",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 1,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 71,
+    "series_days_total": 1456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 169,
+     "weekend": 6719
+    },
+    "iv_null_or_zero": 8652,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1235418,
+     "spikes": 71,
+     "share": 5.747e-05,
+     "early_minutes": 142054,
+     "early_spikes": 1,
+     "early_share": 7.04e-06,
+     "late_minutes": 1093364,
+     "late_spikes": 70,
+     "late_share": 6.402e-05
+    }
+   },
+   "underlying": "CRUDEOILM",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_CRUDEOILM_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2398592,
+   "first": "2026-01-01 09:00:00+05:30",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 58292916,
+   "sha256": "bf57f84b4fdac4763ebb0dd3bbc188936a853f6094fae2eab89f69d38c3b63aa",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 2,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 205,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 131,
+    "series_days_total": 2870,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 169,
+     "weekend": 6719
+    },
+    "iv_null_or_zero": 1164,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 2398592,
+     "spikes": 38,
+     "share": 1.584e-05,
+     "early_minutes": 282102,
+     "early_spikes": 1,
+     "early_share": 3.54e-06,
+     "late_minutes": 2116490,
+     "late_spikes": 37,
+     "late_share": 1.748e-05
+    }
+   },
+   "underlying": "CRUDEOILM",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
    "year": 2026
   },
   {
@@ -3456,11 +3796,11 @@
   {
    "file": "opt_CRUDEOIL_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 2378087,
+   "rows": 2426118,
    "first": "2026-01-01 09:00:00+05:30",
-   "last": "2026-10-13 23:29:00+05:30",
-   "bytes": 46239097,
-   "sha256": "53fedf39b13a9e4cc07a767e5b7561cc89fd1fbd1ced8adfe3e5292841969786",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 55472859,
+   "sha256": "2609e33e5330d268c149384e07c7ee78861038aa13c409c52e7bbc1f3828040f",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -3484,30 +3824,30 @@
     "open_outside_hl": 2,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 201,
+    "trading_days": 205,
     "bars_per_day_median": 870.0,
     "series_days_lt_50pct_median": 130,
-    "series_days_total": 2814,
+    "series_days_total": 2870,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "weekend": 6714,
-     "nonpositive_or_missing_price": 162
+     "nonpositive_or_missing_price": 177,
+     "weekend": 6714
     },
-    "iv_null_or_zero": 1352,
+    "iv_null_or_zero": 1621,
     "spikes": {
      "early_window": "09:00-10:44",
-     "minutes": 2378087,
-     "spikes": 121,
-     "share": 5.088e-05,
-     "early_minutes": 277374,
+     "minutes": 2426118,
+     "spikes": 136,
+     "share": 5.606e-05,
+     "early_minutes": 283009,
      "early_spikes": 1,
-     "early_share": 3.61e-06,
-     "late_minutes": 2100713,
-     "late_spikes": 120,
-     "late_share": 5.712e-05
+     "early_share": 3.53e-06,
+     "late_minutes": 2143109,
+     "late_spikes": 135,
+     "late_share": 6.299e-05
     }
    },
    "underlying": "CRUDEOIL",
@@ -3846,11 +4186,11 @@
   {
    "file": "opt_FINNIFTY_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 2377967,
+   "rows": 2436896,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-13 15:29:00+05:30",
-   "bytes": 36019663,
-   "sha256": "cc852e36e548592f6fd0836e8ab68b59b7fe4496396b77dbd604c220021f5aa7",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 32248836,
+   "sha256": "151e69d2fd30dda523009ed447bd3813fe22e10eae2e0fd161a62ab4c5e86fe3",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -3875,31 +4215,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 14824,
     "nonzero_seconds": 0,
-    "trading_days": 193,
-    "bars_per_day_median": 363.0,
-    "series_days_lt_50pct_median": 1201,
-    "series_days_total": 7820,
+    "trading_days": 197,
+    "bars_per_day_median": 362.0,
+    "series_days_lt_50pct_median": 1478,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 23403,
      "date_not_a_trading_day_or_after_last_daily_close": 0,
+     "outside_session": 27837,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 41512,
+    "iv_null_or_zero": 41930,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2339959,
+     "minutes": 2398888,
      "spikes": 468,
-     "share": 0.0002,
-     "early_minutes": 490656,
+     "share": 0.00019509,
+     "early_minutes": 504059,
      "early_spikes": 12,
-     "early_share": 2.446e-05,
-     "late_minutes": 1849303,
+     "early_share": 2.381e-05,
+     "late_minutes": 1894829,
      "late_spikes": 456,
-     "late_share": 0.00024658
+     "late_share": 0.00024065
     }
    },
    "underlying": "FINNIFTY",
@@ -4240,11 +4580,11 @@
   {
    "file": "opt_FINNIFTY_WEEK_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 2377967,
+   "rows": 2436896,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-13 15:29:00+05:30",
-   "bytes": 36019663,
-   "sha256": "cc852e36e548592f6fd0836e8ab68b59b7fe4496396b77dbd604c220021f5aa7",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 32248836,
+   "sha256": "151e69d2fd30dda523009ed447bd3813fe22e10eae2e0fd161a62ab4c5e86fe3",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -4269,31 +4609,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 14824,
     "nonzero_seconds": 0,
-    "trading_days": 193,
-    "bars_per_day_median": 363.0,
-    "series_days_lt_50pct_median": 1201,
-    "series_days_total": 7820,
+    "trading_days": 197,
+    "bars_per_day_median": 362.0,
+    "series_days_lt_50pct_median": 1478,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 31225,
      "date_not_a_trading_day_or_after_last_daily_close": 0,
+     "outside_session": 35659,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 41512,
+    "iv_null_or_zero": 41930,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2339959,
+     "minutes": 2398888,
      "spikes": 468,
-     "share": 0.0002,
-     "early_minutes": 490656,
+     "share": 0.00019509,
+     "early_minutes": 504059,
      "early_spikes": 12,
-     "early_share": 2.446e-05,
-     "late_minutes": 1849303,
+     "early_share": 2.381e-05,
+     "late_minutes": 1894829,
      "late_spikes": 456,
-     "late_share": 0.00024658
+     "late_share": 0.00024065
     }
    },
    "underlying": "FINNIFTY",
@@ -4370,11 +4710,11 @@
   {
    "file": "opt_GOLDM_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 1876254,
+   "rows": 1924960,
    "first": "2026-01-01 09:01:00+05:30",
-   "last": "2026-10-13 23:29:00+05:30",
-   "bytes": 34800337,
-   "sha256": "cc66be31111874d6bb22a6733046b71c435201fd6fb4602c738b251ebf81670e",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 40342249,
+   "sha256": "cc0cf7827e0043ffa08002f0eda8e938a3fc86cb22874f004b710ef96df23dfd",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -4398,30 +4738,30 @@
     "open_outside_hl": 0,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 201,
-    "bars_per_day_median": 862.0,
-    "series_days_lt_50pct_median": 701,
-    "series_days_total": 2814,
+    "trading_days": 205,
+    "bars_per_day_median": 864.0,
+    "series_days_lt_50pct_median": 703,
+    "series_days_total": 2870,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "weekend": 1301,
-     "nonpositive_or_missing_price": 79
+     "nonpositive_or_missing_price": 86,
+     "weekend": 1301
     },
     "iv_null_or_zero": 2125,
     "spikes": {
      "early_window": "09:00-10:44",
-     "minutes": 1876254,
+     "minutes": 1924960,
      "spikes": 123,
-     "share": 6.556e-05,
-     "early_minutes": 203139,
+     "share": 6.39e-05,
+     "early_minutes": 208991,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 1673115,
+     "late_minutes": 1715969,
      "late_spikes": 123,
-     "late_share": 7.352e-05
+     "late_share": 7.168e-05
     }
    },
    "underlying": "GOLDM",
@@ -4496,11 +4836,11 @@
   {
    "file": "opt_GOLD_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 694813,
+   "rows": 727449,
    "first": "2026-01-01 09:11:00+05:30",
-   "last": "2026-10-13 23:29:00+05:30",
-   "bytes": 10130452,
-   "sha256": "09218a9cb95b536817ac725904b0212a2602a9ded21b2cf4aaef195090e4e539",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 10856469,
+   "sha256": "1db91143bbd51a04724286a38bad1120d27744887e60dbaaf2efd94992e3fc3a",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -4524,30 +4864,30 @@
     "open_outside_hl": 0,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 199,
-    "bars_per_day_median": 152.0,
-    "series_days_lt_50pct_median": 789,
-    "series_days_total": 2683,
+    "trading_days": 203,
+    "bars_per_day_median": 148.0,
+    "series_days_lt_50pct_median": 869,
+    "series_days_total": 2842,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "weekend": 201,
-     "nonpositive_or_missing_price": 23
+     "nonpositive_or_missing_price": 28,
+     "weekend": 201
     },
     "iv_null_or_zero": 2030,
     "spikes": {
      "early_window": "09:00-10:44",
-     "minutes": 694813,
+     "minutes": 727449,
      "spikes": 87,
-     "share": 0.00012521,
-     "early_minutes": 60959,
+     "share": 0.0001196,
+     "early_minutes": 64682,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 633854,
+     "late_minutes": 662767,
      "late_spikes": 87,
-     "late_share": 0.00013726
+     "late_share": 0.00013127
     }
    },
    "underlying": "GOLD",
@@ -4823,11 +5163,11 @@
   {
    "file": "opt_MIDCPNIFTY_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 2927765,
+   "rows": 2990119,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-13 15:29:00+05:30",
-   "bytes": 49089833,
-   "sha256": "1c5fea811a2c8d75387222d4b8fccadd20a48110c9c9ec625c3dcb2f1895c28b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 44958094,
+   "sha256": "fcfef4dd2d520a924cbb2a1418ae4ca392f2c857d920d4d7a9c05bd7b7bec7ea",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -4852,31 +5192,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 15691,
     "nonzero_seconds": 0,
-    "trading_days": 193,
+    "trading_days": 197,
     "bars_per_day_median": 374.0,
     "series_days_lt_50pct_median": 166,
-    "series_days_total": 8106,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 24063,
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
+     "outside_session": 28672,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 31750,
+    "iv_null_or_zero": 31857,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2927595,
+     "minutes": 2989949,
      "spikes": 468,
-     "share": 0.00015986,
-     "early_minutes": 680328,
+     "share": 0.00015652,
+     "early_minutes": 694894,
      "early_spikes": 48,
-     "early_share": 7.055e-05,
-     "late_minutes": 2247267,
+     "early_share": 6.908e-05,
+     "late_minutes": 2295055,
      "late_spikes": 420,
-     "late_share": 0.00018689
+     "late_share": 0.000183
     }
    },
    "underlying": "MIDCPNIFTY",
@@ -5154,11 +5494,11 @@
   {
    "file": "opt_MIDCPNIFTY_WEEK_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 2927765,
+   "rows": 2990119,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-13 15:29:00+05:30",
-   "bytes": 49089833,
-   "sha256": "1c5fea811a2c8d75387222d4b8fccadd20a48110c9c9ec625c3dcb2f1895c28b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 44958094,
+   "sha256": "fcfef4dd2d520a924cbb2a1418ae4ca392f2c857d920d4d7a9c05bd7b7bec7ea",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -5183,31 +5523,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 15691,
     "nonzero_seconds": 0,
-    "trading_days": 193,
+    "trading_days": 197,
     "bars_per_day_median": 374.0,
     "series_days_lt_50pct_median": 166,
-    "series_days_total": 8106,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 31091,
      "date_not_a_trading_day_or_after_last_daily_close": 15397,
+     "outside_session": 35700,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 31750,
+    "iv_null_or_zero": 31857,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2927595,
+     "minutes": 2989949,
      "spikes": 468,
-     "share": 0.00015986,
-     "early_minutes": 680328,
+     "share": 0.00015652,
+     "early_minutes": 694894,
      "early_spikes": 48,
-     "early_share": 7.055e-05,
-     "late_minutes": 2247267,
+     "early_share": 6.908e-05,
+     "late_minutes": 2295055,
      "late_spikes": 420,
-     "late_share": 0.00018689
+     "late_share": 0.000183
     }
    },
    "underlying": "MIDCPNIFTY",
@@ -5217,6 +5557,132 @@
    "year": 2026,
    "same_contract_as": "opt_MIDCPNIFTY_MONTH_2026.parquet",
    "same_contract_reason": "Since 20 Nov 2024 NSE allows weekly expiries only on NIFTY (BSE: SENSEX), so the nearest weekly expiry of MIDCPNIFTY is the monthly one and the WEEK and MONTH files hold the same contracts. Studies must never count both files."
+  },
+  {
+   "file": "opt_NATGASMINI_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1235296,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 18065066,
+   "sha256": "0c8248812605546c9e1d3f74f762e78f7d708bae6108ae9ff0fea296cf238244",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 70,
+    "series_days_total": 1456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 139,
+     "weekend": 6480
+    },
+    "iv_null_or_zero": 13076,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1235296,
+     "spikes": 191,
+     "share": 0.00015462,
+     "early_minutes": 141613,
+     "early_spikes": 3,
+     "early_share": 2.118e-05,
+     "late_minutes": 1093683,
+     "late_spikes": 188,
+     "late_share": 0.0001719
+    }
+   },
+   "underlying": "NATGASMINI",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_NATGASMINI_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2419079,
+   "first": "2026-01-01 09:00:00+05:30",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 45799509,
+   "sha256": "b1e28dff01125408be3aa12e613dc8ae00f567bfb0e549527bb29ff70f2bb21d",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 205,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 149,
+    "series_days_total": 2870,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 139,
+     "weekend": 6480
+    },
+    "iv_null_or_zero": 19212,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 2419079,
+     "spikes": 842,
+     "share": 0.00034807,
+     "early_minutes": 283609,
+     "early_spikes": 34,
+     "early_share": 0.00011988,
+     "late_minutes": 2135470,
+     "late_spikes": 808,
+     "late_share": 0.00037837
+    }
+   },
+   "underlying": "NATGASMINI",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
   },
   {
    "file": "opt_NATURALGAS_MONTH_2025.parquet",
@@ -5284,11 +5750,11 @@
   {
    "file": "opt_NATURALGAS_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 2380732,
+   "rows": 2429463,
    "first": "2026-01-01 09:00:00+05:30",
-   "last": "2026-10-13 23:29:00+05:30",
-   "bytes": 38510472,
-   "sha256": "fd5fb90730e1285bee5194cb94f8d2fe06e785d0db98b01df7887fbfdfb27f08",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 46249558,
+   "sha256": "7ba707a4841126af3715c1d8240986cfccd4aeaf9191e9ce95422e45dae63be5",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -5312,30 +5778,30 @@
     "open_outside_hl": 0,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 201,
+    "trading_days": 205,
     "bars_per_day_median": 870.0,
-    "series_days_lt_50pct_median": 132,
-    "series_days_total": 2807,
+    "series_days_lt_50pct_median": 139,
+    "series_days_total": 2870,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "weekend": 6512,
-     "nonpositive_or_missing_price": 192
+     "nonpositive_or_missing_price": 196,
+     "weekend": 6512
     },
     "iv_null_or_zero": 20280,
     "spikes": {
      "early_window": "09:00-10:44",
-     "minutes": 2380732,
+     "minutes": 2429463,
      "spikes": 831,
-     "share": 0.00034905,
-     "early_minutes": 279455,
+     "share": 0.00034205,
+     "early_minutes": 285332,
      "early_spikes": 24,
-     "early_share": 8.588e-05,
-     "late_minutes": 2101277,
+     "early_share": 8.411e-05,
+     "late_minutes": 2144131,
      "late_spikes": 807,
-     "late_share": 0.00038405
+     "late_share": 0.00037638
     }
    },
    "underlying": "NATURALGAS",
@@ -5672,11 +6138,11 @@
   {
    "file": "opt_NIFTY_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 3046516,
+   "rows": 3093761,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 60659079,
-   "sha256": "a493b36b2b3ff3c4e36706b0ffa805a5c8bfaed3a0d5946e813f9e636eaf9a70",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 58686710,
+   "sha256": "4f51a61183a87d5e140e7635a08186689767589a726d67bab9116bb089a955bc",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -5701,31 +6167,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 15744,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 8,
-    "series_days_total": 8148,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 39590,
      "date_not_a_trading_day_or_after_last_daily_close": 0,
+     "outside_session": 44200,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 65756,
+    "iv_null_or_zero": 67166,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3046497,
+     "minutes": 3093742,
      "spikes": 392,
-     "share": 0.00012867,
-     "early_minutes": 728289,
+     "share": 0.00012671,
+     "early_minutes": 739624,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 2318208,
+     "late_minutes": 2354118,
      "late_spikes": 392,
-     "late_share": 0.0001691
+     "late_share": 0.00016652
     }
    },
    "underlying": "NIFTY",
@@ -6062,11 +6528,11 @@
   {
    "file": "opt_NIFTY_WEEK_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 3055038,
+   "rows": 3102285,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 62922389,
-   "sha256": "938c39adcb6f80d2ddb8aefd46325208db6f8e6918bd7c6f6e97905957d72d41",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 58916689,
+   "sha256": "532013be4ec6a1859e7f57ebe69f88323c675f45803ff52d949de32663512e8c",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6091,31 +6557,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 15750,
     "nonzero_seconds": 0,
-    "trading_days": 194,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 8148,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 44353,
      "date_not_a_trading_day_or_after_last_daily_close": 0,
+     "outside_session": 48973,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 215538,
+    "iv_null_or_zero": 221411,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3055038,
-     "spikes": 1889,
-     "share": 0.00061832,
-     "early_minutes": 732974,
+     "minutes": 3102285,
+     "spikes": 1902,
+     "share": 0.0006131,
+     "early_minutes": 744311,
      "early_spikes": 3,
-     "early_share": 4.09e-06,
-     "late_minutes": 2322064,
-     "late_spikes": 1886,
-     "late_share": 0.00081221
+     "early_share": 4.03e-06,
+     "late_minutes": 2357974,
+     "late_spikes": 1899,
+     "late_share": 0.00080535
     }
    },
    "underlying": "NIFTY",
@@ -6322,11 +6788,11 @@
   {
    "file": "opt_SENSEX_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 2195798,
+   "rows": 2256291,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-13 15:29:00+05:30",
-   "bytes": 40150239,
-   "sha256": "fb3fd81ba0ff6c3c19f63f01cfa8840b51e9118ed0b1be0bc915311f0a6e149f",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 35185673,
+   "sha256": "4ac25c61776dae61e09a31cdc5f1b1ed93d1e639401621fd14572d4282d6eba5",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6351,31 +6817,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 12677,
     "nonzero_seconds": 0,
-    "trading_days": 184,
-    "bars_per_day_median": 371.0,
-    "series_days_lt_50pct_median": 1261,
-    "series_days_total": 7203,
+    "trading_days": 188,
+    "bars_per_day_median": 368.0,
+    "series_days_lt_50pct_median": 1773,
+    "series_days_total": 7896,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 19565,
      "date_not_a_trading_day_or_after_last_daily_close": 13737,
+     "outside_session": 23915,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 23649,
+    "iv_null_or_zero": 23690,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2190707,
+     "minutes": 2251200,
      "spikes": 306,
-     "share": 0.00013968,
-     "early_minutes": 481191,
+     "share": 0.00013593,
+     "early_minutes": 495375,
      "early_spikes": 6,
-     "early_share": 1.247e-05,
-     "late_minutes": 1709516,
+     "early_share": 1.211e-05,
+     "late_minutes": 1755825,
      "late_spikes": 300,
-     "late_share": 0.00017549
+     "late_share": 0.00017086
     }
    },
    "underlying": "SENSEX",
@@ -6582,11 +7048,11 @@
   {
    "file": "opt_SENSEX_WEEK_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 3037783,
+   "rows": 3100741,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-13 15:29:00+05:30",
-   "bytes": 65791577,
-   "sha256": "81bd71f798dd53a21d8367a0d7ce9ab26db03bafad66f3c8efe53745ac3700b5",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 65709984,
+   "sha256": "559286f4f0fff1c2105ced459cb22ca773645e9e3ec4acd38f0e901887f1a42a",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6611,31 +7077,31 @@
     "outside_session_rows": 0,
     "weekend_rows": 15749,
     "nonzero_seconds": 0,
-    "trading_days": 193,
+    "trading_days": 197,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 8106,
+    "series_days_total": 8274,
     "duplicates_dropped_series_total": {
-     "identical": 15,
-     "conflicting_removed": 28568
+     "conflicting_removed": 28568,
+     "identical": 15
     },
     "rows_dropped_series_total": {
-     "outside_session": 27890,
      "date_not_a_trading_day_or_after_last_daily_close": 15749,
+     "outside_session": 32510,
      "nonpositive_or_missing_price": 0
     },
-    "iv_null_or_zero": 97758,
+    "iv_null_or_zero": 99354,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3037783,
-     "spikes": 1364,
-     "share": 0.00044901,
-     "early_minutes": 728591,
+     "minutes": 3100741,
+     "spikes": 1367,
+     "share": 0.00044086,
+     "early_minutes": 743699,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 2309192,
-     "late_spikes": 1364,
-     "late_share": 0.00059068
+     "late_minutes": 2357042,
+     "late_spikes": 1367,
+     "late_share": 0.00057996
     }
    },
    "underlying": "SENSEX",
@@ -6710,11 +7176,11 @@
   {
    "file": "opt_SILVERM_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 1428764,
+   "rows": 1476873,
    "first": "2026-01-01 09:00:00+05:30",
-   "last": "2026-10-13 23:29:00+05:30",
-   "bytes": 26439024,
-   "sha256": "a2865ad3d663bd3a8b2aa7d5225fd32dd515716512db0f600a9103ecd48b584d",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 28197312,
+   "sha256": "1cd2480bd7472f50dcc07aa90bf6a4e48b5d6b733fa79dc8c148d3c0ed05f070",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6738,30 +7204,30 @@
     "open_outside_hl": 0,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 201,
-    "bars_per_day_median": 504.0,
-    "series_days_lt_50pct_median": 974,
-    "series_days_total": 2795,
+    "trading_days": 205,
+    "bars_per_day_median": 527.5,
+    "series_days_lt_50pct_median": 1015,
+    "series_days_total": 2870,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "weekend": 73,
-     "nonpositive_or_missing_price": 80
+     "nonpositive_or_missing_price": 84,
+     "weekend": 73
     },
     "iv_null_or_zero": 1467,
     "spikes": {
      "early_window": "09:00-10:44",
-     "minutes": 1428764,
+     "minutes": 1476873,
      "spikes": 88,
-     "share": 6.159e-05,
-     "early_minutes": 149544,
+     "share": 5.959e-05,
+     "early_minutes": 155357,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 1279220,
+     "late_minutes": 1321516,
      "late_spikes": 88,
-     "late_share": 6.879e-05
+     "late_share": 6.659e-05
     }
    },
    "underlying": "SILVERM",
@@ -6836,11 +7302,11 @@
   {
    "file": "opt_SILVER_MONTH_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 569229,
+   "rows": 600332,
    "first": "2026-01-01 09:11:00+05:30",
-   "last": "2026-10-13 23:29:00+05:30",
-   "bytes": 8949136,
-   "sha256": "92d706b53d6d0fa56735583e6b9b018843d35e82e958b0cca8818531188c60bd",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 9051236,
+   "sha256": "d7ccf6b3400cbfd34349b3c20b266bebd4af18de3b76803950ec0964fc43ec8e",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6864,30 +7330,30 @@
     "open_outside_hl": 0,
     "weekend_rows": 0,
     "nonzero_seconds": 0,
-    "trading_days": 201,
-    "bars_per_day_median": 112.0,
-    "series_days_lt_50pct_median": 889,
-    "series_days_total": 2729,
+    "trading_days": 205,
+    "bars_per_day_median": 109.0,
+    "series_days_lt_50pct_median": 959,
+    "series_days_total": 2870,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "weekend": 117,
-     "nonpositive_or_missing_price": 25
+     "nonpositive_or_missing_price": 28,
+     "weekend": 117
     },
-    "iv_null_or_zero": 1972,
+    "iv_null_or_zero": 1975,
     "spikes": {
      "early_window": "09:00-10:44",
-     "minutes": 569229,
+     "minutes": 600332,
      "spikes": 65,
-     "share": 0.00011419,
-     "early_minutes": 50054,
+     "share": 0.00010827,
+     "early_minutes": 53337,
      "early_spikes": 0,
      "early_share": 0.0,
-     "late_minutes": 519175,
+     "late_minutes": 546995,
      "late_spikes": 65,
-     "late_share": 0.0001252
+     "late_share": 0.00011883
     }
    },
    "underlying": "SILVER",
@@ -6897,13 +7363,139 @@
    "year": 2026
   },
   {
+   "file": "opt_ZINC_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1013668,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 7631929,
+   "sha256": "3cd8338ed0fd9f97da8020ea8207fe35bea44703fe9aa534c3f737aacb3be5c7",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 322,
+    "series_days_total": 1456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 2,
+     "weekend": 682
+    },
+    "iv_null_or_zero": 116253,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 1013668,
+     "spikes": 6,
+     "share": 5.92e-06,
+     "early_minutes": 111462,
+     "early_spikes": 0,
+     "early_share": 0.0,
+     "late_minutes": 902206,
+     "late_spikes": 6,
+     "late_share": 6.65e-06
+    }
+   },
+   "underlying": "ZINC",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_ZINC_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 668315,
+   "first": "2026-01-01 10:54:00+05:30",
+   "last": "2026-10-19 23:29:00+05:30",
+   "bytes": 7345011,
+   "sha256": "a1c5292d9507c13c2500582bf43e508a163ed30a6f83a3782aebbfaed95350ab",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 197,
+    "bars_per_day_median": 56.0,
+    "series_days_lt_50pct_median": 1304,
+    "series_days_total": 2758,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 2,
+     "weekend": 682
+    },
+    "iv_null_or_zero": 33982,
+    "spikes": {
+     "early_window": "09:00-10:44",
+     "minutes": 668315,
+     "spikes": 56,
+     "share": 8.379e-05,
+     "early_minutes": 36731,
+     "early_spikes": 5,
+     "early_share": 0.00013612,
+     "late_minutes": 631584,
+     "late_spikes": 51,
+     "late_share": 8.075e-05
+    }
+   },
+   "underlying": "ZINC",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
    "file": "stkopt_ADANIENT_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4531270,
+   "rows": 5803137,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 74866673,
-   "sha256": "fb631d15913c351ec5d90a58a2b54ab80febcaf7cb1de6607411398cf9178ef1",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 111616659,
+   "sha256": "16fc62c388e961c87fba00540b0e92362bbf9775b705cf11da543772290a1f54",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6926,33 +7518,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 8967,
+    "weekend_rows": 12370,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 104,
-    "series_days_total": 12246,
+    "trading_days": 1275,
+    "bars_per_day_median": 369.0,
+    "series_days_lt_50pct_median": 12458,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 7,
-     "date_not_a_trading_day_or_after_last_daily_close": 3343,
-     "outside_session": 6772
+     "nonpositive_or_missing_price": 8,
+     "outside_session": 10249,
+     "date_not_a_trading_day_or_after_last_daily_close": 3343
     },
-    "iv_null_or_zero": 49160,
+    "iv_null_or_zero": 81643,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4479839,
-     "spikes": 2612,
-     "share": 0.00058306,
-     "early_minutes": 1056979,
-     "early_spikes": 420,
-     "early_share": 0.00039736,
-     "late_minutes": 3422860,
-     "late_spikes": 2192,
-     "late_share": 0.0006404
+     "minutes": 5698414,
+     "spikes": 3145,
+     "share": 0.00055191,
+     "early_minutes": 1334556,
+     "early_spikes": 526,
+     "early_share": 0.00039414,
+     "late_minutes": 4363858,
+     "late_spikes": 2619,
+     "late_share": 0.00060016
     }
    },
    "underlying": "ADANIENT",
@@ -6963,11 +7555,11 @@
   {
    "file": "stkopt_ADANIPORTS_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4731135,
+   "rows": 5967600,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 72621392,
-   "sha256": "20f2e6d9c3a97b332126bf0a5978d7af3e0dc4ca6aa37f3e2bcdedb1fe3a5e0a",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 108692544,
+   "sha256": "68008d64ce328a40a3f33fd97841a966c8e00baedbde880150970349aa2cf892",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -6990,33 +7582,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 9951,
+    "weekend_rows": 13743,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 52,
-    "series_days_total": 12717,
+    "trading_days": 1275,
+    "bars_per_day_median": 371.0,
+    "series_days_lt_50pct_median": 12014,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 3734,
-     "outside_session": 7670
+     "outside_session": 11174,
+     "date_not_a_trading_day_or_after_last_daily_close": 3734
     },
-    "iv_null_or_zero": 69945,
+    "iv_null_or_zero": 146724,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4722762,
-     "spikes": 3649,
-     "share": 0.00077264,
-     "early_minutes": 1119454,
-     "early_spikes": 569,
-     "early_share": 0.00050828,
-     "late_minutes": 3603308,
-     "late_spikes": 3080,
-     "late_share": 0.00085477
+     "minutes": 5953357,
+     "spikes": 4229,
+     "share": 0.00071036,
+     "early_minutes": 1392095,
+     "early_spikes": 709,
+     "early_share": 0.0005093,
+     "late_minutes": 4561262,
+     "late_spikes": 3520,
+     "late_share": 0.00077172
     }
    },
    "underlying": "ADANIPORTS",
@@ -7027,11 +7619,11 @@
   {
    "file": "stkopt_APOLLOHOSP_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4641710,
+   "rows": 5834354,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 69822514,
-   "sha256": "9da6d25669f1ecf2868bdaa7304a5ac2d0463a700cd364ed4c7ff4d1fbd5e592",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 105105931,
+   "sha256": "6d8d1d5d9fa596b2aa60ae59d81c2fe396c4635f096d61490cb01b70a9bd2d35",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7054,33 +7646,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7795,
+    "weekend_rows": 9727,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 129,
-    "series_days_total": 12632,
+    "trading_days": 1275,
+    "bars_per_day_median": 362.0,
+    "series_days_lt_50pct_median": 12273,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 3746,
-     "outside_session": 6819
+     "outside_session": 10154,
+     "date_not_a_trading_day_or_after_last_daily_close": 3746
     },
-    "iv_null_or_zero": 57368,
+    "iv_null_or_zero": 106212,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4592481,
-     "spikes": 4613,
-     "share": 0.00100447,
-     "early_minutes": 1065332,
-     "early_spikes": 944,
-     "early_share": 0.00088611,
-     "late_minutes": 3527149,
-     "late_spikes": 3669,
-     "late_share": 0.00104022
+     "minutes": 5754879,
+     "spikes": 5220,
+     "share": 0.00090706,
+     "early_minutes": 1315477,
+     "early_spikes": 1074,
+     "early_share": 0.00081643,
+     "late_minutes": 4439402,
+     "late_spikes": 4146,
+     "late_share": 0.00093391
     }
    },
    "underlying": "APOLLOHOSP",
@@ -7091,11 +7683,11 @@
   {
    "file": "stkopt_ASIANPAINT_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4634494,
+   "rows": 5900185,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 71678754,
-   "sha256": "c0010693243eab9e6a610e6d96f0530398b68819299f655034c1350384cebf2a",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 108736252,
+   "sha256": "830061b01491f8bb4f090fe57c55d4ffc2c969996c25e4bb411bcf42dda4ac74",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7118,33 +7710,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 9382,
+    "weekend_rows": 13121,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 127,
-    "series_days_total": 12547,
+    "trading_days": 1275,
+    "bars_per_day_median": 370.0,
+    "series_days_lt_50pct_median": 12201,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 3723,
-     "outside_session": 7224
+     "outside_session": 10354,
+     "date_not_a_trading_day_or_after_last_daily_close": 3723
     },
-    "iv_null_or_zero": 55448,
+    "iv_null_or_zero": 122678,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4585014,
-     "spikes": 3396,
-     "share": 0.00074067,
-     "early_minutes": 1080899,
-     "early_spikes": 621,
-     "early_share": 0.00057452,
-     "late_minutes": 3504115,
-     "late_spikes": 2775,
-     "late_share": 0.00079193
+     "minutes": 5842859,
+     "spikes": 3941,
+     "share": 0.0006745,
+     "early_minutes": 1367171,
+     "early_spikes": 792,
+     "early_share": 0.0005793,
+     "late_minutes": 4475688,
+     "late_spikes": 3149,
+     "late_share": 0.00070358
     }
    },
    "underlying": "ASIANPAINT",
@@ -7155,11 +7747,11 @@
   {
    "file": "stkopt_AUBANK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 3817805,
+   "rows": 4817558,
    "first": "2021-08-02 09:25:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 48206576,
-   "sha256": "8cedda10161ef772075d536fb9d8b69566298b8deed9b5280da782c7a1edbddd",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 76573106,
+   "sha256": "c3a5089fd9e6c6e80ebd463bff4452d28dc3521e2c60c9d3175f99e90c39f4ff",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7182,33 +7774,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7688,
+    "weekend_rows": 10009,
     "nonzero_seconds": 0,
-    "trading_days": 1259,
-    "bars_per_day_median": 374.0,
-    "series_days_lt_50pct_median": 519,
-    "series_days_total": 10857,
+    "trading_days": 1262,
+    "bars_per_day_median": 61.0,
+    "series_days_lt_50pct_median": 13689,
+    "series_days_total": 27764,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 3743,
-     "outside_session": 6672
+     "outside_session": 9839,
+     "date_not_a_trading_day_or_after_last_daily_close": 3743
     },
-    "iv_null_or_zero": 135187,
+    "iv_null_or_zero": 182257,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3792902,
-     "spikes": 4415,
-     "share": 0.00116402,
-     "early_minutes": 875940,
-     "early_spikes": 815,
-     "early_share": 0.00093043,
-     "late_minutes": 2916962,
-     "late_spikes": 3600,
-     "late_share": 0.00123416
+     "minutes": 4764052,
+     "spikes": 4851,
+     "share": 0.00101825,
+     "early_minutes": 1095421,
+     "early_spikes": 946,
+     "early_share": 0.00086359,
+     "late_minutes": 3668631,
+     "late_spikes": 3905,
+     "late_share": 0.00106443
     }
    },
    "underlying": "AUBANK",
@@ -7219,11 +7811,11 @@
   {
    "file": "stkopt_AXISBANK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4729005,
+   "rows": 6032971,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 74000018,
-   "sha256": "21b7f85cbf20b08b0074697b4e8a03ae03d4a0de17a1c1aceb75bd50814f2a4f",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 113092357,
+   "sha256": "5f35c1429e689194c0bb0acce46ab81af24c2b43042ce54b488beb1553ab1e46",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7246,33 +7838,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 11169,
+    "weekend_rows": 15443,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 43,
-    "series_days_total": 12669,
+    "trading_days": 1275,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 11913,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 3741,
-     "outside_session": 8389
+     "outside_session": 11861,
+     "date_not_a_trading_day_or_after_last_daily_close": 3741
     },
-    "iv_null_or_zero": 70462,
+    "iv_null_or_zero": 133164,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4724789,
-     "spikes": 3433,
-     "share": 0.00072659,
-     "early_minutes": 1129449,
-     "early_spikes": 632,
-     "early_share": 0.00055956,
-     "late_minutes": 3595340,
-     "late_spikes": 2801,
-     "late_share": 0.00077906
+     "minutes": 6022379,
+     "spikes": 4128,
+     "share": 0.00068544,
+     "early_minutes": 1430859,
+     "early_spikes": 847,
+     "early_share": 0.00059195,
+     "late_minutes": 4591520,
+     "late_spikes": 3281,
+     "late_share": 0.00071458
     }
    },
    "underlying": "AXISBANK",
@@ -7283,11 +7875,11 @@
   {
    "file": "stkopt_BAJAJ-AUTO_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4485930,
+   "rows": 5618780,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 69353853,
-   "sha256": "4a077c97703266f8dc11d0e0116daeb232b33e54ff26582c71aac54e25b54565",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 104542731,
+   "sha256": "f5e3db0dc7a5e4b71e101c189680fd843285f0d9cfbef24a2b7763f16b441d0b",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7310,33 +7902,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 8079,
+    "weekend_rows": 11664,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 168,
-    "series_days_total": 12281,
+    "trading_days": 1275,
+    "bars_per_day_median": 353.0,
+    "series_days_lt_50pct_median": 12828,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 3742,
-     "outside_session": 6936
+     "nonpositive_or_missing_price": 2,
+     "outside_session": 10545,
+     "date_not_a_trading_day_or_after_last_daily_close": 3742
     },
-    "iv_null_or_zero": 75924,
+    "iv_null_or_zero": 136529,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4384607,
-     "spikes": 4161,
-     "share": 0.000949,
-     "early_minutes": 1007281,
-     "early_spikes": 794,
-     "early_share": 0.00078826,
-     "late_minutes": 3377326,
-     "late_spikes": 3367,
-     "late_share": 0.00099694
+     "minutes": 5514361,
+     "spikes": 4592,
+     "share": 0.00083273,
+     "early_minutes": 1258231,
+     "early_spikes": 903,
+     "early_share": 0.00071767,
+     "late_minutes": 4256130,
+     "late_spikes": 3689,
+     "late_share": 0.00086675
     }
    },
    "underlying": "BAJAJ-AUTO",
@@ -7347,11 +7939,11 @@
   {
    "file": "stkopt_BAJAJFINSV_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 3788123,
+   "rows": 5012258,
    "first": "2021-08-02 09:22:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 54974345,
-   "sha256": "e9c2687da1c1df73ba55e4b901064d49e0e8d941825b63f262f0f618b69a506b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 86320179,
+   "sha256": "8b979d3365da4ea7333500214c8b00bb56d15093118139f0902d38dde355dff9",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7374,33 +7966,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7905,
+    "weekend_rows": 11265,
     "nonzero_seconds": 0,
-    "trading_days": 1260,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 202,
-    "series_days_total": 10391,
+    "trading_days": 1263,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 27786,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 3734,
-     "outside_session": 6451
+     "outside_session": 9599,
+     "date_not_a_trading_day_or_after_last_daily_close": 3734
     },
-    "iv_null_or_zero": 201400,
+    "iv_null_or_zero": 266712,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3770585,
-     "spikes": 3437,
-     "share": 0.00091153,
-     "early_minutes": 872519,
-     "early_spikes": 587,
-     "early_share": 0.00067276,
-     "late_minutes": 2898066,
-     "late_spikes": 2850,
-     "late_share": 0.00098341
+     "minutes": 4986168,
+     "spikes": 4408,
+     "share": 0.00088405,
+     "early_minutes": 1138244,
+     "early_spikes": 795,
+     "early_share": 0.00069844,
+     "late_minutes": 3847924,
+     "late_spikes": 3613,
+     "late_share": 0.00093895
     }
    },
    "underlying": "BAJAJFINSV",
@@ -7411,11 +8003,11 @@
   {
    "file": "stkopt_BAJFINANCE_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1742444,
+   "rows": 2460062,
    "first": "2021-08-02 09:46:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 22750418,
-   "sha256": "8d94ff7b5e01362c81d0405740b860d11c3736e8adef53bdb788289fcc1ffddd",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 37702248,
+   "sha256": "3578ba1f4b25513d2002d9b828a23215ee37d39b490256ef2da119d2d1cd8170",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7438,33 +8030,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 3810,
+    "weekend_rows": 5612,
     "nonzero_seconds": 0,
-    "trading_days": 1268,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 335,
-    "series_days_total": 5079,
+    "trading_days": 1271,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 27962,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 8,
-     "date_not_a_trading_day_or_after_last_daily_close": 3729,
-     "outside_session": 5807
+     "nonpositive_or_missing_price": 75,
+     "outside_session": 9075,
+     "date_not_a_trading_day_or_after_last_daily_close": 3729
     },
-    "iv_null_or_zero": 540542,
+    "iv_null_or_zero": 692706,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1741981,
-     "spikes": 348,
-     "share": 0.00019977,
-     "early_minutes": 372517,
-     "early_spikes": 65,
-     "early_share": 0.00017449,
-     "late_minutes": 1369464,
-     "late_spikes": 283,
-     "late_share": 0.00020665
+     "minutes": 2457748,
+     "spikes": 529,
+     "share": 0.00021524,
+     "early_minutes": 533391,
+     "early_spikes": 154,
+     "early_share": 0.00028872,
+     "late_minutes": 1924357,
+     "late_spikes": 375,
+     "late_share": 0.00019487
     }
    },
    "underlying": "BAJFINANCE",
@@ -7475,11 +8067,11 @@
   {
    "file": "stkopt_BANKBARODA_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4509612,
+   "rows": 5700906,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 55152590,
-   "sha256": "4ac79d97d76e364390f2dab5ffa4de214faf2ea55234f10c68d0d5d7f4bd3f11",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 86911652,
+   "sha256": "8d0513cb96f9543d813c9382dc67d8c3567ec77f993a76dc0b86f86f108e95a0",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7502,33 +8094,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 9355,
+    "weekend_rows": 12423,
     "nonzero_seconds": 0,
-    "trading_days": 1270,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 141,
-    "series_days_total": 12268,
+    "trading_days": 1273,
+    "bars_per_day_median": 361.0,
+    "series_days_lt_50pct_median": 12612,
+    "series_days_total": 28006,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 3576,
-     "outside_session": 7126
+     "outside_session": 10695,
+     "date_not_a_trading_day_or_after_last_daily_close": 3576
     },
-    "iv_null_or_zero": 112448,
+    "iv_null_or_zero": 194541,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4477833,
-     "spikes": 5961,
-     "share": 0.00133122,
-     "early_minutes": 1044300,
-     "early_spikes": 1495,
-     "early_share": 0.00143158,
-     "late_minutes": 3433533,
-     "late_spikes": 4466,
-     "late_share": 0.0013007
+     "minutes": 5654661,
+     "spikes": 6802,
+     "share": 0.0012029,
+     "early_minutes": 1301996,
+     "early_spikes": 1756,
+     "early_share": 0.0013487,
+     "late_minutes": 4352665,
+     "late_spikes": 5046,
+     "late_share": 0.00115929
     }
    },
    "underlying": "BANKBARODA",
@@ -7539,11 +8131,11 @@
   {
    "file": "stkopt_BEL_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 3840211,
+   "rows": 5146220,
    "first": "2021-08-02 09:19:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 48324690,
-   "sha256": "94e5b348f5e873a34228895ed02604140a1f6cc8ac125af0f80f8d828daab079",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 80474364,
+   "sha256": "80c34f98e7744ceee9d6219206ddfdc2b74a7b5367c00cabd853222ff9f969d6",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7566,33 +8158,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 9708,
+    "weekend_rows": 14305,
     "nonzero_seconds": 0,
-    "trading_days": 1268,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 260,
-    "series_days_total": 10556,
+    "trading_days": 1271,
+    "bars_per_day_median": 94.0,
+    "series_days_lt_50pct_median": 13931,
+    "series_days_total": 27962,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 5,
-     "date_not_a_trading_day_or_after_last_daily_close": 3739,
-     "outside_session": 6544
+     "outside_session": 10275,
+     "date_not_a_trading_day_or_after_last_daily_close": 3739
     },
-    "iv_null_or_zero": 205281,
+    "iv_null_or_zero": 280328,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3815682,
-     "spikes": 3523,
-     "share": 0.00092329,
-     "early_minutes": 885741,
-     "early_spikes": 753,
-     "early_share": 0.00085014,
-     "late_minutes": 2929941,
-     "late_spikes": 2770,
-     "late_share": 0.00094541
+     "minutes": 5113733,
+     "spikes": 4181,
+     "share": 0.0008176,
+     "early_minutes": 1185013,
+     "early_spikes": 1015,
+     "early_share": 0.00085653,
+     "late_minutes": 3928720,
+     "late_spikes": 3166,
+     "late_share": 0.00080586
     }
    },
    "underlying": "BEL",
@@ -7603,11 +8195,11 @@
   {
    "file": "stkopt_BHARTIARTL_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 4629425,
+   "rows": 5895393,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 71345089,
-   "sha256": "a3408b9c39d1143902dc625299d467583aa64c9e0b07aeeeba2877bc4e0bd0a8",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 108594287,
+   "sha256": "5eb8a2bfd33d44ff5ef450cd1ae6de9060e679b30bd086d73842c21b5fe75ccb",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7630,33 +8222,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 9888,
+    "weekend_rows": 12956,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 75,
-    "series_days_total": 12450,
+    "trading_days": 1274,
+    "bars_per_day_median": 372.0,
+    "series_days_lt_50pct_median": 12218,
+    "series_days_total": 28028,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 3749,
-     "outside_session": 7656
+     "outside_session": 11123,
+     "date_not_a_trading_day_or_after_last_daily_close": 3749
     },
-    "iv_null_or_zero": 121501,
+    "iv_null_or_zero": 241662,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 4619595,
-     "spikes": 4387,
-     "share": 0.00094965,
-     "early_minutes": 1098310,
-     "early_spikes": 914,
-     "early_share": 0.00083219,
-     "late_minutes": 3521285,
-     "late_spikes": 3473,
-     "late_share": 0.00098629
+     "minutes": 5881126,
+     "spikes": 5181,
+     "share": 0.00088095,
+     "early_minutes": 1382654,
+     "early_spikes": 1142,
+     "early_share": 0.00082595,
+     "late_minutes": 4498472,
+     "late_spikes": 4039,
+     "late_share": 0.00089786
     }
    },
    "underlying": "BHARTIARTL",
@@ -7667,11 +8259,11 @@
   {
    "file": "stkopt_BSE_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1348358,
+   "rows": 2099717,
    "first": "2024-11-29 09:45:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 23479519,
-   "sha256": "967bec759be7fbcc49cd13fe9ca01f90ca0fde8c2cd187d6664c2d2d6e39262c",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 38629343,
+   "sha256": "549c19727c5ef2e7caad84a5db399f6153e2953f38411eb91a7a5828bd7387f5",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7694,33 +8286,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 3728,
+    "weekend_rows": 5073,
     "nonzero_seconds": 0,
-    "trading_days": 460,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 46,
-    "series_days_total": 3660,
+    "trading_days": 463,
+    "bars_per_day_median": 369.0,
+    "series_days_lt_50pct_median": 4547,
+    "series_days_total": 10186,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 3745,
-     "outside_session": 5700
+     "outside_session": 8940,
+     "date_not_a_trading_day_or_after_last_daily_close": 3745
     },
-    "iv_null_or_zero": 91418,
+    "iv_null_or_zero": 225539,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1348330,
-     "spikes": 397,
-     "share": 0.00029444,
-     "early_minutes": 316622,
-     "early_spikes": 44,
-     "early_share": 0.00013897,
-     "late_minutes": 1031708,
-     "late_spikes": 353,
-     "late_share": 0.00034215
+     "minutes": 2098337,
+     "spikes": 715,
+     "share": 0.00034075,
+     "early_minutes": 489093,
+     "early_spikes": 112,
+     "early_share": 0.000229,
+     "late_minutes": 1609244,
+     "late_spikes": 603,
+     "late_share": 0.00037471
     }
    },
    "underlying": "BSE",
@@ -7731,11 +8323,11 @@
   {
    "file": "stkopt_CANBK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2461784,
+   "rows": 3736749,
    "first": "2021-08-02 09:17:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 29002728,
-   "sha256": "602d2ed0712192a5a432c251d4a3a11614cfc62b1f135abaf103be4ec76e43ce",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 54498693,
+   "sha256": "87f5e469b826fa5997b89b7f71b7085063075eefa30440faca3dc05aa2947c1b",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7758,33 +8350,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6020,
+    "weekend_rows": 8908,
     "nonzero_seconds": 0,
-    "trading_days": 1265,
-    "bars_per_day_median": 374.0,
-    "series_days_lt_50pct_median": 407,
-    "series_days_total": 7079,
+    "trading_days": 1268,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 27896,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 3720,
-     "outside_session": 5843
+     "outside_session": 8780,
+     "date_not_a_trading_day_or_after_last_daily_close": 3720
     },
-    "iv_null_or_zero": 403430,
+    "iv_null_or_zero": 448961,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2454548,
-     "spikes": 1201,
-     "share": 0.0004893,
-     "early_minutes": 539487,
-     "early_spikes": 288,
-     "early_share": 0.00053384,
-     "late_minutes": 1915061,
-     "late_spikes": 913,
-     "late_share": 0.00047675
+     "minutes": 3720711,
+     "spikes": 1863,
+     "share": 0.00050071,
+     "early_minutes": 832305,
+     "early_spikes": 442,
+     "early_share": 0.00053106,
+     "late_minutes": 2888406,
+     "late_spikes": 1421,
+     "late_share": 0.00049197
     }
    },
    "underlying": "CANBK",
@@ -7795,11 +8387,11 @@
   {
    "file": "stkopt_CIPLA_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 3047193,
+   "rows": 4880354,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 43662219,
-   "sha256": "3e92eaa7d49d1e0d13fd01581698a3a4508d56c6f834fa58cd6113c81e997482",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 84150666,
+   "sha256": "4cc92672f2e1a586f92a8bdfa8eb16a436beb6d2c72f47572b112195a55888fa",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7822,33 +8414,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5108,
+    "weekend_rows": 9847,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 38,
-    "series_days_total": 8209,
+    "trading_days": 1275,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2240,
-     "outside_session": 4699
+     "outside_session": 9940,
+     "date_not_a_trading_day_or_after_last_daily_close": 2240
     },
-    "iv_null_or_zero": 36634,
+    "iv_null_or_zero": 116297,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 3035677,
-     "spikes": 2808,
-     "share": 0.000925,
-     "early_minutes": 716803,
-     "early_spikes": 503,
-     "early_share": 0.00070173,
-     "late_minutes": 2318874,
-     "late_spikes": 2305,
-     "late_share": 0.00099402
+     "minutes": 4859052,
+     "spikes": 3572,
+     "share": 0.00073512,
+     "early_minutes": 1123723,
+     "early_spikes": 698,
+     "early_share": 0.00062115,
+     "late_minutes": 3735329,
+     "late_spikes": 2874,
+     "late_share": 0.00076941
     }
    },
    "underlying": "CIPLA",
@@ -7859,11 +8451,11 @@
   {
    "file": "stkopt_COALINDIA_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2815440,
+   "rows": 4729982,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 37494648,
-   "sha256": "9b9e894e16e2104d79cfbd9cdf96dd9997103626a8f7f706728e43d83e2bcfa9",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 76067745,
+   "sha256": "e7259eda07f93524dae61bc35857672dc0b8a61cd97b4e18340ee145bfbeb856",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7886,33 +8478,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6812,
+    "weekend_rows": 12891,
     "nonzero_seconds": 0,
-    "trading_days": 1269,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 37,
-    "series_days_total": 7573,
+    "trading_days": 1272,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 27984,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 4,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 4823
+     "nonpositive_or_missing_price": 38,
+     "outside_session": 10039,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 50163,
+    "iv_null_or_zero": 150528,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2801704,
-     "spikes": 3486,
-     "share": 0.00124424,
-     "early_minutes": 664375,
-     "early_spikes": 693,
-     "early_share": 0.00104309,
-     "late_minutes": 2137329,
-     "late_spikes": 2793,
-     "late_share": 0.00130677
+     "minutes": 4705330,
+     "spikes": 4437,
+     "share": 0.00094297,
+     "early_minutes": 1102196,
+     "early_spikes": 946,
+     "early_share": 0.00085829,
+     "late_minutes": 3603134,
+     "late_spikes": 3491,
+     "late_share": 0.00096888
     }
    },
    "underlying": "COALINDIA",
@@ -7923,11 +8515,11 @@
   {
    "file": "stkopt_DRREDDY_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1285978,
+   "rows": 3217074,
    "first": "2021-08-02 10:40:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 17192075,
-   "sha256": "b6905f05d29c5bc17050b01b645b923f45b335f36d0caaa4b0bd6ab36ea01db7",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 50061851,
+   "sha256": "065c86c5b45020bd2955a986bf52ab2a9e555680033e22849a466dc8840bffb3",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -7950,33 +8542,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 3075,
+    "weekend_rows": 7785,
     "nonzero_seconds": 0,
-    "trading_days": 1264,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 188,
-    "series_days_total": 3683,
+    "trading_days": 1267,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 27874,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 3594
+     "nonpositive_or_missing_price": 1,
+     "outside_session": 8649,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 254984,
+    "iv_null_or_zero": 367294,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1283446,
-     "spikes": 481,
-     "share": 0.00037477,
-     "early_minutes": 282461,
-     "early_spikes": 96,
-     "early_share": 0.00033987,
-     "late_minutes": 1000985,
-     "late_spikes": 385,
-     "late_share": 0.00038462
+     "minutes": 3193590,
+     "spikes": 1660,
+     "share": 0.00051979,
+     "early_minutes": 710659,
+     "early_spikes": 365,
+     "early_share": 0.00051361,
+     "late_minutes": 2482931,
+     "late_spikes": 1295,
+     "late_share": 0.00052156
     }
    },
    "underlying": "DRREDDY",
@@ -7987,11 +8579,11 @@
   {
    "file": "stkopt_EICHERMOT_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2687487,
+   "rows": 4620309,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 39761651,
-   "sha256": "154c6ac38d4a7d3b5354595ddd4560a88214bb65c8fe118e95d5b6a41752262a",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 81495969,
+   "sha256": "65091705930305abf72530081a9d58e0da6f3e0f7e26a734b0b31c2a3bd44ef3",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8014,33 +8606,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4128,
+    "weekend_rows": 8623,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 114,
-    "series_days_total": 7369,
+    "trading_days": 1275,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2246,
-     "outside_session": 4248
+     "outside_session": 9270,
+     "date_not_a_trading_day_or_after_last_daily_close": 2246
     },
-    "iv_null_or_zero": 19917,
+    "iv_null_or_zero": 99243,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2637948,
-     "spikes": 2243,
-     "share": 0.00085028,
-     "early_minutes": 607548,
-     "early_spikes": 407,
-     "early_share": 0.00066991,
-     "late_minutes": 2030400,
-     "late_spikes": 1836,
-     "late_share": 0.00090426
+     "minutes": 4545692,
+     "spikes": 3270,
+     "share": 0.00071936,
+     "early_minutes": 1029694,
+     "early_spikes": 622,
+     "early_share": 0.00060406,
+     "late_minutes": 3515998,
+     "late_spikes": 2648,
+     "late_share": 0.00075313
     }
    },
    "underlying": "EICHERMOT",
@@ -8051,11 +8643,11 @@
   {
    "file": "stkopt_ETERNAL_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 825309,
+   "rows": 2165938,
    "first": "2025-04-09 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 13420875,
-   "sha256": "cbe477c5986dda3eeb2dcb85f6ff40930dc0a4fb707bf869ea8a9a2a0c65ca12",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 37052851,
+   "sha256": "bfbbf81be4dd88ad041a955ef6bf4e1bef4e7bf304227b5e65801351a70e94bf",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8078,33 +8670,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 2244,
+    "weekend_rows": 5129,
     "nonzero_seconds": 0,
-    "trading_days": 373,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 12,
-    "series_days_total": 2215,
+    "trading_days": 376,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 2457,
+    "series_days_total": 8272,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2243,
-     "outside_session": 3460
+     "outside_session": 8330,
+     "date_not_a_trading_day_or_after_last_daily_close": 2243
     },
-    "iv_null_or_zero": 9279,
+    "iv_null_or_zero": 75624,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 824851,
-     "spikes": 242,
-     "share": 0.00029339,
-     "early_minutes": 197005,
-     "early_spikes": 68,
-     "early_share": 0.00034517,
-     "late_minutes": 627846,
-     "late_spikes": 174,
-     "late_share": 0.00027714
+     "minutes": 2155525,
+     "spikes": 1822,
+     "share": 0.00084527,
+     "early_minutes": 506738,
+     "early_spikes": 429,
+     "early_share": 0.00084659,
+     "late_minutes": 1648787,
+     "late_spikes": 1393,
+     "late_share": 0.00084486
     }
    },
    "underlying": "ETERNAL",
@@ -8115,11 +8707,11 @@
   {
    "file": "stkopt_FEDERALBNK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2783805,
+   "rows": 4580227,
    "first": "2021-08-02 09:16:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 31519053,
-   "sha256": "3d4ea239d2fb8ca958588ff96a2ffe089a3696945170a9452001319e16056e31",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 65480338,
+   "sha256": "76fab13c66a5be1e99568e01a3cb8d29bd035574fe17ec4370f150c9ce719655",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8142,33 +8734,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4477,
+    "weekend_rows": 8162,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 39,
-    "series_days_total": 7518,
+    "trading_days": 1274,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 28028,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2245,
-     "outside_session": 4298
+     "outside_session": 9293,
+     "date_not_a_trading_day_or_after_last_daily_close": 2245
     },
-    "iv_null_or_zero": 23377,
+    "iv_null_or_zero": 150486,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2755884,
-     "spikes": 2808,
-     "share": 0.00101891,
-     "early_minutes": 647016,
-     "early_spikes": 548,
-     "early_share": 0.00084697,
-     "late_minutes": 2108868,
-     "late_spikes": 2260,
-     "late_share": 0.00107166
+     "minutes": 4534628,
+     "spikes": 4148,
+     "share": 0.00091474,
+     "early_minutes": 1037178,
+     "early_spikes": 863,
+     "early_share": 0.00083207,
+     "late_minutes": 3497450,
+     "late_spikes": 3285,
+     "late_share": 0.00093926
     }
    },
    "underlying": "FEDERALBNK",
@@ -8179,11 +8771,11 @@
   {
    "file": "stkopt_GRASIM_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2772216,
+   "rows": 4629696,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 37571833,
-   "sha256": "5743397e4b5f25c8053d5a43e60b6398d234eef6f44d21d2a0fd9fed7ae473b1",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 74818398,
+   "sha256": "598b50c8c48e1a371562581df6ddc94a857e44f0640279f3cb697cb91a914447",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8206,33 +8798,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 3672,
+    "weekend_rows": 6983,
     "nonzero_seconds": 0,
-    "trading_days": 1273,
-    "bars_per_day_median": 374.0,
-    "series_days_lt_50pct_median": 69,
-    "series_days_total": 7573,
+    "trading_days": 1276,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 28072,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2222,
-     "outside_session": 4054
+     "outside_session": 8628,
+     "date_not_a_trading_day_or_after_last_daily_close": 2222
     },
-    "iv_null_or_zero": 17323,
+    "iv_null_or_zero": 67949,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2749879,
-     "spikes": 3093,
-     "share": 0.00112478,
-     "early_minutes": 629844,
-     "early_spikes": 638,
-     "early_share": 0.00101295,
-     "late_minutes": 2120035,
-     "late_spikes": 2455,
-     "late_share": 0.001158
+     "minutes": 4579005,
+     "spikes": 4185,
+     "share": 0.00091395,
+     "early_minutes": 1022116,
+     "early_spikes": 847,
+     "early_share": 0.00082867,
+     "late_minutes": 3556889,
+     "late_spikes": 3338,
+     "late_share": 0.00093846
     }
    },
    "underlying": "GRASIM",
@@ -8243,11 +8835,11 @@
   {
    "file": "stkopt_HCLTECH_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2841721,
+   "rows": 4799714,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 44312462,
-   "sha256": "4a8138f6458a44f61f4a06ea568383f336184003be5c7aa4ddd2b42fe7c6f0e8",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 87120447,
+   "sha256": "a38cac781c5ceb7659cf7f771de2c2912115ce42ba34e7bb61954640b9378088",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8270,33 +8862,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5559,
+    "weekend_rows": 10590,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 33,
-    "series_days_total": 7629,
+    "trading_days": 1275,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 28050,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2241,
-     "outside_session": 4711
+     "outside_session": 10002,
+     "date_not_a_trading_day_or_after_last_daily_close": 2241
     },
-    "iv_null_or_zero": 29646,
+    "iv_null_or_zero": 154251,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2835442,
-     "spikes": 2382,
-     "share": 0.00084008,
-     "early_minutes": 675764,
-     "early_spikes": 485,
-     "early_share": 0.00071771,
-     "late_minutes": 2159678,
-     "late_spikes": 1897,
-     "late_share": 0.00087837
+     "minutes": 4783890,
+     "spikes": 3602,
+     "share": 0.00075294,
+     "early_minutes": 1121951,
+     "early_spikes": 789,
+     "early_share": 0.00070324,
+     "late_minutes": 3661939,
+     "late_spikes": 2813,
+     "late_share": 0.00076817
     }
    },
    "underlying": "HCLTECH",
@@ -8307,11 +8899,11 @@
   {
    "file": "stkopt_HDFCBANK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2845926,
+   "rows": 4731637,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 48958394,
-   "sha256": "b78ba60d235b99db5a368f110d9a2115ac1ae4f8a45bfb0ac317d1b5d3a982cf",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 94589288,
+   "sha256": "46f279a0ef3cadbc8a18d05c1e108b471302fa1c20879d7d07dfba259590afa2",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8334,33 +8926,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7739,
+    "weekend_rows": 14149,
     "nonzero_seconds": 0,
-    "trading_days": 1273,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 24,
-    "series_days_total": 7613,
+    "trading_days": 1276,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 25520,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 5356
+     "outside_session": 10848,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 26544,
+    "iv_null_or_zero": 119782,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2842966,
-     "spikes": 1390,
-     "share": 0.00048893,
-     "early_minutes": 681512,
-     "early_spikes": 130,
-     "early_share": 0.00019075,
-     "late_minutes": 2161454,
-     "late_spikes": 1260,
-     "late_share": 0.00058294
+     "minutes": 4711259,
+     "spikes": 2555,
+     "share": 0.00054232,
+     "early_minutes": 1124760,
+     "early_spikes": 395,
+     "early_share": 0.00035119,
+     "late_minutes": 3586499,
+     "late_spikes": 2160,
+     "late_share": 0.00060226
     }
    },
    "underlying": "HDFCBANK",
@@ -8371,11 +8963,11 @@
   {
    "file": "stkopt_HDFCLIFE_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2827463,
+   "rows": 4488871,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 37502452,
-   "sha256": "d59fda3412a0b2ab564e4d80774b7217a165184c4515c879abd4926c3a1887ae",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 73080841,
+   "sha256": "0bfb39eff2eb9420118c8fccdceab688067785a1822afe6557d7d4b92ca998ca",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8398,33 +8990,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5258,
+    "weekend_rows": 10485,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 36,
-    "series_days_total": 7625,
+    "trading_days": 1275,
+    "bars_per_day_median": 349.0,
+    "series_days_lt_50pct_median": 10829,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2247,
-     "outside_session": 4280
+     "outside_session": 9220,
+     "date_not_a_trading_day_or_after_last_daily_close": 2247
     },
-    "iv_null_or_zero": 23900,
+    "iv_null_or_zero": 107058,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2803920,
-     "spikes": 2830,
-     "share": 0.0010093,
-     "early_minutes": 659927,
-     "early_spikes": 555,
-     "early_share": 0.000841,
-     "late_minutes": 2143993,
-     "late_spikes": 2275,
-     "late_share": 0.0010611
+     "minutes": 4450023,
+     "spikes": 3820,
+     "share": 0.00085842,
+     "early_minutes": 1029632,
+     "early_spikes": 828,
+     "early_share": 0.00080417,
+     "late_minutes": 3420391,
+     "late_spikes": 2992,
+     "late_share": 0.00087475
     }
    },
    "underlying": "HDFCLIFE",
@@ -8435,11 +9027,11 @@
   {
    "file": "stkopt_HINDALCO_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2849962,
+   "rows": 4563965,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 43407400,
-   "sha256": "2aa364d9ccb52df9331154fe4fce7385120fed001e5159295f39b4f3cd1bb973",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 82444784,
+   "sha256": "9d2cb411f5e50e89ede4f74731b25d4e505bbbad0a3bcb74d1495551f410cdc3",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8462,33 +9054,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5435,
+    "weekend_rows": 9614,
     "nonzero_seconds": 0,
-    "trading_days": 1273,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 29,
-    "series_days_total": 7636,
+    "trading_days": 1276,
+    "bars_per_day_median": 368.0,
+    "series_days_lt_50pct_median": 10738,
+    "series_days_total": 22968,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2236,
-     "outside_session": 4868
+     "outside_session": 9892,
+     "date_not_a_trading_day_or_after_last_daily_close": 2236
     },
-    "iv_null_or_zero": 29632,
+    "iv_null_or_zero": 110981,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2846118,
-     "spikes": 2281,
-     "share": 0.00080144,
-     "early_minutes": 680706,
-     "early_spikes": 475,
-     "early_share": 0.0006978,
-     "late_minutes": 2165412,
-     "late_spikes": 1806,
-     "late_share": 0.00083402
+     "minutes": 4555013,
+     "spikes": 3280,
+     "share": 0.00072009,
+     "early_minutes": 1075450,
+     "early_spikes": 786,
+     "early_share": 0.00073086,
+     "late_minutes": 3479563,
+     "late_spikes": 2494,
+     "late_share": 0.00071676
     }
    },
    "underlying": "HINDALCO",
@@ -8499,11 +9091,11 @@
   {
    "file": "stkopt_HINDUNILVR_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2846297,
+   "rows": 4559597,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 45147370,
-   "sha256": "4a4cd7d6d8409e4a6585570e3aab412ea8a3b48315e9be8ceb5473f750c54811",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 85318976,
+   "sha256": "6c29ce01117ef548b39f123304f72e86d49b6e8302095080d5123041ab16cb69",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8526,33 +9118,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6762,
+    "weekend_rows": 12788,
     "nonzero_seconds": 0,
-    "trading_days": 1273,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 27,
-    "series_days_total": 7636,
+    "trading_days": 1276,
+    "bars_per_day_median": 365.0,
+    "series_days_lt_50pct_median": 10725,
+    "series_days_total": 22968,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 4797
+     "outside_session": 9845,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 25558,
+    "iv_null_or_zero": 117664,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2839979,
-     "spikes": 2482,
-     "share": 0.00087395,
-     "early_minutes": 676041,
-     "early_spikes": 440,
-     "early_share": 0.00065085,
-     "late_minutes": 2163938,
-     "late_spikes": 2042,
-     "late_share": 0.00094365
+     "minutes": 4547160,
+     "spikes": 3710,
+     "share": 0.00081589,
+     "early_minutes": 1068141,
+     "early_spikes": 746,
+     "early_share": 0.00069841,
+     "late_minutes": 3479019,
+     "late_spikes": 2964,
+     "late_share": 0.00085196
     }
    },
    "underlying": "HINDUNILVR",
@@ -8563,11 +9155,11 @@
   {
    "file": "stkopt_ICICIBANK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2852080,
+   "rows": 4599909,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 46984105,
-   "sha256": "afff74b9947a5964a1e3248dce981d853066e1084c7e998c4d9af96545253f93",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 89084295,
+   "sha256": "f9a0ac6bd885bf5bcbac2eeab958e95d08c2166a7094a6955cc8a9093852a76d",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8590,33 +9182,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7274,
+    "weekend_rows": 12742,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 24,
-    "series_days_total": 7630,
+    "trading_days": 1275,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 10664,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 5299
+     "outside_session": 10737,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 21267,
+    "iv_null_or_zero": 78324,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2851173,
-     "spikes": 1347,
-     "share": 0.00047244,
-     "early_minutes": 683508,
-     "early_spikes": 167,
-     "early_share": 0.00024433,
-     "late_minutes": 2167665,
-     "late_spikes": 1180,
-     "late_share": 0.00054436
+     "minutes": 4594684,
+     "spikes": 2324,
+     "share": 0.0005058,
+     "early_minutes": 1096554,
+     "early_spikes": 397,
+     "early_share": 0.00036204,
+     "late_minutes": 3498130,
+     "late_spikes": 1927,
+     "late_share": 0.00055087
     }
    },
    "underlying": "ICICIBANK",
@@ -8627,11 +9219,11 @@
   {
    "file": "stkopt_IDFCFIRSTB_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2828526,
+   "rows": 4527481,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 30971965,
-   "sha256": "98de6a37f63bdba694ae72360d576c21ae60f16fa0dabb7ebcd241520ce4909b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 65222898,
+   "sha256": "ccaadc0cf4e9adcc080e40d567867d969725296da3107502fa35b2665b7cde38",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8654,33 +9246,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4905,
+    "weekend_rows": 9240,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 44,
-    "series_days_total": 7624,
+    "trading_days": 1274,
+    "bars_per_day_median": 361.0,
+    "series_days_lt_50pct_median": 10744,
+    "series_days_total": 22932,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2243,
-     "outside_session": 4508
+     "outside_session": 9718,
+     "date_not_a_trading_day_or_after_last_daily_close": 2243
     },
-    "iv_null_or_zero": 34620,
+    "iv_null_or_zero": 111613,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2813269,
-     "spikes": 4661,
-     "share": 0.00165679,
-     "early_minutes": 663073,
-     "early_spikes": 1058,
-     "early_share": 0.0015956,
-     "late_minutes": 2150196,
-     "late_spikes": 3603,
-     "late_share": 0.00167566
+     "minutes": 4509370,
+     "spikes": 6163,
+     "share": 0.00136671,
+     "early_minutes": 1049205,
+     "early_spikes": 1458,
+     "early_share": 0.00138962,
+     "late_minutes": 3460165,
+     "late_spikes": 4705,
+     "late_share": 0.00135976
     }
    },
    "underlying": "IDFCFIRSTB",
@@ -8691,11 +9283,11 @@
   {
    "file": "stkopt_INDIGO_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2776277,
+   "rows": 4480233,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 40939195,
-   "sha256": "0ea5c88e9f896ac6b75f956ec50c9eb9a36c11ed83c2c933f3297a7a42c120f6",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 81283631,
+   "sha256": "4ec8b35b72fa4c5529b22685dae27af32ee453f21833ae8bb36987d71e86cc35",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8718,33 +9310,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4235,
+    "weekend_rows": 8688,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 80,
-    "series_days_total": 7561,
+    "trading_days": 1275,
+    "bars_per_day_median": 346.0,
+    "series_days_lt_50pct_median": 10848,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 7,
-     "date_not_a_trading_day_or_after_last_daily_close": 2244,
-     "outside_session": 4169
+     "nonpositive_or_missing_price": 14,
+     "outside_session": 9228,
+     "date_not_a_trading_day_or_after_last_daily_close": 2244
     },
-    "iv_null_or_zero": 19639,
+    "iv_null_or_zero": 91320,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2742345,
-     "spikes": 2420,
-     "share": 0.00088246,
-     "early_minutes": 635057,
-     "early_spikes": 457,
-     "early_share": 0.00071962,
-     "late_minutes": 2107288,
-     "late_spikes": 1963,
-     "late_share": 0.00093153
+     "minutes": 4434573,
+     "spikes": 3188,
+     "share": 0.0007189,
+     "early_minutes": 1022041,
+     "early_spikes": 600,
+     "early_share": 0.00058706,
+     "late_minutes": 3412532,
+     "late_spikes": 2588,
+     "late_share": 0.00075838
     }
    },
    "underlying": "INDIGO",
@@ -8755,11 +9347,11 @@
   {
    "file": "stkopt_INDUSINDBK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2845196,
+   "rows": 4553795,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 45556336,
-   "sha256": "671e55fa5e5aa5eaf8db131d749034541e4e51c5a0caee364773257e49d61f64",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 85648969,
+   "sha256": "20869077efb29a45f4864c139afe48e5d5bf65599af77b625c4f1f67c84fcf78",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8782,33 +9374,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6927,
+    "weekend_rows": 13113,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 29,
-    "series_days_total": 7632,
+    "trading_days": 1275,
+    "bars_per_day_median": 367.0,
+    "series_days_lt_50pct_median": 10732,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2244,
-     "outside_session": 4993
+     "outside_session": 10107,
+     "date_not_a_trading_day_or_after_last_daily_close": 2244
     },
-    "iv_null_or_zero": 23590,
+    "iv_null_or_zero": 79162,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2841909,
-     "spikes": 2058,
-     "share": 0.00072416,
-     "early_minutes": 677098,
-     "early_spikes": 327,
-     "early_share": 0.00048294,
-     "late_minutes": 2164811,
-     "late_spikes": 1731,
-     "late_share": 0.00079961
+     "minutes": 4548860,
+     "spikes": 3056,
+     "share": 0.00067182,
+     "early_minutes": 1071496,
+     "early_spikes": 593,
+     "early_share": 0.00055343,
+     "late_minutes": 3477364,
+     "late_spikes": 2463,
+     "late_share": 0.0007083
     }
    },
    "underlying": "INDUSINDBK",
@@ -8819,11 +9411,11 @@
   {
    "file": "stkopt_INFY_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2852634,
+   "rows": 4581851,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 49605677,
-   "sha256": "d7ff7aff0145edf9733bc770389a5c53d4edd1ab2cd0206239c20379049eb77c",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 92657538,
+   "sha256": "0ecefd15007f1c0f6c2f6d83931fc1b97ec9b1c9c56c049df1b4dd5edc85c4e7",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8846,33 +9438,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7100,
+    "weekend_rows": 12654,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 24,
-    "series_days_total": 7632,
+    "trading_days": 1275,
+    "bars_per_day_median": 373.0,
+    "series_days_lt_50pct_median": 10706,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 5274
+     "nonpositive_or_missing_price": 3,
+     "outside_session": 10259,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 40128,
+    "iv_null_or_zero": 133857,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2851235,
-     "spikes": 1739,
-     "share": 0.00060991,
-     "early_minutes": 683530,
-     "early_spikes": 257,
-     "early_share": 0.00037599,
-     "late_minutes": 2167705,
-     "late_spikes": 1482,
-     "late_share": 0.00068367
+     "minutes": 4577894,
+     "spikes": 2769,
+     "share": 0.00060486,
+     "early_minutes": 1092027,
+     "early_spikes": 520,
+     "early_share": 0.00047618,
+     "late_minutes": 3485867,
+     "late_spikes": 2249,
+     "late_share": 0.00064518
     }
    },
    "underlying": "INFY",
@@ -8883,11 +9475,11 @@
   {
    "file": "stkopt_ITC_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2842525,
+   "rows": 4548249,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 40091677,
-   "sha256": "e4d52c169f69be0d944bac9939ac9dd07f8489880b8532d300a1f3fe204f5d5b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 77213266,
+   "sha256": "9c1a3869fcf9f8698a3237e136add24ebeb9caeab74d28069e9852de998197dc",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8910,33 +9502,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6815,
+    "weekend_rows": 13026,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 27,
-    "series_days_total": 7627,
+    "trading_days": 1275,
+    "bars_per_day_median": 368.0,
+    "series_days_lt_50pct_median": 10762,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 5001
+     "nonpositive_or_missing_price": 2,
+     "outside_session": 10230,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 44455,
+    "iv_null_or_zero": 156655,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2827766,
-     "spikes": 2871,
-     "share": 0.00101529,
-     "early_minutes": 673337,
-     "early_spikes": 542,
-     "early_share": 0.00080495,
-     "late_minutes": 2154429,
-     "late_spikes": 2329,
-     "late_share": 0.00108103
+     "minutes": 4527420,
+     "spikes": 3981,
+     "share": 0.00087931,
+     "early_minutes": 1069851,
+     "early_spikes": 891,
+     "early_share": 0.00083283,
+     "late_minutes": 3457569,
+     "late_spikes": 3090,
+     "late_share": 0.00089369
     }
    },
    "underlying": "ITC",
@@ -8947,11 +9539,11 @@
   {
    "file": "stkopt_JIOFIN_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1025968,
+   "rows": 2604595,
    "first": "2024-11-29 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 15466903,
-   "sha256": "13020e94359c5dbd1cc392cc2d1424e983f890f6df49287809dcb246d19020a3",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 43239564,
+   "sha256": "ff219a1c662d9fb9755b203493efb32afb0ba1ff5a53033599601356a7136245",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -8974,33 +9566,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 3769,
+    "weekend_rows": 8650,
     "nonzero_seconds": 0,
-    "trading_days": 460,
+    "trading_days": 463,
     "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 14,
-    "series_days_total": 2760,
+    "series_days_lt_50pct_median": 1313,
+    "series_days_total": 8334,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2249,
-     "outside_session": 3460
+     "outside_session": 8320,
+     "date_not_a_trading_day_or_after_last_daily_close": 2249
     },
-    "iv_null_or_zero": 9976,
+    "iv_null_or_zero": 75475,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1025288,
-     "spikes": 397,
-     "share": 0.00038721,
-     "early_minutes": 243973,
-     "early_spikes": 73,
-     "early_share": 0.00029921,
-     "late_minutes": 781315,
-     "late_spikes": 324,
-     "late_share": 0.00041469
+     "minutes": 2592790,
+     "spikes": 1837,
+     "share": 0.0007085,
+     "early_minutes": 604017,
+     "early_spikes": 469,
+     "early_share": 0.00077647,
+     "late_minutes": 1988773,
+     "late_spikes": 1368,
+     "late_share": 0.00068786
     }
    },
    "underlying": "JIOFIN",
@@ -9011,11 +9603,11 @@
   {
    "file": "stkopt_JSWSTEEL_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2844482,
+   "rows": 4517811,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 40583462,
-   "sha256": "6e24a5724df9e4dfb66711f0c5ee0418ae6655ebf890408df48e1c5cb7ca0b28",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 77841751,
+   "sha256": "49d52ecc0fbaf2afb0b7fdb856fe2590c9d6889bf8de7329d7641971034978cd",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9038,33 +9630,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5873,
+    "weekend_rows": 10763,
     "nonzero_seconds": 0,
-    "trading_days": 1273,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 29,
-    "series_days_total": 7638,
+    "trading_days": 1276,
+    "bars_per_day_median": 357.0,
+    "series_days_lt_50pct_median": 10800,
+    "series_days_total": 22968,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2237,
-     "outside_session": 4477
+     "outside_session": 9272,
+     "date_not_a_trading_day_or_after_last_daily_close": 2237
     },
-    "iv_null_or_zero": 20958,
+    "iv_null_or_zero": 71922,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2838792,
-     "spikes": 2057,
-     "share": 0.0007246,
-     "early_minutes": 675246,
-     "early_spikes": 443,
-     "early_share": 0.00065606,
-     "late_minutes": 2163546,
-     "late_spikes": 1614,
-     "late_share": 0.000746
+     "minutes": 4503861,
+     "spikes": 2654,
+     "share": 0.00058927,
+     "early_minutes": 1050568,
+     "early_spikes": 629,
+     "early_share": 0.00059872,
+     "late_minutes": 3453293,
+     "late_spikes": 2025,
+     "late_share": 0.0005864
     }
    },
    "underlying": "JSWSTEEL",
@@ -9075,11 +9667,11 @@
   {
    "file": "stkopt_KOTAKBANK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2848648,
+   "rows": 4557255,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 46682372,
-   "sha256": "0d96c9c838e6bf50d5fc191b75415bfebed10b4309dff5448cbf5250d7e73630",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 86581673,
+   "sha256": "287818ed49b4bd44012c9cd79f0267e6a82dadc6b80ceeb6649fa5d38161c0bb",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9102,33 +9694,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6763,
+    "weekend_rows": 11721,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 24,
-    "series_days_total": 7632,
+    "trading_days": 1275,
+    "bars_per_day_median": 368.0,
+    "series_days_lt_50pct_median": 10729,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2248,
-     "outside_session": 4979
+     "nonpositive_or_missing_price": 1,
+     "outside_session": 10250,
+     "date_not_a_trading_day_or_after_last_daily_close": 2248
     },
-    "iv_null_or_zero": 21170,
+    "iv_null_or_zero": 85147,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2847352,
-     "spikes": 1692,
-     "share": 0.00059424,
-     "early_minutes": 680318,
-     "early_spikes": 206,
-     "early_share": 0.0003028,
-     "late_minutes": 2167034,
-     "late_spikes": 1486,
-     "late_share": 0.00068573
+     "minutes": 4552188,
+     "spikes": 2475,
+     "share": 0.00054369,
+     "early_minutes": 1074214,
+     "early_spikes": 417,
+     "early_share": 0.00038819,
+     "late_minutes": 3477974,
+     "late_spikes": 2058,
+     "late_share": 0.00059172
     }
    },
    "underlying": "KOTAKBANK",
@@ -9139,11 +9731,11 @@
   {
    "file": "stkopt_LT_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2759104,
+   "rows": 4383511,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 45989838,
-   "sha256": "f488ebe57a0a1476707a81b726a76d3b0e3c77bb27c98752b9ecc9ea0b8ad511",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 86568313,
+   "sha256": "cd75ce706d4491b034673358d4253562e5fc1524eafd4691bb42db235fd062b3",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9166,33 +9758,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6594,
+    "weekend_rows": 13111,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 58,
-    "series_days_total": 7435,
+    "trading_days": 1274,
+    "bars_per_day_median": 342.0,
+    "series_days_lt_50pct_median": 11167,
+    "series_days_total": 22932,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2247,
-     "outside_session": 4866
+     "outside_session": 9668,
+     "date_not_a_trading_day_or_after_last_daily_close": 2247
     },
-    "iv_null_or_zero": 21844,
+    "iv_null_or_zero": 94599,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2747010,
-     "spikes": 2205,
-     "share": 0.00080269,
-     "early_minutes": 653489,
-     "early_spikes": 318,
-     "early_share": 0.00048662,
-     "late_minutes": 2093521,
-     "late_spikes": 1887,
-     "late_share": 0.00090135
+     "minutes": 4329244,
+     "spikes": 3028,
+     "share": 0.00069943,
+     "early_minutes": 1022593,
+     "early_spikes": 506,
+     "early_share": 0.00049482,
+     "late_minutes": 3306651,
+     "late_spikes": 2522,
+     "late_share": 0.00076271
     }
    },
    "underlying": "LT",
@@ -9203,11 +9795,11 @@
   {
    "file": "stkopt_M&M_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2797846,
+   "rows": 4514016,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 45322352,
-   "sha256": "4ea83ddce7981f8e96d556e007eb4b727e17e4f0147827949c88b84e5028efe8",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 87065148,
+   "sha256": "2a367121b62cafd951b240cf2852487599ec713c9fac4fd9863ed9eb02050178",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9230,33 +9822,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6701,
+    "weekend_rows": 12265,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 39,
-    "series_days_total": 7518,
+    "trading_days": 1275,
+    "bars_per_day_median": 364.0,
+    "series_days_lt_50pct_median": 10845,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 1874,
-     "outside_session": 4526
+     "outside_session": 9445,
+     "date_not_a_trading_day_or_after_last_daily_close": 1874
     },
-    "iv_null_or_zero": 29149,
+    "iv_null_or_zero": 112835,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2791036,
-     "spikes": 2439,
-     "share": 0.00087387,
-     "early_minutes": 664583,
-     "early_spikes": 444,
-     "early_share": 0.00066809,
-     "late_minutes": 2126453,
-     "late_spikes": 1995,
-     "late_share": 0.00093818
+     "minutes": 4505241,
+     "spikes": 3174,
+     "share": 0.00070451,
+     "early_minutes": 1061487,
+     "early_spikes": 661,
+     "early_share": 0.00062271,
+     "late_minutes": 3443754,
+     "late_spikes": 2513,
+     "late_share": 0.00072973
     }
    },
    "underlying": "M&M",
@@ -9267,11 +9859,11 @@
   {
    "file": "stkopt_MARUTI_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2848517,
+   "rows": 4579160,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 54388659,
-   "sha256": "4797b9f548103378cb14f35390edee777cbe5fa87cc63b70fdc834aadad1fe82",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 100482737,
+   "sha256": "917969e729866022408192837147105e13961a0402f4d1e2ea3cff0ffcf3bf8a",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9294,33 +9886,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7149,
+    "weekend_rows": 13277,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 26,
-    "series_days_total": 7626,
+    "trading_days": 1274,
+    "bars_per_day_median": 370.0,
+    "series_days_lt_50pct_median": 10669,
+    "series_days_total": 22932,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2246,
-     "outside_session": 4915
+     "nonpositive_or_missing_price": 1,
+     "outside_session": 10199,
+     "date_not_a_trading_day_or_after_last_daily_close": 2246
     },
-    "iv_null_or_zero": 30062,
+    "iv_null_or_zero": 94167,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2845435,
-     "spikes": 1555,
-     "share": 0.00054649,
-     "early_minutes": 680914,
-     "early_spikes": 167,
-     "early_share": 0.00024526,
-     "late_minutes": 2164521,
-     "late_spikes": 1388,
-     "late_share": 0.00064125
+     "minutes": 4574044,
+     "spikes": 2415,
+     "share": 0.00052798,
+     "early_minutes": 1083683,
+     "early_spikes": 287,
+     "early_share": 0.00026484,
+     "late_minutes": 3490361,
+     "late_spikes": 2128,
+     "late_share": 0.00060968
     }
    },
    "underlying": "MARUTI",
@@ -9331,11 +9923,11 @@
   {
    "file": "stkopt_MAXHEALTH_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1009986,
+   "rows": 2429806,
    "first": "2024-11-29 09:17:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 14002216,
-   "sha256": "ae5e4fe7cf4593ed276e114999779f7c1af1068e2773311e4255c2af7757ee6f",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 37936139,
+   "sha256": "3207950983c21fe88c11ba0f2487440c1478768f467385ae979791a3c2367dd4",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9358,33 +9950,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 2926,
+    "weekend_rows": 6009,
     "nonzero_seconds": 0,
-    "trading_days": 460,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 31,
-    "series_days_total": 2753,
+    "trading_days": 463,
+    "bars_per_day_median": 372.0,
+    "series_days_lt_50pct_median": 1723,
+    "series_days_total": 8334,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2245,
-     "outside_session": 3450
+     "outside_session": 7950,
+     "date_not_a_trading_day_or_after_last_daily_close": 2245
     },
-    "iv_null_or_zero": 10630,
+    "iv_null_or_zero": 69871,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1002748,
-     "spikes": 396,
-     "share": 0.00039491,
-     "early_minutes": 232171,
-     "early_spikes": 107,
-     "early_share": 0.00046087,
-     "late_minutes": 770577,
-     "late_spikes": 289,
-     "late_share": 0.00037504
+     "minutes": 2401011,
+     "spikes": 1107,
+     "share": 0.00046106,
+     "early_minutes": 531259,
+     "early_spikes": 296,
+     "early_share": 0.00055717,
+     "late_minutes": 1869752,
+     "late_spikes": 811,
+     "late_share": 0.00043375
     }
    },
    "underlying": "MAXHEALTH",
@@ -9395,11 +9987,11 @@
   {
    "file": "stkopt_NESTLEIND_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 959274,
+   "rows": 1850104,
    "first": "2021-08-02 13:00:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 11085257,
-   "sha256": "32debb0360d30bf6603d570721a83a38262e2ea2de6edab515120a71a00fe80b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 25172977,
+   "sha256": "22b2263065d60558c830435b8c6d29b4d483d265da269c8f7ab80ea02ef2d611",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9422,33 +10014,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 2262,
+    "weekend_rows": 5112,
     "nonzero_seconds": 0,
-    "trading_days": 1260,
-    "bars_per_day_median": 372.0,
-    "series_days_lt_50pct_median": 273,
-    "series_days_total": 2914,
+    "trading_days": 1263,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 20208,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2230,
-     "outside_session": 3434
+     "outside_session": 7934,
+     "date_not_a_trading_day_or_after_last_daily_close": 2230
     },
-    "iv_null_or_zero": 317198,
+    "iv_null_or_zero": 418672,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 959229,
-     "spikes": 107,
-     "share": 0.00011155,
-     "early_minutes": 194308,
-     "early_spikes": 31,
-     "early_share": 0.00015954,
-     "late_minutes": 764921,
-     "late_spikes": 76,
-     "late_share": 9.936e-05
+     "minutes": 1848971,
+     "spikes": 242,
+     "share": 0.00013088,
+     "early_minutes": 386130,
+     "early_spikes": 50,
+     "early_share": 0.00012949,
+     "late_minutes": 1462841,
+     "late_spikes": 192,
+     "late_share": 0.00013125
     }
    },
    "underlying": "NESTLEIND",
@@ -9459,11 +10051,11 @@
   {
    "file": "stkopt_NTPC_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2309309,
+   "rows": 4015601,
    "first": "2021-08-02 09:39:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 25531354,
-   "sha256": "2b1a10610a38dcc95183b27304fbb5425e6cd1ce10d857d285725833c9a3d713",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 60039145,
+   "sha256": "bd18a6240d995082edadf38f2a6e100e8a96a51458195714e338b8859253520c",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9486,33 +10078,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4887,
+    "weekend_rows": 10755,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 150,
-    "series_days_total": 6361,
+    "trading_days": 1275,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 3,
-     "date_not_a_trading_day_or_after_last_daily_close": 2247,
-     "outside_session": 4060
+     "nonpositive_or_missing_price": 4,
+     "outside_session": 9072,
+     "date_not_a_trading_day_or_after_last_daily_close": 2247
     },
-    "iv_null_or_zero": 289771,
+    "iv_null_or_zero": 408665,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2301694,
-     "spikes": 4830,
-     "share": 0.00209845,
-     "early_minutes": 530257,
-     "early_spikes": 909,
-     "early_share": 0.00171426,
-     "late_minutes": 1771437,
-     "late_spikes": 3921,
-     "late_share": 0.00221346
+     "minutes": 4000947,
+     "spikes": 5861,
+     "share": 0.0014649,
+     "early_minutes": 922969,
+     "early_spikes": 1202,
+     "early_share": 0.00130232,
+     "late_minutes": 3077978,
+     "late_spikes": 4659,
+     "late_share": 0.00151366
     }
    },
    "underlying": "NTPC",
@@ -9523,11 +10115,11 @@
   {
    "file": "stkopt_ONGC_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2757564,
+   "rows": 4273683,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 35323543,
-   "sha256": "5a5c74e9c9fd051027f5a495374104953d6f56a139fedb7a91858d8d6ab2f78a",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 69493604,
+   "sha256": "2e1dc1816c0c4582db7dbf5afe6f598d4203b48d6979f4466863acf9c7e3c1ec",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9550,33 +10142,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5654,
+    "weekend_rows": 10770,
     "nonzero_seconds": 0,
-    "trading_days": 1270,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 47,
-    "series_days_total": 7438,
+    "trading_days": 1273,
+    "bars_per_day_median": 226.0,
+    "series_days_lt_50pct_median": 11356,
+    "series_days_total": 22914,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2245,
-     "outside_session": 4693
+     "outside_session": 9876,
+     "date_not_a_trading_day_or_after_last_daily_close": 2245
     },
-    "iv_null_or_zero": 63958,
+    "iv_null_or_zero": 164696,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2736673,
-     "spikes": 4032,
-     "share": 0.00147332,
-     "early_minutes": 646679,
-     "early_spikes": 876,
-     "early_share": 0.00135461,
-     "late_minutes": 2089994,
-     "late_spikes": 3156,
-     "late_share": 0.00151005
+     "minutes": 4237145,
+     "spikes": 4770,
+     "share": 0.00112576,
+     "early_minutes": 989813,
+     "early_spikes": 1046,
+     "early_share": 0.00105677,
+     "late_minutes": 3247332,
+     "late_spikes": 3724,
+     "late_share": 0.00114679
     }
    },
    "underlying": "ONGC",
@@ -9587,11 +10179,11 @@
   {
    "file": "stkopt_PNB_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2733084,
+   "rows": 4421692,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 30305462,
-   "sha256": "1ec332ae0fe4350b96594b9a64802b302f24fb87ce1282ba5a1e9ac25ef00bc2",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 66104862,
+   "sha256": "0f0f3ffe0d60af065ec189f5f3c35e74e5dbdb2f2bdd350620879bd0199a4e1d",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9614,33 +10206,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5640,
+    "weekend_rows": 10104,
     "nonzero_seconds": 0,
-    "trading_days": 1270,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 75,
-    "series_days_total": 7450,
+    "trading_days": 1273,
+    "bars_per_day_median": 335.0,
+    "series_days_lt_50pct_median": 10953,
+    "series_days_total": 22914,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2243,
-     "outside_session": 4322
+     "nonpositive_or_missing_price": 3,
+     "outside_session": 9412,
+     "date_not_a_trading_day_or_after_last_daily_close": 2243
     },
-    "iv_null_or_zero": 30917,
+    "iv_null_or_zero": 67350,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2715737,
-     "spikes": 4632,
-     "share": 0.00170561,
-     "early_minutes": 627230,
-     "early_spikes": 1073,
-     "early_share": 0.0017107,
-     "late_minutes": 2088507,
-     "late_spikes": 3559,
-     "late_share": 0.00170409
+     "minutes": 4397892,
+     "spikes": 5545,
+     "share": 0.00126083,
+     "early_minutes": 1012588,
+     "early_spikes": 1239,
+     "early_share": 0.0012236,
+     "late_minutes": 3385304,
+     "late_spikes": 4306,
+     "late_share": 0.00127197
     }
    },
    "underlying": "PNB",
@@ -9651,11 +10243,11 @@
   {
    "file": "stkopt_POWERGRID_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1898396,
+   "rows": 3563888,
    "first": "2021-08-02 10:05:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 23126280,
-   "sha256": "7f91f8eae834184e25ce70eda7d7e118c3cb5e9784a5abb1c1aef391295126ed",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 53238773,
+   "sha256": "3cb672e90cc3080e40cf5f4b9dee5c67701bcce57c7de73a2aa0db9a05977287",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9678,33 +10270,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5903,
+    "weekend_rows": 11017,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 184,
-    "series_days_total": 5323,
+    "trading_days": 1274,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 22932,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2243,
-     "outside_session": 3797
+     "nonpositive_or_missing_price": 2,
+     "outside_session": 8549,
+     "date_not_a_trading_day_or_after_last_daily_close": 2243
     },
-    "iv_null_or_zero": 234258,
+    "iv_null_or_zero": 345900,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1892894,
-     "spikes": 1490,
-     "share": 0.00078715,
-     "early_minutes": 427005,
-     "early_spikes": 334,
-     "early_share": 0.00078219,
-     "late_minutes": 1465889,
-     "late_spikes": 1156,
-     "late_share": 0.0007886
+     "minutes": 3540835,
+     "spikes": 3350,
+     "share": 0.0009461,
+     "early_minutes": 797791,
+     "early_spikes": 785,
+     "early_share": 0.00098397,
+     "late_minutes": 2743044,
+     "late_spikes": 2565,
+     "late_share": 0.00093509
     }
    },
    "underlying": "POWERGRID",
@@ -9715,11 +10307,11 @@
   {
    "file": "stkopt_RELIANCE_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1409182,
+   "rows": 3134073,
    "first": "2021-08-02 09:41:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 20920805,
-   "sha256": "7edd5393bf605479d9a22bedc316ed27644f7c0aca00dcdb109e77e3fa3c5733",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 58908533,
+   "sha256": "ef9be90e2833abafc3e9c4de2281d22e057465e818e0a108b18670b76ef0e644",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9742,33 +10334,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4443,
+    "weekend_rows": 10920,
     "nonzero_seconds": 0,
-    "trading_days": 1267,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 154,
-    "series_days_total": 3980,
+    "trading_days": 1270,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 22860,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2249,
-     "outside_session": 3858
+     "outside_session": 9350,
+     "date_not_a_trading_day_or_after_last_daily_close": 2249
     },
-    "iv_null_or_zero": 344990,
+    "iv_null_or_zero": 405712,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1409123,
-     "spikes": 553,
-     "share": 0.00039244,
-     "early_minutes": 312816,
-     "early_spikes": 84,
-     "early_share": 0.00026853,
-     "late_minutes": 1096307,
-     "late_spikes": 469,
-     "late_share": 0.0004278
+     "minutes": 3133062,
+     "spikes": 1522,
+     "share": 0.00048579,
+     "early_minutes": 724985,
+     "early_spikes": 355,
+     "early_share": 0.00048967,
+     "late_minutes": 2408077,
+     "late_spikes": 1167,
+     "late_share": 0.00048462
     }
    },
    "underlying": "RELIANCE",
@@ -9779,11 +10371,11 @@
   {
    "file": "stkopt_SBILIFE_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2787310,
+   "rows": 4373031,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 36486525,
-   "sha256": "92dff61753774278856b163316d649a9c39a7064407577e98ec5c6d1aeda50b1",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 71008082,
+   "sha256": "ffc98d060a4abb95d3608a5c406bb770c9a635eb65bdef4ea1d3b4c47b698068",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9806,33 +10398,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4753,
+    "weekend_rows": 9400,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 374.0,
-    "series_days_lt_50pct_median": 70,
-    "series_days_total": 7603,
+    "trading_days": 1275,
+    "bars_per_day_median": 299.0,
+    "series_days_lt_50pct_median": 11021,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2246,
-     "outside_session": 4093
+     "outside_session": 8593,
+     "date_not_a_trading_day_or_after_last_daily_close": 2246
     },
-    "iv_null_or_zero": 32520,
+    "iv_null_or_zero": 111532,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2754619,
-     "spikes": 4147,
-     "share": 0.00150547,
-     "early_minutes": 633386,
-     "early_spikes": 887,
-     "early_share": 0.00140041,
-     "late_minutes": 2121233,
-     "late_spikes": 3260,
-     "late_share": 0.00153684
+     "minutes": 4330582,
+     "spikes": 5153,
+     "share": 0.00118991,
+     "early_minutes": 975889,
+     "early_spikes": 1079,
+     "early_share": 0.00110566,
+     "late_minutes": 3354693,
+     "late_spikes": 4074,
+     "late_share": 0.00121442
     }
    },
    "underlying": "SBILIFE",
@@ -9843,11 +10435,11 @@
   {
    "file": "stkopt_SBIN_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2853005,
+   "rows": 4604652,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 46783533,
-   "sha256": "deb9ff11b42957c0cb8104f659a0788ef916733ad6a7747efff736cd410edd6a",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 89332972,
+   "sha256": "db3fbe50bd8577ce119227e555dc576b144bc7e5072d80cea4308408d24ac90d",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9870,33 +10462,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7454,
+    "weekend_rows": 13515,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 24,
-    "series_days_total": 7632,
+    "trading_days": 1275,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 10658,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 5441
+     "outside_session": 10928,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 20713,
+    "iv_null_or_zero": 109207,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2852106,
-     "spikes": 1291,
-     "share": 0.00045265,
-     "early_minutes": 683745,
-     "early_spikes": 133,
-     "early_share": 0.00019452,
-     "late_minutes": 2168361,
-     "late_spikes": 1158,
-     "late_share": 0.00053404
+     "minutes": 4602209,
+     "spikes": 2433,
+     "share": 0.00052866,
+     "early_minutes": 1099752,
+     "early_spikes": 460,
+     "early_share": 0.00041828,
+     "late_minutes": 3502457,
+     "late_spikes": 1973,
+     "late_share": 0.00056332
     }
    },
    "underlying": "SBIN",
@@ -9907,11 +10499,11 @@
   {
    "file": "stkopt_SHRIRAMFIN_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1153215,
+   "rows": 2680766,
    "first": "2022-12-20 14:45:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 16584653,
-   "sha256": "5ad6dc8b4fcca696f17568b49feb2ad1c24d6a0cf4f26aa76c0beb7cabe1676b",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 45907436,
+   "sha256": "20fbbf33ba51ff27998c0d9c838e338b5b841a8b57caa1f78d329ea6bacab314",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9934,33 +10526,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 3624,
+    "weekend_rows": 8116,
     "nonzero_seconds": 0,
-    "trading_days": 933,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 168,
-    "series_days_total": 3296,
+    "trading_days": 936,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 16848,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2239,
-     "outside_session": 3487
+     "outside_session": 8142,
+     "date_not_a_trading_day_or_after_last_daily_close": 2239
     },
-    "iv_null_or_zero": 191950,
+    "iv_null_or_zero": 303979,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1152103,
-     "spikes": 377,
-     "share": 0.00032723,
-     "early_minutes": 254282,
-     "early_spikes": 61,
-     "early_share": 0.00023989,
-     "late_minutes": 897821,
-     "late_spikes": 316,
-     "late_share": 0.00035196
+     "minutes": 2674207,
+     "spikes": 827,
+     "share": 0.00030925,
+     "early_minutes": 603649,
+     "early_spikes": 186,
+     "early_share": 0.00030813,
+     "late_minutes": 2070558,
+     "late_spikes": 641,
+     "late_share": 0.00030958
     }
    },
    "underlying": "SHRIRAMFIN",
@@ -9971,11 +10563,11 @@
   {
    "file": "stkopt_SUNPHARMA_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2841900,
+   "rows": 4506177,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 43655907,
-   "sha256": "cb31e6553a969c41b6e491f9cb2731182f1768d2241384945693220de42e7872",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 81840663,
+   "sha256": "228a9dbe7d0ac9883feb8c647c36462073f4a3c6aa7e8268d072a8ee1b3e7df4",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -9998,33 +10590,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5636,
+    "weekend_rows": 11039,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 34,
-    "series_days_total": 7630,
+    "trading_days": 1275,
+    "bars_per_day_median": 359.0,
+    "series_days_lt_50pct_median": 10838,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2250,
-     "outside_session": 4935
+     "outside_session": 9966,
+     "date_not_a_trading_day_or_after_last_daily_close": 2250
     },
-    "iv_null_or_zero": 38382,
+    "iv_null_or_zero": 132301,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2835559,
-     "spikes": 2926,
-     "share": 0.0010319,
-     "early_minutes": 675130,
-     "early_spikes": 477,
-     "early_share": 0.00070653,
-     "late_minutes": 2160429,
-     "late_spikes": 2449,
-     "late_share": 0.00113357
+     "minutes": 4492861,
+     "spikes": 3896,
+     "share": 0.00086715,
+     "early_minutes": 1050306,
+     "early_spikes": 696,
+     "early_share": 0.00066266,
+     "late_minutes": 3442555,
+     "late_spikes": 3200,
+     "late_share": 0.00092954
     }
    },
    "underlying": "SUNPHARMA",
@@ -10035,11 +10627,11 @@
   {
    "file": "stkopt_TATACONSUM_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2721287,
+   "rows": 4369461,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 36123998,
-   "sha256": "7e2585c86abbcf6fd8c4a02a7081e8b0665b2729b04f73f8c099876cd71ef9cd",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 71321500,
+   "sha256": "38c18d4a2a1f93349ddcbd2e07361f6e462f4bc4251c5a239564775d883c54d8",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10062,33 +10654,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4519,
+    "weekend_rows": 10257,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 49,
-    "series_days_total": 7383,
+    "trading_days": 1275,
+    "bars_per_day_median": 306.0,
+    "series_days_lt_50pct_median": 11066,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2245,
-     "outside_session": 4133
+     "outside_session": 8717,
+     "date_not_a_trading_day_or_after_last_daily_close": 2245
     },
-    "iv_null_or_zero": 18913,
+    "iv_null_or_zero": 75898,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2701263,
-     "spikes": 2814,
-     "share": 0.00104173,
-     "early_minutes": 627496,
-     "early_spikes": 568,
-     "early_share": 0.00090519,
-     "late_minutes": 2073767,
-     "late_spikes": 2246,
-     "late_share": 0.00108305
+     "minutes": 4339252,
+     "spikes": 3448,
+     "share": 0.00079461,
+     "early_minutes": 989118,
+     "early_spikes": 726,
+     "early_share": 0.00073399,
+     "late_minutes": 3350134,
+     "late_spikes": 2722,
+     "late_share": 0.0008125
     }
    },
    "underlying": "TATACONSUM",
@@ -10099,11 +10691,11 @@
   {
    "file": "stkopt_TATASTEEL_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2344673,
+   "rows": 3909709,
    "first": "2021-08-02 10:12:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 31142534,
-   "sha256": "a887622a860f6023b0939528c2ed5bc05b7281de8afd7174f09d6a398d6e6edc",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 65295422,
+   "sha256": "65ccca71413794d8e08830b8570e1a699e0f0a6e088f72b037966523d881c1a5",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10126,33 +10718,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5871,
+    "weekend_rows": 10694,
     "nonzero_seconds": 0,
-    "trading_days": 1265,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 93,
-    "series_days_total": 6370,
+    "trading_days": 1268,
+    "bars_per_day_median": 0.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 22824,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2249,
-     "outside_session": 4383
+     "outside_session": 9630,
+     "date_not_a_trading_day_or_after_last_daily_close": 2249
     },
-    "iv_null_or_zero": 145600,
+    "iv_null_or_zero": 218301,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2334276,
-     "spikes": 2290,
-     "share": 0.00098103,
-     "early_minutes": 549253,
-     "early_spikes": 483,
-     "early_share": 0.00087938,
-     "late_minutes": 1785023,
-     "late_spikes": 1807,
-     "late_share": 0.00101231
+     "minutes": 3880601,
+     "spikes": 3215,
+     "share": 0.00082848,
+     "early_minutes": 904748,
+     "early_spikes": 792,
+     "early_share": 0.00087538,
+     "late_minutes": 2975853,
+     "late_spikes": 2423,
+     "late_share": 0.00081422
     }
    },
    "underlying": "TATASTEEL",
@@ -10163,11 +10755,11 @@
   {
    "file": "stkopt_TCS_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2750607,
+   "rows": 4498375,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 47510630,
-   "sha256": "a5cf8d8abc9a3c5313b49a318d189ae2153d565ac698c6f8252e8336d03be990",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 90900597,
+   "sha256": "caab6a0b436142bf9d35406733acf6440b1cbca249133038265753124485c602",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10190,33 +10782,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6803,
+    "weekend_rows": 12068,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 88,
-    "series_days_total": 7435,
+    "trading_days": 1274,
+    "bars_per_day_median": 370.0,
+    "series_days_lt_50pct_median": 10901,
+    "series_days_total": 22932,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2249,
-     "outside_session": 5030
+     "nonpositive_or_missing_price": 2,
+     "outside_session": 10434,
+     "date_not_a_trading_day_or_after_last_daily_close": 2249
     },
-    "iv_null_or_zero": 17208,
+    "iv_null_or_zero": 92756,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2729065,
-     "spikes": 1279,
-     "share": 0.00046866,
-     "early_minutes": 647151,
-     "early_spikes": 148,
-     "early_share": 0.00022869,
-     "late_minutes": 2081914,
-     "late_spikes": 1131,
-     "late_share": 0.00054325
+     "minutes": 4450861,
+     "spikes": 2064,
+     "share": 0.00046373,
+     "early_minutes": 1054564,
+     "early_spikes": 304,
+     "early_share": 0.00028827,
+     "late_minutes": 3396297,
+     "late_spikes": 1760,
+     "late_share": 0.00051821
     }
    },
    "underlying": "TCS",
@@ -10227,11 +10819,11 @@
   {
    "file": "stkopt_TECHM_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2841191,
+   "rows": 4512171,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 42657928,
-   "sha256": "0d3aa2860b18cd10a99177dd057daecbfa4027da3734bb975606540df4590830",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 79829684,
+   "sha256": "98d378300fd5712c8024276e07a66823b7b63b032b39648f06a3e90e92385c57",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10254,33 +10846,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5025,
+    "weekend_rows": 8995,
     "nonzero_seconds": 0,
-    "trading_days": 1273,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 35,
-    "series_days_total": 7637,
+    "trading_days": 1276,
+    "bars_per_day_median": 358.0,
+    "series_days_lt_50pct_median": 10833,
+    "series_days_total": 22968,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2241,
-     "outside_session": 4517
+     "nonpositive_or_missing_price": 5,
+     "outside_session": 9577,
+     "date_not_a_trading_day_or_after_last_daily_close": 2241
     },
-    "iv_null_or_zero": 23942,
+    "iv_null_or_zero": 99626,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2824320,
-     "spikes": 2101,
-     "share": 0.0007439,
-     "early_minutes": 671230,
-     "early_spikes": 402,
-     "early_share": 0.0005989,
-     "late_minutes": 2153090,
-     "late_spikes": 1699,
-     "late_share": 0.0007891
+     "minutes": 4488541,
+     "spikes": 2942,
+     "share": 0.00065545,
+     "early_minutes": 1047463,
+     "early_spikes": 588,
+     "early_share": 0.00056136,
+     "late_minutes": 3441078,
+     "late_spikes": 2354,
+     "late_share": 0.00068409
     }
    },
    "underlying": "TECHM",
@@ -10291,11 +10883,11 @@
   {
    "file": "stkopt_TITAN_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2737129,
+   "rows": 4364085,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 43355093,
-   "sha256": "3a3ff15771c06317a0e18b2a668383b6418591197e44d94fd6882a9ad0cd98d6",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 82485830,
+   "sha256": "b479458dd26d50595d95f1426cd0f8955978047b7b54a3016bc761ad5c6ccd07",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10318,33 +10910,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 5879,
+    "weekend_rows": 11553,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 126,
-    "series_days_total": 7456,
+    "trading_days": 1275,
+    "bars_per_day_median": 307.0,
+    "series_days_lt_50pct_median": 11167,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2247,
-     "outside_session": 4645
+     "outside_session": 9572,
+     "date_not_a_trading_day_or_after_last_daily_close": 2247
     },
-    "iv_null_or_zero": 17603,
+    "iv_null_or_zero": 83153,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2715885,
-     "spikes": 1804,
-     "share": 0.00066424,
-     "early_minutes": 639795,
-     "early_spikes": 316,
-     "early_share": 0.00049391,
-     "late_minutes": 2076090,
-     "late_spikes": 1488,
-     "late_share": 0.00071673
+     "minutes": 4287701,
+     "spikes": 2500,
+     "share": 0.00058306,
+     "early_minutes": 1000516,
+     "early_spikes": 474,
+     "early_share": 0.00047376,
+     "late_minutes": 3287185,
+     "late_spikes": 2026,
+     "late_share": 0.00061633
     }
    },
    "underlying": "TITAN",
@@ -10355,11 +10947,11 @@
   {
    "file": "stkopt_TMPV_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2794965,
+   "rows": 4562224,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 45149451,
-   "sha256": "f94eadf8df2a5113f2ac5799e9eb6c5ac9d633c6fca6348a591d8638299eb44f",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 86960136,
+   "sha256": "2bb4de1874be7c83bab38054bd960c51b545b4fdf24bb0e95854193c383ec1bb",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10382,33 +10974,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 7463,
+    "weekend_rows": 13833,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 25,
-    "series_days_total": 7479,
+    "trading_days": 1275,
+    "bars_per_day_median": 373.0,
+    "series_days_lt_50pct_median": 10763,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2286,
-     "outside_session": 5237
+     "nonpositive_or_missing_price": 2,
+     "outside_session": 10618,
+     "date_not_a_trading_day_or_after_last_daily_close": 2286
     },
-    "iv_null_or_zero": 24407,
+    "iv_null_or_zero": 110474,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2793924,
-     "spikes": 1483,
-     "share": 0.00053079,
-     "early_minutes": 669392,
-     "early_spikes": 165,
-     "early_share": 0.00024649,
-     "late_minutes": 2124532,
-     "late_spikes": 1318,
-     "late_share": 0.00062037
+     "minutes": 4560040,
+     "spikes": 2411,
+     "share": 0.00052872,
+     "early_minutes": 1087219,
+     "early_spikes": 421,
+     "early_share": 0.00038723,
+     "late_minutes": 3472821,
+     "late_spikes": 1990,
+     "late_share": 0.00057302
     }
    },
    "underlying": "TMPV",
@@ -10419,11 +11011,11 @@
   {
    "file": "stkopt_TRENT_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2674071,
+   "rows": 4363401,
    "first": "2021-08-02 09:16:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 38948631,
-   "sha256": "5337addfa15ebdc1a275128d1ca25d7e827dc4f53ec445a95b6a11b60af42c6c",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 79993334,
+   "sha256": "825355d0dfc65702d11ad4806ffee90959c176d92e82e4978b59126d0558d5a0",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10446,33 +11038,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 4976,
+    "weekend_rows": 10592,
     "nonzero_seconds": 0,
-    "trading_days": 1272,
-    "bars_per_day_median": 374.0,
-    "series_days_lt_50pct_median": 159,
-    "series_days_total": 7432,
+    "trading_days": 1275,
+    "bars_per_day_median": 305.0,
+    "series_days_lt_50pct_median": 11062,
+    "series_days_total": 22950,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2244,
-     "outside_session": 3807
+     "outside_session": 8651,
+     "date_not_a_trading_day_or_after_last_daily_close": 2244
     },
-    "iv_null_or_zero": 22138,
+    "iv_null_or_zero": 99794,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2630649,
-     "spikes": 2782,
-     "share": 0.00105753,
-     "early_minutes": 587817,
-     "early_spikes": 483,
-     "early_share": 0.00082168,
-     "late_minutes": 2042832,
-     "late_spikes": 2299,
-     "late_share": 0.0011254
+     "minutes": 4316701,
+     "spikes": 3627,
+     "share": 0.00084022,
+     "early_minutes": 973560,
+     "early_spikes": 676,
+     "early_share": 0.00069436,
+     "late_minutes": 3343141,
+     "late_spikes": 2951,
+     "late_share": 0.0008827
     }
    },
    "underlying": "TRENT",
@@ -10483,11 +11075,11 @@
   {
    "file": "stkopt_ULTRACEMCO_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 2823642,
+   "rows": 4452433,
    "first": "2021-08-02 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 46864418,
-   "sha256": "f4b015383d53c3b0011e9e0804cd1dc8835a1e32f0814f99fad839c506f7adb9",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 86381234,
+   "sha256": "693df80e765a236a11e7c34f1cf8541e67b2f5f5fdfb91f546b302851ba07f78",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10510,33 +11102,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 6155,
+    "weekend_rows": 12083,
     "nonzero_seconds": 0,
-    "trading_days": 1271,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 42,
-    "series_days_total": 7625,
+    "trading_days": 1274,
+    "bars_per_day_median": 342.5,
+    "series_days_lt_50pct_median": 10911,
+    "series_days_total": 22932,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2247,
-     "outside_session": 4245
+     "outside_session": 8302,
+     "date_not_a_trading_day_or_after_last_daily_close": 2247
     },
-    "iv_null_or_zero": 23695,
+    "iv_null_or_zero": 75691,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 2811175,
-     "spikes": 2521,
-     "share": 0.00089678,
-     "early_minutes": 662138,
-     "early_spikes": 485,
-     "early_share": 0.00073248,
-     "late_minutes": 2149037,
-     "late_spikes": 2036,
-     "late_share": 0.0009474
+     "minutes": 4435027,
+     "spikes": 3299,
+     "share": 0.00074385,
+     "early_minutes": 1026974,
+     "early_spikes": 643,
+     "early_share": 0.00062611,
+     "late_minutes": 3408053,
+     "late_spikes": 2656,
+     "late_share": 0.00077933
     }
    },
    "underlying": "ULTRACEMCO",
@@ -10547,11 +11139,11 @@
   {
    "file": "stkopt_UNIONBANK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1007432,
+   "rows": 2466773,
    "first": "2024-11-29 09:22:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 12952808,
-   "sha256": "b3273568ee9e23a088faac0bd51635802b6f389d1e5baefd7fe3497ed2c42e19",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 36944494,
+   "sha256": "7aa44b94693e39dac0e8a6a0971d717f9e39141540fbf703e9c1b6a68705f2e4",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10574,33 +11166,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 2588,
+    "weekend_rows": 5579,
     "nonzero_seconds": 0,
-    "trading_days": 459,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 24,
-    "series_days_total": 2736,
+    "trading_days": 462,
+    "bars_per_day_median": 372.0,
+    "series_days_lt_50pct_median": 1604,
+    "series_days_total": 8316,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 1,
-     "date_not_a_trading_day_or_after_last_daily_close": 2243,
-     "outside_session": 3462
+     "nonpositive_or_missing_price": 2,
+     "outside_session": 8172,
+     "date_not_a_trading_day_or_after_last_daily_close": 2243
     },
-    "iv_null_or_zero": 8913,
+    "iv_null_or_zero": 65588,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 999587,
-     "spikes": 549,
-     "share": 0.00054923,
-     "early_minutes": 232709,
-     "early_spikes": 153,
-     "early_share": 0.00065747,
-     "late_minutes": 766878,
-     "late_spikes": 396,
-     "late_share": 0.00051638
+     "minutes": 2430636,
+     "spikes": 1817,
+     "share": 0.00074754,
+     "early_minutes": 542268,
+     "early_spikes": 531,
+     "early_share": 0.00097922,
+     "late_minutes": 1888368,
+     "late_spikes": 1286,
+     "late_share": 0.00068101
     }
    },
    "underlying": "UNIONBANK",
@@ -10611,11 +11203,11 @@
   {
    "file": "stkopt_YESBANK_MONTH.parquet",
    "dataset": "stock_options_rolling_1m",
-   "rows": 1004909,
+   "rows": 2258970,
    "first": "2024-11-29 09:15:00+05:30",
-   "last": "2026-10-14 15:29:00+05:30",
-   "bytes": 10399558,
-   "sha256": "aedce10ae697b44ddb986979e5211377b5153d061776a3215985785375891009",
+   "last": "2026-10-19 15:29:00+05:30",
+   "bytes": 28150613,
+   "sha256": "860bfe90dae6ce52642fd9b0309fd51b0b8531cccf179ec215288b82b9e59852",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
@@ -10638,33 +11230,33 @@
     "close_outside_hl": 0,
     "open_outside_hl": 0,
     "outside_session_rows": 0,
-    "weekend_rows": 2732,
+    "weekend_rows": 5565,
     "nonzero_seconds": 0,
-    "trading_days": 460,
-    "bars_per_day_median": 375.0,
-    "series_days_lt_50pct_median": 18,
-    "series_days_total": 2710,
+    "trading_days": 463,
+    "bars_per_day_median": 373.0,
+    "series_days_lt_50pct_median": 2198,
+    "series_days_total": 8334,
     "duplicates_dropped_series_total": {
-     "conflicting_removed": 0,
-     "identical": 0
+     "identical": 0,
+     "conflicting_removed": 0
     },
     "rows_dropped_series_total": {
-     "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 2238,
-     "outside_session": 3480
+     "nonpositive_or_missing_price": 6,
+     "outside_session": 7776,
+     "date_not_a_trading_day_or_after_last_daily_close": 2238
     },
-    "iv_null_or_zero": 36021,
+    "iv_null_or_zero": 216341,
     "spikes": {
      "early_window": "09:15-10:44",
-     "minutes": 1003744,
-     "spikes": 716,
-     "share": 0.00071333,
-     "early_minutes": 236299,
-     "early_spikes": 268,
-     "early_share": 0.00113416,
-     "late_minutes": 767445,
-     "late_spikes": 448,
-     "late_share": 0.00058376
+     "minutes": 2245432,
+     "spikes": 1487,
+     "share": 0.00066223,
+     "early_minutes": 497785,
+     "early_spikes": 520,
+     "early_share": 0.00104463,
+     "late_minutes": 1747647,
+     "late_spikes": 967,
+     "late_share": 0.00055332
     }
    },
    "underlying": "YESBANK",
