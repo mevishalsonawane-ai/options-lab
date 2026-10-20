@@ -1,0 +1,5075 @@
+{
+ "written": "2026-10-20T09:46:05+00:00",
+ "cells": [
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B0",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 843,
+    "days": 358,
+    "sessions": 473,
+    "per_day": 1.782,
+    "win": 0.3618,
+    "avg_win": 744.0,
+    "avg_loss": -565.0,
+    "expectancy": -91.0,
+    "net": -76714.0,
+    "ex_top5": -109899.0,
+    "max_dd": 82341.0,
+    "worst_day": -5228.0,
+    "worst_month": -12329.0,
+    "worst_month_name": "2025-05",
+    "green_months": "5/24",
+    "twin_mean": -100780.0,
+    "twin_p": 0.1856
+   },
+   "opt_risk": {
+    "trades": 843,
+    "days": 358,
+    "sessions": 473,
+    "per_day": 1.782,
+    "win": 0.3784,
+    "avg_win": 1449.0,
+    "avg_loss": -1173.0,
+    "expectancy": -180.5,
+    "net": -152184.0,
+    "ex_top5": -203555.0,
+    "max_dd": 169151.0,
+    "worst_day": -11029.0,
+    "worst_month": -24569.0,
+    "worst_month_name": "2025-05",
+    "green_months": "5/24"
+   },
+   "fut": {
+    "trades": 843,
+    "days": 358,
+    "sessions": 473,
+    "per_day": 1.782,
+    "win": 0.344,
+    "avg_win": 1065.0,
+    "avg_loss": -1956.0,
+    "expectancy": -916.9,
+    "net": -772934.0,
+    "ex_top5": -829279.0,
+    "max_dd": 776854.0,
+    "worst_day": -9748.0,
+    "worst_month": -72566.0,
+    "worst_month_name": "2026-07",
+    "green_months": "2/24",
+    "twin_mean": -846717.0,
+    "twin_p": 0.0758
+   },
+   "false_break": 0.3298,
+   "why": {
+    "stop": 460,
+    "target": 381,
+    "time": 2
+   },
+   "pts_mean": 4.35,
+   "avg_risk_pts": 35.43,
+   "opt_gross_pts": 0.79,
+   "opt_cost_pts": 3.75,
+   "held_min": 5.2,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 212,
+     "net": -20629.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 218,
+     "net": -14344.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 217,
+     "net": -18689.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 185,
+     "net": -22884.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": true,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B1",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 356,
+    "days": 261,
+    "sessions": 473,
+    "per_day": 0.753,
+    "win": 0.368,
+    "avg_win": 2298.0,
+    "avg_loss": -1739.0,
+    "expectancy": -253.3,
+    "net": -90165.0,
+    "ex_top5": -136656.0,
+    "max_dd": 99184.0,
+    "worst_day": -9081.0,
+    "worst_month": -24706.0,
+    "worst_month_name": "2025-02",
+    "green_months": "7/24",
+    "twin_mean": 70937.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 356,
+    "days": 261,
+    "sessions": 473,
+    "per_day": 0.753,
+    "win": 0.368,
+    "avg_win": 2380.0,
+    "avg_loss": -1841.0,
+    "expectancy": -287.8,
+    "net": -102454.0,
+    "ex_top5": -149813.0,
+    "max_dd": 110977.0,
+    "worst_day": -9081.0,
+    "worst_month": -25044.0,
+    "worst_month_name": "2025-02",
+    "green_months": "6/24"
+   },
+   "fut": {
+    "trades": 356,
+    "days": 261,
+    "sessions": 473,
+    "per_day": 0.753,
+    "win": 0.3764,
+    "avg_win": 3729.0,
+    "avg_loss": -3895.0,
+    "expectancy": -1024.9,
+    "net": -364880.0,
+    "ex_top5": -434115.0,
+    "max_dd": 373746.0,
+    "worst_day": -14280.0,
+    "worst_month": -47863.0,
+    "worst_month_name": "2025-02",
+    "green_months": "3/24",
+    "twin_mean": -109410.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3652,
+   "why": {
+    "stop": 197,
+    "target": 107,
+    "time": 52
+   },
+   "pts_mean": 0.67,
+   "avg_risk_pts": 106.92,
+   "opt_gross_pts": -4.7,
+   "opt_cost_pts": 3.73,
+   "held_min": 61.7,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 90,
+     "net": -56226.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 80,
+     "net": -19468.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 94,
+     "net": 11091.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 88,
+     "net": -23669.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B2",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 491,
+    "days": 359,
+    "sessions": 473,
+    "per_day": 1.038,
+    "win": 0.3666,
+    "avg_win": 2157.0,
+    "avg_loss": -1702.0,
+    "expectancy": -287.3,
+    "net": -141041.0,
+    "ex_top5": -212222.0,
+    "max_dd": 159403.0,
+    "worst_day": -11765.0,
+    "worst_month": -26954.0,
+    "worst_month_name": "2025-02",
+    "green_months": "5/24",
+    "twin_mean": 152334.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 491,
+    "days": 359,
+    "sessions": 473,
+    "per_day": 1.038,
+    "win": 0.3666,
+    "avg_win": 2267.0,
+    "avg_loss": -1784.0,
+    "expectancy": -298.9,
+    "net": -146742.0,
+    "ex_top5": -223178.0,
+    "max_dd": 165978.0,
+    "worst_day": -11765.0,
+    "worst_month": -28220.0,
+    "worst_month_name": "2025-02",
+    "green_months": "6/24"
+   },
+   "fut": {
+    "trades": 491,
+    "days": 359,
+    "sessions": 473,
+    "per_day": 1.038,
+    "win": 0.3177,
+    "avg_win": 3704.0,
+    "avg_loss": -3447.0,
+    "expectancy": -1174.9,
+    "net": -576883.0,
+    "ex_top5": -690408.0,
+    "max_dd": 592612.0,
+    "worst_day": -18633.0,
+    "worst_month": -73399.0,
+    "worst_month_name": "2026-07",
+    "green_months": "4/24",
+    "twin_mean": -109530.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3136,
+   "why": {
+    "stop": 230,
+    "trail": 204,
+    "time": 57
+   },
+   "pts_mean": -0.35,
+   "avg_risk_pts": 118.32,
+   "opt_gross_pts": -5.72,
+   "opt_cost_pts": 3.7,
+   "held_min": 70.1,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 127,
+     "net": -38741.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 119,
+     "net": -25601.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 128,
+     "net": -29168.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 111,
+     "net": -45037.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B3",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 275,
+    "days": 250,
+    "sessions": 473,
+    "per_day": 0.581,
+    "win": 0.3455,
+    "avg_win": 2539.0,
+    "avg_loss": -1762.0,
+    "expectancy": -276.3,
+    "net": -75979.0,
+    "ex_top5": -147160.0,
+    "max_dd": 86012.0,
+    "worst_day": -6894.0,
+    "worst_month": -16254.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24",
+    "twin_mean": 71179.0,
+    "twin_p": 0.998
+   },
+   "opt_risk": {
+    "trades": 275,
+    "days": 250,
+    "sessions": 473,
+    "per_day": 0.581,
+    "win": 0.3455,
+    "avg_win": 2582.0,
+    "avg_loss": -1832.0,
+    "expectancy": -307.0,
+    "net": -84430.0,
+    "ex_top5": -155611.0,
+    "max_dd": 93966.0,
+    "worst_day": -6894.0,
+    "worst_month": -17052.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24"
+   },
+   "fut": {
+    "trades": 275,
+    "days": 250,
+    "sessions": 473,
+    "per_day": 0.581,
+    "win": 0.3382,
+    "avg_win": 4089.0,
+    "avg_loss": -3586.0,
+    "expectancy": -990.3,
+    "net": -272337.0,
+    "ex_top5": -385862.0,
+    "max_dd": 283981.0,
+    "worst_day": -14248.0,
+    "worst_month": -35332.0,
+    "worst_month_name": "2025-12",
+    "green_months": "7/24",
+    "twin_mean": -65801.0,
+    "twin_p": 0.998
+   },
+   "false_break": 0.3091,
+   "why": {
+    "stop": 126,
+    "trail": 112,
+    "time": 37
+   },
+   "pts_mean": 4.83,
+   "avg_risk_pts": 126.6,
+   "opt_gross_pts": -5.61,
+   "opt_cost_pts": 3.69,
+   "held_min": 84.9,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 74,
+     "net": -16490.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 66,
+     "net": -7863.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 77,
+     "net": -15794.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 54,
+     "net": -30295.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B4",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 188,
+    "days": 171,
+    "sessions": 473,
+    "per_day": 0.397,
+    "win": 0.3298,
+    "avg_win": 2128.0,
+    "avg_loss": -1664.0,
+    "expectancy": -413.8,
+    "net": -77788.0,
+    "ex_top5": -121164.0,
+    "max_dd": 95641.0,
+    "worst_day": -6517.0,
+    "worst_month": -21687.0,
+    "worst_month_name": "2025-02",
+    "green_months": "8/24",
+    "twin_mean": 153465.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 188,
+    "days": 171,
+    "sessions": 473,
+    "per_day": 0.397,
+    "win": 0.3298,
+    "avg_win": 2276.0,
+    "avg_loss": -1791.0,
+    "expectancy": -449.5,
+    "net": -84513.0,
+    "ex_top5": -135711.0,
+    "max_dd": 107295.0,
+    "worst_day": -6517.0,
+    "worst_month": -24084.0,
+    "worst_month_name": "2025-02",
+    "green_months": "8/24"
+   },
+   "fut": {
+    "trades": 188,
+    "days": 171,
+    "sessions": 473,
+    "per_day": 0.397,
+    "win": 0.3032,
+    "avg_win": 3804.0,
+    "avg_loss": -3359.0,
+    "expectancy": -1187.3,
+    "net": -223211.0,
+    "ex_top5": -294785.0,
+    "max_dd": 240770.0,
+    "worst_day": -12293.0,
+    "worst_month": -41053.0,
+    "worst_month_name": "2025-02",
+    "green_months": "7/24",
+    "twin_mean": 136895.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3085,
+   "why": {
+    "stop": 87,
+    "trail": 69,
+    "time": 32
+   },
+   "pts_mean": -0.7,
+   "avg_risk_pts": 123.67,
+   "opt_gross_pts": -9.0,
+   "opt_cost_pts": 3.68,
+   "held_min": 69.1,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 52,
+     "net": -27677.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 50,
+     "net": -27067.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 50,
+     "net": -13618.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 34,
+     "net": -8012.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B5",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 373,
+    "days": 263,
+    "sessions": 473,
+    "per_day": 0.789,
+    "win": 0.3485,
+    "avg_win": 1894.0,
+    "avg_loss": -1548.0,
+    "expectancy": -348.3,
+    "net": -129916.0,
+    "ex_top5": -180967.0,
+    "max_dd": 154838.0,
+    "worst_day": -11765.0,
+    "worst_month": -25769.0,
+    "worst_month_name": "2025-02",
+    "green_months": "6/24",
+    "twin_mean": 85134.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 373,
+    "days": 263,
+    "sessions": 473,
+    "per_day": 0.789,
+    "win": 0.3485,
+    "avg_win": 2019.0,
+    "avg_loss": -1645.0,
+    "expectancy": -368.1,
+    "net": -137290.0,
+    "ex_top5": -196163.0,
+    "max_dd": 161504.0,
+    "worst_day": -11765.0,
+    "worst_month": -27035.0,
+    "worst_month_name": "2025-02",
+    "green_months": "5/24"
+   },
+   "fut": {
+    "trades": 373,
+    "days": 263,
+    "sessions": 473,
+    "per_day": 0.789,
+    "win": 0.2761,
+    "avg_win": 3458.0,
+    "avg_loss": -3169.0,
+    "expectancy": -1339.0,
+    "net": -499453.0,
+    "ex_top5": -585524.0,
+    "max_dd": 523900.0,
+    "worst_day": -18633.0,
+    "worst_month": -54927.0,
+    "worst_month_name": "2026-07",
+    "green_months": "4/24",
+    "twin_mean": -127007.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3351,
+   "why": {
+    "stop": 182,
+    "trail": 156,
+    "time": 35
+   },
+   "pts_mean": -5.92,
+   "avg_risk_pts": 106.55,
+   "opt_gross_pts": -7.7,
+   "opt_cost_pts": 3.57,
+   "held_min": 61.8,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 101,
+     "net": -36252.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 102,
+     "net": -34161.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 80,
+     "net": -8635.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 85,
+     "net": -49679.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B6",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 640,
+    "days": 391,
+    "sessions": 473,
+    "per_day": 1.353,
+    "win": 0.4094,
+    "avg_win": 2265.0,
+    "avg_loss": -1736.0,
+    "expectancy": -98.4,
+    "net": -62959.0,
+    "ex_top5": -142200.0,
+    "max_dd": 104602.0,
+    "worst_day": -10499.0,
+    "worst_month": -22642.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24",
+    "twin_mean": 22680.0,
+    "twin_p": 0.9222
+   },
+   "opt_risk": {
+    "trades": 640,
+    "days": 391,
+    "sessions": 473,
+    "per_day": 1.353,
+    "win": 0.4094,
+    "avg_win": 2276.0,
+    "avg_loss": -1739.0,
+    "expectancy": -95.5,
+    "net": -61104.0,
+    "ex_top5": -140346.0,
+    "max_dd": 104151.0,
+    "worst_day": -10499.0,
+    "worst_month": -22642.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24"
+   },
+   "fut": {
+    "trades": 640,
+    "days": 391,
+    "sessions": 473,
+    "per_day": 1.353,
+    "win": 0.3812,
+    "avg_win": 3510.0,
+    "avg_loss": -3763.0,
+    "expectancy": -990.1,
+    "net": -633633.0,
+    "ex_top5": -753012.0,
+    "max_dd": 680587.0,
+    "worst_day": -21211.0,
+    "worst_month": -68018.0,
+    "worst_month_name": "2026-06",
+    "green_months": "4/24",
+    "twin_mean": -445325.0,
+    "twin_p": 0.9661
+   },
+   "false_break": 0.1125,
+   "why": {
+    "trail": 294,
+    "stop": 289,
+    "time": 57
+   },
+   "pts_mean": 5.84,
+   "avg_risk_pts": 120.97,
+   "opt_gross_pts": 0.61,
+   "opt_cost_pts": 3.73,
+   "held_min": 68.7,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 163,
+     "net": -61540.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 162,
+     "net": -17981.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 169,
+     "net": 26839.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 137,
+     "net": -13289.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B7",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 353,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.746,
+    "win": 0.3853,
+    "avg_win": 2420.0,
+    "avg_loss": -1728.0,
+    "expectancy": -130.0,
+    "net": -45905.0,
+    "ex_top5": -122330.0,
+    "max_dd": 81222.0,
+    "worst_day": -6090.0,
+    "worst_month": -16147.0,
+    "worst_month_name": "2025-09",
+    "green_months": "9/24",
+    "twin_mean": 109.0,
+    "twin_p": 0.8503
+   },
+   "opt_risk": {
+    "trades": 353,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.746,
+    "win": 0.3853,
+    "avg_win": 2437.0,
+    "avg_loss": -1733.0,
+    "expectancy": -126.1,
+    "net": -44501.0,
+    "ex_top5": -120927.0,
+    "max_dd": 81222.0,
+    "worst_day": -6090.0,
+    "worst_month": -16147.0,
+    "worst_month_name": "2025-09",
+    "green_months": "10/24"
+   },
+   "fut": {
+    "trades": 353,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.746,
+    "win": 0.3683,
+    "avg_win": 3633.0,
+    "avg_loss": -3714.0,
+    "expectancy": -1008.3,
+    "net": -355933.0,
+    "ex_top5": -463416.0,
+    "max_dd": 405778.0,
+    "worst_day": -17943.0,
+    "worst_month": -52337.0,
+    "worst_month_name": "2025-12",
+    "green_months": "7/24",
+    "twin_mean": -256073.0,
+    "twin_p": 0.9102
+   },
+   "false_break": 0.1246,
+   "why": {
+    "trail": 164,
+    "stop": 155,
+    "time": 34
+   },
+   "pts_mean": 5.96,
+   "avg_risk_pts": 121.99,
+   "opt_gross_pts": 0.13,
+   "opt_cost_pts": 3.68,
+   "held_min": 65.6,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 86,
+     "net": 13246.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 88,
+     "net": -29285.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 109,
+     "net": -28563.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 65,
+     "net": 486.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "BANKNIFTY",
+   "variant": "B8",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 94,
+    "days": 87,
+    "sessions": 473,
+    "per_day": 0.199,
+    "win": 0.2872,
+    "avg_win": 2052.0,
+    "avg_loss": -1509.0,
+    "expectancy": -486.3,
+    "net": -45713.0,
+    "ex_top5": -78940.0,
+    "max_dd": 49491.0,
+    "worst_day": -4252.0,
+    "worst_month": -15282.0,
+    "worst_month_name": "2025-02",
+    "green_months": "9/24",
+    "twin_mean": 44598.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 94,
+    "days": 87,
+    "sessions": 473,
+    "per_day": 0.199,
+    "win": 0.2872,
+    "avg_win": 2052.0,
+    "avg_loss": -1633.0,
+    "expectancy": -574.6,
+    "net": -54016.0,
+    "ex_top5": -87244.0,
+    "max_dd": 57191.0,
+    "worst_day": -4252.0,
+    "worst_month": -16080.0,
+    "worst_month_name": "2025-02",
+    "green_months": "8/24"
+   },
+   "fut": {
+    "trades": 94,
+    "days": 87,
+    "sessions": 473,
+    "per_day": 0.199,
+    "win": 0.266,
+    "avg_win": 4031.0,
+    "avg_loss": -3063.0,
+    "expectancy": -1176.1,
+    "net": -110551.0,
+    "ex_top5": -174240.0,
+    "max_dd": 112375.0,
+    "worst_day": -8295.0,
+    "worst_month": -29671.0,
+    "worst_month_name": "2025-02",
+    "green_months": "8/24",
+    "twin_mean": 29007.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3298,
+   "why": {
+    "stop": 45,
+    "trail": 35,
+    "time": 14
+   },
+   "pts_mean": -1.55,
+   "avg_risk_pts": 116.25,
+   "opt_gross_pts": -11.87,
+   "opt_cost_pts": 3.46,
+   "held_min": 70.1,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 30,
+     "net": -30874.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 29,
+     "net": -7243.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 21,
+     "net": 2087.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 13,
+     "net": -7624.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B0",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 767,
+    "days": 340,
+    "sessions": 473,
+    "per_day": 1.622,
+    "win": 0.3259,
+    "avg_win": 811.0,
+    "avg_loss": -464.0,
+    "expectancy": -48.4,
+    "net": -37114.0,
+    "ex_top5": -66492.0,
+    "max_dd": 40952.0,
+    "worst_day": -5503.0,
+    "worst_month": -12436.0,
+    "worst_month_name": "2025-01",
+    "green_months": "6/24",
+    "twin_mean": -91852.0,
+    "twin_p": 0.016
+   },
+   "opt_risk": {
+    "trades": 767,
+    "days": 340,
+    "sessions": 473,
+    "per_day": 1.622,
+    "win": 0.3416,
+    "avg_win": 1681.0,
+    "avg_loss": -1019.0,
+    "expectancy": -96.9,
+    "net": -74298.0,
+    "ex_top5": -120873.0,
+    "max_dd": 88162.0,
+    "worst_day": -8876.0,
+    "worst_month": -20427.0,
+    "worst_month_name": "2025-01",
+    "green_months": "8/24"
+   },
+   "fut": {
+    "trades": 814,
+    "days": 358,
+    "sessions": 473,
+    "per_day": 1.721,
+    "win": 0.3563,
+    "avg_win": 1053.0,
+    "avg_loss": -1853.0,
+    "expectancy": -817.7,
+    "net": -665648.0,
+    "ex_top5": -731427.0,
+    "max_dd": 668434.0,
+    "worst_day": -8621.0,
+    "worst_month": -61612.0,
+    "worst_month_name": "2026-05",
+    "green_months": "3/24",
+    "twin_mean": -757432.0,
+    "twin_p": 0.02
+   },
+   "false_break": 0.3246,
+   "why": {
+    "stop": 413,
+    "target": 353,
+    "time": 1
+   },
+   "pts_mean": 2.56,
+   "avg_risk_pts": 15.99,
+   "opt_gross_pts": 1.1,
+   "opt_cost_pts": 1.88,
+   "held_min": 5.5,
+   "unfilled": 47,
+   "q": 0.72,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 216,
+     "net": -20642.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 200,
+     "net": 5677.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 179,
+     "net": 436.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 162,
+     "net": -24344.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": true,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": true,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B1",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 354,
+    "days": 266,
+    "sessions": 473,
+    "per_day": 0.748,
+    "win": 0.3475,
+    "avg_win": 2251.0,
+    "avg_loss": -1602.0,
+    "expectancy": -263.2,
+    "net": -93160.0,
+    "ex_top5": -135204.0,
+    "max_dd": 110802.0,
+    "worst_day": -10330.0,
+    "worst_month": -33709.0,
+    "worst_month_name": "2025-02",
+    "green_months": "8/24",
+    "twin_mean": 18391.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 354,
+    "days": 266,
+    "sessions": 473,
+    "per_day": 0.748,
+    "win": 0.3475,
+    "avg_win": 2512.0,
+    "avg_loss": -1700.0,
+    "expectancy": -236.4,
+    "net": -83686.0,
+    "ex_top5": -127264.0,
+    "max_dd": 103628.0,
+    "worst_day": -10330.0,
+    "worst_month": -34619.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24"
+   },
+   "fut": {
+    "trades": 366,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.774,
+    "win": 0.3525,
+    "avg_win": 4117.0,
+    "avg_loss": -3876.0,
+    "expectancy": -1058.6,
+    "net": -387437.0,
+    "ex_top5": -459867.0,
+    "max_dd": 422898.0,
+    "worst_day": -22630.0,
+    "worst_month": -67653.0,
+    "worst_month_name": "2025-02",
+    "green_months": "4/24",
+    "twin_mean": -109561.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3757,
+   "why": {
+    "stop": 205,
+    "target": 105,
+    "time": 44
+   },
+   "pts_mean": -0.88,
+   "avg_risk_pts": 50.34,
+   "opt_gross_pts": -2.2,
+   "opt_cost_pts": 1.92,
+   "held_min": 69.8,
+   "unfilled": 12,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 98,
+     "net": -33076.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 80,
+     "net": -35640.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 92,
+     "net": 5125.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 79,
+     "net": -29809.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B2",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 494,
+    "days": 362,
+    "sessions": 473,
+    "per_day": 1.044,
+    "win": 0.3907,
+    "avg_win": 2336.0,
+    "avg_loss": -1537.0,
+    "expectancy": -24.0,
+    "net": -11871.0,
+    "ex_top5": -79007.0,
+    "max_dd": 80573.0,
+    "worst_day": -10330.0,
+    "worst_month": -42480.0,
+    "worst_month_name": "2025-02",
+    "green_months": "12/24",
+    "twin_mean": 151174.0,
+    "twin_p": 0.998
+   },
+   "opt_risk": {
+    "trades": 494,
+    "days": 362,
+    "sessions": 473,
+    "per_day": 1.044,
+    "win": 0.3907,
+    "avg_win": 2469.0,
+    "avg_loss": -1622.0,
+    "expectancy": -23.7,
+    "net": -11727.0,
+    "ex_top5": -78863.0,
+    "max_dd": 78834.0,
+    "worst_day": -10330.0,
+    "worst_month": -43390.0,
+    "worst_month_name": "2025-02",
+    "green_months": "11/24"
+   },
+   "fut": {
+    "trades": 511,
+    "days": 374,
+    "sessions": 473,
+    "per_day": 1.08,
+    "win": 0.3092,
+    "avg_win": 4170.0,
+    "avg_loss": -3333.0,
+    "expectancy": -1013.0,
+    "net": -517626.0,
+    "ex_top5": -626103.0,
+    "max_dd": 568544.0,
+    "worst_day": -22630.0,
+    "worst_month": -80932.0,
+    "worst_month_name": "2025-02",
+    "green_months": "6/24",
+    "twin_mean": -93436.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3259,
+   "why": {
+    "stop": 237,
+    "trail": 212,
+    "time": 45
+   },
+   "pts_mean": 1.01,
+   "avg_risk_pts": 53.44,
+   "opt_gross_pts": 1.44,
+   "opt_cost_pts": 1.9,
+   "held_min": 68.2,
+   "unfilled": 17,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 141,
+     "net": 13218.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 120,
+     "net": -35165.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 124,
+     "net": 12397.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 102,
+     "net": -2743.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B3",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 273,
+    "days": 247,
+    "sessions": 473,
+    "per_day": 0.577,
+    "win": 0.37,
+    "avg_win": 2457.0,
+    "avg_loss": -1627.0,
+    "expectancy": -116.3,
+    "net": -31744.0,
+    "ex_top5": -85658.0,
+    "max_dd": 51370.0,
+    "worst_day": -7965.0,
+    "worst_month": -36221.0,
+    "worst_month_name": "2025-02",
+    "green_months": "11/24",
+    "twin_mean": 86576.0,
+    "twin_p": 0.996
+   },
+   "opt_risk": {
+    "trades": 273,
+    "days": 247,
+    "sessions": 473,
+    "per_day": 0.577,
+    "win": 0.37,
+    "avg_win": 2542.0,
+    "avg_loss": -1707.0,
+    "expectancy": -134.9,
+    "net": -36821.0,
+    "ex_top5": -90734.0,
+    "max_dd": 54421.0,
+    "worst_day": -7965.0,
+    "worst_month": -36221.0,
+    "worst_month_name": "2025-02",
+    "green_months": "11/24"
+   },
+   "fut": {
+    "trades": 283,
+    "days": 255,
+    "sessions": 473,
+    "per_day": 0.598,
+    "win": 0.3074,
+    "avg_win": 4379.0,
+    "avg_loss": -3666.0,
+    "expectancy": -1193.1,
+    "net": -337643.0,
+    "ex_top5": -430796.0,
+    "max_dd": 365748.0,
+    "worst_day": -16465.0,
+    "worst_month": -66538.0,
+    "worst_month_name": "2025-02",
+    "green_months": "5/24",
+    "twin_mean": -58986.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3333,
+   "why": {
+    "stop": 138,
+    "trail": 110,
+    "time": 25
+   },
+   "pts_mean": -2.02,
+   "avg_risk_pts": 58.47,
+   "opt_gross_pts": -0.16,
+   "opt_cost_pts": 1.93,
+   "held_min": 75.3,
+   "unfilled": 10,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 72,
+     "net": 2414.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 65,
+     "net": -15599.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 74,
+     "net": 10234.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 57,
+     "net": -23743.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B4",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 196,
+    "days": 176,
+    "sessions": 473,
+    "per_day": 0.414,
+    "win": 0.3724,
+    "avg_win": 2204.0,
+    "avg_loss": -1608.0,
+    "expectancy": -188.3,
+    "net": -36903.0,
+    "ex_top5": -73858.0,
+    "max_dd": 62307.0,
+    "worst_day": -10330.0,
+    "worst_month": -31383.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24",
+    "twin_mean": 116645.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 196,
+    "days": 176,
+    "sessions": 473,
+    "per_day": 0.414,
+    "win": 0.3724,
+    "avg_win": 2348.0,
+    "avg_loss": -1703.0,
+    "expectancy": -194.1,
+    "net": -38034.0,
+    "ex_top5": -77910.0,
+    "max_dd": 67903.0,
+    "worst_day": -10330.0,
+    "worst_month": -31383.0,
+    "worst_month_name": "2025-02",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 201,
+    "days": 181,
+    "sessions": 473,
+    "per_day": 0.425,
+    "win": 0.2886,
+    "avg_win": 4459.0,
+    "avg_loss": -3247.0,
+    "expectancy": -1023.4,
+    "net": -205697.0,
+    "ex_top5": -282361.0,
+    "max_dd": 246328.0,
+    "worst_day": -22630.0,
+    "worst_month": -62304.0,
+    "worst_month_name": "2025-02",
+    "green_months": "8/24",
+    "twin_mean": 90952.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3112,
+   "why": {
+    "stop": 91,
+    "trail": 84,
+    "time": 21
+   },
+   "pts_mean": 0.53,
+   "avg_risk_pts": 57.38,
+   "opt_gross_pts": -1.14,
+   "opt_cost_pts": 1.89,
+   "held_min": 66.9,
+   "unfilled": 5,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 56,
+     "net": -7845.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 49,
+     "net": -4052.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 52,
+     "net": -6316.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 37,
+     "net": -19565.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B5",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 383,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.81,
+    "win": 0.3655,
+    "avg_win": 2147.0,
+    "avg_loss": -1474.0,
+    "expectancy": -150.2,
+    "net": -57542.0,
+    "ex_top5": -114897.0,
+    "max_dd": 106647.0,
+    "worst_day": -10330.0,
+    "worst_month": -33692.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24",
+    "twin_mean": 107096.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 383,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.81,
+    "win": 0.3655,
+    "avg_win": 2260.0,
+    "avg_loss": -1571.0,
+    "expectancy": -170.7,
+    "net": -65367.0,
+    "ex_top5": -122722.0,
+    "max_dd": 112721.0,
+    "worst_day": -10330.0,
+    "worst_month": -34602.0,
+    "worst_month_name": "2025-02",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 390,
+    "days": 277,
+    "sessions": 473,
+    "per_day": 0.825,
+    "win": 0.2923,
+    "avg_win": 3850.0,
+    "avg_loss": -3113.0,
+    "expectancy": -1077.6,
+    "net": -420273.0,
+    "ex_top5": -517685.0,
+    "max_dd": 477474.0,
+    "worst_day": -22630.0,
+    "worst_month": -62430.0,
+    "worst_month_name": "2025-02",
+    "green_months": "5/24",
+    "twin_mean": -60684.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3342,
+   "why": {
+    "stop": 186,
+    "trail": 160,
+    "time": 37
+   },
+   "pts_mean": -0.23,
+   "avg_risk_pts": 51.0,
+   "opt_gross_pts": -0.61,
+   "opt_cost_pts": 1.85,
+   "held_min": 65.7,
+   "unfilled": 7,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 113,
+     "net": 2940.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 106,
+     "net": -39661.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 84,
+     "net": -19638.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 74,
+     "net": -2705.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B6",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 630,
+    "days": 375,
+    "sessions": 473,
+    "per_day": 1.332,
+    "win": 0.4397,
+    "avg_win": 2181.0,
+    "avg_loss": -1584.0,
+    "expectancy": 71.2,
+    "net": 44830.0,
+    "ex_top5": -4854.0,
+    "max_dd": 49545.0,
+    "worst_day": -9437.0,
+    "worst_month": -16232.0,
+    "worst_month_name": "2025-12",
+    "green_months": "11/24",
+    "twin_mean": 86483.0,
+    "twin_p": 0.7545
+   },
+   "opt_risk": {
+    "trades": 630,
+    "days": 375,
+    "sessions": 473,
+    "per_day": 1.332,
+    "win": 0.4397,
+    "avg_win": 2201.0,
+    "avg_loss": -1599.0,
+    "expectancy": 71.5,
+    "net": 45023.0,
+    "ex_top5": -4661.0,
+    "max_dd": 51309.0,
+    "worst_day": -9437.0,
+    "worst_month": -16232.0,
+    "worst_month_name": "2025-12",
+    "green_months": "11/24"
+   },
+   "fut": {
+    "trades": 659,
+    "days": 391,
+    "sessions": 473,
+    "per_day": 1.393,
+    "win": 0.3703,
+    "avg_win": 3401.0,
+    "avg_loss": -3552.0,
+    "expectancy": -977.7,
+    "net": -644285.0,
+    "ex_top5": -728435.0,
+    "max_dd": 680008.0,
+    "worst_day": -23697.0,
+    "worst_month": -86426.0,
+    "worst_month_name": "2026-06",
+    "green_months": "4/24",
+    "twin_mean": -345417.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.1333,
+   "why": {
+    "stop": 288,
+    "trail": 284,
+    "time": 58
+   },
+   "pts_mean": 1.37,
+   "avg_risk_pts": 54.01,
+   "opt_gross_pts": 2.89,
+   "opt_cost_pts": 1.88,
+   "held_min": 68.5,
+   "unfilled": 29,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 172,
+     "net": 19373.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 161,
+     "net": -25334.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 157,
+     "net": 46452.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 130,
+     "net": 7841.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": true,
+    "G3": false,
+    "G4": false,
+    "G5": true,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B7",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 314,
+    "days": 248,
+    "sessions": 473,
+    "per_day": 0.664,
+    "win": 0.4618,
+    "avg_win": 2338.0,
+    "avg_loss": -1543.0,
+    "expectancy": 249.1,
+    "net": 78202.0,
+    "ex_top5": 31435.0,
+    "max_dd": 26353.0,
+    "worst_day": -7014.0,
+    "worst_month": -7921.0,
+    "worst_month_name": "2025-01",
+    "green_months": "14/24",
+    "twin_mean": 57960.0,
+    "twin_p": 0.3114
+   },
+   "opt_risk": {
+    "trades": 314,
+    "days": 248,
+    "sessions": 473,
+    "per_day": 0.664,
+    "win": 0.4618,
+    "avg_win": 2377.0,
+    "avg_loss": -1560.0,
+    "expectancy": 258.0,
+    "net": 81016.0,
+    "ex_top5": 34249.0,
+    "max_dd": 26353.0,
+    "worst_day": -7014.0,
+    "worst_month": -7921.0,
+    "worst_month_name": "2025-01",
+    "green_months": "13/24"
+   },
+   "fut": {
+    "trades": 338,
+    "days": 264,
+    "sessions": 473,
+    "per_day": 0.715,
+    "win": 0.4083,
+    "avg_win": 3278.0,
+    "avg_loss": -3626.0,
+    "expectancy": -807.4,
+    "net": -272894.0,
+    "ex_top5": -335524.0,
+    "max_dd": 327980.0,
+    "worst_day": -20703.0,
+    "worst_month": -68259.0,
+    "worst_month_name": "2026-04",
+    "green_months": "5/24",
+    "twin_mean": -188611.0,
+    "twin_p": 0.8942
+   },
+   "false_break": 0.1274,
+   "why": {
+    "trail": 151,
+    "stop": 130,
+    "time": 33
+   },
+   "pts_mean": 4.1,
+   "avg_risk_pts": 55.64,
+   "opt_gross_pts": 5.85,
+   "opt_cost_pts": 1.92,
+   "held_min": 70.9,
+   "unfilled": 24,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 86,
+     "net": 35418.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 76,
+     "net": 8003.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 85,
+     "net": 21763.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 60,
+     "net": 13727.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": true,
+    "G3": false,
+    "G4": false,
+    "G5": true,
+    "G6": true,
+    "G7": true,
+    "pass": false
+   }
+  },
+  {
+   "inst": "FINNIFTY",
+   "variant": "B8",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 98,
+    "days": 93,
+    "sessions": 473,
+    "per_day": 0.207,
+    "win": 0.3469,
+    "avg_win": 2319.0,
+    "avg_loss": -1796.0,
+    "expectancy": -368.3,
+    "net": -36095.0,
+    "ex_top5": -69654.0,
+    "max_dd": 48095.0,
+    "worst_day": -7965.0,
+    "worst_month": -26688.0,
+    "worst_month_name": "2025-02",
+    "green_months": "6/23",
+    "twin_mean": 53772.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 98,
+    "days": 93,
+    "sessions": 473,
+    "per_day": 0.207,
+    "win": 0.3469,
+    "avg_win": 2394.0,
+    "avg_loss": -1927.0,
+    "expectancy": -427.6,
+    "net": -41903.0,
+    "ex_top5": -75462.0,
+    "max_dd": 53903.0,
+    "worst_day": -7965.0,
+    "worst_month": -26688.0,
+    "worst_month_name": "2025-02",
+    "green_months": "6/23"
+   },
+   "fut": {
+    "trades": 99,
+    "days": 94,
+    "sessions": 473,
+    "per_day": 0.209,
+    "win": 0.2828,
+    "avg_win": 5288.0,
+    "avg_loss": -3416.0,
+    "expectancy": -954.5,
+    "net": -94494.0,
+    "ex_top5": -167866.0,
+    "max_dd": 116884.0,
+    "worst_day": -16465.0,
+    "worst_month": -50088.0,
+    "worst_month_name": "2025-02",
+    "green_months": "7/23",
+    "twin_mean": 51895.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3367,
+   "why": {
+    "stop": 49,
+    "trail": 37,
+    "time": 12
+   },
+   "pts_mean": 1.61,
+   "avg_risk_pts": 60.51,
+   "opt_gross_pts": -3.98,
+   "opt_cost_pts": 1.87,
+   "held_min": 71.4,
+   "unfilled": 1,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 32,
+     "net": -19217.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 25,
+     "net": -289.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 23,
+     "net": 3643.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 17,
+     "net": -18411.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B0",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 892,
+    "days": 373,
+    "sessions": 473,
+    "per_day": 1.886,
+    "win": 0.3206,
+    "avg_win": 891.0,
+    "avg_loss": -734.0,
+    "expectancy": -212.6,
+    "net": -189649.0,
+    "ex_top5": -217878.0,
+    "max_dd": 194040.0,
+    "worst_day": -7149.0,
+    "worst_month": -18199.0,
+    "worst_month_name": "2025-07",
+    "green_months": "2/24",
+    "twin_mean": -158382.0,
+    "twin_p": 0.8204
+   },
+   "opt_risk": {
+    "trades": 892,
+    "days": 373,
+    "sessions": 473,
+    "per_day": 1.886,
+    "win": 0.3251,
+    "avg_win": 1582.0,
+    "avg_loss": -1384.0,
+    "expectancy": -420.0,
+    "net": -374659.0,
+    "ex_top5": -412988.0,
+    "max_dd": 380110.0,
+    "worst_day": -12570.0,
+    "worst_month": -38588.0,
+    "worst_month_name": "2025-07",
+    "green_months": "1/24"
+   },
+   "fut": {
+    "trades": 894,
+    "days": 375,
+    "sessions": 473,
+    "per_day": 1.89,
+    "win": 0.349,
+    "avg_win": 1228.0,
+    "avg_loss": -2174.0,
+    "expectancy": -986.5,
+    "net": -881894.0,
+    "ex_top5": -919168.0,
+    "max_dd": 881894.0,
+    "worst_day": -12318.0,
+    "worst_month": -82002.0,
+    "worst_month_name": "2026-09",
+    "green_months": "0/24",
+    "twin_mean": -880477.0,
+    "twin_p": 0.5329
+   },
+   "false_break": 0.3318,
+   "why": {
+    "stop": 499,
+    "target": 392,
+    "time": 1
+   },
+   "pts_mean": 0.36,
+   "avg_risk_pts": 10.12,
+   "opt_gross_pts": -0.61,
+   "opt_cost_pts": 1.11,
+   "held_min": 4.4,
+   "unfilled": 2,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 228,
+     "net": -49428.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 228,
+     "net": -51039.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 224,
+     "net": -42471.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 198,
+     "net": -49460.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B1",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 394,
+    "days": 283,
+    "sessions": 473,
+    "per_day": 0.833,
+    "win": 0.4213,
+    "avg_win": 2842.0,
+    "avg_loss": -2328.0,
+    "expectancy": -150.0,
+    "net": -59109.0,
+    "ex_top5": -102601.0,
+    "max_dd": 77559.0,
+    "worst_day": -9699.0,
+    "worst_month": -20814.0,
+    "worst_month_name": "2025-02",
+    "green_months": "9/24",
+    "twin_mean": 121332.0,
+    "twin_p": 0.998
+   },
+   "opt_risk": {
+    "trades": 394,
+    "days": 283,
+    "sessions": 473,
+    "per_day": 0.833,
+    "win": 0.4213,
+    "avg_win": 3008.0,
+    "avg_loss": -2422.0,
+    "expectancy": -134.2,
+    "net": -52878.0,
+    "ex_top5": -99389.0,
+    "max_dd": 81207.0,
+    "worst_day": -9699.0,
+    "worst_month": -20814.0,
+    "worst_month_name": "2025-02",
+    "green_months": "12/24"
+   },
+   "fut": {
+    "trades": 394,
+    "days": 283,
+    "sessions": 473,
+    "per_day": 0.833,
+    "win": 0.4467,
+    "avg_win": 4572.0,
+    "avg_loss": -4556.0,
+    "expectancy": -478.4,
+    "net": -188485.0,
+    "ex_top5": -252663.0,
+    "max_dd": 235261.0,
+    "worst_day": -17379.0,
+    "worst_month": -53781.0,
+    "worst_month_name": "2026-04",
+    "green_months": "10/24",
+    "twin_mean": -21673.0,
+    "twin_p": 0.9741
+   },
+   "false_break": 0.3299,
+   "why": {
+    "stop": 198,
+    "target": 135,
+    "time": 61
+   },
+   "pts_mean": 3.93,
+   "avg_risk_pts": 30.76,
+   "opt_gross_pts": -0.24,
+   "opt_cost_pts": 1.11,
+   "held_min": 68.8,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 102,
+     "net": -18511.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 87,
+     "net": 22447.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 110,
+     "net": -19231.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 89,
+     "net": -42053.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B2",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 549,
+    "days": 380,
+    "sessions": 473,
+    "per_day": 1.161,
+    "win": 0.3934,
+    "avg_win": 2726.0,
+    "avg_loss": -2240.0,
+    "expectancy": -286.4,
+    "net": -157240.0,
+    "ex_top5": -227037.0,
+    "max_dd": 167329.0,
+    "worst_day": -13485.0,
+    "worst_month": -35022.0,
+    "worst_month_name": "2026-02",
+    "green_months": "7/24",
+    "twin_mean": 194463.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 549,
+    "days": 380,
+    "sessions": 473,
+    "per_day": 1.161,
+    "win": 0.3934,
+    "avg_win": 2801.0,
+    "avg_loss": -2299.0,
+    "expectancy": -292.2,
+    "net": -160433.0,
+    "ex_top5": -230230.0,
+    "max_dd": 175913.0,
+    "worst_day": -13485.0,
+    "worst_month": -36701.0,
+    "worst_month_name": "2026-02",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 549,
+    "days": 380,
+    "sessions": 473,
+    "per_day": 1.161,
+    "win": 0.4153,
+    "avg_win": 4371.0,
+    "avg_loss": -4368.0,
+    "expectancy": -738.8,
+    "net": -405578.0,
+    "ex_top5": -533261.0,
+    "max_dd": 437369.0,
+    "worst_day": -30652.0,
+    "worst_month": -79374.0,
+    "worst_month_name": "2026-02",
+    "green_months": "9/24",
+    "twin_mean": -4070.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3169,
+   "why": {
+    "stop": 248,
+    "trail": 229,
+    "time": 72
+   },
+   "pts_mean": 2.68,
+   "avg_risk_pts": 34.27,
+   "opt_gross_pts": -1.36,
+   "opt_cost_pts": 1.11,
+   "held_min": 75.5,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 142,
+     "net": -49801.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 129,
+     "net": 8420.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 149,
+     "net": -44036.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 120,
+     "net": -65223.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B3",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 273,
+    "days": 235,
+    "sessions": 473,
+    "per_day": 0.577,
+    "win": 0.4066,
+    "avg_win": 3109.0,
+    "avg_loss": -2410.0,
+    "expectancy": -165.6,
+    "net": -45217.0,
+    "ex_top5": -112928.0,
+    "max_dd": 88120.0,
+    "worst_day": -13485.0,
+    "worst_month": -35216.0,
+    "worst_month_name": "2026-02",
+    "green_months": "10/24",
+    "twin_mean": 120369.0,
+    "twin_p": 0.998
+   },
+   "opt_risk": {
+    "trades": 273,
+    "days": 235,
+    "sessions": 473,
+    "per_day": 0.577,
+    "win": 0.4066,
+    "avg_win": 3158.0,
+    "avg_loss": -2440.0,
+    "expectancy": -164.4,
+    "net": -44871.0,
+    "ex_top5": -112582.0,
+    "max_dd": 91462.0,
+    "worst_day": -13485.0,
+    "worst_month": -35216.0,
+    "worst_month_name": "2026-02",
+    "green_months": "11/24"
+   },
+   "fut": {
+    "trades": 273,
+    "days": 235,
+    "sessions": 473,
+    "per_day": 0.577,
+    "win": 0.4212,
+    "avg_win": 5087.0,
+    "avg_loss": -4641.0,
+    "expectancy": -543.0,
+    "net": -148226.0,
+    "ex_top5": -265132.0,
+    "max_dd": 221922.0,
+    "worst_day": -30652.0,
+    "worst_month": -70337.0,
+    "worst_month_name": "2026-02",
+    "green_months": "9/24",
+    "twin_mean": 38714.0,
+    "twin_p": 0.996
+   },
+   "false_break": 0.3297,
+   "why": {
+    "stop": 122,
+    "trail": 111,
+    "time": 40
+   },
+   "pts_mean": 4.28,
+   "avg_risk_pts": 38.19,
+   "opt_gross_pts": -0.27,
+   "opt_cost_pts": 1.13,
+   "held_min": 85.8,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 76,
+     "net": 6812.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 55,
+     "net": 1459.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 88,
+     "net": -28427.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 51,
+     "net": -23956.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B4",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 213,
+    "days": 189,
+    "sessions": 473,
+    "per_day": 0.45,
+    "win": 0.3662,
+    "avg_win": 2364.0,
+    "avg_loss": -2402.0,
+    "expectancy": -657.1,
+    "net": -139958.0,
+    "ex_top5": -191051.0,
+    "max_dd": 147624.0,
+    "worst_day": -13485.0,
+    "worst_month": -17715.0,
+    "worst_month_name": "2026-04",
+    "green_months": "4/24",
+    "twin_mean": 116064.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 213,
+    "days": 189,
+    "sessions": 473,
+    "per_day": 0.45,
+    "win": 0.3662,
+    "avg_win": 2478.0,
+    "avg_loss": -2465.0,
+    "expectancy": -654.9,
+    "net": -139487.0,
+    "ex_top5": -190580.0,
+    "max_dd": 150986.0,
+    "worst_day": -13485.0,
+    "worst_month": -17715.0,
+    "worst_month_name": "2026-04",
+    "green_months": "4/24"
+   },
+   "fut": {
+    "trades": 213,
+    "days": 189,
+    "sessions": 473,
+    "per_day": 0.45,
+    "win": 0.3944,
+    "avg_win": 3794.0,
+    "avg_loss": -4547.0,
+    "expectancy": -1257.4,
+    "net": -267830.0,
+    "ex_top5": -357403.0,
+    "max_dd": 283600.0,
+    "worst_day": -30652.0,
+    "worst_month": -36405.0,
+    "worst_month_name": "2026-02",
+    "green_months": "5/24",
+    "twin_mean": 84501.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3192,
+   "why": {
+    "stop": 100,
+    "trail": 82,
+    "time": 31
+   },
+   "pts_mean": -1.43,
+   "avg_risk_pts": 34.58,
+   "opt_gross_pts": -4.28,
+   "opt_cost_pts": 1.12,
+   "held_min": 70.8,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 61,
+     "net": -52282.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 51,
+     "net": -5677.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 57,
+     "net": -47175.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 43,
+     "net": -34796.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B5",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 417,
+    "days": 283,
+    "sessions": 473,
+    "per_day": 0.882,
+    "win": 0.3957,
+    "avg_win": 2572.0,
+    "avg_loss": -2090.0,
+    "expectancy": -245.3,
+    "net": -102308.0,
+    "ex_top5": -161075.0,
+    "max_dd": 102806.0,
+    "worst_day": -13485.0,
+    "worst_month": -27964.0,
+    "worst_month_name": "2025-02",
+    "green_months": "10/24",
+    "twin_mean": 166488.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 417,
+    "days": 283,
+    "sessions": 473,
+    "per_day": 0.882,
+    "win": 0.3957,
+    "avg_win": 2662.0,
+    "avg_loss": -2166.0,
+    "expectancy": -256.0,
+    "net": -106740.0,
+    "ex_top5": -165506.0,
+    "max_dd": 111559.0,
+    "worst_day": -13485.0,
+    "worst_month": -27964.0,
+    "worst_month_name": "2025-02",
+    "green_months": "11/24"
+   },
+   "fut": {
+    "trades": 417,
+    "days": 283,
+    "sessions": 473,
+    "per_day": 0.882,
+    "win": 0.4197,
+    "avg_win": 4054.0,
+    "avg_loss": -4142.0,
+    "expectancy": -702.3,
+    "net": -292840.0,
+    "ex_top5": -387160.0,
+    "max_dd": 299859.0,
+    "worst_day": -30652.0,
+    "worst_month": -62346.0,
+    "worst_month_name": "2026-02",
+    "green_months": "8/24",
+    "twin_mean": 25317.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3285,
+   "why": {
+    "stop": 191,
+    "trail": 174,
+    "time": 52
+   },
+   "pts_mean": 2.98,
+   "avg_risk_pts": 32.01,
+   "opt_gross_pts": -1.06,
+   "opt_cost_pts": 1.08,
+   "held_min": 73.5,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 103,
+     "net": -64990.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 109,
+     "net": 7378.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 102,
+     "net": 12402.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 95,
+     "net": -49476.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B6",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 693,
+    "days": 399,
+    "sessions": 473,
+    "per_day": 1.465,
+    "win": 0.3795,
+    "avg_win": 3093.0,
+    "avg_loss": -2244.0,
+    "expectancy": -218.9,
+    "net": -151720.0,
+    "ex_top5": -219514.0,
+    "max_dd": 199748.0,
+    "worst_day": -12833.0,
+    "worst_month": -35671.0,
+    "worst_month_name": "2026-04",
+    "green_months": "9/24",
+    "twin_mean": 119590.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 693,
+    "days": 399,
+    "sessions": 473,
+    "per_day": 1.465,
+    "win": 0.3795,
+    "avg_win": 3093.0,
+    "avg_loss": -2248.0,
+    "expectancy": -221.5,
+    "net": -153478.0,
+    "ex_top5": -221272.0,
+    "max_dd": 199748.0,
+    "worst_day": -12833.0,
+    "worst_month": -35671.0,
+    "worst_month_name": "2026-04",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 695,
+    "days": 399,
+    "sessions": 473,
+    "per_day": 1.469,
+    "win": 0.3827,
+    "avg_win": 4722.0,
+    "avg_loss": -4187.0,
+    "expectancy": -777.5,
+    "net": -540375.0,
+    "ex_top5": -661214.0,
+    "max_dd": 606836.0,
+    "worst_day": -20274.0,
+    "worst_month": -78127.0,
+    "worst_month_name": "2026-04",
+    "green_months": "4/24",
+    "twin_mean": -210096.0,
+    "twin_p": 0.996
+   },
+   "false_break": 0.1659,
+   "why": {
+    "stop": 335,
+    "trail": 286,
+    "time": 72
+   },
+   "pts_mean": 2.61,
+   "avg_risk_pts": 32.77,
+   "opt_gross_pts": -0.74,
+   "opt_cost_pts": 1.12,
+   "held_min": 70.1,
+   "unfilled": 2,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 177,
+     "net": -1650.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 169,
+     "net": 7495.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 184,
+     "net": -75886.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 150,
+     "net": -75492.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B7",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 332,
+    "days": 249,
+    "sessions": 473,
+    "per_day": 0.702,
+    "win": 0.3886,
+    "avg_win": 3222.0,
+    "avg_loss": -2245.0,
+    "expectancy": -120.5,
+    "net": -40010.0,
+    "ex_top5": -103406.0,
+    "max_dd": 99288.0,
+    "worst_day": -10671.0,
+    "worst_month": -15888.0,
+    "worst_month_name": "2025-09",
+    "green_months": "9/24",
+    "twin_mean": 24815.0,
+    "twin_p": 0.8802
+   },
+   "opt_risk": {
+    "trades": 332,
+    "days": 249,
+    "sessions": 473,
+    "per_day": 0.702,
+    "win": 0.3886,
+    "avg_win": 3222.0,
+    "avg_loss": -2245.0,
+    "expectancy": -120.5,
+    "net": -40010.0,
+    "ex_top5": -103406.0,
+    "max_dd": 99288.0,
+    "worst_day": -10671.0,
+    "worst_month": -15888.0,
+    "worst_month_name": "2025-09",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 333,
+    "days": 249,
+    "sessions": 473,
+    "per_day": 0.704,
+    "win": 0.4024,
+    "avg_win": 4904.0,
+    "avg_loss": -4486.0,
+    "expectancy": -707.3,
+    "net": -235515.0,
+    "ex_top5": -342712.0,
+    "max_dd": 283323.0,
+    "worst_day": -17813.0,
+    "worst_month": -45894.0,
+    "worst_month_name": "2026-06",
+    "green_months": "7/24",
+    "twin_mean": -165177.0,
+    "twin_p": 0.8024
+   },
+   "false_break": 0.1536,
+   "why": {
+    "stop": 161,
+    "trail": 136,
+    "time": 35
+   },
+   "pts_mean": 3.43,
+   "avg_risk_pts": 34.67,
+   "opt_gross_pts": 0.21,
+   "opt_cost_pts": 1.14,
+   "held_min": 72.7,
+   "unfilled": 1,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 85,
+     "net": 18985.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 67,
+     "net": 693.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 104,
+     "net": -17266.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 72,
+     "net": -43754.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "MIDCPNIFTY",
+   "variant": "B8",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 71,
+    "days": 64,
+    "sessions": 473,
+    "per_day": 0.15,
+    "win": 0.3662,
+    "avg_win": 2380.0,
+    "avg_loss": -2276.0,
+    "expectancy": -570.7,
+    "net": -40519.0,
+    "ex_top5": -71320.0,
+    "max_dd": 43881.0,
+    "worst_day": -13485.0,
+    "worst_month": -17631.0,
+    "worst_month_name": "2026-02",
+    "green_months": "9/21",
+    "twin_mean": 61172.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 71,
+    "days": 64,
+    "sessions": 473,
+    "per_day": 0.15,
+    "win": 0.3662,
+    "avg_win": 2475.0,
+    "avg_loss": -2340.0,
+    "expectancy": -576.7,
+    "net": -40944.0,
+    "ex_top5": -71745.0,
+    "max_dd": 45556.0,
+    "worst_day": -13485.0,
+    "worst_month": -17631.0,
+    "worst_month_name": "2026-02",
+    "green_months": "9/21"
+   },
+   "fut": {
+    "trades": 71,
+    "days": 64,
+    "sessions": 473,
+    "per_day": 0.15,
+    "win": 0.338,
+    "avg_win": 4495.0,
+    "avg_loss": -4073.0,
+    "expectancy": -1176.4,
+    "net": -83525.0,
+    "ex_top5": -140301.0,
+    "max_dd": 97933.0,
+    "worst_day": -30652.0,
+    "worst_month": -39463.0,
+    "worst_month_name": "2026-02",
+    "green_months": "8/21",
+    "twin_mean": 75590.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3944,
+   "why": {
+    "stop": 36,
+    "trail": 25,
+    "time": 10
+   },
+   "pts_mean": -0.75,
+   "avg_risk_pts": 33.5,
+   "opt_gross_pts": -3.32,
+   "opt_cost_pts": 1.08,
+   "held_min": 68.8,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 24,
+     "net": -5088.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 18,
+     "net": -11247.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 18,
+     "net": -24397.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 11,
+     "net": 213.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B0",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 811,
+    "days": 353,
+    "sessions": 473,
+    "per_day": 1.715,
+    "win": 0.3588,
+    "avg_win": 723.0,
+    "avg_loss": -542.0,
+    "expectancy": -87.8,
+    "net": -71241.0,
+    "ex_top5": -89858.0,
+    "max_dd": 80852.0,
+    "worst_day": -5692.0,
+    "worst_month": -12447.0,
+    "worst_month_name": "2025-04",
+    "green_months": "5/24",
+    "twin_mean": -64229.0,
+    "twin_p": 0.5908
+   },
+   "opt_risk": {
+    "trades": 811,
+    "days": 353,
+    "sessions": 473,
+    "per_day": 1.715,
+    "win": 0.3662,
+    "avg_win": 1733.0,
+    "avg_loss": -1196.0,
+    "expectancy": -123.5,
+    "net": -100139.0,
+    "ex_top5": -136875.0,
+    "max_dd": 131977.0,
+    "worst_day": -7798.0,
+    "worst_month": -19144.0,
+    "worst_month_name": "2025-01",
+    "green_months": "8/24"
+   },
+   "fut": {
+    "trades": 811,
+    "days": 353,
+    "sessions": 473,
+    "per_day": 1.715,
+    "win": 0.275,
+    "avg_win": 776.0,
+    "avg_loss": -1669.0,
+    "expectancy": -996.5,
+    "net": -808128.0,
+    "ex_top5": -838497.0,
+    "max_dd": 822443.0,
+    "worst_day": -9478.0,
+    "worst_month": -61565.0,
+    "worst_month_name": "2026-08",
+    "green_months": "1/24",
+    "twin_mean": -794551.0,
+    "twin_p": 0.6547
+   },
+   "false_break": 0.328,
+   "why": {
+    "stop": 452,
+    "target": 355,
+    "time": 4
+   },
+   "pts_mean": 0.45,
+   "avg_risk_pts": 12.72,
+   "opt_gross_pts": -0.06,
+   "opt_cost_pts": 1.21,
+   "held_min": 5.9,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 198,
+     "net": -29300.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 209,
+     "net": -16494.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 226,
+     "net": -19900.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 170,
+     "net": -11126.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": true,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B1",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 342,
+    "days": 253,
+    "sessions": 473,
+    "per_day": 0.723,
+    "win": 0.3392,
+    "avg_win": 2170.0,
+    "avg_loss": -1896.0,
+    "expectancy": -517.1,
+    "net": -176851.0,
+    "ex_top5": -219195.0,
+    "max_dd": 200755.0,
+    "worst_day": -8570.0,
+    "worst_month": -33310.0,
+    "worst_month_name": "2026-05",
+    "green_months": "6/24",
+    "twin_mean": 102138.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 342,
+    "days": 253,
+    "sessions": 473,
+    "per_day": 0.723,
+    "win": 0.3392,
+    "avg_win": 2532.0,
+    "avg_loss": -2125.0,
+    "expectancy": -545.2,
+    "net": -186459.0,
+    "ex_top5": -228804.0,
+    "max_dd": 209684.0,
+    "worst_day": -8570.0,
+    "worst_month": -30723.0,
+    "worst_month_name": "2026-01",
+    "green_months": "6/24"
+   },
+   "fut": {
+    "trades": 342,
+    "days": 253,
+    "sessions": 473,
+    "per_day": 0.723,
+    "win": 0.3596,
+    "avg_win": 3006.0,
+    "avg_loss": -3575.0,
+    "expectancy": -1208.3,
+    "net": -413243.0,
+    "ex_top5": -471887.0,
+    "max_dd": 447547.0,
+    "worst_day": -14000.0,
+    "worst_month": -69392.0,
+    "worst_month_name": "2026-05",
+    "green_months": "5/24",
+    "twin_mean": -126181.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3889,
+   "why": {
+    "stop": 194,
+    "target": 98,
+    "time": 50
+   },
+   "pts_mean": -2.29,
+   "avg_risk_pts": 40.28,
+   "opt_gross_pts": -6.1,
+   "opt_cost_pts": 1.21,
+   "held_min": 67.3,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 78,
+     "net": -39392.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 75,
+     "net": -39135.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 116,
+     "net": -91646.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 71,
+     "net": -18179.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B2",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 487,
+    "days": 357,
+    "sessions": 473,
+    "per_day": 1.03,
+    "win": 0.3409,
+    "avg_win": 2539.0,
+    "avg_loss": -1700.0,
+    "expectancy": -255.3,
+    "net": -124320.0,
+    "ex_top5": -190193.0,
+    "max_dd": 180751.0,
+    "worst_day": -8663.0,
+    "worst_month": -31185.0,
+    "worst_month_name": "2026-05",
+    "green_months": "6/24",
+    "twin_mean": 163453.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 487,
+    "days": 357,
+    "sessions": 473,
+    "per_day": 1.03,
+    "win": 0.345,
+    "avg_win": 2751.0,
+    "avg_loss": -1872.0,
+    "expectancy": -277.5,
+    "net": -135125.0,
+    "ex_top5": -200998.0,
+    "max_dd": 186130.0,
+    "worst_day": -9354.0,
+    "worst_month": -30369.0,
+    "worst_month_name": "2026-05",
+    "green_months": "8/24"
+   },
+   "fut": {
+    "trades": 487,
+    "days": 357,
+    "sessions": 473,
+    "per_day": 1.03,
+    "win": 0.308,
+    "avg_win": 3653.0,
+    "avg_loss": -3206.0,
+    "expectancy": -1093.3,
+    "net": -532436.0,
+    "ex_top5": -618484.0,
+    "max_dd": 578716.0,
+    "worst_day": -16856.0,
+    "worst_month": -75074.0,
+    "worst_month_name": "2026-05",
+    "green_months": "2/24",
+    "twin_mean": -186058.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3409,
+   "why": {
+    "stop": 239,
+    "trail": 200,
+    "time": 48
+   },
+   "pts_mean": 1.1,
+   "avg_risk_pts": 43.01,
+   "opt_gross_pts": -2.17,
+   "opt_cost_pts": 1.22,
+   "held_min": 74.0,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 123,
+     "net": -20847.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 113,
+     "net": -34153.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 146,
+     "net": -76978.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 101,
+     "net": 1200.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B3",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 282,
+    "days": 262,
+    "sessions": 473,
+    "per_day": 0.596,
+    "win": 0.3546,
+    "avg_win": 3105.0,
+    "avg_loss": -1802.0,
+    "expectancy": -61.6,
+    "net": -17381.0,
+    "ex_top5": -87031.0,
+    "max_dd": 87730.0,
+    "worst_day": -7800.0,
+    "worst_month": -18387.0,
+    "worst_month_name": "2026-02",
+    "green_months": "12/24",
+    "twin_mean": 113432.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 282,
+    "days": 262,
+    "sessions": 473,
+    "per_day": 0.596,
+    "win": 0.3546,
+    "avg_win": 3306.0,
+    "avg_loss": -1925.0,
+    "expectancy": -69.9,
+    "net": -19705.0,
+    "ex_top5": -89354.0,
+    "max_dd": 90465.0,
+    "worst_day": -7800.0,
+    "worst_month": -18656.0,
+    "worst_month_name": "2026-02",
+    "green_months": "11/24"
+   },
+   "fut": {
+    "trades": 282,
+    "days": 262,
+    "sessions": 473,
+    "per_day": 0.596,
+    "win": 0.3227,
+    "avg_win": 4538.0,
+    "avg_loss": -3394.0,
+    "expectancy": -834.4,
+    "net": -235304.0,
+    "ex_top5": -327707.0,
+    "max_dd": 300135.0,
+    "worst_day": -16342.0,
+    "worst_month": -41606.0,
+    "worst_month_name": "2026-05",
+    "green_months": "6/24",
+    "twin_mean": -82220.0,
+    "twin_p": 0.996
+   },
+   "false_break": 0.3014,
+   "why": {
+    "stop": 136,
+    "trail": 116,
+    "time": 30
+   },
+   "pts_mean": 4.66,
+   "avg_risk_pts": 46.55,
+   "opt_gross_pts": 0.6,
+   "opt_cost_pts": 1.25,
+   "held_min": 89.3,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 74,
+     "net": 41638.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 61,
+     "net": -16937.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 91,
+     "net": -50321.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 53,
+     "net": 3599.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B4",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 204,
+    "days": 189,
+    "sessions": 473,
+    "per_day": 0.431,
+    "win": 0.3431,
+    "avg_win": 2387.0,
+    "avg_loss": -1618.0,
+    "expectancy": -243.7,
+    "net": -49724.0,
+    "ex_top5": -112192.0,
+    "max_dd": 92836.0,
+    "worst_day": -5738.0,
+    "worst_month": -10814.0,
+    "worst_month_name": "2026-02",
+    "green_months": "8/24",
+    "twin_mean": 152595.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 204,
+    "days": 189,
+    "sessions": 473,
+    "per_day": 0.431,
+    "win": 0.3529,
+    "avg_win": 2542.0,
+    "avg_loss": -1816.0,
+    "expectancy": -277.5,
+    "net": -56616.0,
+    "ex_top5": -119085.0,
+    "max_dd": 100407.0,
+    "worst_day": -5738.0,
+    "worst_month": -11546.0,
+    "worst_month_name": "2026-01",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 204,
+    "days": 189,
+    "sessions": 473,
+    "per_day": 0.431,
+    "win": 0.3186,
+    "avg_win": 3406.0,
+    "avg_loss": -3004.0,
+    "expectancy": -961.8,
+    "net": -196213.0,
+    "ex_top5": -278401.0,
+    "max_dd": 226628.0,
+    "worst_day": -12904.0,
+    "worst_month": -27256.0,
+    "worst_month_name": "2026-05",
+    "green_months": "7/24",
+    "twin_mean": 52125.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3333,
+   "why": {
+    "stop": 94,
+    "trail": 83,
+    "time": 27
+   },
+   "pts_mean": 2.06,
+   "avg_risk_pts": 43.28,
+   "opt_gross_pts": -2.52,
+   "opt_cost_pts": 1.2,
+   "held_min": 71.7,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 61,
+     "net": 28281.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 50,
+     "net": -26538.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 59,
+     "net": -53276.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 33,
+     "net": -9.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": true,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B5",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 390,
+    "days": 280,
+    "sessions": 473,
+    "per_day": 0.825,
+    "win": 0.359,
+    "avg_win": 2425.0,
+    "avg_loss": -1555.0,
+    "expectancy": -126.5,
+    "net": -49349.0,
+    "ex_top5": -112803.0,
+    "max_dd": 105806.0,
+    "worst_day": -8663.0,
+    "worst_month": -17044.0,
+    "worst_month_name": "2025-03",
+    "green_months": "10/24",
+    "twin_mean": 147277.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 390,
+    "days": 280,
+    "sessions": 473,
+    "per_day": 0.825,
+    "win": 0.3641,
+    "avg_win": 2665.0,
+    "avg_loss": -1743.0,
+    "expectancy": -138.1,
+    "net": -53844.0,
+    "ex_top5": -117299.0,
+    "max_dd": 107474.0,
+    "worst_day": -9354.0,
+    "worst_month": -18078.0,
+    "worst_month_name": "2025-03",
+    "green_months": "10/24"
+   },
+   "fut": {
+    "trades": 390,
+    "days": 280,
+    "sessions": 473,
+    "per_day": 0.825,
+    "win": 0.3128,
+    "avg_win": 3660.0,
+    "avg_loss": -3000.0,
+    "expectancy": -916.8,
+    "net": -357566.0,
+    "ex_top5": -442189.0,
+    "max_dd": 410300.0,
+    "worst_day": -16856.0,
+    "worst_month": -41800.0,
+    "worst_month_name": "2026-05",
+    "green_months": "5/24",
+    "twin_mean": -120904.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3436,
+   "why": {
+    "stop": 188,
+    "trail": 166,
+    "time": 36
+   },
+   "pts_mean": 3.78,
+   "avg_risk_pts": 40.28,
+   "opt_gross_pts": -0.16,
+   "opt_cost_pts": 1.2,
+   "held_min": 68.3,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 98,
+     "net": -13144.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 104,
+     "net": -24017.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 105,
+     "net": -14092.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 80,
+     "net": -4795.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B6",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 638,
+    "days": 379,
+    "sessions": 473,
+    "per_day": 1.349,
+    "win": 0.3762,
+    "avg_win": 2190.0,
+    "avg_loss": -1722.0,
+    "expectancy": -250.6,
+    "net": -159885.0,
+    "ex_top5": -223976.0,
+    "max_dd": 183499.0,
+    "worst_day": -9885.0,
+    "worst_month": -50824.0,
+    "worst_month_name": "2026-05",
+    "green_months": "9/24",
+    "twin_mean": 122555.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 638,
+    "days": 379,
+    "sessions": 473,
+    "per_day": 1.349,
+    "win": 0.3777,
+    "avg_win": 2271.0,
+    "avg_loss": -1765.0,
+    "expectancy": -240.1,
+    "net": -153182.0,
+    "ex_top5": -217272.0,
+    "max_dd": 183661.0,
+    "worst_day": -9885.0,
+    "worst_month": -50824.0,
+    "worst_month_name": "2026-05",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 638,
+    "days": 379,
+    "sessions": 473,
+    "per_day": 1.349,
+    "win": 0.3527,
+    "avg_win": 2935.0,
+    "avg_loss": -3209.0,
+    "expectancy": -1042.0,
+    "net": -664785.0,
+    "ex_top5": -751666.0,
+    "max_dd": 676949.0,
+    "worst_day": -17084.0,
+    "worst_month": -92316.0,
+    "worst_month_name": "2026-05",
+    "green_months": "4/24",
+    "twin_mean": -360138.0,
+    "twin_p": 0.998
+   },
+   "false_break": 0.1254,
+   "why": {
+    "trail": 302,
+    "stop": 287,
+    "time": 49
+   },
+   "pts_mean": 1.43,
+   "avg_risk_pts": 44.12,
+   "opt_gross_pts": -2.48,
+   "opt_cost_pts": 1.21,
+   "held_min": 69.7,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 159,
+     "net": -17746.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 156,
+     "net": -42401.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 186,
+     "net": -94291.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 131,
+     "net": 50.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B7",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 357,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.755,
+    "win": 0.3529,
+    "avg_win": 2482.0,
+    "avg_loss": -1749.0,
+    "expectancy": -255.8,
+    "net": -91329.0,
+    "ex_top5": -153556.0,
+    "max_dd": 117914.0,
+    "worst_day": -9245.0,
+    "worst_month": -33262.0,
+    "worst_month_name": "2026-05",
+    "green_months": "9/24",
+    "twin_mean": 64538.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 357,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.755,
+    "win": 0.3529,
+    "avg_win": 2552.0,
+    "avg_loss": -1798.0,
+    "expectancy": -262.8,
+    "net": -93827.0,
+    "ex_top5": -156055.0,
+    "max_dd": 119550.0,
+    "worst_day": -9245.0,
+    "worst_month": -33262.0,
+    "worst_month_name": "2026-05",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 357,
+    "days": 273,
+    "sessions": 473,
+    "per_day": 0.755,
+    "win": 0.3445,
+    "avg_win": 3320.0,
+    "avg_loss": -3411.0,
+    "expectancy": -1091.6,
+    "net": -389699.0,
+    "ex_top5": -475014.0,
+    "max_dd": 409004.0,
+    "worst_day": -16873.0,
+    "worst_month": -61352.0,
+    "worst_month_name": "2026-05",
+    "green_months": "3/24",
+    "twin_mean": -204357.0,
+    "twin_p": 0.996
+   },
+   "false_break": 0.1373,
+   "why": {
+    "stop": 170,
+    "trail": 156,
+    "time": 31
+   },
+   "pts_mean": 0.48,
+   "avg_risk_pts": 45.75,
+   "opt_gross_pts": -2.76,
+   "opt_cost_pts": 1.23,
+   "held_min": 76.3,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 93,
+     "net": 21262.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 79,
+     "net": -17962.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 112,
+     "net": -74646.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 69,
+     "net": -18437.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "NIFTY",
+   "variant": "B8",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 100,
+    "days": 100,
+    "sessions": 473,
+    "per_day": 0.211,
+    "win": 0.39,
+    "avg_win": 2948.0,
+    "avg_loss": -1530.0,
+    "expectancy": 216.6,
+    "net": 21657.0,
+    "ex_top5": -36658.0,
+    "max_dd": 26985.0,
+    "worst_day": -5234.0,
+    "worst_month": -7519.0,
+    "worst_month_name": "2026-02",
+    "green_months": "13/21",
+    "twin_mean": 94173.0,
+    "twin_p": 0.988
+   },
+   "opt_risk": {
+    "trades": 100,
+    "days": 100,
+    "sessions": 473,
+    "per_day": 0.211,
+    "win": 0.39,
+    "avg_win": 3256.0,
+    "avg_loss": -1701.0,
+    "expectancy": 232.3,
+    "net": 23230.0,
+    "ex_top5": -35086.0,
+    "max_dd": 30221.0,
+    "worst_day": -5234.0,
+    "worst_month": -7788.0,
+    "worst_month_name": "2026-02",
+    "green_months": "11/21"
+   },
+   "fut": {
+    "trades": 100,
+    "days": 100,
+    "sessions": 473,
+    "per_day": 0.211,
+    "win": 0.37,
+    "avg_win": 4265.0,
+    "avg_loss": -2961.0,
+    "expectancy": -287.4,
+    "net": -28736.0,
+    "ex_top5": -110923.0,
+    "max_dd": 81097.0,
+    "worst_day": -9309.0,
+    "worst_month": -14893.0,
+    "worst_month_name": "2025-12",
+    "green_months": "11/21",
+    "twin_mean": 53104.0,
+    "twin_p": 0.986
+   },
+   "false_break": 0.28,
+   "why": {
+    "trail": 45,
+    "stop": 43,
+    "time": 12
+   },
+   "pts_mean": 11.44,
+   "avg_risk_pts": 41.25,
+   "opt_gross_pts": 4.02,
+   "opt_cost_pts": 1.17,
+   "held_min": 77.2,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 35,
+     "net": 34757.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 24,
+     "net": -8307.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 26,
+     "net": -7648.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 15,
+     "net": 2855.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": true,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": true,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B0",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 822,
+    "days": 364,
+    "sessions": 473,
+    "per_day": 1.738,
+    "win": 0.3297,
+    "avg_win": 663.0,
+    "avg_loss": -436.0,
+    "expectancy": -73.6,
+    "net": -60508.0,
+    "ex_top5": -83756.0,
+    "max_dd": 74039.0,
+    "worst_day": -6526.0,
+    "worst_month": -14357.0,
+    "worst_month_name": "2025-04",
+    "green_months": "6/24",
+    "twin_mean": -61579.0,
+    "twin_p": 0.493
+   },
+   "opt_risk": {
+    "trades": 822,
+    "days": 364,
+    "sessions": 473,
+    "per_day": 1.738,
+    "win": 0.3394,
+    "avg_win": 1629.0,
+    "avg_loss": -1005.0,
+    "expectancy": -111.1,
+    "net": -91349.0,
+    "ex_top5": -135183.0,
+    "max_dd": 127770.0,
+    "worst_day": -9387.0,
+    "worst_month": -24535.0,
+    "worst_month_name": "2025-04",
+    "green_months": "10/24"
+   },
+   "fut": {
+    "trades": 822,
+    "days": 364,
+    "sessions": 473,
+    "per_day": 1.738,
+    "win": 0.2786,
+    "avg_win": 787.0,
+    "avg_loss": -1536.0,
+    "expectancy": -889.0,
+    "net": -730737.0,
+    "ex_top5": -762624.0,
+    "max_dd": 739911.0,
+    "worst_day": -8559.0,
+    "worst_month": -54363.0,
+    "worst_month_name": "2024-12",
+    "green_months": "1/24",
+    "twin_mean": -764405.0,
+    "twin_p": 0.1697
+   },
+   "false_break": 0.3528,
+   "why": {
+    "stop": 464,
+    "target": 357,
+    "time": 1
+   },
+   "pts_mean": 4.34,
+   "avg_risk_pts": 39.33,
+   "opt_gross_pts": 0.1,
+   "opt_cost_pts": 3.76,
+   "held_min": 5.2,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 210,
+     "net": -47765.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 209,
+     "net": -13745.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 227,
+     "net": -9619.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 169,
+     "net": 1978.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B1",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 343,
+    "days": 257,
+    "sessions": 473,
+    "per_day": 0.725,
+    "win": 0.309,
+    "avg_win": 1998.0,
+    "avg_loss": -1609.0,
+    "expectancy": -494.2,
+    "net": -169501.0,
+    "ex_top5": -201196.0,
+    "max_dd": 184632.0,
+    "worst_day": -7927.0,
+    "worst_month": -27033.0,
+    "worst_month_name": "2026-01",
+    "green_months": "5/24",
+    "twin_mean": 117234.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 343,
+    "days": 257,
+    "sessions": 473,
+    "per_day": 0.725,
+    "win": 0.309,
+    "avg_win": 2221.0,
+    "avg_loss": -1894.0,
+    "expectancy": -622.5,
+    "net": -213512.0,
+    "ex_top5": -246863.0,
+    "max_dd": 228227.0,
+    "worst_day": -9082.0,
+    "worst_month": -32230.0,
+    "worst_month_name": "2025-02",
+    "green_months": "2/24"
+   },
+   "fut": {
+    "trades": 344,
+    "days": 258,
+    "sessions": 473,
+    "per_day": 0.727,
+    "win": 0.3343,
+    "avg_win": 2889.0,
+    "avg_loss": -3343.0,
+    "expectancy": -1259.4,
+    "net": -433244.0,
+    "ex_top5": -483612.0,
+    "max_dd": 454403.0,
+    "worst_day": -12804.0,
+    "worst_month": -55631.0,
+    "worst_month_name": "2026-01",
+    "green_months": "1/24",
+    "twin_mean": -94480.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3732,
+   "why": {
+    "stop": 205,
+    "target": 88,
+    "time": 50
+   },
+   "pts_mean": -13.36,
+   "avg_risk_pts": 133.0,
+   "opt_gross_pts": -20.5,
+   "opt_cost_pts": 3.69,
+   "held_min": 71.0,
+   "unfilled": 1,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 80,
+     "net": -47310.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 75,
+     "net": -26187.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 116,
+     "net": -79269.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 69,
+     "net": -25454.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B2",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 481,
+    "days": 360,
+    "sessions": 473,
+    "per_day": 1.017,
+    "win": 0.3306,
+    "avg_win": 2131.0,
+    "avg_loss": -1433.0,
+    "expectancy": -254.9,
+    "net": -122587.0,
+    "ex_top5": -176297.0,
+    "max_dd": 183720.0,
+    "worst_day": -9906.0,
+    "worst_month": -23779.0,
+    "worst_month_name": "2026-05",
+    "green_months": "6/24",
+    "twin_mean": 149069.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 481,
+    "days": 360,
+    "sessions": 473,
+    "per_day": 1.017,
+    "win": 0.3306,
+    "avg_win": 2338.0,
+    "avg_loss": -1622.0,
+    "expectancy": -313.3,
+    "net": -150678.0,
+    "ex_top5": -205859.0,
+    "max_dd": 212527.0,
+    "worst_day": -9906.0,
+    "worst_month": -24444.0,
+    "worst_month_name": "2025-01",
+    "green_months": "6/24"
+   },
+   "fut": {
+    "trades": 482,
+    "days": 360,
+    "sessions": 473,
+    "per_day": 1.019,
+    "win": 0.2884,
+    "avg_win": 3415.0,
+    "avg_loss": -2832.0,
+    "expectancy": -1030.3,
+    "net": -496587.0,
+    "ex_top5": -579627.0,
+    "max_dd": 572169.0,
+    "worst_day": -17665.0,
+    "worst_month": -45895.0,
+    "worst_month_name": "2026-05",
+    "green_months": "4/24",
+    "twin_mean": -153112.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3202,
+   "why": {
+    "stop": 230,
+    "trail": 193,
+    "time": 58
+   },
+   "pts_mean": 2.73,
+   "avg_risk_pts": 142.1,
+   "opt_gross_pts": -8.48,
+   "opt_cost_pts": 3.71,
+   "held_min": 78.1,
+   "unfilled": 1,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 120,
+     "net": -12170.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 111,
+     "net": -15378.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 146,
+     "net": -86522.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 100,
+     "net": -14301.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B3",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 284,
+    "days": 261,
+    "sessions": 473,
+    "per_day": 0.6,
+    "win": 0.3415,
+    "avg_win": 2514.0,
+    "avg_loss": -1515.0,
+    "expectancy": -139.1,
+    "net": -39508.0,
+    "ex_top5": -93218.0,
+    "max_dd": 90843.0,
+    "worst_day": -5763.0,
+    "worst_month": -18931.0,
+    "worst_month_name": "2026-05",
+    "green_months": "12/24",
+    "twin_mean": 94924.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 284,
+    "days": 261,
+    "sessions": 473,
+    "per_day": 0.6,
+    "win": 0.3415,
+    "avg_win": 2611.0,
+    "avg_loss": -1689.0,
+    "expectancy": -220.2,
+    "net": -62533.0,
+    "ex_top5": -116243.0,
+    "max_dd": 109749.0,
+    "worst_day": -5763.0,
+    "worst_month": -18931.0,
+    "worst_month_name": "2026-05",
+    "green_months": "11/24"
+   },
+   "fut": {
+    "trades": 284,
+    "days": 261,
+    "sessions": 473,
+    "per_day": 0.6,
+    "win": 0.2958,
+    "avg_win": 4182.0,
+    "avg_loss": -2916.0,
+    "expectancy": -816.4,
+    "net": -231856.0,
+    "ex_top5": -314896.0,
+    "max_dd": 295964.0,
+    "worst_day": -13995.0,
+    "worst_month": -34894.0,
+    "worst_month_name": "2026-04",
+    "green_months": "5/24",
+    "twin_mean": -70176.0,
+    "twin_p": 0.998
+   },
+   "false_break": 0.2887,
+   "why": {
+    "stop": 135,
+    "trail": 114,
+    "time": 35
+   },
+   "pts_mean": 13.56,
+   "avg_risk_pts": 151.75,
+   "opt_gross_pts": -2.27,
+   "opt_cost_pts": 3.74,
+   "held_min": 91.6,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 80,
+     "net": 12561.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 61,
+     "net": -5096.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 87,
+     "net": -44131.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 53,
+     "net": -8194.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B4",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 205,
+    "days": 184,
+    "sessions": 473,
+    "per_day": 0.433,
+    "win": 0.3073,
+    "avg_win": 2122.0,
+    "avg_loss": -1334.0,
+    "expectancy": -271.7,
+    "net": -55690.0,
+    "ex_top5": -99917.0,
+    "max_dd": 66053.0,
+    "worst_day": -5888.0,
+    "worst_month": -11673.0,
+    "worst_month_name": "2025-01",
+    "green_months": "7/24",
+    "twin_mean": 137517.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 205,
+    "days": 184,
+    "sessions": 473,
+    "per_day": 0.433,
+    "win": 0.3073,
+    "avg_win": 2265.0,
+    "avg_loss": -1555.0,
+    "expectancy": -381.2,
+    "net": -78143.0,
+    "ex_top5": -122370.0,
+    "max_dd": 83595.0,
+    "worst_day": -5888.0,
+    "worst_month": -14165.0,
+    "worst_month_name": "2025-01",
+    "green_months": "6/24"
+   },
+   "fut": {
+    "trades": 205,
+    "days": 184,
+    "sessions": 473,
+    "per_day": 0.433,
+    "win": 0.2976,
+    "avg_win": 3410.0,
+    "avg_loss": -2638.0,
+    "expectancy": -838.1,
+    "net": -171808.0,
+    "ex_top5": -249466.0,
+    "max_dd": 194950.0,
+    "worst_day": -10406.0,
+    "worst_month": -29726.0,
+    "worst_month_name": "2025-12",
+    "green_months": "6/24",
+    "twin_mean": 51872.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.3171,
+   "why": {
+    "stop": 92,
+    "trail": 80,
+    "time": 33
+   },
+   "pts_mean": 9.94,
+   "avg_risk_pts": 145.63,
+   "opt_gross_pts": -9.99,
+   "opt_cost_pts": 3.67,
+   "held_min": 73.8,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 62,
+     "net": -6032.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 51,
+     "net": -11252.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 60,
+     "net": -32760.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 30,
+     "net": -5782.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": true,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B5",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 377,
+    "days": 279,
+    "sessions": 473,
+    "per_day": 0.797,
+    "win": 0.3369,
+    "avg_win": 2081.0,
+    "avg_loss": -1327.0,
+    "expectancy": -179.1,
+    "net": -67526.0,
+    "ex_top5": -120312.0,
+    "max_dd": 121973.0,
+    "worst_day": -9906.0,
+    "worst_month": -17714.0,
+    "worst_month_name": "2025-01",
+    "green_months": "6/24",
+    "twin_mean": 127000.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 377,
+    "days": 279,
+    "sessions": 473,
+    "per_day": 0.797,
+    "win": 0.3369,
+    "avg_win": 2325.0,
+    "avg_loss": -1528.0,
+    "expectancy": -230.1,
+    "net": -86758.0,
+    "ex_top5": -141118.0,
+    "max_dd": 142859.0,
+    "worst_day": -9906.0,
+    "worst_month": -19056.0,
+    "worst_month_name": "2025-12",
+    "green_months": "6/24"
+   },
+   "fut": {
+    "trades": 378,
+    "days": 279,
+    "sessions": 473,
+    "per_day": 0.799,
+    "win": 0.2989,
+    "avg_win": 3346.0,
+    "avg_loss": -2692.0,
+    "expectancy": -887.2,
+    "net": -335380.0,
+    "ex_top5": -415647.0,
+    "max_dd": 405231.0,
+    "worst_day": -17665.0,
+    "worst_month": -39287.0,
+    "worst_month_name": "2025-01",
+    "green_months": "5/24",
+    "twin_mean": -90950.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.305,
+   "why": {
+    "stop": 176,
+    "trail": 155,
+    "time": 46
+   },
+   "pts_mean": 9.83,
+   "avg_risk_pts": 133.84,
+   "opt_gross_pts": -4.46,
+   "opt_cost_pts": 3.66,
+   "held_min": 75.3,
+   "unfilled": 1,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 96,
+     "net": -14832.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 101,
+     "net": -6235.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 101,
+     "net": -41735.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 76,
+     "net": -11495.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B6",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 641,
+    "days": 384,
+    "sessions": 473,
+    "per_day": 1.355,
+    "win": 0.3432,
+    "avg_win": 2212.0,
+    "avg_loss": -1462.0,
+    "expectancy": -201.0,
+    "net": -128835.0,
+    "ex_top5": -187147.0,
+    "max_dd": 154629.0,
+    "worst_day": -9447.0,
+    "worst_month": -43797.0,
+    "worst_month_name": "2026-05",
+    "green_months": "9/24",
+    "twin_mean": 82205.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 641,
+    "days": 384,
+    "sessions": 473,
+    "per_day": 1.355,
+    "win": 0.3432,
+    "avg_win": 2330.0,
+    "avg_loss": -1494.0,
+    "expectancy": -181.5,
+    "net": -116311.0,
+    "ex_top5": -174622.0,
+    "max_dd": 149656.0,
+    "worst_day": -9447.0,
+    "worst_month": -43797.0,
+    "worst_month_name": "2026-05",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 642,
+    "days": 384,
+    "sessions": 473,
+    "per_day": 1.357,
+    "win": 0.3053,
+    "avg_win": 3402.0,
+    "avg_loss": -2965.0,
+    "expectancy": -1020.8,
+    "net": -655338.0,
+    "ex_top5": -747084.0,
+    "max_dd": 668972.0,
+    "worst_day": -18651.0,
+    "worst_month": -84049.0,
+    "worst_month_name": "2026-05",
+    "green_months": "4/24",
+    "twin_mean": -388767.0,
+    "twin_p": 1.0
+   },
+   "false_break": 0.1373,
+   "why": {
+    "stop": 312,
+    "trail": 279,
+    "time": 50
+   },
+   "pts_mean": 2.47,
+   "avg_risk_pts": 144.39,
+   "opt_gross_pts": -6.54,
+   "opt_cost_pts": 3.71,
+   "held_min": 69.4,
+   "unfilled": 1,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 167,
+     "net": -39690.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 155,
+     "net": -32664.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 188,
+     "net": -36370.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 126,
+     "net": -15103.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B7",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 363,
+    "days": 277,
+    "sessions": 473,
+    "per_day": 0.767,
+    "win": 0.3581,
+    "avg_win": 2340.0,
+    "avg_loss": -1507.0,
+    "expectancy": -129.4,
+    "net": -46963.0,
+    "ex_top5": -96545.0,
+    "max_dd": 86931.0,
+    "worst_day": -7769.0,
+    "worst_month": -31100.0,
+    "worst_month_name": "2026-05",
+    "green_months": "10/24",
+    "twin_mean": 49986.0,
+    "twin_p": 0.984
+   },
+   "opt_risk": {
+    "trades": 363,
+    "days": 277,
+    "sessions": 473,
+    "per_day": 0.767,
+    "win": 0.3581,
+    "avg_win": 2430.0,
+    "avg_loss": -1552.0,
+    "expectancy": -126.0,
+    "net": -45732.0,
+    "ex_top5": -95314.0,
+    "max_dd": 88472.0,
+    "worst_day": -7769.0,
+    "worst_month": -31100.0,
+    "worst_month_name": "2026-05",
+    "green_months": "9/24"
+   },
+   "fut": {
+    "trades": 364,
+    "days": 277,
+    "sessions": 473,
+    "per_day": 0.77,
+    "win": 0.3297,
+    "avg_win": 3733.0,
+    "avg_loss": -3080.0,
+    "expectancy": -834.0,
+    "net": -303571.0,
+    "ex_top5": -389135.0,
+    "max_dd": 325558.0,
+    "worst_day": -14432.0,
+    "worst_month": -57657.0,
+    "worst_month_name": "2026-04",
+    "green_months": "7/24",
+    "twin_mean": -220332.0,
+    "twin_p": 0.8962
+   },
+   "false_break": 0.1267,
+   "why": {
+    "stop": 173,
+    "trail": 155,
+    "time": 35
+   },
+   "pts_mean": 11.46,
+   "avg_risk_pts": 148.37,
+   "opt_gross_pts": -3.1,
+   "opt_cost_pts": 3.72,
+   "held_min": 79.2,
+   "unfilled": 1,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 94,
+     "net": 23506.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 84,
+     "net": -10400.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 114,
+     "net": -26056.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 67,
+     "net": -31406.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": false,
+    "pass": false
+   }
+  },
+  {
+   "inst": "SENSEX",
+   "variant": "B8",
+   "lo": "2024-11-20",
+   "hi": "2026-10-19",
+   "option_sessions": 473,
+   "opt": {
+    "trades": 104,
+    "days": 99,
+    "sessions": 473,
+    "per_day": 0.22,
+    "win": 0.3173,
+    "avg_win": 2630.0,
+    "avg_loss": -1346.0,
+    "expectancy": -84.5,
+    "net": -8787.0,
+    "ex_top5": -51852.0,
+    "max_dd": 22611.0,
+    "worst_day": -3933.0,
+    "worst_month": -6031.0,
+    "worst_month_name": "2025-01",
+    "green_months": "9/22",
+    "twin_mean": 76115.0,
+    "twin_p": 1.0
+   },
+   "opt_risk": {
+    "trades": 104,
+    "days": 99,
+    "sessions": 473,
+    "per_day": 0.22,
+    "win": 0.3173,
+    "avg_win": 2775.0,
+    "avg_loss": -1576.0,
+    "expectancy": -195.5,
+    "net": -20337.0,
+    "ex_top5": -63402.0,
+    "max_dd": 30407.0,
+    "worst_day": -4561.0,
+    "worst_month": -7199.0,
+    "worst_month_name": "2025-01",
+    "green_months": "6/22"
+   },
+   "fut": {
+    "trades": 104,
+    "days": 99,
+    "sessions": 473,
+    "per_day": 0.22,
+    "win": 0.3269,
+    "avg_win": 4114.0,
+    "avg_loss": -2677.0,
+    "expectancy": -456.7,
+    "net": -47492.0,
+    "ex_top5": -125150.0,
+    "max_dd": 74049.0,
+    "worst_day": -7975.0,
+    "worst_month": -15582.0,
+    "worst_month_name": "2025-12",
+    "green_months": "5/22",
+    "twin_mean": 33733.0,
+    "twin_p": 0.99
+   },
+   "false_break": 0.2596,
+   "why": {
+    "stop": 46,
+    "trail": 45,
+    "time": 13
+   },
+   "pts_mean": 28.14,
+   "avg_risk_pts": 140.63,
+   "opt_gross_pts": -0.66,
+   "opt_cost_pts": 3.71,
+   "held_min": 77.2,
+   "unfilled": 0,
+   "q": 1.0,
+   "folds": [
+    {
+     "lo": "2024-12-01",
+     "hi": "2025-05-31",
+     "trades": 39,
+     "net": 1790.0
+    },
+    {
+     "lo": "2025-06-01",
+     "hi": "2025-11-30",
+     "trades": 23,
+     "net": -1791.0
+    },
+    {
+     "lo": "2025-12-01",
+     "hi": "2026-05-31",
+     "trades": 29,
+     "net": -1892.0
+    },
+    {
+     "lo": "2026-06-01",
+     "hi": "2026-10-19",
+     "trades": 12,
+     "net": -6599.0
+    }
+   ],
+   "gates": {
+    "G1": true,
+    "G2": false,
+    "G3": false,
+    "G4": false,
+    "G5": false,
+    "G6": false,
+    "G7": true,
+    "pass": false
+   }
+  }
+ ],
+ "pooled": {
+  "B0": {
+   "trades": 4135,
+   "net": -435226.0,
+   "twin_mean": -476822.0,
+   "risk_net": -792629.0,
+   "fut_net": -3859341.0,
+   "false_break": 0.3335
+  },
+  "B1": {
+   "trades": 1789,
+   "net": -588786.0,
+   "twin_mean": 430032.0,
+   "risk_net": -638989.0,
+   "fut_net": -1787289.0,
+   "false_break": 0.3656
+  },
+  "B2": {
+   "trades": 2502,
+   "net": -557059.0,
+   "twin_mean": 810493.0,
+   "risk_net": -604705.0,
+   "fut_net": -2529110.0,
+   "false_break": 0.3233
+  },
+  "B3": {
+   "trades": 1387,
+   "net": -209829.0,
+   "twin_mean": 486480.0,
+   "risk_net": -248360.0,
+   "fut_net": -1225366.0,
+   "false_break": 0.3122
+  },
+  "B4": {
+   "trades": 1006,
+   "net": -360063.0,
+   "twin_mean": 676286.0,
+   "risk_net": -396793.0,
+   "fut_net": -1064759.0,
+   "false_break": 0.3181
+  },
+  "B5": {
+   "trades": 1940,
+   "net": -406641.0,
+   "twin_mean": 632995.0,
+   "risk_net": -449999.0,
+   "fut_net": -1905512.0,
+   "false_break": 0.3294
+  },
+  "B6": {
+   "trades": 3242,
+   "net": -458569.0,
+   "twin_mean": 433513.0,
+   "risk_net": -439052.0,
+   "fut_net": -3138416.0,
+   "false_break": 0.1354
+  },
+  "B7": {
+   "trades": 1719,
+   "net": -146005.0,
+   "twin_mean": 197408.0,
+   "risk_net": -143054.0,
+   "fut_net": -1557612.0,
+   "false_break": 0.1338
+  },
+  "B8": {
+   "trades": 467,
+   "net": -109457.0,
+   "twin_mean": 329830.0,
+   "risk_net": -133970.0,
+   "fut_net": -364798.0,
+   "false_break": 0.3148
+  }
+ },
+ "passers": []
+}
