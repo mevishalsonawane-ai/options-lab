@@ -1,6 +1,7 @@
 package com.optionslab.ira
 
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.Locale
 
 /**
@@ -28,16 +29,23 @@ object LiquidityTwin {
 
     /** One would-be trade: when, the book, the contract, the price at the signal, the account, whether it was [applied] (paper). */
     data class Rec(val atMs: Long, val day: LocalDate, val book: String, val symbol: String, val price: Double?, val live: Boolean,
-                   val applied: Boolean, val by: String) {
-        fun encode(): String = listOf(atMs, day, book, symbol, price?.let { "%.2f".format(Locale.ROOT, it) } ?: "", live, applied, by.replace('|', '/'))
-            .joinToString("|")
+                   val applied: Boolean, val by: String,
+                   /** The signal's bar (its start): the go-live check's replay matches it, so a would-be trade is never a "miss". */
+                   val signalBar: LocalDateTime? = null) {
+        fun encode(): String = listOf(atMs, day, book, symbol, price?.let { "%.2f".format(Locale.ROOT, it) } ?: "", live, applied, by.replace('|', '/'),
+            signalBar?.toString() ?: "").joinToString("|")
     }
 
     fun decode(line: String): Rec? = runCatching {
         val p = line.split('|')
         if (p.size < 8) return null
-        Rec(p[0].toLong(), LocalDate.parse(p[1]), p[2], p[3], p[4].toDoubleOrNull(), p[5] == "true", p[6] == "true", p[7])
+        Rec(p[0].toLong(), LocalDate.parse(p[1]), p[2], p[3], p[4].toDoubleOrNull(), p[5] == "true", p[6] == "true", p[7],
+            p.getOrNull(8)?.takeIf { it.isNotBlank() }?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() })
     }.getOrNull()
+
+    /** The (book, signal bar) of each paper would-be trade the rule made: the go-live fidelity check leaves them out of its misses. */
+    fun excused(recs: List<Rec>): Set<Pair<String, LocalDateTime>> =
+        recs.filter { it.applied && !it.live && it.signalBar != null }.map { it.book to it.signalBar!! }.toSet()
 
     /** Kept at most (the newest). */
     const val KEEP = 200

@@ -42,7 +42,11 @@ object LiquidityGoLive {
      * filled within [MATCH_WINDOW_S] of the bar's close; each replay signal the paper book did not take while it was flat
      * counts as a miss. Days with no replay are left out.
      */
-    fun fidelity(paper: List<PaperEntry>, replay: Map<LocalDate, List<ReplaySignal>>): Fidelity {
+    /**
+     * [excused] (20 Oct, enhancement round 1): the (book, bar) signals the no-twin rule kept as would-be trades
+     * ([LiquidityTwin.excused]) - a rule at work, not a missed signal, so never counted as a miss.
+     */
+    fun fidelity(paper: List<PaperEntry>, replay: Map<LocalDate, List<ReplaySignal>>, excused: Set<Pair<String, java.time.LocalDateTime>> = emptySet()): Fidelity {
         var matched = 0; var compared = 0; var missed = 0
         for ((day, sigs) in replay) {
             val mine = paper.filter { it.signalBar.toLocalDate() == day }
@@ -55,6 +59,7 @@ object LiquidityGoLive {
             }
             for (s in sigs) {
                 if (mine.any { it.book == s.book && it.signalBar == s.bar }) continue
+                if ((s.book to s.bar) in excused) continue
                 val tf = com.optionslab.engine.orb.LiquidityRules.BOOKS.firstOrNull { it.source == s.book }
                     ?.let { com.optionslab.engine.orb.LiquidityRules.minutesOf(it) } ?: 0
                 val at = s.bar.plusMinutes(tf.toLong())

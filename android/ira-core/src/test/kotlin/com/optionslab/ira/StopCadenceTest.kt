@@ -21,8 +21,10 @@ class StopCadenceTest {
     }
 
     @Test fun aSlowLookIsFollowedSoonButNeverInATightLoop() {
-        // The look took 20 s (over the window): the next comes 1 s after it, not at once and not 15 s later.
-        assertEquals(121_000L, StopCadence.windowEnd(100_000L, 120_000L))
+        // The look took 20 s (over the window): the next comes 5 s after it (a slow broker is never hit back to back), not 15 s later.
+        assertEquals(125_000L, StopCadence.windowEnd(100_000L, 120_000L))
+        // A check of 12 s: 15 s from the start would leave 3 s; the rest is 5 s.
+        assertEquals(117_000L, StopCadence.windowEnd(100_000L, 112_000L))
         assertEquals(115_000L + 0L, StopCadence.windowEnd(100_000L, 100_000L))
     }
 

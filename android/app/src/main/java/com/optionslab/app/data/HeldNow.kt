@@ -35,6 +35,12 @@ object HeldNow {
         )
     }
 
-    /** Anything held anywhere (memory only; unknown counts as held). */
-    fun any(): Boolean = runCatching { com.optionslab.ira.Held.any(sources()) }.getOrDefault(true)
+    /**
+     * Anything held anywhere (memory only; unknown counts as held). [mcxLive]: Zerodha's MCX book counts too (the watch's pulse,
+     * as before). Review: the other workers leave it out, as they did - its "not read yet today" counts as held, which kept the NSE
+     * loop on its 15-second path all day for nothing on a paper-only day.
+     */
+    fun any(mcxLive: Boolean = false): Boolean = runCatching {
+        com.optionslab.ira.Held.any(sources().let { if (mcxLive) it else it.copy(mcxLive = false) })
+    }.getOrDefault(true)
 }

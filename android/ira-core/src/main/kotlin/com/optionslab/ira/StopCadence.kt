@@ -17,14 +17,15 @@ object StopCadence {
     const val WINDOW_MS = 15_000L
     const val DRIFT_MS = 16_000L
     const val ALERT_MS = 30_000L
-    const val MIN_GAP_MS = 1_000L
+    /** Review: a slow check (a slow broker) is followed after a short rest, never back to back (which would load the broker more). */
+    const val MIN_GAP_MS = 5_000L
 
     /**
      * When the next look is due: [windowMs] after the last look started ([lastStartMs]; 0 or in the future: unknown, so a full
-     * window from now), never sooner than [MIN_GAP_MS] from [nowMs].
+     * window from now), never sooner than [MIN_GAP_MS] from [nowMs] (never later than the old way: 15 s after the last ended).
      */
     fun windowEnd(lastStartMs: Long, nowMs: Long, windowMs: Long = WINDOW_MS): Long =
-        if (lastStartMs <= 0L || lastStartMs > nowMs) nowMs + windowMs else maxOf(nowMs + MIN_GAP_MS, lastStartMs + windowMs)
+        if (lastStartMs <= 0L || lastStartMs > nowMs) nowMs + windowMs else minOf(nowMs + windowMs, maxOf(nowMs + MIN_GAP_MS, lastStartMs + windowMs))
 
     /** One drift: the gap and when the late look started. */
     data class Gap(val gapMs: Long, val atMs: Long) {
@@ -69,6 +70,10 @@ object StopCadence {
             else "Stop-check gaps: $n of $of gaps while holding were over 16 s today (worst ${w / 1000} s)."
         }
     }
+
+    /** What the app shows for a gap of 30 s or more: the same words each time, so one banner stands for them all. */
+    const val ALERT_WORDS = "The stops were looked at 30 s or more apart while a position was held (the promise is 15 s). " +
+        "Something held the watch back: keep the app open, or check the battery settings."
 
     /** What the log says for one drift. */
     fun words(g: Gap): String = "The stops were looked at ${g.gapMs / 1000} s apart while a position was held (the promise is 15 s)." +

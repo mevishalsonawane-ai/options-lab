@@ -67,7 +67,13 @@ internal fun StrategyLabSection(model: AppModel) {
     LiquidityTrailRow(liq) { model.liquidityTrail(it) }
     // 20 Oct, enhancement round 1: Liquidity's no-twin rule on paper - its count read off the main thread (the record's file).
     var twinLine by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(liq.noTwin) { twinLine = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.LiquidityTest.twinLine() }.getOrNull() } }
+    LaunchedEffect(liq.noTwin) {
+        // Read again each minute while the card is open (a would-be trade made meanwhile shows).
+        while (true) {
+            twinLine = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.LiquidityTest.twinLine() }.getOrNull() }
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
     LiquidityNoTwinRow(liq, twinLine) { model.liquidityNoTwin(it) }
     open?.let { sel -> StrategyLabDialog(model, sel.ifEmpty { null }) { open = null } }
 }

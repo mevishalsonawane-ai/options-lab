@@ -57,4 +57,16 @@ class LiquidityTwinTest {
         val off = LiquidityFreeze.State(unfrozen = true, noTwin = false)
         assertEquals(off, LiquidityFreeze.decode(LiquidityFreeze.encode(off)))
     }
+
+    /** Review: a paper would-be trade is the rule at work, so the go-live check never counts its signal as missed. */
+    @Test fun aWouldBeTradeIsNeverAMissInTheGoLiveCheck() {
+        val bar = day.atTime(9, 25)
+        val rec = LiquidityTwin.Rec(1L, day, "liquidity5", put, 200.0, live = false, applied = true, by = "liquidity15", signalBar = bar)
+        assertEquals(rec, LiquidityTwin.decode(rec.encode()))
+        val ex = LiquidityTwin.excused(listOf(rec, rec.copy(live = true, applied = false), rec.copy(book = "x", signalBar = null)))
+        assertEquals(setOf("liquidity5" to bar), ex)
+        val replay = mapOf(day to listOf(LiquidityGoLive.ReplaySignal("liquidity5", bar, -1, 52_000)))
+        assertEquals(1, LiquidityGoLive.fidelity(emptyList(), replay).missed, "without the excuse it reads as a miss")
+        assertEquals(0, LiquidityGoLive.fidelity(emptyList(), replay, ex).missed)
+    }
 }

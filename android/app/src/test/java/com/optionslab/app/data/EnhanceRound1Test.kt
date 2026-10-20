@@ -103,6 +103,32 @@ class EnhanceRound1Test : RobolectricTest() {
         assertTrue(AccountStopHost.view.value.reached)
     }
 
+    /** Review: a later read the same day (a recovery) never "un-reaches" the rule; only Boss's restart does. */
+    @Test fun onceReachedItStaysReachedThroughARecovery() {
+        session(10, 0)
+        AccountStopHost.setOn(true)
+        AccountStopHost.dayRead(-13_500.0)
+        assertNotNull(Broker.entryRecheck(order("iraorb"), "orb"))
+        AccountStopHost.dayRead(-5_000.0)
+        assertNotNull("still refused after the recovery", Broker.entryRecheck(order("iraorb"), "orb"))
+        assertTrue(AccountStopHost.line(), AccountStopHost.line().contains("REACHED"))
+        assertTrue(AccountStopHost.restart(pinConfirmed = true).startsWith("The account stop rule counts again"))
+        assertNull(Broker.entryRecheck(order("iraorb"), "orb"))
+    }
+
+    /** Review: a figure read before the saved days were read never writes over them: they are read first and kept. */
+    @Test fun aReadBeforeTheSavedDaysAreReadKeepsThem() {
+        session(10, 0)
+        val yesterday = Market.today().minusDays(1)
+        com.optionslab.app.security.SecurePrefs.put("accountStop.days", com.optionslab.ira.AccountStop.encode(listOf(com.optionslab.ira.AccountStop.Day(yesterday, -10_000.0))))
+        AccountStopHost.unloadForTest()
+        AccountStopHost.dayRead(-4_000.0)
+        assertTrue(AccountStopHost.line(), AccountStopHost.line().contains("(2 days,"))
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && com.optionslab.app.security.SecurePrefs.getString("accountStop.days")?.contains(Market.today().toString()) != true) Thread.sleep(20)
+        assertTrue(com.optionslab.app.security.SecurePrefs.getString("accountStop.days")!!.contains(yesterday.toString()))
+    }
+
     // ---- idea 6: the drift guard --------------------------------------------------------------------------------------
 
     @Test fun aGapOver16sIsLoggedAndOver30sAlsoShown() {
@@ -114,7 +140,7 @@ class EnhanceRound1Test : RobolectricTest() {
         assertNotNull(g); assertEquals(18_000L, g!!.gapMs)
         val big = WatchClock.looked(true, t0 + 73_000L)
         assertTrue(big!!.alert)
-        assertTrue(com.optionslab.app.work.Alerts.queue.value.any { it.text.contains("40 s apart") })
+        assertTrue(com.optionslab.app.work.Alerts.queue.value.any { it.text == com.optionslab.ira.StopCadence.ALERT_WORDS })
         assertTrue(WatchClock.driftLine(), WatchClock.driftLine().contains("2 of 3 gaps while holding were over 16 s today (worst 40 s)"))
         // The next look is due 15 s after the last one STARTED.
         assertEquals(t0 + 88_000L, WatchClock.windowEnd(t0 + 76_000L))

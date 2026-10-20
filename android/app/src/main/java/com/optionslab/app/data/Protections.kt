@@ -319,33 +319,38 @@ object Protections {
      * confirmed gone). An active one is deleted and confirmed gone. False when that cannot be confirmed (the list not read, the
      * delete refused): the caller keeps the protection and asks again on the next pass, so two exits never rest together.
      */
-    private suspend fun gttGone(p: Item, cancelFired: Boolean): Boolean {
-        val id = p.gttId ?: return true
+    private suspend fun gttGone(p: Item, cancelFired: Boolean): Boolean = gttState(p, cancelFired) != GttState.HELD
+
+    /** [gttGone]'s answer in full: gone, fired (Zerodha placed its exit), or not confirmed gone (held: ask again next pass). */
+    private enum class GttState { GONE, FIRED, HELD }
+
+    private suspend fun gttState(p: Item, cancelFired: Boolean): GttState {
+        val id = p.gttId ?: return GttState.GONE
         suspend fun read(): Broker.GttRow? = Broker.gtts().firstOrNull { it.id == id }
-        var g = runCatching { read() }.getOrElse { return false }
+        var g = runCatching { read() }.getOrElse { return GttState.HELD }
         if (g != null && g.active) {
             runCatching { Broker.deleteGtt(id) }
-            g = runCatching { read() }.getOrElse { return false }
-            if (g != null && g.active) return false
+            g = runCatching { read() }.getOrElse { return GttState.HELD }
+            if (g != null && g.active) return GttState.HELD
         }
-        if (g == null || g.status.lowercase() in GTT_GONE) return true
-        // Fired: Zerodha placed its exit. Kept as it is at the open (it is an exit already working: [restAgain] counts it), and
-        // said plainly when it has not filled (a limit under a price that opened lower).
-        if (g.orderIds.isEmpty()) return true
+        if (g == null || g.status.lowercase() in GTT_GONE) return GttState.GONE
+        // Fired: Zerodha placed its exit (its order id may not be listed yet). At the open it is kept as it is (an exit already
+        // working: the next pass re-reads what is held and [restAgain] counts it), and said plainly when it has not filled.
         if (!cancelFired) {
             val resting = runCatching { Broker.orders() }.getOrNull()?.filter { it.id in g.orderIds && it.working }.orEmpty()
             if (resting.isNotEmpty()) unprotected("${p.symbol}: its overnight GTT fired; its sell of ${resting.sumOf { it.qty - it.filled }} at " +
                 "%.2f rests at Zerodha unfilled. If the price stays under it, close the position in Trade.".format(resting.first().price))
-            return true
+            return GttState.FIRED
         }
-        val rows = runCatching { Broker.orders() }.getOrElse { return false }.filter { it.id in g.orderIds }
+        if (g.orderIds.isEmpty()) return GttState.FIRED
+        val rows = runCatching { Broker.orders() }.getOrElse { return GttState.HELD }.filter { it.id in g.orderIds }
         rows.filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
         for (oid in g.orderIds) {
             // Not in today's book (an earlier day's): over. Read failed or still working: not confirmed yet.
-            val st = runCatching { Broker.orderState(oid)?.status }.getOrElse { return false }
-            if (st != null && st !in GONE) return false
+            val st = runCatching { Broker.orderState(oid)?.status }.getOrElse { return GttState.HELD }
+            if (st != null && st !in GONE) return GttState.HELD
         }
-        return true
+        return GttState.FIRED
     }
 
     /**
@@ -361,13 +366,29 @@ object Protections {
         val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
         val gtts = runCatching { Broker.gtts() }.getOrNull() ?: return p
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return p
+        // Review: a GTT of this protection's own that went through but was never recorded (a lost reply, a save that did not land)
+        // is adopted, never counted as "another exit": counted busy, the open would place the day's orders beside it.
+        val want = listOfNotNull(p.stop, p.target).map { Math.round(Math.round(it / p.tick) * p.tick * 100) / 100.0 }.sorted()   // as [Kite.protect]
+        gtts.firstOrNull { g -> g.active && g.symbol == p.symbol && g.exchange == p.exchange && g.legSides.firstOrNull() == side.name &&
+            g.legProducts.firstOrNull() == p.product && (g.legQtys.firstOrNull() ?: 0) <= abs(p.qty) && g.triggers.size == want.size &&
+            g.triggers.sorted().zip(want).all { (a, b) -> abs(a - b) < p.tick / 2 + 1e-9 } }?.let { mine ->
+            gttTries.remove(p.id)
+            return p.copy(gttId = mine.id)
+        }
         val busy = orders.filter { it.working && it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product && it.side == side.name }
             .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
             gtts.filter { it.symbol == p.symbol && it.exchange == p.exchange }.sumOf { it.covers(side.name, p.product) }
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(minOf(abs(net), abs(p.qty)), busy, abs(p.qty), p.lotSize)
-        fun tried() { gttTries[p.id] = (gttTries[p.id] ?: 0) + 1 }
+        // Review: what is held less every other exit, at most what this protection covers (an arm's own lots and GTT beside it
+        // never take this protection's place).
+        val qty = com.optionslab.engine.risk.ExitQty.sendable(abs(net), busy, abs(p.qty), p.lotSize)
+        fun tried() {
+            val n = (gttTries[p.id] ?: 0) + 1
+            gttTries[p.id] = n
+            if (n == GTT_TRIES) unprotected("${p.symbol}: its stop could not be rested at Zerodha overnight as a GTT after $n tries. " +
+                "Its stop and target are placed again when the market opens; until then nothing rests at Zerodha.")
+        }
         if (qty <= 0) {
-            tried(); gttTries[p.id] = GTT_TRIES
+            // Not counted as a try: the other exit may go away later in the evening, and the next look checks again.
             Alerts.post("${p.symbol}: an exit already resting at Zerodha covers it overnight, so no GTT was added.", Alerts.Kind.INFO, "Protection", throttle = true)
             return p
         }
@@ -379,9 +400,9 @@ object Protections {
         if (gtt == null && p.stop != null && p.target != null) Kite.protect(spec, p.product, p.qty.sign() * qty, last, p.stop, null).let { (g2, w2) -> if (g2 != null) { gtt = g2; why = w2 } }
         val g = gtt
         if (g == null) {
-            tried()
-            unprotected("${p.symbol}: its stop could not rest at Zerodha overnight as a GTT (${why.joinToString("; ")}). " +
+            if ((gttTries[p.id] ?: 0) == 0) unprotected("${p.symbol}: its stop could not rest at Zerodha overnight as a GTT (${why.joinToString("; ")}). " +
                 "Its stop and target are placed again when the market opens.")
+            gttTries[p.id] = GTT_TRIES          // the price will not move back tonight: not asked again
             return p
         }
         val id = Broker.placeGttOnce(g, gtts.map { it.id }.toSet())
@@ -397,16 +418,18 @@ object Protections {
      * [p]'s stop and target placed again at their levels (an earlier day's DAY orders ended): the protection carried on under
      * a new id (today's: [cancelOrders] knows its orders are today's). Null when the stop could not be placed (the caller says so).
      */
-    private suspend fun restAgain(p0: Item): Item? {
+    private suspend fun restAgain(p0: Item, net: Int = p0.qty): Item? {
         val side = if (p0.qty > 0) Kite.Side.SELL else Kite.Side.BUY
         val known = listOfNotNull(p0.stopOrderId, p0.targetOrderId)
         // Second review: an exit already resting on it (Boss's own after-market order, another owner's) is subtracted first, so
-        // the two together never sell more than is held. All of it covered: nothing placed, and said.
+        // the two together never sell more than is held. All of it covered: nothing placed, and said. 20 Oct, enhancement round 1:
+        // an active GTT on it (an arm's own, or one of ours not recorded) counts too, against all that is held ([net]).
         val busy = runCatching {
             Broker.orders().filter { it.working && it.symbol == p0.symbol && it.exchange == p0.exchange && it.product == p0.product &&
-                it.side == side.name && it.id !in known }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-        }.getOrNull() ?: return p0                                       // the orders not read: asked again next look
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(p0.qty, busy, abs(p0.qty), p0.lotSize)
+                it.side == side.name && it.id !in known }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
+                Broker.gtts().filter { it.symbol == p0.symbol && it.exchange == p0.exchange }.sumOf { it.covers(side.name, p0.product) }
+        }.getOrNull() ?: return p0                                       // the books not read: asked again next look
+        val qty = com.optionslab.engine.risk.ExitQty.sendable(net, busy, abs(p0.qty), p0.lotSize)
         if (qty <= 0) {
             Alerts.post("${p0.symbol}: an exit already resting at Zerodha covers it, so its stop and target were not placed again.",
                 Alerts.Kind.INFO, "Protection")
@@ -629,6 +652,9 @@ object Protections {
             // 20 Oct, enhancement round 1 (idea 2): meanwhile they rest at Zerodha as a GTT, so a dead phone misses nothing overnight.
             return restOvernight(waiting, net!!)
         }
+        // Review: a carried position's positions read that failed outside its market's hours never ends the protection (it would
+        // lose tonight's GTT and the open's orders): asked again next pass.
+        if (net == null && p.product != "MIS" && !marketOpen(p.exchange)) return p
         // A stop refused or cancelled at Zerodha leaves the position unprotected: say so.
         if (so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) {
             unprotected("${p.symbol}: the stop at Zerodha was ${so.status.lowercase()}${so.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""}. The position is not protected by a stop.")
@@ -647,10 +673,16 @@ object Protections {
                 if (!marketOpen(p.exchange)) return restOvernight(p, net)
                 // At the open the GTT goes first, confirmed (or kept, and asked again next pass): the day's orders and a GTT never
                 // rest together. One that fired overnight or at the open is an exit already working: [restAgain] counts it.
-                if (p.gttId != null && !gttGone(p, cancelFired = false)) return p
+                if (p.gttId != null) when (gttState(p, cancelFired = false)) {
+                    GttState.HELD -> return p
+                    // Review: fired (perhaps filled) since this pass read what is held: nothing is placed on that older figure;
+                    // the next pass reads the position again and counts the GTT's own sell.
+                    GttState.FIRED -> return p.copy(gttId = null)
+                    GttState.GONE -> Unit
+                }
                 // Never more than this protection covered: lots added since, or another owner's lots (an arm's trade with its own
                 // GTT), are not this protection's to sell (second review).
-                restAgain(p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)), gttId = null))?.let { return it }
+                restAgain(p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)), gttId = null), net)?.let { return it }
             }
             if (net != 0) unprotected("${p.symbol}: its stop and target are no longer working at Zerodha (orders last only the day they are placed). " +
                 "The position is NOT protected any more: set the protection again.")

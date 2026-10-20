@@ -254,4 +254,77 @@ class ProtectionsGttTest : RobolectricTest() {
         assertTrue(!Protections.overnightHint)
         assertNotNull(runBlocking { Protections.active() }.singleOrNull())
     }
+
+    // ---- review findings ---------------------------------------------------------------------------------------------
+
+    /** Review 1: the GTT fires and fills after the pass read what is held: nothing is placed on that older figure (no naked short). */
+    @Test fun aGttFiringDuringThePassNeverLeadsToASecondSell() {
+        protect()
+        theClose()
+        tick()
+        val id = one().gttId!!
+        kite.orders.clear()
+        kite.quote("NFO:$sym", 140.0, 139.95, 140.05)           // opened through the target: its leg fills
+        session(9, 16, nth = 2)
+        kite.afterNext("/portfolio/positions") { kite.triggerGtt(id, leg = 1) }
+        kite.requests.clear()
+        tick()
+        assertTrue("nothing placed this pass", kite.placed.isEmpty())
+        tick()
+        assertTrue("nor on the next: the position is flat", kite.placed.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertEquals("never short", 0, kite.positions.getValue("NFO:$sym:NRML").first)
+    }
+
+    /** Review 2: a GTT of its own that went through but was never recorded is adopted, never counted as "another exit". */
+    @Test fun itsOwnUnrecordedGttIsAdoptedAndDeletedAtTheOpen() {
+        protect()
+        val orphan = runBlocking {
+            Broker.placeGtt(requireNotNull(com.optionslab.engine.Kite.protect(com.optionslab.engine.Kite.Spec("NFO", sym, 0L, 75, 0.05),
+                "NRML", 75, 100.0, 90.0, 130.0).first))
+        }
+        theClose()
+        kite.requests.clear()
+        tick()
+        assertTrue("no second GTT", gttPosts.isEmpty())
+        assertEquals(orphan, one().gttId)
+        kite.orders.clear()
+        session(9, 20, nth = 2)
+        tick()
+        assertTrue(kite.gtts.isEmpty())
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    /** Review 3: 150 held, 75 of it an arm's with its own GTT: this protection's 75 still rests overnight. */
+    @Test fun anArmsGttOnItsOwnLotsNeverTakesThisProtectionsPlace() {
+        kite.position(sym, 150, 100.0)
+        protect()
+        runBlocking {
+            Broker.placeGtt(requireNotNull(com.optionslab.engine.Kite.protect(com.optionslab.engine.Kite.Spec("NFO", sym, 0L, 75, 0.05),
+                "NRML", 75, 100.0, 80.0, null).first))
+        }
+        theClose()
+        kite.requests.clear()
+        tick()
+        assertEquals(1, gttPosts.size)
+        assertEquals(75, kite.gtts.getValue(one().gttId!!).getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+        // At the open: the arm's GTT counted against all that is held, so this protection's 75 go back as day orders.
+        kite.orders.clear()
+        session(9, 20, nth = 2)
+        kite.requests.clear()
+        tick()
+        assertEquals(listOf("75", "75"), kite.placed.map { it.form["quantity"] })
+    }
+
+    /** Review 4: a positions read that fails at the close never ends a carried protection. */
+    @Test fun aFailedPositionsReadAtTheCloseKeepsTheProtection() {
+        protect()
+        theClose()
+        kite.gatewayHtml["/portfolio/positions"] = 502
+        tick()
+        assertNotNull(runBlocking { Protections.active() }.singleOrNull())
+        kite.gatewayHtml.clear()
+        tick()
+        assertNotNull("the GTT rests once the read works", one().gttId)
+    }
 }

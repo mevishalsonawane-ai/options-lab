@@ -42,7 +42,7 @@ object WatchClock {
             unlogged = 0; loggedAt = now
             runCatching { Diag.record("watch", com.optionslab.ira.StopCadence.words(g) + if (n > 1) " ($n gaps over 16 s since the last note)" else "") }
         }
-        if (g.alert) runCatching { com.optionslab.app.work.Alerts.post(com.optionslab.ira.StopCadence.words(g), com.optionslab.app.work.Alerts.Kind.ERROR, "Stop check", throttle = true) }
+        if (g.alert) runCatching { com.optionslab.app.work.Alerts.post(com.optionslab.ira.StopCadence.ALERT_WORDS, com.optionslab.app.work.Alerts.Kind.ERROR, "Stop check", throttle = true) }
         return g
     }
 

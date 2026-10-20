@@ -1635,7 +1635,7 @@ class WatchService : Service() {
         // Never a lock or a vault read here (a hung pass may hold one): memory copies only. 20 Oct, enhancement round 1 (idea 7):
         // the one shared answer ([com.optionslab.app.data.HeldNow]: the arms' own hints, the paper book as loaded, MCX only while
         // it trades) and the NSE pass's last answer (Solo's book is in the vault: read by the loop, never by the pulse).
-        nseHeldSeen || com.optionslab.app.data.HeldNow.any()
+        nseHeldSeen || com.optionslab.app.data.HeldNow.any(mcxLive = true)
     }.getOrDefault(true)
 
     /** The NSE pass's last [holdingNse] (memory; for the pulse, which never reads the books itself). */
@@ -1757,7 +1757,7 @@ class WatchService : Service() {
                     Heartbeat.stepBegin("15-second stop check")
                     val checkAt = System.currentTimeMillis()
                     // The drift guard: the gap since the last look at the stops, counted and logged when over 16 s (never a wait).
-                    com.optionslab.app.data.WatchClock.looked(held = true, now = checkAt)
+                    runCatching { com.optionslab.app.data.WatchClock.looked(held = true, now = checkAt) }
                     // Each in its own try: a paper or ORB failure never skips the stops and targets.
                     try { Tasks.safely {
                         try {

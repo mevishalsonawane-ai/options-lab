@@ -34,6 +34,22 @@ object AccountStop {
     fun status(days: List<Day>, today: LocalDate, since: LocalDate? = null): LiquidityStopRule.Status = LiquidityStopRule.check(
         days.filter { since == null || !it.day.isBefore(since) }.map { LiquidityStopRule.Trade(it.day.toEpochDay() * 86_400_000L, it.day, it.net) }, today)
 
+    /**
+     * Review (20 Oct): once reached it stays reached. A day's figure is Zerodha's running m2m, so a later read the same day (a
+     * recovery) would "un-reach" it and let the bots in again. [reached] (the day and the reason it was first reached, kept by the
+     * app) holds [st] stopped until Boss restarts the count past that day ([since]).
+     */
+    fun latched(st: LiquidityStopRule.Status, reached: Pair<LocalDate, String>?, since: LocalDate?): LiquidityStopRule.Status {
+        if (st.stopped || reached == null) return st
+        if (since != null && reached.first.isBefore(since)) return st
+        return st.copy(stopped = true, why = reached.second, day = reached.first)
+    }
+
+    fun encodeReached(r: Pair<LocalDate, String>?): String? = r?.let { "${it.first}|${it.second.replace('\n', ' ')}" }
+    fun decodeReached(t: String?): Pair<LocalDate, String>? = runCatching {
+        val i = t!!.indexOf('|'); LocalDate.parse(t.substring(0, i)) to t.substring(i + 1)
+    }.getOrNull()
+
     /** The day a restart made on [today] counts from: the next day (today's figure so far is what reached it). */
     fun restartFrom(today: LocalDate): LocalDate = today.plusDays(1)
 

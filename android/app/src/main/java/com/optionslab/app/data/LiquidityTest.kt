@@ -180,10 +180,11 @@ object LiquidityTest {
             scope.launch {
                 runCatching { readTwins() }
                 runCatching {
-                    val text = synchronized(twins) { ArrayList(twins) }.joinToString("") { t ->
-                        android.util.Base64.encodeToString(Vault.encrypt(t.encode().toByteArray(Charsets.UTF_8)), android.util.Base64.NO_WRAP) + "\n"
-                    }
+                    // The copy taken under the write lock (review): an older copy is never written after a newer one.
                     synchronized(saveLock) {
+                        val text = synchronized(twins) { ArrayList(twins) }.joinToString("") { t ->
+                            android.util.Base64.encodeToString(Vault.encrypt(t.encode().toByteArray(Charsets.UTF_8)), android.util.Base64.NO_WRAP) + "\n"
+                        }
                         val f = File(d, TWINS); val tmp = File(d, "$TWINS.tmp")
                         tmp.writeText(text, Charsets.US_ASCII)
                         if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
@@ -216,6 +217,9 @@ object LiquidityTest {
         runCatching { readTwins() }
         return synchronized(twins) { ArrayList(twins) }
     }
+
+    /** The would-be trades in memory now, without reading the file (the go-live check, under the arms' lock). */
+    fun twinsInMemory(): List<com.optionslab.ira.LiquidityTwin.Rec> = synchronized(twins) { ArrayList(twins) }
 
     /** The diagnostics' and the Strategy lab card's line (off the main thread: the file may be read). */
     fun twinLine(): String = com.optionslab.ira.LiquidityTwin.line(twins(), today(), noTwinOn())

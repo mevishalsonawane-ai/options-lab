@@ -1170,7 +1170,9 @@ object OrbArms {
                 runCatching { Paper.contractOf(p.symbol)?.strike?.toInt() }.getOrNull(), p.entryTime, p.exitTime, LiquidityRules.minutesOf(armOf(p.arm)))
         }
         val lags = entries.map { e -> java.time.Duration.between(e.signalBar.plusMinutes(e.minutes.toLong()), e.entryTime).toMillis() / 1000.0 }
-        val fid = com.optionslab.ira.LiquidityGoLive.fidelity(entries, liquidityReplays(b).filterKeys { !it.isBefore(start) })
+        // 20 Oct, enhancement round 1: the no-twin rule's would-be trades are the rule at work, never missed signals (memory only).
+        val fid = com.optionslab.ira.LiquidityGoLive.fidelity(entries, liquidityReplays(b).filterKeys { !it.isBefore(start) },
+            runCatching { com.optionslab.ira.LiquidityTwin.excused(LiquidityTest.twinsInMemory()) }.getOrDefault(emptySet()))
         val stats = com.optionslab.ira.FillQuality.stats(x.fills)
         val lines = com.optionslab.ira.LiquidityGoLive.lines(com.optionslab.ira.LiquidityGoLive.Inputs(trades, day, fid, lags, stats,
             x.flaws?.first, x.flaws?.second, x.ip.first, x.ip.second, x.state.watched))
@@ -2970,23 +2972,24 @@ object OrbArms {
             atSignal, barCloseMs, null, 0)) }
         // The live recording's market snapshot at the signal (a queue add from memory; never changes the entry).
         runCatching { LiveRecorder.signal(arm.label, c.symbol, und, right.name, atSignal?.last, paper = !live) }
-        // 20 Oct, enhancement round 1 (idea 3, the 19 Oct triple stop): another Liquidity book already holds this very option on
-        // this account. On PAPER, with the no-twin rule on (Boss's switch, on by this update), the entry is a would-be trade kept
-        // with its price, never bought. LIVE: shadow only - recorded, and the entry goes on exactly as before.
-        twinOf(b, arm, c.symbol, live)?.let { holder ->
-            val applied = !live && runCatching { LiquidityTest.noTwinOn() }.getOrDefault(false)
-            val words = com.optionslab.ira.LiquidityTwin.words(runCatching { armOf(holder.book).label }.getOrDefault(holder.book), c.symbol, live)
-            runCatching {
-                LiquidityTest.twin(com.optionslab.ira.LiquidityTwin.Rec(System.currentTimeMillis(), day, arm.source, c.symbol, atSignal?.last,
-                    live, applied, holder.book))
-            }
-            runCatching { Diag.record("orb", "${arm.label}: $words") }
-            if (applied) return "${com.optionslab.ira.LiquidityTwin.SKIPPED}: $words"
-        }
         exposureRefusal(b, c, arm, live)?.let { return it }
         // The order flow at this decision (per index; logged, and only ever a skip under CONFIRM), as the ORB's.
         val flow = FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, signalBar.toString(), arm.source, contract = c)
         if (flow.skip) return flow.pausedWhy ?: FlowGate.SKIPPED
+        // 20 Oct, enhancement round 1 (idea 3, the 19 Oct triple stop): another Liquidity book already holds this very option on
+        // this account. On PAPER, with the no-twin rule on (Boss's switch, on by this update), the entry is a would-be trade kept
+        // with its price, never bought. LIVE: shadow only - recorded, and the entry goes on exactly as before.
+        twinOf(b, arm, c.symbol, live)?.let { holder ->
+            // Review: after the cap and the order flow (their own records stay whole); never while Boss has the paper test frozen.
+            val applied = !live && runCatching { LiquidityTest.noTwinOn() && !LiquidityTest.frozen(arm.source) }.getOrDefault(false)
+            val words = com.optionslab.ira.LiquidityTwin.words(runCatching { armOf(holder.book).label }.getOrDefault(holder.book), c.symbol, live)
+            runCatching {
+                LiquidityTest.twin(com.optionslab.ira.LiquidityTwin.Rec(System.currentTimeMillis(), day, arm.source, c.symbol, atSignal?.last,
+                    live, applied, holder.book, signalBar))
+            }
+            runCatching { Diag.record("orb", "${arm.label}: $words") }
+            if (applied) return "${com.optionslab.ira.LiquidityTwin.SKIPPED}: $words".also { FlowGate.outcome(flow, it) }
+        }
         // Boss's size (1, 2 or 3 lots of this contract's own lot): read at the entry, so a change applies to new entries only.
         val lots = lotsOf(b)
         if (live) {

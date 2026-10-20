@@ -1,0 +1,31 @@
+id: e1-liq-no-twin
+title: 'Liquidity no-twin rule: one book only per option (paper risk control)'
+family: liquidity
+date: '2026-10-20'
+doc: RESULT.md
+hypothesis: When both Liquidity books (15m and 5m) would hold the SAME option, the second entry only doubles one bet
+  (19 Oct, 09:30, both BANKNIFTY books held one put and were stopped together); skipping it lowers risk without changing
+  either book's own signals. Not yet tested on history - logged before any test.
+data_version: none yet (the app's own paper record from 20 Oct on; the evening replay of both books)
+period:
+  design: none yet; forward on paper from 20 Oct 2026
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- the open Liquidity positions (book, option, account)
+model_or_rule: 'a Liquidity paper entry on an option another Liquidity book already holds becomes a would-be trade (kept with
+  its signal bar and price, never bought); live: shadow only'
+settings: on for paper by the 20 Oct enhancement round (Boss's unfreeze of 13 Oct allows risk-lowering paper changes on
+  BANKNIFTY); one switch on the Strategy lab card, logged in the Autopilot timeline
+prereg: null
+variants_tried: 1
+results:
+  summary: 'no result yet. Planned test: replay both books 2020-2026 (signal on the index, the strike rule as live), count the
+    twin entries and compare the record with and without them (real charges and slippage), walk-forward, holdout read once.'
+  costs: n/a
+holdout_read: null
+verdict: paper-only
+notes: A risk control, not an edge claim. Its would-be trades are counted apart and the go-live fidelity check does not count
+  them as misses, so the plain-rules record stays separable for the 26 Oct decision.

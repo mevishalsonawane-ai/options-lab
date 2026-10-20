@@ -84,4 +84,15 @@ class AccountStopTest {
         val later = AccountStop.record(days, d0.plusDays(1), -13_500.0)
         assertTrue(AccountStop.status(later, d0.plusDays(1), from).stopped)
     }
+
+    @Test fun aReachedRuleStaysReachedUntilARestartPastIt() {
+        val notNow = AccountStop.status(listOf(AccountStop.Day(d0, -5_000.0)), d0)
+        val r = d0 to "Oct net -Rs 13,500 (limit -Rs 13,000 a month)"
+        val held = AccountStop.latched(notNow, r, since = null)
+        assertTrue(held.stopped); assertEquals(d0, held.day)
+        assertFalse(AccountStop.latched(notNow, r, since = d0.plusDays(1)).stopped, "restarted past it")
+        assertFalse(AccountStop.latched(notNow, null, null).stopped)
+        assertEquals(r, AccountStop.decodeReached(AccountStop.encodeReached(r)))
+        assertNull(AccountStop.decodeReached(null)); assertNull(AccountStop.decodeReached("junk"))
+    }
 }

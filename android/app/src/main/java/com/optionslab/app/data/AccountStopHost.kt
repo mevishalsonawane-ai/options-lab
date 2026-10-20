@@ -29,10 +29,13 @@ object AccountStopHost {
     private const val K_DAYS = "accountStop.days"
     private const val K_ON = "g.accountStop.on"
     private const val K_SINCE = "g.accountStop.since"
+    private const val K_REACHED = "g.accountStop.reached"
     private const val WRITE_EVERY_MS = 60_000L
 
     @Volatile private var on = false
     @Volatile private var since: java.time.LocalDate? = null
+    /** The day and reason the rule was first reached (kept: it stays reached until Boss restarts the count). */
+    @Volatile private var reached: Pair<java.time.LocalDate, String>? = null
     @Volatile private var loaded = false
     private val lock = Any()
     private var days: List<AccountStop.Day> = emptyList()
@@ -53,44 +56,65 @@ object AccountStopHost {
 
     private fun today(): java.time.LocalDate = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }
 
-    /** The switch and the days read from the settings (a worker thread). Days recorded before this read are kept. */
+    /**
+     * The switch and the days read from the settings (a worker thread). Days recorded before this read are kept. Review: [loaded]
+     * only once the read succeeded (a vault not ready yet is read again on the next ask), and nothing is written before then, so
+     * a failed read never writes today's figure alone over the saved history.
+     */
     internal fun load() {
-        runCatching {
+        val ok = runCatching {
             on = SecurePrefs.getBoolean(K_ON, false)
             since = SecurePrefs.getString(K_SINCE)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+            val r = AccountStop.decodeReached(SecurePrefs.getString(K_REACHED))
             val saved = AccountStop.decode(SecurePrefs.getString(K_DAYS))
             synchronized(lock) {
+                if (reached == null) reached = r
                 // A day recorded in memory before the read wins over the saved one (it is newer).
                 days = (saved.filter { s -> days.none { it.day == s.day } } + days).sortedBy { it.day }.takeLast(AccountStop.KEEP)
-                status = AccountStop.status(days, today(), since)
+                status = compute(today())
             }
-        }
-        loaded = true
+        }.isSuccess
+        if (ok) loaded = true
         publish()
+    }
+
+    /** The rule now, held reached once reached ([AccountStop.latched]); the first time it is reached, kept. Under [lock]. */
+    private fun compute(d: java.time.LocalDate): LiquidityStopRule.Status {
+        val st = AccountStop.status(days, d, since)
+        if (st.stopped && reached == null) {
+            val r = (st.day ?: d) to (st.why ?: "reached")
+            reached = r
+            if (loaded) runCatching { SecurePrefs.putAllSoon(mapOf(K_REACHED to AccountStop.encodeReached(r))) }
+        }
+        return AccountStop.latched(st, reached, since)
     }
 
     /**
      * Zerodha's day P&L as just read ([net]; the daily loss limit's own read, in the watch pass). Recorded for today on a trading
-     * day once the market has opened; written in the background at most once a minute (and at once when the rule is reached).
+     * day once the market has opened; written in the background at most once a minute (and at once when the rule is reached),
+     * and only once the saved days were read.
      */
     fun dayRead(net: Double, now: Long = System.currentTimeMillis()) {
         runCatching {
             if (!net.isFinite() || !Market.isTradingDay() || Market.minuteNow() < Market.OPEN) return
+            // The watch pass, never the order path: the saved days are read here first if the start's read has not landed.
+            if (!loaded) load()
             val d = today()
             val (was, st) = synchronized(lock) {
                 val was = status.stopped
                 days = AccountStop.record(days, d, net)
-                status = AccountStop.status(days, d, since)
+                status = compute(d)
                 was to status
             }
             if (st.stopped && !was) {
                 runCatching { Diag.record("risk", "Account stop rule reached (${st.why}): " +
                     if (on) "the bots' new live entries are refused" else "in shadow, nothing changes (Bot settings switches it on)") }
             }
-            if ((st.stopped && !was) || now - writtenAt >= WRITE_EVERY_MS) {
+            if (loaded && ((st.stopped && !was) || now - writtenAt >= WRITE_EVERY_MS)) {
                 writtenAt = now
                 val text = synchronized(lock) { AccountStop.encode(days) }
-                scope.launch { runCatching { SecurePrefs.putAllSoon(mapOf(K_DAYS to text)) }; publish() }
+                val r = reached
+                scope.launch { runCatching { SecurePrefs.putAllSoon(mapOf(K_DAYS to text, K_REACHED to AccountStop.encodeReached(r))) }; publish() }
             }
         }
     }
@@ -117,7 +141,7 @@ object AccountStopHost {
     private fun shadowToday(): Int = synchronized(lock) { if (shadowDay == today()) shadowSeen.size else 0 }
 
     /** The diagnostics' and Bot settings' line (this month's figure as of today). */
-    fun line(): String = AccountStop.line(synchronized(lock) { AccountStop.status(days, today(), since) }, on, shadowToday())
+    fun line(): String = AccountStop.line(synchronized(lock) { AccountStop.latched(AccountStop.status(days, today(), since), reached, since) }, on, shadowToday())
 
     /**
      * Boss restarts the count after the rule was reached (Bot settings, with his PIN - the caller asks it): it counts again from
@@ -128,8 +152,8 @@ object AccountStopHost {
         if (!status.stopped) return "The account stop rule is not reached: nothing to restart."
         val from = AccountStop.restartFrom(today())
         since = from
-        synchronized(lock) { status = AccountStop.status(days, today(), from) }
-        runCatching { SecurePrefs.putAllSoon(mapOf(K_SINCE to from.toString())) }
+        synchronized(lock) { reached = null; status = AccountStop.status(days, today(), from) }
+        runCatching { SecurePrefs.putAllSoon(mapOf(K_SINCE to from.toString(), K_REACHED to null)) }
         runCatching { Diag.record("risk", "Account stop rule: count restarted by you with your PIN (from $from)") }
         publish()
         return "The account stop rule counts again from $from (-Rs 40,000 from the best, -Rs 13,000 a month)."
@@ -152,9 +176,12 @@ object AccountStopHost {
         runCatching { _view.value = View(on, line(), status.stopped) }
     }
 
+    /** TEST ONLY: as a fresh start before the saved days were read. */
+    internal fun unloadForTest() { loaded = false; synchronized(lock) { days = emptyList(); reached = null; status = AccountStop.status(emptyList(), today()) } }
+
     /** TEST ONLY: off, no days, nothing seen. */
     internal fun resetForTest() {
-        on = false; since = null; loaded = true; writtenAt = 0L
+        on = false; since = null; reached = null; loaded = true; writtenAt = 0L
         synchronized(lock) { days = emptyList(); shadowSeen.clear(); shadowDay = null; status = AccountStop.status(emptyList(), today()) }
         _view.value = View()
     }
