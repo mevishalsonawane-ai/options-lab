@@ -58,7 +58,7 @@ Spike check (`spikes.py`) and lakeclean (`research/hunt/lakeclean.py`: foreign r
 - `dhan_client.py`: `DHAN_RETRIES`. `lake_build.py`, `spikes.py`: the new MCX symbols.
 - New: `mcx.py` (MCX loader, session 09:00–23:30/23:55 by the US clock, continuous futures without look-ahead,
   back-adjustment), `newdata_checks.py`; tests `test_mcx.py`, `test_newdata_checks.py`, `test_stkopt_coverage.py`.
-- Checks: research/data 262 tests, research/brain 139 tests (with the pinned library versions; with pandas 3.0 five brain
+- Checks: research/data 263 tests, research/brain 139 tests (with the pinned library versions; with pandas 3.0 five brain
   tests fail on main too), `features catalog --check` and `experiments.validate` pass.
 
 Note for the app (not changed here): the comment in `android/engine/.../mcx/McxSession.kt` says US summer time starts
