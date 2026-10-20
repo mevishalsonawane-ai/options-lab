@@ -883,6 +883,8 @@ object Broker {
         INDEX.values.firstOrNull { it.first == key }?.let { return it.second }
         // MCX: from the day's MCX list ([McxMarket]), so its contracts stream too.
         if (key.startsWith("MCX:")) return McxMarket.tokenOf(key.removePrefix("MCX:"))
+        // 20 Oct, review: SENSEX's options (BFO) from today's BFO list in memory, so a live SENSEX trade's exits stream too.
+        if (key.startsWith("BFO:")) return bfoToken(key)
         if (!key.startsWith("NFO:")) return null
         val m = tokenMap?.takeIf { it.first == Market.today() }?.second
             ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
@@ -895,7 +897,17 @@ object Broker {
      * trade manager's looks.
      */
     internal fun tokenKnown(key: String): Long? =
-        INDEX.values.firstOrNull { it.first == key }?.second ?: tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
+        INDEX.values.firstOrNull { it.first == key }?.second ?: if (key.startsWith("BFO:")) bfoToken(key)
+        else tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
+
+    /** "BFO:<symbol>" -> its token from today's BFO list in memory (never a file or the network); the map built once per list. */
+    @Volatile private var bfoTokens: Pair<List<Kite.Instrument>, Map<String, Long>>? = null
+    private fun bfoToken(key: String): Long? {
+        val list = cachedBfoOptions() ?: return null
+        val m = bfoTokens?.takeIf { it.first === list }?.second
+            ?: list.associate { "BFO:" + it.tradingSymbol to it.token }.also { bfoTokens = list to it }
+        return m[key]
+    }
 
     /**
      * Quotes for "EXCHANGE:SYMBOL" keys. Instruments the live stream has a fresh tick for
@@ -1226,6 +1238,9 @@ object Broker {
     /** Today's SENSEX options list, memory only (never the network or a file): null when not read today. */
     fun cachedBfoOptions(): List<Kite.Instrument>? = bfoOptions?.takeIf { it.first == Market.today() }?.second
 
+    /** Tests: SENSEX's list forgotten and its 10-minute retry wait cleared. */
+    internal fun resetBfoForTest() { bfoOptions = null; bfoTriedAt = 0L }
+
     /**
      * Read today's SENSEX options in the background (logged in only; at most every 10 minutes after a failure). Returns at once:
      * the stream's price of a SENSEX paper ticket follows on the next look once the list is in.
@@ -1321,18 +1336,25 @@ object Broker {
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.
+        // 20 Oct, review: an exit sent no longer frees a place in the same-direction cap by itself. A resting LIMIT target, a part
+        // sold, Boss's own sale or an exit Zerodha then rejected each freed a whole place while the position was still held, and
+        // the cap undercounted all day. A place is freed only when a positions read shows the position closed
+        // ([ExposureCapHost.livePositions], on every read): until then it is counted one too many, which only lowers risk.
         if (exit) return com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }
-            // 19 Oct review: a resting stop (SL / SL-M) is not a close - only a MARKET or LIMIT exit frees a place; a stop that
-            // fills at Zerodha is caught by the next positions read ([ExposureCapHost.livePositions]).
-            .also { if (o.side == Kite.Side.SELL && !o.hasTrigger) ExposureCapHost.liveExited(o.tradingSymbol) }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
+        // 19 Oct: a bot's live index-option entry counted by the same-direction cap until it closes (memory only).
+        // 20 Oct, review: counted INSIDE the door, before it opens for the next entry. Counted after it (as before), four puts
+        // queued on one signal each passed the cap's check before the one ahead of it was counted. A reply lost on the way (the
+        // order may exist) counts too: counting one too many only lowers risk, and the next positions read corrects it.
+        val counted = o.tag in BOT_TAGS && o.tag != "iraalgostrat"
+        fun count() = ExposureCapHost.liveEntered(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag)
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) {
-            com.optionslab.app.work.TradingBusy.during { sendChecked(o, false, arm, intended) } }) {
-            is com.optionslab.ira.EntryGate.Outcome.Went -> r.value.also {
-                // 19 Oct: a bot's live index-option entry counted by the same-direction cap until it closes (memory only).
-                if (o.tag in BOT_TAGS && o.tag != "iraalgostrat") ExposureCapHost.liveEntered(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag)
-            }
+            com.optionslab.app.work.TradingBusy.during {
+                try { sendChecked(o, false, arm, intended).also { if (counted) count() } }
+                catch (e: Exception) { if (counted && e !is kotlinx.coroutines.CancellationException && !definite(e)) runCatching { count() }; throw e }
+            } }) {
+            is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
             is com.optionslab.ira.EntryGate.Outcome.Refused -> {
                 // The paper-only period's refusal inside the door: told and typed as at the door's front ([paperOnlyRefused]).
                 if (PaperOnly.isRefusal(r.why)) { paperOnlyRefused(o, r.why); throw KiteError("paper_only", r.why) }

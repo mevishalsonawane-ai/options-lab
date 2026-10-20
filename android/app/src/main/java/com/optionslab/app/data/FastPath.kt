@@ -5,6 +5,7 @@ import com.optionslab.engine.KiteTicks
 import com.optionslab.ira.FastLane
 import com.optionslab.ira.OrderSpeed
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -136,11 +137,34 @@ object FastPath {
     /** The paper strategies' live trades' step's name ([ArmLive]). */
     const val ARMS_LIVE = "Arms live"
 
-    private fun liveTokens(): Set<Long> {
-        val keys = OrbArms.liveSymbolsHint.map { "NFO:$it" } + PineAuto.liveSymbols().map { "NFO:$it" } + Protections.liveKeysHint +
-            ArmLive.liveKeysHint
-        return keys.distinct().mapNotNull { k -> runCatching { Broker.tokenOf(k) }.getOrNull() }.toSet()
+    internal fun liveTokens(): Set<Long> {
+        val keys = (OrbArms.liveSymbolsHint.map { "NFO:$it" } + PineAuto.liveSymbols().map { "NFO:$it" } + Protections.liveKeysHint +
+            ArmLive.liveKeysHint).distinct()
+        // 20 Oct, review: memory only on this (the consumer's) thread. [Broker.tokenOf] built the day's map from the instruments
+        // file (several MB) the first time after a restart - disk on the tick path. A token not in memory yet is looked up once
+        // in the background ([warmTokens]) and the next snapshot has it; until then the stop is judged as before, on REST quotes.
+        val out = HashSet<Long>(keys.size)
+        var missing = false
+        for (k in keys) runCatching { Broker.tokenKnown(k) }.getOrNull()?.let { out += it } ?: run { missing = true }
+        if (missing) warmTokens(keys)
+        return out
     }
+
+    private val warming = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var warmedAt = 0L
+
+    /** [keys]' tokens looked up off the tick path (the day's instrument map built from its file once), at most every 5 s. */
+    private fun warmTokens(keys: List<String>) {
+        val now = System.currentTimeMillis()
+        if (now - warmedAt in 0 until WARM_MS || !warming.compareAndSet(false, true)) return
+        warmedAt = now
+        warmScope.launch {
+            try { for (k in keys) runCatching { Broker.tokenOf(k) } } finally { warming.set(false); snap = null }
+        }
+    }
+
+    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private const val WARM_MS = 5_000L
 
     private fun snapshot(now: Long): Snap {
         snap?.takeIf { now - it.at in 0 until STATE_MS }?.let { return it }

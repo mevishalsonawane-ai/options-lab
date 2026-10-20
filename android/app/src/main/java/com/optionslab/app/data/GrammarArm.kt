@@ -418,7 +418,7 @@ object GrammarArm {
         Guard.check(Guard.paperOrder(c, "BUY", 1, 0.0), null, exit = false, paper = true).takeIf { it.isNotEmpty() }
             ?.let { return refused("account guard: " + it.joinToString(" ")) }
         runCatching { LiveRecorder.signal("Grammar ${x.id}", c.symbol, u, right.name, null, paper = true) }
-        val placed = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, auto = LABEL)
+        val placed = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, auto = LABEL, mirror = ExposureCapHost.NO_LIVE)
         val fill = placed.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             placed.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }

@@ -131,6 +131,29 @@ object CandleRead {
         val key: String get() = "$inst|$tf|${bar.t}"
     }
 
+    /** Context words that come only from what the app knows NOW ([Around]: the chain's OI and its change, the gamma regime). */
+    private val NOW_TAGS = setOf("short_gamma", "long_gamma", "bull_oi_shift", "bear_oi_shift", "call_writing", "put_writing")
+
+    /**
+     * 20 Oct, review: [r] as it may be COUNTED. The chain, gamma and an outside VWAP are read at the batch, after the candle
+     * closed (up to a batch later), over the very minutes its outcome is measured on: counting them was look-ahead. They stay
+     * in the explanation and the post; the counted context keeps only what the candles themselves (and the calendar) say.
+     */
+    fun countable(r: Read): Read {
+        val c = r.context
+        val outsideVwap = c.vwap != null && c.vwapFrom != OWN_VWAP
+        fun fromNow(l: Level?) = l != null && (l.kind == LevelKind.CALL_WALL || l.kind == LevelKind.PUT_WALL || (l.kind == LevelKind.VWAP && outsideVwap))
+        val drop = HashSet(NOW_TAGS)
+        if (outsideVwap) { drop += "far_above_vwap"; drop += "far_below_vwap" }
+        if (fromNow(c.support)) drop += "at_support"
+        if (fromNow(c.resistance)) drop += "at_resistance"
+        if (c.tags.none { it in drop }) return r
+        return r.copy(context = c.copy(tags = c.tags.filter { it !in drop }))
+    }
+
+    /** [Context.vwapFrom] when the candles' own volume made it. */
+    const val OWN_VWAP = "its own volume"
+
     /** Shapes too ordinary to post or explain on their own. */
     val PLAIN = setOf("green", "red", "flat", "tiny_range", "inside_bar", "spinning_top", "small_both_wicks")
 
@@ -359,7 +382,7 @@ object CandleRead {
         val ownVwap = if (withVol.size == today.size + 1 && withVol.isNotEmpty())
             withVol.sumOf { (it.h + it.l + it.c) / 3 * it.v!! } / withVol.sumOf { it.v!! } else null
         val vwap = ownVwap ?: around.vwap
-        val vwapFrom = if (ownVwap != null) "its own volume" else if (around.vwap != null) around.vwapFrom ?: "the app" else null
+        val vwapFrom = if (ownVwap != null) OWN_VWAP else if (around.vwap != null) around.vwapFrom ?: "the app" else null
         val atr = atrs[i]
         val va = if (prevDay == null) null else vaCache.getOrPut(prevDay) { valueArea(prev, roundStep(inst, b.c) / 20) }
         // The chain: the biggest call OI at or above the close (resistance), the biggest put OI at or below (support).

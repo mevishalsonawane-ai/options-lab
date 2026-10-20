@@ -463,7 +463,9 @@ internal object IraTools {
         return item
     }
 
-    fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }
+    // 20 Oct, review: under the same lock as [remember] (which reads, adds and writes): a forget landing between those brought
+    // the forgotten notes back.
+    @Synchronized fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }
 
     // ---- Boss's habits ----------------------------------------------------------------------------------------------
 
@@ -474,7 +476,7 @@ internal object IraTools {
         o.keys().asSequence().associateWith { k -> val a = o.getJSONArray(k); IntArray(24) { a.optInt(it) } }
     }.getOrDefault(emptyMap())
 
-    fun forgetHabits() { runCatching { prefs().put(HABITS, null); prefs().put(HABITS_LAST, null) } }
+    @Synchronized fun forgetHabits() { runCatching { prefs().put(HABITS, null); prefs().put(HABITS_LAST, null) } }
 
     /** When each habit's question was last asked (a habit not asked for a week is not offered unasked). */
     private const val HABITS_LAST = "jarvis.habits.last"

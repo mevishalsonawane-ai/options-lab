@@ -68,6 +68,9 @@ object ExposureCapHost {
         publish()
     }
 
+    /** [liveMirrorPossible]'s key for a paper entry that has no live path of its own (it can never be mirrored to Zerodha). */
+    const val NO_LIVE = "paper-only"
+
     /** The paper cap's number while it is on, null while it is off. Memory only (the order path). */
     fun paperMax(): Int? = if (paperOn) max else null
 
@@ -80,6 +83,9 @@ object ExposureCapHost {
      * live entry at the door anyway until it is read).
      */
     fun liveMirrorPossible(mirror: String? = null): Boolean = runCatching {
+        // 20 Oct, review: an entry with no live path at all (Grammar, Pine's paper entry, Jarvis's news trade on paper) is never
+        // mirrored, so its cap is applied in Live too; before, "no key" counted as "may go live" and the cap only logged them.
+        if (mirror == NO_LIVE) return@runCatching false
         val (app, ai) = ArmLive.liveFlagsKept() ?: return@runCatching false
         if (!app || !ai || PaperOnly.entryRefusal() != null) return@runCatching false
         // [mirror]: the arm's own live key, when the caller knows it - its "Trade live" off or its Shadow on sends nothing live.
@@ -175,8 +181,17 @@ object ExposureCapHost {
 
     private fun ledgerToday() {
         val d = runCatching { Market.today() }.getOrNull() ?: return
-        if (ledgerDay != d) { ledger.clear(); ledgerDay = d }
+        if (ledgerDay != d) {
+            ledger.clear(); ledgerDay = d
+            // 20 Oct, review: a bot's live option carried overnight (NRML) is counted again on the new day; before, the clear left
+            // it out and two more same-way entries could pass. Stamped at 0, so the next positions read drops any no longer held.
+            runCatching { for ((sym, ex, owner) in carried()) liveDir(sym, ex)?.let { (dir, _) -> ledger.entered(sym, dir, owner, 0L) } }
+        }
     }
+
+    /** The arms' live BUYs still open (symbol, exchange, arm), from memory ([ArmLive]); replaceable in tests. */
+    @Volatile internal var carried: () -> List<Triple<String, String, String>> =
+        { ArmLive.view.value.openReal.filter { it.side > 0 }.map { Triple(it.symbol, it.exchange, it.key) } }
 
     /**
      * Inside the entry door, for a bot's live BUY ([owner]: its arm, else its tag): the refusal when the live switch is on, else
@@ -202,8 +217,6 @@ object ExposureCapHost {
         }
     }
 
-    /** An exit order of [symbol] was sent live: one of its entries closed. Memory only. */
-    fun liveExited(symbol: String) { runCatching { ledger.exited(symbol) } }
 
     /** Zerodha's positions read at [readAtMs] ([held]: net units by trading symbol): entries it shows closed are dropped. */
     fun livePositions(held: Map<String, Int>, readAtMs: Long) { runCatching { ledgerToday(); ledger.reconcile(held, readAtMs) } }

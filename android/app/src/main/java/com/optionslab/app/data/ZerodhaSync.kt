@@ -80,6 +80,9 @@ object ZerodhaSync {
             val sym = h.kite ?: return@forEach
             if (h.live) out += PositionSync.Belief("Pine #$id", sym, h.qty, stopOrderId = h.stop, unconfirmed = h.unconfirmed)
         }
+        // 20 Oct, review: the arms' live trades ([ArmLive], live since 18 Oct) too: each was said "no bot follows it", and one gone
+        // flat at Zerodha or with its stop missing was never said. Memory only (its book not read yet: none, as before).
+        runCatching { ArmLive.view.value }.getOrNull()?.takeIf { it.loaded }?.let { out += armBeliefs(it.openReal) }
         val prot = withTimeoutOrNull(3_000) { runCatching { Protections.active() }.getOrNull() } ?: return null
         prot.filter { it.live && it.exchange in com.optionslab.engine.Kite.DERIVATIVE_EXCHANGES }.forEach { p ->
             // A protection being removed has its orders on the way out: its stop is not judged.
@@ -87,6 +90,15 @@ object ZerodhaSync {
                 stopOrderId = p.stopOrderId.takeIf { p.note != "removing" })
         }
         return out
+    }
+
+    /**
+     * The beliefs for the arms' open live trades: each one's signed quantity, and its stop when it is an SL order. A carried
+     * trade's stop is a GTT ("gtt:<id>"), which the order book never lists, so it is not judged (it would always read missing).
+     */
+    internal fun armBeliefs(open: List<ArmLive.Pos>): List<PositionSync.Belief> = open.filter { it.open && !it.shadow }.map { p ->
+        PositionSync.Belief(p.label, p.symbol, p.qty * p.side, stopOrderId = p.stopOrderId?.takeIf { !it.startsWith("gtt:") },
+            unconfirmed = p.unconfirmed)
     }
 
     /** The diagnostics / health line. */

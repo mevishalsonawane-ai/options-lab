@@ -90,6 +90,8 @@ object CloudSync {
     fun repoRefused(owner: String, repo: String): String? = when {
         parseRepo("$owner/$repo") == null -> "\"$owner/$repo\" is not a GitHub repository name (owner/name)."
         parseRepo("$owner/$repo")!!.second.equals(CODE_REPO, ignoreCase = true) -> "Uploads never go to $CODE_REPO (the app's code). Use the data repository, $DEFAULT_REPO."
+        // 20 Oct, review: only Boss's own account (a typo, or someone else's repository, could publish the diagnostics).
+        !parseRepo("$owner/$repo")!!.first.equals(OWNER, ignoreCase = true) -> "Uploads go only to Boss's own data repository, $DEFAULT_REPO."
         else -> null
     }
 

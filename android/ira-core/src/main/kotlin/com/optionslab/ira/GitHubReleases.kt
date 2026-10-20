@@ -103,6 +103,15 @@ class GitHubReleases(private val http: Http, private val token: String,
     }
 
     /**
+     * 20 Oct, review: whether the data repository is PRIVATE (null: this token cannot see it). Only a repository GitHub says is
+     * private counts; a public one (or one that does not say) is refused for uploads, so the diagnostics are never published.
+     */
+    fun repoPrivate(): Boolean? {
+        val r = http.send(Request("GET", base, headers()))
+        return when (r.code) { 200 -> obj(r)["private"] == true; 404 -> null; else -> throw failure(r) }
+    }
+
+    /**
      * True when the token reaches the app's code ([CloudSync.CODE_REPO]): it sees it while it is private, or may write to
      * it. Such a token is refused (13 Oct review): a stolen phone could otherwise push code CI signs.
      *

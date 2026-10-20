@@ -3,6 +3,7 @@ package com.optionslab.engine.risk
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AccountGuardTest {
@@ -92,5 +93,18 @@ class AccountGuardTest {
         assertTrue(reasons(buyCe.copy(price = 1_300.0), held, l).none { "Exposure limit" in it })
         // Off by default in the engine.
         assertTrue(reasons(buyCe.copy(price = 1_400.0), held, limits.copy(maxOrderValue = 0.0, maxLotsPerSymbol = 0)).none { "Exposure limit" in it })
+    }
+
+    /** 20 Oct, review: a drawdown today's P&L does not explain (a withdrawal looks like this) is told apart in words only. */
+    @Test fun aDrawdownTodaysTradingDoesNotExplainIsToldApart() {
+        // Rs 2 lakh out overnight: equity 8 lakh against a 10 lakh peak, today flat.
+        assertTrue(AccountGuard.drawdownNotFromToday(calm.copy(equity = 800_000.0, dayPnl = 0.0)))
+        // Today lost most of it: a real loss, not told apart.
+        assertFalse(AccountGuard.drawdownNotFromToday(calm.copy(equity = 800_000.0, dayPnl = -150_000.0)))
+        // At the peak, or unknown figures: never.
+        assertFalse(AccountGuard.drawdownNotFromToday(calm))
+        assertFalse(AccountGuard.drawdownNotFromToday(calm.copy(equity = Double.NaN)))
+        assertFalse(AccountGuard.drawdownNotFromToday(calm.copy(peakEquity = 0.0, equity = 500_000.0)))
+        assertFalse(AccountGuard.drawdownNotFromToday(calm.copy(equity = 800_000.0, dayPnl = Double.NaN)))
     }
 }

@@ -75,6 +75,28 @@ class LiquidityPaperTestAppTest : RobolectricTest() {
         assertFalse(LiquidityTest.frozen("liquidity15"))
     }
 
+    /**
+     * 20 Oct, review: a change made at start-up before the saved state was read (a stop told) left the state non-default, so the
+     * file was ignored: Boss's unfreeze fell back to frozen and was written over. Now the saved state is read with the early
+     * change applied on top, and a write never puts the defaults over the file.
+     */
+    @Test fun aChangeBeforeTheSavedStateIsReadNeverLosesIt() {
+        at(oct20)
+        LiquidityTest.setStateForTest(LiquidityFreeze.State())
+        LiquidityTest.setUnfrozen(true)
+        LiquidityTest.setTrail(true, log = false)
+        waitFor("the state file") { LiquidityTest.stateWrittenForTest()?.let { it.contains("unfrozen=true") && it.contains("trail=true") } == true }
+        // A restart: memory forgotten, the file kept; a stop is told before the background read.
+        LiquidityTest.forgetMemoryForTest()
+        assertTrue(LiquidityTest.markStopTold("liquidity15|2026-10-20"))
+        LiquidityTest.ensureLoaded()
+        val st = LiquidityTest.state.value
+        assertTrue("the unfreeze kept", st.unfrozen)
+        assertTrue("the trail kept", st.trail)
+        assertEquals("the early change kept too", "liquidity15|2026-10-20", st.stopTold)
+        waitFor("written merged") { LiquidityTest.stateWrittenForTest()?.let { it.contains("unfrozen=true") && it.contains("liquidity15|2026-10-20") } == true }
+    }
+
     @Test fun autopilotAppliesNoChangeToLiquidityWhileFrozen() {
         at(oct20)
         LiquidityTest.setStateForTest(LiquidityFreeze.State())

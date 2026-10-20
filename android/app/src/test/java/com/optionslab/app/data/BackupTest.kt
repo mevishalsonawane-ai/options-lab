@@ -221,6 +221,8 @@ class BackupTest : RobolectricTest() {
         val c = Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!",
             JSONObject().put(com.optionslab.app.ira.IraWeekly.KEY, com.optionslab.ira.WeeklyReview.encodeAll(old))), pass.copyOf())
         Backup.restore(context, c)
+        // The restart that follows a restore (20 Oct: until then only the restore writes its files): the merge runs after it.
+        Vault.thaw()
         assertTrue("the phone's reviews file is kept", f.exists())
         val kept = com.optionslab.app.ira.IraWeekly.kept()
         assertEquals(listOf(java.time.LocalDate.of(2026, 10, 5), java.time.LocalDate.of(2026, 9, 28), java.time.LocalDate.of(2026, 9, 21)),

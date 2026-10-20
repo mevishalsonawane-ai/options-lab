@@ -142,8 +142,16 @@ object Guard {
         if (!account.capital.isFinite() && out.none { it.startsWith("Equity is unknown") || it.startsWith("The kill switch") } &&
             !AccountGuard.isExit(order, account))
             return out + FUNDS_UNKNOWN
+        // 20 Oct, review: a withdrawal lowers the next opening balance and reads as a drawdown from the peak (the kill switch then
+        // goes on). Said, never acted on: the peak is restarted only by Boss, with the PIN.
+        if (out.any { it.startsWith("Drawdown limit") && it.contains("its peak") } && AccountGuard.drawdownNotFromToday(account))
+            return out + WITHDRAWAL_HINT
         return out
     }
+
+    /** Said beside a drawdown today's trading does not explain. */
+    const val WITHDRAWAL_HINT = "Today's trading does not explain this drawdown. If money was taken out of the account, that reads as a " +
+        "drawdown: restart the drawdown peak in Settings (with your PIN). Otherwise it is a real loss: leave the kill switch on."
 
     /** The refusal when Zerodha's margins could not be read: the entry waits; it is never a drawdown. */
     const val FUNDS_UNKNOWN = "Zerodha's funds could not be read, so the account's equity is unknown; the entry waits - try again in a moment."

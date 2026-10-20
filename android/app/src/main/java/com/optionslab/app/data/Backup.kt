@@ -202,6 +202,11 @@ object Backup {
         val files = c.json.getJSONObject("files")
         // Liquidity 15+5's size in this phone's book now (before it is replaced): a restore never raises it ([liquidityLots]).
         val lotsHere = currentLiquidityLots(ctx)
+        // 20 Oct, review: the live stores keep saving their old books until the restart; from here only this restore writes
+        // the vault files it replaces ([Vault.freezeForRestore]), so none of them is written over in those seconds.
+        Vault.freezeForRestore(FILES.filter { it.second.endsWith(".vault") }.map { (dir, name) -> file(ctx, dir, name) })
+        // A restore that stops half-way (no restart follows) lets the stores save again, as before.
+        try {
         for ((dir, name) in FILES) {
             val f = file(ctx, dir, name)
             val b64 = files.optString("$dir/$name").ifEmpty { null }
@@ -210,7 +215,7 @@ object Backup {
             if (b64 == null) { if (!name.startsWith("ira-") && name != WEEKLY_REVIEWS) f.delete(); continue }
             val bytes = disarmed(name, Base64.decode(b64, Base64.NO_WRAP), lotsHere)
             try {
-                if (name.endsWith(".vault")) Vault.writeFile(f, bytes) else f.writeBytes(bytes)
+                if (name.endsWith(".vault")) Vault.writeRestored(f, bytes) else f.writeBytes(bytes)
             } finally { bytes.fill(0) }
         }
         val prefs = c.json.getJSONObject("prefs")
@@ -220,6 +225,7 @@ object Backup {
         SecurePrefs.putAll(values)
         // The danger meter's switch as restored, in the entry path's memory copy at once (the restart loads it again).
         runCatching { AppSettings.syncDangerHalf() }
+        } catch (e: Throwable) { Vault.thaw(); throw e }
         return Restored(changePin = c.pinSealed)
     }
 

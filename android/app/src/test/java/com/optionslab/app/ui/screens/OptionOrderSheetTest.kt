@@ -245,6 +245,44 @@ class OptionOrderSheetTest {
         compose.onNodeWithText("Sell (paper)").assertIsEnabled()
     }
 
+    /**
+     * 20 Oct, review: a MARKET order with no price yet skipped the bracket check, so a buy with its stop above the entry could be
+     * sent (live: unprotected once filled). With a bracket and no price the order button waits for one, and says why.
+     */
+    @Test fun aBracketWithNoPriceToCheckItAgainstHoldsTheOrder() {
+        show(pick.copy(ltp = null))
+        compose.onNodeWithText("Buy (paper)").assertIsEnabled()
+        tap("▸ Bracket: stop · trail · target")
+        compose.onNode(hasSetTextAction() and hasText("Stop price")).performTextInput("105")
+        compose.onNodeWithText("Buy (paper)").assertIsNotEnabled()
+        compose.waitUntil(5_000) { (Alerts.queue.value + Alerts.posted).any { it.text == BRACKET_NEEDS_PRICE } }
+        // A limit price gives it one: the check runs on it (a buy's stop above 100 is still wrong, below it is right).
+        tap("Limit")
+        price().performTextClearance(); price().performTextInput("100")
+        compose.onNodeWithText("Buy (paper)").assertIsNotEnabled()
+        compose.onNode(hasSetTextAction() and hasText("Stop price")).performTextClearance()
+        compose.onNode(hasSetTextAction() and hasText("Stop price")).performTextInput("90")
+        compose.onNodeWithText("Buy (paper)").assertIsEnabled()
+    }
+
+    /** 20 Oct, review: the lots steppers are named buttons at least 48 dp; the bracket toggle says whether it is open. */
+    @Test fun theSteppersAndTheBracketToggleAreButtonsTalkBackCanName() {
+        show()
+        for (d in listOf("Fewer lots", "More lots")) {
+            val n = compose.onNode(hasContentDescription(d)).fetchSemanticsNode()
+            assertEquals(d, androidx.compose.ui.semantics.Role.Button, n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Role))
+            val dp = n.size.width / n.layoutInfo.density.density
+            assertTrue("$d is $dp dp wide", dp >= 48f - 0.5f)
+        }
+        compose.onNode(hasContentDescription("More lots")).performClick()
+        assertTrue(exists("150 qty"))
+        val toggle = compose.onNode(androidx.compose.ui.test.hasTestTag("bracket-toggle"))
+        assertEquals("collapsed", toggle.fetchSemanticsNode().config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.StateDescription))
+        toggle.performClick()
+        assertEquals("expanded", toggle.fetchSemanticsNode().config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.StateDescription))
+        assertTrue(toggle.fetchSemanticsNode().size.height / toggle.fetchSemanticsNode().layoutInfo.density.density >= 48f - 0.5f)
+    }
+
     // ---- paper orders ----------------------------------------------------------------------------
 
     @Test fun aPaperBuyFillsAndTheSheetCloses() {

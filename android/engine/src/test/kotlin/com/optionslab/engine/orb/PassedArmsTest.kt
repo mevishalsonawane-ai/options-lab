@@ -102,6 +102,23 @@ class PassedArmsTest {
         assertEquals(84.0, PassedArms.booked(PassedArms.ExitKind.STOP, 84.0, 130.0))
     }
 
+    /** 20 Oct, review: a stop or lock found on a closed minute is never booked better than the walk's price (a wick that recovered). */
+    @Test fun aStopOrLockIsBookedNoBetterThanTheWalk() {
+        val k = PassedArms.ExitKind.values()
+        // A -15% wick at 09:31 that recovered to 95 by the next look: booked at the stop's 85, not 95.
+        assertEquals(85.0, PassedArms.booked(PassedArms.ExitKind.STOP, 95.0, 130.0, 85.0), 1e-9)
+        // A worse fill (slippage through the stop) is booked as it came.
+        assertEquals(82.0, PassedArms.booked(PassedArms.ExitKind.STOP, 82.0, 130.0, 85.0), 1e-9)
+        assertEquals(110.0, PassedArms.booked(PassedArms.ExitKind.LOCK, 114.0, 130.0, 110.0), 1e-9)
+        // No walk price (or an unusable one): the fill, as before.
+        for (w in listOf(null, Double.NaN, 0.0, -1.0)) assertEquals(95.0, PassedArms.booked(PassedArms.ExitKind.STOP, 95.0, 130.0, w), 1e-9)
+        // The target keeps its own rule (the target at most) whatever the walk says; time and square-off are the fill.
+        assertEquals(130.0, PassedArms.booked(PassedArms.ExitKind.TARGET, 133.0, 130.0, 131.0), 1e-9)
+        assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.TIME, 97.0, 130.0, 90.0), 1e-9)
+        assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.SQUARE_OFF, 97.0, 130.0, 90.0), 1e-9)
+        assertEquals(5, k.size)
+    }
+
     @Test fun theTimeStopSellsAtTheCloseOfItsLastMinute() {
         val bars = (0 until 30).map { flat(10, it, 100.0 + it * 0.1) }
         // 29 minutes closed: held.

@@ -12,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.getAndUpdate
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -45,6 +44,17 @@ object LiquidityTest {
     val state: StateFlow<LiquidityFreeze.State> = _state
 
     private val fills = ArrayList<FillQuality.Rec>()
+
+    /** Changes made before the saved state was read (applied again on top of it); [early] while it is not read yet. */
+    private val edits = ArrayList<(LiquidityFreeze.State) -> LiquidityFreeze.State>()
+    @Volatile private var early = true
+    private val saveLock = Any()
+
+    /** [f] applied to the state now (and again over the saved state once it is read); the state before it. Memory only. */
+    private fun edit(f: (LiquidityFreeze.State) -> LiquidityFreeze.State): LiquidityFreeze.State = synchronized(edits) {
+        if (early) edits += f
+        _state.getAndUpdate(f)
+    }
     private val flushing = AtomicBoolean(false)
 
     fun init(context: Context) {
@@ -59,8 +69,14 @@ object LiquidityTest {
             if (loaded) return
             val d = dir ?: return
             val s = runCatching { File(d, STATE).takeIf { it.isFile }?.readText() }.getOrNull()
-            // Only over the defaults: a change made before the file was read is kept (atomic: never over one made meanwhile).
-            _state.compareAndSet(LiquidityFreeze.State(), LiquidityFreeze.decode(s))
+            // 20 Oct, review: the saved state, with every change made before it was read applied on top, in order. Before, a
+            // change made first (a stop told, the trail) left the state non-default, so the file was ignored, and Boss's 13 Oct
+            // unfreeze, the trail and the stop reset fell back to their defaults and were written over.
+            synchronized(edits) {
+                _state.value = edits.fold(LiquidityFreeze.decode(s)) { st, f -> f(st) }
+                edits.clear()
+                early = false
+            }
             val kept = runCatching {
                 File(d, FILLS).takeIf { it.isFile }?.readLines(Charsets.US_ASCII).orEmpty().mapNotNull { l ->
                     if (l.isBlank()) null else runCatching {
@@ -94,7 +110,7 @@ object LiquidityTest {
 
     /** Boss's choice from the Strategy lab card: unfrozen (automatic changes that lower risk may apply again) or frozen again. */
     fun setUnfrozen(unfrozen: Boolean): String {
-        _state.update { it.copy(unfrozen = unfrozen) }
+        edit { it.copy(unfrozen = unfrozen) }
         saveSoon()
         runCatching { Diag.record("liquidity", "Liquidity BANKNIFTY ${if (unfrozen) "unfrozen" else "frozen again"} for its paper test (by you)") }
         return if (unfrozen) "Liquidity BANKNIFTY unfrozen: the strategy lab, Autopilot and the regime lessons may change it again (only ever lowering risk by themselves)."
@@ -116,7 +132,7 @@ object LiquidityTest {
      * [log] false: that Undo itself flipping it back, which is not logged again.
      */
     fun setTrail(on: Boolean, log: Boolean = true): String {
-        val was = _state.getAndUpdate { it.copy(trail = on) }.trail
+        val was = edit { it.copy(trail = on) }.trail
         saveSoon()
         val said = LiquidityFreeze.trailSaid(on)
         runCatching { Diag.record("liquidity", "$said (by you${if (log) "" else ", undone from the change timeline"})") }
@@ -126,19 +142,19 @@ object LiquidityTest {
 
     /** Boss's tick: he watched the first live trade with the app open (or took the tick back). */
     fun setWatched(watched: Boolean) {
-        _state.update { it.copy(watched = watched) }
+        edit { it.copy(watched = watched) }
         saveSoon()
     }
 
     /** Live entries re-enabled by Boss with his PIN ([OrbArms.reenableLiquidityLive]): the stop rule counts from [atMs]. */
     internal fun resetStop(atMs: Long) {
-        _state.update { it.copy(stopResetAtMs = atMs, stopTold = "") }
+        edit { it.copy(stopResetAtMs = atMs, stopTold = "") }
         saveSoon()
     }
 
     /** The stop [key] told once; false when it already was. Memory first, written in the background. */
     internal fun markStopTold(key: String): Boolean {
-        val before = _state.getAndUpdate { if (it.stopTold == key) it else it.copy(stopTold = key) }
+        val before = edit { if (it.stopTold == key) it else it.copy(stopTold = key) }
         if (before.stopTold == key) return false
         saveSoon()
         return true
@@ -150,11 +166,15 @@ object LiquidityTest {
     private fun saveSoon() {
         val d = dir ?: return
         scope.launch {
+            // Never the defaults over the saved file: it is read first (here, a worker). One write at a time (one temp file).
+            runCatching { ensureLoaded() }
             runCatching {
-                val f = File(d, STATE)
-                val tmp = File(d, "$STATE.tmp")
-                tmp.writeText(LiquidityFreeze.encode(_state.value))
-                if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+                synchronized(saveLock) {
+                    val f = File(d, STATE)
+                    val tmp = File(d, "$STATE.tmp")
+                    tmp.writeText(LiquidityFreeze.encode(_state.value))
+                    if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+                }
             }
         }
     }
@@ -209,13 +229,14 @@ object LiquidityTest {
     }
 
     /** TEST ONLY: as a fresh start - nothing kept, the defaults, the files read again on the next ask. */
-    internal fun resetForTest() { wipe(); loaded = false }
+    internal fun resetForTest() { wipe(); loaded = false; synchronized(edits) { edits.clear(); early = true } }
 
     /** TEST ONLY: memory forgotten (the files kept), as after a restart: the next ask reads the files. */
     internal fun forgetMemoryForTest() {
         synchronized(fills) { fills.clear() }
         _state.value = LiquidityFreeze.State()
         loaded = false
+        synchronized(edits) { edits.clear(); early = true }
     }
 
     /** TEST ONLY: whether the fills file exists yet (written in the background). */
@@ -223,5 +244,5 @@ object LiquidityTest {
     internal fun stateWrittenForTest(): String? = dir?.let { File(it, STATE) }?.takeIf { it.isFile }?.readText()
 
     /** TEST ONLY: the state set directly (the freeze off, a watched tick). */
-    internal fun setStateForTest(s: LiquidityFreeze.State) { _state.value = s; loaded = true }
+    internal fun setStateForTest(s: LiquidityFreeze.State) { _state.value = s; loaded = true; synchronized(edits) { edits.clear(); early = false } }
 }

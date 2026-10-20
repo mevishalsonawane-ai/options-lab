@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,8 @@ internal fun CandleAgentContent(v: CandleAgentHost.View) {
             LedgerCard(Modifier.testTag("candle-status"), title = "Status") {
                 Text(when {
                     v.released -> "Released to free memory: open positions come first. It starts again with its next batch."
-                    v.status == null -> "Waiting for its first batch (every 5 minutes in market hours, hourly otherwise)."
+                    // 20 Oct, review: it said "hourly otherwise", but a cold start off hours runs nothing until the next session.
+                    v.status == null -> "Waiting for its first batch: it reads every 5 minutes while NSE or MCX is open, and starts with the next session."
                     else -> v.status.words()
                 }, style = body)
                 if (v.growth.isNotEmpty()) Text(v.growth, style = soft)
@@ -58,9 +60,13 @@ internal fun CandleAgentContent(v: CandleAgentHost.View) {
             LedgerCard(Modifier.testTag("candle-latest"), title = "Latest candles") {
                 if (v.latest.isEmpty()) Text("No notable candle read yet.", style = soft)
                 v.latest.take(15).forEachIndexed { i, e ->
-                    if (i > 0) Rule()
-                    ExplainedName(e.title, e.lines, Modifier.fillMaxWidth())
-                    Text(e.lines.getOrNull(1).orEmpty(), style = soft, maxLines = 2)
+                    // 20 Oct, review: each row keyed by its candle, so an open explanation stays on that candle when a batch adds a
+                    // newer one above it (keyed by place, it showed the next candle's words under the old title).
+                    key(e.read.inst, e.read.tf, e.read.bar.t) {
+                        if (i > 0) Rule()
+                        ExplainedName(e.title, e.lines, Modifier.fillMaxWidth())
+                        Text(e.lines.getOrNull(1).orEmpty(), style = soft, maxLines = 2)
+                    }
                 }
             }
         }

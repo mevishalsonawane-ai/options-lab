@@ -56,6 +56,8 @@ object Protections {
 
     /** The note of a protection being removed whose orders are not yet confirmed gone. */
     private const val REMOVING = "removing"
+    /** A carried position's exits ended with the session: placed again at the next open. */
+    private const val WAITING = "waiting for the next session"
     private val GONE = setOf("CANCELLED", "REJECTED", "COMPLETE")
 
     fun init(context: Context) {
@@ -276,6 +278,40 @@ object Protections {
         return gone
     }
 
+    /** [exchange]'s market open now (MCX's own hours; NSE's otherwise). */
+    private fun marketOpen(exchange: String): Boolean = runCatching {
+        if (exchange == "MCX") McxMarket.isOpen() else Market.isOpen()
+    }.getOrDefault(false)
+
+    /**
+     * [p]'s stop and target placed again at their levels (an earlier day's DAY orders ended): the protection carried on under
+     * a new id (today's: [cancelOrders] knows its orders are today's). Null when the stop could not be placed (the caller says so).
+     */
+    private suspend fun restAgain(p: Item): Item? {
+        val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        val known = listOfNotNull(p.stopOrderId, p.targetOrderId)
+        val stopId = p.stop?.let { s0 ->
+            runCatching {
+                placeTracked(Kite.Order(p.symbol, side, abs(p.qty), p.lotSize, p.product, "SL", stopLimit(s0, side, p.tick),
+                    p.tick, p.exchange, "iraprotect", triggerPrice = s0), known)
+            }.getOrNull() ?: return null
+        }
+        val targetId = p.target?.let { t ->
+            runCatching {
+                placeTracked(Kite.Order(p.symbol, side, abs(p.qty), p.lotSize, p.product, "LIMIT", Kite.onTick(t, p.tick, side),
+                    p.tick, p.exchange, "iraprotect"), known + listOfNotNull(stopId))
+            }.getOrNull()
+        }
+        if (stopId == null && targetId == null) return null
+        stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
+        targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
+        val next = p.copy(id = System.currentTimeMillis(), stopOrderId = stopId, targetOrderId = targetId,
+            target = p.target.takeIf { targetId != null }, note = "placed again for today")
+        Alerts.post("${p.symbol}: its stop and target ended with yesterday's session and were placed again at Zerodha (${next.describe()}).",
+            Alerts.Kind.SUCCESS, "Protection")
+        return next
+    }
+
     /**
      * Place one exit. A lost reply is looked up in the order book (not adopting any of [known]), so an
      * order that reached Zerodha is never left resting untracked; throws when it was not placed, or when
@@ -423,12 +459,21 @@ object Protections {
         }
         // The position closed by hand (or flipped): the resting exits would now open a new position.
         // (Not in its first minute: the position book can trail a fresh fill.)
-        val net = if (System.currentTimeMillis() - p.id < 60_000) null else netNow()
+        val net = if (Market.now().toInstant().toEpochMilli() - p.id < 60_000) null else netNow()
         if (net != null && (net == 0 || net.sign() != p.qty.sign())) {
             listOfNotNull(so, to).filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
             val still = runCatching { Broker.orders().filter { it.id == p.stopOrderId || it.id == p.targetOrderId }.any { it.working } }.getOrElse { true }
             if (still) return p
             return p.copy(active = false, note = "position closed")
+        }
+        // 20 Oct, review: a carried (not intraday) position whose DAY exits Zerodha cancelled at the close: kept, and placed again
+        // at the next session's open ([restAgain]) instead of ending here with nothing watching the position overnight.
+        val carriedNow = p.product != "MIS" && net != null && net != 0 && net.sign() == p.qty.sign() && !marketOpen(p.exchange)
+        if (carriedNow && listOfNotNull(so, to).all { it.status == "CANCELLED" || !it.working } && listOfNotNull(so, to).any { it.status == "CANCELLED" }) {
+            return if (p.note == WAITING) p else p.copy(note = WAITING).also {
+                Alerts.post("${p.symbol}: its stop and target ended with the session at Zerodha; they are placed again when the market opens.",
+                    Alerts.Kind.INFO, "Protection", throttle = true)
+            }
         }
         // A stop refused or cancelled at Zerodha leaves the position unprotected: say so.
         if (so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) {
@@ -438,6 +483,15 @@ object Protections {
         }
         // Both exits gone some other way (a DAY order that ended with its day, cancelled at Zerodha): say so.
         if ((so == null || !so.working) && (to == null || !to.working) && (p.stopOrderId != null || p.targetOrderId != null)) {
+            // 20 Oct, review: a carried (NRML) position's stop and target are DAY orders and end with their day; the next session
+            // marked the protection finished and nothing watched the position any more. Now, in market hours, they are placed
+            // again at the same levels for what is still held (only ever adding a stop: it lowers risk). Refused: said, as before.
+            val today0 = Market.today().atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli()
+            if (net != null && net != 0 && net.sign() == p.qty.sign() && (p.id < today0 || p.note == WAITING)) {
+                // Before the open: kept until then (Zerodha would refuse it now).
+                if (!marketOpen(p.exchange)) return p
+                restAgain(p.copy(qty = net))?.let { return it }
+            }
             if (net != 0) unprotected("${p.symbol}: its stop and target are no longer working at Zerodha (orders last only the day they are placed). " +
                 "The position is NOT protected any more: set the protection again.")
             return p.copy(active = false, note = "exit orders no longer working")

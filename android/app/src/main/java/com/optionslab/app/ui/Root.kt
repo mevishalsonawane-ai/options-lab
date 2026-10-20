@@ -155,10 +155,23 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         // The app stopped unexpectedly last time: show why, once, so it can be reported.
         // Sealed in the vault by IraAlgoApp's crash handler: class names and stack frames, no messages.
-        CrashReport(activity.filesDir)
+        // 20 Oct, review: shown only once unlocked (it was drawn over the PIN screen).
+        if (!locked) CrashReport(activity.filesDir)
         var vaultBad by remember { mutableStateOf(SecurePrefs.unreadable) }
         if (vaultBad) {
-            VaultUnreadable(onRetry = { vaultBad = !SecurePrefs.reload() }, onErase = { eraseEverything(); vaultBad = false })
+            // 20 Oct, review: "Try again" reads the vault on a worker (it waited up to 30 s for the writer, then decrypted with
+            // retries and sleeps, on the screen's thread - when the Keystore is failing, exactly when it is slow).
+            val retryScope = androidx.compose.runtime.rememberCoroutineScope()
+            var checking by remember { mutableStateOf(false) }
+            VaultUnreadable(checking = checking, onRetry = {
+                if (!checking) {
+                    checking = true
+                    retryScope.launch {
+                        val ok = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { SecurePrefs.reload() } }.getOrDefault(false)
+                        vaultBad = !ok; checking = false
+                    }
+                }
+            }, onErase = { eraseEverything(); vaultBad = false })
             return@IraAlgoTheme
         }
         if (compromised && settings.refuseCompromised) {
@@ -309,7 +322,7 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
 /** Destroy the vault key and every personal file. Market data is public and stays. */
 /** The settings vault exists but cannot be decrypted: fail closed, never "choose a new PIN". */
 @Composable
-internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
+internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit, checking: Boolean = false) {
     val p = com.optionslab.app.ui.theme.LocalPalette.current
     var confirm by remember { mutableStateOf(false) }
     // Centred, and scrolling when a large font makes it taller than the screen (the last button was squeezed).
@@ -321,7 +334,7 @@ internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
             "it can also mean the file was altered. Nothing has been changed and no new PIN can be set over it.",
             style = com.optionslab.app.ui.theme.Type.body.copy(color = p.ink))
         Spacer(Modifier.height(20.dp))
-        com.optionslab.app.ui.components.BrassButton("Try again", Modifier.fillMaxWidth(), onClick = onRetry)
+        com.optionslab.app.ui.components.BrassButton(if (checking) "Checking…" else "Try again", Modifier.fillMaxWidth(), enabled = !checking, busy = checking, onClick = onRetry)
         Spacer(Modifier.height(10.dp))
         com.optionslab.app.ui.components.BrassButton(if (confirm) "Tap again: erase ALL IraAlgo data" else "Erase everything and start again",
             Modifier.fillMaxWidth(), tone = p.oxblood) { if (confirm) onErase() else confirm = true }
@@ -330,27 +343,30 @@ internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
 }
 
 fun eraseEverything() {
-    com.optionslab.app.data.Ledger.wipe()
-    com.optionslab.app.data.Alarms.wipe()
-    com.optionslab.app.data.Paper.wipe()
-    com.optionslab.app.data.OrbArms.wipe()
-    com.optionslab.app.data.ShadowArms.wipe()
-    com.optionslab.app.data.MarketRecorder.wipe()
-    com.optionslab.app.data.PineScripts.wipe()
-    com.optionslab.app.data.PineAuto.wipe()
-    com.optionslab.app.data.Protections.wipe()
-    com.optionslab.app.data.TradeBook.wipe()
-    runCatching { com.optionslab.app.data.FillSlippage.wipe() }
-    runCatching { com.optionslab.app.data.LiveRecorder.wipe() }
+    // 20 Oct, review: the keys go FIRST. They were destroyed last, after about 18 wipes with no guard: one wipe that threw (a
+    // store not set up yet) skipped them, and on the too-many-wrong-PINs path the data stayed readable. Every wipe below is
+    // guarded, so one failing never stops the rest; the keys are destroyed again at the end (a save made in between was
+    // sealed with a new key, which goes too).
+    runCatching { com.optionslab.app.security.PinPepper.destroy() }
+    runCatching { Vault.destroy() }
+    runCatching { SessionLock.lock() }
+    fun w(f: () -> Unit) { runCatching(f) }
+    w { com.optionslab.app.data.Ledger.wipe() }
+    w { com.optionslab.app.data.Alarms.wipe() }
+    w { com.optionslab.app.data.Paper.wipe() }
+    w { com.optionslab.app.data.OrbArms.wipe() }
+    w { com.optionslab.app.data.ShadowArms.wipe() }
+    w { com.optionslab.app.data.PineScripts.wipe() }
+    w { com.optionslab.app.data.PineAuto.wipe() }
+    w { com.optionslab.app.data.Protections.wipe() }
+    w { com.optionslab.app.data.TradeBook.wipe() }
     // The OI-wall shadow log (14 Oct): its own encrypted file.
-    runCatching { com.optionslab.app.data.OiWallShadowHost.wipe() }
-    com.optionslab.app.data.Diag.wipe()
-    com.optionslab.app.data.Journal.wipe()
-    com.optionslab.app.data.Strategies.wipe()
-    com.optionslab.app.data.History.wipe()
-    com.optionslab.app.data.Market.wipe()
-    runCatching { com.optionslab.app.data.Broker.forget() }
-    runCatching { com.optionslab.app.data.Store.wipeDeviceData() }
+    w { com.optionslab.app.data.OiWallShadowHost.wipe() }
+    w { com.optionslab.app.data.Diag.wipe() }
+    w { com.optionslab.app.data.Journal.wipe() }
+    w { com.optionslab.app.data.Strategies.wipe() }
+    w { com.optionslab.app.data.Market.wipe() }
+    w { com.optionslab.app.data.Broker.forget() }
     // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
     // eraseEverything can be called from a background dispatcher, where these calls fail silently.
     val web = Runnable {
@@ -358,13 +374,24 @@ fun eraseEverything() {
         runCatching { android.webkit.WebStorage.getInstance().deleteAllData() }
     }
     val main = android.os.Looper.getMainLooper()
-    if (android.os.Looper.myLooper() == main) web.run() else android.os.Handler(main).post(web)
-    SecurePrefs.wipe()
-    com.optionslab.ira.ShortAnswer.clearCache()
-    BiometricGate.forget()
-    com.optionslab.app.security.PinPepper.destroy()
-    Vault.destroy()
-    SessionLock.lock()
+    val onMain = android.os.Looper.myLooper() == main
+    if (onMain) web.run() else android.os.Handler(main).post(web)
+    w { SecurePrefs.wipe() }
+    w { com.optionslab.ira.ShortAnswer.clearCache() }
+    w { BiometricGate.forget() }
+    runCatching { com.optionslab.app.security.PinPepper.destroy() }
+    runCatching { Vault.destroy() }
+    runCatching { SessionLock.lock() }
+    // The large folders (the recordings, the price history, the device data): deleted off the screen's thread (an erase from
+    // a button no longer freezes it). Nothing here holds a key, and nothing destroys one, so a PIN set meanwhile is safe.
+    val slow = Runnable {
+        w { com.optionslab.app.data.MarketRecorder.wipe() }
+        w { com.optionslab.app.data.FillSlippage.wipe() }
+        w { com.optionslab.app.data.LiveRecorder.wipe() }
+        w { com.optionslab.app.data.History.wipe() }
+        w { com.optionslab.app.data.Store.wipeDeviceData() }
+    }
+    if (onMain) Thread(slow, "erase-files").start() else slow.run()
     wipes.value = wipes.value + 1
 }
 
@@ -663,9 +690,14 @@ internal fun NavBack(nav: NavState, onNav: (NavState) -> Unit) {
  */
 @Composable
 internal fun CrashReport(dir: java.io.File) {
-    var crash by remember { mutableStateOf(runCatching {
-        Vault.readFile(java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8)
-    }.getOrNull()) }
+    // 20 Oct, review: read (a file and a Keystore decryption) on a worker, not while the screen is drawn; deleted there too.
+    var crash by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(dir) {
+        crash = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { Vault.readFile(java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8) }.getOrNull()
+        }
+    }
     crash?.let { text ->
         val clip = androidx.compose.ui.platform.LocalClipboardManager.current
         com.optionslab.app.ui.components.AlertDialog(
@@ -683,7 +715,8 @@ internal fun CrashReport(dir: java.io.File) {
             },
             confirmButton = { com.optionslab.app.ui.components.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
             dismissButton = { com.optionslab.app.ui.components.TextButton({
-                runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
+                crash = null
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() } }
             }) { Text("Dismiss") } },
         )
     }

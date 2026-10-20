@@ -45,6 +45,8 @@ class GitHubSyncTest : RobolectricTest() {
         var releaseMade = false
         /** False: the token no longer sees the data repository (GitHub then answers 404). */
         var seesRepo = true
+        /** False: the data repository is public (20 Oct: then nothing is uploaded). */
+        var dataPrivate = true
         /** Called during each upload, before GitHub answers (a test moves the clock here: the upload takes time). */
         var onUpload: ((GitHubReleases.Request) -> Unit)? = null
 
@@ -56,7 +58,7 @@ class GitHubSyncTest : RobolectricTest() {
             return when {
                 u == "https://api.github.com/user" -> json(200, mapOf("login" to "boss"))
                 u == "https://api.github.com/repos/mevishalsonawane-ai/IraAlgo" ->
-                    if (seesRepo) json(200, mapOf("id" to 1, "private" to true)) else json(404, mapOf("message" to "Not Found"))
+                    if (seesRepo) json(200, mapOf("id" to 1, "private" to dataPrivate)) else json(404, mapOf("message" to "Not Found"))
                 u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab" -> codeRepo?.let { json(200, it) } ?: json(404, mapOf("message" to "Not Found"))
                 r.method == "POST" && u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab/git/refs" ->
                     json(probeCode, mapOf("message" to when (probeCode) {
@@ -412,6 +414,31 @@ class GitHubSyncTest : RobolectricTest() {
         assertTrue(gh.seen.none { it.url.startsWith("https://uploads.github.com/") })
         assertTrue(GitHubSync.authBlocked())
         assertNull(SecurePrefs.getString("backup.last"))
+    }
+
+    /** 20 Oct, review: a PUBLIC data repository is refused when the token is saved (the diagnostics would be readable by anyone). */
+    @Test fun aPublicDataRepositoryIsRefusedAtSave() {
+        gh.dataPrivate = false
+        val e = runCatching { runBlocking { GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray()) } }.exceptionOrNull()
+        assertTrue(e?.message, e?.message?.contains("is public") == true)
+        assertFalse("nothing saved", GitHubSync.tokenSet)
+        assertFalse("and the message never carries the token", e?.message.orEmpty().contains("github_pat_"))
+    }
+
+    /** 20 Oct, review: a repository made public after the token was saved: nothing is uploaded, and the runs pause. */
+    @Test fun aDataRepositoryMadePublicLaterIsStoppedAtTheNextRun() = runBlocking {
+        ready()
+        gh.dataPrivate = false
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue(gh.seen.none { it.url.startsWith("https://uploads.github.com/") })
+        assertTrue(GitHubSync.authBlocked())
+    }
+
+    /** 20 Oct, review: only Boss's own account's repository is ever accepted. */
+    @Test fun anotherOwnersRepositoryIsRefused() {
+        val e = runCatching { runBlocking { GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray(), "someone-else/IraAlgo") } }.exceptionOrNull()
+        assertTrue(e?.message, e?.message?.contains("only to Boss's own") == true)
+        assertTrue("GitHub never asked", gh.seen.isEmpty())
     }
 
     // ---- restore needs the PIN ----------------------------------------------------------------------------------------

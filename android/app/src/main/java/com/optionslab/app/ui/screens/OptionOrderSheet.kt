@@ -37,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
@@ -178,9 +180,9 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                         Text("Lots", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
                         Text("$qty qty", style = Type.bodySmall.copy(color = p.inkFaint))
                     }
-                    Stepper("−") { if (lots > 1) lots-- }
+                    Stepper("−", "Fewer lots") { if (lots > 1) lots-- }
                     Text("$lots", style = Type.figureLarge.copy(color = p.ink, fontSize = 22.sp), textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 56.dp).heightIn(min = 32.dp))
-                    Stepper("+") { if (lots < 50) lots++ }
+                    Stepper("+", "More lots") { if (lots < 50) lots++ }
                 }
                 Spacer(Modifier.height(14.dp))
                 // The product moves to a line of its own when a large font leaves no room (MIS was squeezed to nothing).
@@ -194,7 +196,10 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 if (limit) OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' }.take(10) }, label = { Text("Limit price") },
                     singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth().clickable { bracket = !bracket }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                // 48 dp, a button with its state said (it opens or closes the live order's stop, trail and target).
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button, onClickLabel = if (bracket) "Close the bracket" else "Open the bracket") { bracket = !bracket }
+                    .semantics { stateDescription = if (bracket) "expanded" else "collapsed" }.testTag("bracket-toggle"),
+                    verticalAlignment = Alignment.CenterVertically) {
                     Text((if (bracket) "▾ " else "▸ ") + "Bracket: stop · trail · target", style = Type.bodySmall.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                 }
                 if (bracket) {
@@ -212,7 +217,12 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 Spacer(Modifier.height(12.dp))
                 val protect = com.optionslab.app.ui.ProtectSpec(bStop.toDoubleOrNull(), bTrail.toDoubleOrNull(), bTarget.toDoubleOrNull()).takeIf { bracket && it.any }
                 // A bracket's levels must sit on the right sides of the entry.
-                val bracketProblem = protect?.let { pr -> px?.let { e -> com.optionslab.engine.risk.Protection.validate(if (buy) 1 else -1, e, pr.stop, pr.trail, pr.target) } }
+                // 20 Oct, review: a MARKET order with no price yet (an illiquid strike, the chain not priced) skipped the check, and a
+                // live buy with its stop above the entry went out; its protection was refused only after the fill, leaving it unguarded.
+                val bracketProblem = protect?.let { pr ->
+                    if (px == null) (if (!limit) BRACKET_NEEDS_PRICE else null)
+                    else com.optionslab.engine.risk.Protection.validate(if (buy) 1 else -1, px, pr.stop, pr.trail, pr.target)
+                }
                 com.optionslab.app.ui.components.AlertOn(bracketProblem)
                 val ok = (!limit || price.toDoubleOrNull()?.let { it > 0 } == true) && bracketProblem == null
                 // His own record's losing rule, softly, before an entry (S10), paper or live. Words only.
@@ -244,9 +254,16 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
 }
 
 @Composable
-private fun Stepper(label: String, onClick: () -> Unit) {
+private fun Stepper(label: String, description: String, onClick: () -> Unit) {
     val p = LocalPalette.current
-    Box(Modifier.size(36.dp).background(p.chip, CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(label, style = Type.title.copy(color = p.ink, fontSize = 18.sp))
+    // 20 Oct, review: a 48 dp target (the 36 dp circle drawn inside it), a button TalkBack names ("Fewer lots", not "minus").
+    Box(Modifier.size(48.dp).clickable(role = Role.Button, onClick = onClick).semantics { contentDescription = description }.testTag(description),
+        contentAlignment = Alignment.Center) {
+        Box(Modifier.size(36.dp).background(p.chip, CircleShape), contentAlignment = Alignment.Center) {
+            Text(label, style = Type.title.copy(color = p.ink, fontSize = 18.sp))
+        }
     }
 }
+
+/** The order button's reason while a bracket is set and the order has no price to check it against. */
+internal const val BRACKET_NEEDS_PRICE = "Needs a price to check the bracket: no price for this option yet. Set a limit price, or wait for its price."

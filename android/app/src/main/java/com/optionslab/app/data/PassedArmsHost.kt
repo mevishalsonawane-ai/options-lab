@@ -1513,6 +1513,8 @@ object PassedArmsHost {
             ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
         ltp?.let { b.marks[p.symbol] = it }
         val known = b.locks[lockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
+        // 20 Oct, review: the walk's own exit (its kind and price), so a stop or lock is never booked better than it ([sell]).
+        var walked: PassedArms.Exit? = null
         val why: String? = when {
             overnight -> "overnight"
             p.setup == Solo2.Setup.S1.key -> {
@@ -1524,16 +1526,19 @@ object PassedArmsHost {
                     // R64's lock on S1's premium, beside its index exits (A4: S1 keeps them; its own premium stop is none).
                     ?: if (p.lock) PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, exitsOf(p), known, breakeven(p)).also { lw ->
                         lw.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
+                        walked = lw.exit
                     }.exit?.kind?.why else null
             }
             else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known, if (p.lock) breakeven(p) else null).also { w ->
                 w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
+                walked = w.exit
             }.exit?.kind?.why
         } ?: if (stopped) "operator_stop" else null
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
         if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
         if (why == null) return false
-        val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight) else sell(b, p, c, why, ltp)
+        val walkPx = walked?.takeIf { it.kind.why == why }?.price
+        val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
         if (next != p) { b.positions[i] = next; return true }
         return false
     }
@@ -1583,8 +1588,11 @@ object PassedArmsHost {
         return changed
     }
 
-    /** Sells all of [p] at market on paper (a target is booked at the target at most). */
-    private suspend fun sell(b: Book, p: Pos, c: Paper.Contract, why: String, ltp: Double?): Pos {
+    /** The walk's exit kind named [why] (null: an exit the walk did not decide, e.g. overnight or Boss's stop). */
+    private fun kindOf(why: String): PassedArms.ExitKind? = PassedArms.ExitKind.values().firstOrNull { it.why == why }
+
+    /** Sells all of [p] at market on paper (a target is booked at the target at most; a stop or lock never above its walk's price). */
+    private suspend fun sell(b: Book, p: Pos, c: Paper.Contract, why: String, ltp: Double?, walkPx: Double? = null): Pos {
         val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
         val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
@@ -1597,7 +1605,7 @@ object PassedArmsHost {
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(p.arm)} · exit") } }
         runCatching { Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", "${label(p.arm)} · exit", r.orderId) }
         val target = PassedArms.targetLevel(p.entry, exitsOf(p))
-        val booked = if (why == PassedArms.ExitKind.TARGET.why) PassedArms.booked(PassedArms.ExitKind.TARGET, fill.price, target) else fill.price
+        val booked = kindOf(why)?.let { PassedArms.booked(it, fill.price, target, walkPx) } ?: fill.price
         val done = p.copy(exit = booked, exitTime = now0(), why = why, charges = p.charges + chargesOf(r.orderId), exitRef = ltp,
             paperFill = fill.price.takeIf { kotlin.math.abs(it - booked) > 1e-9 }, soldBy = r.orderId?.let { SharedSales.write(mapOf(it to p.qty)) })
         forget(b, p)
@@ -1610,12 +1618,12 @@ object PassedArmsHost {
      * most, as [sell] books it), with the charges a real round trip would have paid. No price: tried again next look (an
      * overnight one closes at its last mark, else its entry).
      */
-    private fun sellWouldBe(b: Book, p: Pos, why: String, ltp: Double?, overnight: Boolean): Pos {
+    private fun sellWouldBe(b: Book, p: Pos, why: String, ltp: Double?, overnight: Boolean, walkPx: Double? = null): Pos {
         // A seller gets the bid: the stream's fresh bid when it has one, else the price seen.
         val bid = runCatching { Paper.contractOf(p.symbol)?.let { Paper.bookNow(it) }?.takeIf { it.ageMs <= FRESH_MS }?.bid }.getOrNull()?.takeIf { it > 0 }
         val at = (if (ltp != null) bid?.let { minOf(it, ltp) } ?: ltp else null) ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
         val target = PassedArms.targetLevel(p.entry, exitsOf(p))
-        val booked = if (why == PassedArms.ExitKind.TARGET.why) PassedArms.booked(PassedArms.ExitKind.TARGET, at, target) else at
+        val booked = kindOf(why)?.let { PassedArms.booked(it, at, target, walkPx) } ?: at
         val charges = runCatching {
             com.optionslab.engine.sandbox.SandboxCosts.charge("BUY", java.math.BigDecimal(p.entry), p.qty).toDouble() +
                 com.optionslab.engine.sandbox.SandboxCosts.charge("SELL", java.math.BigDecimal(booked), p.qty).toDouble()

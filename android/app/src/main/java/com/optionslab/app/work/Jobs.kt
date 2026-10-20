@@ -1470,6 +1470,9 @@ class WatchService : Service() {
         }
         // The watch's workers (10 Oct): the arms' groups run under this run's supervisor, and Jarvis's words-only checks as
         // the lowest-priority worker of their own. They end with this run.
+        // 20 Oct, review (open positions first): the event-driven stops' consumer runs before any analysis worker starts (the
+        // watch loop's own start below only adds an owner; each start has its stop).
+        com.optionslab.app.data.FastPath.start(this@WatchService)
         val workers = WatchWorkers.begin(this)
         if (com.optionslab.app.BuildConfig.JARVIS) {
             val app = this@WatchService
@@ -1485,6 +1488,8 @@ class WatchService : Service() {
             workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.BRAIN, "analysis", timeoutMs = 30_000L,
                 cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.SmartWorkers.refreshDelay(brainAt) },
                 restart = com.optionslab.ira.SelfHeal.Restart())) {
+                // 20 Oct, review: after a restart the open positions are restored and watched first (at most PositionsFirst's wait).
+                com.optionslab.app.data.PositionsFirst.awaitPositions()
                 brainAt = System.currentTimeMillis()
                 // The Live check's 09:20 run (its switch off by default): starts on its own thread when due, returns at once.
                 runCatching { com.optionslab.app.data.LiveSelfTest.autoMaybe() }
@@ -1504,6 +1509,7 @@ class WatchService : Service() {
         try {
             watchLoop(s, workers)
         } finally {
+            com.optionslab.app.data.FastPath.stop()
             WatchWorkers.end(workers)
             // Joined (review, 17 Oct): a pulse already past its check can never take the processor's hold again after the
             // release below.
@@ -1605,7 +1611,8 @@ class WatchService : Service() {
             com.optionslab.app.data.HeroTicketArm.holding() || com.optionslab.app.data.SignalPaperArm.holding() ||
             com.optionslab.app.data.Strategies.runningHint ||       // 18 Oct, review: a strategy run's leg stops too
             com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint ||  // 18 Oct: the paper strategies' live trades
-            (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
+            (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding()) ||
+            HeldBooks.paperOrMinuteArms()
 
     /**
      * 18 Oct, review: an open position or order anywhere (NSE or MCX, paper or live; memory only, unknown counts as held).
@@ -1707,8 +1714,12 @@ class WatchService : Service() {
                 if (barCloseRan) Unit else if (holding && streaming) {
                     val until = System.currentTimeMillis() + 15_000
                     // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
+                    // 20 Oct, review: never waited past the 15 s window (a 6 s or 12 s step waited 18 s or 24 s before the stops).
                     val step = Battery.gap(this, 3_000)
-                    while (System.currentTimeMillis() < until) { delay(step); runCatching { PositionCards.tickLive(this) } }
+                    while (System.currentTimeMillis() < until) {
+                        delay(com.optionslab.ira.BatterySaver.nextWait(until - System.currentTimeMillis(), step))
+                        runCatching { PositionCards.tickLive(this) }
+                    }
                 } else if (holding) delay(15_000) else {
                     // Smart scheduling (10 Oct): nothing held - the wait to the next full pass is cut into the safety-net interval
                     // (Boss's 15-60 s, 30 by default), ended early by an event a worker waits for (an order update, a position
@@ -1893,4 +1904,21 @@ class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             if (runAttemptCount < 2) Result.retry() else Result.failure()
         }
     }
+}
+
+/**
+ * 20 Oct, review: the books the NSE pass's 15-second check also serves that [WatchService]'s "holding" left out - the paper
+ * book's own open positions and resting orders (a manual paper trade, or one held only by Night, VIX divergence or an MCX
+ * paper arm) and those arms' open trades. Without them, a resting paper stop waited for the ~60 s full pass with no stream.
+ * Memory only (never a lock or a vault read); a paper book not loaded yet counts as held (open positions come first).
+ */
+internal object HeldBooks {
+    fun paperOrMinuteArms(): Boolean = runCatching {
+        val paper = com.optionslab.app.data.Paper.stateIfLoaded()?.let { st ->
+            st.positions.any { it.quantity != 0 } || st.orders.any { it.status == "open" || it.status == "trigger pending" }
+        } ?: true
+        paper || com.optionslab.app.data.NightArm.view.value.open.isNotEmpty() ||
+            com.optionslab.app.data.VixDivArm.view.value.open.isNotEmpty() ||
+            com.optionslab.app.data.McxPaperArms.view.value.open.isNotEmpty()
+    }.getOrDefault(true)
 }

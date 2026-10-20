@@ -293,7 +293,8 @@ object KiteStream {
     private fun start() {
         if (testOff) return
         if (loop?.isActive == true) return
-        wants["index"] = INDEX_TOKENS
+        // 20 Oct, review: the armed arms' other indices (FINNIFTY, MIDCPNIFTY) kept too, not wiped until the next ORB pass.
+        wants["index"] = INDEX_TOKENS + wants["index"].orEmpty()
         loop = scope.launch {
             var wait = 0L
             var fails = 0

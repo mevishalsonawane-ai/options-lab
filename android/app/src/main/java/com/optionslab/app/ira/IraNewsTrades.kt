@@ -318,7 +318,8 @@ internal object IraNewsTrades {
         if (lots < 1) return com.optionslab.ira.RiskSizing.tooSmall(c.lotSize)
         // Paper first: until their own record is proven (checked again now), Jarvis's trades go on paper even in Live mode.
         if (!s.live || !earned(solo)) {
-            val r = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, quote, auto = "Jarvis news")
+            val r = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, quote, auto = "Jarvis news",
+                mirror = com.optionslab.app.data.ExposureCapHost.NO_LIVE)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
                 ?: return "Paper: ${r.message}"
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis news · entry") }

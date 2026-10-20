@@ -1549,7 +1549,8 @@ object ArmLive {
         if (!stream) return Broker.stopQuotes(keys)
         val out = HashMap<String, Broker.Quote>()
         for (k in keys) {
-            val tok = runCatching { Broker.tokenOf(k) }.getOrNull() ?: continue
+            // 20 Oct, review: memory only (never the instruments file on a stream look); unknown goes to Zerodha's quote below.
+            val tok = runCatching { Broker.tokenKnown(k) }.getOrNull() ?: continue
             val tk = KiteStream.freshTick(tok) ?: continue
             if (tk.last > 0) out[k] = Broker.Quote(tk.last, tk.bid, tk.ask, tk.open, tk.oi, tk.volume)
         }

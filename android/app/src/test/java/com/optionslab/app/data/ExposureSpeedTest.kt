@@ -164,6 +164,40 @@ class ExposureSpeedTest : RobolectricTest() {
         assertFalse(buy(contract("NIFTY", 24_000, Right.PE), "Hero").ok)
     }
 
+    /**
+     * 20 Oct, review: in Live with AI trades on, an entry with no live path (Grammar, Pine's paper entry, Jarvis's news trade on
+     * paper) was treated as "may go live", so the paper cap only logged it and never counted it. Now it is capped as in Paper;
+     * an arm that may be mirrored live still only logs (the live door applies the cap); and both are COUNTED.
+     */
+    @Test fun inLiveAPaperOnlyEntryIsStillCappedAndEveryEntryIsCounted() {
+        ExposureCapHost.resetForTest(paperOn = true)
+        com.optionslab.app.testing.AutomationSupport.liveSettings()
+        SecurePrefs.put(com.optionslab.app.ira.IraNewsTrades.PAPER_KEY, false)
+        com.optionslab.app.data.PaperOnly.resetForTest(null)
+        try {
+            ArmLive.liveFlags()
+            assertTrue("Live with AI trades on: an arm with a live path may be mirrored", ExposureCapHost.liveMirrorPossible())
+            assertFalse("a paper-only entry never can", ExposureCapHost.liveMirrorPossible(ExposureCapHost.NO_LIVE))
+            // Two puts from arms that may go live: logged only, never refused, but counted.
+            assertTrue(buy(nineThirty[0].second, nineThirty[0].first).ok)
+            assertTrue(buy(nineThirty[1].second, nineThirty[1].first).ok)
+            assertTrue(buy(nineThirty[2].second, nineThirty[2].first).ok)
+            assertEquals("all three counted", 3, Paper.capOpenNow().size)
+            assertTrue(ExposureCapHost.today().all { !it.applied })
+            // A paper-only arm's put: refused (the cap is full), as in Paper.
+            val r = runBlocking { Paper.place(contract("FINNIFTY", 26_000, Right.PE), "BUY", 1, "MARKET", "MIS", null, null,
+                Quote(100.0, bid = 99.9, ask = 100.1), auto = "Jarvis news", mirror = ExposureCapHost.NO_LIVE) }
+            assertTrue(r.message, r.capped && !r.ok)
+            // Back in Paper: the three are still seen, so even an arm with a live path is refused.
+            com.optionslab.app.testing.AutomationSupport.liveSettings(live = false)
+            ArmLive.liveFlags()
+            assertTrue(buy(contract("SENSEX", 81_000, Right.PE), "Hero ticket").capped)
+        } finally {
+            SecurePrefs.put(com.optionslab.app.ira.IraNewsTrades.PAPER_KEY, true)
+            com.optionslab.app.testing.AutomationSupport.liveSettings(live = false)
+        }
+    }
+
     @Test fun anExitIsNeverRefusedAndFreesAPlace() {
         ExposureCapHost.resetForTest(paperOn = true)
         val a = contract("NIFTY", 25_000, Right.PE); val b = contract("BANKNIFTY", 55_500, Right.PE); val c = contract("FINNIFTY", 26_000, Right.PE)
@@ -236,6 +270,27 @@ class ExposureSpeedTest : RobolectricTest() {
         ExposureCapHost.liveEntered("SENSEX26OCT81000PE", "BFO", true, "orb")
         val leg = o.copy(tag = "iraalgostrat")
         assertFalse(Broker.entryRecheck(leg, null).orEmpty().contains("same-direction cap"))
+    }
+
+    /**
+     * 20 Oct, review: a new day cleared the live count, and an option carried overnight was never counted again. Now the arms'
+     * open live buys seed the new day; a positions read that shows one gone drops it. An exit sent no longer frees a place
+     * by itself (only a positions read does).
+     */
+    @Test fun aCarriedLiveOptionIsCountedOnTheNewDay() {
+        ExposureCapHost.resetForTest(paperOn = true)
+        val was = ExposureCapHost.carried
+        ExposureCapHost.carried = { listOf(Triple("NIFTY26OCT25000PE", "NFO", "night"), Triple("BANKNIFTY26OCT55500PE", "NFO", "vix")) }
+        try {
+            ExposureCapHost.setLiveOn(true)
+            val o = Kite.Order("FINNIFTY26OCT26000PE", Kite.Side.BUY, 65, 65, "MIS", "MARKET", null, tag = "iraorb")
+            assertTrue(Broker.entryRecheck(o, "orb").orEmpty().contains("same-direction cap: 2 puts already open"))
+            // Zerodha shows the NIFTY put gone: its place is free.
+            ExposureCapHost.livePositions(mapOf("BANKNIFTY26OCT55500PE" to 30), System.currentTimeMillis())
+            assertNull(ExposureCapHost.liveCheck("FINNIFTY26OCT26000PE", "NFO", true, "orb"))
+        } finally {
+            ExposureCapHost.carried = was
+        }
     }
 
     @Test fun theAutopilotUndoSwitchesThePaperCapOffAndBackOn() {

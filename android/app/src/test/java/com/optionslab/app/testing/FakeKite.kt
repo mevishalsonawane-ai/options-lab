@@ -134,6 +134,9 @@ class FakeKite : Closeable {
     val slowMs: MutableMap<String, Long> = java.util.concurrent.ConcurrentHashMap()
     /** Paths answered by a gateway's HTML error page with this HTTP code (not Kite's JSON), nothing done. */
     val gatewayHtml: MutableMap<String, Int> = java.util.concurrent.ConcurrentHashMap()
+    /** Runs once right after the next answer on that path is built (20 Oct): e.g. a resting exit filling between two reads. */
+    private val afterOnce = HashMap<String, () -> Unit>()
+    fun afterNext(path: String, f: () -> Unit) = synchronized(lock) { afterOnce[path] = f }
 
     /**
      * Kite's rate limits, per rolling second (0: off, the default, so the older tests are unchanged): order placement, change and
@@ -305,7 +308,7 @@ class FakeKite : Closeable {
         }
         val late = slowMs[path]
         if (late != null && late > 0) return handleKnown(r, url, path, body).setHeadersDelay(late, java.util.concurrent.TimeUnit.MILLISECONDS)
-        return handleKnown(r, url, path, body)
+        return handleKnown(r, url, path, body).also { afterOnce.remove(path)?.invoke() }
     }
 
     private fun handleKnown(r: RecordedRequest, url: okhttp3.HttpUrl, path: String, body: String): MockResponse {

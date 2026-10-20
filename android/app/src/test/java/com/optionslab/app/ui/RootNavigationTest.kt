@@ -324,6 +324,9 @@ class RootNavigationTest {
         assertEquals(report, clip?.getItemAt(0)?.text?.toString())
         compose.onNodeWithText("Dismiss").performClick()
         compose.waitForNoText("IraAlgo closed unexpectedly last time")
+        // 20 Oct: deleted on a worker, not the screen's thread.
+        val until = System.currentTimeMillis() + 5_000
+        while (crashFile().exists() && System.currentTimeMillis() < until) Thread.sleep(20)
         assertFalse("shown once: the report is deleted", crashFile().exists())
     }
 
@@ -336,6 +339,14 @@ class RootNavigationTest {
     }
 
     // ---- The sealed vault ------------------------------------------------------------------------
+
+    /** 20 Oct, review: while "Try again" reads the vault on a worker, the button says so and cannot be tapped again. */
+    @Test fun anUnreadableVaultsRetryShowsItIsChecking() {
+        var retries = 0
+        compose.setContent { IraAlgoTheme("light") { VaultUnreadable(onRetry = { retries++ }, onErase = {}, checking = true) } }
+        compose.onNodeWithText("Checking…", substring = true, useUnmergedTree = true).assertExists()
+        assertFalse(compose.has("Try again"))
+    }
 
     @Test fun anUnreadableVaultOffersRetryAndAnEraseThatNeedsTwoTaps() {
         var retries = 0
@@ -383,6 +394,30 @@ class RootNavigationTest {
         eraseEverything()
         shadowOf(Looper.getMainLooper()).idle()
         assertErased(before)
+    }
+
+    /**
+     * 20 Oct, review: the keys were destroyed LAST, after about 18 unguarded wipes; one that threw (here the ledger's file not set
+     * up) skipped them, and the data stayed readable. Now the keys go first and every wipe is guarded.
+     */
+    @Test fun aWipeThatThrowsStillDestroysTheKeys() {
+        seedPersonalData()
+        val before = wipes.value
+        val vaultAlias = "ol.vault.data.v1"
+        assertTrue(vaultAlias in com.optionslab.app.testing.FakeAndroidKeyStore.aliases())
+        val field = com.optionslab.app.data.Ledger::class.java.getDeclaredField("file").apply { isAccessible = true }
+        val kept = field.get(null)
+        field.set(null, null)
+        try {
+            eraseEverything()
+            shadowOf(Looper.getMainLooper()).idle()
+        } finally { field.set(null, kept) }
+        assertFalse("the vault key is gone", vaultAlias in com.optionslab.app.testing.FakeAndroidKeyStore.aliases())
+        assertFalse("the PIN pepper is gone", "ol.pin.pepper.v1" in com.optionslab.app.testing.FakeAndroidKeyStore.aliases())
+        assertFalse(PinLock.isSet)
+        assertTrue(SessionLock.locked.value)
+        assertEquals(before + 1, wipes.value)
+        assertTrue(SecurePrefs.snapshot().isEmpty())
     }
 
     @Test fun eraseEverythingFromABackgroundThread() {

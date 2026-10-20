@@ -162,6 +162,23 @@ class OrbArmsDayTest : RobolectricTest() {
 
     // ---- the day ------------------------------------------------------------------------------------
 
+    /**
+     * 20 Oct, review: the ORB pass's own "index" stream set replaced the one the stream starts with, so with no arm armed
+     * NIFTY, BANKNIFTY and VIX were dropped from the stream (and with one armed, the other two). Now they always stay.
+     */
+    @Test fun thePassNeverDropsTheStreamsIndices() {
+        tick(LocalTime.of(9, 50))
+        assertTrue("nothing armed: ${KiteStream.followed()}", KiteStream.followed().containsAll(KiteStream.INDEX_TOKENS))
+        armOrb(LocalTime.of(9, 51))
+        tick(LocalTime.of(9, 51))
+        val bank = Broker.tokenOf(Broker.indexKey("BANKNIFTY")!!)!!
+        assertTrue("armed on BANKNIFTY: ${KiteStream.followed()}", bank in KiteStream.followed())
+        assertTrue("and the rest kept: ${KiteStream.followed()}", KiteStream.followed().containsAll(KiteStream.INDEX_TOKENS))
+        runBlocking { OrbArms.setArmed("orb", false, automatic = true) }
+        tick(LocalTime.of(9, 52))
+        assertTrue("disarmed again: ${KiteStream.followed()}", KiteStream.followed().containsAll(KiteStream.INDEX_TOKENS))
+    }
+
     @Test fun armedBeforeTenAndTickedEveryMinuteBuysTheCallOnTheBreak() {
         armOrb(LocalTime.of(9, 50))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 34))

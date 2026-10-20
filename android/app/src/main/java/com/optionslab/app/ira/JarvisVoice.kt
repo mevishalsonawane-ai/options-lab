@@ -301,10 +301,10 @@ class JarvisVoice : Service() {
                 keeper.launch {
                     val firstOk = runCatching { com.optionslab.app.security.SecurePrefs.flush() }.getOrDefault(false)
                     if (!firstOk) {
-                        // Queue the whole current map again (it carries this value and any newer one) and wait for it.
+                        // The whole current map (it carries this value and any newer one) written again now, on this IO thread.
+                        // 20 Oct, review: it was putAllSoon(emptyMap()), which queues nothing, so the retry never wrote.
                         val secondOk = runCatching {
-                            com.optionslab.app.security.SecurePrefs.putAllSoon(emptyMap())
-                            com.optionslab.app.security.SecurePrefs.flush()
+                            com.optionslab.app.security.SecurePrefs.writeNow() && com.optionslab.app.security.SecurePrefs.flush()
                         }.getOrDefault(false)
                         if (!secondOk) runCatching { com.optionslab.app.data.Diag.record("jarvis", "a safety setting could not be written to disk; it holds until the app closes") }
                     }

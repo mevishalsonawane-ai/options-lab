@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
@@ -89,6 +90,32 @@ class CandleAgentPageTest {
         compose.onNodeWithText("No notable candle read yet.").assertExists()
         scrollTo("candle-talk")
         compose.onNodeWithText("Nothing shared or heard yet.").assertExists()
+    }
+
+    /**
+     * 20 Oct, review: an open explanation was remembered by its row's place, so a batch adding a newer candle on top showed the
+     * next candle's words in the open dialog. Each row is now keyed by its candle: the dialog stays on the one tapped.
+     */
+    @Test fun anOpenExplanationStaysOnItsCandleWhenANewerOneArrives() {
+        val all = agent().latest()
+        org.junit.Assume.assumeTrue("needs three notable candles", all.size >= 3)
+        val view = androidx.compose.runtime.mutableStateOf(CandleAgentHost.View(latest = all.drop(1)))
+        compose.setContent { IraAlgoTheme("light") { CandleAgentContent(view.value) } }
+        compose.waitForIdle()
+        val tapped = all[2]                                            // the second row before the new candle comes
+        compose.onAllNodesWithText(tapped.title).onFirst().performClick()
+        compose.onAllNodesWithText(keepNumbersWhole(tapped.lines[0])).onFirst().assertExists()
+        // A batch adds a newer candle at the top.
+        view.value = CandleAgentHost.View(latest = all)
+        compose.waitForIdle()
+        compose.onAllNodesWithText(keepNumbersWhole(tapped.lines[0])).onFirst().assertExists()
+        compose.onAllNodesWithText(keepNumbersWhole(all[1].lines[0])).assertCountEquals(0)
+    }
+
+    @Test fun beforeItsFirstBatchTheStatusPromisesNothingItWillNotDo() {
+        compose.setContent { IraAlgoTheme("light") { CandleAgentContent(CandleAgentHost.View()) } }
+        compose.onAllNodesWithText("hourly otherwise", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithText("starts with the next session", substring = true).onFirst().assertExists()
     }
 
     @Test fun afterAMemoryTrimThePageSaysPositionsComeFirst() {

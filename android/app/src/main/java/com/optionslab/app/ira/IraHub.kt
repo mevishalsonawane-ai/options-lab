@@ -5426,10 +5426,17 @@ object IraHub {
     /** 18 Oct (review D6): an arm's shadow and live records, labelled apart from its paper book, after its own answer (memory only). */
     private fun liveLine(key: String): String = runCatching { " " + com.optionslab.app.data.ArmLive.armLine(key) }.getOrDefault("")
 
-    private fun phoneLocked(): Boolean {
-        val c = app ?: return false
-        return runCatching { (c.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked }.getOrDefault(false)
+    /**
+     * 20 Oct, review: fails CLOSED. Unknown (no context yet, or the keyguard could not be asked) counts as locked, so nothing
+     * about the account is said; before, it counted as unlocked and every account answer behind it would open.
+     */
+    internal fun phoneLocked(): Boolean {
+        val c = app ?: return true
+        return runCatching { (c.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked }.getOrDefault(true)
     }
+
+    /** TEST ONLY: [app] as before [init] ran (null) or set again; returns what it was. */
+    internal fun swapAppForTest(c: Context?): Context? { val was = app; app = c; return was }
 
     private const val TOOK_AS = "I took that as: "
     private const val LEARNED_NOTE = "Got it, Boss: next time"

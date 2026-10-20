@@ -331,11 +331,14 @@ object SecurePrefs {
     fun flush(): Boolean {
         // The lazily kept values too ([putAllLazy]): queued now, then waited for with the rest.
         saveSoon()
+        // 20 Oct, review: a large value whose write failed was left dirty with no write queued, and flush still said "written".
+        // Each one still dirty is queued again here, and flush is true only once none is left.
+        for (k in SecureBlobs.dirtyKeys()) runCatching { writer.execute { SecureBlobs.saveNow(k) } }
         if (synchronized(this) { pending || lazyDirty || migrating } || SecureBlobs.anyDirty()) runCatching { writer.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) }
         // A write another thread copied out and is still putting on disk counts as not yet written: wait for it.
         val want = synchronized(this) { seq }
         val written = synchronized(ioLock) { writtenSeq >= want }
-        return written && !writeFailed && synchronized(this) { !pending && !lazyDirty }
+        return written && !writeFailed && synchronized(this) { !pending && !lazyDirty } && !SecureBlobs.anyDirty()
     }
 
     @Synchronized

@@ -81,6 +81,8 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
     /** The other agents' standing words, per instrument (and "*" for all): "who|kind" to the finding. */
     private val heardOn = HashMap<String, LinkedHashMap<String, Findings.Finding>>()
     private val seen = HashSet<Long>()
+    /** Every bus number at or under this was heard already ([seen] keeps the ones after it). */
+    private var heardTo = -1L
     private var health = Health.WAITING
     private var lastBatchMs: Long? = null
     private var batches = 0
@@ -182,7 +184,8 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
                 val sessionOver = s.sessionOver && r.bar.t.toLocalDate() == newest.toLocalDate()
                 val o = CandleBook.outcome(r, bars, sessionOver) ?: break // in order: the next ones are not settled either
                 q.removeFirst()
-                CandleBook.count(stats, r, o)
+                // Counted without the chain, gamma and outside VWAP read at the batch (after the candle: look-ahead; 20 Oct review).
+                CandleBook.count(stats, CandleRead.countable(r), o)
                 stats.counted(sk, r.bar.t)
                 countedN++
             }
@@ -194,13 +197,21 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
             for (r in fresh) {
                 if (!r.notable) continue
                 val ex = Explained(r, explain(r, locked = false, nowMs = nowMs), nowMs)
-                latest.addFirst(ex); while (latest.size > KEEP_EXPLAINED) latest.removeLast()
+                latest.addFirst(ex)
                 explainedN++
                 val age = java.time.Duration.between(r.bar.t.plusMinutes(r.tf.toLong()), now).toMinutes()
                 if (!stale && r.tf >= POST_MIN_TF && age <= POST_WITHIN_CANDLES.toLong() * r.tf) toPost = r
             }
             // One post a series a batch at most (its newest fresh notable candle): the bus is shared, its ring is not the agent's.
             toPost?.let { posts += post(it, nowMs) }
+        }
+        // 20 Oct, review: newest candle first (by when it closed), whatever series it came from, and trimmed only after that.
+        // Added series by series and cut to 40 at each add, a first batch's days of MCX history pushed NIFTY's newest reads out,
+        // and Jarvis's "why was that candle green" answered about an older 15-minute SILVERM candle.
+        if (explainedN > 0) {
+            val sorted = latest.sortedWith(compareByDescending<Explained> { it.read.bar.t.plusMinutes(it.read.tf.toLong()) }.thenByDescending { it.atMs })
+            latest.clear()
+            for (e in sorted) { if (latest.size >= KEEP_EXPLAINED) break; latest.addLast(e) }
         }
         counted += countedN
         batches++
@@ -235,11 +246,17 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
     fun hear(findings: List<Findings.Finding>, nowMs: Long) = synchronized(lock) {
         for (f in findings) {
             if (f.who == WHO || f.kind == Findings.Kind.CANDLE || f.kind !in HEARS) continue
-            if (f.seq >= 0 && !seen.add(f.seq)) continue
+            if (f.seq >= 0 && (f.seq <= heardTo || !seen.add(f.seq))) continue
             heardOn.getOrPut(f.instrument.uppercase(Locale.ENGLISH)) { LinkedHashMap() }["${f.who}|${f.kind}"] = f
             note(Exchange(f.atMs, Way.HEARD, f.who, f.words.ifEmpty { f.kind.words }))
         }
-        if (seen.size > 4_000) seen.clear()
+        // 20 Oct, review: the set is bounded by forgetting its oldest numbers, never by clearing it (a clear heard every finding
+        // still alive on the bus again and logged each one twice). The bus numbers its posts in order.
+        if (seen.size > 4_000) {
+            val keep = seen.sortedDescending().take(2_000)
+            heardTo = maxOf(heardTo, keep.last() - 1)
+            seen.clear(); seen.addAll(keep)
+        }
         for (m in heardOn.values) m.values.removeAll { nowMs - it.atMs > HEARD_MS }
     }
 

@@ -19,6 +19,8 @@ import kotlin.math.abs
  */
 object ExpirySquareOff {
     const val AT_MINUTE = com.optionslab.engine.NseHours.EXPIRY_SQUARE_OFF
+    /** 20 Oct: from here an arm's live trade still open on its expiry is closed by this square-off too (its own 15:05 missed it). */
+    const val BACKSTOP_MINUTE = AT_MINUTE + 3
     private const val K_DONE = "sq.expiry.done"
 
     /**
@@ -30,6 +32,9 @@ object ExpirySquareOff {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }; field = v }
     private fun todayIst(): java.time.LocalDate = testNow?.toLocalDate() ?: Market.today()
     private fun minuteNow(): Int = testNow?.let { it.hour * 60 + it.minute } ?: Market.minuteNow()
+
+    /** Whether an arm's live trade ([ArmLive]) holds [symbol] (memory only); replaceable in tests. */
+    @Volatile internal var armOwns: (String) -> Boolean = { ArmLive.ownerOf(it) != null }
 
     /** What the owner was already told today ("day|what"), so a retry every pass does not repeat it. */
     private val told = HashSet<String>()
@@ -78,21 +83,39 @@ object ExpirySquareOff {
         // Live: whenever there is a Zerodha session (the positions are real even while the app shows Paper);
         // shorts are bought back before longs are sold.
         if (Broker.loggedIn) runCatching {
-            val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
+            // 20 Oct, review: SENSEX's options (BFO) too, from the day's list in memory: they were all "unknown", so Boss's own
+            // SENSEX options were never closed and an arm's SENSEX trade raised a false "NOT closed automatically" notice.
+            val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).associateBy { it.tradingSymbol }
+            // 20 Oct, review: the orders are read BEFORE the positions (as [McxGuard] has since 18 Oct). Read the other way, an
+            // exit resting from the last pass that filled between the two reads showed the position still open and no exit
+            // working, and a second MARKET sell went out and left the account short on expiry day. In this order a fill
+            // between the reads shows as still working (nothing more is sent) and the next pass sees the position gone.
+            val working = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }.filter { it.working }
             val book = Broker.positionBook().net.filter { it.qty != 0 }
             // A derivative the app's contract list does not know (BFO, a stock option, a list not loaded yet): its
             // expiry cannot be told here, so the owner is told instead of it being held into settlement unseen.
-            book.filter { it.exchange in setOf("NFO", "BFO") && it.symbol !in ins && Regex("(CE|PE|FUT)$").containsMatchIn(it.symbol) }.forEach {
+            // SENSEX's list not read yet today: asked for now (in the background) and the notice waits for the next passes, until
+            // the backstop minute, when it is said whatever.
+            val bfoWait = Broker.cachedBfoOptions() == null && minuteNow() < BACKSTOP_MINUTE
+            if (Broker.cachedBfoOptions() == null && book.any { it.exchange == "BFO" }) runCatching { Broker.loadBfoOptionsInBackground() }
+            book.filter { it.exchange in setOf("NFO", "BFO") && it.symbol !in ins && Regex("(CE|PE|FUT)$").containsMatchIn(it.symbol) }
+                .filter { !(it.exchange == "BFO" && bfoWait) }.forEach {
                 tellOnce(context, "unknown ${it.exchange}:${it.symbol}", "${it.exchange} ${it.symbol} (${it.qty}) is open and the app cannot tell when it expires, " +
                     "so it is NOT closed automatically. If it expires today, close it yourself in Trade.")
             }
-            val open = book.filter { it.exchange == "NFO" }
+            // 20 Oct, review: an arm's live trade ([ArmLive]) is sold by its own 15:05 square-off (LiveMirror.squareOffDue). Two
+            // senders reading the same books at once could each sell it (a short on expiry day), so it is left to its owner until
+            // [BACKSTOP_MINUTE]; after that this closes whatever is still open, as before. ORB's trades exit at 15:10 by their own
+            // rules, so they stay this square-off's at 15:05.
+            val backstop = minuteNow() >= BACKSTOP_MINUTE
+            val expiring = book.filter { it.exchange == "NFO" || it.exchange == "BFO" }
                 .filter { p -> ins[p.symbol]?.let { it.expiry == today && !isTicketLeg(it.name, it.strike, it.right.name) } == true }
+            // Still counted open (the day is not done) while left to its owner, so the backstop pass still sees it.
+            stillOpen += expiring.size
+            val open = expiring.filter { p -> backstop || !runCatching { armOwns(p.symbol) }.getOrDefault(false) }
                 .sortedBy { if (it.qty < 0) 0 else 1 }
-            stillOpen += open.size
             // Exits already working at Zerodha (an earlier pass's order resting in a thin book, or one whose
-            // reply was lost) are subtracted first, so a retry never sends a second exit and reverses the position.
-            val working = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }.filter { it.working }
+            // reply was lost; read above, before the positions) are subtracted first, so a retry never sends a second exit.
             for (p in open) {
                 val i = ins.getValue(p.symbol)
                 val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
@@ -108,8 +131,8 @@ object ExpirySquareOff {
                 val qty = com.optionslab.engine.risk.ExitQty.sendable(p.qty, pending, abs(p.qty), i.lotSize)
                 if (qty <= 0) continue                                      // still closing; checked again next pass
                 // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
-                val orders = Kite.slices(qty, i.lotSize, Kite.freezeQuantity("NFO", p.symbol))
-                    .map { Kite.Order(p.symbol, side, it, i.lotSize, p.product, "MARKET", null, i.tickSize, "NFO", "iraalgoexpiry") }
+                val orders = Kite.slices(qty, i.lotSize, Kite.freezeQuantity(p.exchange, p.symbol))
+                    .map { Kite.Order(p.symbol, side, it, i.lotSize, p.product, "MARKET", null, i.tickSize, p.exchange, "iraalgoexpiry") }
                 val bad = orders.flatMap { Kite.refusals(it, s.limits(), Broker.sentToday(), false, exit = true) }.distinct()
                 if (bad.isNotEmpty()) {
                     tellOnce(context, "refused ${p.symbol}", "${p.symbol} expires today and its exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade.")

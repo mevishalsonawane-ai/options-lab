@@ -35,6 +35,11 @@ object CandleBook {
     const val COMPARE_N = 30
     /** |z| of the up-rate against its same-colour baseline before the agent calls its own count an edge. */
     const val EDGE_Z = 2.0
+    /**
+     * 20 Oct, review: the false-discovery rate across every compared cell (Benjamini-Hochberg, CLAUDE.md's rule for many ideas).
+     * Thousands of cells tested at |z| >= 2 alone gave dozens of "differs from the research" notes by chance.
+     */
+    const val FDR_Q = 0.10
 
     // ---- outcomes ---------------------------------------------------------------------------------------------------------
 
@@ -281,13 +286,18 @@ object CandleBook {
 
     /** What the agent's own count says for one cell against its same-colour baseline: a z on the up-rate, needs [COMPARE_N]. */
     fun says(cell: Cell?, base: Cell?): Says {
-        val n = cell?.n5 ?: 0
-        val r = cell?.upRate ?: return Says.FEW
-        val p = base?.upRate ?: 0.5
-        if (n < COMPARE_N) return Says.FEW
-        val se = sqrt(p * (1 - p) / n).coerceAtLeast(1e-9)
-        val z = (r - p) / se
+        val z = z(cell, base) ?: return Says.FEW
         return when { z >= EDGE_Z -> Says.UP; z <= -EDGE_Z -> Says.DOWN; else -> Says.NONE }
+    }
+
+    /** The z of [cell]'s up-rate against its baseline (null: under [COMPARE_N] settled reads, or no outcome). */
+    fun z(cell: Cell?, base: Cell?): Double? {
+        val n = cell?.n5 ?: 0
+        val r = cell?.upRate ?: return null
+        if (n < COMPARE_N) return null
+        val p = base?.upRate ?: 0.5
+        val se = sqrt(p * (1 - p) / n).coerceAtLeast(1e-9)
+        return (r - p) / se
     }
 
     /** One cell compared: its own count, the baseline, the research's row and whether they agree. */
@@ -310,21 +320,45 @@ object CandleBook {
         else -> ctx.replace('_', ' ')
     }
 
-    /** Every "INST|tf|shape|ctx" cell of [s] (baselines aside), compared with the research. */
-    fun compare(s: Stats, seed: Seed): List<Compare> = s.cells.entries.mapNotNull { (k, c) ->
-        val p = k.split('|')
-        if (p.size != 4 || p[2].startsWith("*")) return@mapNotNull null
-        val inst = p[0]; val tf = p[1].toIntOrNull() ?: return@mapNotNull null; val shape = p[2]; val ctx = p[3]
-        val colour = when { shape.contains("green") || shape in BULL -> 1; shape.contains("red") || shape in BEAR -> -1; else -> 0 }
-        // A shape without one colour is compared with every candle of the context (green and red baselines together).
-        val base = if (colour != 0) s[baseKey(inst, tf, colour, ctx)] else merge(s[baseKey(inst, tf, 1, ctx)], s[baseKey(inst, tf, -1, ctx)])
-        val own = says(c, base)
-        val row = if (inst in R87_INDICES && ctx == "all") seed.row(shape, inst, researchTf(tf)) else null
-        // MCX and every context cell: R85 / R87 found no edge in any (0 of 4,049 shape x context cells passed).
-        val rs = when { row != null -> when (row.edge) { 1 -> Says.UP; -1 -> Says.DOWN; else -> Says.NONE }; seed.empty -> Says.FEW; else -> Says.NONE }
-        val agrees = if (own == Says.FEW || rs == Says.FEW) null else own == rs
-        Compare(inst, tf, shape, ctx, c, base, own, row, rs, agrees)
-    }.sortedWith(compareBy({ it.inst }, { it.tf }, { it.shape }, { it.ctx }))
+    /**
+     * Every "INST|tf|shape|ctx" cell of [s] (baselines aside), compared with the research.
+     *
+     * 20 Oct, review: its own count is an edge only when it survives Benjamini-Hochberg at [FDR_Q] across every cell compared
+     * (two-sided p from its z), not |z| >= 2 on each of thousands of cells. And a research edge its own count does not show
+     * (yet) is "too few to compare", not "differs": at n 30 an own count has little power to see a small edge.
+     */
+    fun compare(s: Stats, seed: Seed): List<Compare> {
+        data class Raw(val inst: String, val tf: Int, val shape: String, val ctx: String, val c: Cell, val base: Cell?, val z: Double?)
+        val raw = s.cells.entries.mapNotNull { (k, c) ->
+            val p = k.split('|')
+            if (p.size != 4 || p[2].startsWith("*")) return@mapNotNull null
+            val inst = p[0]; val tf = p[1].toIntOrNull() ?: return@mapNotNull null; val shape = p[2]; val ctx = p[3]
+            val colour = when { shape.contains("green") || shape in BULL -> 1; shape.contains("red") || shape in BEAR -> -1; else -> 0 }
+            // A shape without one colour is compared with every candle of the context (green and red baselines together).
+            val base = if (colour != 0) s[baseKey(inst, tf, colour, ctx)] else merge(s[baseKey(inst, tf, 1, ctx)], s[baseKey(inst, tf, -1, ctx)])
+            Raw(inst, tf, shape, ctx, c, base, z(c, base))
+        }
+        val tested = raw.filter { it.z != null }
+        val q = LearnStats.bh(DoubleArray(tested.size) { LearnStats.pOfZ(tested[it].z!!) })
+        val qOf = HashMap<Raw, Double>(tested.size * 2).apply { tested.forEachIndexed { i, r -> put(r, q[i]) } }
+        return raw.map { r ->
+            val own = when {
+                r.z == null -> Says.FEW
+                (qOf[r] ?: 1.0) > FDR_Q -> Says.NONE
+                r.z > 0 -> Says.UP
+                else -> Says.DOWN
+            }
+            val row = if (r.inst in R87_INDICES && r.ctx == "all") seed.row(r.shape, r.inst, researchTf(r.tf)) else null
+            // MCX and every context cell: R85 / R87 found no edge in any (0 of 4,049 shape x context cells passed).
+            val rs = when { row != null -> when (row.edge) { 1 -> Says.UP; -1 -> Says.DOWN; else -> Says.NONE }; seed.empty -> Says.FEW; else -> Says.NONE }
+            val agrees = when {
+                own == Says.FEW || rs == Says.FEW -> null
+                rs != Says.NONE && own == Says.NONE -> null           // a research edge not (yet) seen in its own count: too few to say
+                else -> own == rs
+            }
+            Compare(r.inst, r.tf, r.shape, r.ctx, r.c, r.base, own, row, rs, agrees)
+        }.sortedWith(compareBy({ it.inst }, { it.tf }, { it.shape }, { it.ctx }))
+    }
 
     private val BULL = setOf("three_white", "bull_engulfing", "bull_harami", "morning_star", "tweezer_bottom")
     private val BEAR = setOf("three_black", "bear_engulfing", "bear_harami", "evening_star", "tweezer_top")

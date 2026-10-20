@@ -62,6 +62,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 20 Oct (Boss: "Deep analysis of the whole application, find if there are any issues and resolve them").
+        Entry("2026-10-20-deep-review-fixes", OCT20, "Whole app review: safer exits, honest records",
+            "The 15:05 expiry exit reads orders first, so an exit that just filled is never sent twice. " +
+                "Expiring SENSEX options are closed too, and an arm's own live trade is left to its own exit. " +
+                "A carried position's stop and target at Zerodha are placed again when the next session opens. " +
+                "The same-direction cap now counts every bot entry, and catches four orders sent on one signal. " +
+                "Low battery never slows the stop checks, and the index prices stay on the live stream. " +
+                "The Candle agent reads only finished candles and lists the newest first. " +
+                "Backups, erasing and the data upload are safer; the upload goes only to a private repository.",
+            "Trade → positions (the stops); Bot settings → same-direction cap; Research → Candles"),
         // 20 Oct (Boss: "Resolve all the problems/issues pushed to git by harvest"): the 19 Oct diagnostics file, fixed.
         Entry("2026-10-20-diagnostics-fixes", OCT20, "Fixes from your 19 Oct diagnostics",
             "The diagnostics now count only real failures as errors; warnings and notices are listed apart. " +

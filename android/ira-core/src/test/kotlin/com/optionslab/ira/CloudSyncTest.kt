@@ -302,6 +302,9 @@ class CloudSyncTest {
         assertNotNull(CloudSync.repoRefused("someone-else", "options-lab"))
         assertNotNull(CloudSync.repoRefused(CloudSync.OWNER, "options-lab.git"))
         assertNotNull(CloudSync.repoRefused("a/b", "c"))
+        // 20 Oct, review: only Boss's own account (any case).
+        assertNotNull(CloudSync.repoRefused("someone-else", "IraAlgo")).let { assertTrue(it.contains("only to Boss's own"), it) }
+        assertNull(CloudSync.repoRefused("MEVISHALSONAWANE-AI", "IraAlgo"))
         assertEquals("mevishalsonawane-ai" to "IraAlgo", CloudSync.parseRepo(" mevishalsonawane-ai/IraAlgo.git "))
         assertNull(CloudSync.parseRepo("IraAlgo"))
         assertNull(CloudSync.parseRepo("a/b/c"))

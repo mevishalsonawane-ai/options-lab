@@ -1043,7 +1043,7 @@ object PineAuto {
             val snap = runCatching { Paper.snapshot() }.getOrNull()
             val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
             if (refusals.isNotEmpty()) { note(b, id, "Guard refused: ${refusals.joinToString(" ")}"); return }
-            val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, auto = label(item))
+            val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, auto = label(item), mirror = ExposureCapHost.NO_LIVE)
             val fill = filledOrCancelled(buy) ?: run { note(b, id, "Paper buy not filled: ${buy.message}"); return }
             buy.orderId?.let { ownerTag("paper:$it", "${label(item)} · entry") }
             FlowGate.taken(flow, buy.orderId)

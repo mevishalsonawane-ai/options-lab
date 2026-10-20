@@ -51,7 +51,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a   # v4.4.3 (20 Oct: pinned to its commit)
       # No Android SDK on purpose: the engine must build on a bare JDK.
       - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification :ira-core:test
 
@@ -128,7 +128,7 @@ jobs:
             echo "NDK install failed (try $i); clearing and retrying"
             rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
           done
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a   # v4.4.3 (20 Oct: pinned to its commit)
       # The TDLib library built above (IraAlgo only: its own flavour's folder, so IraGoldAlgo carries none), checked again.
       - uses: actions/download-artifact@v4
         with:
@@ -322,7 +322,7 @@ jobs:
             echo "NDK install failed (try $i); clearing and retrying"
             rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
           done
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a   # v4.4.3 (20 Oct: pinned to its commit)
       # Robolectric fetches its Android runtime jar from Maven Central on first use, into ~/.m2; kept between runs
       # so four shards do not each download it (Maven Central rate-limits them: HTTP 429 failed every test once).
       - uses: actions/cache@v4

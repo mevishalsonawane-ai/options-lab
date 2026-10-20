@@ -3264,7 +3264,10 @@ object OrbArms {
     private fun followIndices(b: Book) = runCatching {
         val unds = ALL_ARMS.filter { b.armed[it.source] == true && !it.hero }
             .map { if (it.liquidity) LiquidityRules.underlyingOf(it) else OrbRules.UNDERLYING }.distinct()
-        KiteStream.want("index", unds.mapNotNull { u -> Broker.indexKey(u)?.let { Broker.tokenOf(it) } })
+        // 20 Oct, review: always with the indices the stream carries for everyone (NIFTY, BANKNIFTY, VIX). This owner's set
+        // REPLACES the earlier one, so "no arm armed" removed them all: the big-move recorder, the local candles and the widget
+        // lost their index ticks on every pass.
+        KiteStream.want("index", KiteStream.INDEX_TOKENS + unds.mapNotNull { u -> Broker.indexKey(u)?.let { Broker.tokenOf(it) } })
     }
 
     /**

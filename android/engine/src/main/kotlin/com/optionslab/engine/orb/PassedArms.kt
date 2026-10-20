@@ -235,6 +235,18 @@ object PassedArms {
     /** A target is booked at the target at most (a gap through it never counts as better: the research's limit fill). */
     fun booked(kind: ExitKind, fill: Double, target: Double?): Double = if (kind == ExitKind.TARGET && target != null) minOf(fill, target) else fill
 
+    /**
+     * 20 Oct, review: a STOP or LOCK the walk found on a closed minute (a wick through the stop that recovered by the next look)
+     * is booked at the walk's own price ([walk]: the stop's level, or the minute's open on a gap through it) when the later
+     * market fill is better - never flattered above what the research books. A worse fill is booked as it came. A target stays
+     * at the target at most; any other exit, or no walk price, is the fill.
+     */
+    fun booked(kind: ExitKind, fill: Double, target: Double?, walk: Double?): Double = when {
+        kind == ExitKind.TARGET -> booked(kind, fill, target)
+        (kind == ExitKind.STOP || kind == ExitKind.LOCK) && walk != null && walk.isFinite() && walk > 0 -> minOf(fill, walk)
+        else -> fill
+    }
+
     // ---- the 40-trade forward bar (R51 and R52) ---------------------------------------------------------------------------
 
     /**

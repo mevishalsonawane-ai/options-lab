@@ -31,12 +31,20 @@ class JarvisWidget : AppWidgetProvider() {
             if (ids.isNotEmpty()) render(context, mgr, ids)
         }
 
+        private val MONEY = Regex("(?i)(rs\\.?\\s?\\d|₹|p&l|pnl|profit|loss|funds?|margin|balance|position|order|holding|account|zerodha)")
+        /** 20 Oct, review: trade words too ("bought", "2 lots", "stop 95"), each a whole word, and an option's CE / PE. */
+        private val TRADE = Regex("(?i)\\b(bought|sold|buy|sell|lots?|qty|quantity|stop|target|filled|fill|entry|exit|trade[sd]?)\\b")
+        private val CONTRACT = Regex("\\b(CE|PE)\\b|\\d(CE|PE)\\b")
+
+        /** Whether [text] says anything about money, the account or a trade: then it is not shown on the home screen. */
+        internal fun secret(text: String): Boolean = MONEY.containsMatchIn(text) || TRADE.containsMatchIn(text) || CONTRACT.containsMatchIn(text)
+
         private fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
             val v = RemoteViews(context.packageName, R.layout.widget_jarvis)
             val st = IraHub.state.value
             val last = st.messages.lastOrNull { it.fromIra }?.text
             // The home screen is not protected from eyes or screenshots: an answer about money or the account is not shown there.
-            val secret = last != null && Regex("(?i)(rs\\.?\\s?\\d|₹|p&l|pnl|profit|loss|funds?|margin|balance|position|order|holding|account|zerodha)").containsMatchIn(last)
+            val secret = last != null && secret(last)
             v.setTextViewText(R.id.j_msg, when {
                 last == null -> "Hello Boss. Say \"Jarvis\" or open the app to ask me anything."
                 secret -> "I answered you in the app, Boss - open it to read."

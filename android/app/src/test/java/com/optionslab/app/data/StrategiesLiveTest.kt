@@ -166,6 +166,20 @@ class StrategiesLiveTest : RobolectricTest() {
         assertFalse(entry(id).running)
     }
 
+    /**
+     * 20 Oct, review: a live MARKET entry whose quote could not be read was judged by the account guard at price 0, so the
+     * order-value and exposure limits saw a zero-value order and let it through. An unknown price now refuses the entry.
+     */
+    @Test fun aLiveEntryWithNoQuoteIsRefusedNotPricedAtZero() {
+        live()
+        val id = saved(Position.B to OptionType.CE)
+        kite.quotes.remove("NFO:$NIFTY_CE")
+        startLive(id)
+        assertTrue("nothing bought blind", buys().isEmpty())
+        val log = runBlocking { Strategies.log() }.joinToString("\n") { it.message }
+        assertTrue(log, log.contains("Order price is unknown"))
+    }
+
     // ---- exits: only what is held, less what is already going out -------------------------------
 
     @Test fun anExitSendsOnlyWhatZerodhaHoldsLessWorkingExits() {
@@ -203,6 +217,22 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("nothing more sent", before, kite.placed.size)
         val log = runBlocking { Strategies.log() }.joinToString("\n") { it.message }
         assertTrue(log, log.contains("already on its way out; nothing more sent"))
+    }
+
+    /**
+     * 20 Oct, review: a protection's resting exit fills between the exit's two reads. Positions were read first (still held),
+     * then the orders (that exit no longer working), so a second SELL went out and left a short. Orders are now read first.
+     */
+    @Test fun aRestingExitFillingBetweenTheReadsIsNotDoubled() {
+        live()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        val protect = runBlocking { Broker.placeOrder(Kite.Order(NIFTY_CE, Kite.Side.SELL, 75, 75, "NRML", "LIMIT", 150.0, 0.05, "NFO", "iraprotect"), exit = true) }
+        val before = kite.placed.size
+        kite.afterNext("/portfolio/positions") { kite.fill(protect) }
+        runBlocking { Strategies.stop(id, "manual", compromised = false) }
+        assertEquals("nothing more sent", before, kite.placed.size)
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
     }
 
     @Test fun aStopLossOnTheTickSellsTheLegOnce() {

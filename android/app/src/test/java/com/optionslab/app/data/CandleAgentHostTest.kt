@@ -196,4 +196,38 @@ class CandleAgentHostTest : RobolectricTest() {
         assertEquals(31, CandleAgentHost.fold(ones, 1, now).size)
         assertTrue(CandleAgentHost.fold(emptyList(), 15, now).isEmpty())
     }
+
+    /**
+     * 20 Oct, review: the minutes come from a cache up to 10 minutes old while batches run every 5. Closed by the clock, the
+     * 10:00 candle was read at 10:07 from the 2 minutes fetched at 10:02 (and never read again). Closed by the data: it waits.
+     */
+    @Test fun mcxCandlesCloseByTheFetchedMinutesNeverByTheClock() {
+        val t0 = day.atTime(9, 50)
+        val fetched = (0 until 12).map { CandleRead.Bar(t0.plusMinutes(it.toLong()), 100.0, 101.0, 99.0, 100.5, 10.0) }   // 09:50 .. 10:01
+        val five = CandleAgentHost.fold(fetched, 5, day.atTime(10, 2, 30))
+        assertEquals(listOf(day.atTime(9, 50), day.atTime(9, 55)), five.map { it.t })
+        // After MCX's close the day's last candle, cut short by the close, is closed too.
+        val settled = CandleAgentHost.fold(fetched, 15, day.atTime(23, 56), sessionOver = true)
+        assertEquals(listOf(day.atTime(9, 45), day.atTime(10, 0)), settled.map { it.t })
+        assertEquals(1, CandleAgentHost.fold(fetched, 15, day.atTime(23, 56)).size)
+    }
+
+    /** 20 Oct, review: a batch whose study failed returned before publishing, so the page never showed the error. */
+    @Test fun aFailedBatchShowsItsErrorOnThePage() = runBlocking {
+        Market.testClock = java.time.Clock.fixed(LocalDate.of(2026, 10, 18).atTime(12, 0).atZone(zone).toInstant(), zone)   // a Sunday
+        CandleAgentHost.resetForTest(agentWithReads())
+        assertNull(CandleAgentHost.view.value.status!!.lastError)
+        CandleAgentHost.failNextForTest = true
+        CandleAgentHost.batch(context)
+        assertEquals("IllegalStateException", CandleAgentHost.view.value.status!!.lastError)
+        assertTrue(CandleAgentHost.view.value.status!!.words().contains("last error"))
+    }
+
+    /** 20 Oct, review: after MCX's close with minutes still kept, the worker runs one more batch to settle them. */
+    @Test fun mcxClosedWithMinutesKeptAsksForOneSettleBatch() {
+        Market.testClock = java.time.Clock.fixed(LocalDate.of(2026, 10, 18).atTime(12, 0).atZone(zone).toInstant(), zone)   // a Sunday
+        assertNull(CandleAgentHost.delayMs(context))
+        CandleAgentHost.keepMcxForTest("CRUDEOIL", listOf(CandleRead.Bar(day.atTime(23, 20), 1.0, 1.0, 1.0, 1.0)))
+        assertNotNull(CandleAgentHost.delayMs(context))
+    }
 }

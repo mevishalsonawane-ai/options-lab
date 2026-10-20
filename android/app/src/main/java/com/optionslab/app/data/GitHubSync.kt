@@ -161,7 +161,11 @@ object GitHubSync {
             CloudSync.repoRefused(owner, name)?.let { throw IllegalArgumentException(it) }
             val gh = GitHubReleases(http, t, owner, name)
             val user = gh.user()
-            if (!gh.canSeeRepo()) throw IOException("This token cannot see $owner/$name. Make it for that repository only, with Contents: read and write.")
+            when (gh.repoPrivate()) {
+                null -> throw IOException("This token cannot see $owner/$name. Make it for that repository only, with Contents: read and write.")
+                false -> throw IOException("$owner/$name is public: the uploads (diagnostics, backups) would be readable by anyone. Make it private on GitHub first.")
+                true -> Unit
+            }
             // GitHub's answer that decided is added (13 Oct review), so a refusal Boss did not expect can be diagnosed. It is
             // GitHub's status and words only, cut and redacted ([GitHubReleases.lastProbe]): never the token.
             if (gh.reachesCode()) throw IOException("This token can also reach ${CloudSync.CODE_REPO} (the app's code). Delete it on GitHub and make one for $owner/$name ONLY." +
@@ -326,6 +330,18 @@ object GitHubSync {
             if (reaches) {
                 note(CloudSync.Last(System.currentTimeMillis(), false, 0, "upload",
                     "the token can reach ${CloudSync.CODE_REPO}: make one for ${owner}/${name} only", 403))
+                runCatching { check() }
+                return false
+            }
+            // 20 Oct, review: and the data repository is still PRIVATE (it may have been made public since the token was saved).
+            // A failed check sends nothing this run; a public repository is recorded as refused, so the runs pause until fixed.
+            val isPrivate = try { gh.repoPrivate() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                runCatching { Diag.record("github", CloudSync.redact("upload skipped this time: the private check failed (${e.message?.take(120) ?: e.javaClass.simpleName})")) }
+                return false
+            }
+            if (isPrivate != true) {
+                note(CloudSync.Last(System.currentTimeMillis(), false, 0, "upload",
+                    if (isPrivate == null) "the token cannot see ${owner}/${name}" else "${owner}/${name} is public: make it private", 403))
                 runCatching { check() }
                 return false
             }

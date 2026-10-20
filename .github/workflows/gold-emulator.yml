@@ -8,8 +8,9 @@ on:
     branches: [claude/android-options-lab-kotlin-xgt1ym]
     paths: ["android/**", ".github/workflows/gold-emulator.yml"]
 
+# 20 Oct, review: read-only by default; write only for the job that publishes the screenshots release.
 permissions:
-  contents: write
+  contents: read
 
 # One run at a time: two runs replacing the same release asset at once lost the upload (HTTP 404). Only the newest
 # push's run matters, so an older one still running is cancelled.
@@ -20,6 +21,8 @@ concurrency:
 jobs:
   emulator:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only to replace the "gold-emulator" release's screenshots
     if: "!startsWith(github.event.head_commit.message, '[quick]')"   # a "[quick]" push skips it (see android.yml)
     timeout-minutes: 45
     steps:
@@ -32,7 +35,7 @@ jobs:
         run: |
           SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$SDKM" --licenses > /dev/null || true
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a   # v4.4.3
       - name: Build the IraGoldAlgo release APK
         working-directory: android
         # Without the arm64-only model runner (Jarvis's on-device model), so it installs on the x86_64 emulator.
@@ -48,7 +51,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Drive the app on the emulator
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d   # v2.38.0
         with:
           api-level: 34
           arch: x86_64

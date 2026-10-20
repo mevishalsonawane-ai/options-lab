@@ -77,7 +77,11 @@ object CandleAgentHost {
     @Volatile private var settledDay: LocalDate? = null
     @Volatile private var deepDay: LocalDate? = null
 
-    private val mcxBars = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<CandleRead.Bar>>>()
+    /** An MCX future's minutes as last fetched: when ([ms] the phone's clock, [at] the market's) and the finished minutes then. */
+    private class Fetched(val ms: Long, val at: LocalDateTime, val bars: List<CandleRead.Bar>)
+    private val mcxBars = java.util.concurrent.ConcurrentHashMap<String, Fetched>()
+    /** One writer of the counts file at a time (the batch worker and the hourly study worker both save). */
+    private val saveLock = Any()
     /** The chain's OI per strike at the last batch, per index (for the OI change since). */
     private val lastOi = java.util.concurrent.ConcurrentHashMap<String, Map<Double, Pair<Long, Long>>>()
 
@@ -110,9 +114,11 @@ object CandleAgentHost {
         val nse = runCatching { Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose() }.getOrDefault(false)
         val mcx = runCatching { McxMarket.isOpen() }.getOrDefault(false)
         val settle = runCatching { Market.isTradingDay() && Market.minuteNow() > Market.foClose() && settledDay != Market.today() }.getOrDefault(false)
+        // 20 Oct, review: MCX closed with its minutes still kept: one more batch settles its last candles (they were dropped).
+        val mcxSettle = !mcx && mcxBars.isNotEmpty()
         // Off hours: a batch once an hour, asked again every minute (never one long wait that would sleep through the open),
         // and only while the agent is loaded - one let go for memory is not brought back just to idle.
-        if (!nse && !mcx && !settle) return if (agent != null && System.currentTimeMillis() - lastBatchAt >= OFF_HOURS_MS) 0L else null
+        if (!nse && !mcx && !settle && !mcxSettle) return if (agent != null && System.currentTimeMillis() - lastBatchAt >= OFF_HOURS_MS) 0L else null
         val every = if (runCatching { com.optionslab.app.work.WatchWorkers.saver(context) }.getOrDefault(false)) SAVER_MS else EVERY_MS
         return (every - (System.currentTimeMillis() - lastBatchAt)).coerceIn(0L, every)
     }
@@ -132,11 +138,18 @@ object CandleAgentHost {
         val series = ArrayList<CandleAgent.Series>()
         for (m in INDICES) series += indexSeries(m, now.toLocalDateTime(), nseOver, nowMs, nseOpen)
         val mcxOpen = runCatching { McxMarket.isOpen() }.getOrDefault(false)
-        if (mcxOpen) for (u in MCX) series += mcxSeries(u, now.toLocalDateTime(), nowMs)
+        // 20 Oct, review: after MCX's close, one batch reads the day's last minutes as a finished session (its last candles
+        // settle with what they have, as NSE's do after its close); the kept minutes are then let go.
+        val mcxSettle = !mcxOpen && mcxBars.isNotEmpty()
+        if (mcxOpen || mcxSettle) for (u in MCX) series += mcxSeries(u, now.toLocalDateTime(), nowMs, settle = mcxSettle)
         val heard = SmartWorkers.bus.recent(nowMs, kinds = CandleAgent.HEARS)
         val step = withContext(Dispatchers.Default) {
-            runCatching { a.study(series, heard, nowMs, now.toLocalDateTime(), nseOpen || mcxOpen) }.onFailure { a.failed(it) }.getOrNull()
-        } ?: return
+            runCatching {
+                if (failNextForTest) { failNextForTest = false; throw IllegalStateException("test") }
+                a.study(series, heard, nowMs, now.toLocalDateTime(), nseOpen || mcxOpen)
+            }.onFailure { a.failed(it) }.getOrNull()
+        } ?: run { publish(a); return }                 // 20 Oct, review: a failed batch shows its error on the page too
+        if (mcxSettle) mcxBars.clear()
         // Its reads on the bus as they are (no direction: never a vote in any strategy's consensus).
         for (p in step.posts) runCatching { SmartWorkers.bus.post(p) }
         if (step.changed) withContext(Dispatchers.IO) { save(context, a) }
@@ -202,8 +215,12 @@ object CandleAgentHost {
         val bars = all.filter { it.t.toLocalDate() in days }
         val name = m.name
         val todays = around(name, now.toLocalDate(), nowMs)
+        // 20 Oct, review: closed by where the data ends, not by the clock. This history is refreshed only while the Ira page is
+        // open or Jarvis listens, so the clock can be well past a candle whose later minutes were never fetched (it was read
+        // from part of its minutes, then never again); and its newest minute may have been read while still forming.
+        val end = Candles.dataEnd(bars.map { it.t }, now, complete = over)
         return TFS.map { tf ->
-            val folded = Candles.closed(Candles.fold(bars, tf, m), tf, now)
+            val folded = Candles.closedByData(Candles.fold(bars, tf, m), tf, end, sessionOver = over) { it.t }
             // Today's chain, gamma and VWAP are what is known NOW: only a candle that closed within the last batch interval gets
             // them (an older candle never gets a later chain). The expiry day is a calendar fact all day.
             val freshFrom = now.minusMinutes(tf + EVERY_MS / 60_000L)
@@ -243,40 +260,59 @@ object CandleAgentHost {
     }
 
     /** An MCX near future's 1-minute candles today (read at most every [MCX_EVERY_MS]), folded to 1, 5 and 15 minutes. */
-    private suspend fun mcxSeries(u: String, now: LocalDateTime, nowMs: Long): List<CandleAgent.Series> {
+    private suspend fun mcxSeries(u: String, now: LocalDateTime, nowMs: Long, settle: Boolean = false): List<CandleAgent.Series> {
         val kept = mcxBars[u]
-        val bars = if (kept != null && nowMs - kept.first < MCX_EVERY_MS) kept.second else withContext(Dispatchers.IO) {
+        // [settle]: after the close, read once more (the cache can be 10 minutes short of the close); the kept minutes if that fails.
+        val got = if (!settle && kept != null && nowMs - kept.ms < MCX_EVERY_MS) kept else withContext(Dispatchers.IO) {
             val key = runCatching { com.optionslab.engine.mcx.McxInstruments.futures(McxMarket.cached(), u, now.toLocalDate(), 1).firstOrNull()?.upstoxKey }.getOrNull()
-                ?: return@withContext emptyList()
+                ?: return@withContext null
             val nowSec = now.atZone(com.optionslab.engine.IST).toEpochSecond()
             // A failed read is tried again next batch (never kept as "no candles"); the worker's time limit still cuts it.
             val raw = try { Net.intraday(key) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { emptyList() }
-            raw.filter { it.epochSecond + 60 <= nowSec }.sortedBy { it.epochSecond }
+            val bars = raw.filter { it.epochSecond + 60 <= nowSec }.sortedBy { it.epochSecond }
                 .map { b -> CandleRead.Bar(LocalDateTime.ofEpochSecond(b.epochSecond, 0, java.time.ZoneOffset.ofHoursMinutes(5, 30)), b.open, b.high, b.low, b.close,
                     b.volume.takeIf { it > 0 }?.toDouble()) }
-        }.also { if (it.isNotEmpty()) mcxBars[u] = nowMs to it }
-        if (bars.isEmpty()) return emptyList()
-        return TFS.map { tf -> CandleAgent.Series(u, tf, fold(bars, tf, now), 9 * 60) }
+            // Settling: a read after midnight (the next day: nothing yet) or one with fewer minutes than kept keeps the kept ones.
+            if (bars.isEmpty() || (settle && kept != null && bars.last().t.isBefore(kept.bars.last().t))) null else Fetched(nowMs, now, bars)
+        }?.also { if (!settle) mcxBars[u] = it } ?: kept?.takeIf { settle } ?: return emptyList()
+        // Closed by where the fetched minutes end (20 Oct, review): a 5-minute candle is never read from part of its minutes
+        // because the clock moved on while the minutes came from a cache up to 10 minutes old.
+        return TFS.map { tf -> CandleAgent.Series(u, tf, fold(got.bars, tf, got.at, sessionOver = settle), 9 * 60, sessionOver = settle) }
     }
 
-    /** MCX minutes folded to [tf] from 09:00 (volume summed), closed candles only. */
-    internal fun fold(bars: List<CandleRead.Bar>, tf: Int, now: LocalDateTime): List<CandleRead.Bar> {
-        if (tf <= 1) return bars.filter { !it.t.plusMinutes(1).isAfter(now) }
-        return bars.groupBy { b ->
+    /**
+     * MCX minutes folded to [tf] from 09:00 (volume summed), closed candles only: closed by the data's own end ([Candles.dataEnd],
+     * the minutes as fetched at [asOf], each one already over then), never by the clock alone. [sessionOver]: after MCX's close,
+     * its last candle is closed too.
+     */
+    internal fun fold(bars: List<CandleRead.Bar>, tf: Int, asOf: LocalDateTime, sessionOver: Boolean = false): List<CandleRead.Bar> {
+        val end = Candles.dataEnd(bars.map { it.t }, asOf, complete = true)
+        val folded = if (tf <= 1) bars else bars.groupBy { b ->
             val m = b.t.hour * 60 + b.t.minute - 9 * 60
             b.t.toLocalDate().atStartOfDay().plusMinutes((Math.floorDiv(m, tf) * tf + 9 * 60).toLong())
         }.toSortedMap().map { (t, g) ->
             CandleRead.Bar(t, g.first().o, g.maxOf { it.h }, g.minOf { it.l }, g.last().c, g.mapNotNull { it.v }.takeIf { it.isNotEmpty() }?.sum())
-        }.filter { !it.t.plusMinutes(tf.toLong()).isAfter(now) }
+        }
+        return Candles.closedByData(folded, maxOf(tf, 1), end, sessionOver) { it.t }
     }
 
+    /**
+     * The counts written (IO thread). 20 Oct, review: one writer at a time (the batch worker and the hourly study worker could
+     * both write the same temporary file), and the file replaced in one step: a failed rename used to delete the counts first.
+     */
     private fun save(context: Context, a: CandleAgent) {
-        runCatching {
-            val f = file(context)
-            f.parentFile?.mkdirs()
-            val tmp = File(f.parentFile, "stats.tmp")
-            tmp.writeText(a.encodeStats())
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        synchronized(saveLock) {
+            runCatching {
+                val f = file(context)
+                f.parentFile?.mkdirs()
+                val tmp = File(f.parentFile, "stats.tmp")
+                tmp.writeText(a.encodeStats())
+                try {
+                    java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+                } catch (e: Exception) {
+                    java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
         }
     }
 
@@ -316,8 +352,17 @@ object CandleAgentHost {
     /** The diagnostics' line. */
     fun diagLine(): String = agent?.status()?.words() ?: if (_view.value.released) "Candle agent: released to free memory" else "Candle agent: not loaded yet"
 
+    /** TEST ONLY: [bars] kept for [u] as if fetched at their last minute's end. */
+    internal fun keepMcxForTest(u: String, bars: List<CandleRead.Bar>) {
+        mcxBars[u] = Fetched(System.currentTimeMillis(), bars.last().t.plusMinutes(1), bars)
+    }
+
+    /** TEST ONLY: the next batch's study fails (as a real error would). */
+    @Volatile internal var failNextForTest = false
+
     /** TEST ONLY. */
     internal fun resetForTest(a: CandleAgent? = null) {
+        failNextForTest = false
         agent = a; lastBatchAt = 0L; settledDay = null; deepDay = null; mcxBars.clear(); lastOi.clear()
         _view.value = View()
         if (a != null) publish(a)

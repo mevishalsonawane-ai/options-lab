@@ -818,8 +818,11 @@ object Paper {
         val entry = runCatching { opens(c.symbol, action) }.getOrDefault(true)
         // 19 Oct: an automatic BUY that opens an index option is counted by the same-direction cap ([capCheck]); its way (+1 a
         // call, -1 a put). Exits, sells, Boss's own orders and anything but the index options: null, never asked.
-        val capDir = if (auto != null && action.equals("BUY", true) && entry && !ExposureCapHost.liveMirrorPossible(mirror))
+        // 20 Oct, review: the entry is COUNTED ([capWay]) even while the cap only logs it (an entry that may also go live): it is
+        // a paper position the cap must still see once Live is off (before, it was never recorded and the cap undercounted).
+        val capWay = if (auto != null && action.equals("BUY", true) && entry)
             com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) else null
+        val capDir = capWay?.takeIf { !ExposureCapHost.liveMirrorPossible(mirror) }
         val r = locked {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
@@ -830,7 +833,7 @@ object Paper {
             val out = engine(b.capital, b.contracts).place(b.state,
                 OrderRequest(c.symbol, c.exchange, action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
             val id = out.result.orderId
-            val autoNow = if (capDir != null && out.result.ok && id != null) (b.auto + (id to auto!!)).let { m ->
+            val autoNow = if (capWay != null && out.result.ok && id != null) (b.auto + (id to auto!!)).let { m ->
                 if (m.size > AUTO_KEPT) m.entries.drop(m.size - AUTO_KEPT).associate { it.key to it.value } else m } else b.auto
             save(b.copy(state = out.state, auto = autoNow))
             describe(out.result, out.events)

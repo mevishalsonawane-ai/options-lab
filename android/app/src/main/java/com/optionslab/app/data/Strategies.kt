@@ -555,14 +555,17 @@ object Strategies {
                             else -> return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be confirmed out yet; tried again next look")
                         }
                     }
+                    // 20 Oct, review: the orders first, then the positions (as [McxGuard] and [ExpirySquareOff]). The other way round,
+                    // a protection's or the expiry exit's order filling between the two reads showed the position still held and
+                    // nothing working, and this exit doubled it. In this order such a fill shows as still working: nothing more sent.
+                    val working = runCatching { Broker.orders() }.getOrNull()
+                        ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
                     val net = runCatching { Broker.positionBook().net }.getOrNull()
                         ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
                     val held = net.filter { it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product }.sumOf { it.qty }
                     val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
                     if (!closes) return@runBlocking StrategyHost.Placed.Refused(
                         "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} would not close it; not sent")
-                    val working = runCatching { Broker.orders() }.getOrNull()
-                        ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
                     val busy = working.filter { it.working && it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product && it.side == side.name }
                         .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
                     qty = com.optionslab.engine.risk.ExitQty.sendable(held, busy, order.quantity, ref.lot)
@@ -573,7 +576,10 @@ object Strategies {
                 val o = Kite.Order(kiteSym, side, qty, ref.lot, order.product, "MARKET", null, ref.tick, ref.exchange, "iraalgostrat")
                 // The account-wide guard, on a fresh read of the account.
                 val acct = Broker.accountNow()      // positions, funds and orders read in parallel
-                Guard.check(Guard.liveOrder(o).copy(price = last ?: 0.0), acct, exit).takeIf { it.isNotEmpty() }
+                // 20 Oct, review: no quote is an UNKNOWN price (NaN), not 0. At 0 the guard's order-value and exposure limits saw
+                // a zero-value order and let a MARKET entry of any size through; the guard refuses an entry it cannot price
+                // (its existing rule, as ORB, Pine and the arms do: "never enter blind"). An exit never needs one.
+                Guard.check(Guard.liveOrder(o).copy(price = last ?: Double.NaN), acct, exit).takeIf { it.isNotEmpty() }
                     ?.let { return@runBlocking StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
                 val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
                 if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
