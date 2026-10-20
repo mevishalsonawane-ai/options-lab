@@ -19,3 +19,13 @@ price, P&L or outcome was looked at).
    order level for a random entry), with the trade's own risk and reward distances measured from that close.
 6. **SR levels R / S** are read from 15m candles of the previous 5 sessions only, with the confirming candle also before
    today's open; the MCX 15m candles are close-only like the 1m ones.
+
+## N2 (20 Oct 2026, observations after the design run; no rule or gate changed)
+
+1. On MCX the wick variant is identical to the close variant (C-WK = C-B, R-WK = R-B): with close-only minutes a high
+   above a level is a close above it. The cells are kept as run (they count in BH).
+2. GOLDM and SILVERM 1-ITM options often have no print within 2 minutes of the trigger (median gap 89 / 22 minutes on
+   the unfilled base signals): 50 of 97 / 73 of 115 base design signals were not filled. These are reported as "not
+   filled"; an entry is never priced from a stale print.
+3. The pre-registered futures slippage (1 bp in, 2 bp on stops; about 7 NIFTY points a trade) dominates the futures-only
+   view, so `points_*.json` also gives the underlying points at the exact levels (no cost) as context.

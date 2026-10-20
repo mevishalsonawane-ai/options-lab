@@ -1397,3 +1397,20 @@ A0-A3). Signal source: the index's own 1m / 5m / 15m candle (NIFTY, BANKNIFTY, S
   (-Rs 21,127, 162 trades). Exiting an ORB breakout on a big wick against it helped in both windows but not
   significantly out of sample (+Rs 16,107, p 0.40); exits on a strong opposite candle made arms worse. Real option
   prices could not be fetched for the design window (Dhan degraded): still model-priced.
+## Previous-day high / low break on the 1-minute chart (R89, 20 Oct 2026) - 0 of 180 pass; nothing goes to paper
+Full study: `HUNT_R89_PDHL_BREAK.md` (pre-registered `hunt/r89_pdhl_break/PREREG.md`, commit 6cd81b9; notes N1). Signal
+source: the underlying (index spot 1m OHLC; MCX near future, close-only); the 1-ITM option bought on real prints (R51
+engine / R53 rules, real charges and slippage). Design 20 Nov 2024 - 31 Mar 2026 (MCX from 5 Aug 2025), holdout 1 Apr -
+19 Oct 2026 read once. 20 variants (break and go / break and reclaim x levels, wick, 1/3/5m, HTF filter, fractal, RR,
+window, first trade) x 9 instruments, BH over 180, random-entry twins.
+- Boss's rule (break, a same-colour candle beyond, entry on its break, stop at its other end, swing target) is as good as
+  a random entry minute: five indices base -Rs 3.07 lakh on 2,925 design trades (twins -Rs 3.13 lakh), holdout -Rs 1.28
+  lakh on 1,210 (twins -Rs 1.65 lakh). At the exact levels the index made +0.4 to +3.5 points a trade; the option round
+  trip costs 1.1-3.7 points.
+- About a third of trades are false breaks (stopped within 3 candles). The daily + 15m trend filter does not cut them
+  (NIFTY 32% -> 39%) and lowers the win rate; it only halves the trade count. The reclaim reading loses the same.
+- Near-miss: FINNIFTY break and go on 3m, design +Rs 56,447 (474, p 0.002, q 0.12) -> holdout -Rs 6,921 (190). MCX:
+  GOLDM / SILVERM 1-ITM options print too rarely to fill half the signals; every MCX cell lost. On all five indices the
+  base rule breaks the -Rs 13k month in 12 of 17 design and 6 of 7 holdout months.
+- Not the arms' signal (half the time on the other side of Breadth Donchian; daily corr -0.09 to +0.26) and it loses on
+  their days and on the other days. PDH / PDL stay context levels only.
