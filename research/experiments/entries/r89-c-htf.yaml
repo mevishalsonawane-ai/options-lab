@@ -1,0 +1,33 @@
+id: r89-c-htf
+title: 'R89 C-HTF: Boss previous-day high/low 1m break, break and go (long after an up-break, put after a down-break), higher-timeframe filter (daily SMA20 + 15m EMA20) on'
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R89_PDHL_BREAK.md
+hypothesis: 'Pre-registered: buying the 1-ITM option on Boss rule (signal on the underlying: break of a previous-day level, a same-colour candle beyond / back over it, entry on a break of that candle, stop at its other end, target the nearest swing with min RR) beats 500 random-entry twins after real costs (p < 0.05, BH q < 0.10 over 180 cells), >= 40 trades, walk-forward, without the top 5, worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market, close-only near future)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart'
+- previous-day high / low (SR: nearest 15m swing levels), TF candles, fractal swings, daily SMA20 / 15m EMA20 (HTF)
+model_or_rule: R89 C-HTF
+settings: research/hunt/r89_pdhl_break/cfg.py, rules.py, PREREG.md, NOTES.md
+prereg: research/hunt/r89_pdhl_break/PREREG.md
+variants_tried: 20
+results:
+  summary: 'Design option net (1 lot, 1-ITM, real prints, costs): NIFTY 205 tr -33,197 (p 0.8743, q 1.00); BANKNIFTY 225 tr -38,105 (p 0.9202, q 1.00); SENSEX 203 tr -22,733 (p 0.8603, q 1.00); FINNIFTY 219 tr +1,570 (p 0.0439, q 1.00); MIDCPNIFTY 272 tr -74,832 (p 0.9321, q 1.00); GOLDM 9 tr -4,491 (p 0.5509, q 1.00); SILVERM 5 tr -13,880 (p 1.0, q 1.00); CRUDEOIL (mini) 21 tr -2,151 (p 0.8423, q 1.00); NATURALGAS (mini) 12 tr -1,988 (p 0.7226, q 1.00). Pooled indices 1124 tr -167,297 (twin mean -112,985, futures -975,538, false breaks 34%); MCX 47 tr -22,510. Design passers: 0 of 9. Holdout (read once): NIFTY 101 tr -14,854; BANKNIFTY 93 tr -13,247; SENSEX 101 tr -6,652; FINNIFTY 78 tr -2,477; MIDCPNIFTY 103 tr -18,863; GOLDM 19 tr -6,563; SILVERM 7 tr -1,727; CRUDEOIL (mini) 15 tr -307; NATURALGAS (mini) 15 tr -2,429. Pooled indices 476 tr -56,093; MCX 56 tr -11,026.'
+  costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); MCX R53 charges + R85 strict half-spread; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'One of 20 variants x 9 instruments (180 cells, one BH family). Futures-only and fixed-risk (Rs 2,000, 1-3 lots) shown in the doc, not gated.'
