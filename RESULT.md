@@ -68,6 +68,9 @@ All of these are done. The agent is knowledge only: **it never trades, sizes, st
 - No general agent-to-agent ask/answer channel existed. The agents shared only the findings bus and the SharedKnowledge snapshot. The agent uses both, and adds a typed `CandleAgent.ask` that other agents can call. No existing agent calls it yet.
 - MCX outcomes: the last few candles of an MCX session are not counted, because the worker sleeps after MCX closes and the next day's fetch holds only that day.
 
+## Also fixed (not the Candle agent's)
+- Today (20 Oct, Dussehra) every branch's app tests failed `ControlScreensLayoutTest.framePaper[phone-font2.0]`: the masthead's holiday name ("· Dussehra") was cut off beside "Market closed" at 2x fonts. It is now its own item of the masthead's flowing row, so it wraps to its own line (`ui/Root.kt`).
+
 ## Checks
 - `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification`: pass locally.
 - Locally:
