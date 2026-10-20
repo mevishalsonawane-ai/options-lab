@@ -45,7 +45,16 @@ class ExposureSpeedTest : RobolectricTest() {
     private fun sell(c: Paper.Contract): Paper.Result =
         runBlocking { Paper.place(c, "SELL", 1, "MARKET", "MIS", null, null, Quote(100.0, bid = 99.9, ask = 100.1)) }
 
+    @org.junit.Before fun up() {
+        // 20 Oct: the market clock runs at noon of today's IST date (still ticking). On the real clock, a run after 15:15 IST
+        // had every MIS paper order refused (square-off time) and 8 of these tests failed in CI at 15:30.
+        val realNow = java.time.ZonedDateTime.now(com.optionslab.engine.IST)
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
+            java.time.Duration.between(realNow, realNow.toLocalDate().atTime(12, 0).atZone(com.optionslab.engine.IST)))
+    }
+
     @After fun down() {
+        Market.testClock = null
         Vault.testWriteDelayMs = 0L
         Paper.awaitWrites()
         Paper.writeInlineForTest = true
