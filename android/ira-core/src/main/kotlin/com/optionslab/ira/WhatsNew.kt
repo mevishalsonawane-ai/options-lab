@@ -101,7 +101,7 @@ object WhatsNew {
                 "It learns around the clock, shares its reads with the other agents and hears theirs. " +
                 "Its own counts become Jarvis's lessons; any proposal stays a note for you. " +
                 "It never trades, and it is among the first things let go when memory is short.",
-            "Research → Candles", ask = "why was that candle green"),
+            "Research → Candles", ask = "why was that candle green", to = "candles"),
         // 19 Oct (Boss: "Yes, keep only breadth donchain").
         Entry("2026-10-19-r51-record-only", OCT19, "R51 Donchian 20 records only; R72 trades",
             "Only R72 Breadth Donchian now buys the Donchian breaks on paper, as you asked. " +

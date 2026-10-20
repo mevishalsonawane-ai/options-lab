@@ -656,6 +656,8 @@ internal data class NavState(
         "pnl" -> copy(tab = Tab.PNL)
         // "What's new": the Pine change opens the Pine scripts page.
         "pine" -> copy(tab = Tab.LAB, labPage = "pine")
+        // 20 Oct, enhancement round 2: "What's new": the Candle agent's change opens Research → Candles.
+        "candles" -> copy(tab = Tab.LAB, labPage = "candles")
         else -> copy(tab = Tab.CABINET, cabinetPage = dest)
     }
 

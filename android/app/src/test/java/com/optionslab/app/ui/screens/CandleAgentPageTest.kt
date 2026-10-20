@@ -15,6 +15,7 @@ import com.optionslab.app.data.CandleAgentHost
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.ira.CandleAgent
 import com.optionslab.ira.CandleBook
+import com.optionslab.ira.CandlePage
 import com.optionslab.ira.CandleRead
 import com.optionslab.ira.Findings
 import org.junit.After
@@ -29,7 +30,7 @@ import java.time.ZoneId
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 class CandleAgentPageTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-    @After fun down() { CandleAgentHost.resetForTest() }
+    @After fun down() { CandleAgentHost.resetForTest(); com.optionslab.app.data.Market.testClock = null }
 
     private val day = LocalDate.of(2026, 10, 19)
 
@@ -121,5 +122,98 @@ class CandleAgentPageTest {
     @Test fun afterAMemoryTrimThePageSaysPositionsComeFirst() {
         compose.setContent { IraAlgoTheme("light") { CandleAgentContent(CandleAgentHost.View(released = true)) } }
         compose.onAllNodesWithText("open positions come first", substring = true).onFirst().assertExists()
+    }
+
+    // ---- 20 Oct, enhancement round 2: the "as of" line, the instrument chips, 1-minute candles never lessons, What's New's tap --
+
+    private fun ms(t: java.time.LocalDateTime) = t.atZone(ZoneId.of("Asia/Kolkata")).toInstant().toEpochMilli()
+
+    @Test fun theAsOfLineSaysPlainlyWhenNothingWasReadYet() {
+        compose.setContent { IraAlgoTheme("light") { CandleAgentContent(CandleAgentHost.View(), nowMs = ms(day.atTime(10, 0)), open = true) } }
+        compose.onNodeWithText("As of: nothing read yet (its first batch runs while NSE or MCX is open).").assertExists()
+    }
+
+    @Test fun theAsOfLineShowsTheLastBatchAndCallsALateOneStale() {
+        val a = agent()                                                   // its batch ran at 14:06
+        val view = androidx.compose.runtime.mutableStateOf(CandleAgentHost.View(status = a.status(), latest = a.latest()))
+        val now = androidx.compose.runtime.mutableStateOf(ms(day.atTime(14, 9)))
+        val open = androidx.compose.runtime.mutableStateOf(true)
+        compose.setContent { IraAlgoTheme("light") { CandleAgentContent(view.value, nowMs = now.value, open = open.value) } }
+        compose.onNodeWithText("As of 14:06.").assertExists()
+        now.value = ms(day.atTime(14, 40))                               // no batch for 34 minutes in the session
+        compose.waitForIdle()
+        compose.onAllNodesWithText("As of 14:06 (34 min ago: late", substring = true).onFirst().assertExists()
+        open.value = false                                                // after the close: the last batch's, never "late"
+        compose.waitForIdle()
+        compose.onNodeWithText("As of 14:06 (markets closed: the last batch's reads).").assertExists()
+        compose.onAllNodesWithText("overdue", substring = true).assertCountEquals(0)
+    }
+
+    @Test fun thePageReadsTheClockForItsAsOfLine() {
+        val a = agent()
+        CandleAgentHost.resetForTest(a)
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(day.atTime(14, 9).atZone(ZoneId.of("Asia/Kolkata")).toInstant(), ZoneId.of("Asia/Kolkata"))
+        compose.setContent { IraAlgoTheme("light") { CandleAgentPage() } }
+        compose.waitForIdle()
+        compose.onAllNodesWithText("As of 14:06", substring = true).onFirst().assertExists()
+    }
+
+    @Test fun theChipsFilterTheCandlesTheLessonsAndTheNotes() {
+        val a = agent()
+        val v = CandleAgentHost.View(status = a.status(), latest = a.latest(),
+            lessons = listOf(CandlePage.Line("NIFTY", "the nifty lesson"), CandlePage.Line("BANKNIFTY", "the banknifty lesson")),
+            notes = listOf(CandlePage.Line("BANKNIFTY", "the banknifty note")))
+        compose.setContent { IraAlgoTheme("light") { CandleAgentContent(v, nowMs = ms(day.atTime(14, 9)), open = true) } }
+        compose.waitForIdle()
+        // All, then the instruments the page shows, in the app's order; SENSEX shows nothing here, so it has no chip.
+        compose.onNodeWithText(CandlePage.ALL).assertExists()
+        compose.onNodeWithText("NIFTY").assertExists()
+        compose.onNodeWithText("SENSEX").assertDoesNotExist()
+        compose.onNodeWithText("BANKNIFTY").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("No notable candle read on BANKNIFTY yet.").assertExists()
+        compose.onAllNodesWithText("NIFTY 5m 19 Oct", substring = true).assertCountEquals(0)
+        scrollTo("candle-lessons")
+        compose.onNodeWithText("the banknifty lesson").assertExists()
+        compose.onNodeWithText("the banknifty note").assertExists()
+        compose.onAllNodesWithText("the nifty lesson").assertCountEquals(0)
+        compose.onAllNodesWithText("never counted as a lesson", substring = true).onFirst().assertExists()
+        // Back to All: everything again.
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("candle-chips"))
+        compose.onNodeWithText(CandlePage.ALL).performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithText("NIFTY 5m 19 Oct", substring = true).onFirst().assertExists()
+        scrollTo("candle-lessons")
+        compose.onNodeWithText("the nifty lesson").assertExists()
+    }
+
+    @Test fun aPickedInstrumentThatLeavesThePageFallsBackToAll() {
+        val a = agent()
+        val view = androidx.compose.runtime.mutableStateOf(CandleAgentHost.View(status = a.status(), latest = a.latest(),
+            lessons = listOf(CandlePage.Line("SENSEX", "the sensex lesson"))))
+        compose.setContent { IraAlgoTheme("light") { CandleAgentContent(view.value, nowMs = ms(day.atTime(14, 9)), open = true) } }
+        compose.onNodeWithText("SENSEX").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("No notable candle read on SENSEX yet.").assertExists()
+        // A memory trim lets the agent go: nothing about SENSEX is left, so the page lists all again (no dead filter).
+        view.value = CandleAgentHost.View(status = a.status(), latest = a.latest())
+        compose.waitForIdle()
+        compose.onNodeWithText("SENSEX").assertDoesNotExist()
+        compose.onAllNodesWithText("NIFTY 5m 19 Oct", substring = true).onFirst().assertExists()
+    }
+
+    @Test fun withNothingToFilterThereAreNoChips() {
+        compose.setContent { IraAlgoTheme("light") { CandleAgentContent(CandleAgentHost.View(), nowMs = ms(day.atTime(10, 0)), open = true) } }
+        compose.onNodeWithText(CandlePage.ALL).assertDoesNotExist()
+    }
+
+    @Test fun theCandleAgentsWhatsNewChangeOpensResearchCandles() {
+        val e = com.optionslab.ira.WhatsNew.ENTRIES.first { it.id == "2026-10-20-candle-agent" }
+        val went = ArrayList<String>()
+        compose.setContent { IraAlgoTheme("light") { WhatsNewCardContent(listOf(e), onGotIt = {}, onGo = { went += it }) } }
+        compose.onNodeWithText("${e.title} ›").performClick()
+        org.junit.Assert.assertEquals(listOf("candles"), went)
+        org.junit.Assert.assertEquals(com.optionslab.app.ui.NavState(tab = com.optionslab.app.ui.Tab.LAB, labPage = "candles"),
+            com.optionslab.app.ui.NavState().home(went.single()))
     }
 }
