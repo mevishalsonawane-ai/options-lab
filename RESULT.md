@@ -52,7 +52,22 @@ moved by +1.
 
 ## Tests
 
-(filled in below after the final runs)
+- **New ira-core tests:** HeldTest, StopCadenceTest (window, drift, evening look), AccountStopTest (month, drawdown,
+  restart, latch, junk input), LiquidityTwinTest (twins, records, fidelity excuse, saved switch), and SameDirectionCapTest
+  (the "only logged" split).
+- **New app tests:**
+  - ProtectionsGttTest (15): overnight GTT, the open's delete first, MIS never, fired and filled, fired not filled, closed
+    overnight, remove, an unconfirmed delete, other exits, refusals, restart, the evening look hint, and each review case.
+  - EnhanceRound1Test: the door in shadow and on, Boss's own orders and basket legs never refused, the restart PIN, the
+    latch, a read before load, the drift guard, the held check, the cap count.
+  - LiquidityArmTest and LiquidityArmLiveTest: a paper twin is a would-be trade, off it buys, another option is no twin,
+    a live twin is only logged.
+  - StrategiesLiveTest: an automatic live start is refused only with the switch on.
+  - LiquidityNoTwinSwitchTest; EnhanceRound1CardsTest (Compose: the no-twin row and the account stop card).
+- **Checks run locally:** `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification` green. The
+  touched and related app classes (20 classes, 321 tests, 0 failed, 7 skipped by design, including ProtectionsLiveTest,
+  OrderPathRound2Test, ExposureSpeedTest, TickPathReviewTest, JobsTest, ArmsWaitTest, BatteryRestTest) green with CI's
+  flags. The full app suite (4 shards), Build APK and the rest run in CI.
 
 ## Review
 
