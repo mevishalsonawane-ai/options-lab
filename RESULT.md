@@ -63,3 +63,8 @@ Spike check (`spikes.py`) and lakeclean (`research/hunt/lakeclean.py`: foreign r
 
 Note for the app (not changed here): the comment in `android/engine/.../mcx/McxSession.kt` says US summer time starts
 on 8 Mar 2027; the second Sunday of March 2027 is 14 Mar. The code uses the time-zone rules, so only the comment is off.
+
+CI: the Python jobs, engine/ira-core tests and Build APK pass. One app UI test fails, on `main` as well (run 1657,
+commit 9dbbfde) and with no Android change on this branch: `ControlScreensLayoutTest.framePaper[phone-font2.0-*]`,
+"' · Dussehra' is cut off at the side". It depends on the date (the Dussehra holiday label shows this week) and needs an
+app layout fix, which is outside this data task.
