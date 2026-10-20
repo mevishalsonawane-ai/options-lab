@@ -1,0 +1,33 @@
+id: r91-s15
+title: 'R91 S15: ICT / SMC liquidity sweep of a 1h swing, 5m strong-candle entry, as B, the sweep read on a 15m close'
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R91_SMC_SWEEP.md
+hypothesis: 'Pre-registered: buying the 1-ITM put after a swept 1h swing high (call after a swept 1h swing low), signal on the underlying (fractal swing from an earlier session, a 1h bar trades beyond it and closes back inside, then a strong 5m candle within 6 bars: body >= 60%, range >= 1x ATR14; sell-stop at its low / buy-stop at its high, stop at the sweep extreme +/- 1 tick, target per variant, RR >= 1), beats 500 after-trigger random-entry twins after real costs (p < 0.05, BH q < 0.10 over 63 cells), >= 40 trades, walk-forward, without the top 5, worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader via R89 stores, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market, close-only near future)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart, no option-chain data'
+- 1h fractal swings, the sweep (beyond the level, close back inside), a strong 5m candle (body, ATR14), stop at the sweep extreme
+model_or_rule: R91 S15
+settings: research/hunt/r91_smc_sweep/cfg.py, sweep.py, PREREG.md, NOTES.md
+prereg: research/hunt/r91_smc_sweep/PREREG.md
+variants_tried: 7
+results:
+  summary: 'Design option net (1 lot, 1-ITM, real prints, costs): NIFTY 36 tr -20,503 (p 0.9581, q 1.00; underlying -9.65 pts/trade); BANKNIFTY 26 tr -30,428 (p 1.0, q 1.00; underlying -67.26 pts/trade); SENSEX 39 tr -39,979 (p 1.0, q 1.00; underlying -51.64 pts/trade); FINNIFTY 25 tr -13,126 (p 0.982, q 1.00; underlying -15.99 pts/trade); MIDCPNIFTY 28 tr +24,327 (p 0.7904, q 1.00; underlying +26.65 pts/trade); GOLDM 8 tr -7,108 (p 0.984, q 1.00; underlying -214.11 pts/trade); SILVERM 8 tr -25,958 (p 0.998, q 1.00; underlying +369.13 pts/trade); CRUDEOIL (mini) 28 tr -2,750 (p 0.6547, q 1.00; underlying +1.00 pts/trade); NATURALGAS (mini) 22 tr -6,678 (p 0.8782, q 1.00; underlying -0.66 pts/trade). Pooled indices 154 tr -79,709 (after-trigger twins +61,074; underlying no costs Rs -58,795; stopped 45%); MCX 66 tr -42,494. Design passers: 0 of 9. Holdout (read once): NIFTY 9 tr -11,344; BANKNIFTY 12 tr -10,594; SENSEX 6 tr +4,873; FINNIFTY 9 tr -1,039; MIDCPNIFTY 9 tr +29,680; GOLDM 14 tr -12,621; SILVERM 20 tr -32,997; CRUDEOIL (mini) 16 tr -3,680; NATURALGAS (mini) 17 tr -2,459. Pooled indices 45 tr +11,576; MCX 67 tr -51,757.'
+  costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges), flat 15:15 / 15:05 expiry; MCX R53 charges + R85 strict half-spread; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'One of 7 variants x 9 instruments (63 cells, one BH family). Underlying points (no costs), the sweep-failure rates and the funnel are in the doc, not gated.'
