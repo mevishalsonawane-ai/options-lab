@@ -220,7 +220,7 @@ object GitHubSync {
      */
     suspend fun setPassphrase(passphrase: CharArray): Unit = withContext(Dispatchers.Default) {
         require(passphrase.size >= Backup.MIN_PASSPHRASE) { "The backup passphrase needs at least ${Backup.MIN_PASSPHRASE} characters." }
-        require(Backup.strength(passphrase) >= 2) { "That passphrase is too easy to guess. Make it longer, or mix in capitals, digits or symbols." }
+        require(Backup.strength(passphrase) >= 2) { com.optionslab.ira.Passphrase.advice(passphrase)?.full ?: "That passphrase is too easy to guess." }
         val live = LiveSeal.newKey(passphrase)
         val salt = ByteArray(16).also(SecureRandom()::nextBytes)
         val bk = Backup.stretch(passphrase, salt)

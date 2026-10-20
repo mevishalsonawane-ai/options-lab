@@ -14,6 +14,13 @@ internal object IraTools {
     private val IST = ZoneId.of("Asia/Kolkata")
     private fun prefs() = com.optionslab.app.security.SecurePrefs
 
+    /**
+     * 20 Oct (the 17 Oct ANR): the writes made under this object's lock go to the settings' background writer, readable at
+     * once: the screen's thread (Jarvis's speech callbacks, onResume's alert) takes the same lock and must never wait for the
+     * Keystore's encryption behind it.
+     */
+    private fun putSoon(k: String, v: String?) = prefs().putAllSoon(mapOf(k to v))
+
     // ---- the mistakes list ---------------------------------------------------------------------------------------
 
     private const val MISTAKES = "jarvis.mistakes"
@@ -39,7 +46,7 @@ internal object IraTools {
         val said = com.optionslab.ira.Secrets.redact(question?.text ?: heard ?: "?").take(200)
         val all = (mistakes() + com.optionslab.ira.Mistakes.Entry(LocalDateTime.now(IST).withNano(0), said,
             com.optionslab.ira.Secrets.redact(answer.text).take(300))).takeLast(100)
-        prefs().put(MISTAKES, JSONArray().apply { all.forEach { put(JSONObject().put("t", it.at.toString()).put("s", it.said).put("a", it.answered)) } }.toString())
+        putSoon(MISTAKES, JSONArray().apply { all.forEach { put(JSONObject().put("t", it.at.toString()).put("s", it.said).put("a", it.answered)) } }.toString())
         count("mistakes")
         IraActivity.add("Marked wrong: \"$said\".")
         awaiting = said to System.currentTimeMillis()
@@ -298,7 +305,7 @@ internal object IraTools {
     }.getOrDefault(emptyList())
 
     private fun saveLearned(all: List<com.optionslab.ira.Corrections.Learned>) {
-        prefs().put(LEARNED, JSONArray().apply { all.forEach { l -> put(JSONObject().put("w", l.wrong).put("r", l.right)
+        putSoon(LEARNED, JSONArray().apply { all.forEach { l -> put(JSONObject().put("w", l.wrong).put("r", l.right)
             .put("u", (l.used ?: com.optionslab.app.data.Market.today()).toString()).apply { l.since?.let { put("s", it.toString()) } }) } }.toString())
     }
 
@@ -393,7 +400,7 @@ internal object IraTools {
         (0 until a.length()).map { a.getJSONObject(it).let { o -> java.time.LocalDate.parse(o.getString("d")) to o.getString("w") } }
     }.getOrDefault(emptyList())
 
-    fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null; offeredOnce.clear() }
+    fun forgetLearned() { putSoon(LEARNED, null); awaiting = null; missedLast = null; offeredOnce.clear() }
 
     /**
      * The words Jarvis could not place on the last day before [day] that had any (at most 4 days back), for his
@@ -437,7 +444,7 @@ internal object IraTools {
     }
 
     private fun saveMemory(all: List<com.optionslab.ira.Memory.Item>) {
-        prefs().put(MEMORY, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.day.toString()).put("t", it.text)) } }.toString())
+        putSoon(MEMORY, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.day.toString()).put("t", it.text)) } }.toString())
     }
 
     /**
@@ -453,7 +460,7 @@ internal object IraTools {
         return item
     }
 
-    fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }
+    fun forgetMemory() { runCatching { putSoon(MEMORY, null) } }
 
     // ---- Boss's habits ----------------------------------------------------------------------------------------------
 
@@ -558,7 +565,7 @@ internal object IraTools {
     @Synchronized fun routineOffered(p: com.optionslab.ira.Routine.Pattern) {
         runCatching {
             val all = routineOfferedAt() + (p.slot to com.optionslab.app.data.Market.today())
-            prefs().put(ROUTINE_OFFERED, JSONObject().apply { all.entries.sortedBy { it.value }.takeLast(40).forEach { (k, d) -> put(k, d.toString()) } }.toString())
+            putSoon(ROUTINE_OFFERED, JSONObject().apply { all.entries.sortedBy { it.value }.takeLast(40).forEach { (k, d) -> put(k, d.toString()) } }.toString())
         }
     }
 
@@ -572,7 +579,7 @@ internal object IraTools {
 
     /** "Forget my routine": what was noted and kept, all dropped. */
     @Synchronized fun forgetRoutine() {
-        runCatching { prefs().put(ROUTINE_LOG, null); prefs().put(ROUTINE_KEPT, null); prefs().put(ROUTINE_OFFERED, null) }
+        runCatching { prefs().put(ROUTINE_LOG, null); prefs().put(ROUTINE_KEPT, null); putSoon(ROUTINE_OFFERED, null) }
         IraActivity.add("Forgot Boss's routine, as he asked.")
     }
 

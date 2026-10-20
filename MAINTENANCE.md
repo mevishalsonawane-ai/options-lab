@@ -213,8 +213,9 @@ replaces that day's file, so there is only ever one per day. The GitHub sync car
 that went up; a failed upload shows in Problems found like any other. Since 14 Oct: a day whose file did not go up is sent
 again by the next run (up to 3 days back), and until then the card says "✗ diagnostics <day> not uploaded"; an "Upload
 now" before the evening close is marked **partial** on the card until the evening run sends the whole day. A day sent
-late is built then: its decisions, trades, orders, errors and timeline are that day's, but the arms' switches, `mode`,
-`health.lines` and `workers` are as at its `generated_at` (a later date there marks such a catch-up).
+late is built then: its decisions, trades, orders, errors and timeline are that day's (since 20 Oct also the
+`app_health` and `stream` lines), but the arms' switches, `mode`, the other `health.lines` and `workers` are as at its
+`generated_at` (a later date there marks such a catch-up; schema 2 says it again in `health.lines_as_of`).
 
 It is **not sealed**, on purpose: it is cleaned on the phone first, and the research sessions have no passphrase. What is
 never in it: tokens, keys, PINs, account or client ids, your name, phone or e-mail, broker order ids, and rupee balances,
@@ -233,8 +234,14 @@ python research/data/read_diagnostics.py diag-2026-10-13.json.gz          # a sh
 python research/data/read_diagnostics.py --json diag-2026-10-13.json.gz   # the whole file
 ```
 
-Schema 1 (built by `android/ira-core/.../DiagDay.kt`; a sample is `research/data/tests/diag_sample.json`, and a test keeps
-the phone and the sample in step):
+Schema 2 since 20 Oct 2026 (schema 1 before; the reader takes both). Schema 2 keeps every schema-1 key and adds the
+severities: `health.errors` now holds only what failed. A **warning** is a risk or a fault the app rode out by itself (a
+stream drop it reconnected, the paper ticket near its breakeven, the daily loss limit); a **notice** is information or a
+form's hint (the morning check, the day report, "that passphrase is too easy to guess"). A schema-1 file counted all of
+them as errors; `read_diagnostics.py` sorts its kinds by the same words as the phone.
+
+Built by `android/ira-core/.../DiagDay.kt`; a sample is `research/data/tests/diag_sample.json` (and the schema-1 one,
+`diag_sample_v1.json`), and a test keeps the phone and the sample in step:
 
 | Key | What |
 | --- | --- |
@@ -243,7 +250,7 @@ the phone and the sample in step):
 | `other_arms[]` | the other paper arms' one-line states (Night, VIX divergence, MCX, forge ideas) |
 | `decisions_since`, `decisions[]` | each verdict: time, arm, verdict, `kind` (taken, guard, lock, day_lock, kill_switch, flow, liquidity, pretrade, event, cap, exposure, lapsed, skipped_by_boss, refused, order_refused, no_quote, error, or a waiting kind), `outcome` (taken, skipped, waiting, holding, error), bar |
 | `orders[]`, `orders_by_source` | the day's orders, paper and live, with who placed each (never the order id); `avg` (the fill price), `qty` and `filled` are null for live orders, and `message` is the reason only |
-| `health` | `errors` by kind, `unreadable`, `stream` drops, `lines` (app_health, speed, stream, github, order_speed, slippage in points, order_review, order_flow, zerodha_sync; as at the upload), `workers`, `sync` (failed, skipped, lines), `diary_lines` |
+| `health` | `errors` by kind (schema 2: only what failed), `warnings` and `notices` (schema 2), `unreadable`, `stream` drops (schema 2: with `times`), `incidents` (schema 2: the self-healing monitor's "incident:"/"recovered:" lines), `lines` (app_health, speed, stream, github, order_speed, slippage in points, order_review, order_flow, zerodha_sync; app_health and stream are the day's own, the others as at `lines_as_of`), `lines_as_of` (schema 2), `workers`, `sync` (failed, skipped, lines), `diary_lines` |
 | `timeline[]` | the Autopilot change timeline of the day; `own: true` is your own switch (the trail, the parks) |
 | `truncated` | how many items each long list lost to the size cap (256 KB before gzip; the newest are kept) |
 

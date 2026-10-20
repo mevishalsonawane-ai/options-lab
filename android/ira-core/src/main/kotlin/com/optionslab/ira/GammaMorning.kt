@@ -228,6 +228,20 @@ object GammaMorning {
     // ---- when -------------------------------------------------------------------------------------------------------
 
     /** The line is due at [now]: a trading day, 10:00 to [LATE], not made yet today ([doneOn]). */
+    /** Why no reading was made in the window (20 Oct; for the diagnostics): no chain on the phone. */
+    const val NO_CHAIN = "no option chain on the phone 10:00-10:15"
+    const val SWITCHED_OFF = "switched off"
+    const val NOT_LOOKED = "the app did not look 10:00-10:15"
+
+    /**
+     * A kept "day|text" (the day's line or why there was none, 20 Oct: memory only before, so the 13:33 restart and the next
+     * morning's catch-up both said "no reading" whatever 10:00 had found), for [day]; null: another day or nothing kept.
+     */
+    fun keptFor(kept: String?, day: LocalDate): String? =
+        kept?.takeIf { it.startsWith("$day|") }?.substringAfter('|')?.takeIf { it.isNotBlank() }
+
+    fun keep(day: LocalDate, text: String): String = "$day|${text.replace('\n', ' ')}"
+
     fun due(now: LocalDateTime, tradingDay: Boolean, doneOn: LocalDate?): Boolean =
         tradingDay && doneOn != now.toLocalDate() && !now.toLocalTime().isBefore(AT) && now.toLocalTime().isBefore(LATE)
 
@@ -304,8 +318,8 @@ object GammaMorning {
     }
 
     /** The diagnostics line (signs and levels only, never an amount): "gamma 10:00: BANKNIFTY negative (call wall 55000, put wall 54000)". */
-    fun diagLine(readings: List<Reading>): String =
-        if (readings.isEmpty()) "gamma 10:00: no reading" else "gamma 10:00: " + readings.joinToString("; ") { r ->
+    fun diagLine(readings: List<Reading>, why: String? = null): String =
+        if (readings.isEmpty()) "gamma 10:00: no reading" + (why?.let { " ($it)" } ?: "") else "gamma 10:00: " + readings.joinToString("; ") { r ->
             "${r.index} ${if (r.negative) "negative" else "positive"} (call wall ${r.callWall?.let { "%.0f".format(Locale.ENGLISH, it) } ?: "-"}, " +
                 "put wall ${r.putWall?.let { "%.0f".format(Locale.ENGLISH, it) } ?: "-"}, ${r.contracts} options)"
         }

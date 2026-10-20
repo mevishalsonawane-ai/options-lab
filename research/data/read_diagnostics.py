@@ -23,12 +23,22 @@ Schema 1 (see MAINTENANCE.md, "Daily diagnostics"):
   Since 18 Oct 2026: a live order's ``qty`` and ``filled`` are null too (its ``status`` still says whether it filled),
   and a live trade's ``lots`` is null, so its points give no rupees either.
   ``other_arms`` lines say "(net hidden)" where the phone shows a rupee net. A file whose ``generated_at`` is on a
-  later date than ``day`` was sent late (a retry): its arm states, ``mode``, health lines and workers are as at
-  ``generated_at``, not as on ``day``.
+  later date than ``day`` was sent late (a retry): its arm states, ``mode``, health lines (but app_health and stream,
+  the day's own since 20 Oct 2026) and workers are as at ``generated_at``, not as on ``day``.
 - ``health``: errors by kind, unreadable failures, stream drops, named summary lines (order_speed, slippage, ...),
   workers, sync (failed, skipped, lines), diary_lines.
 - ``timeline``: the Autopilot change timeline (at, source, agent, what, why, undo, scope, own: Boss's own switch).
 - ``truncated``: how many items each long list lost to the size cap (the newest are kept).
+
+Schema 2 (20 Oct 2026) keeps every schema-1 key and adds:
+
+- ``health.errors`` holds only what failed; ``health.warnings`` (risks and faults the app rode out: a stream drop it
+  reconnected, the paper ticket near its breakeven, the loss limit) and ``health.notices`` (information and a form's
+  hints: the morning check, the day report, a passphrase too weak) are apart. A schema-1 file counted them all as errors;
+  :func:`severities` sorts its kinds by the same words as the phone (``DiagErrors.classify``).
+- ``health.stream.times``: each drop's time; ``health.incidents``: the self-healing monitor's "incident:" and "recovered:"
+  lines with their times; ``health.lines_as_of``: when ``health.lines`` were read (``app_health`` and ``stream`` are the
+  day's own; the others as at that time).
 
 Usage::
 
@@ -46,7 +56,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-SCHEMA = 1
+SCHEMA = 2
+SCHEMAS = (1, 2)
 KIND = "iraalgo-diagnostics"
 NAME = re.compile(r"^diag-(\d{4}-\d{2}-\d{2})\.json\.gz$")
 TOP_KEYS = ("schema", "kind", "day", "generated_at", "app", "privacy", "mode", "arms", "other_arms", "decisions_since",
@@ -87,11 +98,11 @@ def load(path: str | Path) -> dict[str, Any]:
 
 
 def check(data: Any) -> None:
-    """Raises DiagError unless ``data`` is a schema-1 diagnostics report with nothing that looks secret."""
+    """Raises DiagError unless ``data`` is a schema-1 or schema-2 diagnostics report with nothing that looks secret."""
     if not isinstance(data, dict) or data.get("kind") != KIND:
         raise DiagError("not an IraAlgo diagnostics file")
-    if data.get("schema") != SCHEMA:
-        raise DiagError(f"schema {data.get('schema')!r}: this reader knows schema {SCHEMA}")
+    if data.get("schema") not in SCHEMAS:
+        raise DiagError(f"schema {data.get('schema')!r}: this reader knows schemas {', '.join(map(str, SCHEMAS))}")
     missing = [k for k in TOP_KEYS if k not in data]
     if missing:
         raise DiagError(f"missing keys: {', '.join(missing)}")
@@ -99,6 +110,37 @@ def check(data: Any) -> None:
     for rx in _LEAKS:
         if rx.search(text):
             raise DiagError(f"looks like a secret or a rupee figure ({rx.pattern}): not redacted")
+
+
+# The phone's word rules for a red banner's severity (android/ira-core DiagErrors.classify), on a kind (lower case).
+_NOTICE_STARTS = ("good morning", "day report", "week report", "good evening", "that passphrase is too easy",
+                  "the two passphrases differ", "the backup passphrase needs", "passphrase too weak")
+_WARNING_STARTS = ("index nearing your breakeven", "index below your breakeven", "short put is in the money",
+                   "daily loss limit reached", "live price stream dropped")
+
+
+def classify(kind: str) -> str:
+    """A counted kind's severity by its words: "notice", "warning" or "error" (as the phone sorts an old [error] line)."""
+    k = kind.strip().lower()
+    if k.startswith(_NOTICE_STARTS):
+        return "notice"
+    if k.startswith(_WARNING_STARTS):
+        return "warning"
+    return "error"
+
+
+def severities(data: dict[str, Any]) -> dict[str, dict[str, int]]:
+    """The day's counted lines as {"errors": {kind: n}, "warnings": ..., "notices": ...}. A schema-1 file's errors are
+    sorted by :func:`classify`; schema 2 is read as written."""
+    h = data["health"]
+    out: dict[str, dict[str, int]] = {"errors": {}, "warnings": {}, "notices": {}}
+    if data.get("schema") == 1:
+        for kind, n in h["errors"].items():
+            out[classify(kind) + "s"][kind] = n
+        return out
+    for k in out:
+        out[k] = dict(h.get(k, {}))
+    return out
 
 
 def skips(data: dict[str, Any]) -> Counter:
@@ -131,9 +173,13 @@ def summary(data: dict[str, Any]) -> str:
     if sk:
         out.append("  skips: " + ", ".join(f"{arm} {kind} x{n}" for (arm, kind), n in sk.most_common(8)))
     h = data["health"]
-    errors = sum(h["errors"].values())
-    out.append(f"  health: {errors} errors in {len(h['errors'])} kinds · stream drops {h['stream']['drops']} · "
+    sev = severities(data)
+    errors = sum(sev["errors"].values())
+    out.append(f"  health: {errors} errors in {len(sev['errors'])} kinds, {sum(sev['warnings'].values())} warnings, "
+               f"{sum(sev['notices'].values())} notices · stream drops {h['stream']['drops']} · "
                f"sync failed {h['sync']['failed']}, skipped {h['sync']['skipped']}")
+    for kind, n in sorted(sev["errors"].items(), key=lambda kv: -kv[1])[:5]:
+        out.append(f"    error x{n}: {kind}")
     out.append(f"  changes: {len(data['timeline'])} ({sum(1 for c in data['timeline'] if c['own'])} by Boss)")
     if data["truncated"]:
         out.append("  cut for size: " + ", ".join(f"{k} {v}" for k, v in sorted(data["truncated"].items())))

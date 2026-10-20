@@ -41,7 +41,7 @@ object Backup {
     private const val ROUNDS_PIN = 200_000
     private const val ROUNDS_V2 = 310_000
     private const val ROUNDS = 600_000
-    const val MIN_PASSPHRASE = 10
+    const val MIN_PASSPHRASE = com.optionslab.ira.Passphrase.MIN
 
     /** (directory, name): f = files, n = no-backup files. */
     // Not carried: protections (they name this phone's live Zerodha orders) and the holiday list
@@ -78,18 +78,7 @@ object Backup {
      * A rough strength hint for a passphrase: 0 too short, 1 weak, 2 fair, 3 strong.
      * Estimates the search space from length and kinds of characters; repeats count less.
      */
-    fun strength(pass: CharArray): Int {
-        if (pass.size < MIN_PASSPHRASE) return 0
-        var pool = 0
-        if (pass.any { it in 'a'..'z' }) pool += 26
-        if (pass.any { it in 'A'..'Z' }) pool += 26
-        if (pass.any { it in '0'..'9' }) pool += 10
-        if (pass.any { !it.isLetterOrDigit() }) pool += 33
-        if (pass.any { it.isLetter() && it !in 'a'..'z' && it !in 'A'..'Z' }) pool += 26
-        val distinct = pass.toSet().size
-        val bits = minOf(pass.size, distinct * 2) * (Math.log(maxOf(pool, 2).toDouble()) / Math.log(2.0))
-        return when { bits < 50 -> 1; bits < 72 -> 2; else -> 3 }
-    }
+    fun strength(pass: CharArray): Int = com.optionslab.ira.Passphrase.strength(pass)
 
     /**
      * 1 (PIN-sealed, old) or 2 (passphrase-sealed, whatever its round count); throws when the
@@ -112,7 +101,7 @@ object Backup {
     /** Make a backup sealed with [passphrase] (the caller wipes it). Reads on IO, derives the key on Default. */
     suspend fun create(ctx: Context, passphrase: CharArray): ByteArray {
         require(passphrase.size >= MIN_PASSPHRASE) { "The backup passphrase needs at least $MIN_PASSPHRASE characters." }
-        require(strength(passphrase) >= 2) { "That passphrase is too easy to guess. Make it longer, or mix in capitals, digits or symbols." }
+        require(strength(passphrase) >= 2) { com.optionslab.ira.Passphrase.advice(passphrase)?.full ?: "That passphrase is too easy to guess." }
         val body = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { snapshot(ctx) }
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             try {

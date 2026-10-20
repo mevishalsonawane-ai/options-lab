@@ -209,7 +209,9 @@ object StreamHealth {
 
     // ---- the day, from the diary -------------------------------------------------------
 
-    data class Day(val drops: Int, val lastAt: LocalDateTime?, val lastWhy: String?, val whys: Map<String, Int>)
+    /** [times]: each drop's time, oldest first (20 Oct: the diagnostics file lists them, to set beside other incidents). */
+    data class Day(val drops: Int, val lastAt: LocalDateTime?, val lastWhy: String?, val whys: Map<String, Int>,
+                   val times: List<LocalDateTime> = emptyList())
 
     private val LINE = rx("^(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2}) \\[([\\w-]+)\\] (.*)$")
 
@@ -219,6 +221,7 @@ object StreamHealth {
         var lastAt: LocalDateTime? = null
         var lastWhy: String? = null
         val whys = LinkedHashMap<String, Int>()
+        val times = ArrayList<LocalDateTime>()
         for (raw in lines) {
             val m = LINE.find(raw.trim()) ?: continue
             val (mo, d, h, mi, s, area, text) = m.destructured
@@ -227,19 +230,19 @@ object StreamHealth {
             val at = runCatching { LocalDateTime.of(now.year, mo.toInt(), d.toInt(), h.toInt(), mi.toInt(), s.toInt()) }.getOrNull() ?: continue
             if (at.isAfter(now.plusMinutes(5))) continue
             val why = text.removePrefix("dropped: ").substringBefore(" · ").trim()
-            n++; lastAt = at; lastWhy = why
+            n++; lastAt = at; lastWhy = why; times += at
             val key = why.replace(Regex("\\d+ s\\b"), "N s").replace(Regex(" for N s$"), "")
             whys[key] = (whys[key] ?: 0) + 1
         }
-        return Day(n, lastAt, lastWhy, whys)
+        return Day(n, lastAt, lastWhy, whys, times)
     }
 
     private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.ENGLISH)
 
     /** The diagnostics' line: "Live stream: LIVE · drops today 3 · last drop 09:58:45 (no data from Zerodha for 12 s)". */
-    fun statusLine(status: String, lines: List<String>, now: LocalDateTime): String {
+    fun statusLine(status: String, lines: List<String>, now: LocalDateTime, dayWord: String = "today"): String {
         val d = day(lines, now)
-        return "Live stream: $status · drops today ${d.drops}" + (d.lastAt?.let { " · last drop ${TIME.format(it)} (${d.lastWhy})" } ?: "")
+        return "Live stream: $status · drops $dayWord ${d.drops}" + (d.lastAt?.let { " · last drop ${TIME.format(it)} (${d.lastWhy})" } ?: "")
     }
 
     // ---- asked by voice ------------------------------------------------------------------

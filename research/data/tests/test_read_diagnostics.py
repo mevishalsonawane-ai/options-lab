@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import read_diagnostics as rd  # noqa: E402
 
 SAMPLE = Path(__file__).resolve().parent / "diag_sample.json"
+SAMPLE_V1 = Path(__file__).resolve().parent / "diag_sample_v1.json"
 
 
 @pytest.fixture()
@@ -95,7 +96,7 @@ def test_refuses_other_files_and_schemas(data):
     with pytest.raises(rd.DiagError):
         rd.check({"kind": "something else"})
     with pytest.raises(rd.DiagError):
-        rd.check({**data, "schema": 2})
+        rd.check({**data, "schema": 3})
     bad = dict(data)
     del bad["timeline"]
     with pytest.raises(rd.DiagError):
@@ -112,3 +113,47 @@ def test_command_line(tmp_path, capsys):
     bad = tmp_path / "x.json"
     bad.write_text("{}")
     assert rd.main([str(bad)]) == 1
+
+
+def test_reads_schema_1_still(tmp_path):
+    old = rd.load(SAMPLE_V1)
+    assert old["schema"] == 1
+    sev = rd.severities(old)
+    assert sev["errors"] == {"missing required field: quantity": 2, "order # failed": 1}
+    assert "health: 3 errors in 2 kinds, 0 warnings, 0 notices" in rd.summary(old)
+
+
+def test_schema_2_severities_are_read_as_written(data):
+    sev = rd.severities(data)
+    assert sum(sev["warnings"].values()) == 1 and sum(sev["notices"].values()) == 1
+    assert "3 errors in 2 kinds, 1 warnings, 1 notices" in rd.summary(data)
+    assert data["health"]["stream"]["times"] == ["11:00:00", "11:30:00"]
+
+
+def test_a_schema_1_file_of_19_oct_is_sorted_by_severity():
+    # The kinds of Boss's 19 Oct file (schema 1): 34 "errors", of which only Zerodha's failing requests are errors.
+    errors = {
+        "live price stream dropped (no data from zerodha for # s); reconnecting": 13,
+        "problem: zerodha's requests: zerodha's requests are failing (# of the last #). i": 7,
+        "that passphrase is too easy to guess: make it longer, or mix words, digits and s": 5,
+        "live price stream dropped (the phone's network changed); reconnecting": 2,
+        "short put is in the money: nifty # is below the # strike. the loss is unbounded ": 2,
+        "good morning boss · # things need you: ✓ zerodha logged in for today ✓ nse holid": 1,
+        "daily loss limit reached: today's paper p&l rs -# reached the rs # daily loss li": 1,
+        "index nearing your breakeven: nifty # is #% above the # breakeven of the # put.": 1,
+        "day report · mon # oct: liquidity #+#: # trades · −₹# what i learned today: # co": 1,
+    }
+    data = json.loads(SAMPLE_V1.read_text(encoding="utf-8"))
+    data["health"]["errors"] = errors
+    sev = rd.severities(data)
+    assert sev["errors"] == {"problem: zerodha's requests: zerodha's requests are failing (# of the last #). i": 7}
+    assert sum(sev["warnings"].values()) == 19
+    assert sum(sev["notices"].values()) == 7
+
+
+@pytest.mark.parametrize("kind,want", [
+    ("", "error"), ("  Good Morning Boss", "notice"), ("positions not protected", "error"),
+    ("short put is in the money", "warning"), ("problem: the live price stream", "error"),
+])
+def test_classify_edges(kind, want):
+    assert rd.classify(kind) == want

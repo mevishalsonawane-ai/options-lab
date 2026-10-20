@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "kind": "iraalgo-diagnostics",
   "day": "2026-10-13",
   "generated_at": "2026-10-13T23:41:05",
@@ -70,13 +70,17 @@
   "orders_by_source": {"live · Liquidity 15+5": 1, "paper · Liquidity 15+5": 1},
   "health": {
     "errors": {"missing required field: quantity": 2, "order # failed": 1},
+    "warnings": {"live price stream dropped (no data from zerodha for # s); reconnecting": 1},
+    "notices": {"good morning boss · # things need you: ✓ zerodha logged in for today": 1},
     "unreadable": {},
-    "stream": {"drops": 2, "last_at": "11:30:00", "whys": {"network lost": 1, "no data from Zerodha": 1}},
+    "stream": {"drops": 2, "last_at": "11:30:00", "whys": {"network lost": 1, "no data from Zerodha": 1}, "times": ["11:00:00", "11:30:00"]},
+    "incidents": ["11:05:00 incident: Zerodha's requests are failing (5 in a row). I'm using the stream's prices and the last-read positions meanwhile; exits still go."],
     "lines": {
       "app_health": "Health: 0 stalls today",
       "order_speed": "Order speed: signal to fill p50 0.8 s, worst 2.1 s",
       "slippage": "Slippage (median/p90 a unit, a cost positive): live today 0.45/1.20 pts (0.9/2.4 ticks) n2"
     },
+    "lines_as_of": "2026-10-13T23:41:05",
     "workers": ["Workers (the watch has ended; as they last were):"],
     "sync": {"failed": 1, "skipped": 1, "lines": ["23:40:00 upload skipped this time: the options-lab check failed (rate limit)",
       "23:41:00 backup: failed: GitHub is having trouble", "23:42:00 live 2026-10-13: 2.1 MB uploaded"]},

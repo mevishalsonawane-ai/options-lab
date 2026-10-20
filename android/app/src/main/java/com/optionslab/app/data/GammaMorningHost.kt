@@ -19,6 +19,24 @@ import java.time.LocalDateTime
  */
 object GammaMorningHost {
     private const val KEY_DONE = "jarvis.gamma.done"
+    /** The day's diagnostics line ("yyyy-MM-dd|gamma 10:00: ..."), or why there was none: kept across a restart (20 Oct). */
+    private const val KEY_LINE = "jarvis.gamma.line"
+    /** The kept line as last read or written (memory), so a round reads the vault at most once. */
+    @Volatile private var keptLine: String? = null
+    @Volatile private var keptRead = false
+
+    private fun kept(): String? {
+        if (!keptRead) { keptLine = runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY_LINE) }.getOrNull(); keptRead = true }
+        return keptLine
+    }
+
+    /** [text] kept as [day]'s line (written only when it changes: once or twice a day). */
+    private fun keep(day: LocalDate, text: String) {
+        val v = GammaMorning.keep(day, text)
+        if (kept() == v) return
+        keptLine = v
+        runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_LINE, v) }
+    }
     /** A spot older than this is not today's 10:00 price. */
     const val SPOT_MS = 5 * 60_000L
 
@@ -55,15 +73,22 @@ object GammaMorningHost {
         val day = now.toLocalDate()
         // Battery: outside 10:00-10:15 nothing is read, not even the settings vault (the lane runs all session).
         if (now.toLocalTime().isBefore(GammaMorning.AT) || !now.toLocalTime().isBefore(GammaMorning.LATE)) return
-        if (!Automations.on(Automations.Auto.GAMMA)) return
-        if (!GammaMorning.due(now, runCatching { Market.isTradingDay(day) }.getOrDefault(false), doneOn())) return
+        val trading = runCatching { Market.isTradingDay(day) }.getOrDefault(false)
+        if (!Automations.on(Automations.Auto.GAMMA)) { if (trading && GammaMorning.keptFor(kept(), day) == null) keep(day, "gamma 10:00: no reading (${GammaMorning.SWITCHED_OFF})"); return }
+        if (!GammaMorning.due(now, trading, doneOn())) return
         if (!busy.compareAndSet(false, true)) return
         try {
             val readings = readNow(now)
-            val text = GammaMorning.note(readings) ?: return
+            val text = GammaMorning.note(readings)
+            if (text == null) {
+                // 20 Oct: why there was none is kept for the diagnostics (the next round within the window tries again).
+                keep(day, GammaMorning.diagLine(emptyList(), GammaMorning.NO_CHAIN))
+                return
+            }
             morning = day to readings
-            // Kept as done before it is put, so a restart midway never says it twice.
+            // Kept as done before it is put, so a restart midway never says it twice; its line kept for the diagnostics.
             runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_DONE, day.toString()) }
+            keep(day, GammaMorning.diagLine(readings))
             post(text)
             Automations.acted(Automations.Auto.GAMMA, "Said the morning gamma line (${readings.size} index${if (readings.size == 1) "" else "es"}).")
         } finally {
@@ -88,8 +113,16 @@ object GammaMorningHost {
     }
 
     /** The diagnostics line for [day] (signs and strikes only). */
-    fun diagLine(day: LocalDate): String = GammaMorning.diagLine(morning(day))
+    fun diagLine(day: LocalDate): String {
+        val m = morning(day)
+        if (m.isNotEmpty()) return GammaMorning.diagLine(m)
+        // 20 Oct: memory is empty after a restart or the next morning: the kept line, else why there is none.
+        return GammaMorning.keptFor(kept(), day) ?: GammaMorning.diagLine(emptyList(), GammaMorning.NOT_LOOKED)
+    }
 
     /** TEST ONLY: forget today's line (memory). */
-    internal fun resetForTest() { morning = null; busy.set(false) }
+    internal fun resetForTest() { morning = null; busy.set(false); keptLine = null; keptRead = false }
+
+    /** TEST ONLY: what a restart forgets (memory), the vault kept. */
+    internal fun forgetMemoryForTest() { morning = null; keptLine = null; keptRead = false }
 }

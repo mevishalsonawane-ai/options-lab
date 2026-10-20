@@ -385,8 +385,10 @@ object Broker {
         } catch (e: Exception) {
             if (e !is kotlinx.coroutines.CancellationException)
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
-            // A network failure counts against Zerodha's health; Zerodha's own refusal (a KiteError) or no login does not.
-            if (e is java.io.IOException && e !is KiteError && e !is NotLoggedIn) SmartWorkers.restSample(false, System.currentTimeMillis() - t0)
+            // A network failure counts against Zerodha's health; Zerodha's own refusal (a KiteError) or no login does not, and
+            // (20 Oct) nor does a failure that never reached Zerodha - the phone's own DNS or network gone, or our own cancel.
+            if (e is java.io.IOException && e !is KiteError && e !is NotLoggedIn &&
+                com.optionslab.ira.SelfHeal.zerodhaFault(e.javaClass.simpleName, e.message)) SmartWorkers.restSample(false, System.currentTimeMillis() - t0)
             throw e
         } finally {
             if (write) {

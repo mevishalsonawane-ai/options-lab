@@ -92,9 +92,11 @@ object DiagDayHost {
 
         val health = linkedMapOf<String, String>()
         fun line(k: String, f: () -> String) { runCatching { health[k] = r(f()) } }
-        line("app_health") { AppHealth.diagLine() }
+        // 20 Oct: the app's health and the stream are read for [day] itself (a catch-up the next morning used to give the new
+        // day's "drops today 0" and "stream reconnects 0" beside the day's 15 drops); the others are as at generated_at.
+        line("app_health") { AppHealth.diagLine(day) }
         line("speed") { Speed.line() }
-        line("stream") { KiteStream.statusLine(diary) }
+        line("stream") { KiteStream.statusLine(diary, day) }
         line("github") { GitHubSync.diagLine() }
         if (!GOLD) {
             line("order_speed") { OrderTiming.diagLine() }
@@ -109,7 +111,8 @@ object DiagDayHost {
             com.optionslab.app.work.WatchWorkers.diagLines() + com.optionslab.app.work.WatchWorkers.slowestLine(8)
         }.getOrDefault(emptyList()).map(::r)
         val others = if (GOLD) emptyList() else listOf(
-            { NightArm.diagLine() }, { VixDivArm.diagLine() }, { HeroTicketArm.diagLine() }, { PassedArmsHost.diagLine() }, { WatchlistHost.diagLine() }, { TrendWatchHost.diagLine() }, { McxPaperArms.diagLine() }, { GrammarArm.diagLine() },
+            { NightArm.diagLine() }, { VixDivArm.diagLine() }, { HeroTicketArm.diagLine() }, { PassedArmsHost.diagLine(hideNet = true) }, { WatchlistHost.diagLine() }, { TrendWatchHost.diagLine() }, { McxPaperArms.diagLine() }, { GrammarArm.diagLine() },
+            // 20 Oct: the passed arms' line with every rupee net written "(net hidden)" (its counts kept).
             // 14 Oct (Boss approved): the morning gamma line (signs and strikes) and the OI-wall shadow log (points only).
             { GammaMorningHost.diagLine(day) }, { OiWallShadowHost.diagLine(day) },
         ).mapNotNull { f -> runCatching { r(f()) }.getOrNull() }

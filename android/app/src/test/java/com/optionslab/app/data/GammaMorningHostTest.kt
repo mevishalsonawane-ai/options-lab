@@ -109,8 +109,32 @@ class GammaMorningHostTest : RobolectricTest() {
         assertFalse(a, Regex("Rs|₹|crore").containsMatchIn(a))
         val none = GammaMorningHost.answer("NIFTY")
         assertTrue(none, "no gamma reading for Nifty" in none)
-        // Before the 10:00 line is made, the diagnostics say there is none.
-        assertEquals("gamma 10:00: no reading", GammaMorningHost.diagLine(day))
+        // Before the 10:00 line is made, the diagnostics say there is none, and why (20 Oct).
+        assertEquals("gamma 10:00: no reading (the app did not look 10:00-10:15)", GammaMorningHost.diagLine(day))
+    }
+
+    /** 20 Oct: the 13:33 restart on 19 Oct (and the next morning's catch-up) said "gamma 10:00: no reading" whatever 10:00 found. */
+    @Test fun theTenOClockLineSurvivesARestart() = runBlocking {
+        feed(System.currentTimeMillis())
+        GammaMorningHost.watch()
+        val line = GammaMorningHost.diagLine(day)
+        assertTrue(line.startsWith("gamma 10:00: BANKNIFTY negative"), line)
+        // A restart: memory gone, the vault kept.
+        GammaMorningHost.forgetMemoryForTest()
+        assertEquals(line, GammaMorningHost.diagLine(day))
+        // Another day: nothing of this one.
+        assertEquals("gamma 10:00: no reading (the app did not look 10:00-10:15)", GammaMorningHost.diagLine(day.plusDays(1)))
+    }
+
+    @Test fun noChainOnThePhoneIsSaid() = runBlocking {
+        GammaMorningHost.watch()
+        assertEquals("gamma 10:00: no reading (no option chain on the phone 10:00-10:15)", GammaMorningHost.diagLine(day))
+        GammaMorningHost.forgetMemoryForTest()
+        assertEquals("gamma 10:00: no reading (no option chain on the phone 10:00-10:15)", GammaMorningHost.diagLine(day))
+        // The chain arrives within the window: the reading replaces the reason.
+        feed(System.currentTimeMillis())
+        GammaMorningHost.watch()
+        assertTrue(GammaMorningHost.diagLine(day).startsWith("gamma 10:00: BANKNIFTY"))
     }
 
     @Test fun itsSwitchIsItsOwnUnderMarketAlertsAndOnByDefault() {

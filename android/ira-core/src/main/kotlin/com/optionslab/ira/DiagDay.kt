@@ -37,7 +37,12 @@ import java.util.zip.GZIPOutputStream
  * and backups, which hold Boss's trades, stay sealed.
  */
 object DiagDay {
-    const val SCHEMA = 1
+    /**
+     * 2 (20 Oct): health.errors holds only what failed; health.warnings and health.notices hold the rest apart
+     * ([DiagErrors.Severity]); health.stream.times, health.incidents and health.lines_as_of are new. Every schema-1 key is
+     * kept as it was, so a schema-1 reader's keys are all still there.
+     */
+    const val SCHEMA = 2
     const val KIND = "iraalgo-diagnostics"
     const val EXT = ".json.gz"
     /** The report's most bytes before gzip (the lists are cut, newest kept, until it fits). */
@@ -48,6 +53,8 @@ object DiagDay {
     const val MAX_CHANGES = 120
     const val MAX_LINES = 80
     const val MAX_TEXT = 300
+    /** The most drop times and incidents kept (the newest). */
+    const val MAX_TIMES = 60
 
     fun tag(day: LocalDate): String = "diag-%04d-%02d".format(Locale.ROOT, day.year, day.monthValue)
     fun assetName(day: LocalDate): String = "diag-$day$EXT"
@@ -310,7 +317,14 @@ object DiagDay {
      * diagnostics, says "last 7 closed -2,340 after charges"; the file keeps the count, never the amount). [scrub] runs after.
      */
     fun otherArmLine(line: String): String =
-        NET_AFTER_TRADES.replace(NET_AFTER_CHARGES.replace(line, "(net hidden)")) { m -> m.groupValues[1] }
+        NET_AFTER_PHRASE.replace(NET_AFTER_TRADES.replace(NET_AFTER_CHARGES.replace(line, "(net hidden)")) { m -> m.groupValues[1] }) { m ->
+            m.groupValues[1] + " (net hidden)" }
+
+    /**
+     * 20 Oct (Boss's 19 Oct file kept "9 closed on it -10,947, 10 on the research exits -1,049"): the passed arms' nets after
+     * their phrases. The app now writes "(net hidden)" there itself; this is the second guard.
+     */
+    private val NET_AFTER_PHRASE = Regex("(?i)(closed on it|on the research exits|on the plain rules|\\d+ would-be)\\s+[-+−]?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?")
 
     /**
      * Every text in the report goes through this, last: GitHub tokens, the owner's secret rules, JWTs, keys, client ids (any
@@ -380,11 +394,16 @@ object DiagDay {
         Decision(l.at, l.text.substring(0, i).trim(), l.text.substring(i + 2).substringBefore(" · range").substringBefore(" · bar").trim(), bar)
     }
 
-    /** The day's errors by kind, from the diary's [lines] ([DiagErrors.kindOf]), when the diary's own tally no longer holds it. */
+    /**
+     * The day's counted lines by severity and kind, from the diary's [lines] ([DiagErrors.kindOf]); [DiagDay.build] puts it
+     * together with the diary's own tally ([DiagErrors.merge]): neither alone survives a restart and the diary's cap.
+     */
     fun errorsOf(lines: List<Line>): DiagErrors.Day? {
         val t = DiagErrors.Tally()
         val day = lines.firstOrNull()?.at?.toLocalDate() ?: return null
-        lines.forEach { t.add(day, it.area, it.text) }
+        // Scrubbed BEFORE it is folded into a kind (20 Oct review): folding digits to "#" and cutting at 80 characters first
+        // breaks a token's shape, and the scrub then no longer knows it.
+        lines.forEach { t.add(day, it.area, scrub(it.text)) }
         return t.of(day)
     }
 
@@ -444,7 +463,11 @@ object DiagDay {
         }
 
         val stream = StreamHealth.day(i.diary, i.day.atTime(23, 59, 59))
-        val errors = i.errorTally?.takeIf { it.day == i.day && (it.errors.isNotEmpty() || it.unreadable.isNotEmpty()) } ?: errorsOf(lines)
+        // 20 Oct: the diary's own tally is memory only (it starts again at a restart, 13:33 on 19 Oct) and the diary file keeps
+        // its newest lines only: kind by kind the larger of the two, so neither a restart nor the cap hides part of the day.
+        val errors = DiagErrors.merge(errorsOf(lines), i.errorTally?.takeIf { it.day == i.day && !it.empty })
+        // The self-healing monitor's incidents ("[health] incident: ...", "recovered: ..."), to set beside the stream's drops.
+        val incidents = lines.filter { it.area == "health" && (it.text.startsWith("incident: ") || it.text.startsWith("recovered: ")) }
         val github = lines.filter { it.area == "github" || it.area == "sync" }
         // A run skipped because a check failed is a skip, not a failed upload (counted once).
         val skippedSync = github.count { it.text.contains("skipped") }
@@ -478,11 +501,19 @@ object DiagDay {
             },
             "orders_by_source" to i.orders.groupingBy { (if (it.live) "live · " else "paper · ") + s(it.source) }.eachCount().toSortedMap(),
             "health" to linkedMapOf(
-                "errors" to (errors?.errors ?: emptyMap()).entries.sortedByDescending { it.value }.associate { s(it.key) to it.value },
+                // 20 Oct: only what failed; risks and faults the app rode out, and information or a form's hint, apart.
+                "errors" to counts(errors?.errors, p),
+                "warnings" to counts(errors?.warnings, p),
+                "notices" to counts(errors?.notices, p),
                 "unreadable" to (errors?.unreadable ?: emptyMap()).entries.associate { s(it.key) to it.value },
                 "stream" to linkedMapOf("drops" to stream.drops, "last_at" to stream.lastAt?.let { at(it, i.day) },
-                    "whys" to stream.whys.entries.associate { s(it.key) to it.value }),
+                    "whys" to stream.whys.entries.associate { s(it.key) to it.value },
+                    "times" to stream.times.takeLast(MAX_TIMES).map { at(it, i.day) }),
+                "incidents" to capped("incidents", incidents, MAX_TIMES).map { "${HMS.format(it.at)} ${s(it.text)}" },
                 "lines" to i.health.toSortedMap().mapValues { s(it.value) },
+                // When the lines were read: app_health and stream are the day's own; the others are as at this time (a
+                // later date than "day" marks a catch-up).
+                "lines_as_of" to STAMP.format(i.generatedAt),
                 "workers" to capped("workers", i.workers, MAX_LINES).map { s(it) },
                 "sync" to linkedMapOf("failed" to failedSync, "skipped" to skippedSync,
                     "lines" to capped("sync", github, 30).map { "${HMS.format(it.at)} ${s(it.text)}" }),
@@ -497,6 +528,10 @@ object DiagDay {
         report["truncated"] = cut
         return fit(report)
     }
+
+    /** Kinds and counts, the most first; every kind scrubbed. */
+    private fun counts(m: Map<String, Int>?, personal: Collection<String?>): Map<String, Int> =
+        (m ?: emptyMap()).entries.sortedByDescending { it.value }.associate { scrub(it.key, personal) to it.value }
 
     /** Points and percent only: the count, wins and losses, the points summed and the average percent of the premium. */
     private fun perf(ts: List<Trade>): Map<String, Any?> {

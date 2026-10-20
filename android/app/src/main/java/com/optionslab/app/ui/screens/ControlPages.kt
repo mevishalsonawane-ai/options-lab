@@ -908,7 +908,8 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                         probe.fill('\u0000')
                         val (hint, tone) = when (strength) {
                             0 -> "${pass.length} of at least $minPass characters" to p.inkSoft
-                            1 -> "Weak: make it longer, or mix words, digits and symbols" to p.oxblood
+                            // 20 Oct: exactly what is still needed (the same rule, [com.optionslab.ira.Passphrase.advice]).
+                            1 -> (pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.advice(a).also { a.fill('\u0000') } }?.short ?: "Weak") to p.oxblood
                             2 -> "Fair: a few more words would make it strong" to p.brass
                             else -> "Strong" to p.verdigris
                         }
@@ -919,10 +920,12 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
             },
             confirmButton = {
                 TextButton({
-                    if (mode == "backup" && pass.length < minPass) com.optionslab.app.work.Alerts.error("The backup passphrase needs at least $minPass characters.")
-                    else if (mode == "backup" && pass != again) com.optionslab.app.work.Alerts.error("The two passphrases differ.")
-                    else if (mode == "backup" && pass.toCharArray().let { a -> com.optionslab.app.data.Backup.strength(a).also { a.fill('\u0000') } } <= 1)
-                        com.optionslab.app.work.Alerts.error("That passphrase is too easy to guess: make it longer, or mix words, digits and symbols.")
+                    // 20 Oct: a form's hint, not an error (a notice in the diagnostics), saying exactly what is needed.
+                    if (mode == "backup" && pass.length < minPass) com.optionslab.app.work.Alerts.hint("The backup passphrase needs at least $minPass characters (${pass.length} now).")
+                    else if (mode == "backup" && pass != again) com.optionslab.app.work.Alerts.hint("The two passphrases differ.")
+                    else if (mode == "backup" && !pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.accepted(a).also { a.fill('\u0000') } })
+                        com.optionslab.app.work.Alerts.hint(pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.advice(a).also { a.fill('\u0000') } }?.full
+                            ?: "That passphrase is too easy to guess.")
                     else {
                         val typed = pin.toCharArray()
                         val phrase = pass.toCharArray()

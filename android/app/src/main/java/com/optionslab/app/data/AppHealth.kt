@@ -78,16 +78,9 @@ object AppHealth {
         }
     }
 
-    /** [read] (the file) with [early] (seen before it was read): early days' counts added in. */
-    private fun merge(read: HealthBook.Book, early: HealthBook.Book): HealthBook.Book {
-        if (early == HealthBook.Book()) return read
-        var b = read
-        for (d in early.days) {
-            for (s in d.samples) b = HealthBook.stall(b, s.atMs, s.ms, s.where)
-            repeat(d.reconnects) { b = HealthBook.reconnect(b, d.day.atTime(12, 0).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()) }
-        }
-        return HealthBook.exits(b, early.exits)
-    }
+    /** [read] (the file) with [early] (seen before it was read): early days' counts added in ([HealthBook.merge]). */
+    private fun merge(read: HealthBook.Book, early: HealthBook.Book): HealthBook.Book =
+        if (early == HealthBook.Book()) read else HealthBook.merge(read, early)
 
     private fun mutate(f: (HealthBook.Book) -> HealthBook.Book) {
         synchronized(lock) { book = f(book) }
@@ -177,7 +170,14 @@ object AppHealth {
                 } ?: continue
                 // An ANR's description is Android's own ("Input dispatching timed out"); a crash's place comes from the app's own
                 // crash file (frames only) - its description can carry an exception's message, which is never kept.
-                val where = if (kind == HealthBook.ExitKind.ANR) words(x.description) else crashWhere(ctx, x.timestamp) ?: "unknown place"
+                // 20 Oct: an ANR not yet kept also gets its main thread's frame from Android's trace ([HealthBook.anrMain]; class
+                // and method names only), read once here on the worker - Android's words alone named no code (17 Oct 01:09).
+                val where = if (kind == HealthBook.ExitKind.ANR) {
+                    val main = if (x.timestamp > book.exitsSeenTo) HealthBook.anrMain(runCatching {
+                        x.traceInputStream?.use { s -> String(readCapped(s, 256 * 1024), Charsets.UTF_8) }
+                    }.getOrNull()) else null
+                    listOfNotNull(words(x.description), main).joinToString(" · ")
+                } else crashWhere(ctx, x.timestamp) ?: "unknown place"
                 seen += HealthBook.Exit(x.timestamp, kind, where)
             }
         }
@@ -186,6 +186,14 @@ object AppHealth {
             if (f.isFile) seen += HealthBook.Exit(f.lastModified(), HealthBook.ExitKind.CRASH, crashWhere(ctx, null) ?: "unknown place")
         }
         if (seen.isNotEmpty()) mutate { HealthBook.exits(it, seen) }
+    }
+
+    /** At most [max] bytes of [s] (an ANR dump holds every thread; the main thread is near its top). */
+    private fun readCapped(s: java.io.InputStream, max: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(8192)
+        while (out.size() < max) { val r = s.read(buf, 0, minOf(buf.size, max - out.size())); if (r < 0) break; out.write(buf, 0, r) }
+        return out.toByteArray()
     }
 
     /** Letters, digits and spaces only, short: Android's own words for an ANR. */
@@ -282,6 +290,9 @@ object AppHealth {
 
     /** The diagnostics' "Health:" line. */
     fun diagLine(): String { ensureLoaded(); return HealthBook.diagLine(book, today(), ::hhmm) }
+
+    /** [day]'s line (20 Oct: the diagnostics' catch-up reads the day it is for, not the morning after). */
+    fun diagLine(day: LocalDate): String { ensureLoaded(); return HealthBook.diagLine(book, day, ::hhmm) }
 
     /** "Is the app healthy?" */
     fun sayHealthy(): String { ensureLoaded(); return HealthBook.sayHealthy(book, today()) }

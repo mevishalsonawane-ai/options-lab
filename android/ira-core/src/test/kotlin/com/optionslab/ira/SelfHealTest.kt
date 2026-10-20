@@ -89,6 +89,48 @@ class SelfHealTest {
         assertTrue(f.words().any { "paused everywhere" in it })
     }
 
+    /** 20 Oct (Boss's 19 Oct diagnostics: "Zerodha's requests are failing (# of the last #)" x7 beside the phone's own network drops). */
+    @Test fun thePhonesOwnNetworkFailuresAreNotZerodhasAndTheBreakerSaysInARow() {
+        assertFalse(SelfHeal.zerodhaFault("UnknownHostException", "Unable to resolve host \"api.kite.trade\": No address associated with hostname"))
+        assertFalse(SelfHeal.zerodhaFault("NoRouteToHostException", null))
+        assertFalse(SelfHeal.zerodhaFault("SocketException", "Software caused connection abort"))
+        assertFalse(SelfHeal.zerodhaFault("ConnectException", "failed to connect to api.kite.trade: connect failed: ENETUNREACH (Network is unreachable)"))
+        assertFalse(SelfHeal.zerodhaFault("IOException", "Canceled"))
+        assertFalse(SelfHeal.zerodhaFault("InterruptedIOException", "canceled"))
+        // Zerodha slow or broken: still counted.
+        assertTrue(SelfHeal.zerodhaFault("SocketTimeoutException", "timeout"))
+        assertTrue(SelfHeal.zerodhaFault("SocketException", "Connection reset"))
+        assertTrue(SelfHeal.zerodhaFault("ConnectException", "Failed to connect to api.kite.trade/1.2.3.4:443"))
+        assertTrue(SelfHeal.zerodhaFault(null, null))
+        assertTrue(SelfHeal.zerodhaFault("InterruptedIOException", "timeout"))
+        // Five in a row out of 20 shut the breaker: the words say "in a row", not "5 of the last 20".
+        repeat(15) { m.rest(ok = true, latencyMs = 100) }
+        repeat(5) { m.rest(ok = false, latencyMs = 100) }
+        val (level, why) = m.levels().getValue(SelfHeal.Dep.KITE_REST)
+        assertEquals(SelfHeal.Level.DOWN, level)
+        assertEquals("Zerodha's requests are failing (5 in a row)", why)
+        // Half the window failing without a run: the window's count.
+        val m2 = SelfHeal.Monitor { now }
+        repeat(6) { m2.rest(ok = it % 2 == 0, latencyMs = 100) }
+        assertEquals("Zerodha's requests are failing (3 of the last 6)", m2.levels().getValue(SelfHeal.Dep.KITE_REST).second)
+    }
+
+    /** Open positions first: a stream reconnecting (stale) keeps its REST price fallback whatever Zerodha's requests are doing. */
+    @Test fun aReconnectingStreamKeepsTheOpenPositionsPricedFromQuotes() {
+        m.stream(lastTickMs = now, expected = true)
+        now += SelfHeal.STREAM_STALE_MS + 1
+        // No REST sample at all (the phone's own failures are not counted): the quotes fallback is on.
+        assertTrue(m.fallbacks().restQuotes)
+        assertFalse(m.fallbacks().dataUnreliable)
+        // Zerodha's requests fine: still the quotes, nothing paused.
+        repeat(6) { m.rest(ok = true, latencyMs = 100) }
+        assertTrue(m.fallbacks().restQuotes)
+        assertFalse(m.fallbacks().dataUnreliable)
+        // The stream back: the stream's prices again.
+        m.stream(now, true)
+        assertFalse(m.fallbacks().restQuotes)
+    }
+
     @Test fun theRelayDownBlocksNewLiveEntriesTheCandleFeedFallsBackAndThePhoneIsWatched() {
         m.relay(false); assertFalse(m.fallbacks().blockLiveEntries)
         m.relay(false); assertTrue(m.fallbacks().blockLiveEntries)

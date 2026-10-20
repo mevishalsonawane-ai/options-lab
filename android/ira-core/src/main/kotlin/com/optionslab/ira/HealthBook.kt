@@ -124,11 +124,63 @@ object HealthBook {
     fun orderPath(b: Book, day: LocalDate, medianMs: Long?, n: Int): Book =
         if (medianMs == null || n <= 0) b else upd(b, day) { it.copy(orderMedianMs = medianMs, orderN = n) }
 
+    /**
+     * [read] (the file) with [early] (what was counted in the moment before the file was read) added in, day by day (20 Oct:
+     * the app's merge kept only the stalls and the reconnects, so a stale feed, an overrun or a trim seen at start was lost).
+     */
+    fun merge(read: Book, early: Book): Book {
+        if (early.days.isEmpty() && early.exits.isEmpty()) return read
+        var b = read
+        for (e in early.days) b = upd(b, e.day) { d ->
+            val places = (d.places.keys + e.places.keys).associateWith { (d.places[it] ?: 0) + (e.places[it] ?: 0) }
+            val overruns = (d.overruns.keys + e.overruns.keys).associateWith { (d.overruns[it] ?: 0) + (e.overruns[it] ?: 0) }
+            d.copy(stalls = d.stalls + e.stalls, longestMs = maxOf(d.longestMs, e.longestMs), places = places,
+                samples = (d.samples + e.samples).sortedBy { it.atMs }.takeLast(SAMPLES_DAY), reconnects = d.reconnects + e.reconnects,
+                stale = d.stale + e.stale, overruns = overruns, saverOn = d.saverOn + e.saverOn, saverLooks = d.saverLooks + e.saverLooks,
+                trims = d.trims + e.trims, orderMedianMs = d.orderMedianMs ?: e.orderMedianMs, orderN = if (d.orderMedianMs != null) d.orderN else e.orderN)
+        }
+        return exits(b, early.exits)
+    }
+
     /** Android's exit records (any order): those newer than [Book.exitsSeenTo] kept, newest first. */
     fun exits(b: Book, seen: List<Exit>): Book {
-        val fresh = seen.filter { it.atMs > b.exitsSeenTo }.map { it.copy(where = clean(it.where)) }
+        // 20 Oct: up to [WHERE_MAX] characters, so an ANR's main-thread frame ([anrMain]) is kept after Android's own words.
+        val fresh = seen.filter { it.atMs > b.exitsSeenTo }.map { it.copy(where = clean(it.where, WHERE_MAX)) }
         if (fresh.isEmpty()) return b
         return b.copy(exits = (fresh + b.exits).sortedByDescending { it.atMs }.take(MAX_EXITS), exitsSeenTo = maxOf(b.exitsSeenTo, fresh.maxOf { it.atMs }))
+    }
+
+    /** The longest place kept for an exit. */
+    const val WHERE_MAX = 200
+
+    private val MAIN_HEAD = Regex("^\"main\"\\s")
+    private val FRAME = Regex("^\\s*at ([\\w$.<>-]+)\\(")
+    private val LOCK = Regex("waiting to lock <[^>]+> \\(a ([\\w$.]+)\\)")
+
+    private fun short(frame: String): String = frame.split('.').takeLast(2).joinToString(".")
+
+    /**
+     * Where the main thread was in an ANR's thread dump (20 Oct; Android's own words, "user request after error Input
+     * dispatching timed out 27ec3b6", named no code, so the 17 Oct 01:09 ANR could not be traced): the app's own first frame
+     * on the main thread, the top frame when it is not the app's, and the class whose lock it was waiting for. Class and
+     * method names only (never a message or a value). Null: no main thread in [trace].
+     */
+    fun anrMain(trace: String?): String? {
+        if (trace.isNullOrBlank()) return null
+        val lines = trace.lines()
+        val start = lines.indexOfFirst { MAIN_HEAD.containsMatchIn(it) }
+        if (start < 0) return null
+        val block = lines.drop(start + 1).takeWhile { it.isNotBlank() }
+        val frames = block.mapNotNull { FRAME.find(it)?.groupValues?.get(1) }
+        if (frames.isEmpty()) return null
+        val top = short(frames.first())
+        val ours = frames.firstOrNull { it.startsWith("com.optionslab.") }?.let(::short)
+        val lock = block.firstNotNullOfOrNull { LOCK.find(it)?.groupValues?.get(1) }?.substringAfterLast('.')
+        val out = StringBuilder("main thread in ").append(ours ?: top)
+        if (ours != null && ours != top) out.append(" (top ").append(top).append(')')
+        if (ours == null) out.append(" (no app frame)")
+        lock?.let { out.append(" · waiting for a lock of ").append(it) }
+        return out.toString()
     }
 
     // ---- words ---------------------------------------------------------------------------------------------------------
@@ -144,7 +196,13 @@ object HealthBook {
         val d = b.day(today)
         val stalls = if (d == null || d.stalls == 0) "no stalls today" else
             "${plural(d.stalls, "stall")} today (longest ${sec(d.longestMs)}, most in ${d.places.maxWithOrNull(compareBy<Map.Entry<String, Int>> { it.value }.thenByDescending { it.key })?.key})"
-        val anr = b.exits.firstOrNull { it.kind == ExitKind.ANR }?.let { "last ANR ${AgentLessons.day(dayOf(it.atMs))} ${hhmm(it.atMs)} in ${it.where}" } ?: "no ANR seen"
+        // 20 Oct: with that day's stalls when the book still holds them (where the screen's thread was slow before it).
+        val anr = b.exits.firstOrNull { it.kind == ExitKind.ANR }?.let { e ->
+            val that = b.day(dayOf(e.atMs))?.takeIf { it.stalls > 0 }?.let { d ->
+                " (that day ${plural(d.stalls, "stall")}, most in ${d.places.maxWithOrNull(compareBy<Map.Entry<String, Int>> { it.value }.thenByDescending { it.key })?.key})"
+            }.orEmpty()
+            "last ANR ${AgentLessons.day(dayOf(e.atMs))} ${hhmm(e.atMs)} in ${e.where}$that"
+        } ?: "no ANR seen"
         val crash = b.exits.firstOrNull { crashes(it) }?.let { "last crash ${AgentLessons.day(dayOf(it.atMs))} ${hhmm(it.atMs)} in ${it.where}" } ?: "no crash seen"
         val tuner = if (b.tuned.isEmpty()) "tuner: nothing adjusted" else "tuner: " + b.tuned.values.sortedBy { it.key }.joinToString("; ") {
             "${HealthTuner.words(it.key)} every ${msWords(it.ms)} (normally ${msWords(HealthTuner.defaultMs(it.key))}, since ${AgentLessons.day(it.since)})"

@@ -214,14 +214,71 @@ class DiagDayTest {
         assertEquals(listOf("10:12:00" to "entered", "11:30:00" to "liquidity_no_room"), ds.map { it["at"] to it["verdict"] })
     }
 
-    @Test fun theDiarysOwnTallyIsPreferredWhenItHoldsTheDay() {
-        val tally = DiagErrors.Day(day, mapOf("socket closed" to 7), mapOf("Jarvis words: ij1" to 2))
+    @Test fun theDiarysOwnTallyAndTheDiaryAreTakenTogetherKindByKind() {
+        // 20 Oct: the tally restarts with the process (13:33 on 19 Oct), the diary file keeps its newest lines only: each kind's
+        // larger count is kept, so neither hides part of the day.
+        val tally = DiagErrors.Day(day, mapOf("socket closed" to 7, "missing required field: quantity" to 1), mapOf("Jarvis words: ij1" to 2))
         val h = json(input(diary = diary, tally = tally))["health"] as Map<String, Any?>
-        assertEquals(mapOf("socket closed" to 7L), (h["errors"] as Map<String, Any?>).mapValues { it.value.num() })
+        assertEquals(mapOf("socket closed" to 7L, "missing required field: quantity" to 2L, "order # failed" to 1L),
+            (h["errors"] as Map<String, Any?>).mapValues { it.value.num() })
         assertEquals(mapOf("Jarvis words: ij1" to 2L), (h["unreadable"] as Map<String, Any?>).mapValues { it.value.num() })
-        // Another day's tally (the morning catch-up): counted from the diary instead.
+        // Another day's tally (the morning catch-up): counted from the diary only.
         val h2 = json(input(diary = diary, tally = DiagErrors.Day(day.plusDays(1), mapOf("x" to 1))))["health"] as Map<String, Any?>
         assertEquals(2L, (h2["errors"] as Map<String, Any?>)["missing required field: quantity"].num())
+        assertNull((h2["errors"] as Map<String, Any?>)["x"])
+    }
+
+    /** 20 Oct (Boss's 19 Oct file: "34 errors in 10 kinds", most of them not errors): each line counted under its severity. */
+    @Test fun noticesAndWarningsAreNotCountedAsErrors() {
+        val lines = listOf(
+            "10-13 09:00:05 [error] Good morning Boss · 2 things need you: ✓ Zerodha logged in for today ✗ holidays not read",
+            "10-13 15:46:00 [error] Day report · Mon 13 Oct: Liquidity 15+5: 3 trades",
+            "10-13 10:00:00 [error] That passphrase is too easy to guess: make it longer, or mix words, digits and symbols.",
+            "10-13 10:01:00 [notice] That passphrase is too easy to guess: it needs 12 characters as typed",
+            "10-13 11:00:00 [error] Index nearing your breakeven: NIFTY 25,100.0 is 0.40% above the 25,000.0 breakeven of the 25,200 put.",
+            "10-13 11:05:00 [error] Short put is in the money: NIFTY 25,100.0 is below the 25,200 strike. The loss is unbounded below here.",
+            "10-13 11:10:00 [error] Daily loss limit reached: today's paper P&L Rs -5,000 reached the Rs 5,000 daily loss limit",
+            "10-13 11:15:00 [error] Live price stream dropped (no data from Zerodha for 12 s); reconnecting",
+            "10-13 11:16:00 [warning] Live price stream dropped (the phone's network changed); reconnecting",
+            "10-13 11:20:00 [error] Problem: Zerodha's requests: Zerodha's requests are failing (5 in a row).",
+            "10-13 11:21:00 [error] Positions not protected: 1 open. Check them in Trade.",
+            "10-13 11:22:00 [health] incident: Zerodha's requests are failing (5 in a row).",
+            "10-13 11:25:00 [health] recovered: Zerodha's requests is back to normal; everything is as before.",
+            "10-13 11:30:00 [stream] dropped: no data from Zerodha for 12 s · up 3 min",
+        )
+        val h = json(input(diary = lines))["health"] as Map<String, Any?>
+        fun m(k: String) = (h[k] as Map<String, Any?>).mapValues { it.value.num() }
+        assertEquals(setOf("problem: zerodha's requests: zerodha's requests are failing (# in a row).", "positions not protected: # open. check them in trade."),
+            m("errors").keys)
+        assertEquals(5L, m("warnings").values.sum())
+        assertEquals(4L, m("notices").values.sum())
+        assertEquals(1L, m("notices").filterKeys { it.startsWith("that passphrase is too easy to guess: make it longer") }.values.single())
+        val stream = h["stream"] as Map<String, Any?>
+        assertEquals(listOf("11:30:00"), stream["times"])
+        assertEquals(listOf("11:22:00 incident: Zerodha's requests are failing (5 in a row).",
+            "11:25:00 recovered: Zerodha's requests is back to normal; everything is as before."), h["incidents"])
+        assertEquals("2026-10-13T23:41:05", h["lines_as_of"])
+    }
+
+    /** 20 Oct: the R51 line of Boss's 19 Oct file carried rupee nets after its phrases. */
+    @Test fun thePassedArmsNetsAreHidden() {
+        val line = "R51 Donchian 20: off · open 0 · 19 closed -12,000 after charges · of them 2 would-be -950 · " +
+            "30-60-100 lock on for new trades, 9 closed on it -10,947, 10 on the research exits -1,049 · L25 +5% once +25% on for new trades, " +
+            "5 closed on it 320 · Supertrend filter (R73 T7) on for new breaks, 3 closed on it +1,200.50, 4 on the plain rules -75"
+        val out = DiagDay.otherArmLine(line)
+        assertEquals("R51 Donchian 20: off · open 0 · 19 closed (net hidden) · of them 2 would-be (net hidden) · " +
+            "30-60-100 lock on for new trades, 9 closed on it (net hidden), 10 on the research exits (net hidden) · L25 +5% once +25% on for new trades, " +
+            "5 closed on it (net hidden) · Supertrend filter (R73 T7) on for new breaks, 3 closed on it (net hidden), 4 on the plain rules (net hidden)", out)
+        // The app's own hidden form passes unchanged.
+        val hidden = "9 closed on it (net hidden), 10 on the research exits (net hidden)"
+        assertEquals(hidden, DiagDay.otherArmLine(hidden))
+    }
+
+    @Test fun anEmptyDayHasEmptySeverities() {
+        val h = json(input())["health"] as Map<String, Any?>
+        for (k in listOf("errors", "warnings", "notices")) assertEquals(emptyMap<String, Any?>(), h[k], k)
+        assertEquals(emptyList<Any?>(), h["incidents"])
+        assertEquals(emptyList<Any?>(), (h["stream"] as Map<String, Any?>)["times"])
     }
 
     @Test fun anEmptyDayIsAWholeReport() {

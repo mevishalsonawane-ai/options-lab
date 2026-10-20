@@ -154,4 +154,31 @@ class SecureBlobsTest : RobolectricTest() {
         assertTrue(line, line.startsWith("Settings size:"))
         assertFalse(line, line.contains("secret-looking"))
     }
+
+    /**
+     * 20 Oct (the 17 Oct 01:09 ANR, "Input dispatching timed out"): a value's lock was held for a whole Keystore write, so the
+     * screen's thread putting the same key waited for it. Now a write holds only its own write lock: a put in the meantime
+     * returns at once, and the newer value is the one left on disk.
+     */
+    @Test fun aSlowWriteNeverHoldsAPutOfTheSameKey() {
+        SecurePrefs.put(big, bulk(10))
+        Vault.testWriteDelayMs = 1_500L
+        try {
+            val writer = Thread { SecureBlobs.put(big, bulk(20)) }.apply { start() }
+            Thread.sleep(300)                                    // the write is under way (sleeping in the vault)
+            val t0 = System.nanoTime()
+            assertTrue(SecureBlobs.putSoon(big, bulk(30)))
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue("putSoon waited $ms ms behind a write", ms < 500)
+            assertEquals(bulk(30), SecureBlobs.get(big))           // readable at once
+            writer.join(10_000)
+            Vault.testWriteDelayMs = 0L
+            // The slow write took the older value: the key is still to be written, and the next write leaves the newest.
+            assertTrue(SecureBlobs.anyDirty())
+            SecureBlobs.saveNow(big)
+            assertFalse(SecureBlobs.anyDirty())
+            SecureBlobs.reset()
+            assertEquals(bulk(30), SecureBlobs.get(big))
+        } finally { Vault.testWriteDelayMs = 0L }
+    }
 }

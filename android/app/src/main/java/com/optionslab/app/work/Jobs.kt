@@ -944,6 +944,27 @@ object Tasks {
     /** The whole pass's time, beside its steps' (the Order speed card says it). */
     const val PASS_TOTAL = "watch pass (total)"
 
+    /**
+     * The open paper ticket's risk notices already said (20 Oct; [com.optionslab.ira.TicketRisk]): read from the settings vault
+     * once a process (the watch's worker thread), written in the background ([SecurePrefs.putAllSoon]) - never the order path.
+     */
+    internal object TicketNotices {
+        private const val KEY = "ticket.risk.said"
+        @Volatile private var said: Set<String>? = null
+
+        fun said(): Set<String> = said ?: com.optionslab.ira.TicketRisk.decode(
+            runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY) }.getOrNull()).also { said = it }
+
+        @Synchronized fun add(key: String) {
+            val next = said() + key
+            said = next
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(KEY to com.optionslab.ira.TicketRisk.encode(next))) }
+        }
+
+        /** TEST ONLY: forget the memory (the vault's copy stays). */
+        fun resetForTest() { said = null }
+    }
+
     private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>, lanes: CoroutineScope?): Tick {
         riskSteps(context, s, lanes)
         Heartbeat.stepBegin("index quotes")
@@ -975,12 +996,14 @@ object Tasks {
                 lines.add(0, "Cushion to breakeven %,.1f pts (%.2f%%)".format(spot - tk.breakeven, 100 * cushion))
                 // 0 at the breakeven, 100 at the forward the ticket was priced off.
                 progress = (100 * ((spot - tk.breakeven) / (tk.forward - tk.breakeven))).toInt().coerceIn(0, 100)
-                if (cushion <= s.riskAlertPct && fired.add("risk.near")) Notifier.post(context, 3001, Notifier.RISK,
-                    "Index nearing your breakeven",
-                    "${tk.underlying} %,.1f is %.2f%% above the %,.1f breakeven of the ${fmtG(tk.strike)} put.".format(spot, 100 * cushion, tk.breakeven), "ticket")
-                if (spot < tk.strike && fired.add("risk.itm")) Notifier.post(context, 3002, Notifier.RISK,
-                    "Short put is in the money",
-                    "${tk.underlying} %,.1f is below the ${fmtG(tk.strike)} strike. The loss is unbounded below here.".format(spot), "ticket")
+                // 20 Oct ([com.optionslab.ira.TicketRisk]): each notice once per ticket, kept across a restart (the 13:33
+                // restart on 19 Oct said both again); "below" the breakeven, never "-0.12% above"; nothing past its expiry.
+                val said = TicketNotices.said()
+                for (n in com.optionslab.ira.TicketRisk.due(tk.underlying, tk.side, tk.right, tk.strike, tk.breakeven, tk.expiry, tk.session,
+                        Market.today(), spot, s.riskAlertPct, said)) {
+                    TicketNotices.add(n.key)
+                    Notifier.post(context, n.id, Notifier.RISK, n.title, n.text, "ticket")
+                }
             }
         }
         // Alarms on any instrument ("NSE:INFY", "NFO:NIFTY26SEP24500PE") are priced from Zerodha.

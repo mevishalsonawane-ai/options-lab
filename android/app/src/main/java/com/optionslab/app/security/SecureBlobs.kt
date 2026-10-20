@@ -87,6 +87,14 @@ internal object SecureBlobs {
         var unreadable = false
         /** Changed in memory by [putSoon], not yet on disk. */
         var dirty = false
+        /** Bumped by each change, so a write knows whether what it wrote is still the newest. */
+        var version = 0L
+        /**
+         * Held while the file is written (20 Oct). The value's own lock is held only to read or set the value, never for the
+         * Keystore encryption: the screen's thread putting a value ([putSoon]) waited behind a write of the same key for
+         * the encryption's seconds (the 17 Oct ANR, "Input dispatching timed out", while Jarvis's log was written).
+         */
+        val writing = Any()
     }
     private val entries = ConcurrentHashMap<String, Entry>()
 
@@ -162,19 +170,21 @@ internal object SecureBlobs {
     /** [v] written to [k]'s file now (null: a tombstone). Throws when the encryption or the disk fails, as a settings write does. */
     fun put(k: String, v: Any?) = lock.read {
         val e = entry(k)
-        synchronized(e) {
-            if (e.loaded && !e.dirty && !e.unreadable && SecurePrefs.sameValue(e.value, v)) return@read
-            e.value = v; e.loaded = true; e.dirty = true
-            save(k, e)
+        synchronized(e.writing) {
+            synchronized(e) {
+                if (e.loaded && !e.dirty && !e.unreadable && SecurePrefs.sameValue(e.value, v)) return@read
+                e.value = v; e.loaded = true; e.dirty = true; e.version++
+            }
+            write(k, e)
         }
     }
 
-    /** [v] readable at once; its file written by [SecurePrefs]' background writer ([saveNow]). */
+    /** [v] readable at once; its file written by [SecurePrefs]' background writer ([saveNow]). Never waits on a write. */
     fun putSoon(k: String, v: Any?): Boolean = lock.read {
         val e = entry(k)
         synchronized(e) {
             if (e.loaded && !e.dirty && !e.unreadable && SecurePrefs.sameValue(e.value, v)) return@read false
-            e.value = v; e.loaded = true; e.dirty = true
+            e.value = v; e.loaded = true; e.dirty = true; e.version++
             true
         }
     }
@@ -182,13 +192,27 @@ internal object SecureBlobs {
     /** A [putSoon] value written now (on the background writer). */
     fun saveNow(k: String) = lock.read {
         val e = entry(k)
-        synchronized(e) { if (e.dirty) runCatching { save(k, e) } }
+        synchronized(e.writing) { runCatching { write(k, e) } }
+    }
+
+    /**
+     * Under [Entry.writing] only (20 Oct): the newest value taken under [e]'s lock, then encrypted and written with that lock
+     * let go; still dirty afterwards when it changed meanwhile (the next write takes the newer value).
+     */
+    private fun write(k: String, e: Entry) {
+        if (SecurePrefs.unreadable) return                     // the settings vault fails closed; so does every part of it
+        val (v, ver, unreadable) = synchronized(e) { if (!e.dirty) return; Triple(e.value, e.version, e.unreadable) }
+        val f = file(k)
+        if (unreadable) { runCatching { if (f.exists()) Vault.setAside(f) }; synchronized(e) { e.unreadable = false } }
+        Vault.writeFile(f, encode(v))
+        synchronized(e) { if (e.version == ver) e.dirty = false }
+        SecurePrefs.dropLegacy(k)
     }
 
     /** Any value changed in memory and not yet written. */
     fun anyDirty(): Boolean = entries.values.any { synchronized(it) { it.dirty } }
 
-    /** Under [e]'s lock. */
+    /** Under [e]'s lock and [Entry.writing]: [migrate]'s one-time write only (every other write is [write]). */
     private fun save(k: String, e: Entry) {
         if (SecurePrefs.unreadable) return                     // the settings vault fails closed; so does every part of it
         val f = file(k)
@@ -204,7 +228,7 @@ internal object SecureBlobs {
      */
     fun migrate(k: String, legacy: Any?): Boolean = lock.read {
         val e = entry(k)
-        synchronized(e) {
+        synchronized(e.writing) { synchronized(e) {
             val f = file(k)
             if (e.loaded && !e.unreadable) {
                 if (e.dirty) save(k, e)
@@ -220,7 +244,7 @@ internal object SecureBlobs {
             if (!e.loaded || e.unreadable) { e.value = legacy; e.loaded = true; e.unreadable = false }
             SecurePrefs.dropLegacy(k)
             true
-        }
+        } }
     }
 
     // ---- the diagnostics' sizes ----------------------------------------------------------------------------------------

@@ -173,9 +173,11 @@ fun GitHubSyncCard(model: AppModel) {
                         val probe = pass.toCharArray()
                         val strength = Backup.strength(probe)
                         probe.fill('\u0000')
+                        // 20 Oct: the hint says exactly what is still needed (the same rule, [com.optionslab.ira.Passphrase.advice]).
+                        val advice = pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.advice(a).also { a.fill('\u0000') } }
                         val (hint, tone) = when (strength) {
                             0 -> "${pass.length} of at least ${Backup.MIN_PASSPHRASE} characters" to p.inkSoft
-                            1 -> "Weak: make it longer, or mix words, digits and symbols" to p.oxblood
+                            1 -> (advice?.short ?: "Weak") to p.oxblood
                             2 -> "Fair: a few more words would make it strong" to p.brass
                             else -> "Strong" to p.verdigris
                         }
@@ -185,10 +187,11 @@ fun GitHubSyncCard(model: AppModel) {
                 },
                 confirmButton = {
                     TextButton({
-                        val strong = pass.toCharArray().let { a -> Backup.strength(a).also { a.fill('\u0000') } }
+                        val advice = pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.advice(a).also { a.fill('\u0000') } }
+                        // 20 Oct: a form's hint, not an error (the diagnostics count it as a notice), saying exactly what is needed.
                         when {
-                            pass != again -> Alerts.error("The two passphrases differ.")
-                            strong <= 1 -> Alerts.error("That passphrase is too easy to guess: make it longer, or mix words, digits and symbols.")
+                            pass != again -> Alerts.hint("The two passphrases differ.")
+                            advice != null -> Alerts.hint(advice.full)
                             else -> {
                                 val typed = pin.toCharArray()
                                 val phrase = pass.toCharArray()

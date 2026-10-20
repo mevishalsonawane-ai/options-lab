@@ -713,33 +713,43 @@ object PassedArmsHost {
         }
     }
 
-    /** The diagnostics lines: each arm's switch, open trades, record, apart index and forward test. */
-    fun diagLine(): String {
+    /**
+     * The diagnostics lines: each arm's switch, open trades, record, apart index and forward test. Every rupee figure is
+     * written as is for Copy diagnostics (on the phone only); [hideNet] (the uploaded file) writes [NET_HIDDEN] (20 Oct: Boss's 19 Oct
+     * file carried "9 closed on it -10,947, 10 on the research exits -1,049" and "FINNIFTY 3 2,173", rupees the upload
+     * must never hold), and its forward test's and comparison's "₹" figures are hidden the same way.
+     */
+    fun diagLine(hideNet: Boolean = false): String {
         val v = _view.value
+        fun m(x: Double) = if (hideNet) NET_HIDDEN else "%,.0f".format(Locale.ENGLISH, x)
+        fun rupees(text: String) = if (hideNet) RUPEE_FIGURE.replace(text, NET_HIDDEN) else text
         return SOURCES.joinToString("\n") { s ->
             val c = v.closedOf(s)
             val ap = c.filter { it.index == apart(s) }
             val wb = v.wouldBeOf(s)
             "${label(s)}: ${if (v.on(s)) "on (paper only)" else if (v.recording(s)) com.optionslab.ira.PassedArmsTalk.RECORD_ONLY_WORDS else "off"}" +
                 "${v.paused[s]?.let { " (switched itself off: $it)" } ?: ""} · open ${v.open.count { it.arm == s }} · " +
-                "${c.size} closed %,.0f after charges · ".format(Locale.ENGLISH, c.sumOf { it.net ?: 0.0 }) +
+                "${c.size} closed ${m(c.sumOf { it.net ?: 0.0 })} after charges · " +
                 // 19 Oct: the would-be trades (nothing bought) counted apart within that record.
-                (if (wb.isNotEmpty()) "of them ${wb.size} would-be %,.0f · ".format(Locale.ENGLISH, wb.sumOf { it.net ?: 0.0 }) else "") +
-                "${apart(s)} ${ap.size} %,.0f · ".format(Locale.ENGLISH, ap.sumOf { it.net ?: 0.0 }) +
-                v.forwardLine(s) + " · 30-60-100 lock ${if (v.lockOn) "on" else "off"} for new trades, ${c.count { it.lock }} closed on it " +
-                    "%,.0f, ${c.count { !it.lock }} on the research exits %,.0f".format(Locale.ENGLISH, c.filter { it.lock }.sumOf { it.net ?: 0.0 },
-                        c.filter { !it.lock }.sumOf { it.net ?: 0.0 }) +
+                (if (wb.isNotEmpty()) "of them ${wb.size} would-be ${m(wb.sumOf { it.net ?: 0.0 })} · " else "") +
+                "${apart(s)} ${ap.size} ${m(ap.sumOf { it.net ?: 0.0 })} · " +
+                rupees(v.forwardLine(s)) + " · 30-60-100 lock ${if (v.lockOn) "on" else "off"} for new trades, ${c.count { it.lock }} closed on it " +
+                    "${m(c.filter { it.lock }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.lock }} on the research exits ${m(c.filter { !it.lock }.sumOf { it.net ?: 0.0 })}" +
                     " · L25 +5% once +25% ${if (v.l25On && v.lockOn) "on" else if (v.l25On) "on (acts only with the lock, which is off)" else "off"} for new trades, " +
-                    "${c.count { it.l25 }} closed on it %,.0f".format(Locale.ENGLISH, c.filter { it.l25 }.sumOf { it.net ?: 0.0 }) + (if (s == DonchianArm.SOURCE) " · Supertrend filter (R73 T7) ${if (v.stOn) "on" else "off"} for new breaks, " +
+                    "${c.count { it.l25 }} closed on it ${m(c.filter { it.l25 }.sumOf { it.net ?: 0.0 })}" + (if (s == DonchianArm.SOURCE) " · Supertrend filter (R73 T7) ${if (v.stOn) "on" else "off"} for new breaks, " +
                         "${v.stUnjudged} not judged today, " +
-                        "${c.count { it.st }} closed on it %,.0f, ${c.count { !it.st }} on the plain rules %,.0f".format(Locale.ENGLISH,
-                            c.filter { it.st }.sumOf { it.net ?: 0.0 }, c.filter { !it.st }.sumOf { it.net ?: 0.0 }) else "") +
+                        "${c.count { it.st }} closed on it ${m(c.filter { it.st }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.st }} on the plain rules ${m(c.filter { !it.st }.sumOf { it.net ?: 0.0 })}" else "") +
                     (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
-                v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} $x" } +
-                if (s == BreadthDonchianArm.SOURCE) " · ${v.comparison()}" else ""
+                v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} ${rupees(x)}" } +
+                if (s == BreadthDonchianArm.SOURCE) " · ${rupees(v.comparison())}" else ""
         } + " · ${PassedArms.PASSED}"
     }
+
+    /** What the uploaded diagnostics write for a rupee figure ([diagLine]). */
+    const val NET_HIDDEN = "(net hidden)"
+    /** A rupee figure in words made for the phone ("−₹1,049", "+₹2,173", "₹ 500", "Rs 40,000"). */
+    private val RUPEE_FIGURE = Regex("[-+−]?\\s*(?:₹|\\bRs\\.?)\\s*[-+−]?\\d[\\d,]*(?:\\.\\d+)?")
 
     // ---- the data the passes read --------------------------------------------------------------------------------------
 

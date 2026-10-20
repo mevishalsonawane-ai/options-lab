@@ -848,6 +848,14 @@ class PassedArmsHostTest : RobolectricTest() {
         val d = PassedArmsHost.diagLine()
         assertTrue(d, d.contains("${DonchianArm.LABEL}: record only (would-be trades, nothing bought) · open 0 · 1 closed -"))
         assertTrue(d, d.contains("of them 1 would-be -"))
+        // 20 Oct: the uploaded diagnostics' copy hides every rupee figure and keeps the counts (Copy diagnostics, on the phone, keeps them).
+        val up = PassedArmsHost.diagLine(hideNet = true)
+        assertTrue(up, up.contains("${DonchianArm.LABEL}: record only (would-be trades, nothing bought) · open 0 · 1 closed (net hidden) after charges"))
+        assertTrue(up, up.contains("of them 1 would-be (net hidden)"))
+        assertTrue(up, up.contains("closed on it (net hidden)") && up.contains("on the research exits (net hidden)"))
+        assertFalse(up, Regex("₹|\\bRs\\b").containsMatchIn(up))
+        assertFalse(up, Regex("(closed|would-be|exits|rules|on it)\\s+[-+−]?\\d").containsMatchIn(up))
+        assertFalse(up, Regex("\\d,\\d{3}").containsMatchIn(up))
         val said = PassedArmsHost.facts(v).arms.single { it.source == DonchianArm.SOURCE }
         assertTrue(said.recordOnly && said.on == false); assertEquals(1, said.wouldBe)
         assertTrue(com.optionslab.ira.PassedArmsTalk.armWords(said).startsWith("${DonchianArm.LABEL}: record only (would-be trades, nothing bought)."))

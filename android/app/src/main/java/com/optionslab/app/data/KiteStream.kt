@@ -351,7 +351,9 @@ object KiteStream {
                 lastCause = cause
                 if (opened && !check) {
                     val why = StreamHealth.plain(cause, if (cause == StreamHealth.Cause.PAUSED) d.pausedSec ?: d.silentSec else d.silentSec)
-                    com.optionslab.app.work.Alerts.post("Live price stream dropped ($why); reconnecting", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true)
+                    com.optionslab.app.work.Alerts.post("Live price stream dropped ($why); reconnecting", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true,
+                        // 20 Oct: it reconnects by itself (each drop is also counted in the stream's own line): a warning, not an error.
+                        severity = com.optionslab.ira.DiagErrors.Severity.WARNING)
                 }
                 _status.value = Status.RETRYING
                 wait = if (check) StreamHealth.FIRST_WAIT_MS else StreamHealth.wait(wait, d.upMs, cause)
@@ -644,6 +646,16 @@ object KiteStream {
     /** "Live stream: LIVE · drops today 3 · last drop 09:58:45 (no data from Zerodha for 12 s)", from the diary [lines]. */
     fun statusLine(lines: List<String>): String =
         StreamHealth.statusLine(_status.value.name, lines, Market.now().toLocalDateTime())
+
+    /**
+     * The line for [day] (20 Oct): today's as above; an earlier day's (the diagnostics' catch-up the next morning) from that
+     * day's own diary lines - before, the 02:53 retry of 19 Oct said "drops today 0" (20 Oct's) beside 19 Oct's 15 drops.
+     */
+    fun statusLine(lines: List<String>, day: java.time.LocalDate): String {
+        val now = Market.now().toLocalDateTime()
+        return if (day == now.toLocalDate()) statusLine(lines)
+        else StreamHealth.statusLine("the day's record", lines, day.atTime(23, 59, 59), dayWord = "that day")
+    }
 
 
     /** The latest order update per order id that Zerodha pushed on the stream (the newest [UPDATES_KEPT]). */

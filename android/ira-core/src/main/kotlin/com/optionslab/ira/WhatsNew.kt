@@ -62,6 +62,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 20 Oct (Boss: "Resolve all the problems/issues pushed to git by harvest"): the 19 Oct diagnostics file, fixed.
+        Entry("2026-10-20-diagnostics-fixes", OCT20, "Fixes from your 19 Oct diagnostics",
+            "The diagnostics now count only real failures as errors; warnings and notices are listed apart. " +
+                "Jarvis's log is saved in the background, so the screen no longer waits for it. " +
+                "A paper ticket's risk notice is said once, even after a restart, and says below the breakeven plainly. " +
+                "The backup passphrase hint now says exactly how long it must be. " +
+                "Your own phone's network trouble is no longer blamed on Zerodha. " +
+                "The 10:00 gamma line is kept after a restart, and the late diagnostics file reads the right day. " +
+                "No rupee figure of the passed arms leaves the phone in the diagnostics.",
+            "Data & Harvest → GitHub sync (the daily diagnostics file); Settings → Backup (the passphrase)"),
         // 20 Oct (Boss: "add a new agent in the application who will only study the candle patterns").
         Entry("2026-10-20-candle-agent", OCT20, "Candle agent: every candle read and explained",
             "A new Candle agent studies each closed candle on NIFTY, BANKNIFTY, SENSEX and four MCX futures. " +
