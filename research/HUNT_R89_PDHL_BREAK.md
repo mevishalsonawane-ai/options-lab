@@ -180,3 +180,73 @@ No design passer, so no paper candidate could arise. Read for all 180 cells, des
 - Nothing here is close enough for paper. If PDH / PDL is revisited, the only lead is FINNIFTY "break and go" beating
   random entries in design (p 0.002-0.05 on 8 of 10 variants) and not in the holdout: a longer FINNIFTY history with real
   options (2021-2024 weeklies) could tell whether that was chance.
+
+---
+
+# R89B: the enhanced versions (20 Oct 2026) - 0 of 45 pass; the one lead failed out of sample
+
+Boss, 20 Oct: "Can we enhance it and try something more with it". Boss chose all four directions offered (bigger candles
++ wider stop, let winners run, breadth confirmation, day-type filters) and the unseen test data, Aug 2021 - Nov 2024
+(an exception to the Nov 2024 rule, for this test only). Plan: `hunt/r89_pdhl_break/PREREG_B.md` (commit 867191d) before
+any R89B number; amendment A1 (`NOTES_B.md`, 5e8ce94) after the design and before the holdout. Code `rules_b.py`,
+`study_b.py`, tests `tests/test_r89b.py` (11, incl. the look-ahead guard across indices). Results `results_b/`.
+**Signal source of every rule: the underlying** (each index's spot; breadth reads the other indices' spot). MCX was
+dropped: it has no unseen option data.
+
+## The answer for Boss
+
+**The enhancements do not make it pay. 0 of 45 cells passed design (20 Nov 2024 - 19 Oct 2026). The one setting that
+looked good, FINNIFTY on 5-minute candles with an ATR stop, let-winners-run exit and breadth confirmation, made
++Rs 78,202 on 314 design trades and then LOST Rs 40,647 on 401 trades in 2021-2024. Nothing goes to paper.**
+
+1. **Bigger candles and wider stops made it worse, not better.** 15-minute candles with the swing target lost
+   Rs 5.89 lakh on 1,789 design trades (1m: Rs 4.35 lakh on 4,135). The move grows with the stop, but the edge in points
+   does not: at the exact levels the 15m trades made -13.4 (SENSEX) to +3.9 (MIDCPNIFTY) points a trade.
+2. **Letting winners run helped a little, not enough.** The breakeven-at-+1R plus 1R trail exit (B2) cut the 15m loss
+   from Rs 5.89 to 5.57 lakh in design and lost Rs 2.27 lakh on 3,050 holdout trades. The ATR stop cut false breaks from
+   about 33% to 13-15%, but the trades still lost (B6 design -Rs 4.59 lakh, holdout -Rs 3.06 lakh).
+3. **Breadth was the most useful filter, but only as a loss-cutter.** Requiring 4 of 5 indices to have broken their own
+   level (B3) cut the pooled loss by 62% in design (-Rs 2.10 lakh on 1,387 trades) and 76% in the holdout (-Rs 54,974 on
+   1,607), mostly by trading less. It never turned positive overall. Opening-range alignment (B4) and skipping gap days
+   (B5) did less; all three together (B8) traded rarely and still lost (-Rs 1.09 lakh design, -Rs 98,761 holdout).
+4. **FINNIFTY again looked special in one period and not the other.** FINNIFTY B7 beat hindsight-free random entries in
+   design (p 0.002) and passed every other design gate, so it was carried to the holdout (A1). There it lost (-Rs 40,647,
+   2 of 3 years negative, after-trigger twin p 0.68). Meanwhile FINNIFTY B3 and SENSEX B2 / B3, which lost in design,
+   made money in 2021-2024 (+Rs 47,721 / +24,261 / +29,471): signs of noise, not of a stable edge.
+5. **A method lesson (A1):** random-entry twins that keep the trade's side and day see the day's break direction in
+   advance; with long holds and trailing exits that hindsight makes random entries look very profitable (pooled B2 twins
+   +Rs 8.10 lakh). The hindsight-free "after-trigger" twin fixes it. This can only have hidden an edge, never invented
+   one; with the fixed twin nothing passes either.
+
+## Results (option, 1 lot, after costs; pooled over the five indices)
+
+| variant | what | design trades | design net | holdout trades | holdout net | false breaks (design / holdout) |
+|---|---|---|---|---|---|---|
+| B0 | R89 base, 1m | 4,135 | -4,35,226 | 5,092 | -4,15,915 | 33% / 34% |
+| B1 | 15m, candle stop, swing target | 1,789 | -5,88,786 | 2,222 | -3,01,456 | 37% / 35% |
+| B2 | 15m, run exit | 2,502 | -5,57,059 | 3,050 | -2,26,973 | 32% / 32% |
+| B3 | B2 + breadth | 1,387 | -2,09,829 | 1,607 | -54,974 | 31% / 32% |
+| B4 | B2 + opening range | 1,006 | -3,60,063 | 1,309 | -2,70,435 | 32% / 32% |
+| B5 | B2 + skip gap days | 1,940 | -4,06,641 | 2,274 | -2,33,278 | 33% / 34% |
+| B6 | 5m, ATR stop, run exit | 3,242 | -4,58,569 | 4,042 | -3,05,793 | 14% / 15% |
+| B7 | B6 + breadth | 1,719 | -1,46,005 | 2,114 | -2,47,864 | 13% / 15% |
+| B8 | B2 + breadth + OR + gap | 467 | -1,09,457 | 504 | -98,761 | 31% / 31% |
+
+Per index, design / holdout (Rs): NIFTY B3 -17,381 / -11,701, B8 +21,657 / -31,762; BANKNIFTY every variant negative in
+both; SENSEX B2 -1,22,587 / +24,261, B3 -39,508 / +29,471; FINNIFTY B6 +44,830 / -70,351, B7 +78,202 / -40,647, B3
+-31,744 / +47,721; MIDCPNIFTY every variant negative in both. Design option sessions 473 per index; holdout NIFTY 814,
+BANKNIFTY 811, FINNIFTY 803, MIDCPNIFTY 444 (options from 2023), SENSEX 375 (from May 2023). Every cell, fold, twin and
+holdout block: `results_b/design.json`, `results_b/final.json`.
+
+## Honest limits (R89B)
+
+- The design window had already been seen by R89 (for R89's variants), and R89's descriptive futures view had shown the
+  2021-2024 index results of R89's own variants; no R89B rule had been run on either window before its plan.
+- The carried lead was chosen after seeing the design (A1, mechanical rule); it failed, so this does not change anything.
+- 2021-2024 had weekly expiries on every index and different lot sizes; the costs used are those in force each day.
+
+## What is left
+
+Nothing in R89 / R89B is close enough for paper. The consistent facts are useful for the existing arms, not for a new
+one: breadth agreement across indices cuts losses on break trades by 60-75% in both periods (the idea R72 Breadth
+Donchian already uses), and an ATR stop halves the false breaks of candle stops. PDH / PDL stay context levels for Jarvis.

@@ -13,3 +13,9 @@ holdout (1 Apr - 19 Oct 2026, read once) lost on every index and every MCX book.
 
 Write-up: `research/HUNT_R89_PDHL_BREAK.md`. Code and tests: `research/hunt/r89_pdhl_break/`. Signal source of every
 rule: the underlying.
+
+## R89B (Boss: "enhance it")
+
+**Still no.** 0 of 45 enhanced cells (15m / 5m candles, ATR stop, let winners run, breadth, opening range, gap) passed;
+the one lead (FINNIFTY 5m ATR + run + breadth, +Rs 78,202 in design) lost Rs 40,647 on 401 trades in the Aug 2021 -
+Nov 2024 holdout. Breadth agreement cut losses by 62-76% in both periods but never made it positive.

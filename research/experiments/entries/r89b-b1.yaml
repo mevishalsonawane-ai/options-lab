@@ -7,7 +7,7 @@ hypothesis: 'Pre-registered (PREREG_B): the enhanced break-and-go rule on the in
 data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy): index_1m + options_rolling_1m WEEK, R51 loader (clean + stale step); design stores to 19 Oct 2026, holdout stores 2 Aug 2021 - 19 Nov 2024'
 period:
   design: 20 Nov 2024 - 19 Oct 2026
-  holdout: 2 Aug 2021 - 19 Nov 2024 (not yet read)
+  holdout: 2 Aug 2021 - 19 Nov 2024 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -21,8 +21,8 @@ settings: research/hunt/r89_pdhl_break/rules_b.py, PREREG_B.md, NOTES_B.md
 prereg: research/hunt/r89_pdhl_break/PREREG_B.md
 variants_tried: 9
 results:
-  summary: 'Design 20 Nov 2024 - 19 Oct 2026, 1-ITM option, 1 lot, real prints and costs: NIFTY 342 tr -176,851 (twin p 1.0, after-trigger p 1.0); BANKNIFTY 356 tr -90,165 (twin p 1.0, after-trigger p 0.7505); SENSEX 343 tr -169,501 (twin p 1.0, after-trigger p 1.0); FINNIFTY 354 tr -93,160 (twin p 1.0, after-trigger p 0.4331); MIDCPNIFTY 394 tr -59,109 (twin p 0.998, after-trigger p 0.5309). Pooled 1789 tr -588,786, false breaks 37%.'
+  summary: 'Design 20 Nov 2024 - 19 Oct 2026, 1-ITM option, 1 lot, real prints and costs: NIFTY 342 tr -176,851 (twin p 1.0, after-trigger p 1.0); holdout 629 tr -118,746 (after-trigger p 0.996); BANKNIFTY 356 tr -90,165 (twin p 1.0, after-trigger p 0.7505); holdout 655 tr -93,651 (after-trigger p 0.4192); SENSEX 343 tr -169,501 (twin p 1.0, after-trigger p 1.0); holdout 289 tr +6,063 (after-trigger p 0.0958); FINNIFTY 354 tr -93,160 (twin p 1.0, after-trigger p 0.4331); holdout 402 tr -34,285 (after-trigger p 0.491); MIDCPNIFTY 394 tr -59,109 (twin p 0.998, after-trigger p 0.5309); holdout 247 tr -60,837 (after-trigger p 0.982). Pooled 1789 tr -588,786, false breaks 37%. Holdout 2 Aug 2021 - 19 Nov 2024 pooled 2222 tr -301,456.'
   costs: R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); 1 lot in force
-holdout_read: false
+holdout_read: true
 verdict: rejected
 notes: 'One of 9 variants x 5 indices (45 cells, one BH family), after R89 (180 cells). NOTES_B A1: the pre-registered twins carry hindsight on the day side; an after-trigger twin was added before the holdout read.'

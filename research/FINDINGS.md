@@ -1414,3 +1414,9 @@ window, first trade) x 9 instruments, BH over 180, random-entry twins.
   base rule breaks the -Rs 13k month in 12 of 17 design and 6 of 7 holdout months.
 - Not the arms' signal (half the time on the other side of Breadth Donchian; daily corr -0.09 to +0.26) and it loses on
   their days and on the other days. PDH / PDL stay context levels only.
+- R89B (Boss's "enhance it", 20 Oct; `PREREG_B.md`, amendment A1): 15m / 5m candles, ATR stop, let-winners-run exit
+  (breakeven at +1R, 1R trail), breadth (4 of 5 indices), opening range, gap filter; 9 variants x 5 indices, holdout
+  Aug 2021 - Nov 2024 (Boss's exception). 0 of 45 pass. Bigger candles made it worse; the run exit and ATR stop helped
+  a little (ATR halves false breaks, 33% -> 14%); breadth cut losses 62% / 76% but never turned positive. The one lead,
+  FINNIFTY 5m ATR + run + breadth, +Rs 78,202 (314 trades) in design, lost Rs 40,647 (401) in 2021-24. Method lesson:
+  twins that keep the day's side carry hindsight on long holds; use after-trigger twins.
