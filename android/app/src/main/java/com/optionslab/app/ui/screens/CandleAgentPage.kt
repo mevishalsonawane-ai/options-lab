@@ -48,7 +48,7 @@ internal fun CandleAgentContent(v: CandleAgentHost.View) {
             LedgerCard(Modifier.testTag("candle-status"), title = "Status") {
                 Text(when {
                     v.released -> "Released to free memory: open positions come first. It starts again with its next batch."
-                    v.status == null -> "Waiting for its first batch (every 5 minutes while a market is open)."
+                    v.status == null -> "Waiting for its first batch (every 5 minutes in market hours, hourly otherwise)."
                     else -> v.status.words()
                 }, style = body)
                 if (v.growth.isNotEmpty()) Text(v.growth, style = soft)

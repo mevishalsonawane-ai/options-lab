@@ -43,11 +43,14 @@ All of these are done. The agent is knowledge only: **it never trades, sizes, st
     - a `BudgetRule.Job.CANDLE_STUDY`.
 - **App**
   - `CandleAgentHost`, a supervised worker in the watch's analysis group:
-    - every 5 minutes in session (10 with the battery saver), then hourly around the clock;
+    - every 5 minutes in session (10 with the battery saver), then hourly around the clock while it is loaded (re-checked every minute, so it never sleeps through the open);
     - it waits for open positions to be restored first and skips while memory is short;
     - its counts are written on IO.
   - Its inputs come from memory: IraHub's 1-minute index history, `MemoryChain`, `GammaLive`, and the future's VWAP. MCX near futures are read via `Net.intraday` at most every 10 minutes while MCX is open.
-  - 24x7 study: once a day outside market hours, from the hourly study worker and within the background battery budget. It studies the last 60 sessions of 5m and 15m candles from the market study's cache. Each candle is counted once only (the counted span is kept with the counts).
+  - 24x7 study: once a day while NSE and MCX are both shut, from the hourly study worker and within the background battery budget (metered on the thread doing the work).
+    - It reads only the 5-minute history the market study already holds in memory (nothing fetched for it), also folded to 15 minutes.
+    - Each night it goes up to 60 sessions further back than the oldest candle counted so far.
+    - Each candle is counted once only: the counted span (first and last) is kept with the counts, and an older counts file is read safely.
   - Page: Research → **Candles**. It shows:
     - status and growth;
     - the latest candles (tap one for its full explanation);
@@ -66,9 +69,9 @@ All of these are done. The agent is knowledge only: **it never trades, sizes, st
 - MCX outcomes: the last few candles of an MCX session are not counted, because the worker sleeps after MCX closes and the next day's fetch holds only that day.
 
 ## Checks
-- `:engine:test`, `:ira-core:cleanTest :ira-core:test`, `:engine:jacocoTestCoverageVerification`: see the commit's CI.
+- `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification`: pass locally.
 - Locally:
-  - ira-core passes in full, including 44 new candle tests: classifier, look-ahead guard, history levels, footprints, outcomes (gaps, holidays, session end), stats bounds and encoding, research seed, lessons, sharing with no direction, hearing, locked phone, stale data, no data, restart without double counting, 24x7 study, and speed.
+  - ira-core passes in full, including 47 new candle tests: classifier, look-ahead guard, history levels, footprints, outcomes (gaps, holidays, session end), stats bounds and encoding, research seed, lessons, sharing with no direction, hearing, locked phone, stale data, no data, restart without double counting, 24x7 study, and speed.
   - The R87 research tests (58) and the features catalog pass.
   - The `research/brain` suite fails in this sandbox for an environment reason: numpy/pandas versions. It fails the same way on the untouched base, and nothing there changed.
 - `:app` compiles only in CI. App tests added:
@@ -76,6 +79,11 @@ All of these are done. The agent is knowledge only: **it never trades, sizes, st
   - `CandleAgentPageTest`: Compose page;
   - `LabScreensTest`: the Candles tab;
   - `MemoryTrimTest`.
-- Reviews: self-review of the full diff, plus a separate reviewer agent. Fixed:
+- Reviews: self-review of the full diff, plus two separate reviewer agents (one on the first commit, one on the second). No compile errors were found by hand. Fixed:
   - a first batch of days of 1-minute candles dropped history before counting it;
-  - the 24x7 study's counted span was moved by its own first candle.
+  - the 24x7 study's counted span was moved by its own first candle;
+  - today's chain, gamma and VWAP were given to older candles of the day (look-ahead); now only to the candle that just closed, with gamma older than 15 minutes left out;
+  - design findings that failed out of sample were counted as edges;
+  - an hour-long off-hours wait could miss the open; the daily study would re-download two years of candles and re-read the same sessions every night;
+  - the trade manager was woken by candle reads; MCX read failures were cached; a finished batch could refill memory after a release; the cell cap could squeeze out new context cells;
+  - smaller fixes: posts capped at one per series per batch (5m and longer), no stale flag while a market is shut, page-test robustness, What's new wording.

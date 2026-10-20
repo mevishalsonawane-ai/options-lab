@@ -66,7 +66,7 @@ class CandleBookTest {
         var n = 0
         for (r in CandleRead.readAll("NIFTY", 5, bars)) { val o = CandleBook.outcome(r, bars, true) ?: continue; CandleBook.count(s, r, o); n++ }
         assertTrue(n > 100)
-        s.marks["NIFTY|5"] = bars.last().t
+        s.marks["NIFTY|5"] = bars.last().t; s.firsts["NIFTY|5"] = bars.first().t
         val text = CandleBook.encode(s)
         val back = CandleBook.decode(text + "\nC~broken\nC~x~1~5~0~0~0~0~0~0~0~\nnot a line")
         assertEquals(s.cells, back.cells)
@@ -89,16 +89,23 @@ class CandleBookTest {
         assertFalse(s.countable("NIFTY|5", t.minusDays(1)))
         val back = CandleBook.decode(CandleBook.encode(s))
         assertEquals(s.marks, back.marks); assertEquals(s.firsts, back.firsts)
+        // A file from before the first-counted span: everything up to its mark is taken as counted (never counted again).
+        val old = CandleBook.decode("M~NIFTY|5~${t}")
+        assertFalse(old.countable("NIFTY|5", t.minusDays(30))); assertTrue(old.countable("NIFTY|5", t.plusMinutes(5)))
     }
 
     @Test fun theStatsStayBounded() {
         val s = CandleBook.Stats()
-        for (i in 0 until 3_000) s.cells["NIFTY|5|shape$i|ctx"] = CandleBook.Cell(n5 = i % 7)
+        for (i in 0 until CandleBook.MAX_CELLS + 1_000) s.cells["NIFTY|5|shape$i|ctx"] = CandleBook.Cell(n5 = i % 7)
         s.cells["NIFTY|5|hammer|all"] = CandleBook.Cell(n5 = 0)
+        s.cells["NIFTY|5|*G|all"] = CandleBook.Cell(n5 = 0)
+        s.cells["NIFTY|5|hammer|hist_support_held"] = CandleBook.Cell(n5 = 50)
         CandleBook.trim(s)
         assertEquals(CandleBook.MAX_CELLS, s.size)
         assertNotNull(s["NIFTY|5|hammer|all"], "the \"all\" cells go last")
-        assertTrue(CandleBook.encode(s).length < 200_000)
+        assertNotNull(s["NIFTY|5|*G|all"], "and the same-colour baselines last of all")
+        assertNotNull(s["NIFTY|5|hammer|hist_support_held"], "a context cell that keeps coming back is kept")
+        assertTrue(CandleBook.encode(s).length < 600_000)
     }
 
     @Test fun theSeedIsTheResearchAndABrokenOneIsEmpty() {

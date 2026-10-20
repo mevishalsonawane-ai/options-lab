@@ -34,7 +34,7 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         val inst: String, val tf: Int, val bars: List<CandleRead.Bar>, val sessionOpenMin: Int = 9 * 60 + 15,
         /** The newest session is over (the market closed): its last reads settle with what they have. */
         val sessionOver: Boolean = false,
-        /** The chain, gamma and expiry known at a candle's start (the app gives today's only to the candles it is fresh for). */
+        /** The chain, gamma and expiry known around a candle's close (the app gives today's only to a candle that just closed). */
         val around: (LocalDateTime) -> CandleRead.Around = { CandleRead.Around() },
         /**
          * The 24x7 study of older history (Boss, 20 Oct: "agent should be running 24x7 to learn new things from candles"): every
@@ -496,6 +496,9 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
     fun exchanges(): List<Exchange> = synchronized(lock) { log.toList() }
 
     fun encodeStats(): String = synchronized(lock) { CandleBook.encode(stats) }
+
+    /** The counted span of [series] ("NIFTY|5"): its first and last counted candle (nulls: none yet). */
+    fun counted(series: String): Pair<LocalDateTime?, LocalDateTime?> = synchronized(lock) { stats.firsts[series] to stats.marks[series] }
 
     fun failed(e: Throwable) = synchronized(lock) { lastError = e.javaClass.simpleName }
 

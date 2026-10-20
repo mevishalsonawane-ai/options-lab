@@ -27,7 +27,8 @@ import kotlin.math.sqrt
 object CandleBook {
     val HORIZONS = intArrayOf(1, 3, 5, 10, 20, 50)
     const val SETTLE = 10
-    const val MAX_CELLS = 2_000
+    /** About 21 series x (43 shapes + 3 colours) x the context words they meet: a few hundred KB of text at most. */
+    const val MAX_CELLS = 6_000
     /** Own reads needed before the agent says its own number at all. */
     const val SAY_N = 10
     /** Own reads needed before it compares itself with the research. */
@@ -147,9 +148,10 @@ object CandleBook {
 
     fun trim(s: Stats, max: Int = MAX_CELLS) {
         if (s.cells.size <= max) return
-        // The context cells go before the "all" cells, the thinnest and the oldest first; the same-colour baselines last of all
-        // (every comparison needs them).
-        val drop = s.cells.entries.sortedWith(compareBy<Map.Entry<String, Cell>>({ it.key.contains("|*") }, { it.key.endsWith("|all") }, { it.value.n5 }, { it.value.last ?: LocalDate.MIN }))
+        // Kept longest: the same-colour baselines over all candles, then each shape's "all" cell, then the context cells - the
+        // thinnest and the oldest of those go first.
+        fun rank(k: String) = if (k.endsWith("|all")) (if (k.contains("|*")) 2 else 1) else 0
+        val drop = s.cells.entries.sortedWith(compareBy<Map.Entry<String, Cell>>({ rank(it.key) }, { it.value.n5 }, { it.value.last ?: LocalDate.MIN }))
             .take(s.cells.size - max).map { it.key }
         for (k in drop) s.cells.remove(k)
     }
@@ -181,6 +183,8 @@ object CandleBook {
             if (c.n5 < 0 || c.up5 !in 0..c.n5 || c.wickHeld !in 0..c.wickN) continue
             s.cells[p[1]] = c
         }
+        // A file from before the first-counted span (20 Oct's first build): everything up to its mark counts as counted.
+        for (k in s.marks.keys) if (k !in s.firsts) s.firsts[k] = java.time.LocalDateTime.MIN
         trim(s)
         return s
     }

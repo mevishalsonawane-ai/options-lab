@@ -561,6 +561,15 @@ object IraHub {
     /** Two years and a month of [minutes]-minute candles, fetched once a day per market and chart. */
     private val longCache = HashMap<String, Pair<LocalDate, List<Candle>>>()
 
+    /**
+     * The long history [twoYears] already holds for [m] at [minutes] (any day it was read), or null: never fetched here (20 Oct:
+     * the Candle agent's 24x7 study reads only what the market study already brought in). Memory only.
+     */
+    internal fun twoYearsKept(m: IraMarket, minutes: Int): List<Candle>? {
+        testLabBars?.let { return it(m, minutes) }
+        return synchronized(longCache) { longCache["$m|$minutes"]?.second }
+    }
+
     internal suspend fun twoYears(m: IraMarket, minutes: Int): List<Candle>? {
         testLabBars?.let { return it(m, minutes) }
         if (m == IraMarket.GOLD || m == IraMarket.VIX) return null

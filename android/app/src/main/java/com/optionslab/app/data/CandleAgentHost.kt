@@ -24,9 +24,10 @@ import com.optionslab.ira.Market as IraMarket
  *  - Its own supervised worker ("Candle agent", the watch's analysis group, [delayMs]): one BATCH every 5 minutes in NSE's
  *    session or MCX's (10 with the battery saver), one more after the close to settle the day, then one an hour around the clock
  *    (Boss, 20 Oct: "agent should be running 24x7 to learn new things from candles"). Never per tick.
- *  - The 24x7 study ([studyOffHours], from the hourly study worker): once a day outside market hours, the last
- *    [DEEP_SESSIONS] sessions of 5- and 15-minute candles the app already keeps for the market study, every candle's outcome
- *    counted once (never twice: [CandleBook.Stats.countable]).
+ *  - The 24x7 study ([studyOffHours], from the hourly study worker): once a day outside NSE's and MCX's sessions, up to
+ *    [DEEP_SESSIONS] more sessions of the indices' 5-minute candles the market study already holds in memory (nothing is
+ *    fetched for it), each night going further back than the last ([CandleBook.Stats.firsts]), folded to 15 minutes too;
+ *    every candle's outcome counted once, never twice ([CandleBook.Stats.countable]).
  *  - Open positions come first: a batch waits for the start-up's positions and stream steps, skips while memory is short,
  *    and the agent is the second thing let go when Android asks for memory ([releaseForMemory]; its counts are on disk).
  *    It reads nothing the position watch needs and slows none of it.
@@ -75,6 +76,7 @@ object CandleAgentHost {
     @Volatile private var lastBatchAt = 0L
     @Volatile private var settledDay: LocalDate? = null
     @Volatile private var deepDay: LocalDate? = null
+
     private val mcxBars = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<CandleRead.Bar>>>()
     /** The chain's OI per strike at the last batch, per index (for the OI change since). */
     private val lastOi = java.util.concurrent.ConcurrentHashMap<String, Map<Double, Pair<Long, Long>>>()
@@ -108,7 +110,9 @@ object CandleAgentHost {
         val nse = runCatching { Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose() }.getOrDefault(false)
         val mcx = runCatching { McxMarket.isOpen() }.getOrDefault(false)
         val settle = runCatching { Market.isTradingDay() && Market.minuteNow() > Market.foClose() && settledDay != Market.today() }.getOrDefault(false)
-        if (!nse && !mcx && !settle) return (OFF_HOURS_MS - (System.currentTimeMillis() - lastBatchAt)).coerceIn(0L, OFF_HOURS_MS)
+        // Off hours: a batch once an hour, asked again every minute (never one long wait that would sleep through the open),
+        // and only while the agent is loaded - one let go for memory is not brought back just to idle.
+        if (!nse && !mcx && !settle) return if (agent != null && System.currentTimeMillis() - lastBatchAt >= OFF_HOURS_MS) 0L else null
         val every = if (runCatching { com.optionslab.app.work.WatchWorkers.saver(context) }.getOrDefault(false)) SAVER_MS else EVERY_MS
         return (every - (System.currentTimeMillis() - lastBatchAt)).coerceIn(0L, every)
     }
@@ -150,28 +154,41 @@ object CandleAgentHost {
     suspend fun studyOffHours(context: Context) {
         if (!enabled()) return
         val today = runCatching { Market.today() }.getOrElse { return }
-        val nse = runCatching { Market.isOpen() }.getOrDefault(true)
-        if (nse || deepDay == today || MemoryTrim.underPressure()) return
-        if (!runCatching { com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.CANDLE_STUDY) }.getOrDefault(false)) return
-        try { deep(context, today) } finally { runCatching { com.optionslab.app.work.BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.CANDLE_STUDY) } }
-    }
-
-    private suspend fun deep(context: Context, today: LocalDate) {
+        // Never in NSE's or MCX's session (MCX positions may be open in its evening: the study's CPU waits for the close).
+        val open = runCatching { Market.isOpen() || McxMarket.isOpen() }.getOrDefault(true)
+        if (open || deepDay == today || MemoryTrim.underPressure()) return
         val a = withContext(Dispatchers.IO) { agentOrLoad(context) }
         val series = ArrayList<CandleAgent.Series>()
-        for (m in INDICES) for (tf in listOf(5, 15)) {
-            val bars = runCatching { com.optionslab.app.ira.IraHub.twoYears(m, tf) }.getOrNull().orEmpty()
-            if (bars.isEmpty()) continue
-            val days = bars.map { it.t.toLocalDate() }.distinct().takeLast(DEEP_SESSIONS).toSet()
-            series += CandleAgent.Series(m.name, tf, bars.filter { it.t.toLocalDate() in days }.map { CandleRead.Bar(it.t, it.o, it.h, it.l, it.c) },
-                9 * 60 + 15, sessionOver = true, deep = true)
+        for (m in INDICES) {
+            // The market study's 5-minute history, if it holds one (never fetched here). Finished sessions only.
+            val five = runCatching { com.optionslab.app.ira.IraHub.twoYearsKept(m, 5) }.getOrNull().orEmpty().filter { it.t.toLocalDate().isBefore(today) }
+            if (five.isEmpty()) continue
+            for (tf in listOf(5, 15)) {
+                val bars = if (tf == 5) five else Candles.fold(five, 15, m)
+                // Each night a step further back: the sessions before the first one counted (and any finished one after the last).
+                val sk = "${m.name}|$tf"
+                val first = a.counted(sk).first; val mark = a.counted(sk).second
+                val days = bars.map { it.t.toLocalDate() }.distinct()
+                val older = days.filter { first == null || it.isBefore(first.toLocalDate()) }.takeLast(DEEP_SESSIONS)
+                val newer = days.filter { mark != null && it.isAfter(mark.toLocalDate()) }
+                val pick = (older + newer).toSet()
+                if (pick.isEmpty()) continue
+                // A few sessions before the picked ones are kept for ATR, the trend and history (read, never counted twice).
+                val lead = days.filter { it.isBefore(pick.min()) }.takeLast(3).toSet()
+                series += CandleAgent.Series(m.name, tf, bars.filter { it.t.toLocalDate() in pick || it.t.toLocalDate() in lead }
+                    .map { CandleRead.Bar(it.t, it.o, it.h, it.l, it.c) }, 9 * 60 + 15, sessionOver = true, deep = true)
+            }
         }
+        deepDay = today
         if (series.isEmpty()) return
         val now = Market.now().toLocalDateTime()
+        // The budget is asked and charged on the thread that does the work (it meters that thread's CPU).
         val step = withContext(Dispatchers.Default) {
-            runCatching { a.study(series, emptyList(), System.currentTimeMillis(), now, false) }.onFailure { a.failed(it) }.getOrNull()
+            val budget = com.optionslab.ira.BudgetRule.Job.CANDLE_STUDY
+            if (!runCatching { com.optionslab.app.work.BackgroundBudget.allow(budget) }.getOrDefault(false)) return@withContext null
+            try { runCatching { a.study(series, emptyList(), System.currentTimeMillis(), now, false) }.onFailure { a.failed(it) }.getOrNull() }
+            finally { runCatching { com.optionslab.app.work.BackgroundBudget.done(budget) } }
         } ?: return
-        deepDay = today
         if (step.changed) withContext(Dispatchers.IO) { save(context, a) }
         if (step.counted > 0) SharedKnowledgeHost.added(NAME, "${step.counted} older candles studied")
         publish(a)
@@ -187,9 +204,9 @@ object CandleAgentHost {
         val todays = around(name, now.toLocalDate(), nowMs)
         return TFS.map { tf ->
             val folded = Candles.closed(Candles.fold(bars, tf, m), tf, now)
-            // Today's chain, gamma and VWAP are what is known NOW: only the candles that closed in the last few candle lengths
-            // get them (an older candle never gets a later chain: no look-ahead). The expiry day is a calendar fact all day.
-            val freshFrom = now.minusMinutes(3L * tf)
+            // Today's chain, gamma and VWAP are what is known NOW: only a candle that closed within the last batch interval gets
+            // them (an older candle never gets a later chain). The expiry day is a calendar fact all day.
+            val freshFrom = now.minusMinutes(tf + EVERY_MS / 60_000L)
             val around: (LocalDateTime) -> CandleRead.Around = { t ->
                 when {
                     t.toLocalDate() != now.toLocalDate() -> CandleRead.Around()
