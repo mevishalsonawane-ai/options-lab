@@ -1461,3 +1461,21 @@ bought on real prints with real costs, flat 15:15 (15:05 expiry). 11 variants (1
   losses, but after-trigger random entries do as well; lock + trails cut the 5m / 60m index loss from -Rs 1.19 lakh to
   -Rs 16,857 (design), never to a profit. Apr - Oct 2026 (already seen by R90): 5m / 60m indices positive with or without
   the additions (plain +Rs 19,679 on 92); commodities lose with every combination.
+
+## Boss's ICT / Smart Money "liquidity sweep" of a 1h swing (R91, 20 Oct 2026) - 0 of 63 pass; it stays a note
+Full study: `HUNT_R91_SMC_SWEEP.md` (pre-registered `hunt/r91_smc_sweep/PREREG.md`, commit d3020a2; notes N1). Signal
+source: the underlying in every rule (1h fractal swing from an earlier session, a 1h high beyond it with the 1h close
+back inside, a strong 5m candle within 30 minutes, sell-stop at its low / buy-stop at its high, stop at the sweep's
+extreme, target the nearest 1h swing / previous day's level / 2R); the 1-ITM put / call bought on real prints, real
+costs, flat 15:15 (15:05 expiry). 7 variants x 9 instruments, BH over 63, after-trigger twins. Design 20 Nov 2024 -
+31 Mar 2026 (MCX from 5 Aug 2025), holdout 1 Apr - 19 Oct 2026 read once.
+- Rare: 120-190 sweeps per index in 16 months, half find no strong 5m candle; 18-36 trades per index on the base rule
+  (about 0.1 a day). Design pooled indices -Rs 40,340 on 135 (random after-trigger entries -Rs 42,134; underlying before
+  costs -Rs 37,150), worst month -Rs 40,095; MCX lost on all 7 variants. Lowest q 0.38.
+- The sweep fails (stop at its extreme hit) on 41% of index trades (51% MCX), only ~2% within 15 minutes; 18% of sweeps
+  are retaken before any entry. Losses are slow, not whipsaws.
+- Holdout (descriptive; no design passer): indices pooled +Rs 15,243 on 44 (base), BANKNIFTY / FINNIFTY / MIDCPNIFTY
+  cells of 7-15 trades with twin p 0.002-0.03 but negative without their top 5; NIFTY and MCX lost. Not evidence; a
+  fresh pre-registration on post-19 Oct data if Boss wants it watched.
+- Mirror image of the Liquidity arm (which buys the break): on 74% of R91's BANKNIFTY days the Liquidity arm also trades,
+  mostly on the other side; daily corr -0.00 (design) / -0.23 (holdout). Agrees with R86 (fading stop runs loses).

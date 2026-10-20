@@ -7,7 +7,7 @@ hypothesis: 'Pre-registered: buying the 1-ITM put after a swept 1h swing high (c
 data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader via R89 stores, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market, close-only near future)'
 period:
   design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
-  holdout: 1 Apr - 19 Oct 2026 (not yet read)
+  holdout: 1 Apr - 19 Oct 2026 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,8 +26,8 @@ settings: research/hunt/r91_smc_sweep/cfg.py, sweep.py, PREREG.md, NOTES.md
 prereg: research/hunt/r91_smc_sweep/PREREG.md
 variants_tried: 7
 results:
-  summary: 'Design option net (1 lot, 1-ITM, real prints, costs): NIFTY 25 tr -30,920 (p 0.6667, q 1.00; underlying -32.04 pts/trade); BANKNIFTY 27 tr -27,090 (p 1.0, q 1.00; underlying -28.76 pts/trade); SENSEX 18 tr +10,195 (p 0.0519, q 0.50; underlying +57.52 pts/trade); FINNIFTY 29 tr -18,323 (p 0.9381, q 1.00; underlying -13.14 pts/trade); MIDCPNIFTY 36 tr +25,798 (p 0.022, q 0.46; underlying +10.73 pts/trade); GOLDM 4 tr -2,808 (p 0.9062, q 1.00; underlying +251.88 pts/trade); SILVERM 5 tr -2,367 (p 0.4551, q 1.00; underlying +233.86 pts/trade); CRUDEOIL (mini) 28 tr -1,926 (p 0.1597, q 0.84; underlying +10.93 pts/trade); NATURALGAS (mini) 24 tr -7,994 (p 0.7904, q 1.00; underlying -0.52 pts/trade). Pooled indices 135 tr -40,340 (after-trigger twins -42,134; underlying no costs Rs -37,150; stopped 41%); MCX 61 tr -15,095. Design passers: 0 of 9.'
+  summary: 'Design option net (1 lot, 1-ITM, real prints, costs): NIFTY 25 tr -30,920 (p 0.6667, q 1.00; underlying -32.04 pts/trade); BANKNIFTY 27 tr -27,090 (p 1.0, q 1.00; underlying -28.76 pts/trade); SENSEX 18 tr +10,195 (p 0.0519, q 0.50; underlying +57.52 pts/trade); FINNIFTY 29 tr -18,323 (p 0.9381, q 1.00; underlying -13.14 pts/trade); MIDCPNIFTY 36 tr +25,798 (p 0.022, q 0.46; underlying +10.73 pts/trade); GOLDM 4 tr -2,808 (p 0.9062, q 1.00; underlying +251.88 pts/trade); SILVERM 5 tr -2,367 (p 0.4551, q 1.00; underlying +233.86 pts/trade); CRUDEOIL (mini) 28 tr -1,926 (p 0.1597, q 0.84; underlying +10.93 pts/trade); NATURALGAS (mini) 24 tr -7,994 (p 0.7904, q 1.00; underlying -0.52 pts/trade). Pooled indices 135 tr -40,340 (after-trigger twins -42,134; underlying no costs Rs -37,150; stopped 41%); MCX 61 tr -15,095. Design passers: 0 of 9. Holdout (read once): NIFTY 10 tr -16,659; BANKNIFTY 11 tr +10,022; SENSEX 3 tr -6,303; FINNIFTY 11 tr +10,434; MIDCPNIFTY 9 tr +17,749; GOLDM 15 tr -5,397; SILVERM 11 tr -18,386; CRUDEOIL (mini) 14 tr -3,964; NATURALGAS (mini) 23 tr -819. Pooled indices 44 tr +15,243; MCX 63 tr -28,566.'
   costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges), flat 15:15 / 15:05 expiry; MCX R53 charges + R85 strict half-spread; 1 lot in force
-holdout_read: false
+holdout_read: true
 verdict: rejected
 notes: 'One of 7 variants x 9 instruments (63 cells, one BH family). Underlying points (no costs), the sweep-failure rates and the funnel are in the doc, not gated.'

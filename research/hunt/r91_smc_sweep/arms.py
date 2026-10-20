@@ -1,8 +1,8 @@
 """R91 same-day comparison with the arms already running (PREREG section 8; descriptive, no gate).
 
-R72 Breadth Donchian (C1), the Liquidity 15+5 arm (R51 fam_liq: BANKNIFTY as the app runs it, plus the other four
-indices descriptively) and the ORB signal (R20 V0): R89's own functions on the same stores. The holdout is compared only
-after R91's own holdout read (results/FINAL_READ exists).
+R72 Breadth Donchian (C1), the Liquidity arm (R51 fam_liq: BANKNIFTY 15+5 as the app runs it, plus FINNIFTY 30+5, the
+only other index R51 defines it for) and the ORB signal (R20 V0): R89's own functions on the same stores. The holdout
+is compared only after R91's own holdout read (results/FINAL_READ exists).
 """
 from __future__ import annotations
 
@@ -14,6 +14,9 @@ import pandas as pd
 from research.hunt.r89_pdhl_break import arms as A89
 
 from . import cfg as K
+
+
+LIQ_UNDS = {"liquidity_bn": ("BANKNIFTY",), "liquidity_bn_fn": ("BANKNIFTY", "FINNIFTY")}
 
 
 def r91(tag: str, v: str) -> pd.DataFrame:
@@ -30,8 +33,8 @@ def r91(tag: str, v: str) -> pd.DataFrame:
 def liq_all(lo, hi) -> pd.DataFrame:
     import fam_liq  # noqa: E402  (research/hunt/r51 on sys.path via R89's store)
     rows = []
-    for und in K.INDICES:
-        T = fam_liq.make(und, (15, 5)).run(lo, hi)
+    for und in fam_liq.IDX_STOP:                 # R51 defines the arm for BANKNIFTY and FINNIFTY only
+        T = fam_liq.make(und, fam_liq.ORIG_BOOKS[und]).run(lo, hi)
         if len(T):
             rows.append(pd.DataFrame(dict(und=T.und.values, date=T.day.values, side=np.where(T.side == "C", 1, -1),
                                           net=T.net.values)))
@@ -49,14 +52,14 @@ def main():
                     for u in K.INDICES}
         LQ = liq_all(lo, hi)
         arms = dict(breadth_donchian=A89.bd_trades(lo, hi), liquidity_bn=LQ[LQ.und == "BANKNIFTY"],
-                    liquidity_all5=LQ, orb_signal=A89.orb_signals(lo, hi))
+                    liquidity_bn_fn=LQ, orb_signal=A89.orb_signals(lo, hi))
         res = dict(arms={k: dict(trades=int(len(a)), net=round(float(a.net.sum()), 0) if "net" in a else None)
                          for k, a in arms.items()})
         res["variants"] = {}
         for v in K.VARIANTS:
             R = r91(tag, v.name)
             res["variants"][v.name] = {
-                k: A89.compare(R if k != "liquidity_bn" else R[R.und == "BANKNIFTY"], a, sessions, k != "orb_signal")
+                k: A89.compare(R[R.und.isin(LIQ_UNDS[k])] if k in LIQ_UNDS else R, a, sessions, k != "orb_signal")
                 for k, a in arms.items()}
         out[tag] = res
         print(tag, json.dumps(res["arms"]), flush=True)
