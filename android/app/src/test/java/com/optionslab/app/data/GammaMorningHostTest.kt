@@ -115,10 +115,12 @@ class GammaMorningHostTest : RobolectricTest() {
 
     /** 20 Oct: the 13:33 restart on 19 Oct (and the next morning's catch-up) said "gamma 10:00: no reading" whatever 10:00 found. */
     @Test fun theTenOClockLineSurvivesARestart() = runBlocking {
+        // The morning line is Jarvis's (CI also runs the app's tests without him).
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
         feed(System.currentTimeMillis())
         GammaMorningHost.watch()
         val line = GammaMorningHost.diagLine(day)
-        assertTrue(line.startsWith("gamma 10:00: BANKNIFTY negative"), line)
+        assertTrue(line, line.startsWith("gamma 10:00: BANKNIFTY negative"))
         // A restart: memory gone, the vault kept.
         GammaMorningHost.forgetMemoryForTest()
         assertEquals(line, GammaMorningHost.diagLine(day))
@@ -127,6 +129,8 @@ class GammaMorningHostTest : RobolectricTest() {
     }
 
     @Test fun noChainOnThePhoneIsSaid() = runBlocking {
+        // The morning line is Jarvis's (CI also runs the app's tests without him).
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
         GammaMorningHost.watch()
         assertEquals("gamma 10:00: no reading (no option chain on the phone 10:00-10:15)", GammaMorningHost.diagLine(day))
         GammaMorningHost.forgetMemoryForTest()
