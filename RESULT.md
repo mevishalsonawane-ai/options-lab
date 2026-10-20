@@ -54,6 +54,53 @@ moved by +1.
 
 (filled in below after the final runs)
 
+## Review
+
+Two separate reviewer agents read the full diff (the order and exit path; everything else). Every finding was checked
+against the code; the confirmed ones were fixed, with tests:
+
+- At the open, a GTT that fired during a pass could be followed by a full-size stop and target on a position already
+  flat: now nothing is placed that pass and the next pass reads the position again.
+- A GTT of the protection's own that reached Zerodha but was never recorded (a lost reply) is adopted, never counted as
+  "another exit" (which would have put the day's orders beside it). At the open, active GTTs count as exits too.
+- The overnight GTT was sized from the protection's own lots less every other exit, so an arm's GTT on its own lots
+  took the protection's place: now held less other exits, at most what the protection covers.
+- One failed positions read at the close ended a carried protection: now kept and asked again.
+- Boss is told when the GTT could not rest after 3 tries.
+- The account stop rule "un-reached" itself when the day's P&L recovered: now it stays reached until Boss restarts it with
+  the PIN. A failed read of its saved days can no longer write today's figure over the history.
+- No-twin: its would-be trades were counted as "missed signals" by the 26 Oct go-live fidelity check: now excused. The
+  check runs after the same-direction cap and the order flow (their records stay whole) and never while the paper test is
+  frozen. A file-write race and a stale card count were fixed.
+- Stop-check window: after a slow check the next waits at least 5 s (never back to back on a slow broker); a late-check
+  banner uses one fixed text so it does not repeat.
+- The shared held check keeps Zerodha's MCX book only in the watch's pulse, as before (elsewhere its "not read yet today"
+  kept the NSE loop on the 15 s path all day).
+
+The no-twin rule has no research behind it yet: it is logged as `research/experiments/entries/e1-liq-no-twin.yaml`
+(verdict paper-only, a planned replay test). It is on for paper as the round's brief asked (it only skips entries;
+Boss's 13 Oct unfreeze allows risk-lowering paper changes on BANKNIFTY). **Boss: one tap on the Strategy lab card turns
+it off if you want it logged only until it is tested.**
+
 ## Next: ranked ideas for round 2
 
-(filled in below)
+1. **One exit coordinator per contract** (deep review idea 1): one registry of exits in flight for every exit sender.
+   High value; medium risk.
+2. **The no-twin rule's replay test** (e1): both books 2020-2026, with and without twins, real costs, walk-forward.
+3. **MCX carried protections overnight:** the evening look covers NSE only; MCX's DAY exits end at 23:30 with no look
+   after. Same GTT path, a look after MCX's close. High; low.
+4. **Encrypted diagnostics** (idea 5): needs Boss's choice first - encrypted, a future session cannot read the file
+   without the passphrase.
+5. **Payout-aware drawdown** (idea 12) for the account guard's kill switch (the new account stop rule reads trading P&L
+   only, so a withdrawal never trips it).
+6. **Account stop rule net of charges:** Zerodha's day figure is before charges; subtract the day's charges from the
+   contract notes so the rule reads the same net as the arms'.
+7. **Paper positions as an explicit stream owner** (idea 8).
+8. **Candle page "as of", filter chips, What's New tap** (idea 10); **count only 5m/15m candle reads into lessons**
+   (idea 11).
+9. **Clipboard diagnostics marked sensitive** (idea 13); **Liquidity live stop rule state kept** (idea 14).
+10. **Weekly Jarvis review** (idea 15, TODO I15).
+11. **A real two-book twin test:** today's twin tests inject the other book's holding; a test day where both books
+    signal the same option would cover the real path.
+12. **Protections' restAgain and arm GTTs before this round:** the open now counts active GTTs; a test that an arm's
+    GTT and a protection on one contract never sell more than held across a whole day (fills, partials).
