@@ -1583,7 +1583,15 @@ class WatchService : Service() {
      * run is still open.
      */
     private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.foClose() ||
-        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning()))
+        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning())) || eveningLookDue()
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 2): up to half an hour past F&O's close while a carried live protection still waits for
+     * its overnight GTT ([com.optionslab.app.data.Protections.overnightHint], memory only): the watch stays for that one look.
+     */
+    private fun eveningLookDue(): Boolean = runCatching {
+        com.optionslab.ira.EveningLook.due(Market.minuteNow(), Market.foClose(), Market.isTradingDay(), com.optionslab.app.data.Protections.overnightHint)
+    }.getOrDefault(false)
 
     private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 
@@ -1638,6 +1646,16 @@ class WatchService : Service() {
         run {
             Heartbeat.beat(this)
             // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
+            // 20 Oct, enhancement round 1 (idea 2): past the close, only the stops-and-targets look while a carried protection waits
+            // for its overnight GTT (a strategy still open past the close keeps its full pass, which looks at them too).
+            if (Market.minuteNow() > Market.foClose() && eveningLookDue() && !runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false)) {
+                Heartbeat.stepBegin("evening stops and targets")
+                try { com.optionslab.app.data.Protections.tick() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                    Tasks.stepFailed("evening stops and targets", e)
+                } finally { Heartbeat.stepEnd() }
+                delay(com.optionslab.ira.EveningLook.EVERY_MS)
+                return
+            }
             val nseOpen = nseWindow() && Market.minuteNow() >= Market.OPEN
             if (!nseOpen) {
                 if (mcxDue()) { mcxPass(); return }

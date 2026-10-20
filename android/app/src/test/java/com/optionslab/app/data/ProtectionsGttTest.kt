@@ -228,4 +228,30 @@ class ProtectionsGttTest : RobolectricTest() {
         Protections.forgetMemoryForTest()          // as after a restart: the file read again
         assertEquals(id, one().gttId)
     }
+
+    /** The watch's evening look runs only while a carried live protection still waits for its overnight GTT. */
+    @Test fun theEveningLookHintFollowsTheGtt() {
+        protect()
+        assertTrue("carried, no GTT yet", Protections.overnightHint)
+        theClose()
+        tick()
+        assertTrue(one().gttId != null)
+        assertTrue("its GTT rests: nothing more to wait for", !Protections.overnightHint)
+    }
+
+    @Test fun anIntradayProtectionNeverKeepsTheEveningLook() {
+        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
+        protect(product = "MIS")
+        assertTrue(!Protections.overnightHint)
+    }
+
+    /** Refused three times (the price through the stop): the evening look for it ends (bounded), the protection stays for the open. */
+    @Test fun repeatedRefusalsEndTheEveningLook() {
+        protect(target = null)
+        theClose()
+        kite.quote("NFO:$sym", 85.0, 84.95, 85.05)
+        repeat(3) { tick() }
+        assertTrue(!Protections.overnightHint)
+        assertNotNull(runBlocking { Protections.active() }.singleOrNull())
+    }
 }

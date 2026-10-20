@@ -109,7 +109,16 @@ object Protections {
     private fun hint(list: List<Item>) {
         activeHint = list.any { it.active }
         liveKeysHint = list.filter { it.active && it.live }.map { "${it.exchange}:${it.symbol}" }.distinct()
+        overnightHint = list.any { it.active && it.live && it.product != "MIS" && it.exchange != "MCX" && it.gttId == null && it.note != REMOVING &&
+            (it.stop != null || it.target != null) && (gttTries[it.id] ?: 0) < GTT_TRIES }
     }
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 2): an active carried (not intraday) live NSE protection without its overnight GTT yet, as of
+     * the last load or save - the watch keeps its evening look ([com.optionslab.ira.EveningLook]) while it is true. Memory only.
+     */
+    @Volatile var overnightHint: Boolean = false
+        private set
 
     /** True while a fast look decides from the stream (round 2, set under [lock] by [tick]): Zerodha's books as last read. */
     @Volatile private var streamLook = false
@@ -491,6 +500,8 @@ object Protections {
             save(list)
             trackedOnly = false
         }
+        // An overnight GTT refused (counted in memory, nothing saved) ends the watch's evening look for it ([overnightHint]).
+        hint(list)
     }
 
     /** A fast look left a best-price change in memory only ([tick]): the next regular look writes it. */
@@ -741,7 +752,7 @@ object Protections {
     /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */
     suspend fun resetPaper(): Unit = lock.withLock { save(load().filter { it.live }) }
 
-    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); gttTries.clear(); if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; gttTries.clear(); if (::file.isInitialized) file.delete() }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */
     internal fun forgetMemoryForTest() { cache = null; gttTries.clear() }

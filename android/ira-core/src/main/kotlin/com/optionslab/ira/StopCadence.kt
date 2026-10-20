@@ -74,3 +74,18 @@ object StopCadence {
     fun words(g: Gap): String = "The stops were looked at ${g.gapMs / 1000} s apart while a position was held (the promise is 15 s)." +
         if (g.alert) " Something held the watch back: keep the app open, or check the battery settings." else ""
 }
+
+/**
+ * 20 Oct, enhancement round 1 (idea 2): the watch's evening look. Zerodha ends a carried position's DAY stop and target after
+ * F&O's close, and the watch used to end at the close, so nothing then rested them overnight as a GTT. While a carried live
+ * protection still waits for its overnight GTT ([pending]), the watch keeps one small look (stops and targets only) for up to
+ * [MINUTES] past the close. Pure.
+ */
+object EveningLook {
+    const val MINUTES = 30
+    const val EVERY_MS = 30_000L
+
+    /** Whether the evening look is due at [minute] of a [tradingDay] with F&O closing at [foClose]. */
+    fun due(minute: Int, foClose: Int, tradingDay: Boolean, pending: Boolean): Boolean =
+        tradingDay && pending && minute > foClose && minute <= foClose + MINUTES
+}

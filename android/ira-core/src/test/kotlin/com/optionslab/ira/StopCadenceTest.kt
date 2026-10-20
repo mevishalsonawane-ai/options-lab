@@ -66,4 +66,16 @@ class StopCadenceTest {
         d.look(50_000L, true, day)
         assertNull(d.look(10_000L, true, day))
     }
+
+    /** 20 Oct (idea 2): the watch's evening look, after F&O's close, only while a carried protection waits for its GTT. */
+    @Test fun theEveningLookIsDueOnlyJustAfterTheCloseWithSomethingWaiting() {
+        val close = 15 * 60 + 40
+        assertFalse(EveningLook.due(close, close, tradingDay = true, pending = true), "the close minute itself: the session's own pass")
+        assertTrue(EveningLook.due(close + 1, close, true, true))
+        assertTrue(EveningLook.due(close + EveningLook.MINUTES, close, true, true))
+        assertFalse(EveningLook.due(close + EveningLook.MINUTES + 1, close, true, true), "bounded: half an hour")
+        assertFalse(EveningLook.due(close + 5, close, true, pending = false), "nothing waiting: the watch ends at the close as before")
+        assertFalse(EveningLook.due(close + 5, close, tradingDay = false, pending = true), "a holiday")
+        assertFalse(EveningLook.due(9 * 60 + 30, close, true, true), "never in the session")
+    }
 }
