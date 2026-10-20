@@ -74,6 +74,11 @@ object CandleAgentHost {
 
     @Volatile private var agent: CandleAgent? = null
     @Volatile private var lastBatchAt = 0L
+    /** The index's cash close (its candles end then). */
+    private const val INDEX_CLOSE_H = 15
+    private const val INDEX_CLOSE_M = 30
+    /** How many MCX settle batches ran in this process (tests: one a session). */
+    @Volatile internal var mcxSettles = 0
     @Volatile private var settledDay: LocalDate? = null
     @Volatile private var deepDay: LocalDate? = null
 
@@ -112,10 +117,12 @@ object CandleAgentHost {
     fun delayMs(context: Context?): Long? {
         if (!enabled()) return null
         val nse = runCatching { Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose() }.getOrDefault(false)
-        val mcx = runCatching { McxMarket.isOpen() }.getOrDefault(false)
+        val mcxState = runCatching { McxMarket.openOrNull() }.getOrNull()
+        val mcx = mcxState == true
         val settle = runCatching { Market.isTradingDay() && Market.minuteNow() > Market.foClose() && settledDay != Market.today() }.getOrDefault(false)
         // 20 Oct, review: MCX closed with its minutes still kept: one more batch settles its last candles (they were dropped).
-        val mcxSettle = !mcx && mcxBars.isNotEmpty()
+        // Second review: only when MCX is KNOWN closed (a failed read is not a close).
+        val mcxSettle = mcxState == false && mcxBars.isNotEmpty()
         // Off hours: a batch once an hour, asked again every minute (never one long wait that would sleep through the open),
         // and only while the agent is loaded - one let go for memory is not brought back just to idle.
         if (!nse && !mcx && !settle && !mcxSettle) return if (agent != null && System.currentTimeMillis() - lastBatchAt >= OFF_HOURS_MS) 0L else null
@@ -137,11 +144,15 @@ object CandleAgentHost {
         val nseOver = runCatching { Market.isTradingDay() && Market.minuteNow() > Market.foClose() }.getOrDefault(false)
         val series = ArrayList<CandleAgent.Series>()
         for (m in INDICES) series += indexSeries(m, now.toLocalDateTime(), nseOver, nowMs, nseOpen)
-        val mcxOpen = runCatching { McxMarket.isOpen() }.getOrDefault(false)
+        val mcxState = runCatching { McxMarket.openOrNull() }.getOrNull()
+        val mcxOpen = mcxState == true
         // 20 Oct, review: after MCX's close, one batch reads the day's last minutes as a finished session (its last candles
         // settle with what they have, as NSE's do after its close); the kept minutes are then let go.
-        val mcxSettle = !mcxOpen && mcxBars.isNotEmpty()
+        val mcxSettle = mcxState == false && mcxBars.isNotEmpty()
         if (mcxOpen || mcxSettle) for (u in MCX) series += mcxSeries(u, now.toLocalDateTime(), nowMs, settle = mcxSettle)
+        // 20 Oct, second review: the settle is tried ONCE a session (its minutes let go now, whatever the study does): a study
+        // that kept failing re-fetched every MCX series every 5 minutes all night.
+        if (mcxSettle) { mcxSettles++; mcxBars.clear() }
         val heard = SmartWorkers.bus.recent(nowMs, kinds = CandleAgent.HEARS)
         val step = withContext(Dispatchers.Default) {
             runCatching {
@@ -149,7 +160,6 @@ object CandleAgentHost {
                 a.study(series, heard, nowMs, now.toLocalDateTime(), nseOpen || mcxOpen)
             }.onFailure { a.failed(it) }.getOrNull()
         } ?: run { publish(a); return }                 // 20 Oct, review: a failed batch shows its error on the page too
-        if (mcxSettle) mcxBars.clear()
         // Its reads on the bus as they are (no direction: never a vote in any strategy's consensus).
         for (p in step.posts) runCatching { SmartWorkers.bus.post(p) }
         if (step.changed) withContext(Dispatchers.IO) { save(context, a) }
@@ -218,9 +228,13 @@ object CandleAgentHost {
         // 20 Oct, review: closed by where the data ends, not by the clock. This history is refreshed only while the Ira page is
         // open or Jarvis listens, so the clock can be well past a candle whose later minutes were never fetched (it was read
         // from part of its minutes, then never again); and its newest minute may have been read while still forming.
-        val end = Candles.dataEnd(bars.map { it.t }, now, complete = over)
+        // 20 Oct, second review: "over" only when today's minutes reach the index's 15:30 close; a history that stopped at
+        // 11:01 is not a finished session (its 11:00 15-minute candle was read from 2 minutes and counted).
+        val lastToday = bars.lastOrNull { it.t.toLocalDate() == now.toLocalDate() }?.t
+        val done = over && Candles.reachesClose(lastToday, now.toLocalDate().atTime(INDEX_CLOSE_H, INDEX_CLOSE_M))
+        val end = Candles.dataEnd(bars.map { it.t }, now, complete = done)
         return TFS.map { tf ->
-            val folded = Candles.closedByData(Candles.fold(bars, tf, m), tf, end, sessionOver = over) { it.t }
+            val folded = Candles.closedByData(Candles.fold(bars, tf, m), tf, end, sessionOver = done) { it.t }
             // Today's chain, gamma and VWAP are what is known NOW: only a candle that closed within the last batch interval gets
             // them (an older candle never gets a later chain). The expiry day is a calendar fact all day.
             val freshFrom = now.minusMinutes(tf + EVERY_MS / 60_000L)
@@ -231,7 +245,7 @@ object CandleAgentHost {
                     else -> CandleRead.Around(expiry = todays.expiry)
                 }
             }
-            CandleAgent.Series(name, tf, folded.map { CandleRead.Bar(it.t, it.o, it.h, it.l, it.c) }, 9 * 60 + 15, over, around, open = open)
+            CandleAgent.Series(name, tf, folded.map { CandleRead.Bar(it.t, it.o, it.h, it.l, it.c) }, 9 * 60 + 15, done, around, open = open)
         }
     }
 
@@ -277,7 +291,12 @@ object CandleAgentHost {
         }?.also { if (!settle) mcxBars[u] = it } ?: kept?.takeIf { settle } ?: return emptyList()
         // Closed by where the fetched minutes end (20 Oct, review): a 5-minute candle is never read from part of its minutes
         // because the clock moved on while the minutes came from a cache up to 10 minutes old.
-        return TFS.map { tf -> CandleAgent.Series(u, tf, fold(got.bars, tf, got.at, sessionOver = settle), 9 * 60, sessionOver = settle) }
+        // 20 Oct, second review: settled as a finished session only when the minutes reach MCX's close (within a minute); kept
+        // minutes that stop short of it are read by their own end, as in session.
+        val last = got.bars.lastOrNull()?.t
+        val done = settle && last != null && runCatching { McxMarket.calendar().window(last.toLocalDate()) }.getOrNull()
+            ?.let { w -> Candles.reachesClose(last, last.toLocalDate().atTime(w.close)) } == true
+        return TFS.map { tf -> CandleAgent.Series(u, tf, fold(got.bars, tf, got.at, sessionOver = done), 9 * 60, sessionOver = done) }
     }
 
     /**
@@ -363,7 +382,7 @@ object CandleAgentHost {
     /** TEST ONLY. */
     internal fun resetForTest(a: CandleAgent? = null) {
         failNextForTest = false
-        agent = a; lastBatchAt = 0L; settledDay = null; deepDay = null; mcxBars.clear(); lastOi.clear()
+        agent = a; lastBatchAt = 0L; settledDay = null; deepDay = null; mcxBars.clear(); lastOi.clear(); mcxSettles = 0
         _view.value = View()
         if (a != null) publish(a)
     }

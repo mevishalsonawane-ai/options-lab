@@ -326,9 +326,9 @@ class IraSoloTest : RobolectricTest() {
     @Test fun aSoloTradeIsRecordedEvenWhenItsOrderLabelCannotBeSaved() {
         upstox.price(ceKey, 400.0)
         IraSolo.on = true
-        // The strategies vault cannot be written now: its temp file's name is a directory.
-        val blocker = java.io.File(context.filesDir, "strategies.vault.tmp").apply { mkdirs() }
-        try { pass(LocalTime.of(12, 1)) } finally { blocker.deleteRecursively() }
+        // The strategies vault cannot be written now (a Keystore or disk fault).
+        com.optionslab.app.security.Vault.testFailWrites = setOf("strategies.vault")
+        try { pass(LocalTime.of(12, 1)) } finally { com.optionslab.app.security.Vault.testFailWrites = emptySet() }
         val t = IraSolo.all().single()
         assertFalse(t.closed)
         assertTrue(Paper.state.positions.any { it.symbol == t.symbol && it.quantity == 30 })

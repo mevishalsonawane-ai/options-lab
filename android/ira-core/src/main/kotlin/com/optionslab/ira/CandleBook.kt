@@ -186,6 +186,9 @@ object CandleBook {
                     p[11].takeIf { it.isNotEmpty() }?.let { LocalDate.parse(it) })
             }.getOrNull() ?: continue
             if (c.n5 < 0 || c.up5 !in 0..c.n5 || c.wickHeld !in 0..c.wickN) continue
+            // 20 Oct, second review: cells of the chain and gamma context read at the batch (look-ahead, no longer counted:
+            // [CandleRead.countable]) are dropped from a file saved before, so they never reach the comparisons or the notes.
+            if (p[1].substringAfterLast('|') in CandleRead.NOW_TAGS) continue
             s.cells[p[1]] = c
         }
         // A file from before the first-counted span (20 Oct's first build): everything up to its mark counts as counted.
@@ -285,6 +288,13 @@ object CandleBook {
     enum class Says(val words: String) { UP("more up than its baseline"), DOWN("more down than its baseline"), NONE("no edge"), FEW("too few to say") }
 
     /** What the agent's own count says for one cell against its same-colour baseline: a z on the up-rate, needs [COMPARE_N]. */
+    /**
+     * 20 Oct, second review: [s] said for ONE candle's own count (the explanation). An edge there is one cell's |z| >= 2 before
+     * the correction for the many cells tested ([compare]'s Benjamini-Hochberg), so it is said as that, never as a finding.
+     */
+    fun oneCellWords(s: Says): String = if (s == Says.UP || s == Says.DOWN)
+        "${s.words} on this one count alone, before correcting for the many shapes counted (the shapes table says whether it holds)" else s.words
+
     fun says(cell: Cell?, base: Cell?): Says {
         val z = z(cell, base) ?: return Says.FEW
         return when { z >= EDGE_Z -> Says.UP; z <= -EDGE_Z -> Says.DOWN; else -> Says.NONE }

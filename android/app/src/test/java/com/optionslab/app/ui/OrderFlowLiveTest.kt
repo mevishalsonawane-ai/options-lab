@@ -95,7 +95,8 @@ class OrderFlowLiveTest : RobolectricTest() {
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
         val plan = await("the plan") { (model.plan.value as? Load.Done)?.value ?: (model.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
         model.plan.value = Load.Done(plan.copy(session = LocalDate.now()))
-        java.io.File(context.noBackupFilesDir, "ledger.vault.tmp").apply { mkdirs(); java.io.File(this, "busy").writeText("x") }
+        // The ledger's write after the fills fails (a disk or Keystore fault); every test starts with it off again (TestApp).
+        com.optionslab.app.security.Vault.testFailWrites = setOf("ledger.vault")
         model.sendPlan()
         val fills = await("the send") {
             (model.sending.value as? Load.Done)?.value ?: (model.sending.value as? Load.Failed)?.let { throw AssertionError(it.why) }

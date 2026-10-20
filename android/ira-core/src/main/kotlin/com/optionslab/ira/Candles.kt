@@ -89,6 +89,14 @@ object Candles {
      * from a cache 10 minutes old, was read and counted as closed). [sessionOver]: the session has ended, so the last candle,
      * even one cut short by the close, is closed too.
      */
+    /**
+     * 20 Oct, second review: whether a session's minutes reach its [close] (the last minute starting within [slackMin] of it).
+     * A session the clock says is over but whose data stopped early (a history refreshed last at 11:01) is NOT over for its
+     * candles: its last ones were never seen whole, so they are not closed or settled as if they were.
+     */
+    fun reachesClose(lastMinute: LocalDateTime?, close: LocalDateTime, slackMin: Int = 1): Boolean =
+        lastMinute != null && !lastMinute.plusMinutes(1L + slackMin).isBefore(close)
+
     fun <T> closedByData(candles: List<T>, minutes: Int, end: LocalDateTime?, sessionOver: Boolean = false, start: (T) -> LocalDateTime): List<T> {
         val e = end ?: return emptyList()
         return candles.filter { c ->

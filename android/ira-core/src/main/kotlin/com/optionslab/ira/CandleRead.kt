@@ -132,7 +132,7 @@ object CandleRead {
     }
 
     /** Context words that come only from what the app knows NOW ([Around]: the chain's OI and its change, the gamma regime). */
-    private val NOW_TAGS = setOf("short_gamma", "long_gamma", "bull_oi_shift", "bear_oi_shift", "call_writing", "put_writing")
+    internal val NOW_TAGS = setOf("short_gamma", "long_gamma", "bull_oi_shift", "bear_oi_shift", "call_writing", "put_writing")
 
     /**
      * 20 Oct, review: [r] as it may be COUNTED. The chain, gamma and an outside VWAP are read at the batch, after the candle

@@ -50,6 +50,7 @@ class TestApp : Application() {
         com.optionslab.app.security.Vault.testWriteDelayMs = 0L
         // 20 Oct: a backup restore freezes its vault files until the restart (no restart in a test): every test starts thawed.
         com.optionslab.app.security.Vault.thaw()
+        com.optionslab.app.security.Vault.testFailWrites = emptySet()
         // The same-direction cap off for every other test (their arms' many same-way entries are not what they test); its own
         // tests switch it on.
         com.optionslab.app.data.ExposureCapHost.resetForTest(paperOn = false)

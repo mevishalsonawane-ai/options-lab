@@ -140,6 +140,47 @@ class ProtectionsLiveTest : RobolectricTest() {
         assertTrue(runBlocking { Protections.active() }.isEmpty())
     }
 
+    /** Second review: more held now (lots added since) - placed again for what the protection covered, never more. */
+    @Test fun placedAgainForNoMoreThanItCovered() {
+        kite.login()
+        protect()
+        kite.orders.clear()
+        kite.position(sym, 225, 100.0)
+        nextSession(9, 20)
+        kite.requests.clear()
+        runBlocking { Protections.tick() }
+        assertEquals(listOf("75", "75"), kite.placed.map { it.form["quantity"] })
+    }
+
+    /** Second review: an exit already resting at the open (Boss's own after-market order) is subtracted: nothing doubled. */
+    @Test fun anExitAlreadyRestingIsNotDoubled() {
+        kite.login()
+        protect()
+        kite.orders.clear()
+        nextSession(9, 20)
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 75, 75, "NRML", "LIMIT", 150.0,
+            0.05, "NFO", "manual"), exit = true) }
+        kite.requests.clear()
+        runBlocking { Protections.tick() }
+        assertTrue("nothing more placed", kite.placed.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    /** Second review: the price opened through the stop - Zerodha refuses the stop; said plainly, with the price. */
+    @Test fun aGapThroughTheStopIsSaidPlainly() {
+        kite.login()
+        protect()
+        kite.orders.clear()
+        kite.quote("NFO:$sym", 80.0, 79.95, 80.05)
+        nextSession(9, 20)
+        kite.nextPlace(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "Trigger price for stoploss sell orders should be lower than the last price.")
+        kite.requests.clear()
+        runBlocking { Protections.tick() }
+        val said = com.optionslab.app.work.Alerts.queue.value.map { it.text }
+        assertTrue(said.toString(), said.any { it.contains("already through its stop of 90.00") })
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
     /** The position was closed overnight elsewhere: nothing is placed again, the protection ends. */
     @Test fun aCarriedProtectionWithNothingHeldIsNotPlacedAgain() {
         kite.login()

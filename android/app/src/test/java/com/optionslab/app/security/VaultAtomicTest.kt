@@ -109,4 +109,23 @@ class VaultAtomicTest : RobolectricTest() {
         FakeAndroidKeyStore.nullKey -= alias
         assertEquals("the same key, the file still readable", "kept", String(Vault.readFile(f)!!))
     }
+
+    /** 20 Oct, second review: a save already encrypting when the restore froze its file never lands over the restored one. */
+    @Test fun aSaveAlreadyUnderWayWhenTheRestoreFreezesIsDropped() {
+        val f = java.io.File(context.filesDir, "race.vault")
+        Vault.writeFile(f, "old".toByteArray())
+        Vault.testWriteDelayMs = 400L                 // after the early check, before the encryption and the rename
+        try {
+            val late = Thread { Vault.writeFile(f, "stale book".toByteArray()) }
+            late.start()
+            Thread.sleep(100)                          // it passed the early check and is waiting
+            Vault.freezeForRestore(listOf(f))
+            Vault.testWriteDelayMs = 0L
+            Vault.writeRestored(f, "restored".toByteArray())
+            late.join(5_000)
+            assertEquals("restored", String(Vault.readFile(f)!!))
+            val left = context.filesDir.listFiles { x -> x.name.startsWith("race.vault.") && x.name.endsWith(".tmp") }.orEmpty()
+            assertEquals("no temp file left", 0, left.size)
+        } finally { Vault.testWriteDelayMs = 0L; Vault.thaw() }
+    }
 }

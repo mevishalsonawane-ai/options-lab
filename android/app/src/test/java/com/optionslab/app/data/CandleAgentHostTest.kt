@@ -230,4 +230,20 @@ class CandleAgentHostTest : RobolectricTest() {
         CandleAgentHost.keepMcxForTest("CRUDEOIL", listOf(CandleRead.Bar(day.atTime(23, 20), 1.0, 1.0, 1.0, 1.0)))
         assertNotNull(CandleAgentHost.delayMs(context))
     }
+
+    /**
+     * 20 Oct, second review: the MCX settle runs once a session (a study that kept failing re-fetched every MCX series every 5
+     * minutes all night): after one settle batch nothing more is asked for MCX.
+     */
+    @Test fun theMcxSettleRunsOnceASession() = runBlocking {
+        Market.testClock = java.time.Clock.fixed(LocalDate.of(2026, 10, 18).atTime(12, 0).atZone(zone).toInstant(), zone)   // a Sunday
+        CandleAgentHost.keepMcxForTest("CRUDEOIL", listOf(CandleRead.Bar(day.atTime(23, 20), 1.0, 1.0, 1.0, 1.0)))
+        CandleAgentHost.batch(context)
+        assertEquals(1, CandleAgentHost.mcxSettles)
+        CandleAgentHost.batch(context)
+        assertEquals("never twice", 1, CandleAgentHost.mcxSettles)
+        // Its minutes let go: no more batches asked for MCX on a closed Sunday (the hourly off-hours one aside).
+        CandleAgentHost.resetForTest()
+        assertNull(CandleAgentHost.delayMs(context))
+    }
 }

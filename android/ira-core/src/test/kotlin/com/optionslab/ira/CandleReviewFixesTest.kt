@@ -170,4 +170,43 @@ class CandleReviewFixesTest {
         a.study(emptyList(), listOf(alive.copy(seq = 4_001, words = "new")), t + 120_000, now.plusMinutes(2), true)
         assertTrue(a.exchanges().any { it.words == "new" })
     }
+    // ---- second review ---------------------------------------------------------------------------------------------------
+
+    /** A history that stopped at 11:01, read after the close: not a finished session, so the 11:00 15m candle is not closed. */
+    @Test fun aSessionWhoseDataStoppedEarlyIsNotOverForItsCandles() {
+        val close = day.atTime(15, 30)
+        val mins = minutes(day.atTime(9, 15), 107)                    // 09:15 .. 11:01
+        assertTrue(!Candles.reachesClose(mins.last(), close))
+        assertTrue(Candles.reachesClose(day.atTime(15, 29), close))
+        assertTrue(Candles.reachesClose(day.atTime(15, 28), close), "within a minute of the close")
+        assertTrue(!Candles.reachesClose(day.atTime(15, 27), close))
+        assertTrue(!Candles.reachesClose(null, close))
+        val asOf = day.atTime(15, 45)
+        val done = Candles.reachesClose(mins.last(), close)
+        val end = Candles.dataEnd(mins, asOf, complete = done)
+        val starts = listOf(day.atTime(10, 45), day.atTime(11, 0))
+        assertEquals(listOf(day.atTime(10, 45)), Candles.closedByData(starts, 15, end, sessionOver = done) { it })
+        // The old rule (the clock said the session was over) closed the 11:00 candle from 2 of its 15 minutes.
+        assertEquals(2, Candles.closedByData(starts, 15, Candles.dataEnd(mins, asOf, complete = true), sessionOver = true) { it }.size)
+    }
+
+    /** One candle's own count is said as one uncorrected cell, never as a finding; no edge and too few read as before. */
+    @Test fun oneCandlesOwnCountIsSaidAsUncorrected() {
+        val up = CandleBook.oneCellWords(CandleBook.Says.UP)
+        assertTrue("on this one count alone" in up && "before correcting" in up, up)
+        assertTrue("on this one count alone" in CandleBook.oneCellWords(CandleBook.Says.DOWN))
+        assertEquals(CandleBook.Says.NONE.words, CandleBook.oneCellWords(CandleBook.Says.NONE))
+        assertEquals(CandleBook.Says.FEW.words, CandleBook.oneCellWords(CandleBook.Says.FEW))
+    }
+
+    /** Cells of the chain and gamma context counted before the fix are dropped when the saved counts are read. */
+    @Test fun oldLookAheadCellsAreDroppedOnLoad() {
+        val s = CandleBook.Stats()
+        s.cells[CandleBook.key("NIFTY", 5, "hammer", "short_gamma")] = CandleBook.Cell(n5 = 40, up5 = 30)
+        s.cells[CandleBook.key("NIFTY", 5, "hammer", "call_writing")] = CandleBook.Cell(n5 = 40, up5 = 30)
+        s.cells[CandleBook.key("NIFTY", 5, "hammer", "all")] = CandleBook.Cell(n5 = 40, up5 = 22)
+        s.cells[CandleBook.key("NIFTY", 5, "hammer", "hist_support")] = CandleBook.Cell(n5 = 40, up5 = 22)
+        val back = CandleBook.decode(CandleBook.encode(s))
+        assertEquals(setOf("all", "hist_support"), back.cells.keys.map { it.substringAfterLast('|') }.toSet())
+    }
 }

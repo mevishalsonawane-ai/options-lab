@@ -307,11 +307,11 @@ class PineAutoLiveTest : RobolectricTest() {
     @Test fun aLiveBuyIsBookedAndItsStopPlacedEvenWhenItsOrderLabelCannotBeSaved() {
         switchOn()
         pass(51_900.0)
-        // The strategies vault cannot be written now (a Keystore or disk fault): its temp file's name is a directory.
-        val blocker = java.io.File(context.filesDir, "strategies.vault.tmp").apply { mkdirs() }
+        // The strategies vault cannot be written now (a Keystore or disk fault).
+        com.optionslab.app.security.Vault.testFailWrites = setOf("strategies.vault")
         try {
             pass(52_010.0)
-        } finally { blocker.deleteRecursively() }
+        } finally { com.optionslab.app.security.Vault.testFailWrites = emptySet() }
         assertEquals(1, side("BUY").size)
         val h = checkNotNull(held()) { "the live buy is booked: " + log() }
         assertEquals(30, h.qty)

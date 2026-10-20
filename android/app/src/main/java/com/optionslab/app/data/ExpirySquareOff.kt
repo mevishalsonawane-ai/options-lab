@@ -97,7 +97,11 @@ object ExpirySquareOff {
             // SENSEX's list not read yet today: asked for now (in the background) and the notice waits for the next passes, until
             // the backstop minute, when it is said whatever.
             val bfoWait = Broker.cachedBfoOptions() == null && minuteNow() < BACKSTOP_MINUTE
-            if (Broker.cachedBfoOptions() == null && book.any { it.exchange == "BFO" }) runCatching { Broker.loadBfoOptionsInBackground() }
+            if (Broker.cachedBfoOptions() == null && book.any { it.exchange == "BFO" }) {
+                runCatching { Broker.loadBfoOptionsInBackground() }
+                // Its expiry not known yet: the day is not done (a later pass, with the list in, closes or reports it).
+                unread = true
+            }
             book.filter { it.exchange in setOf("NFO", "BFO") && it.symbol !in ins && Regex("(CE|PE|FUT)$").containsMatchIn(it.symbol) }
                 .filter { !(it.exchange == "BFO" && bfoWait) }.forEach {
                 tellOnce(context, "unknown ${it.exchange}:${it.symbol}", "${it.exchange} ${it.symbol} (${it.qty}) is open and the app cannot tell when it expires, " +
@@ -122,6 +126,13 @@ object ExpirySquareOff {
                 val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
                 // Any other resting exit on it (a protection's stop or target, a strategy's stop) would keep the
                 // market exit from ever going out: cancel them first; the exit goes on the next pass.
+                // Second review: at the backstop, an arm's own exit still working on it (its market sell, or its stop it is about to
+                // replace with one) is its closing in progress: never cancelled here (it would only rest it again, and the two
+                // could both sell). The arm is left to finish; this pass sends nothing for it and says so once.
+                if (backstop && runCatching { armOwns(p.symbol) }.getOrDefault(false) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
+                    tellOnce(context, "arm closing ${p.symbol}", "${p.symbol} expires today and its arm is still closing it at Zerodha; watch it in Trade.")
+                    continue
+                }
                 val others = same.filter { it.tag != "iraalgoexpiry" }
                 if (others.isNotEmpty()) {
                     others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }

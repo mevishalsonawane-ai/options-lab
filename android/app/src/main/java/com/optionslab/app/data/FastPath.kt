@@ -108,6 +108,7 @@ object FastPath {
     /** TEST ONLY: no consumer and no owner left from an earlier test. */
     internal fun resetForTest() {
         synchronized(this) { owners = 0; job?.cancel(); job = null }
+        warmedAt = 0L; warming.set(false); deadKeys = null
         inbox.drain()
         snap = null
         modeAt = 0L
@@ -145,13 +146,20 @@ object FastPath {
         // in the background ([warmTokens]) and the next snapshot has it; until then the stop is judged as before, on REST quotes.
         val out = HashSet<Long>(keys.size)
         var missing = false
-        for (k in keys) runCatching { Broker.tokenKnown(k) }.getOrNull()?.let { out += it } ?: run { missing = true }
+        val dead = deadKeys?.takeIf { System.currentTimeMillis() - it.first in 0 until DEAD_MS }?.second.orEmpty()
+        for (k in keys) runCatching { Broker.tokenKnown(k) }.getOrNull()?.let { out += it } ?: run { if (k !in dead) missing = true }
         if (missing) warmTokens(keys)
         return out
     }
 
     private val warming = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var warmedAt = 0L
+    /**
+     * Keys the last background lookup could not resolve (an NSE stock, a list not downloaded yet) and when: not looked up again
+     * every 5 s, only after [DEAD_MS] (the day's list may come in meanwhile).
+     */
+    @Volatile private var deadKeys: Pair<Long, Set<String>>? = null
+    private const val DEAD_MS = 5 * 60_000L
 
     /** [keys]' tokens looked up off the tick path (the day's instrument map built from its file once), at most every 5 s. */
     private fun warmTokens(keys: List<String>) {
@@ -159,7 +167,10 @@ object FastPath {
         if (now - warmedAt in 0 until WARM_MS || !warming.compareAndSet(false, true)) return
         warmedAt = now
         warmScope.launch {
-            try { for (k in keys) runCatching { Broker.tokenOf(k) } } finally { warming.set(false); snap = null }
+            try {
+                val dead = keys.filter { k -> runCatching { Broker.tokenOf(k) }.getOrNull() == null }.toSet()
+                deadKeys = if (dead.isEmpty()) null else System.currentTimeMillis() to dead
+            } finally { warming.set(false); snap = null }
         }
     }
 

@@ -181,17 +181,25 @@ object ExposureCapHost {
 
     private fun ledgerToday() {
         val d = runCatching { Market.today() }.getOrNull() ?: return
-        if (ledgerDay != d) {
-            ledger.clear(); ledgerDay = d
-            // 20 Oct, review: a bot's live option carried overnight (NRML) is counted again on the new day; before, the clear left
-            // it out and two more same-way entries could pass. Stamped at 0, so the next positions read drops any no longer held.
-            runCatching { for ((sym, ex, owner) in carried()) liveDir(sym, ex)?.let { (dir, _) -> ledger.entered(sym, dir, owner, 0L) } }
+        if (ledgerDay != d) { ledger.clear(); ledgerDay = d; seeded = false }
+        // 20 Oct, review: a bot's live option carried overnight (NRML) is counted again on the new day; before, the clear left
+        // it out and two more same-way entries could pass. Stamped at 0, so the next positions read drops any no longer held.
+        // Once a day, as soon as the arms' book is read (second review: a first ask before that read seeded nothing all day).
+        if (!seeded) runCatching {
+            val open = carried() ?: return@runCatching
+            for ((sym, ex, owner) in open) liveDir(sym, ex)?.let { (dir, _) -> ledger.entered(sym, dir, owner, 0L) }
+            seeded = true
         }
     }
 
-    /** The arms' live BUYs still open (symbol, exchange, arm), from memory ([ArmLive]); replaceable in tests. */
-    @Volatile internal var carried: () -> List<Triple<String, String, String>> =
-        { ArmLive.view.value.openReal.filter { it.side > 0 }.map { Triple(it.symbol, it.exchange, it.key) } }
+    @Volatile private var seeded = false
+
+    /** The arms' live BUYs still open (symbol, exchange, arm), from memory ([ArmLive]); null while its book is not read yet. */
+    @Volatile internal var carried: () -> List<Triple<String, String, String>>? = {
+        val today = Market.today()
+        // Only those bought before today (today's own were counted at their entry).
+        ArmLive.view.value.takeIf { it.loaded }?.openReal?.filter { it.side > 0 && it.day.isBefore(today) }?.map { Triple(it.symbol, it.exchange, it.key) }
+    }
 
     /**
      * Inside the entry door, for a bot's live BUY ([owner]: its arm, else its tag): the refusal when the live switch is on, else

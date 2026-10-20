@@ -167,7 +167,7 @@ object Protections {
             }
             // An MCX contract keeps its own exchange and tick (9 Oct); NFO exactly as before.
             val tick = if (c.isMcx) McxMarket.find(symbol)?.tick ?: 0.05 else 0.05
-            val item = Item(System.currentTimeMillis(), false, symbol, c.exchange, product, qty, c.lotSize, tick, s0, trail, target, price, stopId, targetId)
+            val item = Item(nowMs(), false, symbol, c.exchange, product, qty, c.lotSize, tick, s0, trail, target, price, stopId, targetId)
             list += item; save(list)
             "Protected ${symbol}: ${item.describe()}"
         }
@@ -218,7 +218,7 @@ object Protections {
             }
             stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
             targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
-            val item = Item(System.currentTimeMillis(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail,
+            val item = Item(nowMs(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail,
                 target.takeIf { targetId != null }, price, stopId, targetId)
             list += item; save(list)
             "Protected $symbol at Zerodha: ${item.describe()}$partly"
@@ -278,6 +278,9 @@ object Protections {
         return gone
     }
 
+    /** The clock of the ids and the first-minute check (the market's: one clock, tests included). */
+    private fun nowMs(): Long = Market.now().toInstant().toEpochMilli()
+
     /** [exchange]'s market open now (MCX's own hours; NSE's otherwise). */
     private fun marketOpen(exchange: String): Boolean = runCatching {
         if (exchange == "MCX") McxMarket.isOpen() else Market.isOpen()
@@ -287,14 +290,34 @@ object Protections {
      * [p]'s stop and target placed again at their levels (an earlier day's DAY orders ended): the protection carried on under
      * a new id (today's: [cancelOrders] knows its orders are today's). Null when the stop could not be placed (the caller says so).
      */
-    private suspend fun restAgain(p: Item): Item? {
-        val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
-        val known = listOfNotNull(p.stopOrderId, p.targetOrderId)
+    private suspend fun restAgain(p0: Item): Item? {
+        val side = if (p0.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        val known = listOfNotNull(p0.stopOrderId, p0.targetOrderId)
+        // Second review: an exit already resting on it (Boss's own after-market order, another owner's) is subtracted first, so
+        // the two together never sell more than is held. All of it covered: nothing placed, and said.
+        val busy = runCatching {
+            Broker.orders().filter { it.working && it.symbol == p0.symbol && it.exchange == p0.exchange && it.product == p0.product &&
+                it.side == side.name && it.id !in known }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+        }.getOrNull() ?: return p0                                       // the orders not read: asked again next look
+        val qty = com.optionslab.engine.risk.ExitQty.sendable(p0.qty, busy, abs(p0.qty), p0.lotSize)
+        if (qty <= 0) {
+            Alerts.post("${p0.symbol}: an exit already resting at Zerodha covers it, so its stop and target were not placed again.",
+                Alerts.Kind.INFO, "Protection")
+            return p0.copy(active = false, note = "covered by another exit")
+        }
+        val p = p0.copy(qty = p0.qty.sign() * qty)
         val stopId = p.stop?.let { s0 ->
             runCatching {
                 placeTracked(Kite.Order(p.symbol, side, abs(p.qty), p.lotSize, p.product, "SL", stopLimit(s0, side, p.tick),
                     p.tick, p.exchange, "iraprotect", triggerPrice = s0), known)
-            }.getOrNull() ?: return null
+            }.getOrElse { e ->
+                // Usually the price opened through the stop (Zerodha refuses a stop on the wrong side of the price): said plainly.
+                val last = runCatching { Broker.quotes(listOf("${p.exchange}:${p.symbol}"))["${p.exchange}:${p.symbol}"]?.last }.getOrNull()
+                val through = last != null && last > 0 && (if (p.qty > 0) last <= s0 else last >= s0)
+                unprotected(if (through) "${p.symbol} opened at %.2f, already through its stop of %.2f, so the stop could not be placed again. Close it in Trade.".format(last, s0)
+                    else "${p.symbol}: its stop could not be placed again at the open (${e.message}). The position is NOT protected: set the protection again.")
+                return p.copy(active = false, note = "stop not placed again")
+            }
         }
         val targetId = p.target?.let { t ->
             runCatching {
@@ -305,7 +328,7 @@ object Protections {
         if (stopId == null && targetId == null) return null
         stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
         targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
-        val next = p.copy(id = System.currentTimeMillis(), stopOrderId = stopId, targetOrderId = targetId,
+        val next = p.copy(id = nowMs(), stopOrderId = stopId, targetOrderId = targetId,
             target = p.target.takeIf { targetId != null }, note = "placed again for today")
         Alerts.post("${p.symbol}: its stop and target ended with yesterday's session and were placed again at Zerodha (${next.describe()}).",
             Alerts.Kind.SUCCESS, "Protection")
@@ -459,7 +482,7 @@ object Protections {
         }
         // The position closed by hand (or flipped): the resting exits would now open a new position.
         // (Not in its first minute: the position book can trail a fresh fill.)
-        val net = if (Market.now().toInstant().toEpochMilli() - p.id < 60_000) null else netNow()
+        val net = if (nowMs() - p.id < 60_000) null else netNow()
         if (net != null && (net == 0 || net.sign() != p.qty.sign())) {
             listOfNotNull(so, to).filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
             val still = runCatching { Broker.orders().filter { it.id == p.stopOrderId || it.id == p.targetOrderId }.any { it.working } }.getOrElse { true }
@@ -490,7 +513,9 @@ object Protections {
             if (net != null && net != 0 && net.sign() == p.qty.sign() && (p.id < today0 || p.note == WAITING)) {
                 // Before the open: kept until then (Zerodha would refuse it now).
                 if (!marketOpen(p.exchange)) return p
-                restAgain(p.copy(qty = net))?.let { return it }
+                // Never more than this protection covered: lots added since, or another owner's lots (an arm's trade with its own
+                // GTT), are not this protection's to sell (second review).
+                restAgain(p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty))))?.let { return it }
             }
             if (net != 0) unprotected("${p.symbol}: its stop and target are no longer working at Zerodha (orders last only the day they are placed). " +
                 "The position is NOT protected any more: set the protection again.")

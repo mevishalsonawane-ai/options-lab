@@ -33,6 +33,8 @@ class TickPathReviewTest : RobolectricTest() {
     @After fun down() {
         liveKeys(emptyList())
         setStatic("bfoOptions", null)
+        mcxMem(null)
+        FastPath.resetForTest()
         Market.testClock = null
         kite?.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -41,6 +43,9 @@ class TickPathReviewTest : RobolectricTest() {
     /** The active live protections' keys as [Protections] keeps them (its setter is private: memory only, as the app sets it). */
     private fun liveKeys(keys: List<String>) =
         Protections::class.java.getDeclaredField("liveKeysHint").apply { isAccessible = true }.set(null, keys)
+
+    /** The MCX list in memory as [McxMarket] keeps it (null: forgotten). */
+    private fun mcxMem(v: Any?) = McxMarket::class.java.getDeclaredField("mem").apply { isAccessible = true }.set(null, v)
 
     private fun setStatic(name: String, v: Any?) =
         Broker::class.java.getDeclaredField(name).apply { isAccessible = true }.set(null, v)
@@ -63,6 +68,21 @@ class TickPathReviewTest : RobolectricTest() {
             Kite.Instrument(1_234_567L, sym, "SENSEX", LocalDate.now().plusDays(3), 81_000.0, 20, Right.CE, 0.05)))
         liveKeys(listOf("BFO:$sym"))
         assertTrue(1_234_567L in FastPath.liveTokens())
+    }
+
+    /**
+     * 20 Oct, second review: the tick path's memory-only lookup had no MCX branch, so a live MCX trade's exits left the stream
+     * (REST every 2 s) and its key was looked up again every 5 s all session. MCX now answers from its list in memory.
+     */
+    @Test fun anMcxLiveTradesTokenReachesTheLiveExitsFromMemory() {
+        val sym = "CRUDEOIL26NOVFUT"
+        assertNull("no MCX list in memory: unknown", Broker.tokenKnown("MCX:$sym"))
+        mcxMem(Market.today().toString() to listOf(
+            com.optionslab.engine.mcx.McxContract(7_654_321L, 29_899L, sym, "CRUDEOIL", LocalDate.now().plusDays(30), 0.0, null, 1.0, 100)))
+        assertEquals(7_654_321L, Broker.tokenKnown("MCX:$sym"))
+        assertNull("another contract", Broker.tokenKnown("MCX:GOLDM26NOVFUT"))
+        liveKeys(listOf("MCX:$sym"))
+        assertTrue(7_654_321L in FastPath.liveTokens())
     }
 
     @Test fun afterARestartTheLiveTokensNeverParseTheInstrumentsFileOnTheTickPath() {

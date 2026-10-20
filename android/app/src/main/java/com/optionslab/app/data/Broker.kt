@@ -898,6 +898,8 @@ object Broker {
      */
     internal fun tokenKnown(key: String): Long? =
         INDEX.values.firstOrNull { it.first == key }?.second ?: if (key.startsWith("BFO:")) bfoToken(key)
+        // 20 Oct, second review: MCX from its list in memory (a live MCX trade's exits stream again; never the file here).
+        else if (key.startsWith("MCX:")) McxMarket.tokenKnown(key.removePrefix("MCX:"))
         else tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
 
     /** "BFO:<symbol>" -> its token from today's BFO list in memory (never a file or the network); the map built once per list. */

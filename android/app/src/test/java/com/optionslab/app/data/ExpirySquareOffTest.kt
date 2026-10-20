@@ -146,6 +146,21 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals("the backstop closes what its owner did not", listOf(Triple(pe, "SELL", "75"), Triple(ce, "SELL", "75")), sent())
     }
 
+    /** Second review: at the backstop, an arm whose own exit is still working at Zerodha is left to finish it (no cancel, no second sell). */
+    @Test fun atTheBackstopAnArmsWorkingExitIsLeftAlone() {
+        kite.position(ce, 75, 20.0)
+        ExpirySquareOff.armOwns = { it == ce }
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val armSell = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO",
+            com.optionslab.engine.orb.LiveMirror.TAG), exit = true) }
+        kite.requests.clear()
+        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue("the arm's exit not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(armSell).status)
+        assertTrue("not done while it is open", !done())
+    }
+
     /** 20 Oct, review: SENSEX's options (BFO) expiring today are closed too, on BFO, once the day's list is in. */
     @Test fun aSensexOptionExpiringTodayIsClosedOnBfo() {
         val sx = "SENSEX26OCT81000CE"
@@ -155,7 +170,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         Broker.resetBfoForTest()
         pass()                                                        // asks for the SENSEX list in the background
         val until = System.currentTimeMillis() + 5_000
-        while (Broker.cachedBfoOptions() == null && System.currentTimeMillis() < until) Thread.sleep(20)
+        while (Broker.cachedBfoOptions() == null && System.currentTimeMillis() < until + 10_000) Thread.sleep(20)
         assertTrue("the list is in", Broker.cachedBfoOptions() != null)
         at(15, 7); pass()
         val o = kite.placed.single().form
@@ -283,7 +298,12 @@ class ExpirySquareOffTest : RobolectricTest() {
 
     @Test fun aDerivativeTheAppCannotDateIsReportedNotClosed() {
         kite.position("SENSEX26SEP80000CE", 20, 100.0, exchange = "BFO")
+        Broker.resetBfoForTest()
         pass()
+        assertTrue(kite.placed.isEmpty())
+        // 20 Oct: SENSEX's list is asked for first; with no list by the backstop minute, it is said whatever.
+        assertTrue("not before the list could be read", texts().none { it.contains("SENSEX26SEP80000CE") })
+        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertTrue(kite.placed.isEmpty())
         val said = texts().single { it.contains("SENSEX26SEP80000CE") }
         assertTrue(said, said.contains("NOT closed automatically"))

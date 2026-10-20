@@ -358,7 +358,7 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         val base = stats[CandleBook.baseKey(r.inst, r.tf, r.anatomy.colour, "all")]
         val says = CandleBook.says(cell, base)
         return "My own count (n $n): up after 5 candles ${pc(cell!!.upRate!!)}" + (base?.upRate?.let { " vs ${pc(it)} for any ${if (r.anatomy.colour > 0) "green" else "red"} candle" } ?: "") +
-            (cell.heldRate?.let { ", its wick end held ${pc(it)} of ${cell.wickN}" } ?: "") + "; " + says.words + "."
+            (cell.heldRate?.let { ", its wick end held ${pc(it)} of ${cell.wickN}" } ?: "") + "; " + CandleBook.oneCellWords(says) + "."
     }
 
     /**

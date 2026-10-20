@@ -1473,38 +1473,45 @@ class WatchService : Service() {
         // 20 Oct, review (open positions first): the event-driven stops' consumer runs before any analysis worker starts (the
         // watch loop's own start below only adds an owner; each start has its stop).
         com.optionslab.app.data.FastPath.start(this@WatchService)
-        val workers = WatchWorkers.begin(this)
-        if (com.optionslab.app.BuildConfig.JARVIS) {
-            val app = this@WatchService
-            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.WORDS, "analysis", timeoutMs = 5 * 60_000L,
-                cancelOnTimeout = true, nextDelayMs = { Tasks.wordsDelay(app) }, restart = com.optionslab.ira.SelfHeal.Restart())) { Tasks.wordsRound() }
-        }
-        // The shared market brain (10 Oct): its own worker every 10 s in market hours (regime, event windows, trap flags, the
-        // data's health and incidents, the findings log, the daily self-review); words and readings only - it never orders.
-        // A read-only worker: cut at its time limit, restarted fresh after repeated failures.
-        if (!com.optionslab.app.BuildConfig.GOLD) {
-            val app = this@WatchService
-            var brainAt = 0L
-            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.BRAIN, "analysis", timeoutMs = 30_000L,
-                cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.SmartWorkers.refreshDelay(brainAt) },
-                restart = com.optionslab.ira.SelfHeal.Restart())) {
-                // 20 Oct, review: after a restart the open positions are restored and watched first (at most PositionsFirst's wait).
-                com.optionslab.app.data.PositionsFirst.awaitPositions()
-                brainAt = System.currentTimeMillis()
-                // The Live check's 09:20 run (its switch off by default): starts on its own thread when due, returns at once.
-                runCatching { com.optionslab.app.data.LiveSelfTest.autoMaybe() }
-                com.optionslab.app.data.SmartWorkers.refresh(app)
+        // 20 Oct, second review: a worker's start that throws gives the fast path's owner back (it outlived the watch before).
+        val workers = try {
+            val w = WatchWorkers.begin(this)
+            if (com.optionslab.app.BuildConfig.JARVIS) {
+                val app = this@WatchService
+                w.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.WORDS, "analysis", timeoutMs = 5 * 60_000L,
+                    cancelOnTimeout = true, nextDelayMs = { Tasks.wordsDelay(app) }, restart = com.optionslab.ira.SelfHeal.Restart())) { Tasks.wordsRound() }
             }
-        }
-        // The Candle agent (20 Oct): its own worker in the analysis group, a batch every 5 minutes in session (never per tick),
-        // cut at its time limit, restarted fresh after repeated failures. Knowledge only: it reads and explains, never orders.
-        if (com.optionslab.app.data.CandleAgentHost.enabled()) {
-            val app = this@WatchService
-            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.CANDLES, "analysis", timeoutMs = 2 * 60_000L,
-                cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.CandleAgentHost.delayMs(app) },
-                restart = com.optionslab.ira.SelfHeal.Restart())) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.CandleAgentHost.batch(app) }
+            // The shared market brain (10 Oct): its own worker every 10 s in market hours (regime, event windows, trap flags, the
+            // data's health and incidents, the findings log, the daily self-review); words and readings only - it never orders.
+            // A read-only worker: cut at its time limit, restarted fresh after repeated failures.
+            if (!com.optionslab.app.BuildConfig.GOLD) {
+                val app = this@WatchService
+                var brainAt = 0L
+                w.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.BRAIN, "analysis", timeoutMs = 30_000L,
+                    cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.SmartWorkers.refreshDelay(brainAt) },
+                    restart = com.optionslab.ira.SelfHeal.Restart())) {
+                    // 20 Oct, review: after a restart the open positions are restored and watched first (at most PositionsFirst's wait).
+                    com.optionslab.app.data.PositionsFirst.awaitPositions()
+                    brainAt = System.currentTimeMillis()
+                    // The Live check's 09:20 run (its switch off by default): starts on its own thread when due, returns at once.
+                    runCatching { com.optionslab.app.data.LiveSelfTest.autoMaybe() }
+                    com.optionslab.app.data.SmartWorkers.refresh(app)
+                }
             }
+            // The Candle agent (20 Oct): its own worker in the analysis group, a batch every 5 minutes in session (never per tick),
+            // cut at its time limit, restarted fresh after repeated failures. Knowledge only: it reads and explains, never orders.
+            if (com.optionslab.app.data.CandleAgentHost.enabled()) {
+                val app = this@WatchService
+                w.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.CANDLES, "analysis", timeoutMs = 2 * 60_000L,
+                    cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.CandleAgentHost.delayMs(app) },
+                    restart = com.optionslab.ira.SelfHeal.Restart())) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.CandleAgentHost.batch(app) }
+                }
+            }
+            w
+        } catch (e: Throwable) {
+            com.optionslab.app.data.FastPath.stop()
+            throw e
         }
         try {
             watchLoop(s, workers)

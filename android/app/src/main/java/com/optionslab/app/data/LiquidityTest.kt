@@ -52,7 +52,7 @@ object LiquidityTest {
 
     /** [f] applied to the state now (and again over the saved state once it is read); the state before it. Memory only. */
     private fun edit(f: (LiquidityFreeze.State) -> LiquidityFreeze.State): LiquidityFreeze.State = synchronized(edits) {
-        if (early) edits += f
+        if (early) { edits += f; while (edits.size > 200) edits.removeAt(0) }   // bounded (a store never read: tests only)
         _state.getAndUpdate(f)
     }
     private val flushing = AtomicBoolean(false)

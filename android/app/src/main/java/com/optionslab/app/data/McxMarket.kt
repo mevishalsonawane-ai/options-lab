@@ -80,6 +80,9 @@ object McxMarket {
     /** MCX is trading now (its own hours and holidays). */
     fun isOpen(): Boolean = runCatching { calendar().isOpen(now()) }.getOrDefault(false)
 
+    /** [isOpen], or null when it cannot be told now (20 Oct: a failed read is not "closed" for what runs only after the close). */
+    fun openOrNull(): Boolean? = runCatching { calendar().isOpen(now()) }.getOrNull()
+
     /** Today's MCX session, or null when MCX does not trade today. */
     fun todayWindow(): McxSession.Window? = runCatching { calendar().window(Market.today()) }.getOrNull()
 
@@ -150,6 +153,9 @@ object McxMarket {
         cached().firstOrNull { it.name == name && it.expiry == expiry && it.right == right && (right == null || it.strike == strike) }
 
     /** Zerodha's instrument token for an MCX trading symbol (the live stream), or null. */
+    /** [tokenOf] from the list already in memory only (never the file): the tick path's lookup. */
+    fun tokenKnown(tradingSymbol: String): Long? = mem?.second?.firstOrNull { it.tradingSymbol == tradingSymbol }?.token?.takeIf { it > 0 }
+
     fun tokenOf(tradingSymbol: String): Long? = cached().firstOrNull { it.tradingSymbol == tradingSymbol }?.token?.takeIf { it > 0 }
 
     /** The paper account's contract for [c]: units per lot as its lot (paper keeps units, as for NFO), a future's right IX. */

@@ -225,7 +225,11 @@ object Backup {
         SecurePrefs.putAll(values)
         // The danger meter's switch as restored, in the entry path's memory copy at once (the restart loads it again).
         runCatching { AppSettings.syncDangerHalf() }
-        } catch (e: Throwable) { Vault.thaw(); throw e }
+        } catch (e: Throwable) {
+            // 20 Oct, second review: kept frozen. Both callers close the app after a failed restore too; a thaw here let the
+            // live stores write their old books over the files already restored, and the restart read a mix of the two.
+            throw e
+        }
         return Restored(changePin = c.pinSealed)
     }
 
