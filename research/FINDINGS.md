@@ -1410,3 +1410,11 @@ Full study: `HUNT_R88_WHAT_MOVES_THE_CANDLE.md` (pre-registered `hunt/r88/PREREG
 - With the candle (not a forecast): NIFTY's same candle explains 51-90% of the other indices' candles; VIX falls on up
   candles; on MCX the PCR falls on up candles (crude 20-28%).
 - Use: size stops, targets and position size by expected candle size; never PCR/OI/skew/volume as a direction signal.
+
+## A strategy from R88: buy a straddle when a big candle is expected (R89, 20 Oct 2026) - 0 of 18 profitable
+Full study: `HUNT_R89_SIZE_STRADDLE.md` (pre-registered `hunt/r89/PREREG.md`, commit 5f4f988). Since R88 can forecast
+size but not direction, the only option-buying use is a straddle (ATM call + put, 1 lot each, 15 or 60 minutes) on 5
+indices and GOLDM/SILVERM/CRUDEOIL/NATURALGAS. Real option minutes and charges. Design: 4,302 straddles, -Rs 12.8 lakh,
+win rate 2-40%; out of sample (Jun-Oct 2026): 2,214 straddles, -Rs 4.4 lakh, win rate 3-35%, 0 of 18 versions positive.
+Gross before costs is about zero (options already price the expected move); costs (4 orders) decide; random timing
+loses about the same. Use R88's size forecast for risk sizing only.

@@ -1,3 +1,19 @@
+# R89, 20 Oct 2026: profit and win rate of a strategy built on R88: RESULT
+
+Boss: "If we create a strategy based on the above findings, what will the profit and win rate be?"
+Write-up: `research/HUNT_R89_SIZE_STRADDLE.md` (pre-registered `research/hunt/r89/PREREG.md`, 5f4f988, before any P&L).
+
+- R88 forecasts candle SIZE, not direction, so the strategy tested is a straddle (buy ATM call + ATM put) when a big
+  15-minute candle is expected, held 15 or 60 minutes, on 5 indices and GOLDM, SILVERM, CRUDEOIL, NATURALGAS, with real
+  option minutes, spreads and charges.
+- **It loses: 0 of 18 versions profitable.** Design (Jun 2025 - May 2026): 4,302 straddles, -Rs 12.8 lakh, win rate
+  2-40%. Out of sample (Jun - Oct 2026): 2,214 straddles, -Rs 4.4 lakh, win rate 3-35% (indices 23-35%, crude and
+  natural gas 3-11%).
+- Before costs it about breaks even (options already price the bigger move); costs (4 orders) make every version
+  negative; random timing loses about the same. Nothing goes to paper.
+
+---
+
 # R88, 20 Oct 2026: what moves the candle (every candle, every parameter): RESULT
 
 Boss: "deep study each and every candle, the behaviour, and the other parameters which affect the candle movement".
