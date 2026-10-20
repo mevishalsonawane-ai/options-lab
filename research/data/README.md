@@ -1,7 +1,8 @@
 # Data lake (Dhan API v2)
 
 Historical market data for IraAlgo research, downloaded from Dhan API v2 on 2026-10-13/14 (UTC; data up to
-2026-10-12), with index data appended on 2026-10-14/15 (to 13 or 14 Oct, see Known gaps). It is stored as Parquet (zstd) files on **Google Drive** (below; a GitHub Release with tag `data-20261014`
+2026-10-12), with index data appended on 2026-10-14/15 (to 13 or 14 Oct), and MCX, index and stock-option data
+filled to **19 Oct 2026** on 19–20 Oct (see "Data fill of 19–20 Oct 2026"). It is stored as Parquet (zstd) files on **Google Drive** (below; a GitHub Release with tag `data-20261014`
 is optional), **not** in git. This folder holds only code and metadata:
 
 | file | what |
@@ -102,6 +103,37 @@ BANKNIFTY 2025, FINNIFTY 2025 and 2026, MIDCPNIFTY 2022, 2025 and 2026. Not byte
 on every shared minute: BANKNIFTY 2026 (the `WEEK` file just has one more day, 14 Oct) and, from the day after each
 index's last weekly expiry (BANKNIFTY 13 Nov, MIDCPNIFTY 18 Nov, FINNIFTY 19 Nov 2024), the rest of the 2024 files.
 A study that pools books must use one of each pair (use `MONTH`).
+
+## Data fill of 19–20 Oct 2026 (newest state; the notes of 15 Oct below are kept for history)
+
+Boss asked for data **from Nov 2024 only** (20 Oct), so every request this time was for windows ending on or after
+1 Nov 2024; older gaps were left as they were.
+
+| dataset | now | coverage |
+|---|---|---|
+| MCX futures 1-minute (`fut_1m_live_mcx`) | 11 commodities, 55 contracts, 2,493,209 minutes, each contract from its listing (earliest SILVERM Nov-26 from 20 Oct 2025) to **19 Oct 2026 23:30** | every contract in Dhan's scrip master on 19 Oct; expired contracts before 14 Oct are not available |
+| MCX continuous (`fut_1m_mcx_continuous`, `fut_mcx_rolls`, `fut_mcx_contracts`) | 974,604 minutes; near month from: SILVERM 27 Feb, SILVER 30 Jun, GOLDM 3 Jul, GOLD 15 Jul, NATURALGAS/NATGASMINI 26 Aug, COPPER/ZINC/ALUMINIUM 28 Aug, CRUDEOIL/CRUDEOILM 18 Sep 2026 | before those days the series holds a far month (`near_share` near 0) |
+| MCX options (ATM±5, nearest monthly) | 10 books: GOLD, GOLDM, SILVER, SILVERM, CRUDEOIL, NATURALGAS and new CRUDEOILM, NATGASMINI, COPPER, ZINC; 5 Aug 2025 → **19 Oct 2026** | 100% of the windows Dhan serves (0 failed chunks) |
+| Index 1-minute, daily, futures, options ATM±10 (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, WEEK and MONTH) | to **19 Oct 2026** | 100% |
+| Stock options (59 stocks) | ATM to ATM±3, 1 Nov 2024 → **19 Oct 2026**; 162.9M → 254.1M rows | 100% at ATM..±3 from Nov 2024 (`STOCK_OPTIONS_COVERAGE_SINCE_2024-11.json`) |
+| MCX continuous daily (Dhan expiryCode 0) | to 16 Oct (Dhan had not published MCX 19 Oct dailies by 20 Oct 00:00 UTC) | index dailies to 19 Oct |
+
+* **Stock options ATM±4 and ±5 do not exist at Dhan.** `/charts/rollingoption` answers every ATM±4/±5 stock-option
+  request empty (checked on ULTRACEMCO and INFY, July 2026, next to full ATM..±3 answers), so the earlier plan of
+  ATM±5 for stocks cannot be met; their chunks are `.empty`.
+* `STOCK_OPTIONS_COVERAGE.json` (all windows from Aug 2021) keeps per stock and offset the larger of the published and
+  the new share. It is a lower bound: this run's raw folder did not have the earlier run's empty-window markers.
+  Before Nov 2024, ATM±2 and ±3 are still partial (Boss's choice).
+* **Bad ticks in the new rows** (`newdata_checks.py`, results in `NEWDATA_CHECKS.json`): spikes 0–0.06% of
+  contract-minutes in every appended book; stray opens and stale prints (lakeclean) 0–0.3% in MCX and index books,
+  except the NIFTY and SENSEX weekly books in the expiry week of 13–19 Oct (0.95% and 0.86%, expiry-day prices). The
+  new MCX books: 0.04–0.40% in 2026, up to 1.8% for thin COPPER options in 2025 (stale repeated prints). Stock options
+  from Nov 2024: spikes 0.047%, stray/stale 0.39% (TITAN highest, 1.3%), and 1.0% of rows whose `spot` is more than 3%
+  from the book's median spot at that minute. MCX futures: no spikes (50% or 2% rules); 69% of contract-minutes are
+  padded (flat, zero volume, same close), almost all in far months.
+* Dhan's limits met on this fill: `/charts/rollingoption` timed out (HTTP 504) on most 30-day stock-option windows of
+  2026; `lake_fetch` now asks such windows again in 10-day pieces (`LAKE_SPLIT_FIRST=1` does so at once). MCX option
+  history takes 15–30 s a request. The account was rate limited (DH-904) for several short spells.
 
 ## Known gaps in this download (updated 2026-10-15)
 

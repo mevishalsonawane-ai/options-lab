@@ -1,0 +1,2331 @@
+{
+ "written": "2026-10-20",
+ "tool": "research/data/newdata_checks.py",
+ "note": "appended books: rows from 2026-10-13; new MCX books: all rows; stock options: rows from 2024-11-01; MCX futures: all rows",
+ "appended_books_since_2026_10_13": [
+  {
+   "file": "opt_BANKNIFTY_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 78735,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 78735,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 18885,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 59850,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 78735,
+    "foreign": 0,
+    "stray_open": 12,
+    "high_capped": 6,
+    "stale_run": 0,
+    "bad_tick_share": 0.00015241,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_BANKNIFTY_WEEK_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 78735,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 78735,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 18885,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 59850,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 78735,
+    "foreign": 0,
+    "stray_open": 12,
+    "high_capped": 6,
+    "stale_run": 0,
+    "bad_tick_share": 0.00015241,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_CRUDEOIL_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 60202,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 60202,
+    "spikes": 15,
+    "share": 0.00024916,
+    "early_minutes": 7096,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 53106,
+    "late_spikes": 15,
+    "late_share": 0.00028245
+   },
+   "lakeclean": {
+    "rows": 60202,
+    "foreign": 0,
+    "stray_open": 167,
+    "high_capped": 219,
+    "stale_run": 0,
+    "bad_tick_share": 0.00277399,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_FINNIFTY_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 73261,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 73261,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 16530,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 56731,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 73261,
+    "foreign": 0,
+    "stray_open": 4,
+    "high_capped": 36,
+    "stale_run": 13,
+    "bad_tick_share": 0.00023205,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_FINNIFTY_WEEK_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 73261,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 73261,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 16530,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 56731,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 73261,
+    "foreign": 0,
+    "stray_open": 4,
+    "high_capped": 36,
+    "stale_run": 13,
+    "bad_tick_share": 0.00023205,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_GOLDM_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 60883,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 60883,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 7319,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 53564,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 60883,
+    "foreign": 0,
+    "stray_open": 3,
+    "high_capped": 0,
+    "stale_run": 0,
+    "bad_tick_share": 4.927e-05,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_GOLD_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 41183,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 41183,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 4643,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 36540,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 41183,
+    "foreign": 0,
+    "stray_open": 0,
+    "high_capped": 3,
+    "stale_run": 0,
+    "bad_tick_share": 0.0,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_MIDCPNIFTY_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 77751,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 77751,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 18067,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 59684,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 77751,
+    "foreign": 0,
+    "stray_open": 8,
+    "high_capped": 21,
+    "stale_run": 0,
+    "bad_tick_share": 0.00010289,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_MIDCPNIFTY_WEEK_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 77751,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 77751,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 18067,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 59684,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 77751,
+    "foreign": 0,
+    "stray_open": 8,
+    "high_capped": 21,
+    "stale_run": 0,
+    "bad_tick_share": 0.00010289,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_NATURALGAS_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 60911,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 60911,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 7347,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 53564,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 60911,
+    "foreign": 0,
+    "stray_open": 3,
+    "high_capped": 0,
+    "stale_run": 0,
+    "bad_tick_share": 4.925e-05,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_NIFTY_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 78737,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 78737,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 18887,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 59850,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 78737,
+    "foreign": 0,
+    "stray_open": 15,
+    "high_capped": 9,
+    "stale_run": 0,
+    "bad_tick_share": 0.00019051,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_NIFTY_WEEK_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 78747,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 78747,
+    "spikes": 45,
+    "share": 0.00057145,
+    "early_minutes": 18897,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 59850,
+    "late_spikes": 45,
+    "late_share": 0.00075188
+   },
+   "lakeclean": {
+    "rows": 78747,
+    "foreign": 0,
+    "stray_open": 748,
+    "high_capped": 1302,
+    "stale_run": 0,
+    "bad_tick_share": 0.00949877,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_SENSEX_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 74230,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 74230,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 17119,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 57111,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 74230,
+    "foreign": 0,
+    "stray_open": 3,
+    "high_capped": 33,
+    "stale_run": 156,
+    "bad_tick_share": 0.00214199,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_SENSEX_WEEK_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 78707,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 78707,
+    "spikes": 3,
+    "share": 3.812e-05,
+    "early_minutes": 18887,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 59820,
+    "late_spikes": 3,
+    "late_share": 5.015e-05
+   },
+   "lakeclean": {
+    "rows": 78707,
+    "foreign": 0,
+    "stray_open": 675,
+    "high_capped": 445,
+    "stale_run": 0,
+    "bad_tick_share": 0.00857611,
+    "foreign_share": 0.0,
+    "foreign_ref": "index_1m close"
+   }
+  },
+  {
+   "file": "opt_SILVERM_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 60283,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 60283,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 7281,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 53002,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 60283,
+    "foreign": 0,
+    "stray_open": 6,
+    "high_capped": 1,
+    "stale_run": 0,
+    "bad_tick_share": 9.953e-05,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_SILVER_MONTH_2026.parquet",
+   "since": "2026-10-13",
+   "rows": 38859,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 38859,
+    "spikes": 0,
+    "share": 0.0,
+    "early_minutes": 4205,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 34654,
+    "late_spikes": 0,
+    "late_share": 0.0
+   },
+   "lakeclean": {
+    "rows": 38859,
+    "foreign": 0,
+    "stray_open": 0,
+    "high_capped": 4,
+    "stale_run": 3,
+    "bad_tick_share": 7.72e-05,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  }
+ ],
+ "new_mcx_books": [
+  {
+   "file": "opt_COPPER_MONTH_2025.parquet",
+   "since": null,
+   "rows": 1147907,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 1147907,
+    "spikes": 25,
+    "share": 2.178e-05,
+    "early_minutes": 127842,
+    "early_spikes": 1,
+    "early_share": 7.82e-06,
+    "late_minutes": 1020065,
+    "late_spikes": 24,
+    "late_share": 2.353e-05
+   },
+   "lakeclean": {
+    "rows": 1147907,
+    "foreign": 0,
+    "stray_open": 740,
+    "high_capped": 923,
+    "stale_run": 20306,
+    "bad_tick_share": 0.01833424,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_COPPER_MONTH_2026.parquet",
+   "since": null,
+   "rows": 1694577,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 1694577,
+    "spikes": 184,
+    "share": 0.00010858,
+    "early_minutes": 162763,
+    "early_spikes": 1,
+    "early_share": 6.14e-06,
+    "late_minutes": 1531814,
+    "late_spikes": 183,
+    "late_share": 0.00011947
+   },
+   "lakeclean": {
+    "rows": 1694577,
+    "foreign": 0,
+    "stray_open": 792,
+    "high_capped": 3136,
+    "stale_run": 5939,
+    "bad_tick_share": 0.00397208,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_CRUDEOILM_MONTH_2025.parquet",
+   "since": null,
+   "rows": 1235418,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 1235418,
+    "spikes": 71,
+    "share": 5.747e-05,
+    "early_minutes": 142054,
+    "early_spikes": 1,
+    "early_share": 7.04e-06,
+    "late_minutes": 1093364,
+    "late_spikes": 70,
+    "late_share": 6.402e-05
+   },
+   "lakeclean": {
+    "rows": 1235418,
+    "foreign": 0,
+    "stray_open": 781,
+    "high_capped": 808,
+    "stale_run": 1352,
+    "bad_tick_share": 0.00172654,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_CRUDEOILM_MONTH_2026.parquet",
+   "since": null,
+   "rows": 2398592,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 2398592,
+    "spikes": 38,
+    "share": 1.584e-05,
+    "early_minutes": 282102,
+    "early_spikes": 1,
+    "early_share": 3.54e-06,
+    "late_minutes": 2116490,
+    "late_spikes": 37,
+    "late_share": 1.748e-05
+   },
+   "lakeclean": {
+    "rows": 2398592,
+    "foreign": 0,
+    "stray_open": 973,
+    "high_capped": 772,
+    "stale_run": 942,
+    "bad_tick_share": 0.00079839,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_NATGASMINI_MONTH_2025.parquet",
+   "since": null,
+   "rows": 1235296,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 1235296,
+    "spikes": 191,
+    "share": 0.00015462,
+    "early_minutes": 141613,
+    "early_spikes": 3,
+    "early_share": 2.118e-05,
+    "late_minutes": 1093683,
+    "late_spikes": 188,
+    "late_share": 0.0001719
+   },
+   "lakeclean": {
+    "rows": 1235296,
+    "foreign": 0,
+    "stray_open": 489,
+    "high_capped": 1964,
+    "stale_run": 1718,
+    "bad_tick_share": 0.00178662,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_NATGASMINI_MONTH_2026.parquet",
+   "since": null,
+   "rows": 2419079,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 2419079,
+    "spikes": 842,
+    "share": 0.00034807,
+    "early_minutes": 283609,
+    "early_spikes": 34,
+    "early_share": 0.00011988,
+    "late_minutes": 2135470,
+    "late_spikes": 808,
+    "late_share": 0.00037837
+   },
+   "lakeclean": {
+    "rows": 2419079,
+    "foreign": 0,
+    "stray_open": 811,
+    "high_capped": 6097,
+    "stale_run": 201,
+    "bad_tick_share": 0.00041834,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_ZINC_MONTH_2025.parquet",
+   "since": null,
+   "rows": 1013668,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 1013668,
+    "spikes": 6,
+    "share": 5.92e-06,
+    "early_minutes": 111462,
+    "early_spikes": 0,
+    "early_share": 0.0,
+    "late_minutes": 902206,
+    "late_spikes": 6,
+    "late_share": 6.65e-06
+   },
+   "lakeclean": {
+    "rows": 1013668,
+    "foreign": 0,
+    "stray_open": 233,
+    "high_capped": 269,
+    "stale_run": 6607,
+    "bad_tick_share": 0.00674777,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "opt_ZINC_MONTH_2026.parquet",
+   "since": null,
+   "rows": 668315,
+   "spikes": {
+    "early_window": "09:00-10:44",
+    "minutes": 668315,
+    "spikes": 56,
+    "share": 8.379e-05,
+    "early_minutes": 36731,
+    "early_spikes": 5,
+    "early_share": 0.00013612,
+    "late_minutes": 631584,
+    "late_spikes": 51,
+    "late_share": 8.075e-05
+   },
+   "lakeclean": {
+    "rows": 668315,
+    "foreign": 0,
+    "stray_open": 211,
+    "high_capped": 1145,
+    "stale_run": 1089,
+    "bad_tick_share": 0.00194519,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  }
+ ],
+ "stock_options_since_2024_11_01": [
+  {
+   "file": "stkopt_ADANIENT_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2887306,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2832308,
+    "spikes": 837,
+    "share": 0.00029552,
+    "early_minutes": 659957,
+    "early_spikes": 190,
+    "early_share": 0.0002879,
+    "late_minutes": 2172351,
+    "late_spikes": 647,
+    "late_share": 0.00029783
+   },
+   "lakeclean": {
+    "rows": 2887306,
+    "foreign": 33029,
+    "stray_open": 20237,
+    "high_capped": 4615,
+    "stale_run": 4845,
+    "bad_tick_share": 0.00868699,
+    "foreign_share": 0.01143938,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_ADANIPORTS_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2966141,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2959147,
+    "spikes": 1028,
+    "share": 0.0003474,
+    "early_minutes": 682891,
+    "early_spikes": 197,
+    "early_share": 0.00028848,
+    "late_minutes": 2276256,
+    "late_spikes": 831,
+    "late_share": 0.00036507
+   },
+   "lakeclean": {
+    "rows": 2966141,
+    "foreign": 38577,
+    "stray_open": 6995,
+    "high_capped": 4546,
+    "stale_run": 1338,
+    "bad_tick_share": 0.00280937,
+    "foreign_share": 0.01300579,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_APOLLOHOSP_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2874891,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2831183,
+    "spikes": 1198,
+    "share": 0.00042314,
+    "early_minutes": 639629,
+    "early_spikes": 227,
+    "early_share": 0.00035489,
+    "late_minutes": 2191554,
+    "late_spikes": 971,
+    "late_share": 0.00044306
+   },
+   "lakeclean": {
+    "rows": 2874891,
+    "foreign": 79354,
+    "stray_open": 14403,
+    "high_capped": 3458,
+    "stale_run": 9415,
+    "bad_tick_share": 0.00828484,
+    "foreign_share": 0.02760244,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_ASIANPAINT_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2987646,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2978074,
+    "spikes": 1123,
+    "share": 0.00037709,
+    "early_minutes": 694770,
+    "early_spikes": 282,
+    "early_share": 0.00040589,
+    "late_minutes": 2283304,
+    "late_spikes": 841,
+    "late_share": 0.00036833
+   },
+   "lakeclean": {
+    "rows": 2987646,
+    "foreign": 29730,
+    "stray_open": 8960,
+    "high_capped": 4590,
+    "stale_run": 2093,
+    "bad_tick_share": 0.00369957,
+    "foreign_share": 0.00995098,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_AUBANK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2573060,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2534343,
+    "spikes": 912,
+    "share": 0.00035986,
+    "early_minutes": 593273,
+    "early_spikes": 244,
+    "early_share": 0.00041128,
+    "late_minutes": 1941070,
+    "late_spikes": 668,
+    "late_share": 0.00034414
+   },
+   "lakeclean": {
+    "rows": 2573060,
+    "foreign": 36920,
+    "stray_open": 14299,
+    "high_capped": 4387,
+    "stale_run": 1138,
+    "bad_tick_share": 0.00599947,
+    "foreign_share": 0.01434867,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_AXISBANK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 3018532,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 3010983,
+    "spikes": 1246,
+    "share": 0.00041382,
+    "early_minutes": 710596,
+    "early_spikes": 303,
+    "early_share": 0.0004264,
+    "late_minutes": 2300387,
+    "late_spikes": 943,
+    "late_share": 0.00040993
+   },
+   "lakeclean": {
+    "rows": 3018532,
+    "foreign": 14576,
+    "stray_open": 7030,
+    "high_capped": 5271,
+    "stale_run": 180,
+    "bad_tick_share": 0.00238858,
+    "foreign_share": 0.00482884,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_BAJAJ-AUTO_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2794422,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2779496,
+    "spikes": 807,
+    "share": 0.00029034,
+    "early_minutes": 639975,
+    "early_spikes": 174,
+    "early_share": 0.00027189,
+    "late_minutes": 2139521,
+    "late_spikes": 633,
+    "late_share": 0.00029586
+   },
+   "lakeclean": {
+    "rows": 2794422,
+    "foreign": 27098,
+    "stray_open": 10341,
+    "high_capped": 3959,
+    "stale_run": 2486,
+    "bad_tick_share": 0.00459022,
+    "foreign_share": 0.00969718,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_BAJAJFINSV_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2943216,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2932346,
+    "spikes": 1738,
+    "share": 0.0005927,
+    "early_minutes": 670496,
+    "early_spikes": 365,
+    "early_share": 0.00054437,
+    "late_minutes": 2261850,
+    "late_spikes": 1373,
+    "late_share": 0.00060703
+   },
+   "lakeclean": {
+    "rows": 2943216,
+    "foreign": 45747,
+    "stray_open": 9615,
+    "high_capped": 4313,
+    "stale_run": 1526,
+    "bad_tick_share": 0.00378532,
+    "foreign_share": 0.0155432,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_BAJFINANCE_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2028168,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2025854,
+    "spikes": 439,
+    "share": 0.0002167,
+    "early_minutes": 465828,
+    "early_spikes": 128,
+    "early_share": 0.00027478,
+    "late_minutes": 1560026,
+    "late_spikes": 311,
+    "late_share": 0.00019936
+   },
+   "lakeclean": {
+    "rows": 2028168,
+    "foreign": 5700,
+    "stray_open": 2801,
+    "high_capped": 3755,
+    "stale_run": 3107,
+    "bad_tick_share": 0.00291297,
+    "foreign_share": 0.00281042,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_BANKBARODA_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2856506,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2838660,
+    "spikes": 1721,
+    "share": 0.00060627,
+    "early_minutes": 650119,
+    "early_spikes": 485,
+    "early_share": 0.00074602,
+    "late_minutes": 2188541,
+    "late_spikes": 1236,
+    "late_share": 0.00056476
+   },
+   "lakeclean": {
+    "rows": 2856506,
+    "foreign": 43143,
+    "stray_open": 6852,
+    "high_capped": 5221,
+    "stale_run": 1064,
+    "bad_tick_share": 0.00277122,
+    "foreign_share": 0.01510342,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_BEL_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 3025790,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 3016654,
+    "spikes": 1363,
+    "share": 0.00045183,
+    "early_minutes": 710527,
+    "early_spikes": 404,
+    "early_share": 0.00056859,
+    "late_minutes": 2306127,
+    "late_spikes": 959,
+    "late_share": 0.00041585
+   },
+   "lakeclean": {
+    "rows": 3025790,
+    "foreign": 22068,
+    "stray_open": 5807,
+    "high_capped": 5846,
+    "stale_run": 136,
+    "bad_tick_share": 0.00196412,
+    "foreign_share": 0.0072933,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_BHARTIARTL_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2990512,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2985316,
+    "spikes": 1368,
+    "share": 0.00045824,
+    "early_minutes": 695854,
+    "early_spikes": 354,
+    "early_share": 0.00050873,
+    "late_minutes": 2289462,
+    "late_spikes": 1014,
+    "late_share": 0.0004429
+   },
+   "lakeclean": {
+    "rows": 2990512,
+    "foreign": 27596,
+    "stray_open": 6190,
+    "high_capped": 5617,
+    "stale_run": 1208,
+    "bad_tick_share": 0.00247382,
+    "foreign_share": 0.00922785,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_BSE_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2099717,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2098337,
+    "spikes": 715,
+    "share": 0.00034075,
+    "early_minutes": 489093,
+    "early_spikes": 112,
+    "early_share": 0.000229,
+    "late_minutes": 1609244,
+    "late_spikes": 603,
+    "late_share": 0.00037471
+   },
+   "lakeclean": {
+    "rows": 2099717,
+    "foreign": 126,
+    "stray_open": 5223,
+    "high_capped": 4065,
+    "stale_run": 2572,
+    "bad_tick_share": 0.00371241,
+    "foreign_share": 6.001e-05,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_CANBK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2977844,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2966223,
+    "spikes": 1295,
+    "share": 0.00043658,
+    "early_minutes": 693172,
+    "early_spikes": 315,
+    "early_share": 0.00045443,
+    "late_minutes": 2273051,
+    "late_spikes": 980,
+    "late_share": 0.00043114
+   },
+   "lakeclean": {
+    "rows": 2977844,
+    "foreign": 8444,
+    "stray_open": 6983,
+    "high_capped": 5639,
+    "stale_run": 741,
+    "bad_tick_share": 0.00259382,
+    "foreign_share": 0.00283561,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_CIPLA_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2855855,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2844671,
+    "spikes": 1039,
+    "share": 0.00036524,
+    "early_minutes": 649742,
+    "early_spikes": 235,
+    "early_share": 0.00036168,
+    "late_minutes": 2194929,
+    "late_spikes": 804,
+    "late_share": 0.0003663
+   },
+   "lakeclean": {
+    "rows": 2855855,
+    "foreign": 44985,
+    "stray_open": 8160,
+    "high_capped": 4217,
+    "stale_run": 2540,
+    "bad_tick_share": 0.00374669,
+    "foreign_share": 0.01575185,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_COALINDIA_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2919575,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2907875,
+    "spikes": 1404,
+    "share": 0.00048283,
+    "early_minutes": 678279,
+    "early_spikes": 312,
+    "early_share": 0.00045999,
+    "late_minutes": 2229596,
+    "late_spikes": 1092,
+    "late_share": 0.00048977
+   },
+   "lakeclean": {
+    "rows": 2919575,
+    "foreign": 24726,
+    "stray_open": 8216,
+    "high_capped": 5951,
+    "stale_run": 979,
+    "bad_tick_share": 0.00314943,
+    "foreign_share": 0.00846904,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_DRREDDY_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2954815,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2932366,
+    "spikes": 1490,
+    "share": 0.00050812,
+    "early_minutes": 671556,
+    "early_spikes": 322,
+    "early_share": 0.00047948,
+    "late_minutes": 2260810,
+    "late_spikes": 1168,
+    "late_share": 0.00051663
+   },
+   "lakeclean": {
+    "rows": 2954815,
+    "foreign": 63261,
+    "stray_open": 10165,
+    "high_capped": 4898,
+    "stale_run": 1589,
+    "bad_tick_share": 0.00397791,
+    "foreign_share": 0.02140946,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_EICHERMOT_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2916789,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2889234,
+    "spikes": 1282,
+    "share": 0.00044372,
+    "early_minutes": 656051,
+    "early_spikes": 255,
+    "early_share": 0.00038869,
+    "late_minutes": 2233183,
+    "late_spikes": 1027,
+    "late_share": 0.00045988
+   },
+   "lakeclean": {
+    "rows": 2916789,
+    "foreign": 73800,
+    "stray_open": 13018,
+    "high_capped": 3713,
+    "stale_run": 6449,
+    "bad_tick_share": 0.00667412,
+    "foreign_share": 0.0253018,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_ETERNAL_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2165938,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2155525,
+    "spikes": 1822,
+    "share": 0.00084527,
+    "early_minutes": 506738,
+    "early_spikes": 429,
+    "early_share": 0.00084659,
+    "late_minutes": 1648787,
+    "late_spikes": 1393,
+    "late_share": 0.00084486
+   },
+   "lakeclean": {
+    "rows": 2165938,
+    "foreign": 18476,
+    "stray_open": 3482,
+    "high_capped": 5540,
+    "stale_run": 1086,
+    "bad_tick_share": 0.00210902,
+    "foreign_share": 0.00853025,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_FEDERALBNK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2792975,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2774164,
+    "spikes": 2030,
+    "share": 0.00073175,
+    "early_minutes": 627168,
+    "early_spikes": 421,
+    "early_share": 0.00067127,
+    "late_minutes": 2146996,
+    "late_spikes": 1609,
+    "late_share": 0.00074942
+   },
+   "lakeclean": {
+    "rows": 2792975,
+    "foreign": 42382,
+    "stray_open": 5412,
+    "high_capped": 6524,
+    "stale_run": 1466,
+    "bad_tick_share": 0.00246261,
+    "foreign_share": 0.0151745,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_GRASIM_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2841586,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2809498,
+    "spikes": 1428,
+    "share": 0.00050828,
+    "early_minutes": 621353,
+    "early_spikes": 265,
+    "early_share": 0.00042649,
+    "late_minutes": 2188145,
+    "late_spikes": 1163,
+    "late_share": 0.0005315
+   },
+   "lakeclean": {
+    "rows": 2841586,
+    "foreign": 74789,
+    "stray_open": 14369,
+    "high_capped": 3954,
+    "stale_run": 4045,
+    "bad_tick_share": 0.00648018,
+    "foreign_share": 0.02631946,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_HCLTECH_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2964947,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2954656,
+    "spikes": 1479,
+    "share": 0.00050057,
+    "early_minutes": 687315,
+    "early_spikes": 324,
+    "early_share": 0.0004714,
+    "late_minutes": 2267341,
+    "late_spikes": 1155,
+    "late_share": 0.00050941
+   },
+   "lakeclean": {
+    "rows": 2964947,
+    "foreign": 36202,
+    "stray_open": 9349,
+    "high_capped": 4358,
+    "stale_run": 1292,
+    "bad_tick_share": 0.00358893,
+    "foreign_share": 0.01221,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_HDFCBANK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2892238,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2872182,
+    "spikes": 1486,
+    "share": 0.00051738,
+    "early_minutes": 683715,
+    "early_spikes": 266,
+    "early_share": 0.00038905,
+    "late_minutes": 2188467,
+    "late_spikes": 1220,
+    "late_share": 0.00055747
+   },
+   "lakeclean": {
+    "rows": 2892238,
+    "foreign": 30010,
+    "stray_open": 7392,
+    "high_capped": 6983,
+    "stale_run": 210,
+    "bad_tick_share": 0.00262841,
+    "foreign_share": 0.01037605,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_HDFCLIFE_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2678287,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2660224,
+    "spikes": 1367,
+    "share": 0.00051387,
+    "early_minutes": 610422,
+    "early_spikes": 347,
+    "early_share": 0.00056846,
+    "late_minutes": 2049802,
+    "late_spikes": 1020,
+    "late_share": 0.00049761
+   },
+   "lakeclean": {
+    "rows": 2678287,
+    "foreign": 41782,
+    "stray_open": 8372,
+    "high_capped": 4349,
+    "stale_run": 1163,
+    "bad_tick_share": 0.00356011,
+    "foreign_share": 0.01560027,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_HINDALCO_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2736084,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2730397,
+    "spikes": 1186,
+    "share": 0.00043437,
+    "early_minutes": 639286,
+    "early_spikes": 359,
+    "early_share": 0.00056156,
+    "late_minutes": 2091111,
+    "late_spikes": 827,
+    "late_share": 0.00039548
+   },
+   "lakeclean": {
+    "rows": 2736084,
+    "foreign": 21130,
+    "stray_open": 6177,
+    "high_capped": 4564,
+    "stale_run": 659,
+    "bad_tick_share": 0.00249846,
+    "foreign_share": 0.00772272,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_HINDUNILVR_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2734581,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2728061,
+    "spikes": 1399,
+    "share": 0.00051282,
+    "early_minutes": 635549,
+    "early_spikes": 322,
+    "early_share": 0.00050665,
+    "late_minutes": 2092512,
+    "late_spikes": 1077,
+    "late_share": 0.00051469
+   },
+   "lakeclean": {
+    "rows": 2734581,
+    "foreign": 20248,
+    "stray_open": 9260,
+    "high_capped": 4515,
+    "stale_run": 1185,
+    "bad_tick_share": 0.0038196,
+    "foreign_share": 0.00740443,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_ICICIBANK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2770671,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2766065,
+    "spikes": 1316,
+    "share": 0.00047577,
+    "early_minutes": 657898,
+    "early_spikes": 271,
+    "early_share": 0.00041192,
+    "late_minutes": 2108167,
+    "late_spikes": 1045,
+    "late_share": 0.00049569
+   },
+   "lakeclean": {
+    "rows": 2770671,
+    "foreign": 9612,
+    "stray_open": 5420,
+    "high_capped": 4915,
+    "stale_run": 659,
+    "bad_tick_share": 0.00219405,
+    "foreign_share": 0.0034692,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_IDFCFIRSTB_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2726933,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2723269,
+    "spikes": 2189,
+    "share": 0.00080381,
+    "early_minutes": 631233,
+    "early_spikes": 528,
+    "early_share": 0.00083646,
+    "late_minutes": 2092036,
+    "late_spikes": 1661,
+    "late_share": 0.00079396
+   },
+   "lakeclean": {
+    "rows": 2726933,
+    "foreign": 0,
+    "stray_open": 8419,
+    "high_capped": 5477,
+    "stale_run": 438,
+    "bad_tick_share": 0.00324797,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_INDIGO_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2726756,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2713154,
+    "spikes": 1105,
+    "share": 0.00040728,
+    "early_minutes": 631620,
+    "early_spikes": 177,
+    "early_share": 0.00028023,
+    "late_minutes": 2081534,
+    "late_spikes": 928,
+    "late_share": 0.00044583
+   },
+   "lakeclean": {
+    "rows": 2726756,
+    "foreign": 39957,
+    "stray_open": 8836,
+    "high_capped": 4258,
+    "stale_run": 7342,
+    "bad_tick_share": 0.00593306,
+    "foreign_share": 0.01465368,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_INDUSINDBK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2728904,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2726893,
+    "spikes": 1365,
+    "share": 0.00050057,
+    "early_minutes": 636682,
+    "early_spikes": 300,
+    "early_share": 0.00047119,
+    "late_minutes": 2090211,
+    "late_spikes": 1065,
+    "late_share": 0.00050952
+   },
+   "lakeclean": {
+    "rows": 2728904,
+    "foreign": 0,
+    "stray_open": 6730,
+    "high_capped": 4063,
+    "stale_run": 980,
+    "bad_tick_share": 0.00282531,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_INFY_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2753179,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2750339,
+    "spikes": 1419,
+    "share": 0.00051594,
+    "early_minutes": 653752,
+    "early_spikes": 331,
+    "early_share": 0.00050631,
+    "late_minutes": 2096587,
+    "late_spikes": 1088,
+    "late_share": 0.00051894
+   },
+   "lakeclean": {
+    "rows": 2753179,
+    "foreign": 9342,
+    "stray_open": 5685,
+    "high_capped": 5825,
+    "stale_run": 162,
+    "bad_tick_share": 0.00212373,
+    "foreign_share": 0.00339317,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_ITC_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2727965,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2721395,
+    "spikes": 1600,
+    "share": 0.00058793,
+    "early_minutes": 640853,
+    "early_spikes": 489,
+    "early_share": 0.00076305,
+    "late_minutes": 2080542,
+    "late_spikes": 1111,
+    "late_share": 0.000534
+   },
+   "lakeclean": {
+    "rows": 2727965,
+    "foreign": 16850,
+    "stray_open": 4893,
+    "high_capped": 6059,
+    "stale_run": 251,
+    "bad_tick_share": 0.00188565,
+    "foreign_share": 0.00617677,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_JIOFIN_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2604595,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2592790,
+    "spikes": 1837,
+    "share": 0.0007085,
+    "early_minutes": 604017,
+    "early_spikes": 469,
+    "early_share": 0.00077647,
+    "late_minutes": 1988773,
+    "late_spikes": 1368,
+    "late_share": 0.00068786
+   },
+   "lakeclean": {
+    "rows": 2604595,
+    "foreign": 20136,
+    "stray_open": 5564,
+    "high_capped": 4555,
+    "stale_run": 359,
+    "bad_tick_share": 0.00227406,
+    "foreign_share": 0.00773095,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_JSWSTEEL_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2693124,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2683092,
+    "spikes": 907,
+    "share": 0.00033804,
+    "early_minutes": 617502,
+    "early_spikes": 250,
+    "early_share": 0.00040486,
+    "late_minutes": 2065590,
+    "late_spikes": 657,
+    "late_share": 0.00031807
+   },
+   "lakeclean": {
+    "rows": 2693124,
+    "foreign": 41572,
+    "stray_open": 6850,
+    "high_capped": 3635,
+    "stale_run": 1252,
+    "bad_tick_share": 0.0030084,
+    "foreign_share": 0.01543635,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_KOTAKBANK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2730670,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2726329,
+    "spikes": 1015,
+    "share": 0.0003723,
+    "early_minutes": 637587,
+    "early_spikes": 252,
+    "early_share": 0.00039524,
+    "late_minutes": 2088742,
+    "late_spikes": 763,
+    "late_share": 0.00036529
+   },
+   "lakeclean": {
+    "rows": 2730670,
+    "foreign": 60517,
+    "stray_open": 5066,
+    "high_capped": 4482,
+    "stale_run": 876,
+    "bad_tick_share": 0.00217602,
+    "foreign_share": 0.02216196,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_LT_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2601901,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2552830,
+    "spikes": 1062,
+    "share": 0.00041601,
+    "early_minutes": 599400,
+    "early_spikes": 227,
+    "early_share": 0.00037871,
+    "late_minutes": 1953430,
+    "late_spikes": 835,
+    "late_share": 0.00042745
+   },
+   "lakeclean": {
+    "rows": 2601901,
+    "foreign": 13910,
+    "stray_open": 22594,
+    "high_capped": 5286,
+    "stale_run": 2066,
+    "bad_tick_share": 0.00947769,
+    "foreign_share": 0.00534609,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_M&M_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2738611,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2736462,
+    "spikes": 958,
+    "share": 0.00035009,
+    "early_minutes": 641146,
+    "early_spikes": 232,
+    "early_share": 0.00036185,
+    "late_minutes": 2095316,
+    "late_spikes": 726,
+    "late_share": 0.00034649
+   },
+   "lakeclean": {
+    "rows": 2738611,
+    "foreign": 12044,
+    "stray_open": 6005,
+    "high_capped": 4447,
+    "stale_run": 828,
+    "bad_tick_share": 0.00249506,
+    "foreign_share": 0.00439785,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_MARUTI_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2753670,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2751391,
+    "spikes": 1235,
+    "share": 0.00044886,
+    "early_minutes": 647274,
+    "early_spikes": 152,
+    "early_share": 0.00023483,
+    "late_minutes": 2104117,
+    "late_spikes": 1083,
+    "late_share": 0.00051471
+   },
+   "lakeclean": {
+    "rows": 2753670,
+    "foreign": 10924,
+    "stray_open": 9598,
+    "high_capped": 4944,
+    "stale_run": 1426,
+    "bad_tick_share": 0.00400338,
+    "foreign_share": 0.00396707,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_MAXHEALTH_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2429806,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2401011,
+    "spikes": 1107,
+    "share": 0.00046106,
+    "early_minutes": 531259,
+    "early_spikes": 296,
+    "early_share": 0.00055717,
+    "late_minutes": 1869752,
+    "late_spikes": 811,
+    "late_share": 0.00043375
+   },
+   "lakeclean": {
+    "rows": 2429806,
+    "foreign": 78184,
+    "stray_open": 13384,
+    "high_capped": 3156,
+    "stale_run": 4272,
+    "bad_tick_share": 0.00726642,
+    "foreign_share": 0.03217705,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_NESTLEIND_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 1608494,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 1607361,
+    "spikes": 227,
+    "share": 0.00014123,
+    "early_minutes": 352958,
+    "early_spikes": 47,
+    "early_share": 0.00013316,
+    "late_minutes": 1254403,
+    "late_spikes": 180,
+    "late_share": 0.00014349
+   },
+   "lakeclean": {
+    "rows": 1608494,
+    "foreign": 2172,
+    "stray_open": 2686,
+    "high_capped": 3178,
+    "stale_run": 5042,
+    "bad_tick_share": 0.00480449,
+    "foreign_share": 0.00135033,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_NTPC_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2711983,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2704340,
+    "spikes": 1445,
+    "share": 0.00053433,
+    "early_minutes": 632604,
+    "early_spikes": 402,
+    "early_share": 0.00063547,
+    "late_minutes": 2071736,
+    "late_spikes": 1043,
+    "late_share": 0.00050344
+   },
+   "lakeclean": {
+    "rows": 2711983,
+    "foreign": 20436,
+    "stray_open": 5371,
+    "high_capped": 6549,
+    "stale_run": 381,
+    "bad_tick_share": 0.00212096,
+    "foreign_share": 0.00753545,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_ONGC_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2508142,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2483715,
+    "spikes": 1200,
+    "share": 0.00048315,
+    "early_minutes": 576663,
+    "early_spikes": 322,
+    "early_share": 0.00055839,
+    "late_minutes": 1907052,
+    "late_spikes": 878,
+    "late_share": 0.0004604
+   },
+   "lakeclean": {
+    "rows": 2508142,
+    "foreign": 23334,
+    "stray_open": 14257,
+    "high_capped": 6216,
+    "stale_run": 1576,
+    "bad_tick_share": 0.00631264,
+    "foreign_share": 0.0093033,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_PNB_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2715862,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2710402,
+    "spikes": 1253,
+    "share": 0.00046229,
+    "early_minutes": 630534,
+    "early_spikes": 258,
+    "early_share": 0.00040918,
+    "late_minutes": 2079868,
+    "late_spikes": 995,
+    "late_share": 0.0004784
+   },
+   "lakeclean": {
+    "rows": 2715862,
+    "foreign": 0,
+    "stray_open": 7131,
+    "high_capped": 4676,
+    "stale_run": 712,
+    "bad_tick_share": 0.00288785,
+    "foreign_share": 0.0,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_POWERGRID_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2678608,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2659515,
+    "spikes": 2345,
+    "share": 0.00088174,
+    "early_minutes": 611927,
+    "early_spikes": 559,
+    "early_share": 0.00091351,
+    "late_minutes": 2047588,
+    "late_spikes": 1786,
+    "late_share": 0.00087225
+   },
+   "lakeclean": {
+    "rows": 2678608,
+    "foreign": 33211,
+    "stray_open": 8519,
+    "high_capped": 4859,
+    "stale_run": 815,
+    "bad_tick_share": 0.00348465,
+    "foreign_share": 0.0123986,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_RELIANCE_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2780136,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2779129,
+    "spikes": 1275,
+    "share": 0.00045878,
+    "early_minutes": 664826,
+    "early_spikes": 276,
+    "early_share": 0.00041515,
+    "late_minutes": 2114303,
+    "late_spikes": 999,
+    "late_share": 0.0004725
+   },
+   "lakeclean": {
+    "rows": 2780136,
+    "foreign": 2120,
+    "stray_open": 4033,
+    "high_capped": 6501,
+    "stale_run": 97,
+    "bad_tick_share": 0.00148554,
+    "foreign_share": 0.00076255,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_SBILIFE_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2590415,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2578287,
+    "spikes": 1491,
+    "share": 0.00057829,
+    "early_minutes": 578745,
+    "early_spikes": 298,
+    "early_share": 0.00051491,
+    "late_minutes": 1999542,
+    "late_spikes": 1193,
+    "late_share": 0.00059664
+   },
+   "lakeclean": {
+    "rows": 2590415,
+    "foreign": 50829,
+    "stray_open": 10465,
+    "high_capped": 3779,
+    "stale_run": 3092,
+    "bad_tick_share": 0.00523352,
+    "foreign_share": 0.01962195,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_SBIN_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2775281,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2773683,
+    "spikes": 1419,
+    "share": 0.00051159,
+    "early_minutes": 661085,
+    "early_spikes": 340,
+    "early_share": 0.00051431,
+    "late_minutes": 2112598,
+    "late_spikes": 1079,
+    "late_share": 0.00051075
+   },
+   "lakeclean": {
+    "rows": 2775281,
+    "foreign": 3102,
+    "stray_open": 4132,
+    "high_capped": 7265,
+    "stale_run": 141,
+    "bad_tick_share": 0.00153966,
+    "foreign_share": 0.00111772,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_SHRIRAMFIN_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2503895,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2497336,
+    "spikes": 769,
+    "share": 0.00030793,
+    "early_minutes": 581526,
+    "early_spikes": 177,
+    "early_share": 0.00030437,
+    "late_minutes": 1915810,
+    "late_spikes": 592,
+    "late_share": 0.00030901
+   },
+   "lakeclean": {
+    "rows": 2503895,
+    "foreign": 27882,
+    "stray_open": 5866,
+    "high_capped": 3778,
+    "stale_run": 1202,
+    "bad_tick_share": 0.0028228,
+    "foreign_share": 0.01113545,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_SUNPHARMA_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2686596,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2678706,
+    "spikes": 1390,
+    "share": 0.00051891,
+    "early_minutes": 619559,
+    "early_spikes": 275,
+    "early_share": 0.00044386,
+    "late_minutes": 2059147,
+    "late_spikes": 1115,
+    "late_share": 0.00054149
+   },
+   "lakeclean": {
+    "rows": 2686596,
+    "foreign": 32448,
+    "stray_open": 7889,
+    "high_capped": 4930,
+    "stale_run": 669,
+    "bad_tick_share": 0.00318544,
+    "foreign_share": 0.01207774,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_TATACONSUM_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2645740,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2633484,
+    "spikes": 903,
+    "share": 0.00034289,
+    "early_minutes": 595783,
+    "early_spikes": 229,
+    "early_share": 0.00038437,
+    "late_minutes": 2037701,
+    "late_spikes": 674,
+    "late_share": 0.00033076
+   },
+   "lakeclean": {
+    "rows": 2645740,
+    "foreign": 47233,
+    "stray_open": 8954,
+    "high_capped": 3327,
+    "stale_run": 2711,
+    "bad_tick_share": 0.00440897,
+    "foreign_share": 0.01785247,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_TATASTEEL_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2549092,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2527069,
+    "spikes": 1448,
+    "share": 0.000573,
+    "early_minutes": 590023,
+    "early_spikes": 416,
+    "early_share": 0.00070506,
+    "late_minutes": 1937046,
+    "late_spikes": 1032,
+    "late_share": 0.00053277
+   },
+   "lakeclean": {
+    "rows": 2549092,
+    "foreign": 20680,
+    "stray_open": 9163,
+    "high_capped": 7336,
+    "stale_run": 514,
+    "bad_tick_share": 0.00379625,
+    "foreign_share": 0.00811269,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_TCS_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2760178,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2730866,
+    "spikes": 1012,
+    "share": 0.00037058,
+    "early_minutes": 647882,
+    "early_spikes": 169,
+    "early_share": 0.00026085,
+    "late_minutes": 2082984,
+    "late_spikes": 843,
+    "late_share": 0.00040471
+   },
+   "lakeclean": {
+    "rows": 2760178,
+    "foreign": 7836,
+    "stray_open": 15051,
+    "high_capped": 4778,
+    "stale_run": 975,
+    "bad_tick_share": 0.00580615,
+    "foreign_share": 0.00283895,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_TECHM_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2691232,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2682945,
+    "spikes": 1147,
+    "share": 0.00042752,
+    "early_minutes": 618963,
+    "early_spikes": 231,
+    "early_share": 0.0003732,
+    "late_minutes": 2063982,
+    "late_spikes": 916,
+    "late_share": 0.0004438
+   },
+   "lakeclean": {
+    "rows": 2691232,
+    "foreign": 37427,
+    "stray_open": 7538,
+    "high_capped": 3626,
+    "stale_run": 1549,
+    "bad_tick_share": 0.00337652,
+    "foreign_share": 0.01390701,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_TITAN_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2627622,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2572226,
+    "spikes": 1030,
+    "share": 0.00040043,
+    "early_minutes": 596635,
+    "early_spikes": 203,
+    "early_share": 0.00034024,
+    "late_minutes": 1975591,
+    "late_spikes": 827,
+    "late_share": 0.00041861
+   },
+   "lakeclean": {
+    "rows": 2627622,
+    "foreign": 28391,
+    "stray_open": 32104,
+    "high_capped": 4139,
+    "stale_run": 1944,
+    "bad_tick_share": 0.01295772,
+    "foreign_share": 0.01080483,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_TMPV_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2767529,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2766348,
+    "spikes": 1226,
+    "share": 0.00044318,
+    "early_minutes": 657063,
+    "early_spikes": 316,
+    "early_share": 0.00048093,
+    "late_minutes": 2109285,
+    "late_spikes": 910,
+    "late_share": 0.00043143
+   },
+   "lakeclean": {
+    "rows": 2767529,
+    "foreign": 3262,
+    "stray_open": 3579,
+    "high_capped": 6723,
+    "stale_run": 177,
+    "bad_tick_share": 0.00135717,
+    "foreign_share": 0.00117867,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_TRENT_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2704595,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2701051,
+    "spikes": 1109,
+    "share": 0.00041058,
+    "early_minutes": 627925,
+    "early_spikes": 210,
+    "early_share": 0.00033443,
+    "late_minutes": 2073126,
+    "late_spikes": 899,
+    "late_share": 0.00043364
+   },
+   "lakeclean": {
+    "rows": 2704595,
+    "foreign": 10440,
+    "stray_open": 6614,
+    "high_capped": 4415,
+    "stale_run": 1745,
+    "bad_tick_share": 0.00309067,
+    "foreign_share": 0.0038601,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_ULTRACEMCO_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2642219,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2636323,
+    "spikes": 1048,
+    "share": 0.00039752,
+    "early_minutes": 605008,
+    "early_spikes": 198,
+    "early_share": 0.00032727,
+    "late_minutes": 2031315,
+    "late_spikes": 850,
+    "late_share": 0.00041845
+   },
+   "lakeclean": {
+    "rows": 2642219,
+    "foreign": 29067,
+    "stray_open": 9496,
+    "high_capped": 3803,
+    "stale_run": 4538,
+    "bad_tick_share": 0.00531144,
+    "foreign_share": 0.01100098,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_UNIONBANK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2466773,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2430636,
+    "spikes": 1817,
+    "share": 0.00074754,
+    "early_minutes": 542268,
+    "early_spikes": 531,
+    "early_share": 0.00097922,
+    "late_minutes": 1888368,
+    "late_spikes": 1286,
+    "late_share": 0.00068101
+   },
+   "lakeclean": {
+    "rows": 2466773,
+    "foreign": 77,
+    "stray_open": 14275,
+    "high_capped": 3818,
+    "stale_run": 1505,
+    "bad_tick_share": 0.00639702,
+    "foreign_share": 3.121e-05,
+    "foreign_ref": "median spot of the book"
+   }
+  },
+  {
+   "file": "stkopt_YESBANK_MONTH.parquet",
+   "since": "2024-11-01",
+   "rows": 2258970,
+   "spikes": {
+    "early_window": "09:15-10:44",
+    "minutes": 2245432,
+    "spikes": 1487,
+    "share": 0.00066223,
+    "early_minutes": 497785,
+    "early_spikes": 520,
+    "early_share": 0.00104463,
+    "late_minutes": 1747647,
+    "late_spikes": 967,
+    "late_share": 0.00055332
+   },
+   "lakeclean": {
+    "rows": 2258970,
+    "foreign": 13494,
+    "stray_open": 2437,
+    "high_capped": 12481,
+    "stale_run": 162,
+    "bad_tick_share": 0.00115052,
+    "foreign_share": 0.00597352,
+    "foreign_ref": "median spot of the book"
+   }
+  }
+ ],
+ "mcx_futures": [
+  {
+   "file": "fut_1m_live_mcx.parquet",
+   "since": null,
+   "rows": 2493209,
+   "spikes_50pct": 0,
+   "per_symbol": {
+    "ALUMINIUM": {
+     "minutes": 80028,
+     "spikes_2pct": 0,
+     "padded": 68727,
+     "padded_share": 0.858787
+    },
+    "COPPER": {
+     "minutes": 225476,
+     "spikes_2pct": 0,
+     "padded": 185008,
+     "padded_share": 0.820522
+    },
+    "CRUDEOIL": {
+     "minutes": 171122,
+     "spikes_2pct": 0,
+     "padded": 107241,
+     "padded_share": 0.626693
+    },
+    "CRUDEOILM": {
+     "minutes": 274758,
+     "spikes_2pct": 0,
+     "padded": 156707,
+     "padded_share": 0.570346
+    },
+    "GOLD": {
+     "minutes": 149651,
+     "spikes_2pct": 0,
+     "padded": 117745,
+     "padded_share": 0.786797
+    },
+    "GOLDM": {
+     "minutes": 314839,
+     "spikes_2pct": 0,
+     "padded": 202209,
+     "padded_share": 0.642262
+    },
+    "NATGASMINI": {
+     "minutes": 335718,
+     "spikes_2pct": 0,
+     "padded": 216899,
+     "padded_share": 0.646075
+    },
+    "NATURALGAS": {
+     "minutes": 255933,
+     "spikes_2pct": 0,
+     "padded": 167360,
+     "padded_share": 0.653921
+    },
+    "SILVER": {
+     "minutes": 180624,
+     "spikes_2pct": 0,
+     "padded": 132748,
+     "padded_share": 0.734941
+    },
+    "SILVERM": {
+     "minutes": 428535,
+     "spikes_2pct": 0,
+     "padded": 303329,
+     "padded_share": 0.707828
+    },
+    "ZINC": {
+     "minutes": 76525,
+     "spikes_2pct": 0,
+     "padded": 61571,
+     "padded_share": 0.804587
+    }
+   },
+   "spikes_2pct": 0,
+   "spike_share_2pct": 0.0,
+   "padded_share": 0.689691
+  }
+ ]
+}
