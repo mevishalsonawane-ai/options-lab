@@ -1,0 +1,2358 @@
+{
+ "breadth_split_design": {
+  "D-A by D-B": {
+   "confirmed": {
+    "by_family": {
+     "ALUMINIUM": {
+      "gross_per_trade": -543.9393939393958,
+      "net_per_trade": -749.0851948484868,
+      "trades": 33,
+      "win_rate": 0.45454545454545453
+     },
+     "COPPER": {
+      "gross_per_trade": 6718.023255813947,
+      "net_per_trade": 5229.262940116271,
+      "trades": 43,
+      "win_rate": 0.4883720930232558
+     },
+     "CRUDE": {
+      "gross_per_trade": -1405.3846153846155,
+      "net_per_trade": -1483.505551292308,
+      "trades": 13,
+      "win_rate": 0.3076923076923077
+     },
+     "GOLD": {
+      "gross_per_trade": -2027.142857142857,
+      "net_per_trade": -2478.1865060571427,
+      "trades": 28,
+      "win_rate": 0.32142857142857145
+     },
+     "NATGAS": {
+      "gross_per_trade": -1691.3043478260865,
+      "net_per_trade": -1808.6568195652167,
+      "trades": 23,
+      "win_rate": 0.34782608695652173
+     },
+     "SILVER": {
+      "gross_per_trade": 4688.448275862069,
+      "net_per_trade": 4329.52658437931,
+      "trades": 29,
+      "win_rate": 0.5862068965517241
+     },
+     "ZINC": {
+      "gross_per_trade": 1622.727272727274,
+      "net_per_trade": 1386.2301276969708,
+      "trades": 33,
+      "win_rate": 0.5454545454545454
+     }
+    },
+    "energy": {
+     "net": -60884.679016799986,
+     "net_per_trade": -1691.2410838,
+     "trades": 36
+    },
+    "gross_per_trade": 1715.3960396039595,
+    "metals": {
+     "net": 302051.13798639947,
+     "net_per_trade": 1819.585168592769,
+     "trades": 166
+    },
+    "net": 241166.45896959974,
+    "net_per_trade": 1193.8933612356423,
+    "trades": 202,
+    "win_rate": 0.45544554455445546
+   },
+   "unconfirmed": {
+    "by_family": {
+     "ALUMINIUM": {
+      "gross_per_trade": 1264.5833333333344,
+      "net_per_trade": 1051.5107612833342,
+      "trades": 120,
+      "win_rate": 0.5833333333333334
+     },
+     "COPPER": {
+      "gross_per_trade": 1389.5089285714223,
+      "net_per_trade": -34.183775937506134,
+      "trades": 112,
+      "win_rate": 0.4732142857142857
+     },
+     "CRUDE": {
+      "gross_per_trade": 460.64102564102564,
+      "net_per_trade": 394.9352060307692,
+      "trades": 156,
+      "win_rate": 0.5641025641025641
+     },
+     "GOLD": {
+      "gross_per_trade": -453.0081300813008,
+      "net_per_trade": -923.3738204487805,
+      "trades": 123,
+      "win_rate": 0.4715447154471545
+     },
+     "NATGAS": {
+      "gross_per_trade": -204.86111111111137,
+      "net_per_trade": -321.52447395833343,
+      "trades": 144,
+      "win_rate": 0.4583333333333333
+     },
+     "SILVER": {
+      "gross_per_trade": 362.32,
+      "net_per_trade": 32.6538231263999,
+      "trades": 125,
+      "win_rate": 0.512
+     },
+     "ZINC": {
+      "gross_per_trade": 300.0000000000001,
+      "net_per_trade": 46.533032231405095,
+      "trades": 121,
+      "win_rate": 0.49586776859504134
+     }
+    },
+    "energy": {
+     "net": 15310.367890799944,
+     "net_per_trade": 51.034559635999884,
+     "trades": 300
+    },
+    "gross_per_trade": 416.87569367369525,
+    "metals": {
+     "net": 18489.953324599323,
+     "net_per_trade": 30.765313352078763,
+     "trades": 601
+    },
+    "net": 33800.32121539966,
+    "net_per_trade": 37.5142299837954,
+    "trades": 901,
+    "win_rate": 0.5094339622641509
+   }
+  },
+  "I-A by I-B": {
+   "confirmed": {
+    "by_family": {
+     "COPPER": {
+      "gross_per_trade": 2240.217391304345,
+      "net_per_trade": -1005.6274643043514,
+      "trades": 115,
+      "win_rate": 0.26956521739130435
+     },
+     "CRUDE": {
+      "gross_per_trade": 7.394366197183099,
+      "net_per_trade": -80.14925273352112,
+      "trades": 71,
+      "win_rate": 0.15492957746478872
+     },
+     "GOLD": {
+      "gross_per_trade": -280.5159574468085,
+      "net_per_trade": -641.517733645,
+      "trades": 94,
+      "win_rate": 0.26595744680851063
+     },
+     "NATGAS": {
+      "gross_per_trade": 12.721036585365814,
+      "net_per_trade": -124.74172248003053,
+      "trades": 82,
+      "win_rate": 0.23170731707317074
+     },
+     "SILVER": {
+      "gross_per_trade": 59.72380952380952,
+      "net_per_trade": -434.76205246399996,
+      "trades": 105,
+      "win_rate": 0.3142857142857143
+     },
+     "ZINC": {
+      "gross_per_trade": -59.78260869565032,
+      "net_per_trade": -466.73552869565026,
+      "trades": 92,
+      "win_rate": 0.15217391304347827
+     }
+    },
+    "energy": {
+     "net": -15919.418187442496,
+     "net_per_trade": -104.04848488524512,
+     "trades": 153
+    },
+    "gross_per_trade": 417.8812611806794,
+    "metals": {
+     "net": -264539.50950635015,
+     "net_per_trade": -651.5751465673652,
+     "trades": 406
+    },
+    "net": -280458.9276937928,
+    "net_per_trade": -501.7154341570533,
+    "trades": 559,
+    "win_rate": 0.23792486583184258
+   },
+   "unconfirmed": {
+    "by_family": {
+     "COPPER": {
+      "gross_per_trade": -457.6023391812803,
+      "net_per_trade": -3744.3458827680247,
+      "trades": 513,
+      "win_rate": 0.1871345029239766
+     },
+     "CRUDE": {
+      "gross_per_trade": -16.41347583643123,
+      "net_per_trade": -96.98273416555948,
+      "trades": 538,
+      "win_rate": 0.14869888475836432
+     },
+     "GOLD": {
+      "gross_per_trade": -133.4897435897436,
+      "net_per_trade": -526.1109481589231,
+      "trades": 390,
+      "win_rate": 0.33589743589743587
+     },
+     "NATGAS": {
+      "gross_per_trade": 13.100142045454545,
+      "net_per_trade": -128.8339785034801,
+      "trades": 528,
+      "win_rate": 0.2159090909090909
+     },
+     "SILVER": {
+      "gross_per_trade": -308.8198891625616,
+      "net_per_trade": -883.8830458408436,
+      "trades": 406,
+      "win_rate": 0.29310344827586204
+     },
+     "ZINC": {
+      "gross_per_trade": -29.86247544204242,
+      "net_per_trade": -439.48907103339803,
+      "trades": 509,
+      "win_rate": 0.16306483300589392
+     }
+    },
+    "energy": {
+     "net": -120201.05163090852,
+     "net_per_trade": -112.75896025413554,
+     "trades": 1066
+    },
+    "gross_per_trade": -148.8576456310667,
+    "metals": {
+     "net": -2708589.161409362,
+     "net_per_trade": -1489.8730260777552,
+     "trades": 1818
+    },
+    "net": -2828790.213040267,
+    "net_per_trade": -980.856523245585,
+    "trades": 2884,
+    "win_rate": 0.21601941747572814
+   }
+  },
+  "I-A by I-C": {
+   "confirmed": {
+    "by_family": {
+     "COPPER": {
+      "gross_per_trade": 977.9962546816429,
+      "net_per_trade": -2274.70419117978,
+      "trades": 267,
+      "win_rate": 0.21348314606741572
+     },
+     "CRUDE": {
+      "gross_per_trade": -17.343704600484262,
+      "net_per_trade": -98.62887399409445,
+      "trades": 413,
+      "win_rate": 0.17675544794188863
+     },
+     "GOLD": {
+      "gross_per_trade": -87.82908163265306,
+      "net_per_trade": -440.0052019209694,
+      "trades": 294,
+      "win_rate": 0.336734693877551
+     },
+     "NATGAS": {
+      "gross_per_trade": -5.516233766233775,
+      "net_per_trade": -144.99371634162338,
+      "trades": 385,
+      "win_rate": 0.21558441558441557
+     },
+     "SILVER": {
+      "gross_per_trade": -79.58554817275747,
+      "net_per_trade": -569.8564462724087,
+      "trades": 301,
+      "win_rate": 0.3388704318936877
+     }
+    },
+    "energy": {
+     "net": -96556.30575108602,
+     "net_per_trade": -120.99787688106017,
+     "trades": 798
+    },
+    "gross_per_trade": 121.72367469879437,
+    "metals": {
+     "net": -908234.3387377624,
+     "net_per_trade": -1053.6361238257093,
+     "trades": 862
+    },
+    "net": -1004790.6444888473,
+    "net_per_trade": -605.2955689691852,
+    "trades": 1660,
+    "win_rate": 0.2493975903614458
+   },
+   "unconfirmed": {
+    "by_family": {
+     "COPPER": {
+      "gross_per_trade": -659.9722991689639,
+      "net_per_trade": -3958.865864847634,
+      "trades": 361,
+      "win_rate": 0.19390581717451524
+     },
+     "CRUDE": {
+      "gross_per_trade": -5.829081632653061,
+      "net_per_trade": -87.41623962035715,
+      "trades": 196,
+      "win_rate": 0.09183673469387756
+     },
+     "GOLD": {
+      "gross_per_trade": -276.8828947368421,
+      "net_per_trade": -716.4442493676052,
+      "trades": 190,
+      "win_rate": 0.3
+     },
+     "NATGAS": {
+      "gross_per_trade": 44.81666666666667,
+      "net_per_trade": -99.69147156299998,
+      "trades": 225,
+      "win_rate": 0.2222222222222222
+     },
+     "SILVER": {
+      "gross_per_trade": -453.1172619047619,
+      "net_per_trade": -1109.4273418671787,
+      "trades": 210,
+      "win_rate": 0.23809523809523808
+     },
+     "ZINC": {
+      "gross_per_trade": -34.44259567387591,
+      "net_per_trade": -443.6599098103151,
+      "trades": 601,
+      "win_rate": 0.16139767054908485
+     }
+    },
+    "energy": {
+     "net": -39564.164067264996,
+     "net_per_trade": -93.97663673934679,
+     "trades": 421
+    },
+    "gross_per_trade": -223.09092821087793,
+    "metals": {
+     "net": -2064894.332177949,
+     "net_per_trade": -1516.075133757671,
+     "trades": 1362
+    },
+    "net": -2104458.496245213,
+    "net_per_trade": -1180.2907999131871,
+    "trades": 1783,
+    "win_rate": 0.19181155356141336
+   }
+  }
+ },
+ "info": {
+  "bars": {
+   "ALUMINIUM": {
+    "first": "2026-07-24",
+    "last": "2026-10-19",
+    "n": 9191,
+    "sessions": 56,
+    "signals": 893
+   },
+   "COPPER": {
+    "first": "2025-08-05",
+    "last": "2026-10-19",
+    "n": 52578,
+    "sessions": 309,
+    "signals": 6587
+   },
+   "CRUDE": {
+    "first": "2025-08-05",
+    "last": "2026-10-19",
+    "n": 52607,
+    "sessions": 309,
+    "signals": 7911
+   },
+   "GOLD": {
+    "first": "2025-08-05",
+    "last": "2026-10-19",
+    "n": 52253,
+    "sessions": 309,
+    "signals": 7325
+   },
+   "NATGAS": {
+    "first": "2025-08-05",
+    "last": "2026-10-19",
+    "n": 52607,
+    "sessions": 309,
+    "signals": 7617
+   },
+   "SILVER": {
+    "first": "2025-08-05",
+    "last": "2026-10-19",
+    "n": 50802,
+    "sessions": 309,
+    "signals": 7097
+   },
+   "ZINC": {
+    "first": "2025-08-05",
+    "last": "2026-10-19",
+    "n": 48083,
+    "sessions": 300,
+    "signals": 5621
+   }
+  },
+  "daily": {
+   "ALUMINIUM": {
+    "first": "2012-01-02",
+    "last": "2026-10-16",
+    "rolls": 161,
+    "rows": 3650
+   },
+   "COPPER": {
+    "first": "2012-01-02",
+    "last": "2026-10-16",
+    "rolls": 122,
+    "rows": 3651
+   },
+   "CRUDE": {
+    "first": "2012-01-02",
+    "last": "2026-10-16",
+    "rolls": 175,
+    "rows": 3621
+   },
+   "GOLD": {
+    "first": "2012-01-02",
+    "last": "2026-10-16",
+    "rolls": 89,
+    "rows": 3664
+   },
+   "NATGAS": {
+    "first": "2012-01-02",
+    "last": "2026-10-16",
+    "rolls": 175,
+    "rows": 3614
+   },
+   "SILVER": {
+    "first": "2012-01-02",
+    "last": "2026-10-16",
+    "rolls": 77,
+    "rows": 3683
+   },
+   "ZINC": {
+    "first": "2012-01-02",
+    "last": "2026-10-16",
+    "rolls": 163,
+    "rows": 3651
+   }
+  },
+  "drivers": {
+   "ALUMINIUM": null,
+   "COPPER": {
+    "bars": 91975,
+    "first": "2025-07-01 05:30:00",
+    "last": "2026-10-20 05:25:00"
+   },
+   "CRUDE": {
+    "bars": 92026,
+    "first": "2025-07-01 05:30:00",
+    "last": "2026-10-20 05:25:00"
+   },
+   "GOLD": {
+    "bars": 92606,
+    "first": "2025-07-01 05:30:00",
+    "last": "2026-10-20 05:25:00"
+   },
+   "NATGAS": {
+    "bars": 81832,
+    "first": "2025-07-01 05:30:00",
+    "last": "2026-10-20 05:25:00"
+   },
+   "SILVER": {
+    "bars": 92364,
+    "first": "2025-07-01 05:30:00",
+    "last": "2026-10-20 05:25:00"
+   },
+   "ZINC": null
+  },
+  "expiry_days": {
+   "ALUMINIUM": null,
+   "COPPER": [
+    "2025-08-22",
+    "2025-09-23",
+    "2025-10-24",
+    "2025-11-21",
+    "2025-12-23",
+    "2026-01-22",
+    "2026-02-20",
+    "2026-03-23",
+    "2026-04-23",
+    "2026-05-22",
+    "2026-06-23",
+    "2026-07-24",
+    "2026-08-24",
+    "2026-09-23"
+   ],
+   "CRUDE": [
+    "2025-08-14",
+    "2025-09-17",
+    "2025-10-16",
+    "2025-11-17",
+    "2025-12-16",
+    "2026-01-14",
+    "2026-02-17",
+    "2026-03-17",
+    "2026-04-16",
+    "2026-05-14",
+    "2026-06-16",
+    "2026-07-16",
+    "2026-08-17",
+    "2026-09-17",
+    "2026-10-15"
+   ],
+   "GOLD": [
+    "2025-08-27",
+    "2025-09-23",
+    "2025-10-29",
+    "2025-11-28",
+    "2025-12-29",
+    "2026-01-29",
+    "2026-02-26",
+    "2026-03-26",
+    "2026-04-28",
+    "2026-05-29",
+    "2026-06-26",
+    "2026-07-29",
+    "2026-08-28",
+    "2026-09-25"
+   ],
+   "NATGAS": [
+    "2025-08-22",
+    "2025-09-23",
+    "2025-10-24",
+    "2025-11-20",
+    "2025-12-23",
+    "2026-01-22",
+    "2026-02-20",
+    "2026-03-24",
+    "2026-04-23",
+    "2026-05-22",
+    "2026-06-23",
+    "2026-07-24",
+    "2026-08-24",
+    "2026-09-23"
+   ],
+   "SILVER": [
+    "2025-08-20",
+    "2025-09-25",
+    "2025-10-28",
+    "2025-11-19",
+    "2025-12-24",
+    "2026-01-27",
+    "2026-02-18",
+    "2026-03-26",
+    "2026-04-21",
+    "2026-05-26",
+    "2026-06-19",
+    "2026-07-28",
+    "2026-08-24",
+    "2026-09-24"
+   ],
+   "ZINC": [
+    "2025-08-22",
+    "2025-09-23",
+    "2025-10-24",
+    "2025-11-21",
+    "2025-12-23",
+    "2026-01-22",
+    "2026-02-20",
+    "2026-03-23",
+    "2026-05-22",
+    "2026-06-23",
+    "2026-07-24",
+    "2026-08-24",
+    "2026-09-23"
+   ]
+  }
+ },
+ "variants": {
+  "D-A": {
+   "design": {
+    "avg_loss": -7883.405332823915,
+    "avg_win": 8396.745052456987,
+    "best_family": "COPPER",
+    "calls": 570,
+    "cost": 447148.219815,
+    "days": 862,
+    "dd_beyond_40k": true,
+    "exits": {
+     "lock": 12,
+     "roll": 318,
+     "stop": 253,
+     "time": 520
+    },
+    "gross": 722114.9999999991,
+    "max_dd": 552237.8556366002,
+    "months": 132,
+    "months_below_stop": 51,
+    "net": 274966.7801849991,
+    "net_2x_slip": -68396.66831500077,
+    "net_calls": 101915.98705399965,
+    "net_per_day": 318.98698397331685,
+    "net_puts": 173050.79313099934,
+    "net_wo_best_family": 53937.05666500013,
+    "net_wo_top5": -395789.18729500053,
+    "puts": 533,
+    "stale_exits": 0,
+    "top5_share": 2.439407287777498,
+    "trades": 1103,
+    "win_rate": 0.499546690843155,
+    "worst_day": -91983.67863540012,
+    "worst_month": -98885.35156520015,
+    "worst_month_name": "2022-04"
+   },
+   "design_breakdown": {
+    "by_family": {
+     "ALUMINIUM": {
+      "avg_loss": -2853.477200558823,
+      "avg_win": 3476.446230141177,
+      "best_family": "ALUMINIUM",
+      "calls": 78,
+      "cost": 32338.520076,
+      "days": 153,
+      "dd_beyond_40k": false,
+      "exits": {
+       "lock": 2,
+       "roll": 55,
+       "stop": 24,
+       "time": 72
+      },
+      "gross": 133800.00000000006,
+      "max_dd": 30898.61572200003,
+      "months": 105,
+      "months_below_stop": 1,
+      "net": 101461.47992400006,
+      "net_2x_slip": 79935.56992400005,
+      "net_calls": 95015.46051800005,
+      "net_per_day": 663.1469276078435,
+      "net_puts": 6446.019405999992,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": 25409.938915999955,
+      "puts": 75,
+      "stale_exits": 0,
+      "top5_share": 0.7495607304857629,
+      "trades": 153,
+      "win_rate": 0.5555555555555556,
+      "worst_day": -14526.297594000005,
+      "worst_month": -14526.297594000005,
+      "worst_month_name": "2022-05"
+     },
+     "COPPER": {
+      "avg_loss": -27288.80061370372,
+      "avg_win": 32857.061800405405,
+      "best_family": "COPPER",
+      "calls": 81,
+      "cost": 223470.27647999997,
+      "days": 155,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "roll": 35,
+       "stop": 37,
+       "time": 82
+      },
+      "gross": 444499.999999999,
+      "max_dd": 400716.49119500024,
+      "months": 111,
+      "months_below_stop": 41,
+      "net": 221029.72351999904,
+      "net_2x_slip": 35294.09851999907,
+      "net_calls": 183997.9164199996,
+      "net_per_day": 1425.9982162580584,
+      "net_puts": 37031.80709999941,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -449726.2439600008,
+      "puts": 74,
+      "stale_exits": 0,
+      "top5_share": 3.034686723567789,
+      "trades": 155,
+      "win_rate": 0.4774193548387097,
+      "worst_day": -90762.18954000018,
+      "worst_month": -129879.27814000007,
+      "worst_month_name": "2021-09"
+     },
+     "CRUDE": {
+      "avg_loss": -1833.9745629714282,
+      "avg_win": 1995.0039274217393,
+      "best_family": "CRUDE",
+      "calls": 88,
+      "cost": 11265.680026,
+      "days": 169,
+      "dd_beyond_40k": false,
+      "exits": {
+       "lock": 1,
+       "roll": 59,
+       "stop": 42,
+       "time": 67
+      },
+      "gross": 53590.0,
+      "max_dd": 15649.69829879998,
+      "months": 106,
+      "months_below_stop": 0,
+      "net": 42324.319974,
+      "net_2x_slip": 37529.328974000004,
+      "net_calls": 16178.315283999998,
+      "net_per_day": 250.43976315976332,
+      "net_puts": 26146.004689999994,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": 2754.638021599996,
+      "puts": 81,
+      "stale_exits": 0,
+      "top5_share": 0.9349159532086474,
+      "trades": 169,
+      "win_rate": 0.5443786982248521,
+      "worst_day": -9112.4898684,
+      "worst_month": -8539.8927028,
+      "worst_month_name": "2022-09"
+     },
+     "GOLD": {
+      "avg_loss": -6767.879511395239,
+      "avg_win": 5754.293684662686,
+      "best_family": "GOLD",
+      "calls": 80,
+      "cost": 70484.2020848,
+      "days": 151,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 2,
+       "roll": 31,
+       "stop": 36,
+       "time": 82
+      },
+      "gross": -112480.0,
+      "max_dd": 232125.93903799995,
+      "months": 112,
+      "months_below_stop": 10,
+      "net": -182964.20208479994,
+      "net_2x_slip": -237432.29208480002,
+      "net_calls": -154219.35839,
+      "net_per_day": -1211.6834575152313,
+      "net_puts": -28744.84369480001,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -316442.95074520004,
+      "puts": 71,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 151,
+      "win_rate": 0.44370860927152317,
+      "worst_day": -41431.243576,
+      "worst_month": -65760.4099236,
+      "worst_month_name": "2020-03"
+     },
+     "NATGAS": {
+      "avg_loss": -4165.0448633763435,
+      "avg_win": 4046.6289350540537,
+      "best_family": "NATGAS",
+      "calls": 80,
+      "cost": 19498.6311,
+      "days": 167,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 2,
+       "roll": 59,
+       "stop": 42,
+       "time": 64
+      },
+      "gross": -68400.00000000003,
+      "max_dd": 121498.19847300001,
+      "months": 110,
+      "months_below_stop": 4,
+      "net": -87898.63110000006,
+      "net_2x_slip": -99840.11610000004,
+      "net_calls": -103290.99406599998,
+      "net_per_day": -526.3391083832339,
+      "net_puts": 15392.362965999962,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -190536.50165500006,
+      "puts": 87,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 167,
+      "win_rate": 0.4431137724550898,
+      "worst_day": -30850.330843999993,
+      "worst_month": -30850.330843999993,
+      "worst_month_name": "2022-11"
+     },
+     "SILVER": {
+      "avg_loss": -6457.085483052055,
+      "avg_win": 7419.817766674074,
+      "best_family": "SILVER",
+      "calls": 69,
+      "cost": 51617.0011622,
+      "days": 154,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 3,
+       "roll": 26,
+       "stop": 36,
+       "time": 89
+      },
+      "gross": 181255.0,
+      "max_dd": 87463.93613040002,
+      "months": 115,
+      "months_below_stop": 7,
+      "net": 129637.99883780004,
+      "net_2x_slip": 91536.2563378,
+      "net_calls": 16848.360896000002,
+      "net_per_day": 841.8051872584418,
+      "net_puts": 112789.63794179999,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -51108.2236118,
+      "puts": 85,
+      "stale_exits": 0,
+      "top5_share": 1.3942379863156122,
+      "trades": 154,
+      "win_rate": 0.525974025974026,
+      "worst_day": -23995.8156698,
+      "worst_month": -23995.8156698,
+      "worst_month_name": "2021-03"
+     },
+     "ZINC": {
+      "avg_loss": -4983.89620405263,
+      "avg_win": 5514.771828487178,
+      "best_family": "ZINC",
+      "calls": 94,
+      "cost": 38473.908886000005,
+      "days": 154,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "roll": 53,
+       "stop": 36,
+       "time": 64
+      },
+      "gross": 89850.00000000006,
+      "max_dd": 63008.602341999875,
+      "months": 112,
+      "months_below_stop": 4,
+      "net": 51376.09111400004,
+      "net_2x_slip": 24580.486114000054,
+      "net_calls": 47386.286392000045,
+      "net_per_day": 333.6109812597405,
+      "net_puts": 3989.8047220000153,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -58405.24428399996,
+      "puts": 60,
+      "stale_exits": 0,
+      "top5_share": 2.136817593896016,
+      "trades": 154,
+      "win_rate": 0.5064935064935064,
+      "worst_day": -19672.54211199999,
+      "worst_month": -19672.54211199999,
+      "worst_month_name": "2022-04"
+     }
+    },
+    "by_group": {
+     "energy_futures": {
+      "avg_loss": -3109.207139075294,
+      "avg_win": 2909.583750101205,
+      "best_family": "CRUDE",
+      "calls": 168,
+      "cost": 30764.311126,
+      "days": 326,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 3,
+       "roll": 118,
+       "stop": 84,
+       "time": 131
+      },
+      "gross": -14810.000000000051,
+      "max_dd": 87631.80253740006,
+      "months": 124,
+      "months_below_stop": 4,
+      "net": -45574.31112600006,
+      "net_2x_slip": -62310.787126000054,
+      "net_calls": -87112.678782,
+      "net_per_day": -139.79850038650324,
+      "net_puts": 41538.367655999966,
+      "net_wo_best_family": -87898.63110000006,
+      "net_wo_top5": -148212.181681,
+      "puts": 168,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 336,
+      "win_rate": 0.49404761904761907,
+      "worst_day": -30850.330843999993,
+      "worst_month": -29596.320657999993,
+      "worst_month_name": "2022-11"
+     },
+     "metals_futures": {
+      "avg_loss": -10008.04850805236,
+      "avg_win": 10762.637977628572,
+      "best_family": "COPPER",
+      "calls": 402,
+      "cost": 416383.90868899995,
+      "days": 617,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 9,
+       "roll": 200,
+       "stop": 169,
+       "time": 389
+      },
+      "gross": 736924.9999999991,
+      "max_dd": 563901.2145936002,
+      "months": 131,
+      "months_below_stop": 50,
+      "net": 320541.0913109992,
+      "net_2x_slip": -6085.881189000793,
+      "net_calls": 189028.66583599974,
+      "net_per_day": 519.515545074553,
+      "net_puts": 131512.42547499936,
+      "net_wo_best_family": 99511.36779100003,
+      "net_wo_top5": -350214.87616900075,
+      "puts": 365,
+      "stale_exits": 0,
+      "top5_share": 2.092574043273632,
+      "trades": 767,
+      "win_rate": 0.5019556714471969,
+      "worst_day": -91983.67863540012,
+      "worst_month": -114085.10250020014,
+      "worst_month_name": "2022-04"
+     }
+    }
+   },
+   "design_twin_mean": 21224.72512186086,
+   "design_twin_p": 0.33532934131736525,
+   "label": "plain Donchian 20 (daily, futures)"
+  },
+  "D-B": {
+   "design": {
+    "avg_loss": -10301.357621930438,
+    "avg_win": 12608.036330316865,
+    "best_family": "COPPER",
+    "calls": 184,
+    "cost": 181531.99690700002,
+    "days": 143,
+    "dd_beyond_40k": true,
+    "exits": {
+     "lock": 2,
+     "roll": 116,
+     "stop": 91,
+     "time": 164
+    },
+    "gross": 142084.99999999942,
+    "max_dd": 636366.2949898004,
+    "months": 85,
+    "months_below_stop": 31,
+    "net": -39446.996907000575,
+    "net_2x_slip": -181142.63740700073,
+    "net_calls": -81306.36412240035,
+    "net_per_day": -275.85312522378024,
+    "net_puts": 41859.36721539966,
+    "net_wo_best_family": -137739.07702199995,
+    "net_wo_top5": -650580.3787870004,
+    "puts": 189,
+    "stale_exits": 0,
+    "top5_share": null,
+    "trades": 373,
+    "win_rate": 0.4450402144772118,
+    "worst_day": -140544.60577100012,
+    "worst_month": -131555.06556339993,
+    "worst_month_name": "2022-07"
+   },
+   "design_breakdown": {
+    "by_family": {
+     "ALUMINIUM": {
+      "avg_loss": -5347.351214551727,
+      "avg_win": 2847.1075732000013,
+      "best_family": "ALUMINIUM",
+      "calls": 31,
+      "cost": 12909.958026,
+      "days": 59,
+      "dd_beyond_40k": true,
+      "exits": {
+       "roll": 24,
+       "stop": 13,
+       "time": 22
+      },
+      "gross": -56750.000000000044,
+      "max_dd": 79910.81467600004,
+      "months": 54,
+      "months_below_stop": 2,
+      "net": -69659.95802600004,
+      "net_2x_slip": -78355.99302600004,
+      "net_calls": -46939.33421,
+      "net_per_day": -1180.6772546779666,
+      "net_puts": -22720.623816000032,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -111569.09780400008,
+      "puts": 28,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 59,
+      "win_rate": 0.5084745762711864,
+      "worst_day": -31165.97516000001,
+      "worst_month": -31165.97516000001,
+      "worst_month_name": "2021-10"
+     },
+     "COPPER": {
+      "avg_loss": -31177.543483026333,
+      "avg_win": 42767.957749,
+      "best_family": "COPPER",
+      "calls": 34,
+      "cost": 102082.91988500001,
+      "days": 68,
+      "dd_beyond_40k": true,
+      "exits": {
+       "roll": 20,
+       "stop": 16,
+       "time": 32
+      },
+      "gross": 200374.99999999942,
+      "max_dd": 504632.87076000037,
+      "months": 60,
+      "months_below_stop": 26,
+      "net": 98292.08011499936,
+      "net_2x_slip": 13325.142614999393,
+      "net_calls": -103549.82853500031,
+      "net_per_day": 1445.4717663970496,
+      "net_puts": 201841.90864999976,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -512841.3017650007,
+      "puts": 34,
+      "stale_exits": 0,
+      "top5_share": 6.217524150114522,
+      "trades": 68,
+      "win_rate": 0.4411764705882353,
+      "worst_day": -96872.40764000018,
+      "worst_month": -96872.40764000018,
+      "worst_month_name": "2022-11"
+     },
+     "CRUDE": {
+      "avg_loss": -2053.5267782,
+      "avg_win": 2186.2449522105267,
+      "best_family": "CRUDE",
+      "calls": 17,
+      "cost": 2534.8279155999994,
+      "days": 37,
+      "dd_beyond_40k": false,
+      "exits": {
+       "roll": 17,
+       "stop": 7,
+       "time": 13
+      },
+      "gross": 7110.0,
+      "max_dd": 11230.4256084,
+      "months": 35,
+      "months_below_stop": 0,
+      "net": 4575.172084400001,
+      "net_2x_slip": 3502.2010843999997,
+      "net_calls": -1248.8433987999988,
+      "net_per_day": 123.65329957837841,
+      "net_puts": 5824.015483199997,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -23843.406088000003,
+      "puts": 20,
+      "stale_exits": 0,
+      "top5_share": 6.211477436946916,
+      "trades": 37,
+      "win_rate": 0.5135135135135135,
+      "worst_day": -6580.8430924,
+      "worst_month": -6580.8430924,
+      "worst_month_name": "2022-09"
+     },
+     "GOLD": {
+      "avg_loss": -6895.3596894125,
+      "avg_win": 8450.323890259999,
+      "best_family": "GOLD",
+      "calls": 25,
+      "cost": 24065.032256,
+      "days": 52,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "roll": 10,
+       "stop": 15,
+       "time": 26
+      },
+      "gross": -27580.0,
+      "max_dd": 67662.75673760001,
+      "months": 46,
+      "months_below_stop": 3,
+      "net": -51645.032256000006,
+      "net_2x_slip": -70247.85825599999,
+      "net_calls": -10880.792097199996,
+      "net_per_day": -993.1736972307693,
+      "net_puts": -40764.24015880001,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -144483.04540119998,
+      "puts": 27,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 52,
+      "win_rate": 0.38461538461538464,
+      "worst_day": -41431.243576,
+      "worst_month": -41431.243576,
+      "worst_month_name": "2020-03"
+     },
+     "NATGAS": {
+      "avg_loss": -4149.379376000001,
+      "avg_win": 3628.2266246153854,
+      "best_family": "NATGAS",
+      "calls": 17,
+      "cost": 4418.158904,
+      "days": 37,
+      "dd_beyond_40k": true,
+      "exits": {
+       "roll": 11,
+       "stop": 12,
+       "time": 14
+      },
+      "gross": -48000.00000000001,
+      "max_dd": 54425.45250500002,
+      "months": 35,
+      "months_below_stop": 2,
+      "net": -52418.158904000025,
+      "net_2x_slip": -55112.05890400001,
+      "net_calls": -31294.794272000006,
+      "net_per_day": -1416.7069974054061,
+      "net_puts": -21123.364632000008,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -81572.88863700003,
+      "puts": 20,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 37,
+      "win_rate": 0.35135135135135137,
+      "worst_day": -20328.424477999994,
+      "worst_month": -20328.424477999994,
+      "worst_month_name": "2014-02"
+     },
+     "SILVER": {
+      "avg_loss": -7781.16987086875,
+      "avg_win": 11306.405069335999,
+      "best_family": "SILVER",
+      "calls": 25,
+      "cost": 19417.3091344,
+      "days": 57,
+      "dd_beyond_40k": true,
+      "exits": {
+       "roll": 9,
+       "stop": 16,
+       "time": 32
+      },
+      "gross": 53080.0,
+      "max_dd": 64115.54215580001,
+      "months": 49,
+      "months_below_stop": 6,
+      "net": 33662.690865600016,
+      "net_2x_slip": 19274.09486560003,
+      "net_calls": 69319.0953446,
+      "net_per_day": 590.573523957895,
+      "net_puts": -35656.404479,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -143928.99843160002,
+      "puts": 32,
+      "stale_exits": 0,
+      "top5_share": 5.275623686954907,
+      "trades": 57,
+      "win_rate": 0.43859649122807015,
+      "worst_day": -22641.7306138,
+      "worst_month": -23857.3291042,
+      "worst_month_name": "2012-11"
+     },
+     "ZINC": {
+      "avg_loss": -5481.28403535294,
+      "avg_win": 6348.616083310346,
+      "best_family": "ZINC",
+      "calls": 35,
+      "cost": 16103.790786,
+      "days": 63,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "roll": 25,
+       "stop": 12,
+       "time": 25
+      },
+      "gross": 13850.000000000047,
+      "max_dd": 59734.89441199995,
+      "months": 58,
+      "months_below_stop": 3,
+      "net": -2253.7907859999514,
+      "net_2x_slip": -13528.165785999952,
+      "net_calls": 43288.13304600009,
+      "net_per_day": -35.77445692063415,
+      "net_puts": -45541.92383200004,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -100833.84698599999,
+      "puts": 28,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 63,
+      "win_rate": 0.4603174603174603,
+      "worst_day": -29248.528731999988,
+      "worst_month": -29248.528731999988,
+      "worst_month_name": "2022-04"
+     }
+    },
+    "by_group": {
+     "energy_futures": {
+      "avg_loss": -3251.156834085715,
+      "avg_win": 2772.0500066249997,
+      "best_family": "CRUDE",
+      "calls": 34,
+      "cost": 6952.9868196,
+      "days": 40,
+      "dd_beyond_40k": true,
+      "exits": {
+       "roll": 28,
+       "stop": 19,
+       "time": 27
+      },
+      "gross": -40890.000000000015,
+      "max_dd": 48886.2609886,
+      "months": 35,
+      "months_below_stop": 2,
+      "net": -47842.98681960002,
+      "net_2x_slip": -51609.85781960001,
+      "net_calls": -32543.637670800006,
+      "net_per_day": -1196.0746704900005,
+      "net_puts": -15299.349148800007,
+      "net_wo_best_family": -52418.15890400002,
+      "net_wo_top5": -84664.27011700004,
+      "puts": 40,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 74,
+      "win_rate": 0.43243243243243246,
+      "worst_day": -20328.424477999994,
+      "worst_month": -23183.126873599995,
+      "worst_month_name": "2014-02"
+     },
+     "metals_futures": {
+      "avg_loss": -12095.954186109097,
+      "avg_win": 14956.928586720896,
+      "best_family": "COPPER",
+      "calls": 150,
+      "cost": 174579.0100874,
+      "days": 107,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 2,
+       "roll": 88,
+       "stop": 72,
+       "time": 137
+      },
+      "gross": 182974.99999999933,
+      "max_dd": 619417.1931338005,
+      "months": 72,
+      "months_below_stop": 29,
+      "net": 8395.989912599354,
+      "net_2x_slip": -129532.77958740066,
+      "net_calls": -48762.72645160026,
+      "net_per_day": 78.46719544485377,
+      "net_puts": 57158.71636419965,
+      "net_wo_best_family": -89896.09020239984,
+      "net_wo_top5": -602737.3919674004,
+      "puts": 149,
+      "stale_exits": 0,
+      "top5_share": 72.78872274047268,
+      "trades": 299,
+      "win_rate": 0.44816053511705684,
+      "worst_day": -140544.60577100012,
+      "worst_month": -127643.26204100015,
+      "worst_month_name": "2022-04"
+     }
+    }
+   },
+   "design_twin_mean": 74513.4004149788,
+   "design_twin_p": 0.6227544910179641,
+   "label": "complex breadth (daily, futures)"
+  },
+  "I-A": {
+   "design": {
+    "avg_loss": -1694.540341665402,
+    "avg_win": 1910.0274567736433,
+    "best_family": "CRUDE",
+    "calls": 1784,
+    "cost": 2913539.3157340637,
+    "days": 167,
+    "dd_beyond_40k": true,
+    "exits": {
+     "fut_stop": 170,
+     "lock": 2,
+     "squareoff": 16,
+     "stop": 44,
+     "time": 3211
+    },
+    "gross": -195709.8249999966,
+    "max_dd": 3114544.6116944696,
+    "months": 8,
+    "months_below_stop": 8,
+    "net": -3109249.14073406,
+    "net_2x_slip": -5474189.85659656,
+    "net_calls": -1642280.545962287,
+    "net_per_day": -18618.258327748863,
+    "net_puts": -1466968.594771773,
+    "net_wo_best_family": -3051381.832808909,
+    "net_wo_top5": -3375469.144344061,
+    "puts": 1659,
+    "stale_exits": 235,
+    "top5_share": null,
+    "trades": 3443,
+    "win_rate": 0.21957595120534418,
+    "worst_day": -187713.9671808702,
+    "worst_month": -637840.504305928,
+    "worst_month_name": "2025-12"
+   },
+   "design_breakdown": {
+    "by_family": {
+     "COPPER": {
+      "avg_loss": -6214.779042594809,
+      "avg_win": 8481.163024291354,
+      "best_family": "COPPER",
+      "calls": 322,
+      "cost": 2059371.596255,
+      "days": 167,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 85,
+       "squareoff": 2,
+       "time": 541
+      },
+      "gross": 22875.00000000281,
+      "max_dd": 2043552.3126249982,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -2036496.596254997,
+      "net_2x_slip": -3774992.1337549975,
+      "net_calls": -1064561.660749996,
+      "net_per_day": -12194.590396736508,
+      "net_puts": -971934.9355050012,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -2302716.599864998,
+      "puts": 306,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 628,
+      "win_rate": 0.20222929936305734,
+      "worst_day": -180609.37257500022,
+      "worst_month": -476279.7246300004,
+      "worst_month_name": "2025-12"
+     },
+     "CRUDE": {
+      "avg_loss": -127.86506120880503,
+      "avg_win": 91.9427888023077,
+      "best_family": "CRUDE",
+      "calls": 310,
+      "cost": 49561.857925151,
+      "days": 159,
+      "dd_beyond_40k": true,
+      "exits": {
+       "stop": 9,
+       "time": 600
+      },
+      "gross": -8305.45,
+      "max_dd": 57867.30792515103,
+      "months": 8,
+      "months_below_stop": 1,
+      "net": -57867.307925151,
+      "net_2x_slip": -76172.15022515101,
+      "net_calls": -28935.674661181,
+      "net_per_day": -363.9453328625849,
+      "net_puts": -28931.63326397,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -60268.612034401005,
+      "puts": 299,
+      "stale_exits": 6,
+      "top5_share": null,
+      "trades": 609,
+      "win_rate": 0.14942528735632185,
+      "worst_day": -8552.858694661001,
+      "worst_month": -19420.309408531,
+      "worst_month_name": "2026-03"
+     },
+     "GOLD": {
+      "avg_loss": -1129.4610212296038,
+      "avg_win": 672.9312706326923,
+      "best_family": "GOLD",
+      "calls": 267,
+      "cost": 187056.43674461,
+      "days": 156,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 4,
+       "stop": 10,
+       "time": 470
+      },
+      "gross": -78429.5,
+      "max_dd": 265485.9367446098,
+      "months": 8,
+      "months_below_stop": 6,
+      "net": -265485.93674460996,
+      "net_2x_slip": -408130.27274461,
+      "net_calls": -156127.476659925,
+      "net_per_day": -1701.832927850064,
+      "net_puts": -109358.460084685,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -283343.23081330996,
+      "puts": 217,
+      "stale_exits": 116,
+      "top5_share": null,
+      "trades": 484,
+      "win_rate": 0.32231404958677684,
+      "worst_day": -13315.8353434,
+      "worst_month": -66397.7499547,
+      "worst_month_name": "2026-02"
+     },
+     "NATGAS": {
+      "avg_loss": -217.7405493455189,
+      "avg_win": 192.5494747715226,
+      "best_family": "NATGAS",
+      "calls": 308,
+      "cost": 86213.1618932,
+      "days": 159,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "squareoff": 2,
+       "stop": 11,
+       "time": 596
+      },
+      "gross": 7959.999999999996,
+      "max_dd": 78867.18248244998,
+      "months": 8,
+      "months_below_stop": 1,
+      "net": -78253.16189320001,
+      "net_2x_slip": -130828.0484557,
+      "net_calls": -32169.103082337504,
+      "net_per_day": -492.158250900629,
+      "net_puts": -46084.0588108625,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -84059.43240095,
+      "puts": 302,
+      "stale_exits": 11,
+      "top5_share": null,
+      "trades": 610,
+      "win_rate": 0.2180327868852459,
+      "worst_day": -2061.996806500001,
+      "worst_month": -13498.3641320125,
+      "worst_month_name": "2026-01"
+     },
+     "SILVER": {
+      "avg_loss": -1618.254658344436,
+      "avg_win": 1160.8348041154607,
+      "best_family": "SILVER",
+      "calls": 270,
+      "cost": 285396.6571201025,
+      "days": 156,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "squareoff": 5,
+       "stop": 14,
+       "time": 491
+      },
+      "gross": -119109.875,
+      "max_dd": 404506.5321201026,
+      "months": 8,
+      "months_below_stop": 6,
+      "net": -404506.5321201025,
+      "net_2x_slip": -631025.2356201025,
+      "net_calls": -223259.92252884753,
+      "net_per_day": -2592.9905905134774,
+      "net_puts": -181246.60959125502,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -457387.03220680245,
+      "puts": 241,
+      "stale_exits": 102,
+      "top5_share": null,
+      "trades": 511,
+      "win_rate": 0.2974559686888454,
+      "worst_day": -20790.01010695,
+      "worst_month": -131854.46359315,
+      "worst_month_name": "2026-02"
+     },
+     "ZINC": {
+      "avg_loss": -631.1758267103162,
+      "avg_win": 530.6495965567005,
+      "best_family": "ZINC",
+      "calls": 307,
+      "cost": 245939.605796,
+      "days": 162,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 85,
+       "squareoff": 3,
+       "time": 513
+      },
+      "gross": -20699.99999999942,
+      "max_dd": 266969.44155399955,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -266639.6057959994,
+      "net_2x_slip": -453042.01579599944,
+      "net_calls": -137226.70828000002,
+      "net_per_day": -1645.9234925678975,
+      "net_puts": -129412.89751599937,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -281880.57819599943,
+      "puts": 294,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 601,
+      "win_rate": 0.16139767054908485,
+      "worst_day": -15859.377779999943,
+      "worst_month": -51396.0165579999,
+      "worst_month_name": "2026-01"
+     }
+    },
+    "by_group": {
+     "energy_options": {
+      "avg_loss": -170.9510992401744,
+      "avg_win": 151.678008596529,
+      "best_family": "CRUDE",
+      "calls": 618,
+      "cost": 135775.019818351,
+      "days": 167,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "squareoff": 2,
+       "stop": 20,
+       "time": 1196
+      },
+      "gross": -345.45000000000437,
+      "max_dd": 136273.22492451113,
+      "months": 8,
+      "months_below_stop": 7,
+      "net": -136120.469818351,
+      "net_2x_slip": -207000.198680851,
+      "net_calls": -61104.7777435185,
+      "net_per_day": -815.0926336428204,
+      "net_puts": -75015.6920748325,
+      "net_wo_best_family": -78253.16189320001,
+      "net_wo_top5": -141926.740326101,
+      "puts": 601,
+      "stale_exits": 17,
+      "top5_share": null,
+      "trades": 1219,
+      "win_rate": 0.1837571780147662,
+      "worst_day": -10614.855501161,
+      "worst_month": -29427.152065281003,
+      "worst_month_name": "2026-03"
+     },
+     "metals_futures": {
+      "avg_loss": -3414.643698509451,
+      "avg_win": 5038.306763174116,
+      "best_family": "ZINC",
+      "calls": 629,
+      "cost": 2305311.2020509997,
+      "days": 167,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 170,
+       "squareoff": 5,
+       "time": 1054
+      },
+      "gross": 2175.0000000033906,
+      "max_dd": 2310521.754179001,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -2303136.202050997,
+      "net_2x_slip": -4228034.149550997,
+      "net_calls": -1201788.369029996,
+      "net_per_day": -13791.234742820341,
+      "net_puts": -1101347.8330210005,
+      "net_wo_best_family": -2036496.596254997,
+      "net_wo_top5": -2569356.205660997,
+      "puts": 600,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 1229,
+      "win_rate": 0.1822620016273393,
+      "worst_day": -177017.6839350002,
+      "worst_month": -511338.93486800045,
+      "worst_month_name": "2025-12"
+     },
+     "metals_options": {
+      "avg_loss": -1384.8859349475438,
+      "avg_win": 913.7148326112014,
+      "best_family": "GOLD",
+      "calls": 537,
+      "cost": 472453.0938647125,
+      "days": 166,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "squareoff": 9,
+       "stop": 24,
+       "time": 961
+      },
+      "gross": -197539.375,
+      "max_dd": 669992.4688647132,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -669992.4688647124,
+      "net_2x_slip": -1039155.5083647125,
+      "net_calls": -379387.3991887725,
+      "net_per_day": -4036.099210028388,
+      "net_puts": -290605.06967594,
+      "net_wo_best_family": -404506.5321201024,
+      "net_wo_top5": -726787.3497248626,
+      "puts": 458,
+      "stale_exits": 218,
+      "top5_share": null,
+      "trades": 995,
+      "win_rate": 0.30954773869346736,
+      "worst_day": -22809.6258256,
+      "worst_month": -198252.21354785,
+      "worst_month_name": "2026-02"
+     }
+    }
+   },
+   "design_twin_mean": -3080399.5992215606,
+   "design_twin_p": 0.5708582834331337,
+   "label": "plain Donchian 20 (5-minute)"
+  },
+  "I-B": {
+   "design": {
+    "avg_loss": -1995.6254860965441,
+    "avg_win": 2281.5456404423635,
+    "best_family": "CRUDE",
+    "calls": 842,
+    "cost": 1549864.9668687102,
+    "days": 166,
+    "dd_beyond_40k": true,
+    "exits": {
+     "fut_stop": 57,
+     "squareoff": 17,
+     "stop": 26,
+     "time": 1497
+    },
+    "gross": -101644.50000000303,
+    "max_dd": 1658686.735723711,
+    "months": 8,
+    "months_below_stop": 8,
+    "net": -1651509.466868713,
+    "net_2x_slip": -2913238.7696187133,
+    "net_calls": -892137.5432013387,
+    "net_per_day": -9948.852210052488,
+    "net_puts": -759371.9236673742,
+    "net_wo_best_family": -1629363.7848338732,
+    "net_wo_top5": -1908077.9668255127,
+    "puts": 755,
+    "stale_exits": 93,
+    "top5_share": null,
+    "trades": 1597,
+    "win_rate": 0.2247964934251722,
+    "worst_day": -102367.45751488952,
+    "worst_month": -421578.2985628959,
+    "worst_month_name": "2026-02"
+   },
+   "design_breakdown": {
+    "by_family": {
+     "COPPER": {
+      "avg_loss": -6382.096172150358,
+      "avg_win": 7704.422010892838,
+      "best_family": "COPPER",
+      "calls": 187,
+      "cost": 1215108.05632,
+      "days": 149,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 32,
+       "squareoff": 5,
+       "time": 333
+      },
+      "gross": 36999.99999999617,
+      "max_dd": 1185285.325175004,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -1178108.056320004,
+      "net_2x_slip": -2202679.4563200036,
+      "net_calls": -653004.9429449993,
+      "net_per_day": -7906.765478657744,
+      "net_puts": -525103.1133750045,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -1425894.5397250033,
+      "puts": 183,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 370,
+      "win_rate": 0.22702702702702704,
+      "worst_day": -89486.94083999956,
+      "worst_month": -295202.5160600007,
+      "worst_month_name": "2026-02"
+     },
+     "CRUDE": {
+      "avg_loss": -133.38436811169726,
+      "avg_win": 130.79453233037734,
+      "best_family": "CRUDE",
+      "calls": 146,
+      "cost": 22137.68203484,
+      "days": 136,
+      "dd_beyond_40k": false,
+      "exits": {
+       "squareoff": 3,
+       "time": 268
+      },
+      "gross": -8.0,
+      "max_dd": 22145.682034839996,
+      "months": 8,
+      "months_below_stop": 0,
+      "net": -22145.68203484,
+      "net_2x_slip": -30213.453034840004,
+      "net_calls": -8442.05991647,
+      "net_per_day": -162.835897315,
+      "net_puts": -13703.62211837,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -25153.31283953,
+      "puts": 125,
+      "stale_exits": 4,
+      "top5_share": null,
+      "trades": 271,
+      "win_rate": 0.19557195571955718,
+      "worst_day": -1555.08423365,
+      "worst_month": -9529.46957075,
+      "worst_month_name": "2026-03"
+     },
+     "GOLD": {
+      "avg_loss": -1335.7137275910295,
+      "avg_win": 917.2646008943398,
+      "best_family": "GOLD",
+      "calls": 99,
+      "cost": 66091.04310498,
+      "days": 108,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 2,
+       "stop": 5,
+       "time": 182
+      },
+      "gross": -66951.0,
+      "max_dd": 138898.28421537997,
+      "months": 8,
+      "months_below_stop": 5,
+      "net": -133042.04310498,
+      "net_2x_slip": -181707.65460498002,
+      "net_calls": -58756.410285134996,
+      "net_per_day": -1231.8707694905554,
+      "net_puts": -74285.63281984499,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -152333.52289438003,
+      "puts": 90,
+      "stale_exits": 48,
+      "top5_share": null,
+      "trades": 189,
+      "win_rate": 0.2804232804232804,
+      "worst_day": -25602.4304739,
+      "worst_month": -44883.0219195,
+      "worst_month_name": "2026-02"
+     },
+     "NATGAS": {
+      "avg_loss": -235.73037484251176,
+      "avg_win": 302.285317625,
+      "best_family": "NATGAS",
+      "calls": 148,
+      "cost": 35067.1335033625,
+      "days": 135,
+      "dd_beyond_40k": false,
+      "exits": {
+       "squareoff": 1,
+       "stop": 10,
+       "time": 267
+      },
+      "gross": 5043.124999999995,
+      "max_dd": 30024.008503362522,
+      "months": 8,
+      "months_below_stop": 0,
+      "net": -30024.0085033625,
+      "net_2x_slip": -49864.1991283625,
+      "net_calls": -12026.381002900001,
+      "net_per_day": -222.40006298787037,
+      "net_puts": -17997.6275004625,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -37205.4675091125,
+      "puts": 130,
+      "stale_exits": 2,
+      "top5_share": null,
+      "trades": 278,
+      "win_rate": 0.23741007194244604,
+      "worst_day": -1771.7522057124993,
+      "worst_month": -8167.985987862499,
+      "worst_month_name": "2026-03"
+     },
+     "SILVER": {
+      "avg_loss": -1680.458160424844,
+      "avg_win": 1348.3960328508929,
+      "best_family": "SILVER",
+      "calls": 105,
+      "cost": 94347.17226152749,
+      "days": 113,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 2,
+       "stop": 11,
+       "time": 187
+      },
+      "gross": -72128.625,
+      "max_dd": 166475.79726152756,
+      "months": 8,
+      "months_below_stop": 5,
+      "net": -166475.7972615275,
+      "net_2x_slip": -238547.67688652745,
+      "net_calls": -87974.17586983499,
+      "net_per_day": -1473.2371439073231,
+      "net_puts": -78501.62139169249,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -207576.4075172775,
+      "puts": 95,
+      "stale_exits": 39,
+      "top5_share": null,
+      "trades": 200,
+      "win_rate": 0.28,
+      "worst_day": -22139.16321707,
+      "worst_month": -57901.005521555,
+      "worst_month_name": "2026-02"
+     },
+     "ZINC": {
+      "avg_loss": -589.2941024132192,
+      "avg_win": 444.58070510638044,
+      "best_family": "ZINC",
+      "calls": 157,
+      "cost": 117113.879644,
+      "days": 136,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 25,
+       "squareoff": 4,
+       "time": 260
+      },
+      "gross": -4599.9999999991705,
+      "max_dd": 121713.87964399914,
+      "months": 8,
+      "months_below_stop": 5,
+      "net": -121713.87964399919,
+      "net_2x_slip": -210226.32964399917,
+      "net_calls": -71933.57318199945,
+      "net_per_day": -894.954997382347,
+      "net_puts": -49780.30646199972,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -129100.5662579992,
+      "puts": 132,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 289,
+      "win_rate": 0.16262975778546712,
+      "worst_day": -4695.241633999965,
+      "worst_month": -24731.565593999738,
+      "worst_month_name": "2025-10"
+     }
+    },
+    "by_group": {
+     "energy_options": {
+      "avg_loss": -183.84332956968026,
+      "avg_win": 225.90706871226894,
+      "best_family": "CRUDE",
+      "calls": 294,
+      "cost": 57204.8155382025,
+      "days": 144,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 4,
+       "stop": 10,
+       "time": 535
+      },
+      "gross": 5035.124999999995,
+      "max_dd": 52169.69053820248,
+      "months": 8,
+      "months_below_stop": 1,
+      "net": -52169.69053820251,
+      "net_2x_slip": -80077.6521632025,
+      "net_calls": -20468.440919370005,
+      "net_per_day": -362.2895176264063,
+      "net_puts": -31701.2496188325,
+      "net_wo_best_family": -30024.008503362507,
+      "net_wo_top5": -59372.6085582325,
+      "puts": 255,
+      "stale_exits": 6,
+      "top5_share": null,
+      "trades": 549,
+      "win_rate": 0.2167577413479053,
+      "worst_day": -3171.087459072499,
+      "worst_month": -17697.4555586125,
+      "worst_month_name": "2026-03"
+     },
+     "metals_futures": {
+      "avg_loss": -3727.061890187503,
+      "avg_win": 5099.746122557241,
+      "best_family": "ZINC",
+      "calls": 344,
+      "cost": 1332221.935964,
+      "days": 153,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 57,
+       "squareoff": 9,
+       "time": 593
+      },
+      "gross": 32399.999999997053,
+      "max_dd": 1306999.204819003,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -1299821.935964003,
+      "net_2x_slip": -2412905.785964003,
+      "net_calls": -724938.5161269987,
+      "net_per_day": -8495.568208915052,
+      "net_puts": -574883.4198370043,
+      "net_wo_best_family": -1178108.0563200037,
+      "net_wo_top5": -1547608.4193690023,
+      "puts": 315,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 659,
+      "win_rate": 0.19878603945371776,
+      "worst_day": -94182.18247399952,
+      "worst_month": -312460.84838600096,
+      "worst_month_name": "2026-02"
+     },
+     "metals_options": {
+      "avg_loss": -1513.010864476991,
+      "avg_win": 1138.7633182298166,
+      "best_family": "GOLD",
+      "calls": 204,
+      "cost": 160438.2153665075,
+      "days": 137,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 4,
+       "stop": 16,
+       "time": 369
+      },
+      "gross": -139079.625,
+      "max_dd": 300662.9693038074,
+      "months": 8,
+      "months_below_stop": 6,
+      "net": -299517.8403665075,
+      "net_2x_slip": -420255.33149150753,
+      "net_calls": -146730.58615497,
+      "net_per_day": -2186.2616085146533,
+      "net_puts": -152787.25421153748,
+      "net_wo_best_family": -166475.79726152748,
+      "net_wo_top5": -350975.63661360746,
+      "puts": 185,
+      "stale_exits": 87,
+      "top5_share": null,
+      "trades": 389,
+      "win_rate": 0.2802056555269923,
+      "worst_day": -29316.7326224,
+      "worst_month": -102784.027441055,
+      "worst_month_name": "2026-02"
+     }
+    }
+   },
+   "design_twin_mean": -1524846.0867692467,
+   "design_twin_p": 0.782435129740519,
+   "label": "complex breadth (5-minute)"
+  },
+  "I-C": {
+   "design": {
+    "avg_loss": -1673.9291286756625,
+    "avg_win": 1925.628643962246,
+    "best_family": "CRUDE",
+    "calls": 1332,
+    "cost": 2251607.1432853937,
+    "days": 166,
+    "dd_beyond_40k": true,
+    "exits": {
+     "fut_stop": 64,
+     "lock": 2,
+     "squareoff": 22,
+     "stop": 44,
+     "time": 2410
+    },
+    "gross": 231804.67500000066,
+    "max_dd": 2019802.4682853923,
+    "months": 8,
+    "months_below_stop": 8,
+    "net": -2019802.4682853927,
+    "net_2x_slip": -3848891.514835393,
+    "net_calls": -1197767.0295376885,
+    "net_per_day": -12167.484748707186,
+    "net_puts": -822035.4387477046,
+    "net_wo_best_family": -1966474.8381777618,
+    "net_wo_top5": -2309147.533295393,
+    "puts": 1210,
+    "stale_exits": 163,
+    "top5_share": null,
+    "trades": 2542,
+    "win_rate": 0.24429583005507474,
+    "worst_day": -52501.06695892068,
+    "worst_month": -472225.4328087417,
+    "worst_month_name": "2026-03"
+   },
+   "design_breakdown": {
+    "by_family": {
+     "COPPER": {
+      "avg_loss": -5383.3489704838685,
+      "avg_win": 7972.9880038839265,
+      "best_family": "COPPER",
+      "calls": 278,
+      "cost": 1775523.796755,
+      "days": 161,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 64,
+       "squareoff": 5,
+       "time": 477
+      },
+      "gross": 332125.0000000006,
+      "max_dd": 1443398.7967549998,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -1443398.7967549996,
+      "net_2x_slip": -2941296.8092549993,
+      "net_calls": -879846.5059199997,
+      "net_per_day": -8965.209917732916,
+      "net_puts": -563552.2908349995,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -1732743.8617649996,
+      "puts": 268,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 546,
+      "win_rate": 0.20512820512820512,
+      "worst_day": -42863.12093500068,
+      "worst_month": -343784.02219500067,
+      "worst_month_name": "2026-03"
+     },
+     "CRUDE": {
+      "avg_loss": -130.59165007097513,
+      "avg_win": 91.10408295934582,
+      "best_family": "CRUDE",
+      "calls": 302,
+      "cost": 47424.180107631,
+      "days": 158,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 4,
+       "stop": 8,
+       "time": 578
+      },
+      "gross": -5903.450000000001,
+      "max_dd": 53327.630107631005,
+      "months": 8,
+      "months_below_stop": 1,
+      "net": -53327.630107631,
+      "net_2x_slip": -70488.278407631,
+      "net_calls": -26577.598754561,
+      "net_per_day": -337.51664625082907,
+      "net_puts": -26750.031353070004,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -55676.797253151,
+      "puts": 288,
+      "stale_exits": 5,
+      "top5_share": null,
+      "trades": 590,
+      "win_rate": 0.18135593220338983,
+      "worst_day": -7522.951389081,
+      "worst_month": -18326.875445011,
+      "worst_month_name": "2026-03"
+     },
+     "GOLD": {
+      "avg_loss": -1073.0709579496154,
+      "avg_win": 712.790847008435,
+      "best_family": "GOLD",
+      "calls": 229,
+      "cost": 142459.77056214,
+      "days": 151,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "squareoff": 6,
+       "stop": 12,
+       "time": 385
+      },
+      "gross": -57113.0,
+      "max_dd": 199572.77056213995,
+      "months": 8,
+      "months_below_stop": 5,
+      "net": -199572.77056214,
+      "net_2x_slip": -305900.94556213997,
+      "net_calls": -125226.192803515,
+      "net_per_day": -1321.6739772327153,
+      "net_puts": -74346.57775862502,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -217489.27146504004,
+      "puts": 175,
+      "stale_exits": 86,
+      "top5_share": null,
+      "trades": 404,
+      "win_rate": 0.32425742574257427,
+      "worst_day": -10799.0084434,
+      "worst_month": -61187.13519588,
+      "worst_month_name": "2026-03"
+     },
+     "NATGAS": {
+      "avg_loss": -227.44082201846282,
+      "avg_win": 215.6753046166667,
+      "best_family": "NATGAS",
+      "calls": 298,
+      "cost": 81558.66453918749,
+      "days": 157,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 2,
+       "stop": 11,
+       "time": 579
+      },
+      "gross": 6734.374999999998,
+      "max_dd": 75609.14492593751,
+      "months": 8,
+      "months_below_stop": 1,
+      "net": -74824.28953918749,
+      "net_2x_slip": -123775.68891418749,
+      "net_calls": -29041.9315794625,
+      "net_per_day": -476.58783145979294,
+      "net_puts": -45782.357959725,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -81208.67830943751,
+      "puts": 294,
+      "stale_exits": 6,
+      "top5_share": null,
+      "trades": 592,
+      "win_rate": 0.22804054054054054,
+      "worst_day": -2264.809441750001,
+      "worst_month": -14261.396632875001,
+      "worst_month_name": "2026-01"
+     },
+     "SILVER": {
+      "avg_loss": -1530.2182803977555,
+      "avg_win": 1254.4178493202207,
+      "best_family": "SILVER",
+      "calls": 225,
+      "cost": 204640.73132143499,
+      "days": 148,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 1,
+       "squareoff": 5,
+       "stop": 13,
+       "time": 391
+      },
+      "gross": -44038.25,
+      "max_dd": 248678.98132143499,
+      "months": 8,
+      "months_below_stop": 6,
+      "net": -248678.981321435,
+      "net_2x_slip": -407429.792696435,
+      "net_calls": -137074.80048015,
+      "net_per_day": -1680.2633873069933,
+      "net_puts": -111604.180841285,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -312361.55933368497,
+      "puts": 185,
+      "stale_exits": 66,
+      "top5_share": null,
+      "trades": 410,
+      "win_rate": 0.33170731707317075,
+      "worst_day": -14380.845609355,
+      "worst_month": -81348.875576655,
+      "worst_month_name": "2026-02"
+     }
+    },
+    "by_group": {
+     "energy_options": {
+      "avg_loss": -177.676832602892,
+      "avg_win": 160.59629338801653,
+      "best_family": "CRUDE",
+      "calls": 600,
+      "cost": 128982.84464681848,
+      "days": 166,
+      "dd_beyond_40k": true,
+      "exits": {
+       "squareoff": 6,
+       "stop": 19,
+       "time": 1157
+      },
+      "gross": 830.9249999999975,
+      "max_dd": 128304.67475297839,
+      "months": 8,
+      "months_below_stop": 6,
+      "net": -128151.91964681851,
+      "net_2x_slip": -194263.9673218185,
+      "net_calls": -55619.5303340235,
+      "net_per_day": -771.9995159446898,
+      "net_puts": -72532.389312795,
+      "net_wo_best_family": -74824.2895391875,
+      "net_wo_top5": -134536.3084170685,
+      "puts": 582,
+      "stale_exits": 11,
+      "top5_share": null,
+      "trades": 1182,
+      "win_rate": 0.20473773265651438,
+      "worst_day": -9787.760830831001,
+      "worst_month": -29099.182253011,
+      "worst_month_name": "2026-03"
+     },
+     "metals_futures": {
+      "avg_loss": -5383.3489704838685,
+      "avg_win": 7972.9880038839265,
+      "best_family": "COPPER",
+      "calls": 278,
+      "cost": 1775523.796755,
+      "days": 161,
+      "dd_beyond_40k": true,
+      "exits": {
+       "fut_stop": 64,
+       "squareoff": 5,
+       "time": 477
+      },
+      "gross": 332125.0000000006,
+      "max_dd": 1443398.7967549998,
+      "months": 8,
+      "months_below_stop": 8,
+      "net": -1443398.7967549996,
+      "net_2x_slip": -2941296.8092549993,
+      "net_calls": -879846.5059199997,
+      "net_per_day": -8965.209917732916,
+      "net_puts": -563552.2908349995,
+      "net_wo_best_family": NaN,
+      "net_wo_top5": -1732743.8617649996,
+      "puts": 268,
+      "stale_exits": 0,
+      "top5_share": null,
+      "trades": 546,
+      "win_rate": 0.20512820512820512,
+      "worst_day": -42863.12093500068,
+      "worst_month": -343784.02219500067,
+      "worst_month_name": "2026-03"
+     },
+     "metals_options": {
+      "avg_loss": -1302.0624869272945,
+      "avg_win": 988.6757620436515,
+      "best_family": "GOLD",
+      "calls": 454,
+      "cost": 347100.501883575,
+      "days": 163,
+      "dd_beyond_40k": true,
+      "exits": {
+       "lock": 2,
+       "squareoff": 11,
+       "stop": 25,
+       "time": 776
+      },
+      "gross": -101151.25,
+      "max_dd": 448251.7518835748,
+      "months": 8,
+      "months_below_stop": 7,
+      "net": -448251.751883575,
+      "net_2x_slip": -713330.7382585751,
+      "net_calls": -262300.993283665,
+      "net_per_day": -2750.0107477519937,
+      "net_puts": -185950.75859991,
+      "net_wo_best_family": -248678.98132143499,
+      "net_wo_top5": -513899.98205472506,
+      "puts": 360,
+      "stale_exits": 152,
+      "top5_share": null,
+      "trades": 814,
+      "win_rate": 0.32800982800982803,
+      "worst_day": -16483.6487385,
+      "worst_month": -114078.573013755,
+      "worst_month_name": "2026-02"
+     }
+    }
+   },
+   "design_twin_mean": -2304875.4977817605,
+   "design_twin_p": 0.06786427145708583,
+   "label": "cross-market confirmation (5-minute)"
+  }
+ },
+ "walk_forward_daily": {
+  "fold_net": {
+   "D-A": [
+    -130274.01219780004,
+    345483.95403280016,
+    88459.26761679984,
+    -152638.4940398005
+   ],
+   "D-B": [
+    -22955.969807400044,
+    534492.2934349999,
+    -214755.0186024002,
+    -409787.4866876001
+   ]
+  },
+  "fold_sum": {
+   "D-A": 151030.71541199947,
+   "D-B": -113006.18166240043
+  },
+  "folds": [
+   [
+    "2019-01-01",
+    "2019-12-31"
+   ],
+   [
+    "2020-01-01",
+    "2020-12-31"
+   ],
+   [
+    "2021-01-01",
+    "2021-12-31"
+   ],
+   [
+    "2022-01-01",
+    "2022-12-31"
+   ]
+  ],
+  "selection_oos": 36824.76859499913,
+  "selection_picks": [
+   "D-A",
+   "D-B",
+   "D-B",
+   "D-A"
+  ]
+ },
+ "walk_forward_intraday": {
+  "fold_net": {
+   "I-A": [
+    -957495.0747769809,
+    -807549.3531057427,
+    -547673.1711737302
+   ],
+   "I-B": [
+    -328113.7085308197,
+    -600046.5549669776,
+    -263480.0224331185
+   ],
+   "I-C": [
+    -488170.2999414239,
+    -365823.1036808988,
+    -472225.4328087413
+   ]
+  },
+  "fold_sum": {
+   "I-A": -2312717.5990564534,
+   "I-B": -1191640.2859309157,
+   "I-C": -1326218.836431064
+  },
+  "folds": [
+   [
+    "2025-11-01",
+    "2025-12-31"
+   ],
+   [
+    "2026-01-01",
+    "2026-02-28"
+   ],
+   [
+    "2026-03-01",
+    "2026-03-31"
+   ]
+  ],
+  "selection_oos": -1191640.2859309157,
+  "selection_picks": [
+   "I-B",
+   "I-B",
+   "I-B"
+  ]
+ }
+}

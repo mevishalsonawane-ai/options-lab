@@ -1479,3 +1479,19 @@ costs, flat 15:15 (15:05 expiry). 7 variants x 9 instruments, BH over 63, after-
   fresh pre-registration on post-19 Oct data if Boss wants it watched.
 - Mirror image of the Liquidity arm (which buys the break): on 74% of R91's BANKNIFTY days the Liquidity arm also trades,
   mostly on the other side; daily corr -0.00 (design) / -0.23 (holdout). Agrees with R86 (fading stop runs loses).
+
+## Breadth Donchian on MCX commodities (R93, 21 Oct 2026) - 0 of 5 pass; no MCX arm
+Full study: `HUNT_R93_BREADTH_DONCHIAN_MCX.md` (pre-registered `hunt/r93_breadth_donchian_mcx/PREREG.md`, commit 4e5ba0f;
+notes N1-N4). Signal source: the MCX future itself (I-C also the international driver); 1-ITM GOLDM / SILVERM / CRUDEOILM /
+NATGASMINI options on real prints, copper / zinc / aluminium as futures (options thin or none); daily rules as futures.
+Breadth = 3 of 5 metals (GOLD, SILVER, COPPER, ZINC, ALUMINIUM; minis once) / 2 of 2 energy on the same bar; R72's exits.
+- 5-minute (holdout 1 Apr - 19 Oct 2026, 142 sessions, read once): plain -Rs 30.06 lakh (3,365), breadth -Rs 17.93 lakh
+  (1,957), cross-market (XAUUSD, XAGUSD, WTI, Henry Hub, COMEX copper) -Rs 22.57 lakh (2,485); every month below -Rs 13k;
+  no better than random entries (q 0.39-0.58). Options alone: gold + silver -Rs 2.33 lakh (653, breadth), crude + gas
+  -Rs 57,064 (594). Gross before costs is about zero (options -Rs 82 to +Rs 86 a trade vs Rs 100-520 of costs).
+- Breadth sorts MCX breaks only a little: confirmed -Rs 805 a trade (640) vs unconfirmed -Rs 914 (2,725) in the holdout
+  (indices, R72: +Rs 183 vs -Rs 54); confirmed gross higher in 7 of 7 commodities, by tens of rupees. Costs decide on MCX.
+- Daily (2012-2022 design, 2023 - Oct 2026 holdout, futures): plain +Rs 7.26 lakh (367) but random entries made as much
+  (twin p 0.51; -Rs 5.76 lakh without the top 5: the 2023-26 silver / copper rally); daily breadth -Rs 3.68 lakh (133).
+- Sample: long enough for the intraday answer (95% upper bound of gross a trade below cost in every option book; closest
+  gold with breadth Rs 265 vs Rs 364). Keep Breadth Donchian on the indices only.
