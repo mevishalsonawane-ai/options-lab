@@ -117,3 +117,12 @@ def fold_of(d) -> int:
         if in_period(d, p):
             return k
     return -1
+# round 4 (PREREG_ROUND4)
+METALS = ("GOLDM", "SILVERM")
+R4_TSM_LONG = 250                # R4B: sign of the back-adjusted 250-session return (Moskowitz, Ooi & Pedersen 2012)
+R4_TSM_SHORT = 20                # R4F: sign of the back-adjusted 20-session return (1-month lookback)
+R4_IV_LOOK, R4_IV_MIN = 20, 10   # R4G: NR7 day's ATM IV below the median of the previous 20 sessions' (>= 10 known)
+R4_SPIKE_MIN = 5                 # R4C: the future's move from the minute before the EIA release to release + 5 min ...
+R4_SPIKE_KATR = 0.20             # ... at least 0.20 x ATR14 (known before the day) -> fade it
+R4_FADE_HOLD = 60                # R4C: out 60 minutes after the entry minute (or the square-off, if earlier)
+R4_EVE_A, R4_EVE_B = 17 * 60, 17 * 60 + 30     # R4D: the future's 17:00 -> 17:30 IST move; entry from 17:31

@@ -484,10 +484,11 @@ class NR7Var(NR7):
     instead of the premium ladder (R3C), or an entry at the US cash open after a morning break that still holds (R3G)."""
 
     def __init__(self, rid, col="nr7", books=K.CRUDE, last_tod=22 * 60, trail=None, us_open=False, n=3,
-                 r93=False, fut=False):
-        super().__init__(rid, col=col, itm=1, edge=not (r93 or fut), books=books)
+                 r93=False, fut=False, itm=1, side_col=None, iv_cheap=False):
+        super().__init__(rid, col=col, itm=itm, edge=not (r93 or fut), books=books)
         self.LAST_TOD, self.trail, self.us_open, self.n = last_tod, trail, us_open, n
         self.r93, self.fut = r93 or fut, fut
+        self.side_col, self.iv_cheap = side_col, iv_cheap        # round 4 filters (R4B / R4F, R4G)
         if self.r93:
             self.n = K.R93_MAX_HOLD
 
@@ -510,7 +511,19 @@ class NR7Var(NR7):
             sp["kind"] = "future"
         return sp
 
+    def _keep(self, book, sp) -> bool:
+        """Round 4 filters, read from the last daily row / option session strictly before the entry day (the NR7 day,
+        known at the entry day's open). The twin (another day of the month) is not filtered."""
+        if self.side_col is not None and value_before(book, sp["day"], self.side_col) != sp["side"]:
+            return False
+        if self.iv_cheap and not iv_cheap_before(book, sp["day"]):
+            return False
+        return True
+
     def candidates(self, book, period):
+        return [sp for sp in self._candidates(book, period) if self._keep(book, sp)]
+
+    def _candidates(self, book, period):
         if not self.us_open:
             return [self._finish(book, sp) for sp in super().candidates(book, period)]
         m, d = book.m, book.daily
@@ -601,6 +614,58 @@ class WeeklyNR7(NR7Var):
         return out
 
 
+def r4_daily(d: pd.DataFrame) -> pd.DataFrame:
+    """Round 4 daily columns (causal): tsm12 / tsm1 = the sign of the back-adjusted close change over the last
+    R4_TSM_LONG / R4_TSM_SHORT rows (0 when unknown)."""
+    d = d.copy()
+    ac = d.ac.values.astype(float)
+    for col, L in (("tsm12", K.R4_TSM_LONG), ("tsm1", K.R4_TSM_SHORT)):
+        prev = np.r_[np.full(L, np.nan), ac[:-L]] if len(ac) > L else np.full(len(ac), np.nan)
+        x = ac - prev
+        d[col] = np.where(np.isfinite(x), np.sign(x), 0).astype(int)
+    return d
+
+
+def value_before(book, day, col):
+    """A daily column's value on the last row strictly before `day` (known at that day's open); None when none."""
+    d = book.daily
+    k = int(np.searchsorted(d.date.values, _day64(day), side="left")) - 1
+    return d[col].values[k] if k >= 0 else None
+
+
+def atm_iv_by_day(book) -> dict:
+    """{option session: median over its minutes of the mean ATM call / put IV (offset 0, Dhan's IV %)}; cached."""
+    c = getattr(book, "_atm_iv_day", None)
+    if c is not None:
+        return c
+    m = book.m
+    a, b = book.iv.get((0, 0)), book.iv.get((1, 0))
+    out = {}
+    if a is not None and b is not None:
+        with np.errstate(all="ignore"):
+            v = np.nanmean(np.vstack([a, b]), axis=0)
+        for day in m.days:
+            x = v[m.day_ix(day)]
+            x = x[np.isfinite(x)]
+            out[day] = float(np.median(x)) if len(x) else float("nan")
+    book._atm_iv_day = out
+    return out
+
+
+def iv_cheap_before(book, day) -> bool:
+    """R4G: the ATM IV of the option session before `day` is below the median of the R4_IV_LOOK sessions before that
+    one (>= R4_IV_MIN finite values). Uses sessions strictly before `day` only."""
+    m = book.m
+    pos = int(np.searchsorted(m.days, _day64(day), side="left"))
+    if pos < 1:
+        return False
+    iv = atm_iv_by_day(book)
+    t = iv.get(m.days[pos - 1], float("nan"))
+    past = np.array([iv.get(x, float("nan")) for x in m.days[max(0, pos - 1 - K.R4_IV_LOOK):pos - 1]], float)
+    past = past[np.isfinite(past)]
+    return bool(np.isfinite(t) and len(past) >= K.R4_IV_MIN and t < float(np.median(past)))
+
+
 def r3_daily(d: pd.DataFrame) -> pd.DataFrame:
     """Round 3 daily flags (added by daily_ind's caller when present; all causal)."""
     d = d.copy()
@@ -612,7 +677,7 @@ def r3_daily(d: pd.DataFrame) -> pd.DataFrame:
     with np.errstate(all="ignore"):
         pos = (v5.values - lo) / (hi - lo)
     d["hivol"] = np.isfinite(pos) & (pos >= K.R3_HIVOL_FRAC - 1e-12)                       # R3J
-    return d
+    return r4_daily(d)
 
 
 def flag_before(book, day, col) -> bool:
@@ -779,3 +844,104 @@ RULES.update({
 ORDER3B = ("R3K", "R3L")
 HISTORY_RULES.update({"R3K": "nr7_r93", "R3L": "nr7_r93", "R3A": "nr7", "R3B": "nr4", "R3C": "nr7", "R3D": "nr7_lowvol", "R3E": "wnr7", "R3F": "nr7",
                       "R3G": "nr7"})
+
+
+# ---------------------------------------------------------------------------------------------- round 4 (PREREG_ROUND4)
+class EIASpikeFade:
+    """R4C (Li & Geman 2018; Rousse & Sevi 2019: the EIA spike partly reverts): on EIA crude days, the future's move
+    from the last minute before the release to release + 5 min; if |move| >= 0.20 x ATR14 (known before the day),
+    1-ITM AGAINST it from the next minute; underlying stop = the future's extreme between those two minutes (in the
+    spike's direction); -40% premium stop, lock ladder, edge; out 60 minutes after the entry minute (or the square-off).
+    Twin: the same clock and side on a non-EIA session of the same month, no size filter."""
+    kind = "single"
+
+    def __init__(self, rid="R4C", books=K.CRUDE):
+        self.rid, self.books = rid, books
+
+    def spec(self, book, day, rel, side=None):
+        m = book.m
+        i_pre = m.at_or_before(day, rel - 1)
+        i_post = m.at_or_before(day, rel + K.R4_SPIKE_MIN)
+        if i_pre < 0 or i_post <= i_pre or m.tod[i_pre] < rel - 5 or m.tod[i_post] < rel + K.R4_SPIKE_MIN - 2:
+            return None
+        mv = float(m.F[i_post] - m.F[i_pre])
+        seg = m.F[i_pre:i_post + 1]
+        if side is None:
+            atr = atr_before(book, day)
+            if not (np.isfinite(mv) and np.isfinite(atr) and atr > 0 and abs(mv) >= K.R4_SPIKE_KATR * atr):
+                return None
+            side = -1 if mv > 0 else 1
+        ext = float(np.nanmax(seg)) if side < 0 else float(np.nanmin(seg))   # the spike's extreme, against the trade
+        ext -= side * 1e-6               # the stop is a close BEYOND the extreme (the engine stops on touching its level)
+        i_from = i_post + 1
+        if i_from >= len(m.ts) or m.day[i_from] != m.day[i_post]:
+            return None
+        i_end = m.at_or_before(day, int(m.tod[i_from]) + K.R4_FADE_HOLD)
+        return dict(day=day, i_sig=i_post, i_from=i_from, side=int(side), ustop=ext, n_sessions=None,
+                    kind="single", i_end_fixed=int(i_end), katr=None, edge=True, tod=int(m.tod[i_post]), rel=rel)
+
+    def candidates(self, book, period):
+        out = []
+        for day, rel in sorted(release_days(book).items()):
+            if day in book.day_pos and in_p(day, period):
+                sp = self.spec(book, day, rel)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        if day in release_days(book):
+            return None
+        return self.spec(book, day, sp["rel"], side=sp["side"])
+
+
+class EveningMomentum:
+    """R4D (night-session first half-hour momentum in metal futures: Bouri, Ma, Xu & Zhou; Ma et al., GFJ 64, 2025):
+    the future's move from 17:00 to 17:30 IST (last minutes at or before them, within 5 minutes) -> 1-ITM that way from
+    the next minute; underlying stop = the 17:00 price; -40% premium stop, lock ladder, edge; out at the session
+    square-off. Every session with a non-zero move trades. Twin: the same clock and side on a random session of the
+    month (so the twin tests the direction, not the clock)."""
+    kind = "single"
+
+    def __init__(self, rid="R4D", books=K.METALS):
+        self.rid, self.books = rid, books
+
+    def spec(self, book, day, side=None):
+        m = book.m
+        i_a, i_b = m.at_or_before(day, K.R4_EVE_A), m.at_or_before(day, K.R4_EVE_B)
+        if i_a < 0 or i_b <= i_a or m.tod[i_a] < K.R4_EVE_A - 5 or m.tod[i_b] < K.R4_EVE_B - 5:
+            return None
+        mv = float(m.F[i_b] - m.F[i_a])
+        if side is None:
+            if not np.isfinite(mv) or mv == 0:
+                return None
+            side = 1 if mv > 0 else -1
+        return dict(day=day, i_sig=i_b, i_from=i_b + 1, side=int(side), ustop=float(m.F[i_a]), n_sessions=None,
+                    kind="single", i_end_fixed=None, katr=None, edge=True, tod=int(m.tod[i_b]))
+
+    def candidates(self, book, period):
+        out = []
+        for day in book.m.days:
+            if in_p(day, period):
+                sp = self.spec(book, day)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        return self.spec(book, day, side=sp["side"])
+
+
+RULES.update({
+    "R4A": NR7Var("R4A", books=K.CRUDE, us_open=True),
+    "R4B": NR7Var("R4B", books=K.CRUDE, side_col="tsm12"),
+    "R4C": EIASpikeFade("R4C", books=K.CRUDE),
+    "R4D": EveningMomentum("R4D", books=K.METALS),
+    "R4E": NR7Var("R4E", books=K.CRUDE, itm=2),
+    "R4F": NR7Var("R4F", books=K.CRUDE, side_col="tsm1"),
+    "R4G": NR7Var("R4G", books=K.CRUDE, iv_cheap=True),
+})
+ORDER4 = ("R4A", "R4B", "R4C", "R4D", "R4E", "R4F", "R4G")
+# the NR7-crude family: R3A and its round-4 variants share most trades; PREREG_ROUND4 s5 adds a collapsed-BH gate
+NR7_CRUDE_FAMILY = (("3", "R3A"), ("4", "R4A"), ("4", "R4B"), ("4", "R4E"), ("4", "R4F"), ("4", "R4G"))
+HISTORY_RULES.update({"R4A": "nr7", "R4B": "nr7_tsm12", "R4E": "nr7", "R4F": "nr7_tsm1"})

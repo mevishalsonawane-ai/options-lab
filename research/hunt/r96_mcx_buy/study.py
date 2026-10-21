@@ -41,6 +41,8 @@ def simulate(book, sp: dict, last_day):
         kw.update(ladder=(), trail_from=float("inf"))
     if sp.get("trail") is not None:
         kw["utrail"] = (sp.get("atr", float("nan")),) + tuple(sp["trail"])
+    if sp.get("i_end_fixed") is not None:          # round 4 R4C: out after a fixed number of minutes
+        kw["i_end_fixed"] = sp["i_end_fixed"]
     return E.sim_single(book, sp["i_sig"], sp["side"], sp["ustop"], sp["n_sessions"], last_day, sp["i_from"],
                         offset=sp.get("itm"), edge_exit=sp.get("edge", False), max_risk=sp.get("max_risk"), **kw)
 
@@ -194,6 +196,18 @@ def gates(s: dict, fl: list, p: float, q: float, hist: dict | None, round_no: in
     return g
 
 
+def family_q(rows: list, family) -> float:
+    """PREREG_ROUND4 s5: BH with the NR7-crude family collapsed into one test (its smallest p x the family's size,
+    Bonferroni, capped at 1). Returns that test's q (NaN when no family member is in the ledger)."""
+    fam = {(str(r), i) for r, i in family}
+    inside = [r.get("p") for r in rows if (str(r["round"]), r["id"]) in fam]
+    inside = [x for x in inside if x is not None and np.isfinite(x)]
+    if not inside:
+        return float("nan")
+    others = [r.get("p") for r in rows if (str(r["round"]), r["id"]) not in fam]
+    return bh(others + [min(1.0, min(inside) * len(inside))])[-1]
+
+
 def is_lead(s, fl, p) -> bool:
     return bool((s.get("net", 0) > 0 and sum(f["net"] > 0 for f in fl) >= 2) or (np.isfinite(p) and p < 0.10))
 
@@ -228,7 +242,7 @@ def design(round_no: int = 1, only=None):
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     res = {}
     all_df = []
-    for rid in (only or {1: R.ORDER, 2: R.ORDER2}.get(round_no) or R.ORDER3):      # R3K / R3L: `design 3 R3K R3L`
+    for rid in (only or {1: R.ORDER, 2: R.ORDER2, 4: R.ORDER4}.get(round_no) or R.ORDER3):      # R3K / R3L: `design 3 R3K R3L`
         trades = run_rule(rid, books, K.DESIGN)
         df = frame(trades)
         all_df.append(df)
@@ -252,6 +266,8 @@ def design(round_no: int = 1, only=None):
                          p=r["twin_p"]))
     rows = save_ledger(rows)
     qmap = {(r["round"], r["id"]): r["q"] for r in rows}
+    fq = family_q(rows, R.NR7_CRUDE_FAMILY)
+    fam = {(int(a), b) for a, b in R.NR7_CRUDE_FAMILY}
     jp = K.RESULTS / f"design_round{round_no}.json"
     if only and jp.exists():          # a partial run (e.g. `design 3 R3K R3L`) adds to the round's results
         old = json.loads(jp.read_text())["rules"]
@@ -265,6 +281,9 @@ def design(round_no: int = 1, only=None):
         h = r["history"]["pooled"] if r["history"] else None
         r["bh_q"] = q
         r["gates"] = gates(r["summary"], r["folds"], r["twin_p"], q, h, round_no)
+        if round_no >= 4 and (round_no, rid) in fam:            # PREREG_ROUND4 s5: the collapsed-family BH gate
+            r["family_q"] = fq
+            r["gates"]["bh_family"] = bool(np.isfinite(fq) and fq <= K.GATE_Q)
         r["pass"] = bool(all(r["gates"].values()))
         r["lead"] = is_lead(r["summary"], r["folds"], r["twin_p"])
     out = dict(round=round_no, written=datetime.now(timezone.utc).isoformat(timespec="seconds"),

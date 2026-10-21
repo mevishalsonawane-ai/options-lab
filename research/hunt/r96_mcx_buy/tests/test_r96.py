@@ -732,3 +732,160 @@ def test_r3k_r3l_specs_and_history_trade():
     assert H.trade_nr7_r93(x, i) == pytest.approx((5000.0 - 5020.0) / 5000.0 - H.COST)
     x.loc[i + 2, "ac"] = 4930.0                          # below the 2 ATR stop / lock (4970) on the second close
     assert H.trade_nr7_r93(x, i) == pytest.approx((4930.0 - 5020.0) / 5000.0 - H.COST)
+
+
+# ------------------------------------------------------------------------------------------------ round 4
+def test_round4_tsm_columns_and_guard():
+    base = daily_frame(n=420, seed=5)
+    full = R.daily_ind(base)
+    ac = full.ac.values
+    for col, L in (("tsm12", K.R4_TSM_LONG), ("tsm1", K.R4_TSM_SHORT)):
+        assert (full[col].values[:L] == 0).all()                         # unknown -> 0
+        j = L + 7
+        assert full[col].values[j] == int(np.sign(ac[j] - ac[j - L]))
+    for cut in (300, 400):                                               # look-ahead guard: later rows change nothing
+        for mode in ("perturb", "delete"):
+            d = base.copy()
+            if mode == "perturb":
+                d.loc[cut + 1:, ["open", "high", "low", "close"]] *= 1.3
+            else:
+                d = d.iloc[:cut + 1]
+            part = R.daily_ind(d)
+            for col in ("tsm12", "tsm1"):
+                assert (full[col].values[:cut + 1] == part[col].values[:cut + 1]).all(), (mode, cut, col)
+
+
+def _brk_book(side_val=1, flt_col="tsm12"):
+    def brk(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = (t.normalize() - t.normalize()[0]).days.values
+        return np.where((k == 1) & (t.hour * 60 + t.minute >= 10 * 60), 5100.0, 5000.0)
+    bk = _nr7_book(brk)
+    bk.daily[flt_col] = side_val
+    return bk
+
+
+def test_round4_side_filter_keeps_only_agreeing_breaks():
+    per = (date_(2025, 11, 1), date_(2025, 11, 30))
+    assert len(R.RULES["R4B"].candidates(_brk_book(1), per)) == 1        # up break, 12-month sign up: kept
+    assert R.RULES["R4B"].candidates(_brk_book(-1), per) == []          # against the trend: dropped
+    assert R.RULES["R4B"].candidates(_brk_book(0), per) == []           # unknown trend: dropped
+    assert len(R.RULES["R4F"].candidates(_brk_book(1, "tsm1"), per)) == 1
+    bk = _brk_book(-1)
+    sp = R.RULES["R3A"].candidates(bk, per)[0]
+    assert R.RULES["R4B"].twin(bk, sp, bk.m.days[3]) is not None         # the twin is not filtered
+
+
+def test_round4_value_before_uses_the_previous_row_only():
+    bk = _brk_book(1)
+    bk.daily["tsm12"] = [1, -1, -1, -1, -1, -1]
+    assert R.value_before(bk, bk.m.days[1], "tsm12") == 1                # the NR7 day's (row 0) value
+    assert R.value_before(bk, bk.m.days[0], "tsm12") is None
+
+
+def test_round4_two_itm_and_iv_filter():
+    per = (date_(2025, 11, 1), date_(2025, 11, 30))
+    bk = _brk_book(1)
+    c = R.RULES["R4E"].candidates(bk, per)
+    assert len(c) == 1 and c[0]["itm"] == 2
+    t = S.simulate(bk, c[0], None)
+    assert t is not None and t["strike"][0] == 5100.0 - 2 * STEP          # call 2 strikes below the ATM (5100)
+    # IV filter: a flat IV is never below its own median -> no trade; then make the NR7 day cheap
+    bk2 = _brk_book(1)
+    assert R.RULES["R4G"].candidates(bk2, per) == []                     # also: < 10 earlier sessions known
+
+
+def test_round4_iv_cheap_before_is_causal():
+    bk = make_book(days=14)
+    m = bk.m
+    iv = np.full(len(m.ts), 30.0)
+    day12 = m.days[12]
+    iv[m.day_ix(m.days[11])] = 20.0                                      # session 11 cheap
+    iv[m.day_ix(day12)] = 5.0                                            # the entry day itself: must not matter
+    bk.iv = {(0, 0): iv.copy(), (1, 0): iv.copy()}
+    assert R.iv_cheap_before(bk, day12)                                  # 20 < median(30, ...) over 11 sessions
+    assert not R.iv_cheap_before(bk, m.days[11])                         # session 10 = 30, not below
+    assert not R.iv_cheap_before(bk, m.days[5])                          # only 4 earlier sessions: < R4_IV_MIN
+    bk.iv[(0, 0)][m.day_ix(m.days[13])] = 1.0                            # a later day changes nothing
+    bk._atm_iv_day = None
+    assert R.iv_cheap_before(bk, day12)
+
+
+def test_round4_eia_spike_fade_spec_twin_and_fixed_exit():
+    # 5 Nov 2025 (Wed, US winter time): EIA 10:30 ET = 21:00 IST; the future jumps +40 at 21:01 (ATR 100 -> 0.4 ATR)
+    path = _tod_path(lambda k, tod: np.where((k == 2) & (tod >= 21 * 60 + 1), 5040.0, 5000.0))
+    bk = _daily_atr(make_book(days=6, path=path))
+    rule = R.RULES["R4C"]
+    day = bk.m.days[2]
+    rel = R.release_days(bk)[day]
+    assert rel == 21 * 60
+    sp = rule.spec(bk, day, rel)
+    m = bk.m
+    assert sp["side"] == -1 and sp["ustop"] == pytest.approx(5040.0) and sp["ustop"] > 5040.0 and m.tod[sp["i_sig"]] == 21 * 60 + 5
+    assert m.tod[sp["i_end_fixed"]] == 21 * 60 + 6 + K.R4_FADE_HOLD
+    t = S.simulate(bk, sp, None)
+    assert t is not None and t["side"] == -1 and t["exit_ts"] <= pd.Timestamp(m.ts[sp["i_end_fixed"]])
+    assert t["why"] == "time" and t["exit_ts"] == pd.Timestamp(m.ts[sp["i_end_fixed"]])
+    # a small move (< 0.20 ATR) does not trade
+    bk2 = _daily_atr(make_book(days=6, path=_tod_path(lambda k, tod: np.where((k == 2) & (tod >= 21 * 60 + 1),
+                                                                              5010.0, 5000.0))))
+    assert rule.spec(bk2, bk2.m.days[2], rel) is None
+    # twin: a non-EIA day, the same clock and side, no size filter; an EIA day is refused
+    tw = rule.twin(bk, sp, bk.m.days[3])
+    assert tw is not None and tw["side"] == -1 and tw["rel"] == rel
+    assert rule.twin(bk, sp, day) is None
+
+
+def test_round4_fade_stop_at_the_spike_extreme():
+    def f(k, tod):
+        x = np.where((k == 2) & (tod >= 21 * 60 + 1), 5040.0, 5000.0)
+        return np.where((k == 2) & (tod >= 21 * 60 + 20), 5045.0, x)     # the spike resumes beyond its extreme
+    bk = _daily_atr(make_book(days=6, path=_tod_path(f)))
+    sp = R.RULES["R4C"].spec(bk, bk.m.days[2], 21 * 60)
+    t = S.simulate(bk, sp, None)
+    assert t["why"] == "ustop" and bk.m.tod[bk.m.ts.searchsorted(np.datetime64(t["exit_ts"]))] == 21 * 60 + 20
+
+
+def test_round4_evening_momentum_spec_and_twin():
+    path = _tod_path(lambda k, tod: np.where((k == 1) & (tod >= 17 * 60 + 10), 4980.0, 5000.0))
+    bk = make_book(days=4, path=path)
+    rule = R.RULES["R4D"]
+    sp = rule.spec(bk, bk.m.days[1])
+    assert sp["side"] == -1 and bk.m.tod[sp["i_sig"]] == 17 * 60 + 30 and sp["ustop"] == 5000.0
+    assert rule.spec(bk, bk.m.days[0]) is None                           # flat: no trade
+    tw = rule.twin(bk, sp, bk.m.days[2])
+    assert tw["side"] == -1                                              # twin keeps the trade's side
+    c = rule.candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    assert [x["day"] for x in c] == [bk.m.days[1]]
+    t = S.simulate(bk, sp, None)
+    assert t["exit_ts"] <= pd.Timestamp(bk.m.ts[E.sq_ix(bk.m, bk.m.days[1])])
+
+
+def test_round4_family_q_and_rules_registered():
+    rows = [dict(round=1, id="X", p=0.5), dict(round=3, id="R3A", p=0.01), dict(round=4, id="R4A", p=0.02),
+            dict(round=4, id="R4B", p=0.03), dict(round=4, id="R4C", p=0.9)]
+    fam = (("3", "R3A"), ("4", "R4A"), ("4", "R4B"))
+    q = S.family_q(rows, fam)
+    assert q == pytest.approx(S.bh([0.5, 0.9, 0.03])[-1])                 # min p 0.01 x 3 = 0.03, BH over 3 tests
+    assert np.isnan(S.family_q([dict(round=1, id="X", p=0.5)], fam))
+    assert len(R.ORDER4) == 7 and all(r in R.RULES for r in R.ORDER4)
+    assert all(R.RULES[r].books == K.CRUDE for r in ("R4A", "R4B", "R4C", "R4E", "R4F", "R4G"))
+    assert R.RULES["R4D"].books == K.METALS
+    assert all(r in {b for _, b in R.NR7_CRUDE_FAMILY} for r in ("R3A", "R4A", "R4B", "R4E", "R4F", "R4G"))
+
+
+def test_round4_history_side_filter():
+    n = 30
+    c = np.full(n, 5000.0)
+    d = pd.DataFrame(dict(date=pd.bdate_range("2024-01-01", periods=n), open=c, high=c + 20, low=c - 20, close=c,
+                          oi=np.full(n, 1000.0)))
+    from research.hunt.r93_breadth_donchian_mcx import rules as R93
+    x = R.daily_ind(R93.daily_series(d))
+    i = 20
+    x.loc[i + 1, ["ah", "ac"]] = [5100.0, 5090.0]
+    base = H.trade_nr7(x, i)
+    assert base is not None
+    x["tsm1"] = 1
+    assert H.trade_nr7(x, i, side_col="tsm1") == pytest.approx(base)
+    x["tsm1"] = -1
+    assert H.trade_nr7(x, i, side_col="tsm1") is None

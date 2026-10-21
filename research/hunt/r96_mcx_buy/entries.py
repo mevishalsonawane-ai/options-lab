@@ -68,9 +68,21 @@ RULE_TEXT = {
            "+ -40% premium stop; no premium ladder, no edge take-profit (deep-ITM exits model-priced, flagged); out "
            "after 10 sessions or before the option expiry; Boss's request",
     "R3L": "as R3K, trading the crude future itself (CRUDEOILM x10, CRUDEOIL x100); R93 futures costs",
+    "R4A": "R3A's NR7 crude signal; a break from 09:15 to the minute before the US cash open that still holds at that "
+           "minute enters at the US open (09:30 ET); 1-ITM, stop -40% / NR7 opposite extreme, lock ladder, edge, 3 "
+           "sessions; books chosen after rounds 2-3",
+    "R4B": "as R3A, only breaks in the direction of the sign of the back-adjusted 250-session return at the NR7 day",
+    "R4C": "EIA crude days: the future's move from the minute before the release to release + 5 min, if >= 0.20 ATR14 "
+           "-> 1-ITM against it; stop -40% / the spike's extreme, lock ladder, edge, out after 60 minutes",
+    "R4D": "GOLDM, SILVERM: the future's 17:00 -> 17:30 IST move -> 1-ITM that way; stop -40% / the 17:00 price, lock "
+           "ladder, edge, out at the session square-off",
+    "R4E": "as R3A with the 2-ITM strike",
+    "R4F": "as R3A, only breaks in the direction of the sign of the back-adjusted 20-session return at the NR7 day",
+    "R4G": "as R3A, only when the NR7 day's median ATM IV (option-chain filter) is below the median of the previous 20 "
+           "sessions' values",
 }
 PREREG = {1: "research/hunt/r96_mcx_buy/PREREG_ROUND1.md", 2: "research/hunt/r96_mcx_buy/PREREG_ROUND2.md",
-          3: "research/hunt/r96_mcx_buy/PREREG_ROUND3.md"}
+          3: "research/hunt/r96_mcx_buy/PREREG_ROUND3.md", 4: "research/hunt/r96_mcx_buy/PREREG_ROUND4.md"}
 
 
 def main(round_no: int = 1):

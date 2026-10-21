@@ -22,3 +22,10 @@
 - **N7 (21 Oct, round 3, before any run): R3G / R3I clocks.** R3G's twin enters at the twin day's own US open (US
   summer and winter time differ by an hour). R3I reads the move at the last minute at or before close - 46 and needs
   that minute within 5 minutes of it; R3H and R3J need their clock minutes within 5 minutes too.
+- **N8 (21 Oct, round 4, before any round-4 rule was run): environment and data.** rclone was missing again; installed
+  from downloads.rclone.org (v1.75.2) as in N6. The lake's STATUS.txt claims MCX options at ATM-5..+5, but every MCX
+  book still has offsets -3..+3 only in every design month, so R4-0 (wider strikes) cannot run.
+- **N9 (21 Oct, round 4, before any run): R4C's stop is strict.** A first synthetic test showed that a stop level equal
+  to the spike's extreme stops a flat, held spike on the fill minute (the engine stops on touching its level). The
+  pre-registered intent is a close beyond the extreme, so the level is moved 1e-6 beyond it. R4C's exit minute is fixed
+  (entry + 60 minutes, capped by the square-off) via `engine.sim_single(i_end_fixed=)`.

@@ -60,3 +60,16 @@ Effect sizes below are from abstracts or summaries where marked; none were verif
 | time-series momentum (12-month sign) in commodities | Moskowitz, Ooi & Pedersen, JFE 2012 | round 4 (as a filter only) |
 | gold rises in Asian hours, falls in US hours | CBS master's thesis; FXStreet commentary (Jul 2026), descriptive only | round 4 (futures check first) |
 | dropped: pre-FOMC drift in gold (Lucca & Moench find it in stocks only), drift after NFP / CPI in gold (retail write-ups), API Tuesday (no study), storage direction (vendor test: none) | - | no |
+
+## Round 4 scan (21 Oct 2026, before the round-4 pre-registration)
+
+About 8 web searches; abstracts and summaries only.
+
+| idea | source | used |
+|---|---|---|
+| short-lookback time-series momentum: 1-month lookback / 1-month hold best in Chinese commodity futures | J. Futures Markets 39(12) 2019, https://ideas.repec.org/a/wly/jfutmk/v39y2019i12p1515-1528.html | R4F (filter) |
+| commodity factor momentum strongest at the 1-month horizon, US and UK 1985-2022 | J. Futures Markets 45(11) 2025, https://ideas.repec.org/a/wly/jfutmk/v45y2025i11p1934-1969.html | R4F (support) |
+| after night trading began, the night session's first half-hour (not the day's) predicts later returns in gold, silver, copper, aluminium futures | Bouri, Ma, Xu & Zhou, AUT working paper, https://acfr.aut.ac.nz/__data/assets/pdf_file/0008/686816/4a-Z-Ivy-Zhou.pdf ; Ma et al., GFJ 64 (2025) | R4D |
+| crude variance risk premium is negative and time-varying; it predicts futures returns | Chevallier & Sevi (FEEM WP); Da Fonseca & Xu (USO, AUT); Trolle & Schwartz 2010 | R4G (cheap-IV filter) |
+| dealer-gamma regime pages (negative gamma favours breakouts) | vendor pages (optionsanalysissuite, SpotGamma), no track record | no (no MCX dealer data) |
+| MCX NR7 / inside-bar option backtests | none found (only tip pages) | - |

@@ -402,7 +402,7 @@ def _trade_dict(book, i_in, i_out, side, strikes, fills, exits, why, model, stal
 def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_day=None, i_from: int | None = None,
                offset: int | None = None, stop_frac: float = K.PREM_STOP, ladder=K.LADDER,
                trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, edge_exit: bool = False,
-               max_risk: float | None = None, utrail=None, r93_exit: bool = False):
+               max_risk: float | None = None, utrail=None, r93_exit: bool = False, i_end_fixed: int | None = None):
     """Buy one contract: the strike from the future's close at grid index i_sig (the minute before entry), filled at
     the first print from i_from (default i_sig + 1). `offset` = steps in the money (default 1: 1-ITM). Returns a trade
     or None."""
@@ -425,6 +425,8 @@ def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_
     if max_risk is not None and stop_frac * fill * book.units + K.R2_RISK_COST > max_risk:
         return None                   # round 2 R2E: the 1-lot stop risk is above the cap -> skip
     i_end = last_exit_ix(book, i_in, n_sessions, last_day)
+    if i_end_fixed is not None:       # round 4 R4C: a fixed exit minute (never later than the session cap)
+        i_end = min(i_end, int(i_end_fixed))
     if i_end <= i_in:
         return None
     o, h, l, c, mdl = contract_marks(book, cp, strike, i_in, i_end)

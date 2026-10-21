@@ -26,7 +26,14 @@ NAMES = {"S1": "squeeze release, ATM straddle", "S2": "squeeze release, 1-ITM di
          "R3I": "last-half-hour intraday momentum, 1-ITM (4 minis)",
          "R3J": "US-open range breakout in a high-volatility regime (crude)",
          "R3K": "NR7 crude, 1-ITM option with R93's 2 ATR stop + 3 ATR chandelier, 10 sessions",
-         "R3L": "NR7 crude, the future itself with R93's 2 ATR stop + 3 ATR chandelier, 10 sessions"}
+         "R3L": "NR7 crude, the future itself with R93's 2 ATR stop + 3 ATR chandelier, 10 sessions",
+         "R4A": "NR7 crude, morning break still holding -> entry at the US open (R3A x R3G)",
+         "R4B": "NR7 crude, only breaks agreeing with the 12-month trend (TSMOM filter)",
+         "R4C": "EIA spike fade, 1-ITM against the first 5 minutes (crude)",
+         "R4D": "MCX 17:00-17:30 IST momentum, 1-ITM, same session (GOLDM, SILVERM)",
+         "R4E": "NR7 crude, 2-ITM strike",
+         "R4F": "NR7 crude, only breaks agreeing with the 1-month trend",
+         "R4G": "NR7 crude, only when the NR7 day's ATM IV is below its 20-session median"}
 
 
 def rs(x) -> str:
