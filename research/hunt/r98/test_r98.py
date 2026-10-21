@@ -110,3 +110,41 @@ def test_profit_lock_ladder_fills_like_the_app():
     assert list(lv[1:]) == pytest.approx([2.05, 2.6, 3.2])
     lc = K.lock_levels("cmp30", e, be, np.array([2.0, 2.6, 3.38, 4.4]))
     assert list(lc[1:]) == pytest.approx([2.05, 2.6, 3.38])
+
+
+def test_hero2_exits_on_a_synthetic_path():
+    import hero2 as H
+    e = 2.0
+    n = 40
+    o = np.full(n, 2.0); h = np.full(n, 2.1); l = np.full(n, 1.9); c = np.full(n, 2.0)
+    # the option runs to 12 (6x) by minute 10, then falls back to 3 by the end
+    run = np.linspace(2.0, 12.0, 11)
+    c[:11], h[:11], o[:11], l[:11] = run, run + 0.2, run - 0.1, run - 0.2
+    c[11:], h[11:], o[11:], l[11:] = np.linspace(11.5, 3.0, n - 11), np.linspace(11.6, 3.1, n - 11), \
+        np.linspace(11.6, 3.1, n - 11), np.linspace(11.4, 2.9, n - 11)
+    ix = np.concatenate([np.linspace(100, 110, 11), np.linspace(109.5, 101, n - 11)])
+    x = dict(zip(H.COLS, H.simulate("NIFTY", e, o, h, l, c, ix, 1.0, 4.0)))
+    assert x["E1_half2x_s0"] == pytest.approx(H.net_legs("NIFTY", e, [(0.5, 4.0), (0.5, 3.0)]))
+    # give-back 50% armed at 5x: the peak before the break is 12.2 -> stop 2 + 0.5 x 10.2 = 7.1; the breaking minute
+    # opens below it on this falling path (a gap), so the fill is that open
+    jb = 11 + int(np.argmax(l[11:] <= 7.1))                        # after the 12.2 peak (minute 10) sets the level
+    assert o[jb] <= 7.1
+    assert x["E2_arm5x_g0.5_s0"] == pytest.approx(H.net_legs("NIFTY", e, [(1.0, min(o[jb], 7.1))]))
+    # index trail 1 straddle (4 points) from the best close 110: the first close <= 106 sells at that minute's option close
+    j = 11 + int(np.argmax(ix[11:] <= 106.0))                      # after the 110 high of minute 10
+    assert x["E3_idx1em_s0"] == pytest.approx(H.net_legs("NIFTY", e, [(1.0, c[j])]))
+    assert x["B_hold"] == pytest.approx(H.net_legs("NIFTY", e, [(1.0, 3.0)]))
+    assert H.net_legs("NIFTY", e, [(1.0, 2.0)]) == pytest.approx(L.net_pnl("NIFTY", e, 2.0))
+
+
+def test_hero2_time_stop_and_initial_stop():
+    import hero2 as H
+    e, n = 4.0, 70
+    o = np.full(n, 3.0); h = np.full(n, 3.2); l = np.full(n, 2.9); c = np.full(n, 3.0)
+    c[-1] = 12.0                                                       # a late jump the time stop never sees
+    x = dict(zip(H.COLS, H.simulate("NIFTY", e, o, h, l, c, np.full(n, 100.0), 1.0, 5.0)))
+    assert x["E4_time30"] == pytest.approx(H.net_legs("NIFTY", e, [(1.0, 3.0)]))       # below entry at 30 min: out
+    assert x["B_hold"] == pytest.approx(H.net_legs("NIFTY", e, [(1.0, 12.0)]))
+    l2 = l.copy(); l2[5] = 1.5; o2 = o.copy()
+    y = dict(zip(H.COLS, H.simulate("NIFTY", e, o2, h, l2, c, np.full(n, 100.0), 1.0, 5.0)))
+    assert y["E1_half2x_s0.5"] == pytest.approx(H.net_legs("NIFTY", e, [(1.0, 2.0)]))    # -50% stop at 2.0 in minute 5

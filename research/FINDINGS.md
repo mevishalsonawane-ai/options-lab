@@ -330,3 +330,8 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
   with -20%; the -50% stop kills only 1-3.5% of later winners). A +30%-step profit lock (app ProfitLock fills) lifts
   the win rate 3% -> 19% and the loss to -Rs 2,139 (-Rs 594 with a -20% stop, the least bad tested, 0 of 6 years > 0),
   but cuts the 10x tickets from +Rs 43,742 to +Rs 4,977 (13 Oct 22650 CE: +Rs 84k held, +Rs 1.4k locked).
+- R98b (pre-registered PREREG_B, design 2021-23 / holdout 2024-26): 26 new exits (free roll, late give-back trail,
+  index trail, time stop) x every ticket / daily basket / confirmation entries: 0 of 4 pass on the holdout. Several
+  exits keep all of 13 Oct's Rs 84k, but every exit loses overall: break-even needs 6-8% of tickets to be 10x
+  heroes, the base is 2.2% and the best model ~5%. Real pattern: after a 1.5-straddle move from 13:00 the index
+  reaches 2.5 straddles 30% of days (vs 6.9%); untested with ATM options, needs a forward paper test.

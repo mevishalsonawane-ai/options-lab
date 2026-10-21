@@ -327,6 +327,76 @@ tickets, Rs 5,000 each. These are post-hoc questions, not pre-registered.
   pick it turns +Rs 714 into −Rs 636.
 - **Highest win rate with any lock:** 19% on all tickets and 33% on the model's daily pick. Nowhere near 75%.
 
+## R98b (Boss, 21 Oct): "enhance it, try to resolve it, and catch all Rs 85,000"
+
+- **Pre-registered** in `hunt/r98/PREREG_B.md` (commit `eced272`) before any number was computed.
+- **The test:** 26 new exits and two new entries; design 2021-23, holdout 2024-26 read once.
+- **Code and tables:** `hunt/r98/hero2.py`, `results/hero2.md`.
+
+**Verdict: not resolved.**
+- 0 of 4 pre-registered tests pass.
+- Catching the full Rs 84,357 of 13 Oct is easy, but every rule that catches it loses on the other days.
+
+**What was tested:**
+- **Exits:**
+  - E1 free roll: half sold at 2× / 3×, the rest held;
+  - E2 give-back trail armed only after 2× / 3× / 5×, keeping 50% or 70% of the gain;
+  - E3 a trail on the INDEX (sell when the index pulls back 0.5 / 1 straddle);
+  - E4 a 30 / 60-minute time stop for tickets still under water;
+  - E1 + E2 combined;
+  - each with no initial stop or a −50% one.
+- **Entries:**
+  - U-A every ticket;
+  - U-B a fixed daily basket (CE + PE near Rs 5 at 13:30 and 14:30);
+  - U-C confirmation: buy only once the index has already moved 1 or 1.5 straddles from 13:00.
+
+**Holdout 2024-26, the exit each entry chose on design:**
+
+| entries | exit chosen on design | tickets | win | mean | bootstrap 95% | w/o 5 best days | years > 0 |
+|---|---|---|---|---|---|---|---|
+| every ticket | 30-min time stop | 230,678 | 1.7% | −Rs 1,579 | −1,917 .. −1,140 | −Rs 1,902 | 0/3 |
+| daily basket | 30-min time stop | 1,909 | 4.5% | −Rs 990 | −1,684 .. −183 | −Rs 1,647 | 0/3 |
+| confirmation, 1 straddle | trail armed at 3×, keep 50% | 193 | 13.5% | −Rs 862 | −1,623 .. +71 | −Rs 1,525 | 0/3 |
+| confirmation, 1.5 straddles | index trail 0.5 straddle | 71 | 12.7% | +Rs 190 | −1,998 .. +3,287 | −Rs 2,170 | 1/3 |
+
+**13 Oct (22650 CE at Rs 4.15, 13:30).** Exits that keep all Rs 84,357:
+- the give-back trail keeping 70% of the gain (armed at 2×, 3× or 5×);
+- the 1-straddle index trail;
+- the 30 / 60-minute time stops;
+- plain stops.
+
+Half-at-2× keeps Rs 44,591. The +30% lock keeps Rs 1,378.
+
+**Why no exit can fix it** (all 394,956 tickets, 2021-26):
+
+| exit | heroes (2.2% of tickets, best close ≥ 10×) | every other ticket | all | hero share needed to break even |
+|---|---|---|---|---|
+| hold to 15:20 | +Rs 54,298 | −Rs 4,535 | −Rs 3,213 | 7.7% |
+| −20% stop | +Rs 15,442 | −Rs 1,129 | −Rs 757 | 6.8% |
+| index trail 1 straddle (−50% stop before) | +Rs 37,687 | −Rs 2,628 | −Rs 1,722 | 6.5% |
+| 30-min time stop | +Rs 36,189 | −Rs 2,396 | −Rs 1,529 | 6.2% |
+| +30% lock | +Rs 4,667 | −Rs 2,295 | −Rs 2,139 | 33% |
+
+- **Every exit trades hero gains against losses elsewhere, and none reaches break-even:**
+  - tighter exits cut the losers but kill the heroes, which often dip before they run;
+  - looser exits keep the heroes but let the 98% of losers bleed.
+- **Break-even needs 6-8% heroes, against 2.2%.** The best model raised it to about 5% (one pick a day, section 7).
+  That is why the one-ticket-a-day lead hovers near zero instead of clearly above it.
+- **So the problem is the entry, not the exit.** Getting there means picking heroes about 3× better than chance, which
+  nothing tested here does reliably.
+
+**New patterns:**
+- **Continuation is real.** Once the index has moved 1.5 straddles from 13:00, it reaches 2.5 straddles the same way by
+  15:20 on 30% of days (28% design, 32% holdout), against 6.9% unconditionally. After 1 straddle it is 14%.
+  - The Rs 5 option bought then does not pay enough to profit from it: the move left is about 1 straddle, so the
+    option ends 2-3×, not 10×.
+  - A nearer strike (ATM) bought after a 1.5-straddle move is the one untested idea with a measured basis. It needs its
+    own pre-registration and a FORWARD paper test, because this holdout has now been seen.
+- **No clustering.** After an expiry with a hero (any index, ≤ 3 days earlier) the next hero rate was 2.2% (46 days),
+  against 9.0%. That is small and not monotonic in the previous day's move, so it is noise, not a signal.
+- **A busy morning against the priced move does not help.** When the 09:15-13:00 range was ≥ 4 straddles, the
+  afternoon hero rate was lower (6%, then 0% on 22 days).
+
 ## Honest notes
 
 - **Prices.** No bid/ask in the lake. The 1-tick spread is a model; real Rs 1-3 strikes are often 1 tick wide, but
