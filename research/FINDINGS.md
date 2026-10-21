@@ -1495,3 +1495,13 @@ Breadth = 3 of 5 metals (GOLD, SILVER, COPPER, ZINC, ALUMINIUM; minis once) / 2 
   (twin p 0.51; -Rs 5.76 lakh without the top 5: the 2023-26 silver / copper rally); daily breadth -Rs 3.68 lakh (133).
 - Sample: long enough for the intraday answer (post-hoc 95% upper bound of gross a trade below cost in every option book; closest
   gold with breadth Rs 265 vs Rs 364). Keep Breadth Donchian on the indices only.
+## MCX commodity option BUYING hunt, round 1 (R96, 21 Oct 2026) - 0 of 9 pass; leads: NR7 breakout; holdout not read
+Full study: `HUNT_R96_ROUND1.md` (pre-registered `hunt/r96_mcx_buy/PREREG_ROUND1.md`, commit c1d5f8e8; cumulative ledger
+`hunt/r96_mcx_buy/LEDGER.md`, 9 ideas). Signal source: the MCX future; trade: buy 1-ITM / ATM straddle on CRUDEOILM,
+NATGASMINI, GOLDM, SILVERM, hard stop + profit lock. Design 5 Aug 2025 - 14 Jul 2026; locked holdout 15 Jul - 19 Oct 2026
+(not read: nothing passed).
+- Event straddles (103), event follow (103) and US-session momentum (236) lose even before costs; IV-below-forecast
+  straddles (15) lose: MCX options price events and vol like other markets (variance premium).
+- Lead: NR7 breakout -> 1-ITM for 3 sessions, design +Rs 1.84 lakh on 58 (twin p 0.006, q 0.054), positive vs twins on
+  2012-25 daily futures (+0.58% vs +0.32% a trade, 1,436); but it fails folds (2 of 4), the -13k month and the drawdown,
+  and 7 model-priced deep-ITM silver exits carry the profit (real-print exits lose on every book). Round 2 refines it.
