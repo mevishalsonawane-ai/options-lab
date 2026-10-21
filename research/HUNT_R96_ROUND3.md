@@ -44,8 +44,10 @@ Design 5 Aug 2025 - 14 Jul 2026, 1 lot, net after Zerodha MCX charges and half-s
    - BH q 0.126 over 27 ideas (the gate is 0.10).
    - **The books were chosen after seeing round 2.** CRUDEOIL's half is the same 23 trades as R2D (+Rs 45,170). The
      CRUDEOILM half (+Rs 3,705) trades the same signal days at a tenth of the size, so it is not an independent check.
-   - The rupee result is almost all one book: CRUDEOIL, 23 trades. Its median 1-lot stop risk is about Rs 4,657, so
-     2% risk needs about Rs 2.3 lakh.
+   - The rupee result is almost all one book: CRUDEOIL, 23 trades. Its median 1-lot stop risk is about Rs 9,149, so
+     2% risk needs about Rs 4.6 lakh (the pooled median with CRUDEOILM, Rs 4,657, understates it).
+   - One CRUDEOIL winner (22 Oct 2025, +Rs 16,532, a time exit) is model-priced; on real prints CRUDEOIL made
+     +Rs 28,639 on 22. Trade-by-trade detail: `hunt/r96_mcx_buy/results/NR7_CRUDE_DETAIL.md`.
 2. **With ATM+/-3 strikes, the exit question can't be answered on crude.** R3C swapped the premium ladder for a trail
    on the future. Its CRUDEOIL trades came out identical to R3A's (17 edge exits, 5 underlying stops, 1 time exit): every
    crude winner hits the deepest stored strike before the ladder or the trail can act. Only natural gas changed

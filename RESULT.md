@@ -14,7 +14,9 @@ Boss, in plain English:
   - It beat random-day copies of itself (p 0.014).
   - It fails one gate: after correcting for all 27 ideas tried so far, its score is 0.126 against the 0.10 limit.
   - Caveat: I chose crude because round 2 pointed there, so its numbers are flattering. Almost all of the profit is on
-    the big CRUDEOIL lot (23 trades). Capital for 2% risk is about Rs 2.3 lakh.
+    the big CRUDEOIL lot (23 trades), whose median risk a trade is about Rs 9,100, so 2% risk needs about Rs 4.6 lakh.
+  - One CRUDEOIL winner (22 Oct 2025, +Rs 16,532) was priced by the model, not a real print; on real prints only
+    CRUDEOIL made +Rs 28,639 on 22 trades. Full trade list: `research/hunt/r96_mcx_buy/results/NR7_CRUDE_DETAIL.md`.
 - **The three new ideas from published research all lost after costs on MCX options:**
   - trading the EIA-day half-hour move (90 trades, -Rs 10,239);
   - last-half-hour momentum (223 trades, -Rs 79,100);
