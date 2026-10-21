@@ -359,7 +359,10 @@ object Diag {
     // 21 Oct, enhancement round 3: the positions-lag guard's day ([round3Lag]) rides in this function, never as its own line in the
     // report's (one more line there overflowed the compiler's stack in the APK build again).
     private fun round2Exits(): String = (runCatching { ExitCoordinator.line() }.getOrElse { "Exit coordinator: could not read" }) + "\n" + round3Lag()
-    private fun round3Lag(): String = (runCatching { ExitCoordinator.lagLine() }.getOrElse { "Positions-lag guard: could not read" }) + "\n"
+    private fun round3Lag(): String = (runCatching { ExitCoordinator.lagLine() }.getOrElse { "Positions-lag guard: could not read" }) + "\n" + round4Lines()
+    /** 21 Oct, enhancement round 4: the day OCO's switch and the payout-aware drawdown's line (in this chain, as round 3's line). */
+    private fun round4Lines(): String = "Stop and target as one GTT in the day: ${if (runCatching { DayOco.isOn() }.getOrDefault(false)) "on" else "off"}\n" +
+        (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"
 
     /** 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7). */
     private fun round1Watch(): String = buildString {

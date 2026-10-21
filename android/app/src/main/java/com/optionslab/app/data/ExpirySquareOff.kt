@@ -145,6 +145,9 @@ object ExpirySquareOff {
                         others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
                         continue
                     }
+                    // 21 Oct, enhancement round 4 (idea 1): a protection's stop and target resting as one GTT ([DayOco]) would still
+                    // fire after this exit sold the position: deleted first, confirmed (or the exit waits for the next pass).
+                    if (!Protections.dayGttsOut(p.exchange, p.symbol, "expiry square-off")) continue
                     val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
                     // 21 Oct, enhancement round 3 (idea 1, review): what is held, checked against the orders read's fills: an exit sent
                     // from here that filled a moment ago (an arm's, a protection's, Boss's own) is never sold again while the

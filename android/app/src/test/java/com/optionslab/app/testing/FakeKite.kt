@@ -84,6 +84,8 @@ class FakeKite : Closeable {
         var cancelRest: Boolean = false,
         /** 18 Oct: the price GET /trades shows for its fill when it is not [avg] (a trade book and an order book that differ). */
         val tradePrice: Double? = null,
+        /** 21 Oct, enhancement round 4 (idea 2): when the exchange last changed it (its last fill here): exchange_update_timestamp. */
+        var updated: LocalDateTime = at,
     ) {
         val working: Boolean get() = status in setOf("OPEN", "TRIGGER PENDING", "MODIFY PENDING")
     }
@@ -114,11 +116,15 @@ class FakeKite : Closeable {
      * reads (Zerodha's positions can trail an order that shows COMPLETE in the order book by a moment).
      */
     @Volatile var positionsTrailReads = 0
+    /** 21 Oct, enhancement round 4: the next this many reads of the GTT list fail (500 GeneralException). */
+    @Volatile var gttReadFailures = 0
     private var trailedPositions: JSONObject? = null
     private var trailedLeft = 0
     /** Positions reads answered so far. */
     @Volatile var positionReads = 0
     var cash = 500_000.0
+    /** 21 Oct, enhancement round 4 (idea 3): the day's payout in the margins (utilised.payout). */
+    @Volatile var payoutToday = 0.0
     var marginPerOrder = 40_000.0
     /** What the contract note (POST /charges/orders) says each order cost, all in; [down] += "/charges/orders" fails it. */
     @Volatile var chargesPerOrder = 31.25
@@ -385,6 +391,7 @@ class FakeKite : Closeable {
             m == "GET" && path.startsWith("/instruments/historical/") -> ok(JSONObject().put("candles", candles ?: JSONArray()))
             m == "POST" && path == "/margins/basket" -> basket(body)
             m == "POST" && path == "/charges/orders" -> contractNote(body)
+            m == "GET" && path == "/gtt/triggers" && gttReadFailures > 0 -> { gttReadFailures--; error(500, "GeneralException", "Something went wrong. Please try again.") }
             m == "GET" && path == "/gtt/triggers" -> ok(JSONArray().apply { gtts.values.forEach { put(it) } })
             m == "POST" && path == "/gtt/triggers" -> placeGtt(parseForm(body))
             m == "GET" && path.startsWith("/gtt/triggers/") -> {
@@ -403,7 +410,7 @@ class FakeKite : Closeable {
     private fun funds() = JSONObject().put("equity", JSONObject().put("enabled", true).put("net", cash)
         .put("available", JSONObject().put("cash", cash).put("live_balance", cash).put("opening_balance", cash).put("collateral", 0))
         .put("utilised", JSONObject().put("debits", 0).put("span", 0).put("exposure", 0).put("option_premium", 0)
-            .put("m2m_realised", 0).put("m2m_unrealised", 0)))
+            .put("m2m_realised", 0).put("m2m_unrealised", 0).put("payout", payoutToday)))
 
     private fun positionsJson(): JSONObject {
         val net = JSONArray()
@@ -438,7 +445,7 @@ class FakeKite : Closeable {
 
     private fun orderJson(o: Order) = JSONObject().put("order_id", o.id).put("exchange_order_id", "1100000${o.id.takeLast(8)}")
         .put("status", o.status).put("status_message", if (o.message.isEmpty()) JSONObject.NULL else o.message)
-        .put("order_timestamp", o.at.format(TS)).put("variety", "regular").put("exchange", o.exchange)
+        .put("order_timestamp", o.at.format(TS)).put("exchange_update_timestamp", o.updated.format(TS)).put("variety", "regular").put("exchange", o.exchange)
         .put("tradingsymbol", o.symbol).put("order_type", o.type).put("transaction_type", o.side).put("validity", "DAY")
         .put("product", o.product).put("quantity", o.qty).put("price", o.price).put("trigger_price", o.trigger)
         .put("average_price", o.avg).put("filled_quantity", o.filled).put("pending_quantity", if (o.working) o.qty - o.filled else 0)
@@ -446,6 +453,7 @@ class FakeKite : Closeable {
 
     private fun move(o: Order, qty: Int) {
         if (qty == 0) return
+        o.updated = LocalDateTime.now(IST)
         val k = "${o.exchange}:${o.symbol}:${o.product}"
         if (positionsTrailReads > 0 && trailedPositions == null) { trailedPositions = positionsJson(); trailedLeft = positionsTrailReads; positionsTrailReads = 0 }
         if (o.side == "BUY") dayBought[k] = (dayBought[k] ?: 0) + qty else daySold[k] = (daySold[k] ?: 0) + qty

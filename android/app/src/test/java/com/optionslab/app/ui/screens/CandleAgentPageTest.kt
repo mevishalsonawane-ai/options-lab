@@ -29,6 +29,8 @@ import java.time.ZoneId
 @RunWith(AndroidJUnit4::class)
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 class CandleAgentPageTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @After fun down() { CandleAgentHost.resetForTest(); com.optionslab.app.data.Market.testClock = null }
 

@@ -47,6 +47,8 @@ import org.junit.runner.RunWith
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h800dp")
 @RunWith(AndroidJUnit4::class)
 class JarvisControlsTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = AreaEWatchdog()
     @get:Rule val compose = createComposeRule()
 

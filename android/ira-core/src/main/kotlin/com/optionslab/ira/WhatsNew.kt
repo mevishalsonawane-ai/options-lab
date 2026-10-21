@@ -63,6 +63,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 4.
+        Entry("2026-10-21-enhance-round-4", OCT21, "Stop and target as one GTT; payouts in the drawdown",
+            "A carried position's stop and target can rest at Zerodha as one GTT all day. " +
+                "Whichever fires, Zerodha cancels the other, even with your phone off. " +
+                "It is off until you switch it on with your PIN. " +
+                "The guard against selling a filled exit twice now covers a stop resting since the morning too. " +
+                "Money taken out of Zerodha is now counted when a drawdown stops entries. " +
+                "It only logs until you switch it on, and never clears the kill switch by itself.",
+            "Bot settings → Stop and target as one GTT; Payouts and the drawdown"),
         // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 3.
         Entry("2026-10-21-enhance-round-3", OCT21, "No filled exit sold twice; Sunday review catch-up",
             "Zerodha's positions can trail an exit that already filled, so a second exit could sell it again. " +

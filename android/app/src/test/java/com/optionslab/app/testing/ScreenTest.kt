@@ -52,6 +52,8 @@ data class DeviceConfig(val size: String, val qualifiers: String, val fontScale:
  */
 abstract class ScreenTest(protected val device: DeviceConfig) {
     @get:Rule val compose = createEmptyComposeRule()
+    /** 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own ([MarketClockRule]). */
+    @get:Rule val marketClock = MarketClockRule()
     private var scenario: ActivityScenario<ComponentActivity>? = null
 
     @Before fun configureDevice() {

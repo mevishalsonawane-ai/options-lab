@@ -90,6 +90,8 @@ import java.time.LocalDate
 @RunWith(AndroidJUnit4::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class BrokerScreensTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = com.optionslab.app.testing.Watchdog()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)

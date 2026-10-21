@@ -33,6 +33,9 @@ object Guard {
     /** Start the peak again from today's equity (after a paper reset, or when the owner asks). */
     fun resetPeak(live: Boolean) = SecurePrefs.put(peakKey(live), null)
 
+    /** 21 Oct, enhancement round 4 (idea 3): the peak set to [peak] (Boss lowering it by the payouts, with the PIN: [PayoutWatch]). */
+    internal fun setPeak(live: Boolean, peak: Double) { if (peak.isFinite() && peak > 0) SecurePrefs.put(peakKey(live), peak) }
+
     fun paperAccount(snap: Paper.Snapshot): AccountGuard.Account {
         val capital = Paper.capital.toDouble()
         val f = snap.funds
@@ -144,6 +147,11 @@ object Guard {
             return out + FUNDS_UNKNOWN
         // 20 Oct, review: a withdrawal lowers the next opening balance and reads as a drawdown from the peak (the kill switch then
         // goes on). Said, never acted on: the peak is restarted only by Boss, with the PIN.
+        // 21 Oct, enhancement round 4 (idea 3): payouts since the peak counted ([PayoutWatch]; memory only). In shadow only logged;
+        // on, said beside the refusal. Either way the refusal stands and the kill switch goes on as before.
+        val payouts = if (out.any { it.startsWith("Drawdown limit") && it.contains("its peak") })
+            runCatching { PayoutWatch.drawdown(account, limits.maxDrawdownPct) }.getOrNull() else null
+        if (payouts != null) return out + payouts
         if (out.any { it.startsWith("Drawdown limit") && it.contains("its peak") } && AccountGuard.drawdownNotFromToday(account))
             return out + WITHDRAWAL_HINT
         return out

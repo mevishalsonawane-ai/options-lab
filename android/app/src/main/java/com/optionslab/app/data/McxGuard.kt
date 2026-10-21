@@ -119,6 +119,8 @@ object McxGuard {
                     // A resting stop or target on it would keep the market exit from going: cancelled first, exit next pass.
                     val others = same.filter { it.tag != "iraalgoexpiry" }
                     if (others.isNotEmpty()) { others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }; continue }
+                    // 21 Oct, enhancement round 4 (idea 1): a protection's day GTT on it deleted first, confirmed ([Protections.dayGttsOut]).
+                    if (!Protections.dayGttsOut(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")) continue
                     val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
                     // 21 Oct, enhancement round 3 (idea 1, review): held, checked against the orders read's fills ([ExitCoordinator.held]).
                     val heldNow = runCatching { ExitCoordinator.held(Mcx.EXCHANGE, p.symbol, p.product, "MCX expiry exit", read, freshBook) }.getOrNull() ?: continue

@@ -104,6 +104,8 @@ internal fun ComposeTestRule.pineTap(text: String, exact: Boolean = true) {
 
 @RunWith(AndroidJUnit4::class)
 class PineScreenTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)

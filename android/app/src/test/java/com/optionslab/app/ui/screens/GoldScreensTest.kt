@@ -47,6 +47,8 @@ import java.time.LocalDateTime
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h2000dp")
 @RunWith(AndroidJUnit4::class)
 class GoldScreensTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = AreaEWatchdog()
     @get:Rule val compose = createComposeRule()
     private val app: Application get() = ApplicationProvider.getApplicationContext()

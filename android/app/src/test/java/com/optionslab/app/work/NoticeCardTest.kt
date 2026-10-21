@@ -10,6 +10,8 @@ import org.junit.Test
 
 /** A tapped notification's card: what goes into the intent and back, and where each kind takes the app (pure JVM). */
 class NoticeCardTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @After fun down() = NoticeCards.forgetAll()
 
     private fun roundTrip(c: NoticeCard): NoticeCard? = NoticeCards.toExtras(c).let { m -> NoticeCards.fromExtras { m[it] } }

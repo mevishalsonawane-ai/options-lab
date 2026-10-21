@@ -209,6 +209,8 @@ internal fun ComposeTestRule.strategyShown(text: String): Boolean {
 
 @RunWith(AndroidJUnit4::class)
 class StrategiesScreenTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
@@ -340,6 +342,8 @@ class StrategiesScreenTest {
 
 @RunWith(AndroidJUnit4::class)
 class StrategyArmCardTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     private val rec = RecordingStrategyActions()
@@ -462,6 +466,8 @@ class StrategyArmCardTest {
 
 @RunWith(AndroidJUnit4::class)
 class OrbRowsTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     private val rec = RecordingStrategyActions()

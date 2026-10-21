@@ -37,7 +37,18 @@ object Market {
             field = v
         }
 
-    fun now(): ZonedDateTime = testClock?.let { ZonedDateTime.now(it).withZoneSameInstant(IST) } ?: ZonedDateTime.now(IST)
+    /**
+     * 21 Oct, enhancement round 4 (idea 5): TEST SEAM (JVM tests only): the clock [now] falls back to while [testClock] is null - the
+     * app tests' rule pins it to noon IST on a trading day, so no test depends on the hour by accident. Its setter throws unless
+     * BuildConfig.DEBUG and no app code sets it; null (always, in the app): [now] reads the system clock exactly as before.
+     */
+    @Volatile internal var testDefaultClock: java.time.Clock? = null
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }
+            field = v
+        }
+
+    fun now(): ZonedDateTime = (testClock ?: testDefaultClock)?.let { ZonedDateTime.now(it).withZoneSameInstant(IST) } ?: ZonedDateTime.now(IST)
     fun today(): LocalDate = now().toLocalDate()
     fun minuteNow(): Int = now().let { it.hour * 60 + it.minute }
 

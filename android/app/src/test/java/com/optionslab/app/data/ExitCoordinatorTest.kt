@@ -488,4 +488,78 @@ class ExitCoordinatorTest : RobolectricTest() {
         ExitCoordinator.load()
         assertTrue(!ExitCoordinator.isLagOn())
     }
+    // ---- 21 Oct, enhancement round 4 (idea 2): a RESTING exit's fill, judged by its exchange update time ----------------------
+
+    /** A stop resting since the morning (sent before this process's memory: a restart forgets it), filled now; the positions trail. */
+    private fun restingStopFills(qty: Int, trail: Int): String {
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, qty, 75, "NRML", "SL", 9.0, 0.05, "NFO", "iraprotect", triggerPrice = 9.5), exit = true) }
+        runBlocking { Broker.orders() }
+        ExitCoordinator.restartForTest()                           // as the morning's stop: this phone did not send it a moment ago
+        kite.positionsTrailReads = trail
+        kite.fill(id)
+        kite.requests.clear()
+        return id
+    }
+
+    @Test fun inShadowARestingStopsFreshFillIsReadOnceAndOnlyLogged() {
+        kite.position(ce, 75, 20.0)
+        restingStopFills(75, trail = 10)
+        assertEquals("as before this round: the read as it came", 75, heldFor())
+        assertEquals(1, positionReads())
+        assertEquals(1, ExitCoordinator.countsForTest().lagShadow)
+    }
+
+    @Test fun onARestingStopsFreshFillIsNeverSoldAgain() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 75, 20.0)
+        restingStopFills(75, trail = 1)
+        assertEquals(0, heldFor())
+        assertEquals("trailing once, then whole", 2, positionReads())
+        assertEquals(1, ExitCoordinator.countsForTest().lagReadAgain)
+    }
+
+    @Test fun onARestingStopStillTrailingIsCountedAsSold() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        restingStopFills(75, trail = 50)
+        assertEquals("150 shown, 75 of it sold by the stop: 75", 75, heldFor())
+        assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
+    }
+
+    @Test fun aRestingStopThatFilledLongAgoNeverWakesTheGuard() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        val id = restingStopFills(75, trail = 0)
+        kite.order(id).updated = java.time.LocalDateTime.now(com.optionslab.engine.IST).minusMinutes(10)
+        assertEquals(75, heldFor())
+        assertEquals("no exit of ours sent and no fresh fill: one read", 1, positionReads())
+        assertEquals(0, ExitCoordinator.countsForTest().let { it.lagShadow + it.lagReadAgain + it.lagSubtracted })
+    }
+
+    @Test fun theExchangeUpdateTimeIsReadFromTheOrderBook() = runBlocking {
+        kite.position(ce, 75, 20.0)
+        val id = restingStopFills(75, trail = 0)
+        val row = Broker.orders().first { it.id == id }
+        assertTrue(row.updatedAt, row.updatedAt.matches(Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}""")))
+    }
+
+    /** The 15:05 expiry square-off with Boss's stop resting since the morning that fills just before its pass. */
+    @Test fun theExpirySquareOffNeverSellsARestingStopsFillAgainWithTheGuardOn() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 75, 20.0)
+        restingStopFills(75, trail = 50)
+        pass()
+        assertEquals("the pass sends nothing: the stop already sold it", 0, sells())
+        assertEquals(0, held())
+        assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
+    }
+
+    @Test fun inShadowTheExpirySquareOffWithARestingStopsFillOnlyLogs() {
+        kite.position(ce, 75, 20.0)
+        restingStopFills(75, trail = 50)
+        pass()
+        assertEquals("as before this round: the pass sells the trailing read again", 75, sells())
+        assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
+    }
 }

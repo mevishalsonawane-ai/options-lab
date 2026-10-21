@@ -9,6 +9,8 @@ import java.time.LocalDate
 
 /** An order asked of Ira, matched to one listed contract: never a guessed strike or a past expiry. */
 class IraOrdersTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     private val today = LocalDate.of(2026, 10, 2)
     private val listed = listOf(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 10, 7), LocalDate.of(2026, 10, 14)).flatMap { e ->
         (0..8).map { IraOrders.Listed(e, 24_000.0 + it * 50, 75) }
