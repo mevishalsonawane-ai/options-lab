@@ -1,0 +1,377 @@
+"""R96 trade engine (PREREG_ROUND1.md s3-5). Pure given a Book (minute grid, printed legs, IV per stored strike).
+
+One held contract (cp, strike) is followed minute by minute from its fill:
+- a printed minute gives o/h/l/c; a minute where the strike sits outside the stored ATM+/-3 window gets a Black-76
+  mark (o = h = l = c = the mark) from the future, the time to expiry and the IV of the nearest stored strike of the
+  same side; any other minute (in the window but no print) gives no option price;
+- single leg: stop / lock check on the minute's low first (level = max(hard stop, lock); out at the level, or at the
+  open when the minute opened below it), then the underlying stop on the future's minute close (out at the option's
+  exit price that minute), then the peak / lock update (ladder, then the trail above TRAIL_FROM);
+- straddle: the same on the two legs' combined value, using each leg's latest known price (closes only);
+- the exit price at a minute (time exit, underlying stop) = its printed close, else the next print's open within 10
+  minutes the same session, else the model mark when out of the window, else the last print (stale).
+Costs: Zerodha MCX option charges + a half-spread per fill (x2 on a model-priced exit), times `mult` (gate: 2x).
+"""
+from __future__ import annotations
+
+import math
+
+import numpy as np
+import pandas as pd
+
+from research.hunt.r53 import common as C53
+from research.hunt.r96_mcx_buy import cfg as K
+
+ONE_MIN = np.timedelta64(1, "m")
+OFFSETS = tuple(range(-3, 4))
+
+
+# ------------------------------------------------------------------------------------------------ pricing / costs
+def _ncdf(x):
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+def b76(F: float, Kx: float, T: float, vol: float, cp: int) -> float:
+    """Black-76 undiscounted price; cp 0 call / 1 put; vol as a fraction a year; T in years."""
+    if not (F > 0 and Kx > 0) or not np.isfinite(vol) or vol <= 0 or T <= 0:
+        return max(F - Kx, 0.0) if cp == 0 else max(Kx - F, 0.0)
+    s = vol * math.sqrt(T)
+    d1 = (math.log(F / Kx) + 0.5 * s * s) / s
+    d2 = d1 - s
+    if cp == 0:
+        return F * _ncdf(d1) - Kx * _ncdf(d2)
+    return Kx * _ncdf(-d2) - F * _ncdf(-d1)
+
+
+def opt_cost(ck: str, buy_rs: float, sell_rs: float, tod_in: int, tod_out: int, mult: float = 1.0,
+             model_exit: bool = False) -> float:
+    return (C53.mcx_opt_charges(buy_rs, sell_rs) + K.opt_half(ck, tod_in, mult) * buy_rs
+            + K.opt_half(ck, tod_out, mult) * sell_rs * (K.MODEL_EXIT_HALF_MULT if model_exit else 1.0))
+
+
+# ------------------------------------------------------------------------------------------------ calendar helpers
+def last_ix_at_or_before(m, t64) -> int:
+    return int(np.searchsorted(m.ts, t64, side="right")) - 1
+
+
+def sq_ix(m, day) -> int:
+    """Grid index of the square-off of a session: the last minute at or before close - 15 min."""
+    d = np.datetime64(pd.Timestamp(day).normalize(), "ns")
+    end = m.session_end(d) - K.SQ_BEFORE_CLOSE
+    return m.at_or_before(d, end - 1)
+
+
+def expiry_of(m, i: int):
+    """The option expiry day of the contract live at grid index i (None when not detected in the data)."""
+    s = int(m.seg[i])
+    return m.exp_days[s] if s < len(m.exp_days) else None
+
+
+def day_position(book, day) -> int:
+    """Position of a day in the book's sessions (a day not in the data: where it would be inserted)."""
+    k = book.day_pos.get(day)
+    return int(np.searchsorted(book.m.days, day)) if k is None else k
+
+
+def last_exit_ix(book, i_entry: int, n_sessions: int | None, last_day=None) -> int:
+    """Grid index of the latest allowed exit: the square-off of the n-th session counting the entry day as the first
+    (None: the entry session's square-off), capped by the session before the option expiry day and by last_day."""
+    m = book.m
+    pos = book.day_pos[m.day[i_entry]]
+    tgt = pos + (n_sessions - 1 if n_sessions else 0)
+    ex = expiry_of(m, i_entry)
+    if ex is not None:
+        tgt = min(tgt, day_position(book, ex) - 1)
+    tgt = min(tgt, len(m.days) - 1)
+    if last_day is not None:
+        ld = np.datetime64(pd.Timestamp(last_day).normalize(), "ns")
+        while tgt > pos and m.days[tgt] > ld:
+            tgt -= 1
+    if tgt < pos:
+        return -1
+    return sq_ix(m, m.days[tgt])
+
+
+def sessions_to_expiry(book, i: int) -> int:
+    """Sessions strictly between the day of grid index i and the option expiry day (large when unknown)."""
+    ex = expiry_of(book.m, i)
+    if ex is None:
+        return 10 ** 6
+    return day_position(book, ex) - book.day_pos[book.m.day[i]] - 1
+
+
+# ------------------------------------------------------------------------------------------------ marks
+def contract_marks(book, cp: int, strike: float, i0: int, i1: int):
+    """Over grid indices i0..i1: o, h, l, c (NaN = no print) and mdl (Black-76 mark where the strike is outside the
+    stored window, else NaN)."""
+    m = book.m
+    n = i1 - i0 + 1
+    o = np.full(n, np.nan)
+    h, l, c = o.copy(), o.copy(), o.copy()
+    days = np.unique(m.day[i0:i1 + 1])
+    for d in days:
+        lg = m.leg(d, cp, strike)
+        if lg is None:
+            continue
+        ii, V = lg
+        sel = (ii >= i0) & (ii <= i1)
+        r = ii[sel] - i0
+        o[r], h[r], l[r], c[r] = V[sel, 0], V[sel, 1], V[sel, 2], V[sel, 3]
+    S = np.vstack([m.k_at.get((cp, k), np.full(len(m.ts), np.nan))[i0:i1 + 1] for k in OFFSETS])
+    with np.errstate(all="ignore"):
+        smax = np.nanmax(np.where(np.isfinite(S), S, -np.inf), axis=0)
+        smin = np.nanmin(np.where(np.isfinite(S), S, np.inf), axis=0)
+    have = np.isfinite(smax) & np.isfinite(smin)
+    out = have & ((strike > smax + 1e-9) | (strike < smin - 1e-9))
+    mdl = np.full(n, np.nan)
+    if out.any():
+        ex = expiry_of(m, i0)
+        if ex is not None:
+            t_exp = pd.Timestamp(ex) + pd.Timedelta(hours=23, minutes=30)
+        else:
+            t_exp = pd.Timestamp(m.days[-1]) + pd.Timedelta(days=10)
+        IV = np.vstack([book.iv.get((cp, k), np.full(len(m.ts), np.nan))[i0:i1 + 1] for k in OFFSETS])
+        for r in np.flatnonzero(out):
+            col = S[:, r]
+            kk = int(np.nanargmax(col)) if strike > smax[r] else int(np.nanargmin(col))
+            vol = IV[kk, r]
+            if not np.isfinite(vol):
+                fin = np.flatnonzero(np.isfinite(IV[:, r]))
+                if not len(fin):
+                    continue
+                vol = IV[fin[np.argmin(np.abs(fin - kk))], r]
+            T = max((t_exp - pd.Timestamp(m.ts[i0 + r])).total_seconds() / (365.0 * 86400.0), 1e-6)
+            mdl[r] = b76(float(m.F[i0 + r]), strike, T, vol / 100.0, cp)
+    return o, h, l, c, mdl
+
+
+def exit_price(o, c, mdl, day, k: int):
+    """(price, model?, stale?) for an exit decided at relative minute k."""
+    if np.isfinite(c[k]):
+        return float(c[k]), False, False
+    n = len(c)
+    for q in range(k + 1, min(k + 11, n)):
+        if day[q] != day[k]:
+            break
+        if np.isfinite(o[q]):
+            return float(o[q]), False, False
+    if np.isfinite(mdl[k]):
+        return float(mdl[k]), True, False
+    pr = np.flatnonzero(np.isfinite(c[:k + 1]))
+    if len(pr):
+        return float(c[pr[-1]]), False, True
+    return float("nan"), False, True
+
+
+def _lock_update(lock, peak, base, be, ladder, trail_from, trail_gap):
+    g = peak / base - 1.0
+    for trig, keep in ladder:
+        if g >= trig - 1e-12:
+            lv = be if not np.isfinite(keep) else base * (1 + keep)
+            if lv > lock:
+                lock = lv
+    if g >= trail_from - 1e-12:
+        lv = base * (1 + g - trail_gap)
+        if lv > lock:
+            lock = lv
+    return lock
+
+
+def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, stop_frac: float = K.PREM_STOP,
+                ladder=K.LADDER, trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP):
+    """Relative minute 0 = the fill minute. Returns (k, why, price or None, model?) where price None means 'use
+    exit_price at k'."""
+    lvl_stop = fill * (1 - stop_frac)
+    lock = -np.inf
+    peak = fill
+    n = len(c)
+    for k in range(n):
+        if np.isfinite(l[k]):
+            op, hi, lo, md = o[k], h[k], l[k], False
+        elif np.isfinite(mdl[k]):
+            op = hi = lo = mdl[k]
+            md = True
+        else:
+            op = hi = lo = np.nan
+            md = False
+        if np.isfinite(lo):
+            lvl = max(lvl_stop, lock)
+            if lo <= lvl:
+                px = op if (np.isfinite(op) and op < lvl) else lvl
+                return k, ("lock" if lock > lvl_stop else "stop"), float(px), md
+        if ustop is not None and np.isfinite(ustop) and np.isfinite(F[k]) and side * (F[k] - ustop) <= 0:
+            return k, "ustop", None, False
+        if np.isfinite(hi):
+            if hi > peak:
+                peak = hi
+            lock = _lock_update(lock, peak, fill, be, ladder, trail_from, trail_gap)
+    return n - 1, "time", None, False
+
+
+def walk_straddle(legs, fill_v: float, be_v: float, stop_frac: float = K.STRAD_STOP, ladder=K.LADDER,
+                  trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP):
+    """legs: [(o, h, l, c, mdl), (o, h, l, c, mdl)] from the fill minute; checks the combined value on closes / marks.
+    Returns (k, why)."""
+    n = len(legs[0][3])
+    last = [np.nan, np.nan]
+    lvl_stop = fill_v * (1 - stop_frac)
+    lock = -np.inf
+    peak = fill_v
+    for k in range(n):
+        for j in (0, 1):
+            c, mdl = legs[j][3], legs[j][4]
+            if np.isfinite(c[k]):
+                last[j] = c[k]
+            elif np.isfinite(mdl[k]):
+                last[j] = mdl[k]
+        if not (np.isfinite(last[0]) and np.isfinite(last[1])):
+            continue
+        v = last[0] + last[1]
+        if v <= max(lvl_stop, lock):
+            return k, ("lock" if lock > lvl_stop else "stop")
+        if v > peak:
+            peak = v
+            lock = _lock_update(lock, peak, fill_v, be_v, ladder, trail_from, trail_gap)
+    return n - 1, "time"
+
+
+# ------------------------------------------------------------------------------------------------ fills
+def first_print(book, cp: int, strike: float, i_from: int, wait: int = K.FILL_WAIT):
+    """(grid index, open) of the contract's first printed minute in [ts[i_from], ts[i_from] + wait min) the same day."""
+    m = book.m
+    lg = m.leg(m.day[i_from], cp, strike)
+    if lg is None:
+        return None
+    ii, V = lg
+    a = int(np.searchsorted(ii, i_from))
+    if a >= len(ii) or m.ts[ii[a]] >= m.ts[i_from] + wait * ONE_MIN or not V[a, 0] > 0:
+        return None
+    return int(ii[a]), float(V[a, 0])
+
+
+def pick_strike(m, cp: int, j: int, itm: int) -> float:
+    """The strike `itm` steps in the money from the ATM at grid minute j (0 = ATM), from the set of strikes stored at
+    that minute (both sides, all offsets): the ATM is the stored strike nearest the future; 1-ITM is the next stored
+    strike below it for a call, above it for a put. NaN when the set does not reach that far. (The offset -> strike map
+    of the thin metal books is forward-filled within the day and can repeat a strike, so offsets are not used.)"""
+    ks = {float(a[j]) for (c_, _k), a in m.k_at.items() if np.isfinite(a[j])}
+    if not ks:
+        return float("nan")
+    ks = np.array(sorted(ks))
+    a = int(np.argmin(np.abs(ks - m.F[j])))
+    b = a - itm if cp == 0 else a + itm
+    return float(ks[b]) if 0 <= b < len(ks) else float("nan")
+
+
+def _trade_dict(book, i_in, i_out, side, strikes, fills, exits, why, model, stale, cost, cost2, kind):
+    units = book.units
+    gross = sum((x - f) * units for f, x in zip(fills, exits))
+    return dict(book=book.name, entry_ts=pd.Timestamp(book.m.ts[i_in]), exit_ts=pd.Timestamp(book.m.ts[i_out]),
+                day=pd.Timestamp(book.m.day[i_in]), side=int(side), kind=kind, strike=strikes, fill=fills,
+                exit=exits, why=why, model=bool(model), stale=bool(stale), gross=gross, cost=cost, net=gross - cost,
+                net2=gross - cost2, prem_rs=sum(f * units for f in fills))
+
+
+def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_day=None, i_from: int | None = None,
+               offset: int | None = None, stop_frac: float = K.PREM_STOP, ladder=K.LADDER,
+               trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP):
+    """Buy one contract: the strike from the future's close at grid index i_sig (the minute before entry), filled at
+    the first print from i_from (default i_sig + 1). `offset` = steps in the money (default 1: 1-ITM). Returns a trade
+    or None."""
+    m = book.m
+    i_from = i_sig + 1 if i_from is None else i_from
+    if i_from >= len(m.ts) or m.day[i_from] != m.day[i_sig] or m.is_exp[i_from]:
+        return None
+    if sessions_to_expiry(book, i_from) < K.MIN_SESSIONS_TO_EXPIRY and n_sessions is not None:
+        return None
+    if sessions_to_expiry(book, i_from) < 0:
+        return None
+    cp = 0 if side > 0 else 1
+    strike = pick_strike(m, cp, i_sig, 1 if offset is None else offset)
+    if not np.isfinite(strike):
+        return None
+    fp = first_print(book, cp, strike, i_from)
+    if fp is None:
+        return None
+    i_in, fill = fp
+    i_end = last_exit_ix(book, i_in, n_sessions, last_day)
+    if i_end <= i_in:
+        return None
+    o, h, l, c, mdl = contract_marks(book, cp, strike, i_in, i_end)
+    o[0] = fill                       # the fill minute is entered at its open
+    tod_in = int(m.tod[i_in])
+    be = fill + opt_cost(book.ck, fill * book.units, fill * book.units, tod_in, tod_in) / book.units
+    k, why, px, md = walk_single(o, h, l, c, mdl, m.F[i_in:i_end + 1], side, fill, be, ustop, stop_frac, ladder,
+                                 trail_from, trail_gap)
+    stale = False
+    if px is None:
+        px, md, stale = exit_price(o, c, mdl, m.day[i_in:i_end + 1], k)
+    if not np.isfinite(px):
+        return None
+    i_out = i_in + k
+    tod_out = int(m.tod[i_out])
+    b, s = fill * book.units, px * book.units
+    cost = opt_cost(book.ck, b, s, tod_in, tod_out, 1.0, md)
+    cost2 = opt_cost(book.ck, b, s, tod_in, tod_out, 2.0, md)
+    t = _trade_dict(book, i_in, i_out, side, [strike], [fill], [px], why, md, stale, cost, cost2, "single")
+    t["risk_rs"] = fill * book.units * stop_frac + cost
+    return t
+
+
+def sim_straddle(book, i_sig: int, n_sessions: int | None, last_day=None, i_from: int | None = None,
+                 i_end_fixed: int | None = None, stop_frac: float = K.STRAD_STOP, ladder=K.LADDER,
+                 trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, fill_wait: int = K.FILL_WAIT):
+    """Buy the ATM call and put (strikes at grid index i_sig); both must print within fill_wait minutes of i_from."""
+    m = book.m
+    i_from = i_sig + 1 if i_from is None else i_from
+    if i_from >= len(m.ts) or m.day[i_from] != m.day[i_sig] or m.is_exp[i_from]:
+        return None
+    if n_sessions is not None and sessions_to_expiry(book, i_from) < K.MIN_SESSIONS_TO_EXPIRY:
+        return None
+    ks = [pick_strike(m, 0, i_sig, 0), pick_strike(m, 1, i_sig, 0)]
+    if not all(np.isfinite(ks)):
+        return None
+    fps = [first_print(book, cp, ks[cp], i_from, fill_wait) for cp in (0, 1)]
+    if any(f is None for f in fps):
+        return None
+    i_in = max(fps[0][0], fps[1][0])
+    fills = [fps[0][1], fps[1][1]]
+    if i_end_fixed is not None:
+        i_end = i_end_fixed
+        cap = last_exit_ix(book, i_in, None, last_day)
+        if cap < i_end:
+            i_end = cap
+    else:
+        i_end = last_exit_ix(book, i_in, n_sessions, last_day)
+    if i_end <= i_in:
+        return None
+    legs = []
+    for cp in (0, 1):
+        o, h, l, c, mdl = contract_marks(book, cp, ks[cp], i_in, i_end)
+        if fps[cp][0] == i_in:
+            o[0] = fills[cp]
+        legs.append((o, h, l, c, mdl))
+    tod_in = int(m.tod[i_in])
+    fv = sum(fills)
+    be = fv + opt_cost(book.ck, fv * book.units, fv * book.units, tod_in, tod_in) / book.units + 40.0 / book.units
+    k, why = walk_straddle(legs, fv, be, stop_frac, ladder, trail_from, trail_gap)
+    dd = m.day[i_in:i_end + 1]
+    exits, mds, sts = [], [], []
+    for cp in (0, 1):
+        o, h, l, c, mdl = legs[cp]
+        px, md, st = exit_price(o, c, mdl, dd, k)
+        exits.append(px)
+        mds.append(md)
+        sts.append(st)
+    if not all(np.isfinite(exits)):
+        return None
+    i_out = i_in + k
+    tod_out = int(m.tod[i_out])
+    cost = cost2 = 0.0
+    for cp in (0, 1):
+        b, s = fills[cp] * book.units, exits[cp] * book.units
+        cost += opt_cost(book.ck, b, s, tod_in, tod_out, 1.0, mds[cp])
+        cost2 += opt_cost(book.ck, b, s, tod_in, tod_out, 2.0, mds[cp])
+    t = _trade_dict(book, i_in, i_out, 0, ks, fills, exits, why, any(mds), any(sts), cost, cost2, "straddle")
+    t["risk_rs"] = fv * book.units * stop_frac + cost
+    return t
