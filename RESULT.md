@@ -73,6 +73,9 @@ round 3). Payouts and the drawdown - shadow. Nothing new acts on a live trade un
   live check dated its fake candle by the wall clock while the check judges its age by the market clock, which the new rule pins
   to noon; CI ran at 00:23 IST, so the candle looked 11 hours old. The test now dates it by the market clock. The whole app
   suite was then run again locally past midnight IST (the same condition): 4,168 tests, 0 failures.
+- **CI on `c152d0b`: all green** (engine, PC harness, Build APK, all four app shards). App shard 2 failed once on
+  TradeDialogsLayoutTest's live-orders screen (a tap before the "Orders 1" tab had merged: Trade screen code this round did not
+  touch; the same shard passed on the run before and twice locally) and passed on its one re-run.
 - No test was skipped, disabled or loosened. One test's meaning was kept with one line: MarketTest's "no test clock reads the
   system clock" now clears the rule's fallback first (as in the app, where both are always empty).
 
