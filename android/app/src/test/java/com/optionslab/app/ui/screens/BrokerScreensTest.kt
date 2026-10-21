@@ -912,7 +912,8 @@ class BrokerScreensTest {
     @Test fun theLiveCheckOnLivePricesPassesEverything() {
         liveCheckReady()
         val src = com.optionslab.app.testing.FakeLiveSources(open = true).apply {
-            val bar = System.currentTimeMillis() / 60_000 * 60 - 60
+            // 21 Oct, round 4: from the market clock the check judges the candle's age by (the tests' rule pins it to noon).
+            val bar = com.optionslab.app.data.Market.now().toEpochSecond() / 60 * 60 - 60
             upstox = listOf(com.optionslab.engine.Upstox.Bar(bar, 1.0, 1.0, 1.0, 1.0, 0, 0))
             kite.candles = org.json.JSONArray().put(org.json.JSONArray().put(java.time.Instant.ofEpochSecond(bar).atZone(com.optionslab.engine.IST).toOffsetDateTime().toString())
                 .put(1.0).put(1.0).put(1.0).put(1.0).put(0).put(0))
