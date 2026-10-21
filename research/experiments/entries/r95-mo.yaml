@@ -1,0 +1,40 @@
+id: r95-mo
+title: 'R95 MO (amendment A1): trade WITH the CCI acceleration (cross out through +-200), exit when back inside'
+family: patterns-indicators
+date: '2026-10-21'
+doc: research/HUNT_R95_CCI_SIGNALS.md
+hypothesis: 'Pre-registered (A1, before any data): buying the 1-ITM call when the CCI(25) of hlc3 on the underlying crosses
+  UP through +200 (the put when it crosses down through -200), entry at the next minute''s open, 09:30-14:45, stop beyond
+  the signal bar +/- 1 tick, exit at the first bar back inside the level, flat 15:15 / 15:05, on 3m / 5m / 15m / 60m bars,
+  beats 1000 after-trigger random-entry twins after real costs (p_emp < 0.05, BH q < 0.10 over 328 cells), >= 40 trades, 3
+  of 4 folds, without the top 5, worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m + options_rolling_1m WEEK via R89 stores to 19 Oct 2026; MCX
+  MONTH option books from Aug 2025) - NOT YET COPIED: the run is pending'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (locked, not read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart, no option-chain data'
+- CCI 25 of hlc3, crossing out through +-200, stop at the signal bar, exit back inside
+model_or_rule: R95 MO
+settings: research/hunt/r95_cci_signals/cfg.py, rules.py, PREREG.md, NOTES.md
+prereg: research/hunt/r95_cci_signals/PREREG.md
+variants_tried: 1
+results:
+  summary: 'NOT RUN YET (21 Oct 2026): pre-registered with code and tests; the lake could not be copied in this session, so
+    no statistic exists. To be replaced by the design and holdout results.'
+  costs: 'planned: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); MCX R53 charges + R85 strict half-spread;
+    1 lot in force'
+holdout_read: false
+verdict: inconclusive
+notes: 'Idea 2 of amendment A1: 4 timeframes x 9 instruments (36 cells) in the 328-cell BH family. Pending run.'

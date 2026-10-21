@@ -167,7 +167,7 @@ cell's trades.
 - G1 at least 40 filled option trades;
 - G2 net (option, after costs) > 0;
 - G3 `p_emp` < 0.05;
-- G4 BH q < 0.10 over all 288 cells;
+- G4 BH q < 0.10 over all 288 cells (328 after amendment A1, section 10);
 - G5 positive in 3 of 4 index folds (Apr-Jun 2025, Jul-Sep, Oct-Dec, Jan-Mar 2026); MCX 2 of 3 (Nov-Dec 2025,
   Jan-Feb 2026, Mar 2026);
 - G6 positive without its 5 best trades;
@@ -194,3 +194,47 @@ Whether the Pine source runs unchanged in the app's Pine engine (`android/engine
 function list and its `ta.cci` / `ta.atr` / `ta.pivot*` code. If any cell becomes a paper candidate: an APP_SPEC for a
 PAPER-only arm behind a switch that is off by default, logged in the Autopilot change timeline and undoable; nothing
 goes live. If nothing passes: whether it still has a use as a chart overlay.
+
+## 10. Amendment A1 (21 Oct 2026, before any data): two more ideas from the formula
+
+Added on Boss's go-ahead, still before any lake file was opened (see `NOTES.md` N0 / A1). Both come from the formula
+facts in N0: a steady trend sits at CCI(25) about +128, so +-200 needs ACCELERATION, and a cross back inside means the
+acceleration has stopped. They join the same BH family: **288 + 36 + 4 = 328 cells**, one BH step over all of them
+(G4 now reads "BH q < 0.10 over all 328 cells"; the holdout rule is unchanged).
+
+### 10.1 Idea 2, variant MO: trade WITH the acceleration (36 cells: 4 timeframes x 9 instruments)
+
+Signal on the UNDERLYING, base settings only (CCI 25 of hlc3, +-200, pulse off, no divergence filter):
+- **Entry:** `CCI[i-1] < +200 AND CCI[i] >= +200` -> BUY the 1-ITM call; `CCI[i-1] > -200 AND CCI[i] <= -200` -> BUY
+  the 1-ITM put. Entry at the next minute's open, the same window, caps and one-position rule as section 4.
+- **Stop:** beyond the signal bar's own extreme: its low - 1 tick (call) / high + 1 tick (put).
+- **Exit (M):** at the close of the first bar k > i with `CCI[k] < +200` (call) / `> -200` (put), i.e. the original
+  indicator's SELL / BUY signal ("the burst has stopped"); the stop and the session flat as in section 4.
+- Pricing, costs, twins (holding-time twins, as for Z), gates G1-G7 and the holdout rule: as sections 5 and 7.
+
+### 10.2 Idea 1, the EX overlay: the CCI cross back inside as an early EXIT for two existing arms (4 cells)
+
+Not a new entry. The two arms' own trades are taken as they are, and only their exit can move EARLIER (a risk-lowering
+change):
+- **Arms:** Liquidity (R51 `fam_liq`: BANKNIFTY 15+5 and FINNIFTY 30+5, pooled, as R91 compared it) and Breadth
+  Donchian (R72 C1, breadth 4 of 5, exits XL, the 5 indices pooled; R89's `bd_trades` call), on the same R51 clean +
+  stale stores.
+- **Timeframes:** 5m and 15m CCI bars (2 arms x 2 timeframes = 4 cells). Signal on the UNDERLYING (index spot).
+- **Rule:** while a trade is open, if a bar closes with the indicator's signal AGAINST the position (a SELL,
+  `CCI[k-1] >= +200 AND CCI[k] < +200`, for a call; a BUY for a put; CCI 25, +-200), and that bar closes at or after
+  the entry minute, the option is sold at the next minute's open, if that is before the arm's own exit. Otherwise the
+  trade is unchanged.
+- **Same pricer for both:** every arm trade is priced twice with R95's index pricer (R90 / R51 engine, 1-ITM chosen at
+  the entry, the app's slippage, dated charges, 1 lot): once with the arm's own exit row, once with the overlay exit.
+  The difference isolates the exit. The arm's own recorded net is reported beside it.
+- **Reported:** trades, trades changed, the win rate, average win / loss and payoff, net, max DD, worst day / month,
+  all for "arm as is" vs "arm + EX" and the paired difference.
+- **Twins (1000, seed 95):** for each CHANGED trade, the early exit moves to a uniformly random minute between the
+  entry and the arm's own exit (same count of early exits, random timing). `p_emp` = (1 + #twin differences >= the
+  actual difference) / 1001; `p_norm` as section 7.
+- **Gates (all):** at least 40 changed trades; the total difference > 0; `p_emp` < 0.05; BH q < 0.10 over all 328
+  cells; the difference positive in 3 of 4 index folds; positive without its 5 best changed trades; the "arm + EX"
+  worst month >= -Rs 13,000.
+- **Holdout:** as section 7 (difference > 0, >= 20 changed trades, `p_emp` < 0.10, q < 0.10 among design passers).
+  A passer is a PAPER candidate as a risk-lowering exit: logged in the Autopilot change timeline, undoable, never
+  carried to live by itself; on live it could only start in shadow behind a switch that is off by default.

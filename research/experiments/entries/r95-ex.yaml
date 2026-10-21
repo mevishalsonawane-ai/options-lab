@@ -1,0 +1,36 @@
+id: r95-ex
+title: 'R95 EX (amendment A1): the CCI cross back inside +-200 as an early exit for the Liquidity and Breadth Donchian arms'
+family: trade-management
+date: '2026-10-21'
+doc: research/HUNT_R95_CCI_SIGNALS.md
+hypothesis: 'Pre-registered (A1, before any data): selling an open arm trade''s option at the next minute''s open after the
+  indicator''s signal against it (CCI 25 of hlc3 on the underlying, 5m or 15m bars: a SELL for a call, a BUY for a put), when
+  that is before the arm''s own exit, adds net after costs vs the arm''s own exit (same pricer), beats 1000 random-early-exit
+  twins (p_emp < 0.05, BH q < 0.10 over 328 cells), >= 40 changed trades, 3 of 4 folds, without the top 5 changed trades,
+  worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m + options_rolling_1m WEEK via R89 stores to 19 Oct 2026; MCX
+  MONTH option books from Aug 2025) - NOT YET COPIED: the run is pending'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: 1 Apr - 19 Oct 2026 (locked, not read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the underlying (index spot 1m OHLC); exit-only overlay on the arms'' own trades'
+- Liquidity (BANKNIFTY 15+5, FINNIFTY 30+5) and Breadth Donchian (C1, breadth 4, XL) trades; CCI 25 +-200 on 5m / 15m
+model_or_rule: R95 EX
+settings: research/hunt/r95_cci_signals/overlay.py, cfg.py, PREREG.md section 10.2
+prereg: research/hunt/r95_cci_signals/PREREG.md
+variants_tried: 4
+results:
+  summary: 'NOT RUN YET (21 Oct 2026): pre-registered with code and tests; the lake could not be copied in this session, so
+    no statistic exists. To be replaced by the design and holdout results.'
+  costs: 'planned: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); MCX R53 charges + R85 strict half-spread;
+    1 lot in force'
+holdout_read: false
+verdict: inconclusive
+notes: 'Idea 1 of amendment A1: 2 arms x 2 timeframes (4 cells) in the 328-cell BH family. Risk-lowering only. Pending run.'

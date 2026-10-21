@@ -27,6 +27,20 @@
 ```
 IRAALGO_LAKE=~/lakeflat python research/hunt/r89_pdhl_break/store.py build      # R89 index stores (if missing)
 IRAALGO_LAKE=~/lake python -m research.hunt.r95_cci_signals.study counts       # N1: signal counts only
-IRAALGO_LAKE=~/lake python -m research.hunt.r95_cci_signals.study design       # 288 cells + descriptive (design)
+IRAALGO_LAKE=~/lake python -m research.hunt.r95_cci_signals.study design       # 328 cells + descriptive (design)
 IRAALGO_LAKE=~/lake python -m research.hunt.r95_cci_signals.study final        # the ONE holdout read
 ```
+
+## A1, 21 Oct 2026: two ideas added (Boss's go-ahead), still before any data
+
+- Still no lake file opened; no statistic exists. PREREG section 10 adds:
+  - **MO** (idea 2): buy WITH the acceleration (the CCI crossing OUT through +-200), stop beyond the signal bar, exit
+    when the CCI is back inside. 36 cells (4 timeframes x 9 instruments).
+  - **EX** (idea 1): the indicator's signal against an open position as an early EXIT for the Liquidity arm and Breadth
+    Donchian, on 5m and 15m CCI bars. 4 cells. Both exits priced by the same pricer; random-early-exit twins.
+- One BH family over 288 + 36 + 4 = 328 cells.
+- Code: `cfg.py` (MO, FADE, N_CELLS), `cci.py` (`breakouts`), `rules.py` (MO entry, stop and exit), `overlay.py` (new),
+  `study.py` (the overlay cells, R51's own holdout guard opened only in `final`). Tests: 49 (MO, the overlay's exit
+  rule, its summary and gates, and its cell loop with a fake arm and pricer; the look-ahead guard now covers MO).
+- The overlay's arm loaders (`fam_liq`, R72 / R71 `rule_trades`) and the pricer need the stores, so they are tested
+  only through fakes until the run.

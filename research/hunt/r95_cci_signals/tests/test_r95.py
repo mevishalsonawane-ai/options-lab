@@ -12,6 +12,7 @@ import pytest
 from research.hunt.r95_cci_signals import cci as C
 from research.hunt.r95_cci_signals import cfg as K
 from research.hunt.r95_cci_signals import describe as DS
+from research.hunt.r95_cci_signals import overlay as OV
 from research.hunt.r95_cci_signals import price as PR
 from research.hunt.r95_cci_signals import rules as R
 from research.hunt.r95_cci_signals import study as S
@@ -485,8 +486,12 @@ def test_design_gates_and_bh_floor():
 
 
 def test_variants_declared():
-    assert [v.name for v in K.VARIANTS] == ["B", "XR", "XT", "PU", "DV", "L20", "L50", "K100"]
-    assert len(K.INSTRUMENTS) * len(K.TIMEFRAMES) * len(K.VARIANTS) == 288
+    assert [v.name for v in K.VARIANTS] == ["B", "XR", "XT", "PU", "DV", "L20", "L50", "K100", "MO"]
+    assert [v.name for v in K.FADE] == ["B", "XR", "XT", "PU", "DV", "L20", "L50", "K100"]
+    assert len(K.INSTRUMENTS) * len(K.TIMEFRAMES) * len(K.FADE) == 288
+    assert K.N_CELLS == 288 + 36 + 4 == 328
+    mo = K.BY_NAME["MO"]
+    assert (mo.n, mo.level, mo.pulse, mo.div, mo.exit, mo.mode) == (25, 200.0, False, False, "M", "mo")
     b = K.BY_NAME["B"]
     assert (b.n, b.level, b.pulse, b.div, b.exit) == (25, 200.0, False, False, "Z")
 
@@ -523,3 +528,100 @@ def test_describe_runs_on_synthetic_panel():
         assert r["signals"] == r["buy"] + r["sell"]
         assert set(r["forward"]) == {str(h) for h in K.HORIZONS}
         assert set(r["repaint"]) == {"label", "confirm", "inflation"}
+
+
+# ------------------------------------------------------------------------------------------------ amendment A1: MO
+def test_breakouts_and_next_inside():
+    x = np.array([np.nan, 150, 210, 260, 199, -150, -220, -250, -150, 205])
+    up, dn = C.breakouts(x, 200)
+    assert list(np.flatnonzero(up)) == [2, 9] and list(np.flatnonzero(dn)) == [6]
+    lo, hi = R._next_inside(x, 200)
+    assert lo[2] == 4 and lo[3] == 4 and hi[6] == 8 and lo[9] == 10
+
+
+def test_mo_entries_stops_and_exits():
+    P, sq = minute_panel(6, seed=31, vol=3.0)
+    Ind = C.indicator(C.bars(P.mday, P.mt, P.mo, P.mh, P.ml, P.mc, OPEN, 5), 25, 100.0)
+    v = K.Variant("MO", level=100.0, exit="M", mode="mo")
+    up, dn = C.breakouts(Ind.cci, 100.0)
+    T, F = R.run(Ind, v, M_of(P), sq, K.NSE_FIRST, K.NSE_LAST, np.ones(6, bool), 0.05)
+    assert T
+    for t in T:
+        i = t["i"]
+        assert (up[i] and t["side"] == 1) or (dn[i] and t["side"] == -1)
+        assert t["j"] == i and t["t"] == Ind.B["e"][i] + 1
+        ext = Ind.B["l"][i] - 0.05 if t["side"] > 0 else Ind.B["h"][i] + 0.05
+        assert t["stop"] == pytest.approx(ext)
+        assert np.isnan(t["target"]) and t["why"] in ("stop", "bar", "flat")
+        if t["why"] == "bar":
+            k = t["k"]
+            assert (Ind.cci[k] < 100.0) if t["side"] > 0 else (Ind.cci[k] > -100.0)
+            assert all((Ind.cci[m] >= 100.0) if t["side"] > 0 else (Ind.cci[m] <= -100.0) for m in range(i + 1, k))
+
+
+# ------------------------------------------------------------------------------------------------ amendment A1: EX overlay
+def test_overlay_exit_row():
+    rows = np.array([4, 9, 14, 19, 24])                # bar close rows (5m bars ending 09:19, 09:24, ...)
+    buy = np.array([False, False, False, True, False])
+    sell = np.array([False, True, False, False, True])
+    assert OV.exit_row(rows, buy, sell, er=6, xr=40, side=1) == 10       # first SELL closing at / after entry
+    assert OV.exit_row(rows, buy, sell, er=10, xr=40, side=1) == 25      # the 09:24 bar closed before the entry
+    assert OV.exit_row(rows, buy, sell, er=6, xr=10, side=1) == -1       # not before the arm's own exit
+    assert OV.exit_row(rows, buy, sell, er=6, xr=40, side=-1) == 20      # a put exits on a BUY
+    assert OV.exit_row(rows, buy, sell, er=9, xr=40, side=1) == 10       # a bar closing on the entry row counts
+    assert OV.exit_row(rows, np.zeros(5, bool), np.zeros(5, bool), 0, 99, 1) == -1
+
+
+def test_overlay_summary_and_gates():
+    days = [date(2025, m, 10) for m in (4, 5, 7, 8, 10, 11, 1, 2)]
+    days[6], days[7] = date(2026, 1, 10), date(2026, 2, 10)
+    rows = []
+    for k, d in enumerate(days * 6):
+        ch = k % 2 == 0
+        rows.append(dict(und="BANKNIFTY", day=d, date=d, side=1, er=10, xr=200, net=100.0, changed=ch,
+                         x=50 if ch else -1, net0=-200.0, net1=-200.0 + (300.0 if ch else 0.0),
+                         diff=300.0 if ch else 0.0))
+    F = pd.DataFrame(rows)
+    r = OV.summarise("liquidity", 5, F, np.zeros(1000))
+    assert r["inst"] == "ARM:liquidity" and r["opt"]["trades"] == 24 and r["opt"]["net"] == 7200
+    assert r["opt"]["ex_top5"] == 7200 - 1500 and r["opt"]["p_emp"] == pytest.approx(1 / 1001, abs=1e-5)
+    assert r["as_is"]["net"] == -9600 and r["with_ex"]["net"] == -2400 and r["changed_share"] == 0.5
+    r["q"] = 0.01
+    g = OV.gates(r)
+    assert not g["G1"] and g["G2"] and g["G3"] and g["G5"] and g["G6"] and not g["pass"]   # 24 changed < 40
+    assert OV.summarise("liquidity", 5, F.iloc[:0], np.zeros(10))["opt"]["trades"] == 0
+
+
+def test_overlay_run_cell_with_fake_arm_and_pricer(monkeypatch):
+    """The cell loop: unchanged trades add 0, changed trades their difference, twins exit at random rows inside."""
+    P, sq = minute_panel(3, seed=41, vol=3.0)
+    I = fake_inst(P, sq)
+    I.store = {dt: None for dt in P.days}
+    I.day_index_of = lambda dt: P.days.index(dt) if dt in P.days else None
+    Ind = I.ind(5, 25, 200.0)
+    d1 = P.days[1]
+    br, b, s = OV.day_bars(Ind, P, 1)
+    seen = []
+
+    def fake_price(und, D, side, er, fx, lot):
+        fx = np.asarray(fx)
+        seen.append(fx.copy())
+        return 1000.0 - 2.0 * fx                       # an earlier exit is worth more, by construction
+
+    trades = [dict(und="BANKNIFTY", day=d1, side=1, er=20, xr=300, net=5.0),
+              dict(und="BANKNIFTY", day=d1, side=-1, er=20, xr=300, net=5.0),
+              dict(und="BANKNIFTY", day=date(2030, 1, 1), side=1, er=20, xr=300, net=5.0)]   # not in the panel
+    monkeypatch.setattr(OV, "arm_trades", lambda arm, lo, hi: trades)
+    monkeypatch.setattr(OV, "price_rows", fake_price)
+    monkeypatch.setattr(OV.P90.K51, "lot", lambda und, dt: 30)
+    r, F = OV.run_cell("liquidity", 5, {"BANKNIFTY": I}, None, None, twins=200)
+    assert len(F) == 2
+    for _, row in F.iterrows():
+        x = OV.exit_row(br, b, s, 20, 300, int(row.side))
+        assert row.changed == (x >= 0)
+        assert row["diff"] == pytest.approx(2.0 * (300 - x) if x >= 0 else 0.0)
+    assert F.changed.any()                             # not vacuous
+    twin_draws = [a for a in seen if len(a) == 200]
+    assert len(twin_draws) == int(F.changed.sum())
+    for a in twin_draws:
+        assert a.min() >= 21 and a.max() <= 299

@@ -6,6 +6,8 @@ d's flat time (exit at its open); `day_ok[d]` says whether trades are allowed on
 Each trade: day, ts (signal minute = the signal bar's last minute; the option is bought at the next minute's open),
 t (entry minute), side (+1 call, -1 put), entry, stop, target (NaN if none), risk, xm (exit minute), why, px, pts,
 i (the CCI signal bar), j (the entry bar; DV may be later), and k (the exit bar, -1 for a stop / target / flat exit).
+MO (amendment A1): the entry is the CCI crossing OUT through +-level, the stop the signal bar's own extreme, and the
+exit the first bar back inside the level.
 """
 from __future__ import annotations
 
@@ -13,7 +15,7 @@ import numpy as np
 from numba import njit
 
 from . import cfg as K
-from .cci import Ind, episode_start
+from .cci import Ind, breakouts, episode_start
 
 R_STOP, R_TARGET, R_BAR, R_FLAT = 1, 2, 3, 4
 WHY = {R_STOP: "stop", R_TARGET: "target", R_BAR: "bar", R_FLAT: "flat"}
@@ -60,10 +62,31 @@ def _next_cross(x: np.ndarray) -> tuple:
     return up, dn
 
 
+def _next_inside(x: np.ndarray, level: float) -> tuple:
+    """For MO exits: per bar i, the first bar k > i with CCI < +level (a call's exit) and with CCI > -level (a put's);
+    len(x) when none. NaN never counts."""
+    n = len(x)
+    lo = np.full(n, n, np.int64)
+    hi = np.full(n, n, np.int64)
+    nl = nh = n
+    for k in range(n - 1, -1, -1):
+        lo[k] = nl
+        hi[k] = nh
+        if np.isfinite(x[k]):
+            if x[k] < level:
+                nl = k
+            if x[k] > -level:
+                nh = k
+    return lo, hi
+
+
 def candidates(I: Ind, v: K.Variant) -> list:
     """(i, j, side, stop_bar_lo) per setup: i the CCI signal bar, j the entry bar (DV: the later of the signal and the
     divergence confirmation), stop_bar_lo the first bar whose extreme sets the stop."""
     B = I.B
+    if v.mode == "mo":
+        up, dn = breakouts(I.cci, I.level)
+        return [(int(i), int(i), 1 if up[i] else -1, int(i)) for i in np.flatnonzero(up | dn)]
     sig = []
     for i in np.flatnonzero(I.buy | I.sell):
         side = 1 if I.buy[i] else -1
@@ -96,6 +119,7 @@ def run(I: Ind, v: K.Variant, M: dict, sq: np.ndarray, first: int, last: int, da
     B = I.B
     mo, mh, ml, mc, mt, mday = M["mo"], M["mh"], M["ml"], M["mc"], M["mt"], M["mday"]
     up, dn = _next_cross(I.cci)
+    ins_c, ins_p = _next_inside(I.cci, I.level) if v.exit == "M" else (None, None)
     nb = len(B["o"])
     F = dict(signals=0, day_off=0, window=0, busy=0, cap=0, crossed=0, beyond_stop=0, filled=0)
     out, busy, per_day = [], -1, {}
@@ -132,6 +156,8 @@ def run(I: Ind, v: K.Variant, M: dict, sq: np.ndarray, first: int, last: int, da
             k = int(up[j] if side > 0 else dn[j])
         elif v.exit == "T":
             k = i + K.TIME_BARS
+        elif v.exit == "M":
+            k = int(ins_c[j] if side > 0 else ins_p[j])
         else:
             k = nb
         xb = int(B["e"][k]) if k < nb and int(B["day"][k]) == d else -1

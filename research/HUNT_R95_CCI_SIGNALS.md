@@ -12,16 +12,20 @@ from market data. The run order is in `hunt/r95_cci_signals/NOTES.md`.
 Research only: nothing in `android/**` or `.github/**` changed.
 
 - **Plan:** `hunt/r95_cci_signals/PREREG.md`: 8 variants x 4 timeframes x 9 instruments = 288 cells, the gates, the
-  twins, the walk-forward and the one holdout read.
+  twins, the walk-forward and the one holdout read. Amendment A1 (section 10, also before any data) adds two ideas
+  from the formula: MO (36 cells) and the EX exit overlay (4 cells), so 328 cells in one BH family.
 - **Source:** `hunt/r95_cci_signals/SOURCE.md` (Boss's Pine v6, verbatim; the divergence block as summarised).
 - **Code:** `cci.py` (the indicator, bar for bar as Pine), `rules.py` (trades), `price.py` (option prices, twins),
-  `describe.py` (indicator vs price, the repaint test), `study.py` (cells, gates, holdout guard).
-- **Tests:** `tests/test_r95.py`, 43 tests on synthetic data:
+  `describe.py` (indicator vs price, the repaint test), `overlay.py` (the EX exit overlay), `study.py` (cells, gates,
+  holdout guard).
+- **Tests:** `tests/test_r95.py`, 49 tests on synthetic data:
   - the CCI against a hand-written Pine reference, and the ATR / RMA, pivots, divergences and the pulse;
   - the trade rules and the twins' exits;
   - the look-ahead guard: indicator values and signals on data cut at any bar equal the full-data values; a
     divergence is never known before its pivot + 5 bars; trades on data cut at a session boundary equal the
-    full-data trades, for all 8 variants.
+    full-data trades, for all 9 entry variants (the 8 fade variants and MO);
+  - MO's entry, stop and exit, and the EX overlay's exit rule, summary, gates and cell loop (with a fake arm and
+    pricer, since the arms' trades need the data stores).
 
 ## Signal source of every rule: the UNDERLYING
 
@@ -93,7 +97,7 @@ Per cell, the design period first, then the locked holdout (1 Apr - 19 Oct 2026)
   the losses big, and a CCI-zero exit tends to take small wins;
 - expectancy per trade, trades a day, net, max drawdown, the worst day and the worst month (against the -Rs 13k
   monthly stop);
-- the after-trigger random-entry twins (1000 per cell) and BH q-values over all 288 cells, the 4 walk-forward folds,
+- the after-trigger random-entry twins (1000 per cell) and BH q-values over all 328 cells, the 4 walk-forward folds,
   and the pooled index and MCX books.
 
 Descriptive, for the B signals:
@@ -101,6 +105,24 @@ Descriptive, for the B signals:
 - signals per day by timeframe;
 - forward returns and MFE / MAE over 5 / 15 / 30 / 60 candles, against every candle as a baseline;
 - the divergence repaint inflation.
+
+## Two ideas built from the formula (amendment A1, before any data)
+
+Both use the fact above: a steady trend holds CCI(25) near +128, so crossing +-200 means price is ACCELERATING, and
+crossing back inside means the acceleration has STOPPED. Neither has a win rate yet.
+
+- **Idea 1, EX: use the cross back inside as an early exit for arms that already run.** While a Liquidity or Breadth
+  Donchian trade is open, the indicator's signal against it (a SELL for a call, a BUY for a put; 5m or 15m candles)
+  sells the option at the next minute, if that comes before the arm's own exit.
+  - It never adds a trade and can only end one earlier, so it only lowers risk.
+  - Each arm trade is priced twice on the same option (its own exit and the CCI exit), so the difference is the exit
+    alone. The test is whether that difference is positive and beats early exits at random minutes.
+  - What to expect: a higher win rate (more trades closed while green) but smaller big winners. The money, not the
+    win rate, decides.
+- **Idea 2, MO: trade WITH the acceleration.** Buy the call when the CCI crosses UP through +200 (the put when it
+  crosses down through -200). The stop goes beyond the signal candle, and the exit comes when the CCI is back inside the
+  level, i.e. the original indicator's own signal. Base settings, 4 timeframes, 9 instruments.
+  - It is still a direction bet from candles, which R85-R88 found does not work. Expect a fail.
 
 ## Prior work, and what to expect
 

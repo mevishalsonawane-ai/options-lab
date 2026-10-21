@@ -7,6 +7,7 @@ Every function works on plain arrays so the tests can feed hand-made bars. Pine 
     atr()          ta.atr: RMA of the true range (the first TR = high - low), seeded with the SMA of the first n
     pulse()        the Volatility Pulse: ATR above its 20-bar SMA and the body >= 0.25 ATR
     signals()      BUY / SELL: the CCI was at / beyond a level on the previous bar and closes back inside on this one
+    breakouts()    MO (amendment A1): the CCI crosses out through +-level (the acceleration starts)
     pivots()       the app's Pine engine's ta.pivotlow / ta.pivothigh (strict on the right, non-strict on the left)
     divergences()  BULL / BEAR, each known at its confirming bar (pivot + right bars), never at the pivot bar
     episode_start()  first bar of the stretch (the run of bars at / beyond the level) that a signal ends
@@ -120,6 +121,14 @@ def signals(x: np.ndarray, level: float) -> tuple:
         sell = (prev >= level) & (x < level)
         buy = (prev <= -level) & (x > -level)
     return buy, sell
+
+
+def breakouts(x: np.ndarray, level: float) -> tuple:
+    """(up, dn) for MO (amendment A1): the CCI crosses UP through +level / DOWN through -level on this bar."""
+    x = np.asarray(x, float)
+    prev = np.r_[np.nan, x[:-1]]
+    with np.errstate(invalid="ignore"):
+        return (prev < level) & (x >= level), (prev > -level) & (x <= -level)
 
 
 def episode_start(x: np.ndarray, i: int, side: int, level: float) -> int:

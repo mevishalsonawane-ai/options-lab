@@ -1503,3 +1503,5 @@ instruments = 288 cells. The lake could not be copied in this session, so no sta
 +200 = 3 mean deviations above the 25-bar mean (about 2.4 standard deviations); a steady trend holds CCI(25) at +128, so the
 signal fires when an ACCELERATION stops, not when price turns; the divergence labels are known only 5 bars after the bar they
 are drawn on (the run measures that inflation). The app's Pine engine runs the indicator except the labels (accepted, not drawn).
+Amendment A1 (before any data) adds two ideas from that: MO, buying WITH the acceleration (CCI crossing out through +-200;
+36 cells), and EX, the cross back inside as an early exit for the Liquidity and Breadth Donchian arms (4 cells): 328 cells in all.

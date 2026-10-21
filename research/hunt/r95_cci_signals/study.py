@@ -24,6 +24,7 @@ from research.hunt.r90_almazov_bos.study import Inst as Inst90
 from . import cfg as K
 from . import cci as C
 from . import describe as DS
+from . import overlay as OV
 from . import price as PR
 from . import rules as R
 
@@ -59,6 +60,10 @@ class Inst(Inst90):
         self.M = dict(mo=P.mo, mh=P.mh, ml=P.ml, mc=P.mc, mt=P.mt, mday=P.mday)
         self._B: dict = {}
         self._I: dict = {}
+        self._dmap = {dt: i for i, dt in enumerate(P.days)}
+
+    def day_index_of(self, dt):
+        return self._dmap.get(dt)
 
     def tf_bars(self, tf: int) -> dict:
         if tf not in self._B:
@@ -175,7 +180,7 @@ def selection_wf(cells: dict, trades: dict) -> dict:
         picks, tot = [], 0.0
         for a, b in folds_of(inst):
             best, bv = K.BASE, -1e18
-            for v in K.VARIANTS:
+            for v in K.FADE:
                 T = tv.get(v.name)
                 if T is None or not len(T):
                     continue
@@ -245,9 +250,12 @@ def _log(name, tf, v, r):
 
 
 def run_cells(tag: str, insts, window_of) -> tuple:
-    cells, trades, desc = {}, {}, {}
+    """The 324 entry cells (and the descriptive study). Index wrappers are kept for the EX overlay."""
+    cells, trades, desc, keep = {}, {}, {}, {}
     for name in insts:
         I = Inst(name)
+        if I.nse:
+            keep[name] = I
         lo, hi = window_of(I)
         for tf in K.TIMEFRAMES:
             trades[(name, tf)] = {}
@@ -260,7 +268,25 @@ def run_cells(tag: str, insts, window_of) -> tuple:
                     T.drop(columns=["date"]).assign(date=T.date.astype(str)).to_parquet(_trades_path(tag, name, tf, v.name))
                 _log(name, tf, v.name, r)
         desc[name] = DS.describe(I, lo, hi, day_range)
-    return cells, trades, desc
+    return cells, trades, desc, keep
+
+
+def run_overlay(tag: str, insts: dict, lo, hi) -> dict:
+    """The 4 EX cells (amendment A1, PREREG 10.2). insts: the index wrappers."""
+    check(lo, hi)
+    for u in K.INDICES:
+        if u not in insts:
+            insts[u] = Inst(u)
+    cells = {}
+    for arm in K.OVL_ARMS:
+        for tf in K.OVL_TFS:
+            r, F = OV.run_cell(arm, tf, insts, lo, hi)
+            cells[(r["inst"], tf, "EX")] = r
+            if len(F):
+                F.drop(columns=["date", "day"]).assign(date=F.date.astype(str)).to_parquet(
+                    _trades_path(tag, r["inst"].replace(":", "_"), tf, "EX"))
+            print(r["inst"], tf, "EX", r["opt"], flush=True)
+    return cells
 
 
 def run_counts(insts=K.INSTRUMENTS):
@@ -281,12 +307,17 @@ def _cells_out(cells: dict, keys: list) -> list:
     return [cells[k] for k in keys]
 
 
+def is_overlay(k) -> bool:
+    return str(k[0]).startswith("ARM:")
+
+
 def run_design(insts=K.INSTRUMENTS):
-    cells, trades, desc = run_cells("design", insts, lambda I: K.IDX_DESIGN if I.nse else K.MCX_DESIGN)
-    keys = sorted(cells)
+    cells, trades, desc, keep = run_cells("design", insts, lambda I: K.IDX_DESIGN if I.nse else K.MCX_DESIGN)
+    cells.update(run_overlay("design", keep, *K.IDX_DESIGN))
+    keys = sorted(cells, key=lambda k: tuple(map(str, k)))
     for k, qq in zip(keys, bh_q(cells, keys)):
         cells[k]["q"] = round(float(qq), 5)
-        cells[k]["gates"] = design_gates(cells[k])
+        cells[k]["gates"] = OV.gates(cells[k]) if is_overlay(k) else design_gates(cells[k])
     out = dict(written=datetime.now(timezone.utc).isoformat(timespec="seconds"), n_cells=len(cells),
                cells=_cells_out(cells, keys), selection_wf=selection_wf(cells, trades), pooled=pool(cells, trades),
                describe=desc, passers=["|".join(map(str, k)) for k in keys if cells[k]["gates"]["pass"]])
@@ -299,13 +330,16 @@ def run_final():
     if K.FINAL_FLAG.exists():
         raise SystemExit("R95 holdout already read (results/FINAL_READ); a second look needs a new pre-registration")
     D = json.loads((K.RESULTS / "design.json").read_text())
-    if D.get("n_cells") != len(K.INSTRUMENTS) * len(K.TIMEFRAMES) * len(K.VARIANTS):
-        raise SystemExit("R95: design.json does not cover all 288 cells; run the full design first")
+    if D.get("n_cells") != K.N_CELLS:
+        raise SystemExit(f"R95: design.json does not cover all {K.N_CELLS} cells; run the full design first")
     passers = set(D["passers"])
+    from research.hunt.r89_pdhl_break import arms as A89     # imported before the flag, so a failure costs no read
     K.FINAL_FLAG.write_text(datetime.now(timezone.utc).isoformat(timespec="seconds") + "\n")
     _HOLDOUT_OPEN = True
-    cells, trades, desc = run_cells("final", K.INSTRUMENTS, lambda I: K.HOLDOUT)
-    keys = sorted(cells)
+    A89.C51.open_final()                    # R51's own guard, for the arms' holdout trades (EX overlay)
+    cells, trades, desc, keep = run_cells("final", K.INSTRUMENTS, lambda I: K.HOLDOUT)
+    cells.update(run_overlay("final", keep, *K.HOLDOUT))
+    keys = sorted(cells, key=lambda k: tuple(map(str, k)))
     for k, qq in zip(keys, bh_q(cells, keys)):
         cells[k]["q_all"] = round(float(qq), 5)
     pk = [k for k in keys if "|".join(map(str, k)) in passers]

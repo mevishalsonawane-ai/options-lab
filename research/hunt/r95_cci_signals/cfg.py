@@ -75,7 +75,8 @@ class Variant:
     level: float = LEVEL
     pulse: bool = False
     div: bool = False
-    exit: str = "Z"             # 'Z' CCI crosses 0, 'R' fixed 2R, 'T' 10 bars
+    exit: str = "Z"             # 'Z' CCI crosses 0, 'R' fixed 2R, 'T' 10 bars, 'M' CCI back inside the level (MO)
+    mode: str = "fade"          # 'fade' the indicator as given; 'mo' trade WITH the acceleration (amendment A1)
 
     @property
     def ind_key(self):
@@ -84,11 +85,20 @@ class Variant:
 
 
 VARIANTS = [Variant("B"), Variant("XR", exit="R"), Variant("XT", exit="T"), Variant("PU", pulse=True),
-            Variant("DV", div=True), Variant("L20", n=20), Variant("L50", n=50), Variant("K100", level=100.0)]
+            Variant("DV", div=True), Variant("L20", n=20), Variant("L50", n=50), Variant("K100", level=100.0),
+            Variant("MO", exit="M", mode="mo")]
+FADE = [v for v in VARIANTS if v.mode == "fade"]        # the 8 pre-registered fade variants (walk-forward pick)
 BY_NAME = {v.name: v for v in VARIANTS}
 BASE = "B"
 DESC = {"B": "CCI 25 of hlc3, +-200 cross back, pulse off, all signals, exit when the CCI crosses 0 (as given)",
         "XR": "as B, exit at a fixed 2R target", "XT": "as B, exit 10 bars after the signal",
         "PU": "as B, Volatility Pulse on (ATR14 > its SMA20 and body >= 0.25 ATR)",
         "DV": "as B, only signals with a confirmed CCI divergence within 10 bars (entry when both are known)",
-        "L20": "as B, CCI length 20", "L50": "as B, CCI length 50", "K100": "as B, levels +-100"}
+        "L20": "as B, CCI length 20", "L50": "as B, CCI length 50", "K100": "as B, levels +-100",
+        "MO": "momentum (A1): buy the call when the CCI crosses UP through +200 (the put down through -200), stop "
+              "beyond the signal bar, exit when the CCI is back inside the level"}
+
+# ------------------------------------------------------------------------------------------------ EX overlay (A1, PREREG 10.2)
+OVL_ARMS = ("liquidity", "breadth_donchian")
+OVL_TFS = (5, 15)
+N_CELLS = len(INSTRUMENTS) * len(TIMEFRAMES) * len(VARIANTS) + len(OVL_ARMS) * len(OVL_TFS)     # 328

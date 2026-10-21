@@ -6,7 +6,7 @@ doc: research/HUNT_R95_CCI_SIGNALS.md
 hypothesis: 'Pre-registered: buying the 1-ITM call on a CCI BUY (the put on a SELL), signal on the underlying (as B, CCI length
   50; entry at the next minute''s open, 09:30-14:45, stop beyond the stretch''s extreme +/- 1 tick, flat 15:15 / 15:05 expiry),
   on 3m / 5m / 15m / 60m bars, beats 1000 after-trigger random-entry twins after real costs (p_emp < 0.05, BH q < 0.10 over
-  288 cells), >= 40 trades, positive in 3 of 4 folds, without the top 5, worst month >= -Rs 13k.'
+  328 cells), >= 40 trades, positive in 3 of 4 folds, without the top 5, worst month >= -Rs 13k.'
 data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m + options_rolling_1m WEEK via R89 stores to 19 Oct 2026; MCX
   MONTH option books from Aug 2025) - NOT YET COPIED: the run is pending'
 period:
@@ -36,4 +36,5 @@ results:
     1 lot in force'
 holdout_read: false
 verdict: inconclusive
-notes: One of 8 variants x 4 timeframes x 9 instruments (288 cells, one BH family). Pending run.
+notes: One of 8 fade variants x 4 timeframes x 9 instruments (288 cells); one BH family of 328 cells with MO and EX (amendment
+  A1). Pending run.
