@@ -304,3 +304,17 @@ def test_twin_pools_keep_only_filled_entries():
     assert list(P[("D", "GOLD", 2026, 1)]) == [1.0]               # keyed by the entry (next session) year
     tw = S.twin_totals([dict(fam="GOLD", entry_ts=pd.Timestamp("2026-07-01 10:00"), side=-1, net=1.0)], P, False, n=5)
     assert list(tw) == [0.0] * 5
+
+
+def test_confirmed_split_per_group_and_family():
+    def t(fam, grp, net, gross, ib):
+        return dict(fam=fam, group=grp, net=net, gross=gross, ib=ib, entry_ts=pd.Timestamp("2026-07-01 10:00"),
+                    cost=gross - net, net2=net, why="time", stale=False, side=1)
+    tt = [t("GOLD", "metals", 10, 20, 1), t("GOLD", "metals", -30, -20, 0), t("CRUDE", "energy", 5, 8, 1),
+          t("CRUDE", "energy", -1, 1, 0), t("CRUDE", "energy", -3, 0, 0)]
+    sp = S.confirmed_split(tt, "ib")
+    assert sp["confirmed"]["trades"] == 2 and sp["confirmed"]["net"] == 15
+    assert sp["unconfirmed"]["energy"] == dict(trades=2, net=-4.0, net_per_trade=-2.0)
+    assert sp["unconfirmed"]["by_family"]["CRUDE"]["gross_per_trade"] == pytest.approx(0.5)
+    assert sp["confirmed"]["by_family"]["GOLD"]["win_rate"] == 1.0
+    assert sp["confirmed"]["gross_per_trade"] == pytest.approx(14)

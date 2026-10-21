@@ -22,14 +22,14 @@ def pct(x) -> str:
 
 def row(name, s) -> str:
     if not s or not s.get("trades"):
-        return f"| {name} | 0 | - | - | - | - | - | - | - |"
+        return f"| {name} | 0 | - | - | - | - | - | - | - | - |"
     return (f"| {name} | {s['trades']:,} | {pct(s['win_rate'])} | {rs(s['avg_win'])} / {rs(s['avg_loss'])} | "
-            f"{rs(s['net'])} | {rs(s['worst_day'])} | {rs(s.get('worst_month'))} ({s.get('months_below_stop', 0)} of "
+            f"{rs(s.get('gross'))} | {rs(s['net'])} | {rs(s['worst_day'])} | {rs(s.get('worst_month'))} ({s.get('months_below_stop', 0)} of "
             f"{s.get('months', 0)} below -13k) | {rs(s['max_dd'])} | {rs(s.get('net_2x_slip'))} |")
 
 
-HEAD = ("| | trades | win | avg win / loss | net | worst day | worst month (months below the stop) | max DD | "
-        "net at 2x spread |\n|---|---|---|---|---|---|---|---|---|")
+HEAD = ("| | trades | win | avg win / loss | gross (before costs) | net | worst day | worst month (months below the "
+        "stop) | max DD | net at 2x spread |\n|---|---|---|---|---|---|---|---|---|---|")
 
 
 def split_table(sp) -> list:
@@ -42,6 +42,16 @@ def split_table(sp) -> list:
             out.append(f"| {name}: {k} | {x['trades']:,} | {pct(x['win_rate'])} | {rs(x['net'])} | "
                        f"{rs(x['net_per_trade'])} | {m['trades']:,}, {rs(m['net_per_trade'])} | "
                        f"{e['trades']:,}, {rs(e['net_per_trade'])} |")
+    fams = sorted({f for s in sp.values() for k in ("confirmed", "unconfirmed") for f in s[k].get("by_family", {})})
+    if fams:
+        out += ["", "Per family, gross (before costs) / net per trade (trades):", "",
+                "| split | " + " | ".join(fams) + " |", "|---|" + "---|" * len(fams)]
+        for name, s in sp.items():
+            for k in ("confirmed", "unconfirmed"):
+                bf = s[k].get("by_family", {})
+                cells = [f"{rs(bf[f]['gross_per_trade'])} / {rs(bf[f]['net_per_trade'])} ({bf[f]['trades']})" if f in bf
+                         else "-" for f in fams]
+                out.append(f"| {name}: {k} | " + " | ".join(cells) + " |")
     return out
 
 

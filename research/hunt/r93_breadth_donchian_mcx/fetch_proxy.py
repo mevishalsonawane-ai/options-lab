@@ -24,7 +24,11 @@ SYMS = ["XAUUSD", "XAGUSD", "LIGHTCMDUSD", "GASCMDUSD", "COPPERCMDUSD"]
 FIRST, LAST = dt.date(2025, 7, 1), dt.date(2026, 10, 19)
 
 
-def get(url, tries=20):
+BACKOFF = float(os.environ.get("R93_BACKOFF", "0"))     # 0: growing back-off; > 0: a fixed pause (the feed's 503s
+                                                       # are random, not a rate limit: a short fixed retry is faster)
+
+
+def get(url, tries=40):
     for k in range(tries):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -32,9 +36,9 @@ def get(url, tries=20):
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return b""
-            time.sleep(min(2 + 2 * k, 30))
+            time.sleep(BACKOFF or min(2 + 2 * k, 30))
         except Exception:
-            time.sleep(min(2 + 2 * k, 30))
+            time.sleep(BACKOFF or min(2 + 2 * k, 30))
     return None
 
 

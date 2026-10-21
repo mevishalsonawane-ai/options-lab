@@ -294,10 +294,16 @@ def confirmed_split(trades: list, flag: str) -> dict:
         s = summary(tt)
         out[name] = dict(trades=s["trades"], win_rate=s["win_rate"], net=s["net"],
                          net_per_trade=(s["net"] / s["trades"]) if s["trades"] else None)
+        out[name]["gross_per_trade"] = float(np.mean([t["gross"] for t in tt])) if tt else None
         for g in ("metals", "energy"):
             gg = [t for t in tt if t["group"] == g]
             out[name][g] = dict(trades=len(gg), net=float(sum(t["net"] for t in gg)),
                                 net_per_trade=(float(np.mean([t["net"] for t in gg])) if gg else None))
+        # per family (descriptive, added before the holdout read: the families' mix differs between the two sets)
+        out[name]["by_family"] = {
+            f: dict(trades=len(ff), gross_per_trade=float(np.mean([t["gross"] for t in ff])),
+                    net_per_trade=float(np.mean([t["net"] for t in ff])), win_rate=float(np.mean([t["net"] > 0 for t in ff])))
+            for f in sorted({t["fam"] for t in tt}) for ff in [[t for t in tt if t["fam"] == f]]}
     return out
 
 
