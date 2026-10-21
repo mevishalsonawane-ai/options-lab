@@ -61,3 +61,14 @@ IRAALGO_LAKE=~/lake python -m research.hunt.r95_cci_signals.study final        #
 - To unblock: Boss allows the Drive copy in a session (a permission rule for the rclone call, e.g. for
   `rclone copy gdrive:IraAlgo-data-lake/...`), or a session starts with the lake already in `~/lake` / `~/lakeflat`.
   Then follow the run order above unchanged.
+
+## N2, 21 Oct 2026: third attempt, stopped before any data (rclone still not on the PATH)
+
+- This session was told to use only the plain `rclone` on the PATH (normally `/usr/local/bin/rclone`, remote
+  `gdrive:` set up by the environment), and to stop if it is missing rather than work around it.
+- `command -v rclone` prints nothing and `/usr/local/bin/rclone` does not exist. No other rclone was installed or run
+  and no credential, config or `/opt` build was looked at. `~/lake` and `~/lakeflat` do not exist.
+- Still NO lake file opened and NO statistic; the holdout is unread. Checks re-run (Python 3.11 venv, pinned
+  requirements + numba): R95 tests 49 passed; brain tests 183 passed; catalog check up to date; validator OK.
+- To unblock: put rclone with the `gdrive:` remote on the PATH (e.g. the cloud environment's setup script), then
+  follow the run order above unchanged.

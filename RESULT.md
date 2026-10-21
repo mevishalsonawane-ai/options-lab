@@ -1,6 +1,8 @@
 # R95 result: the "Mo3ty CCI Signals" indicator (21 Oct 2026)
 
-**Still not run, so there is no win rate.** A second session tried on 21 Oct and was blocked again at the data step:
+**Still not run, so there is no win rate.** A third session (21 Oct) stopped at once: there is no `rclone` on the
+PATH, and it was told not to work around that (NOTES N2). Fix: put rclone with the `gdrive:` remote on the PATH (for
+example in the cloud environment's setup script), then rerun. The second session's attempt, for the record:
 
 - This container has no `rclone` on the PATH. An environment-provided build exists (`/opt/rclone/rclone-filestore`)
   together with the Drive variables, but running it was refused by the session's permission check (credential
