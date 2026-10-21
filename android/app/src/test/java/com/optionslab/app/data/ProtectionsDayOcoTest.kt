@@ -104,6 +104,9 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertEquals(Protections.DAY_GTT, p.note)
         assertNull(p.stopOrderId); assertNull(p.targetOrderId)
         assertEquals(90.0, p.stop!!, 0.0); assertEquals(130.0, p.target!!, 0.0)
+        // 21 Oct, round 5 (idea 1): counted for the diagnostics.
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.PLACED))
+        assertTrue(DayOco.line(), DayOco.line().contains("on; today placed 1; last 7 days placed 1"))
     }
 
     @Test fun onIntradayAndStopOnlyProtectionsAreUnchanged() {
@@ -127,6 +130,8 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertTrue(kite.gtts.isEmpty())
         assertNull(one().gttId)
     }
+        assertEquals("round 5: counted as replaced by two orders", 1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.REPLACED))
+        assertEquals(0, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.PLACED))
 
     @Test fun nothingHeldYetFallsBackToTheTwoOrders() {
         DayOco.resetForTest(on = true)
@@ -161,6 +166,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertTrue("no new orders or GTTs", writes().none { it.method == "POST" })
         assertTrue(alerted("its GTT fired"))
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.FIRED))
     }
 
     @Test fun firedButItsLimitNotFilledIsKeptAndSaidThenEndsOnceFilled() {
@@ -220,6 +226,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertEquals(Protections.DAY_GTT, p.note)
         assertNull(p.stopOrderId)
         assertTrue(alerted("stay at Zerodha as one GTT today"))
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.KEPT))
         // Later looks that day: nothing more sent.
         session(9, 30, nth = 2)
         kite.requests.clear()
@@ -250,6 +257,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         tick()
         assertTrue(kite.placed.isEmpty())
         assertEquals(1, gttPosts.size)
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.PLACED))
         val p = one()
         assertEquals(Protections.DAY_GTT, p.note)
         assertEquals(listOf(90.0, 130.0), triggers(p.gttId!!))
@@ -269,6 +277,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertTrue(gttDeletes.isEmpty()); assertTrue(gttPosts.isEmpty())
         assertEquals(listOf(100.0, 130.0), triggers(id))
         assertEquals(100.0, one().stop!!, 0.0)
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.TRAILED))
         // The price back down: a trailing stop never loosens.
         kite.quote("NFO:$sym", 104.0, 103.95, 104.05)
         kite.requests.clear()
@@ -320,6 +329,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertEquals(listOf(90.0, 130.0), triggers(id))
         assertEquals(75, one().qty)
         assertTrue(gttDeletes.isEmpty())
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.SHRUNK))
     }
 
     @Test fun switchedOffInMarketHoursTheGttGoesFirstThenTheTwoOrders() {
@@ -338,6 +348,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertNotNull(p.stopOrderId)
         assertTrue(p.note != Protections.DAY_GTT)
         assertTrue(alerted("rest at Zerodha as two orders again"))
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.REPLACED))
     }
 
     @Test fun switchedOffAfterTheCloseTheGttStaysOvernight() {
@@ -359,6 +370,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         tick()
         assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertTrue(alerted("NOT protected"))
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.GONE))
         assertTrue(kite.placed.isEmpty())
     }
 
@@ -567,5 +579,30 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertFalse("the exit waits for its next pass", runBlocking { Protections.dayGttsOut("NFO", sym, "test") })
         assertEquals("CANCELLED", kite.order(oid).status)
         assertTrue(runBlocking { Protections.dayGttsOut("NFO", sym, "test") })
+    }
+
+    // ---- 21 Oct, enhancement round 5 (idea 1): the counts ------------------------------------------------------------------------
+
+    @Test fun offNothingIsCountedAndTheLineSaysOff() {
+        protect()
+        assertTrue(com.optionslab.ira.DayGttTally.Event.values().all { DayOco.countForTest(it) == 0 })
+        assertTrue(DayOco.line(), DayOco.line().startsWith("Stop and target as one GTT in the day: off; today nothing yet"))
+        assertEquals(DayOco.line(), DayOco.view.value.line)
+    }
+
+    @Test fun theCountsAreSavedAndReadBackAfterARestartWithThoseSeenBeforeTheRead() {
+        DayOco.resetForTest(on = true)
+        protect()
+        // Written on a worker thread: wait for it (the vault's map in memory, then the file).
+        val until = System.nanoTime() + 5_000_000_000L
+        while (!com.optionslab.app.security.SecurePrefs.getString("g.dayOco.tally").orEmpty().contains("PLACED=1") && System.nanoTime() < until) Thread.sleep(20)
+        assertTrue(com.optionslab.app.security.SecurePrefs.getString("g.dayOco.tally").orEmpty().contains("PLACED=1"))
+        // A restart: memory empty, the read not landed yet; an event seen before it is added to the saved ones.
+        DayOco.resetForTest(on = true, loaded = false)
+        DayOco.note(com.optionslab.ira.DayGttTally.Event.TRAILED)
+        DayOco.load()
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.PLACED))
+        assertEquals(1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.TRAILED))
+        assertTrue(DayOco.view.value.line.contains("placed 1, trailed 1"))
     }
 }

@@ -115,3 +115,104 @@ class PayoutDrawdownTest {
         assertEquals(d1.plusDays(5), l.first().day)
     }
 }
+
+/** 21 Oct, enhancement round 5 (idea 5): a payout confirmed by the next day's opening balance ([PayoutDrawdown.left]). */
+class PayoutLeftTest {
+    private val d1 = LocalDate.of(2026, 10, 19)
+    private val d2 = LocalDate.of(2026, 10, 20)
+    private val d3 = LocalDate.of(2026, 10, 21)
+    private fun pay(day: LocalDate, rs: Double) = PayoutDrawdown.Payout(day, rs, 500_000.0)
+
+    @Test fun aDaysBalancesKeepTheFirstOpeningAndTheLastExpectedNext() {
+        var b = PayoutDrawdown.recordBalance(emptyList(), d1, 400_000.0, 400_000.0)
+        b = PayoutDrawdown.recordBalance(b, d1, 401_000.0, 395_000.0)
+        assertEquals(listOf(PayoutDrawdown.Balance(d1, 400_000.0, 395_000.0)), b)
+        assertEquals(b, PayoutDrawdown.recordBalance(b, d1, Double.NaN, Double.NaN), "nothing known changes nothing")
+        b = PayoutDrawdown.recordBalance(b, d1, 0.0, 394_000.0)                      // an opening of 0 is not known
+        assertEquals(400_000.0, b.single().opening)
+        assertEquals(394_000.0, b.single().expectedNext)
+        val nan = PayoutDrawdown.recordBalance(emptyList(), d2, -1.0, 390_000.0)
+        assertTrue(nan.single().opening.isNaN())
+        var many = emptyList<PayoutDrawdown.Balance>()
+        for (i in 0L until 15L) many = PayoutDrawdown.recordBalance(many, d1.plusDays(i), 1.0, 1.0)
+        assertEquals(PayoutDrawdown.KEEP_BALANCES, many.size)
+        assertEquals(d1.plusDays(14), many.last().day)
+    }
+
+    @Test fun aPayoutThatLeftIsConfirmed() {
+        val b = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 402_000.0), PayoutDrawdown.Balance(d2, 352_100.0, 352_100.0))
+        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 50_000.0), b))   // dropped 49,900 (charges, slack)
+    }
+
+    @Test fun aPayoutCancelledAfterItsDaysLastReadIsNotSeen() {
+        val b = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 402_000.0), PayoutDrawdown.Balance(d2, 401_900.0, 401_900.0))
+        assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 50_000.0), b))
+        // Half of it left: not confirmed either.
+        val half = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 402_000.0), PayoutDrawdown.Balance(d2, 377_000.0, 377_000.0))
+        assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 50_000.0), half))
+    }
+
+    @Test fun theToleranceIsRs500OrFivePercent() {
+        val small = listOf(PayoutDrawdown.Balance(d1, 100_000.0, 100_000.0), PayoutDrawdown.Balance(d2, 98_500.0, 98_500.0))
+        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 2_000.0), small))        // 1,500 >= 2,000 - 500
+        assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 2_001.0), small))
+        val big = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 400_000.0), PayoutDrawdown.Balance(d2, 305_000.0, 305_000.0))
+        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 100_000.0), big))       // 95,000 >= 100,000 - 5,000
+        assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 100_100.0), big))
+    }
+
+    @Test fun noReadOfItsDayOrOfALaterOpeningIsUnknown() {
+        assertEquals(PayoutDrawdown.Left.UNKNOWN, PayoutDrawdown.left(pay(d1, 50_000.0), emptyList()))
+        assertEquals(PayoutDrawdown.Left.UNKNOWN, PayoutDrawdown.left(pay(d1, 50_000.0), listOf(PayoutDrawdown.Balance(d1, 400_000.0, 400_000.0))))
+        assertEquals(PayoutDrawdown.Left.UNKNOWN, PayoutDrawdown.left(pay(d1, 50_000.0), listOf(PayoutDrawdown.Balance(d2, 350_000.0, 350_000.0))))
+        assertEquals(PayoutDrawdown.Left.UNKNOWN, PayoutDrawdown.left(pay(d1, 50_000.0),
+            listOf(PayoutDrawdown.Balance(d1, 400_000.0, Double.NaN), PayoutDrawdown.Balance(d2, 350_000.0, 350_000.0))))
+    }
+
+    @Test fun theFirstLaterOpeningIsUsedAcrossAWeekendOrHoliday() {
+        // Friday's payout, the next read on Monday (the weekend has no reads).
+        val fri = LocalDate.of(2026, 10, 16); val mon = LocalDate.of(2026, 10, 19)
+        val b = listOf(PayoutDrawdown.Balance(fri, 400_000.0, 400_000.0), PayoutDrawdown.Balance(mon, 350_000.0, 350_000.0),
+            PayoutDrawdown.Balance(LocalDate.of(2026, 10, 20), 500_000.0, 500_000.0))
+        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(fri, 50_000.0), b))
+    }
+
+    @Test fun theSplitCountsOnlyPayoutsBeforeTodayUnderThePeak() {
+        val payouts = listOf(pay(d1, 50_000.0), pay(d2, 20_000.0), pay(d3, 10_000.0), PayoutDrawdown.Payout(d1, 7_000.0, 480_000.0))
+        val b = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 400_000.0), PayoutDrawdown.Balance(d2, 350_000.0, 350_000.0))
+        val s = PayoutDrawdown.paidOutSplit(payouts, b, 500_000.0, d3)
+        assertEquals(50_000.0, s.confirmed)
+        assertEquals(0.0, s.notSeen)
+        assertEquals(20_000.0, s.unknown)          // d2's: no later opening read yet
+        assertEquals(70_000.0, s.all)
+        assertEquals(0.0, PayoutDrawdown.paidOutSplit(payouts, b, Double.NaN, d3).all)
+        assertEquals(0.0, PayoutDrawdown.paidOutSplit(payouts, b, 0.0, d3).all)
+    }
+
+    @Test fun waitingWordsOnlyWhenAllWouldExplainButTheConfirmedDoNot() {
+        val all = PayoutDrawdown.judge(500_000.0, 380_000.0, 50_000.0, 20.0)       // 24% raw, 14% less payouts
+        val none = PayoutDrawdown.judge(500_000.0, 380_000.0, 0.0, 20.0)
+        val split = PayoutDrawdown.Split(0.0, 50_000.0, 0.0)
+        val on = PayoutDrawdown.waitingWords(all, none, split, on = true)
+        assertNotNull(on)
+        assertTrue(on.contains("has not shown Rs 50,000 of them leaving") && on.contains("Nothing is offered"))
+        val shadow = PayoutDrawdown.waitingWords(all, none, PayoutDrawdown.Split(0.0, 0.0, 50_000.0), on = false)
+        assertNotNull(shadow)
+        assertTrue(shadow.contains("them leaving yet") && shadow.contains("Shadow: logged only"))
+        val mixed = PayoutDrawdown.waitingWords(all, none, PayoutDrawdown.Split(0.0, 30_000.0, 20_000.0), on = true)
+        assertTrue(mixed!!.contains("Rs 30,000 of them leaving (Rs 20,000 not read yet)"))
+        assertNull(PayoutDrawdown.waitingWords(all, all, split, on = true), "the confirmed explain it: nothing to wait for")
+        assertNull(PayoutDrawdown.waitingWords(none, none, split, on = true))
+        assertNull(PayoutDrawdown.waitingWords(null, null, split, on = true))
+    }
+
+    @Test fun balancesEncodeAndDecode() {
+        val b = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 395_500.5), PayoutDrawdown.Balance(d2, Double.NaN, 350_000.0))
+        val back = PayoutDrawdown.decodeBalances(PayoutDrawdown.encodeBalances(b))
+        assertEquals(2, back.size)
+        assertEquals(395_500.5, back[0].expectedNext)
+        assertTrue(back[1].opening.isNaN())
+        assertTrue(PayoutDrawdown.decodeBalances(null).isEmpty())
+        assertEquals(listOf(d1), PayoutDrawdown.decodeBalances("x;2026-10-19|1|2;2026-10-20|NaN|NaN;bad|1|2;2026-10-21|1").map { it.day })
+    }
+}

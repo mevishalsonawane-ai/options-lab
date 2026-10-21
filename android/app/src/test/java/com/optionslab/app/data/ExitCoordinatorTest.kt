@@ -562,4 +562,53 @@ class ExitCoordinatorTest : RobolectricTest() {
         assertEquals("as before this round: the pass sells the trailing read again", 75, sells())
         assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
     }
+
+    // ---- 21 Oct, enhancement round 5 (idea 3): a same-day NRML/MIS conversion ------------------------------------------------
+
+    /**
+     * Boss's NRML sell of 75 filled, then a conversion: Kite shows that sell's day quantity in the MIS row (the orders keep NRML).
+     * The NRML row alone reads as trailing a fill it never will show.
+     */
+    private fun soldThenConverted() {
+        kite.position(ce, 150, 20.0)
+        bossSells(75)                                              // filled at once; NRML now 75 held, day sells 75
+        synchronized(kite) {
+            kite.daySold["NFO:$ce:NRML"] = 0
+            kite.position(ce, 0, 20.0, product = "MIS")
+            kite.daySold["NFO:$ce:MIS"] = 75
+            kite.dayBought["NFO:$ce:MIS"] = 75
+        }
+        kite.requests.clear()
+    }
+
+    @Test fun onAFillMovedByAConversionIsNeverCountedAsSold() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        soldThenConverted()
+        assertEquals("75 still held as NRML: nothing counted as sold", 75, heldFor())
+        assertEquals("no trailing read: read once", 1, positionReads())
+        val c = ExitCoordinator.countsForTest()
+        assertEquals(0, c.lagReadAgain + c.lagSubtracted + c.lagShadow)
+        assertEquals(1, c.lagConversion)
+        assertTrue(ExitCoordinator.lagLine(), ExitCoordinator.lagLine().contains("by a conversion (not counted as trailing) 1"))
+    }
+
+    @Test fun inShadowAFillMovedByAConversionIsNotLoggedAsTrailing() {
+        soldThenConverted()
+        assertEquals(75, heldFor())
+        assertEquals(0, ExitCoordinator.countsForTest().lagShadow)
+        assertEquals(1, ExitCoordinator.countsForTest().lagConversion)
+    }
+
+    @Test fun aRealLagBesideAnotherProductsRowIsStillCaught() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        kite.position(ce, 0, 20.0, product = "MIS")                // an MIS row of its own, nothing moved
+        kite.positionsTrailReads = 50
+        bossSells(75)
+        kite.requests.clear()
+        assertEquals("150 shown, 75 of it sold: 75", 75, heldFor())
+        assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
+        assertEquals(0, ExitCoordinator.countsForTest().lagConversion)
+    }
 }
+

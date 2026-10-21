@@ -109,6 +109,25 @@ object ExitDesk {
         return lag.coerceIn(0, kotlin.math.abs(net))
     }
 
+    /**
+     * 21 Oct, enhancement round 5 (idea 3): [positionsLag] safe across a product conversion (NRML to MIS or back) the same day.
+     *
+     * Kite moves a converted quantity to the other product's positions row, while the orders keep the product they were placed
+     * with. A sell filled as NRML whose quantity Boss then converted shows in the NRML orders but in the MIS row of the positions,
+     * so the NRML row alone reads as "trailing" a fill it never will show: with the guard on, the sender would count that fill as
+     * sold and send less than is held. The whole contract is compared too, every product together ([allDayExitQty]: the exit side's
+     * day quantity summed over every positions row of the contract, null when one row did not give it; [allFills]: every product's
+     * orders on it): a conversion only moves quantity between rows, so the totals still match unless the positions really trail.
+     * The smaller of the two is the lag (it only ever counts less as sold, never more); the whole contract not known, this
+     * product's alone, as before this round.
+     */
+    fun positionsLagAcross(net: Int, dayExitQty: Int?, fills: List<Fill>, mine: Set<String>, now: Long?,
+                           allDayExitQty: Int?, allFills: List<Fill>): Int {
+        val one = positionsLag(net, dayExitQty, fills, mine, now)
+        if (one <= 0 || allDayExitQty == null) return one
+        return minOf(one, positionsLag(net, allDayExitQty, allFills, mine, now))
+    }
+
     /** [net] less [lag] toward zero: what is held once the fills the positions trail are counted. */
     fun heldLess(net: Int, lag: Int): Int = if (net > 0) (net - lag).coerceAtLeast(0) else if (net < 0) (net + lag).coerceAtMost(0) else 0
 
@@ -161,11 +180,14 @@ object ExitDesk {
         val lagShadow: Int = 0,
         val lagReadAgain: Int = 0,
         val lagSubtracted: Int = 0,
+        /** 21 Oct, round 5 (idea 3): reads where a product conversion explained a fill the product's own row did not show. */
+        val lagConversion: Int = 0,
     ) {
         /** 21 Oct, round 3: the positions-lag guard's part of the line ([lagOn]: its own switch). */
         fun lagLine(lagOn: Boolean): String =
-            if (lagOn) "Positions-lag guard: on; positions read again until an exit's fill showed $lagReadAgain; fill counted as sold $lagSubtracted"
-            else "Positions-lag guard: shadow (logged only); a positions read trailing an exit's fill $lagShadow (on, it would read again)"
+            (if (lagOn) "Positions-lag guard: on; positions read again until an exit's fill showed $lagReadAgain; fill counted as sold $lagSubtracted"
+            else "Positions-lag guard: shadow (logged only); a positions read trailing an exit's fill $lagShadow (on, it would read again)") +
+                if (lagConversion > 0) "; a fill moved to the other product by a conversion (not counted as trailing) $lagConversion" else ""
 
         fun line(on: Boolean): String = buildString {
             append("Exit coordinator: ").append(if (on) "on" else "shadow (logged only)").append("; exits sent today $sent")

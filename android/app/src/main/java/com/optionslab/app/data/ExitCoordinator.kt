@@ -211,15 +211,31 @@ object ExitCoordinator {
             .map { ExitDesk.Fill(it.id, it.side, it.filled, placedMs(it.updatedAt)) }
         val now = System.currentTimeMillis()
         fun rows(b: Broker.Positions) = b.net.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }
+        // 21 Oct, enhancement round 5 (idea 3): every product's orders and rows on the contract too, so a fill whose quantity a
+        // conversion moved to the other product's row is never read as the positions trailing it ([ExitDesk.positionsLagAcross]).
+        val allFills = orders.filter { it.symbol == symbol && it.exchange == exchange }
+            .map { ExitDesk.Fill(it.id, it.side, it.filled, placedMs(it.updatedAt)) }
+        var converted = false
         fun lag(b: Broker.Positions): Int = runCatching {
             val rs = rows(b)
             val net = rs.sumOf { it.qty }
-            val day = rs.map { if (net > 0) it.daySellQty else it.dayBuyQty }
-            ExitDesk.positionsLag(net, if (rs.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }, fills, mine, now)
+            fun exitDay(list: List<Broker.Position>): Int? {
+                val day = list.map { if (net > 0) it.daySellQty else it.dayBuyQty }
+                return if (list.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }
+            }
+            val all = b.net.filter { it.symbol == symbol && it.exchange == exchange }
+            val one = ExitDesk.positionsLag(net, exitDay(rs), fills, mine, now)
+            val l = ExitDesk.positionsLagAcross(net, exitDay(rs), fills, mine, now, exitDay(all), allFills)
+            if (l < one) converted = true
+            l
         }.getOrDefault(0)
         if (mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
         var given = first
         val (book, left) = ExitDesk.settleHeld(lagOn, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
+        if (converted) {
+            count { it.copy(lagConversion = it.lagConversion + 1) }
+            record("$who $key: its $product exit's fill shows in the other product's positions row (a conversion today); not read as trailing")
+        }
         val net = rows(book).sumOf { it.qty }
         return ExitDesk.heldLess(net, left)
     }

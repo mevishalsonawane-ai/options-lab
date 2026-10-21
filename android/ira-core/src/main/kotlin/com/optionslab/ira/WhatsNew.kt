@@ -63,6 +63,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 5.
+        Entry("2026-10-21-enhance-round-5", OCT21, "One GTT counted; payouts checked next morning",
+            "Bot settings now counts what the one GTT did, today and over the last week. " +
+                "It shows how many were placed, kept at the open, trailed, fired or replaced by two orders. " +
+                "The guard against selling a filled exit twice now sees a position moved between intraday and carried. " +
+                "A payout now counts only once the next morning's opening balance shows the money left. " +
+                "The payout check only logs until you switch it on, as before.",
+            "Bot settings → Stop and target as one GTT; Payouts and the drawdown"),
         // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 4.
         Entry("2026-10-21-enhance-round-4", OCT21, "Stop and target as one GTT; payouts in the drawdown",
             "A carried position's stop and target can rest at Zerodha as one GTT all day. " +

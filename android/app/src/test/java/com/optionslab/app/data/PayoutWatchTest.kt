@@ -42,8 +42,18 @@ class PayoutWatchTest : RobolectricTest() {
     private val entry = AccountGuard.Order("NIFTY26OCT24500CE", "BUY", 75, 75, 100.0, "NIFTY", Market.today().plusDays(7), "CE")
     private fun peakNow() = SecurePrefs.getDouble("guard.peak.live", Double.NaN)
 
+    /**
+     * Rs 1 lakh paid out yesterday, and (21 Oct, round 5) today's opening balance read Rs 1 lakh under what yesterday's balances
+     * expected: the payout really left ([PayoutDrawdown.left]).
+     */
+    private fun paidYesterday(rs: Double = 100_000.0, todayOpening: Double = 500_000.0 - rs) {
+        PayoutWatch.keepForTest(yesterday, rs, peak)
+        PayoutWatch.keepBalanceForTest(yesterday, 500_000.0, 500_000.0)
+        PayoutWatch.keepBalanceForTest(Market.today(), todayOpening, todayOpening)
+    }
+
     @Test fun inShadowTheRefusalAndTheKillSwitchAreAsBeforeAndItIsOnlyLogged() {
-        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        paidYesterday()
         val out = Guard.check(entry, account())
         assertTrue(out.toString(), out.any { it.startsWith("Drawdown limit") && it.contains("its peak") })
         assertTrue("no payout words in shadow", out.none { it.contains("Payouts of") })
@@ -55,7 +65,7 @@ class PayoutWatchTest : RobolectricTest() {
 
     @Test fun onTheRefusalSaysSoTheKillSwitchStillGoesOnAndThePeakIsOffered() {
         PayoutWatch.resetForTest(on = true)
-        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        paidYesterday()
         val out = Guard.check(entry, account())
         assertTrue(out.any { it.startsWith("Drawdown limit") })
         assertTrue(out.toString(), out.any { it.startsWith("Payouts of Rs 1,00,000") || it.startsWith("Payouts of Rs 100,000") })
@@ -66,7 +76,7 @@ class PayoutWatchTest : RobolectricTest() {
 
     @Test fun loweringThePeakTakesThePinAndNeverClearsTheKillSwitch() {
         PayoutWatch.resetForTest(on = true)
-        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        paidYesterday()
         Guard.check(entry, account())
         assertTrue(PayoutWatch.lowerPeak(pinConfirmed = false).contains("PIN"))
         assertEquals(peak, peakNow(), 0.0)
@@ -105,7 +115,7 @@ class PayoutWatchTest : RobolectricTest() {
 
     @Test fun thePeakMovedSinceIsNeverLowered() {
         PayoutWatch.resetForTest(on = true)
-        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        paidYesterday()
         Guard.check(entry, account())
         Guard.setPeak(live = true, 520_000.0)
         assertTrue(PayoutWatch.lowerPeak(pinConfirmed = true).contains("changed"))
@@ -113,7 +123,7 @@ class PayoutWatchTest : RobolectricTest() {
     }
 
     @Test fun offLoweringIsRefused() {
-        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        paidYesterday()
         Guard.check(entry, account())
         assertTrue(PayoutWatch.lowerPeak(pinConfirmed = true).contains("on first"))
         assertEquals(peak, peakNow(), 0.0)
@@ -154,7 +164,7 @@ class PayoutWatchTest : RobolectricTest() {
 
     @Test fun theGuardsCheckReadsNothingFromTheSettingsVault() {
         PayoutWatch.resetForTest(on = true)
-        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        paidYesterday()
         val a = account()
         SecurePrefs.readsForTest.set(0)
         SecurePrefs.countedThread = Thread.currentThread()
@@ -177,8 +187,78 @@ class PayoutWatchTest : RobolectricTest() {
 
     @Test fun paperNeverConsultsIt() {
         PayoutWatch.resetForTest(on = true)
-        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        paidYesterday()
         assertTrue(Guard.check(entry, account(), paper = true).isEmpty())
         assertNull(PayoutWatch.view.value.offer)
+    }
+
+    // ---- 21 Oct, enhancement round 5 (idea 5): the next morning's opening balance confirms the payout left ---------------------
+
+    @Test fun onAPayoutTheOpeningBalanceDidNotShowLeavingIsNeverOffered() {
+        PayoutWatch.resetForTest(on = true)
+        paidYesterday(todayOpening = 499_000.0)                       // cancelled after yesterday's last read: the money stayed
+        val out = Guard.check(entry, account())
+        assertTrue(out.any { it.startsWith("Drawdown limit") })
+        assertTrue(out.toString(), out.any { it.contains("has not shown Rs 1,00,000 of them leaving") || it.contains("has not shown Rs 100,000 of them leaving") })
+        assertTrue(out.toString(), out.any { it.contains("Nothing is offered until it does") })
+        assertTrue("the kill switch goes on as before", AppSettings.load().guardKill)
+        assertNull(PayoutWatch.view.value.offer)
+        assertTrue(PayoutWatch.lowerPeak(pinConfirmed = true).startsWith("No drawdown"))
+        assertEquals(peak, peakNow(), 0.0)
+        assertTrue(PayoutWatch.line(), PayoutWatch.line().contains("confirmed 0, not seen 1, not read yet 0"))
+    }
+
+    @Test fun onAPayoutWithNoBalancesReadYetWaits() {
+        PayoutWatch.resetForTest(on = true)
+        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        val out = Guard.check(entry, account())
+        assertTrue(out.toString(), out.any { it.contains("has not shown them leaving yet") })
+        assertNull(PayoutWatch.view.value.offer)
+        assertTrue(PayoutWatch.line(), PayoutWatch.line().contains("confirmed 0, not seen 0, not read yet 1"))
+    }
+
+    @Test fun inShadowAnUnconfirmedPayoutIsOnlyLogged() {
+        PayoutWatch.keepForTest(yesterday, 100_000.0, peak)
+        val out = Guard.check(entry, account())
+        assertTrue("no payout words in shadow", out.none { it.contains("Payouts of") })
+        assertTrue(PayoutWatch.line(), PayoutWatch.line().contains("Shadow: logged only"))
+        assertNull(PayoutWatch.view.value.offer)
+    }
+
+    @Test fun aConfirmedPayoutIsSaidConfirmedInTheLine() {
+        PayoutWatch.resetForTest(on = true)
+        paidYesterday()
+        Guard.check(entry, account())
+        assertTrue(PayoutWatch.line(), PayoutWatch.line().contains("confirmed 1, not seen 0, not read yet 0"))
+        assertEquals(100_000.0, PayoutWatch.view.value.offer!!, 0.0)
+    }
+
+    @Test fun aMarginsReadKeepsTheDaysBalances() {
+        kite.payoutToday = 0.0
+        runBlocking { Broker.funds() }
+        val deadline = System.currentTimeMillis() + 5_000
+        while (PayoutWatch.balancesForTest().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val b = PayoutWatch.balancesForTest().single()
+        assertEquals(Market.today(), b.day)
+        assertTrue(b.opening > 0.0)
+        assertEquals("no realised P&L, premium or money added: the same opening tomorrow", b.opening, b.expectedNext, 0.0)
+        assertTrue("no payout, none kept", PayoutWatch.payoutsForTest().isEmpty())
+    }
+
+    @Test fun theExpectedNextOpeningCountsRealisedPremiumAndMoneyAdded() {
+        val f = Broker.Funds(0.0, 0.0, 0.0, openingBalance = 400_000.0, optionPremium = 15_000.0, realised = 2_000.0, payin = 10_000.0)
+        assertEquals(397_000.0, f.expectedNextOpening, 0.0)
+        assertTrue("no opening balance: not known", Broker.Funds(0.0, 0.0, 0.0).expectedNextOpening.isNaN())
+    }
+
+    @Test fun theGuardsCheckWithBalancesReadsNothingFromTheSettingsVault() {
+        PayoutWatch.resetForTest(on = true)
+        paidYesterday(todayOpening = 450_000.0)
+        val a = account()
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        PayoutWatch.drawdown(a, 10.0)
+        SecurePrefs.countedThread = null
+        assertEquals(0L, SecurePrefs.readsForTest.get())
     }
 }

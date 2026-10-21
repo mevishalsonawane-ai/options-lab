@@ -346,7 +346,10 @@ class OrderPathRound2Test : RobolectricTest() {
             assertTrue(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Price stream drops today: 1") })
             // Queued yesterday, read today: dropped.
             OrderTiming.forget()
-            Market.testClock = java.time.Clock.offset(java.time.Clock.systemUTC(), java.time.Duration.ofDays(-1))
+            // 21 Oct, round 5: the day before the MARKET's day (the test rule pins it to a trading day's noon), never the wall
+            // clock's yesterday: on a Saturday, or the day after a holiday, that was the market's "today" and the test failed.
+            val dayBefore = Market.now().minusDays(1).toInstant()
+            Market.testClock = java.time.Clock.offset(java.time.Clock.systemUTC(), java.time.Duration.between(java.time.Instant.now(), dayBefore))
             OrderTiming.streamDropped(); OrderTiming.streamGap(900)
             Market.testClock = was
             assertFalse(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Price stream drops today") })

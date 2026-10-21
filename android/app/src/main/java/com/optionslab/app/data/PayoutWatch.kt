@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 object PayoutWatch {
     private const val K_ON = "g.payoutDrawdown.on"
     private const val K_LIST = "g.payoutDrawdown.payouts"
+    /** 21 Oct, enhancement round 5 (idea 5): each day's opening balance and the next one expected ([PayoutDrawdown.Balance]). */
+    private const val K_BAL = "g.payoutDrawdown.balances"
     /** The guard's live peak, as [Guard] keeps it. */
     private const val K_PEAK = "guard.peak.live"
 
@@ -32,6 +34,9 @@ object PayoutWatch {
     @Volatile private var loaded = false
     @Volatile private var switched = false
     @Volatile private var payouts: List<PayoutDrawdown.Payout> = emptyList()
+    @Volatile private var balances: List<PayoutDrawdown.Balance> = emptyList()
+    /** 21 Oct, round 5: the last time payouts would have explained a drawdown that the next opening balance has not confirmed. */
+    @Volatile private var lastWaiting: String? = null
     /** The last drawdown judged with payouts, with its peak and equity (review: one snapshot, never pieces of two calls). */
     private data class Last(val j: PayoutDrawdown.Judged?, val peak: Double, val equity: Double)
     @Volatile private var lastSnap = Last(null, Double.NaN, Double.NaN)
@@ -55,11 +60,16 @@ object PayoutWatch {
         val ok = runCatching {
             val saved = SecurePrefs.getBoolean(K_ON, false)
             val list = PayoutDrawdown.decode(SecurePrefs.getString(K_LIST))
+            val bals = PayoutDrawdown.decodeBalances(SecurePrefs.getString(K_BAL))
             if (!switched) on = saved
             synchronized(lock) {
                 var merged = list
                 for (p in payouts) merged = PayoutDrawdown.record(merged, p.day, p.amount, p.peak)
                 payouts = merged
+                // 21 Oct, round 5: balances read before this are laid over the saved ones (a day's first opening kept).
+                var mb = bals
+                for (b in balances) mb = PayoutDrawdown.recordBalance(mb, b.day, b.opening, b.expectedNext)
+                balances = mb
             }
         }.isSuccess
         if (ok) loaded = true
@@ -86,11 +96,22 @@ object PayoutWatch {
      * Kite's payout for today from a margins read ([amount]: utilised.payout). Returns at once: recorded with the peak that stands
      * now, and written, on a worker thread (this may run on the send path).
      */
-    fun seen(amount: Double) {
+    fun seen(amount: Double, opening: Double = Double.NaN, expectedNext: Double = Double.NaN) {
+        val day = today()
+        // 21 Oct, enhancement round 5 (idea 5): the day's balances, to confirm tomorrow that a payout really left ([PayoutDrawdown.left]).
+        if ((opening.isFinite() && opening > 0.0) || expectedNext.isFinite()) scope.launch {
+            runCatching {
+                if (!loaded) load()
+                val text = synchronized(lock) {
+                    balances = PayoutDrawdown.recordBalance(balances, day, opening, expectedNext)
+                    PayoutDrawdown.encodeBalances(balances)
+                }
+                if (loaded) SecurePrefs.putAllSoon(mapOf(K_BAL to text))
+            }
+        }
         // Review: a 0 read is kept too when the day has a payout (a request cancelled the same day removes it).
         if (!amount.isFinite() || amount < 0.0) return
-        if (amount == 0.0 && payouts.none { it.day == today() }) return
-        val day = today()
+        if (amount == 0.0 && payouts.none { it.day == day }) return
         scope.launch {
             runCatching {
                 if (!loaded) load()
@@ -111,11 +132,16 @@ object PayoutWatch {
      */
     fun drawdown(a: AccountGuard.Account, limitPct: Double): String? = runCatching {
         val d = today()
-        val paid = PayoutDrawdown.paidOutSince(payouts, a.peakEquity, d)
-        if (paid <= 0.0) return@runCatching null
-        val j = PayoutDrawdown.judge(a.peakEquity, a.equity, paid, limitPct)
+        // 21 Oct, enhancement round 5 (idea 5): only payouts the next day's opening balance shows leaving count (confirmed); those
+        // not seen leaving, or not read yet, are said and never offered (a payout cancelled after its day's last read never left).
+        val split = PayoutDrawdown.paidOutSplit(payouts, balances, a.peakEquity, d)
+        if (split.all <= 0.0) return@runCatching null
+        val j = PayoutDrawdown.judge(a.peakEquity, a.equity, split.confirmed, limitPct)
         lastSnap = Last(j, a.peakEquity, a.equity)
-        val w = PayoutDrawdown.words(j, on) ?: return@runCatching null
+        val wait = PayoutDrawdown.waitingWords(PayoutDrawdown.judge(a.peakEquity, a.equity, split.all, limitPct), j, split, on)
+        lastWaiting = wait
+        val w = (if (split.confirmed > 0.0) PayoutDrawdown.words(j, on) else null) ?: wait
+        if (w == null) { publish(); return@runCatching null }
         if (saidDay != d) { saidDay = d; runCatching { Diag.record("risk", "Payout-aware drawdown: $w") } }
         publish()
         if (on) w else null
@@ -148,8 +174,13 @@ object PayoutWatch {
     /** The diagnostics' and Bot settings' line. */
     fun line(): String {
         val n = payouts.size
-        val head = "Payout-aware drawdown: ${if (on) "on" else "shadow (logged only)"}; payouts kept $n"
-        val w = PayoutDrawdown.words(last, on)
+        // 21 Oct, enhancement round 5 (idea 5): how many of them the next day's opening balance showed leaving.
+        val bals = balances
+        val by = payouts.groupingBy { PayoutDrawdown.left(it, bals) }.eachCount()
+        val check = if (n == 0) "" else " (left, by the next opening balance: confirmed ${by[PayoutDrawdown.Left.CONFIRMED] ?: 0}, " +
+            "not seen ${by[PayoutDrawdown.Left.NOT_SEEN] ?: 0}, not read yet ${by[PayoutDrawdown.Left.UNKNOWN] ?: 0})"
+        val head = "Payout-aware drawdown: ${if (on) "on" else "shadow (logged only)"}; payouts kept $n$check"
+        val w = PayoutDrawdown.words(last, on) ?: lastWaiting
         return if (w == null) head else "$head; $w"
     }
 
@@ -163,10 +194,18 @@ object PayoutWatch {
     /** TEST ONLY: shadow, nothing kept. */
     internal fun resetForTest(on: Boolean = false) {
         this.on = on; loaded = true; switched = false
-        synchronized(lock) { payouts = emptyList() }
-        lastSnap = Last(null, Double.NaN, Double.NaN); saidDay = null
+        synchronized(lock) { payouts = emptyList(); balances = emptyList() }
+        lastSnap = Last(null, Double.NaN, Double.NaN); saidDay = null; lastWaiting = null
         _view.value = View(on)
     }
+
+    /** TEST ONLY: a day's balances kept as if read ([PayoutDrawdown.recordBalance]). */
+    internal fun keepBalanceForTest(day: java.time.LocalDate, opening: Double, expectedNext: Double) {
+        synchronized(lock) { balances = PayoutDrawdown.recordBalance(balances, day, opening, expectedNext) }
+    }
+
+    /** TEST ONLY: the balances kept. */
+    internal fun balancesForTest(): List<PayoutDrawdown.Balance> = balances
 
     /** TEST ONLY: the payouts kept. */
     internal fun payoutsForTest(): List<PayoutDrawdown.Payout> = payouts
