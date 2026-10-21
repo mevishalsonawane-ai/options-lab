@@ -1,0 +1,35 @@
+id: r96-1-n1
+title: 'R96 round 1 N1: NR7 breakout, 1-ITM (MCX option buying)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R96_ROUND1.md
+hypothesis: 'Boss (21 Oct): find an MCX commodity option BUYING strategy. N1 earns after real MCX costs on design (5 Aug 2025
+  - 14 Jul 2026), beats random-session twins (p < 0.05, BH q <= 0.10 over the cumulative R96 ledger), in >= 3 of 4 walk-forward
+  folds, worst month > -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m MONTH books to 19 Oct 2026: near-future spot + ATM-3..+3
+  minutes with IV; fut_daily_continuous to 16 Oct 2026), copied 21 Oct'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; read once only for a design pass)
+instruments:
+- CRUDEOILM
+- NATGASMINI
+- GOLDM
+- SILVERM
+features:
+- 'signal source: the MCX future (near future minute closes; daily: the near-month daily continuous future, back-adjusted)'
+- ATM IV as a filter only (V1)
+model_or_rule: NR7 day -> next session first future minute close beyond its high / low (09:15-22:00) -> 1-ITM; stop -40% /
+  the NR7 opposite extreme, lock ladder, out after 3 sessions
+settings: research/hunt/r96_mcx_buy/cfg.py; PREREG_ROUND1.md s3-6
+prereg: research/hunt/r96_mcx_buy/PREREG_ROUND1.md
+variants_tried: 1
+results:
+  summary: 'Design: 58 trades, net Rs 183,983 (2x spread Rs 170,533), gross Rs 201,758, win 52%, worst month Rs -20,791, max
+    DD Rs -51,030, without top 3 Rs 33,112; folds F1 Rs -1,778 (12), F2 Rs 155,314 (13), F3 Rs -30,408 (17), F4 Rs 60,856
+    (16); twin mean Rs 1,933, twin p 0.006, BH q 0.054 (cumulative ledger, 9 ideas). Gates failed: folds, worst_month, max_dd.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before (NATGASMINI 0.45% / 0.90%) each fill, 2x
+    on model-priced exits; gates also at 2x spreads
+holdout_read: false
+verdict: inconclusive
+notes: lead for round 2
