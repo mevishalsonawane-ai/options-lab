@@ -552,6 +552,7 @@ object Tasks {
             if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() },
             com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
         )
         val due = armsDue(true, all)
@@ -896,6 +897,7 @@ object Tasks {
         // exits), and - in Jarvis - his approved news trades and Solo (paper only, Boss's switch); they never go first.
         together("arms after the square-off", armsDue(lanes != null, listOfNotNull(
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() },
             com.optionslab.ira.Supervisor.Step("strategies") {
                 val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
                 com.optionslab.app.data.Strategies.tickAll(bad)
@@ -1101,6 +1103,7 @@ object Tasks {
             step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
             // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
             step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
+            step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
             if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
                 com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }

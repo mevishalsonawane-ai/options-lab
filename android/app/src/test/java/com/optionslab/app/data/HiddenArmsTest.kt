@@ -291,6 +291,28 @@ class HiddenArmsTest : RobolectricTest() {
         for (k in listOf("liquidity", "liquidity15", "hero_ticket")) assertTrue(k, HiddenArms.mayArm(k) && !HiddenArms.blocks(k))
     }
 
+    // ---- 21 Oct: the two MCX paper arms Boss asked to remove ------------------------------------------------------------------
+
+    @Test fun theSilvermMorningCallAndTheTrendAreHiddenAndTheirOwnSwitchRefuses() {
+        McxPaperArms.init(context)
+        val mcx = listOf(ArmsCleanup.MCX_SILVERM_AM, ArmsCleanup.MCX_TREND)
+        assertTrue(HiddenArms.defaultArmsForTest().map { it.key }.containsAll(mcx))
+        HiddenArms.arms = emptyList()
+        pass()
+        assertTrue(mcx.all { HiddenArms.blocks(it) && !HiddenArms.mayArm(it) })
+        val trend = com.optionslab.engine.mcx.McxTrendRules
+        assertEquals(ArmsCleanup.refusal(trend.LABEL), runBlocking { McxPaperArms.setArmed(trend.SOURCE, true) })
+        assertFalse(McxPaperArms.armed(trend.SOURCE))
+        // Off is always allowed; the two MCX arms that stay are never gated.
+        assertFalse(runBlocking { McxPaperArms.setArmed(trend.SOURCE, false) }.contains("hidden"))
+        for (k in listOf(com.optionslab.engine.mcx.McxEveRules.SOURCE, com.optionslab.engine.mcx.McxUsSilverRules.SOURCE))
+            assertTrue(k, HiddenArms.mayArm(k) && !HiddenArms.blocks(k))
+        // A restore from the Hidden arms list lets Boss switch it on again (paper only).
+        runBlocking { HiddenArms.restore(ArmsCleanup.MCX_TREND) }
+        assertTrue(runBlocking { McxPaperArms.setArmed(trend.SOURCE, true) }.contains("paper only"))
+        runBlocking { McxPaperArms.setArmed(trend.SOURCE, false) }
+    }
+
     // ---- Liquidity on its indices ------------------------------------------------------------------------------------------
 
     private fun liqArmed() = runBlocking { OrbArms.liquidityDay(OrbArms.testNow!!.toLocalDate()) }.first.associate { it.book to it.armed }

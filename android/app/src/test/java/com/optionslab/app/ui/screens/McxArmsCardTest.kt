@@ -196,4 +196,45 @@ class McxArmsCardTest {
         // No switch here: the bots' one place is Home → Strategies.
         assertEquals(0, compose.onAllNodes(hasContentDescription("Paper only: switch", substring = true)).fetchSemanticsNodes().size)
     }
+
+    // ---- 21 Oct: NR7 crude (record only) and the two hidden MCX arms -------------------------------------------------------
+
+    @Test fun theNr7RecordRowSaysRecordOnlyAndItsSwitchCallsBack() {
+        var asked: Boolean? = null
+        val t = com.optionslab.app.data.McxNr7Record.Trade("CRUDEOIL", "CRUDEOIL26NOV5950CE", 1, 5950.0, 100,
+            java.time.LocalDate.of(2026, 11, 16), "k", "f", 100.0, java.time.LocalDateTime.of(2026, 10, 21, 10, 2),
+            java.time.LocalDate.of(2026, 10, 20), 5995.0, 102.0, exit = 180.0, exitTime = java.time.LocalDateTime.of(2026, 10, 21, 10, 4),
+            why = "edge", cost = 500.0)
+        val v = com.optionslab.app.data.McxNr7Record.View(on = false, closed = listOf(t))
+        compose.setContent { IraAlgoTheme("light") { Column { McxNr7Content(v) { asked = it } } } }
+        compose.onNodeWithText(com.optionslab.engine.mcx.McxNr7Rules.LABEL).assertExists()
+        compose.onNodeWithText(nr7State(v)).assertExists()
+        assertEquals("OFF · RECORD ONLY (NO ORDERS)", nr7State(v))
+        assertTrue(nr7Numbers(v).contains("1 trade") && nr7Numbers(v).contains("+₹7,500") && nr7Numbers(v).contains("never traded"))
+        val sw = compose.onNodeWithContentDescription("Record only, no orders: switch ${com.optionslab.engine.mcx.McxNr7Rules.LABEL}")
+        sw.assertIsOff()
+        sw.performClick()
+        assertEquals(true, asked)
+        assertEquals("RECORDING · NO ORDERS", nr7State(v.copy(on = true)))
+    }
+
+    @Test fun theHiddenMcxArmsLeaveTheGroup() {
+        com.optionslab.app.data.HiddenArms.resetForTest(context)
+        com.optionslab.app.data.HiddenArms.arms = emptyList()
+        kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.passNow() }
+        // A position-less read counts as holding (never switched off on a missing read): stand in "flat" for both MCX arms.
+        com.optionslab.app.data.HiddenArms.arms = listOf(McxMorningRules.SOURCE, McxTrendRules.SOURCE).map { k ->
+            com.optionslab.app.data.HiddenArms.Arm(k, now = { com.optionslab.engine.orb.ArmsCleanup.Now(k, false, false) },
+                off = { emptyList() }, on = { "" })
+        }
+        kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.passNow() }
+        home(off)
+        compose.waitForIdle()
+        compose.onNodeWithText(McxEveRules.LABEL).assertExists()
+        compose.onNodeWithText(McxUsSilverRules.LABEL).assertExists()
+        compose.onNodeWithText(McxMorningRules.LABEL).assertDoesNotExist()
+        compose.onNodeWithText(McxTrendRules.LABEL).assertDoesNotExist()
+        assertEquals(2, compose.onAllNodes(isToggleable() and hasContentDescription("Paper only: switch", substring = true)).fetchSemanticsNodes().size)
+        com.optionslab.app.data.HiddenArms.resetForTest(context)
+    }
 }

@@ -3,6 +3,7 @@ package com.optionslab.engine.orb
 import com.optionslab.engine.orb.ArmsCleanup.Action
 import com.optionslab.engine.orb.ArmsCleanup.Now
 import com.optionslab.engine.orb.ArmsCleanup.State
+import com.optionslab.engine.orb.ArmsCleanup.Step
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -112,7 +113,7 @@ class ArmsCleanupTest {
         }
         assertTrue(ArmsCleanup.KEPT.any { it.label.startsWith("Liquidity 15+5") })
         assertTrue(ArmsCleanup.KEPT.any { it.label == "Hero ₹1,000 ticket" })
-        assertEquals(12, ArmsCleanup.HIDDEN.size)
+        assertEquals(14, ArmsCleanup.HIDDEN.size)                  // 12 on 15 Oct + the two MCX arms on 21 Oct
         assertEquals(keys.toSet().size, keys.size)
         assertEquals("ORB", ArmsCleanup.of(ArmsCleanup.ORB)?.label)
         assertNull(ArmsCleanup.of("liquidity"))
@@ -127,7 +128,9 @@ class ArmsCleanupTest {
         assertEquals(State(), ArmsCleanup.decode(null))
         assertEquals(State(), ArmsCleanup.decode("garbage"))
         // Unknown keys (a later build's) are dropped; an empty list reads as empty.
-        assertEquals(State(true, setOf(ArmsCleanup.ORB)), ArmsCleanup.decode("v1\ndone=true\nhidden=orb,nope\nwaiting=\nbad line\n"))
+        // A file saved before 21 Oct (no "seen") that ran the cleanup saw exactly the 15 Oct arms.
+        assertEquals(State(true, setOf(ArmsCleanup.ORB), seen = ArmsCleanup.FIRST_15OCT),
+            ArmsCleanup.decode("v1\ndone=true\nhidden=orb,nope\nwaiting=\nbad line\n"))
     }
 
     @Test fun theWordsAreShortAndSayWhatBossChose() {
@@ -155,5 +158,60 @@ class ArmsCleanupTest {
         val all = LiquidityRules.BOOKS.associate { it.source to true }
         assertEquals(ArmsCleanup.LiqPlan(emptySet(), emptyList()), ArmsCleanup.liquidityPlan(all, emptySet(), false, false))
         assertNull(ArmsCleanup.liquidityPlan(bnOn, setOf("FINNIFTY"), done = true, restoring = false))
+    }
+
+    // ---- 21 Oct: the two MCX paper arms Boss asked to remove ---------------------------------------------------------------------
+
+    private val mcx = listOf(ArmsCleanup.MCX_SILVERM_AM, ArmsCleanup.MCX_TREND)
+
+    @Test fun theMcxArmsAreKeyedByTheirOwnSources() {
+        assertEquals(com.optionslab.engine.mcx.McxMorningRules.SOURCE, ArmsCleanup.MCX_SILVERM_AM)
+        assertEquals(com.optionslab.engine.mcx.McxTrendRules.SOURCE, ArmsCleanup.MCX_TREND)
+        assertTrue(mcx.all { ArmsCleanup.covers(it) && it !in ArmsCleanup.FIRST_15OCT })
+        // The two MCX arms that stay are never hidden.
+        for (k in listOf(com.optionslab.engine.mcx.McxEveRules.SOURCE, com.optionslab.engine.mcx.McxUsSilverRules.SOURCE)) assertFalse(ArmsCleanup.covers(k), k)
+        assertEquals(ArmsCleanup.HIDDEN.map { it.key }.toSet() - mcx.toSet(), ArmsCleanup.FIRST_15OCT)
+    }
+
+    @Test fun aPhoneThatRanThe15OctCleanupTakesTheMcxArmsInOnceAndKeepsItsRestores() {
+        // Ran on 15 Oct, then Boss restored ORB: the old file has no "seen".
+        val old = ArmsCleanup.decode("v1\ndone=true\nhidden=${(ArmsCleanup.FIRST_15OCT - ArmsCleanup.ORB).sorted().joinToString(",")}\n" +
+            "waiting=\nwasOn=\nlogged=${ArmsCleanup.FIRST_15OCT.sorted().joinToString(",")}\n")
+        val now = keys.map { Now(it, armed = it == ArmsCleanup.MCX_TREND || it == ArmsCleanup.ORB, open = false) }
+        val (s1, steps) = ArmsCleanup.pass(old, now)
+        assertTrue(mcx.all { it in s1.hidden }, "both MCX arms taken in")
+        assertTrue(ArmsCleanup.ORB !in s1.hidden, "Boss's restore stands")
+        assertEquals(listOf(Step(ArmsCleanup.MCX_SILVERM_AM, Action.HIDE, true), Step(ArmsCleanup.MCX_TREND, Action.OFF, true)),
+            steps.filter { it.key in mcx })
+        assertTrue(steps.none { it.key == ArmsCleanup.ORB })
+        assertFalse(ArmsCleanup.mayArm(s1, ArmsCleanup.MCX_TREND))
+        assertFalse(ArmsCleanup.visible(s1, ArmsCleanup.MCX_SILVERM_AM))
+        // Boss restores the trend arm: a later pass never takes it in again.
+        val r = ArmsCleanup.restore(s1, ArmsCleanup.MCX_TREND)
+        assertTrue(r.on)
+        val (s2, again) = ArmsCleanup.pass(r.state, now)
+        assertTrue(ArmsCleanup.MCX_TREND !in s2.hidden && again.none { it.key == ArmsCleanup.MCX_TREND })
+        assertEquals(s2, ArmsCleanup.decode(ArmsCleanup.encode(s2)))
+    }
+
+    @Test fun anMcxArmHoldingAPositionWaitsForItsOwnExit() {
+        val old = ArmsCleanup.decode("v1\ndone=true\nhidden=\nwaiting=\nwasOn=\nlogged=\n")
+        val now = keys.map { Now(it, armed = it == ArmsCleanup.MCX_TREND, open = it == ArmsCleanup.MCX_TREND) }
+        val (s1, steps) = ArmsCleanup.pass(old, now)
+        assertEquals(Step(ArmsCleanup.MCX_TREND, Action.WAIT, true), steps.single { it.key == ArmsCleanup.MCX_TREND })
+        assertTrue(ArmsCleanup.visible(s1, ArmsCleanup.MCX_TREND), "its row stays while it holds the leg")
+        assertFalse(ArmsCleanup.mayArm(s1, ArmsCleanup.MCX_TREND), "no new entry")
+        // Flat: switched off.
+        val (s2, off) = ArmsCleanup.pass(s1, keys.map { Now(it, armed = it == ArmsCleanup.MCX_TREND, open = false) })
+        assertEquals(Action.OFF, off.single { it.key == ArmsCleanup.MCX_TREND }.action)
+        assertFalse(ArmsCleanup.visible(s2, ArmsCleanup.MCX_TREND))
+    }
+
+    @Test fun aNewInstallHidesEveryArmIncludingTheMcxOnes() {
+        val (s, _) = ArmsCleanup.pass(State(), flat())
+        assertTrue(mcx.all { it in s.hidden })
+        assertEquals(ArmsCleanup.HIDDEN.map { it.key }.toSet(), s.seen)
+        assertTrue(ArmsCleanup.hiddenWords(ArmsCleanup.MCX_TREND).contains("21 Oct"))
+        assertEquals(ArmsCleanup.HIDDEN_WORDS, ArmsCleanup.hiddenWords(ArmsCleanup.ORB))
     }
 }

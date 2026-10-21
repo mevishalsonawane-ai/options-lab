@@ -340,6 +340,7 @@ object FastPath {
                     step("Night (R3)") { NightArm.tick() }
                     step("VIX divergence") { VixDivArm.tick() }
                     step("MCX paper arms") { McxPaperArms.tick() }
+                    step("NR7 crude (record only)") { McxNr7Record.tick() }
                     step("Forge ideas") { GrammarArm.tick() }
                     if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.manageOnly() }
                     step("missed-lock sweep") { Sweeper.run(ctx) }
