@@ -408,7 +408,7 @@ object McxMarket {
         // The arms' book read first (when nothing has read it yet), then its open positions from memory.
         // 21 Oct: the NR7 record (no orders) needs the watch too while it records ([McxPaperArms.wantsWatch] counts it).
         val armed = McxPaperArms.armedNow().map { McxPaperArms.label(it) } +
-            (if (McxNr7Record.onQuick()) listOf(com.optionslab.engine.mcx.McxNr7Rules.LABEL) else emptyList())
+            (if (nr7OnQuick()) listOf(com.optionslab.engine.mcx.McxNr7Rules.LABEL) else emptyList())
         val held = exposure() || McxPaperArms.holdsNow()
         return com.optionslab.ira.SessionCoverage.Market(NAME, true, if (held) 1 else 0, armed)
     }
@@ -434,13 +434,23 @@ object McxMarket {
         // and nothing watched the arms until the next dead-man check minutes later ("Session coverage", 15 Oct 17:56).
         val arms = runCatching { McxPaperArms.wantsWatchIfLoaded() }.getOrNull() ?: hint(H_ARMS)
         if (arms == true) return true
+        // 21 Oct, review: the NR7 record (no orders) recording is a yes too, from its own key ([nr7OnQuick]). It shared the
+        // arms' key and, switched off, wrote "false" there from an arms' book not read yet after a restart: armed arms unwatched.
+        if (nr7OnQuick()) return true
         return if (paper == null || arms == null) null else false
     }
 
-    // ---- the watch hint: two booleans in a plain file, so the main thread never decrypts a vault to decide ----------------
+    /**
+     * Whether the NR7 record ([McxNr7Record], no orders) is recording, from memory only: its book when this process has read
+     * it, else its last write's hint. Never written: it was never read, so never switched on (off by default) - no.
+     */
+    fun nr7OnQuick(): Boolean = runCatching { McxNr7Record.onIfLoaded() }.getOrNull() ?: hint(H_NR7) ?: false
+
+    // ---- the watch hint: a few booleans in a plain file, so the main thread never decrypts a vault to decide --------------
 
     private const val H_PAPER = "paper"
     private const val H_ARMS = "arms"
+    private const val H_NR7 = "nr7"
     private fun hintFile() = File(app.filesDir, "mcx_watch.hint")
     private val hintLock = Any()
     /** The hint as this process last read or wrote it (null: not read yet). */
@@ -465,6 +475,9 @@ object McxMarket {
 
     /** Kept when it changed: whether any MCX paper arm is switched on (its book read or written). */
     fun noteArmsArmed(armed: Boolean) = noteHint(H_ARMS, armed)
+
+    /** 21 Oct: kept when it changed - whether the NR7 record ([McxNr7Record], no orders) records (its book read or written). */
+    fun noteNr7On(on: Boolean) = noteHint(H_NR7, on)
 
     private fun noteHint(key: String, v: Boolean) {
         if (!ready()) return

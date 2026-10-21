@@ -10,6 +10,7 @@ import com.optionslab.engine.mcx.McxSession
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -34,8 +35,14 @@ class McxNr7RecordTest : RobolectricTest() {
     private fun peKey(k: Int) = "MCX_FO|82${k}"
 
     private class Fake(var now: LocalDateTime, val contracts: List<McxContract>, val bars: MutableMap<String, MutableList<Upstox.Bar>>) : McxNr7Record.Feed {
-        override suspend fun contracts() = contracts
+        /** Set: every read of minutes waits on it (a slow or rate-limited Upstox). */
+        @Volatile var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+        val contractReads = java.util.concurrent.atomic.AtomicInteger()
+        val barReads = java.util.concurrent.ConcurrentHashMap<String, Int>()
+        override suspend fun contracts(): List<McxContract> { contractReads.incrementAndGet(); return contracts }
         override suspend fun bars(key: String, from: LocalDate, to: LocalDate, now: LocalDateTime): List<Upstox.Bar> {
+            barReads.merge(key, 1, Int::plus)
+            gate?.await()
             val nowSec = now.atZone(IST).toEpochSecond()
             return bars[key].orEmpty().filter { !it.istDate.isBefore(from) && !it.istDate.isAfter(to) && it.epochSecond + 60 <= nowSec }
                 .sortedBy { it.epochSecond }
@@ -192,6 +199,126 @@ class McxNr7RecordTest : RobolectricTest() {
         at(LocalTime.of(10, 8)); tick()
         val t = McxNr7Record.view.value.closed.single()
         assertEquals("future_stop", t.why); assertEquals(70.0, t.exit!!, 1e-9)
+    }
+
+    /**
+     * 21 Oct, review: the passes never wait for this record. [McxNr7Record.kick] returns at once while Upstox hangs, runs
+     * one pass at a time (a second call meanwhile starts nothing), and the pass finishes by itself once the read answers.
+     */
+    @Test fun kickReturnsAtOnceWhileTheFeedHangsAndRunsOnePassAtATime() {
+        feed.bars[futKey] = history()
+        runBlocking { McxNr7Record.setOn(true) }
+        at(LocalTime.of(10, 30))
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        feed.gate = gate
+        val t0 = System.nanoTime()
+        assertTrue(McxNr7Record.kick())
+        assertFalse("one pass at a time", McxNr7Record.kick())
+        assertTrue((System.nanoTime() - t0) / 1_000_000 < 1_000)
+        waitFor { feed.barReads[futKey] == 1 }
+        assertTrue("still waiting on the read", McxNr7Record.kickRunningForTest())
+        gate.complete(Unit)
+        waitFor { !McxNr7Record.kickRunningForTest() }
+        assertTrue(McxNr7Record.view.value.status["CRUDEOIL"]!!.contains("NR7 day"))
+        // The next minute: a new pass starts.
+        feed.gate = null
+        at(LocalTime.of(10, 31))
+        assertTrue(McxNr7Record.kick())
+        waitFor { !McxNr7Record.kickRunningForTest() }
+    }
+
+    /** 21 Oct, review: the MCX pass (its stop checks, expiry exit and heartbeat) returns while the NR7 read hangs. */
+    @Test fun theMcxPassDoesNotWaitForTheRecord() {
+        feed.bars[futKey] = history()
+        runBlocking { McxNr7Record.setOn(true) }
+        at(LocalTime.of(10, 30))
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        feed.gate = gate
+        try {
+            val t0 = System.nanoTime()
+            runBlocking { com.optionslab.app.work.Tasks.mcxTick(context, AppSettings.load()) }
+            assertTrue("the pass returned while the record's read hangs", McxNr7Record.kickRunningForTest())
+            assertTrue((System.nanoTime() - t0) / 1_000_000 < 15_000)
+        } finally {
+            gate.complete(Unit)
+            waitFor { !McxNr7Record.kickRunningForTest() }
+        }
+        // Every call site starts it in its own job, never inside a pass's steps.
+        for (path in listOf("src/main/java/com/optionslab/app/work/Jobs.kt", "src/main/java/com/optionslab/app/data/FastPath.kt")) {
+            val src = File(path).readText()
+            assertFalse("$path waits for the NR7 record", src.contains("McxNr7Record.tick()"))
+            assertTrue(src.contains("McxNr7Record.kick()"))
+        }
+        val jobs = File("src/main/java/com/optionslab/app/work/Jobs.kt").readText()
+        val mcx = jobs.substring(jobs.indexOf("suspend fun mcxTick("), jobs.indexOf("return Tick(\"MCX watch\""))
+        assertTrue("after the heartbeat and outside the safety block",
+            mcx.indexOf("McxNr7Record.kick()") > mcx.indexOf("} finally {"))
+    }
+
+    /**
+     * 21 Oct, review: a history read cut by the pass's budget (a timeout, not a failure) is not read again every minute,
+     * and the cancelled pass stops there - the next underlying is not read and nothing is saved.
+     */
+    @Test fun aTimedOutHistoryReadIsThrottledAndEndsThePass() {
+        feed.bars[futKey] = history()
+        runBlocking { McxNr7Record.setOn(true) }
+        McxNr7Record.passBudgetMs = 1_000
+        feed.gate = kotlinx.coroutines.CompletableDeferred()          // never answers
+        val logBefore = McxNr7Record.view.value.log.size
+        at(LocalTime.of(10, 30)); tick()
+        assertEquals(1, feed.barReads[futKey])
+        assertEquals("CRUDEOILM not looked at in a cancelled pass", 1, feed.contractReads.get())
+        assertEquals("nothing saved", logBefore, McxNr7Record.view.value.log.size)
+        assertTrue(McxNr7Record.view.value.status.isEmpty())
+        assertNull("the cut pass dropped whole: the book read again next minute", McxNr7Record.onIfLoaded())
+        // The next minute: not read again (throttled for half an hour); CRUDEOILM decided as usual.
+        at(LocalTime.of(10, 31)); tick()
+        assertEquals(1, feed.barReads[futKey])
+        assertTrue(McxNr7Record.view.value.status["CRUDEOIL"]!!.contains("tried again shortly"))
+        assertTrue(McxNr7Record.view.value.status["CRUDEOILM"]!!.contains("no option chain"))
+        // Half an hour on, with Upstox answering: read again and decided.
+        feed.gate = null
+        at(LocalTime.of(11, 1)); tick()
+        assertEquals("the history again, then today's minutes", 3, feed.barReads[futKey])
+        assertTrue(McxNr7Record.view.value.status["CRUDEOIL"]!!.contains("NR7 day"))
+    }
+
+    /**
+     * 21 Oct, review: after a restart, the NR7 record read (switched off) before the MCX arms' book must not hide armed arms
+     * from the watch's restart in MCX's evening (it wrote "no arm armed" from the arms' book not read yet); and the arms'
+     * book read with nothing armed must not hide a recording NR7 record.
+     */
+    @Test fun theWatchHintSurvivesEitherBookBeingReadFirstAfterARestart() {
+        Market.testClock = java.time.Clock.fixed(LocalDate.of(2026, 10, 21).atTime(19, 0).atZone(IST).toInstant(), IST)
+        try {
+            McxMarket.notePaperExposure(false)
+            // Arms armed, NR7 off: a new process reads the NR7 book first.
+            McxMarket.noteArmsArmed(true)
+            McxNr7Record.resetCacheForTest(); McxMarket.wipe(); McxPaperArms.wipe(); Paper.forgetForTest()
+            runBlocking { McxNr7Record.refresh() }
+            assertFalse(McxNr7Record.view.value.on)
+            assertEquals(true, McxMarket.watchDueQuick())
+            McxMarket.wipe()
+            assertEquals("from the file too", true, McxMarket.watchDueQuick())
+            // NR7 recording, no arm armed: a new process reads the arms' book first.
+            McxMarket.noteArmsArmed(false)
+            runBlocking { McxNr7Record.setOn(true) }
+            McxNr7Record.resetCacheForTest(); McxMarket.wipe(); McxPaperArms.wipe(); Paper.forgetForTest()
+            runBlocking { McxPaperArms.refresh() }
+            assertNull("the NR7 book not read", McxNr7Record.onIfLoaded())
+            assertEquals(true, McxMarket.watchDueQuick())
+            // Both off: a firm no.
+            runBlocking { McxNr7Record.setOn(false) }
+            McxMarket.wipe()
+            assertEquals(false, McxMarket.watchDueQuick())
+        } finally {
+            Market.testClock = null
+        }
+    }
+
+    private fun waitFor(ms: Long = 5_000, ok: () -> Boolean) {
+        val end = System.currentTimeMillis() + ms
+        while (!ok()) { assertTrue("timed out", System.currentTimeMillis() < end); Thread.sleep(10) }
     }
 
     @Test fun itsCodeHasNoOrderPath() {

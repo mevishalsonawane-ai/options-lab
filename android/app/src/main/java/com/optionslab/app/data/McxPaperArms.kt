@@ -254,7 +254,8 @@ object McxPaperArms {
 
     private fun publish(b: Book) {
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
-        runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it } || McxNr7Record.onQuick()) }
+        // 21 Oct, review: this book's arms only (the NR7 record keeps its own key, [McxMarket.noteNr7On]).
+        runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
         _view.value = View(b.armed.toMap(), b.status.shown({ _, x -> x == McxMorningPark.PARKED }), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
             b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } },
             b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) ->
@@ -377,7 +378,8 @@ object McxPaperArms {
      */
     private fun windows(v: View): List<IntRange> =
         // 21 Oct: the NR7 record ([McxNr7Record], no orders) needs the MCX session's minutes too while it records.
-        if (ARMS.any { v.isArmed(it) } || v.open.isNotEmpty() || McxNr7Record.onQuick()) listOf(0..24 * 60) else emptyList()
+        // (Its book, or its hint before that book is read after a restart: [McxMarket.nr7OnQuick].)
+        if (ARMS.any { v.isArmed(it) } || v.open.isNotEmpty() || McxMarket.nr7OnQuick()) listOf(0..24 * 60) else emptyList()
 
     /** Whether the MCX watch should run now for the arms: MCX open and an arm armed, or a position open in an arm's book. */
     fun wantsWatch(): Boolean = runCatching {

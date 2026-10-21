@@ -552,7 +552,8 @@ object Tasks {
             if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
-            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() },
+            // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
+            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.kick() },
             com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
         )
         val due = armsDue(true, all)
@@ -904,7 +905,8 @@ object Tasks {
         // exits), and - in Jarvis - his approved news trades and Solo (paper only, Boss's switch); they never go first.
         together("arms after the square-off", armsDue(lanes != null, listOfNotNull(
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
-            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() },
+            // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
+            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.kick() },
             com.optionslab.ira.Supervisor.Step("strategies") {
                 val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
                 com.optionslab.app.data.Strategies.tickAll(bad)
@@ -1116,13 +1118,15 @@ object Tasks {
                     ?.let { com.optionslab.app.data.McxMarket.noteLive(it.net) }
             }
             step("position cards") { PositionCards.refresh(context) }
-            // 21 Oct: NR7 crude, record only (no orders): after every step that guards a position (its reads are slow).
-            step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() }
             runCatching { Heartbeat.beat(context) }
         } } finally {
             com.optionslab.app.data.Broker.passEnd()
             Heartbeat.stepEnd()
         }
+        // 21 Oct: NR7 crude, record only (no orders): after every step that guards a position and the heartbeat. 21 Oct,
+        // review: started in its own job and never waited for - its reads (up to 20 s when Upstox is slow) held this pass,
+        // so the next stop check of real MCX positions came ~35 s apart instead of 15 s.
+        runCatching { com.optionslab.app.data.McxNr7Record.kick() }
         val until = com.optionslab.app.data.McxMarket.todayWindow()?.close
         return Tick("MCX watch", listOf("Watching your MCX positions and orders" + (until?.let { " until %02d:%02d".format(it.hour, it.minute) } ?: "")), -1, "trade")
     }

@@ -356,8 +356,9 @@ object FastPath {
                     // 18 Oct: after the paper exits above, their live trades follow at once ([ArmLive]; nothing held: returns at once).
                     // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
                     if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
-                    // 21 Oct: NR7 crude, record only (no orders): last, after every step that guards a position (its reads are slow).
-                    step("NR7 crude (record only)") { McxNr7Record.tick() }
+                    // 21 Oct: NR7 crude, record only (no orders): last, after every step that guards a position. 21 Oct, review:
+                    // started in its own job ([McxNr7Record.kick]) - its slow reads held this lane and the next minute's exits.
+                    runCatching { McxNr7Record.kick() }
                     // Smart scheduling (10 Oct): these looked at this minute; the watch's passes need not look again for it.
                     runCatching { SmartWorkers.ranByLane(MINUTE_ARMS) }
                 }

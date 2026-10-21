@@ -31,8 +31,9 @@ import java.util.Locale
  * order - not on paper, not live. Nothing here calls [Paper], [ArmLive], the trade manager or any order path, and nothing
  * here is an open position of the account (the position watch, the expiry exit and the guards never see it).
  *
- * OFF by default (Boss's switch on Home's MCX group). Its own file (no backup). Runs with the MCX arms' pass (after them:
- * real positions first), at most once a minute, off the main thread; a failed read decides nothing that minute.
+ * OFF by default (Boss's switch on Home's MCX group). Its own file (no backup). Started by the MCX arms' passes ([kick], after
+ * them: real positions first) in its own background job, at most once a minute, off the main thread; no pass or lane ever
+ * waits for it (21 Oct, review); a failed read decides nothing that minute.
  */
 object McxNr7Record {
     /** One would-be trade (record only). [qty] units of 1 lot; [exit] null while open. */
@@ -108,20 +109,28 @@ object McxNr7Record {
 
     fun init(context: Context) {
         file = File(context.applicationContext.noBackupFilesDir, "mcx_nr7_record.vault")
-        // Read once in the background, so the MCX watch knows at once (after a restart) that it records ([onQuick]).
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch { runCatching { refresh() } }
+        // Read once in the background, so the MCX watch knows at once (after a restart) that it records ([onIfLoaded]).
+        scope.launch { runCatching { refresh() } }
     }
 
-    /** A pass's whole budget: the network reads never hold the MCX pass (and the steps after it) longer than this. */
-    private const val PASS_BUDGET_MS = 20_000L
+    /** A pass's whole budget: a slow read (Upstox busy or rate-limited) never keeps this record's own job longer than this. */
+    @Volatile internal var passBudgetMs = 20_000L
 
-    /** When a history read last failed, per underlying (memory): tried again after half an hour, not every minute. */
+    /**
+     * When a history read was last tried without an answer, per underlying (memory): tried again after half an hour, not
+     * every minute. 21 Oct, review: marked BEFORE the read and cleared on an answer, so a read cut by the pass's budget
+     * (a timeout, not a failure) is throttled too - it was read again every minute.
+     */
     private val historyTried = HashMap<String, Long>()
 
     private fun ready() = ::file.isInitialized
 
-    /** Switched on (memory only: the MCX watch's scheduling reads it; false before the book is read). */
-    fun onQuick(): Boolean = _view.value.on
+    /**
+     * Switched on, once the book has been read in this process (memory only: the MCX watch's scheduling reads it through
+     * [McxMarket.nr7OnQuick]); null before. 21 Oct, review: no plain "false before the book is read" any more - that answer
+     * after a restart is what hid armed MCX arms from the watch.
+     */
+    fun onIfLoaded(): Boolean? = if (cache == null) null else _view.value.on
 
     private fun book(): Book {
         cache?.let { return it }
@@ -135,8 +144,8 @@ object McxNr7Record {
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
-        cache = b
         publish(b)
+        cache = b                                                        // after the view: [onIfLoaded] never reads a stale "off"
         return b
     }
 
@@ -160,6 +169,28 @@ object McxNr7Record {
 
     // ---- the pass ---------------------------------------------------------------------------------------------------------
 
+    /** This record's own background job: the watch's passes and lanes start it ([kick]) and never wait for it. */
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val running = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /**
+     * 21 Oct, review: what the watch's passes and the minute lane call - [tick] in this record's own job, returned from at
+     * once. It ran inside the MCX pass (before its heartbeat) and in the minute lane, so a slow or rate-limited Upstox
+     * (up to its 20 s budget) held the next stop check of real MCX positions back to ~35 s, and the arms' exits in the lane.
+     * One pass at a time: a call while the last one still runs does nothing (the next minute's call starts the next).
+     * Never throws. True when it started a pass.
+     */
+    fun kick(): Boolean {
+        if (!ready() || !running.compareAndSet(false, true)) return false
+        return runCatching {
+            scope.launch { try { tick() } finally { running.set(false) } }
+            true
+        }.getOrElse { running.set(false); false }
+    }
+
+    /** TEST ONLY: whether a [kick]'s pass is still running. */
+    internal fun kickRunningForTest(): Boolean = running.get()
+
     /** One pass, at most once a minute (after the MCX paper arms in the same pass). Never throws. */
     suspend fun tick() {
         if (!ready()) return
@@ -168,15 +199,22 @@ object McxNr7Record {
         val stamp = now.atZone(IST).toEpochSecond() / 60
         if (stamp == lastMinute) return
         runCatching {
-            kotlinx.coroutines.withTimeoutOrNull(PASS_BUDGET_MS) { lock.withLock {
+            kotlinx.coroutines.withTimeoutOrNull(passBudgetMs) { lock.withLock {
                 if (stamp == lastMinute) return@withLock              // another caller ran this minute's pass meanwhile
                 val b = book()
                 if (!b.on && b.trades.none { it.open }) return@withLock
                 lastMinute = stamp
                 var changed = false
-                if (f.isOpen()) for (u in McxNr7Rules.UNDERLYINGS) {
-                    changed = runCatching { pass(b, u, now, f) }.getOrElse { b.status[u] = "error: ${it.javaClass.simpleName}"; true } || changed
-                }
+                // 21 Oct, review: a pass cut by its budget is dropped whole - the book is read again from its file next
+                // minute, so a half-made change (a decided key, a would-be trade) is neither kept unsaved nor shown late.
+                try { if (f.isOpen()) for (u in McxNr7Rules.UNDERLYINGS) {
+                    // 21 Oct, review: the budget's cancellation is passed on (it was kept as an "error" and the next
+                    // underlying read and the save ran in a cancelled pass); the pass ends there, unsaved.
+                    changed = runCatching { pass(b, u, now, f) }.getOrElse {
+                        if (it is kotlinx.coroutines.CancellationException) throw it
+                        b.status[u] = "error: ${it.javaClass.simpleName}"; true
+                    } || changed
+                } } catch (e: kotlinx.coroutines.CancellationException) { cache = null; throw e }
                 val closed = b.trades.count { !it.open }
                 if (closed > CLOSED_KEPT) { var drop = closed - CLOSED_KEPT; b.trades.removeAll { !it.open && drop-- > 0 }; changed = true }
                 if (changed) save(b)
@@ -214,9 +252,11 @@ object McxNr7Record {
         val fut = McxInstruments.underlyingFuture(all, chain.first()) ?: return decide(b, u, key, "no future")
         val lv = b.nr7[key] ?: run {
             val tried = historyTried[key]
-            if (tried != null && System.currentTimeMillis() - tried < 30 * 60_000L) return setStatus(b, u, "history not read yet (tried again shortly)")
-            (nr7Of(fut, today, now, cal, f) ?: run { historyTried[key] = System.currentTimeMillis(); return setStatus(b, u, "history not read yet") })
-                .also { b.nr7[key] = it; b.nr7.keys.sorted().dropLast(40).forEach { k -> b.nr7.remove(k) } }
+            val nowMs = now.atZone(IST).toInstant().toEpochMilli()           // the feed's clock (MCX's own; a test's)
+            if (tried != null && nowMs - tried < 30 * 60_000L) return setStatus(b, u, "history not read yet (tried again shortly)")
+            historyTried[key] = nowMs                                       // before the read: a timeout counts as a try too
+            (nr7Of(fut, today, now, cal, f) ?: return setStatus(b, u, "history not read yet"))
+                .also { historyTried.remove(key); b.nr7[key] = it; b.nr7.keys.sorted().dropLast(40).forEach { k -> b.nr7.remove(k) } }
         }
         if (lv == "none") return decide(b, u, key, "the last session was not an NR7 day")
         val (hc, lc, d) = lv.split(',')
@@ -371,7 +411,9 @@ object McxNr7Record {
 
     private fun publish(b: Book) {
         // The MCX watch's plain hint (the main thread's): it runs while this records, even with every paper arm off.
-        runCatching { McxMarket.noteArmsArmed(b.on || McxPaperArms.view.value.armed.values.any { it }) }
+        // 21 Oct, review: its own key, from this book only (read here) - it wrote the arms' key from the arms' book, which
+        // after a restart is not read yet, so "false" hid armed MCX arms from the watch's restart ([McxMarket.watchDueQuick]).
+        runCatching { McxMarket.noteNr7On(b.on) }
         _view.value = View(b.on, b.status.toMap(), b.trades.filter { it.open }, b.trades.filter { !it.open }.takeLast(60), b.log.takeLast(40))
     }
 
@@ -388,9 +430,9 @@ object McxNr7Record {
     /** TEST ONLY: a fresh book in [context]'s file, with [f] as the feed. */
     internal fun resetForTest(context: Context, f: Feed) {
         file = File(context.applicationContext.noBackupFilesDir, "mcx_nr7_record.vault")
-        historyTried.clear()
+        historyTried.clear(); running.set(false)
         file.delete(); written.forget()
-        cache = null; lastMinute = -1L; feed = f
+        cache = null; lastMinute = -1L; feed = f; passBudgetMs = 20_000L
         _view.value = View()
     }
 }
