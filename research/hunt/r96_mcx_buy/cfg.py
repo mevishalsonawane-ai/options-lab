@@ -136,3 +136,19 @@ R5_PRE_TOD = 17 * 60             # R5E: ATM straddle from 17:00 IST ...
 R5_PRE_EXIT = 5                  # ... out at the release minute - 5
 R5_GSR_LOOK = 20                 # R5F: ratio index beyond the max / min of its previous 20 values
 R5_GSR_KATR, R5_GSR_N = 1.5, 5   # R5F: stop 1.5 x ATR14, 5 sessions
+# round 6 (PREREG_ROUND6): the base-metal option books R96 never touched. Lots: COPPER 2,500 kg, ZINC 5 MT, both
+# quoted in Rs / kg (Zerodha's commodity options list, 21 Oct 2026). No US events are read on these books.
+BOOKS["COPPER"] = ("COPPER", "copper", 2500.0, ())
+BOOKS["ZINC"] = ("ZINC", "zinc", 5000.0, ())
+BASE = ("COPPER", "ZINC")
+# half-spreads (PREREG_ROUND6 s1): the books' printed one-minute option ranges are ~1.4-1.8x crude's (COPPER) and
+# ~3-4x (ZINC, median premium Rs 4, where one Rs 0.05 tick is 1.25%); gates are also run at 2x, as everywhere
+OPT_HALF["copper"] = (0.0050, 0.0100)
+OPT_HALF["zinc"] = (0.0125, 0.0250)
+R6_OPEN_A, R6_OPEN_B = 9 * 60, 9 * 60 + 30      # R6C: the move from the previous session's last minute to 09:30 IST
+R6_DC_LOOK = 20                  # R6D: back-adjusted close beyond the max / min of the previous 20 closes (first day)
+R6_DC_KATR, R6_DC_N = 1.5, 5     # R6D: stop 1.5 x ATR14 on the future, 5 sessions
+# PREREG_ROUND6 s5 (gate 10): the other MCX hunts' design twin p (research/experiments/entries/r97-a..g, r98-a..f on
+# main, 21 Oct 2026; R99 is NIFTY, not a commodity, and is not counted). BH over R96's ideas + these must also be <= 0.10.
+OTHER_MCX_P = {"R97A": 0.196, "R97B": 0.164, "R97C": 0.415, "R97D": 0.914, "R97E": 0.240, "R97F": 0.571, "R97G": 0.731,
+               "R98A": 0.385, "R98B": 0.010, "R98C": 0.896, "R98D": 0.671, "R98E": 0.351, "R98F": 0.198}

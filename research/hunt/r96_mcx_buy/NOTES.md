@@ -34,3 +34,10 @@
   build there), so every check ran in a Python 3.11 venv with research/brain/requirements.txt. `xauusd_1m/` on Drive
   holds only README.md and us_events.csv (no minute pack), so the MCX-vs-COMEX lag idea is not testable. R5A reads the
   ATR row strictly before the day (as every rule); R5E's exit minute must lie within 5 minutes before release - 5.
+- **N11 (21 Oct, round 6, before any round-6 rule was run): environment and data.** rclone missing again; installed
+  from downloads.rclone.org (v1.75.2) as in N6 / N8 / N10; checks in a Python 3.11 venv. `xauusd_1m/` still holds only
+  README.md and us_events.csv. The R53 expiry detector finds all 14 monthly COPPER expiries but misses ZINC's 23 Apr
+  2026 (ZINC prints ~42 near-ATM minutes a session). The two books expire on the same day in every other month, so ZINC
+  uses the union of both detected sets (`data.share_expiries`), so a ZINC trade is never held across an expiry. The
+  copper / zinc half-spreads (PREREG_ROUND6 s1) are set from the printed one-minute option ranges relative to crude's,
+  before any rule was run. Lots: COPPER 2,500 kg, ZINC 5 MT (Zerodha's commodity options list).

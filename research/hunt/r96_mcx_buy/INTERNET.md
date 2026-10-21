@@ -89,3 +89,15 @@ About 12 web searches; abstracts and summaries only (two full texts could not be
 | gold / silver ratio catch-up | practitioner pages only (WisdomTree, TradingView) | R5F used R94's "ratio trends" finding instead |
 | MCX vs NYMEX minute lead-lag | nothing quantitative found (broker pages only) | not testable (no XAUUSD / COMEX minutes on Drive) |
 | API Tuesday -> EIA Wednesday | news anecdotes only | no |
+
+## Round 6 scan (21 Oct 2026, before the round-6 pre-registration)
+
+3 web searches + 1 abstract page; abstracts and summaries only.
+
+| idea | source | used |
+|---|---|---|
+| MCX COPPER options lot 2,500 kg; ZINC options 5 MT (one site says 1 MT: treated as the outlier) | Zerodha support "Which commodity options contracts can be traded on Kite?", https://support.zerodha.com/category/trading-and-markets/corporate-actions/general/articles/how-can-i-trade-commodity-options-in-zerodha ; https://upstox.com/learning-center/commodity/what-are-copper-futures/article-1871/ ; https://www.indmoney.com/commodities/options | lots (cfg) |
+| copper futures: the first half-hour's return predicts the last half-hour's, stronger on high-volume / high-volatility days | Jin, Kearney, Li & Yang, J. Futures Markets 40(4) 2020, https://ideas.repec.org/a/wly/jfutmk/v40y2020i4p632-650.html | R6C |
+| channel and dual moving-average rules: positive mean excess returns net of costs in >= 22 of 28 commodity futures, 48 years (monthly data) | Szakmary, Shen & Sharma, J. Banking & Finance 34(2) 2010, https://ideas.repec.org/a/eee/jbfina/v34y2010i2p409-426.html | R6D |
+| realized-semivariance momentum / reversal in commodity futures | Liu, Lu, Li & Wang, J. Empirical Finance 2023, https://centaur.reading.ac.uk/111035/ | no (needs intraday history the lake does not have before Aug 2025) |
+| NR7 / narrow-range breakouts in base metals | nothing peer-reviewed found | R6A is round 5's out-of-sample test, not a literature idea |

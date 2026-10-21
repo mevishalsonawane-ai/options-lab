@@ -227,6 +227,14 @@ def family_qs(rows: list, families) -> list:
     return [float("nan") if k is None else q[k] for k in pos]
 
 
+def q_with_other(rows: list, key, other: dict) -> float:
+    """PREREG_ROUND6 s5: the BH q of ledger row `key` (round, id) when the other MCX hunts' p-values join the list."""
+    ks = [(r["round"], r["id"]) for r in rows]
+    if key not in ks:
+        return float("nan")
+    return bh([r.get("p") for r in rows] + list(other.values()))[ks.index(key)]
+
+
 def is_lead(s, fl, p) -> bool:
     return bool((s.get("net", 0) > 0 and sum(f["net"] > 0 for f in fl) >= 2) or (np.isfinite(p) and p < 0.10))
 
@@ -250,18 +258,19 @@ def save_ledger(rows: list):
 
 
 # ================================================================================================ commands
-def load_books():
+def load_books(extra=()):
+    """The six round 1-5 books, plus `extra` (round 6: COPPER, ZINC), each loaded once."""
     from research.hunt.r96_mcx_buy import data as D
-    return {n: D.load_book(n) for n in K.ALL_BOOKS}
+    return {n: D.load_book(n) for n in tuple(K.ALL_BOOKS) + tuple(x for x in extra if x not in K.ALL_BOOKS)}
 
 
 def design(round_no: int = 1, only=None):
     from research.hunt.r96_mcx_buy import history as H
-    books = load_books()
+    books = load_books(K.BASE if round_no >= 6 else ())
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     res = {}
     all_df = []
-    for rid in (only or {1: R.ORDER, 2: R.ORDER2, 4: R.ORDER4, 5: R.ORDER5}.get(round_no) or R.ORDER3):      # R3K / R3L: `design 3 R3K R3L`
+    for rid in (only or {1: R.ORDER, 2: R.ORDER2, 4: R.ORDER4, 5: R.ORDER5, 6: R.ORDER6}.get(round_no) or R.ORDER3):      # R3K / R3L: `design 3 R3K R3L`
         trades = run_rule(rid, books, K.DESIGN)
         df = frame(trades)
         all_df.append(df)
@@ -309,12 +318,17 @@ def design(round_no: int = 1, only=None):
                 if (str(round_no), rid) in {(str(a), b) for a, b in f}:
                     r["family_q"] = fqx
                     r["gates"]["bh_family"] = bool(np.isfinite(fqx) and fqx <= K.GATE_Q)
+        if round_no >= 6:                                        # PREREG_ROUND6 s5 gate 10: + R97 / R98's MCX ideas
+            r["q_all_mcx"] = q_with_other(rows, (round_no, rid), K.OTHER_MCX_P)
+            r["gates"]["bh_q_all_mcx"] = bool(np.isfinite(r["q_all_mcx"]) and r["q_all_mcx"] <= K.GATE_Q)
         r["pass"] = bool(all(r["gates"].values()))
         r["lead"] = is_lead(r["summary"], r["folds"], r["twin_p"])
     out = dict(round=round_no, written=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                design=[str(x) for x in K.DESIGN], ideas_in_ledger=len(rows), rules=res)
     if round_no >= 5:
         out["family_q"] = {"nr7_crude": fqs[0], "eia_fade": fqs[1]}
+    if round_no >= 6:
+        out["family_q"]["nr7_base"] = fqs[2]
     jp.write_text(json.dumps(out, indent=1, default=str))
     pd.concat(all_df, ignore_index=True).to_csv(K.RESULTS / f"trades_design_round{round_no}.csv", index=False)
     return out
@@ -329,7 +343,7 @@ def holdout(rid: str, round_no: int = 1):
     if r is None or not r.get("pass"):
         raise SystemExit(f"{rid} did not pass every design gate; the holdout stays locked")
     lock.write_text(json.dumps(dict(rule=rid, round=round_no, read_at=datetime.now(timezone.utc).isoformat()), indent=1))
-    books = load_books()
+    books = load_books(K.BASE if round_no >= 6 else ())
     trades = run_rule(rid, books, K.HOLDOUT)
     df = frame(trades)
     s = summarize(df)

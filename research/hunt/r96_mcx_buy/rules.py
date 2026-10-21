@@ -626,7 +626,7 @@ def r4_daily(d: pd.DataFrame) -> pd.DataFrame:
         prev = np.r_[np.full(L, np.nan), ac[:-L]] if len(ac) > L else np.full(len(ac), np.nan)
         x = ac - prev
         d[col] = np.where(np.isfinite(x), np.sign(x), 0).astype(int)
-    return d
+    return r6_daily(d)
 
 
 def value_before(book, day, col):
@@ -1074,3 +1074,59 @@ ORDER5 = ("R5A", "R5B", "R5C", "R5D", "R5E", "R5F")
 EIA_FADE_FAMILY = (("4", "R4C"), ("5", "R5D"))
 FAMILIES = (NR7_CRUDE_FAMILY + (("5", "R5C"),), EIA_FADE_FAMILY)
 HISTORY_RULES.update({"R5A": "storage_long", "R5F": "dir"})
+
+
+# ---------------------------------------------------------------------------------------------- round 6 (PREREG_ROUND6)
+def r6_daily(d: pd.DataFrame) -> pd.DataFrame:
+    """Round 6 daily column (causal): dc_side = +1 on the FIRST row whose back-adjusted close is above the max of the
+    previous R6_DC_LOOK closes (-1 below the min), 0 otherwise (also 0 while fewer than R6_DC_LOOK earlier rows exist,
+    and on the row after a break on the same side)."""
+    d = d.copy()
+    c = pd.Series(d.ac.values.astype(float))
+    hi = c.shift(1).rolling(K.R6_DC_LOOK).max().values
+    lo = c.shift(1).rolling(K.R6_DC_LOOK).min().values
+    with np.errstate(invalid="ignore"):
+        raw = np.where(c.values > hi, 1, np.where(c.values < lo, -1, 0)).astype(int)
+    prev = np.r_[0, raw[:-1]]
+    d["dc_side"] = np.where(raw != prev, raw, 0).astype(int)
+    return d
+
+
+class OpenHalfHour(LastHalfHour):
+    """R6C (Jin, Kearney, Li & Yang, J. Futures Markets 40(4) 2020: on Chinese copper futures the first half-hour's
+    return predicts the last half-hour's, more so on high-volume / high-volatility days). The future's move from the
+    previous session's last minute to 09:30 IST (the last minute at or before 09:29, within 5 minutes of it); when
+    |move| is at least the 67th percentile of the last 60 sessions' moves (>= 20 known), 1-ITM that way at the
+    session close - 45 min (R3I's clock: our square-off is close - 15); stop -40% / 0.25 x ATR14 behind the entry-signal
+    price; out at the square-off. The previous session must be in the same option contract segment. Twin: a random
+    session of the same month, its own sign, no size filter."""
+
+    def window(self, book, day):
+        m = book.m
+        pos = book.day_pos.get(day)
+        if pos is None or pos == 0:
+            return None
+        prev = m.days[pos - 1]
+        i_p = m.day_last[prev]
+        i_o = m.at_or_before(day, K.R6_OPEN_B - 1)
+        if i_o < 0 or m.tod[i_o] < K.R6_OPEN_B - 5 or m.day[i_o] != _day64(day):
+            return None
+        t = m.session_end(day) - K.R3_LH_MIN
+        i_s = m.at_or_before(day, t - 1)
+        if i_s < 0 or m.tod[i_s] < t - 5 or m.seg[i_p] != m.seg[i_s]:
+            return None
+        mv = float(m.F[i_o] / m.F[i_p] - 1.0)
+        return (i_s, mv) if np.isfinite(mv) and mv != 0 else None
+
+
+RULES.update({
+    "R6A": NR7Var("R6A", books=K.BASE),
+    "R6B": NR7Var("R6B", books=K.BASE, iv_cheap=True),
+    "R6C": OpenHalfHour("R6C", books=K.BASE),
+    "R6D": DailyDir("R6D", "dc_side", K.R6_DC_KATR, K.R6_DC_N, edge=True, books=K.BASE),
+})
+ORDER6 = ("R6A", "R6B", "R6C", "R6D")
+# PREREG_ROUND6 s4: R6B is R6A with a filter -> one more family for gate 9
+NR7_BASE_FAMILY = (("6", "R6A"), ("6", "R6B"))
+FAMILIES = FAMILIES + (NR7_BASE_FAMILY,)
+HISTORY_RULES.update({"R6A": "nr7", "R6D": "dir"})

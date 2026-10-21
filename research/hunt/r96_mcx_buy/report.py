@@ -39,7 +39,21 @@ NAMES = {"S1": "squeeze release, ATM straddle", "S2": "squeeze release, 1-ITM di
          "R5C": "NR7 crude -> ATM straddle, only on cheap-IV days",
          "R5D": "EIA spike fade at 0.10 ATR (crude)",
          "R5E": "pre-event ATM straddle 17:00 IST -> release - 5 min (EIA crude, EIA storage)",
-         "R5F": "gold / silver ratio breakout -> 1-ITM SILVERM, 5 sessions"}
+         "R5F": "gold / silver ratio breakout -> 1-ITM SILVERM, 5 sessions",
+         "R6A": "NR7 breakout on the untouched COPPER and ZINC option books (R3A's rule)",
+         "R6B": "NR7 breakout on COPPER and ZINC, only on cheap-IV days (R4G's filter)",
+         "R6C": "first-half-hour momentum -> last-hour 1-ITM (COPPER, ZINC)",
+         "R6D": "20-day Donchian breakout (first day) -> 1-ITM, 5 sessions (COPPER, ZINC)"}
+
+
+def books_of(dj) -> list:
+    """The books this round's rules traded or checked, in the usual order (rounds 1-5: the six; round 6 adds the base
+    metals)."""
+    seen = set()
+    for r in dj["rules"].values():
+        seen |= set(r["summary"].get("by_book", {}))
+        seen |= {k for k in (r.get("history") or {}) if k != "pooled"}
+    return [b for b in tuple(K.ALL_BOOKS) + tuple(K.BASE) if b in seen or (b in K.ALL_BOOKS and not seen & set(K.BASE))]
 
 
 def rs(x) -> str:
@@ -93,30 +107,31 @@ def main(round_no: int = 1):
             continue
         failed = [k for k, v in r.get("gates", {}).items() if not v]
         L.append(f"- {rid}: failed {', '.join(failed) if failed else 'none'}")
+    BK = books_of(dj)
     L.append("\n## By book (design)\n")
-    L.append("| rule | " + " | ".join(K.ALL_BOOKS) + " |")
-    L.append("|---|" + "---|" * len(K.ALL_BOOKS))
+    L.append("| rule | " + " | ".join(BK) + " |")
+    L.append("|---|" + "---|" * len(BK))
     for rid in order:
         r = dj["rules"].get(rid)
         if r is None or not r["summary"].get("trades"):
             continue
         bb = r["summary"]["by_book"]
         cells = []
-        for b in K.ALL_BOOKS:
+        for b in BK:
             x = bb.get(b)
             cells.append("-" if x is None else f"{x['trades']}: gross {rs(x['gross'])}, net {rs(x['net'])}, "
                                                f"win {x['win']:.0%}")
         L.append(f"| {rid} | " + " | ".join(cells) + " |")
     L.append("\n## Long-history check of the directional daily signals (futures, 2012 - Jul 2025, 0.10% cost)\n")
-    L.append("| rule | " + " | ".join(K.ALL_BOOKS) + " | pooled |")
-    L.append("|---|" + "---|" * (len(K.ALL_BOOKS) + 1))
+    L.append("| rule | " + " | ".join(BK) + " | pooled |")
+    L.append("|---|" + "---|" * (len(BK) + 1))
     for rid in order:
         r = dj["rules"].get(rid)
         if r is None or not r.get("history"):
             continue
         h = r["history"]
         cells = [f"{h[b]['n']}: {h[b]['mean'] * 100:+.2f}% (twin {h[b]['twin_mean'] * 100:+.2f}%, p {h[b]['p']:.2f})"
-                 if b in h and h[b]["n"] else "-" for b in K.ALL_BOOKS]
+                 if b in h and h[b]["n"] else "-" for b in BK]
         L.append(f"| {rid} | " + " | ".join(cells) + f" | {h['pooled']['n']}: {h['pooled']['mean'] * 100:+.2f}% |")
     (K.RESULTS / f"report_round{round_no}.md").write_text("\n".join(L) + "\n")
     ledger(round_no)
