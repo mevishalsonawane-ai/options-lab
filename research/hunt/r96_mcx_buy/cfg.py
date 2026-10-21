@@ -91,6 +91,13 @@ R3_HIVOL_FRAC = 2.0 / 3.0        # R3J: 5-day mean Garman-Klass variance in the 
 R3_LH_MIN = 45                   # R3I: signal at session close - 45 min, out at the square-off (close - 15)
 R3_LH_LOOK, R3_LH_PAST, R3_LH_Q = 60, 20, 2.0 / 3.0      # R3I: |move| >= the 67th pct of the last 60 sessions' moves
 R3_LH_KATR = 0.25                # R3I: underlying stop 0.25 x ATR14 behind the signal price
+# R3K / R3L (Boss, 21 Oct: "add trailing profit lock and trailing stoploss same as breadth donchian"): R93's daily
+# exit set on the future (r93_breadth_donchian_mcx cfg D_INIT_ATR / D_TRAIL_ATR / D_MAX_HOLD, engine.sim_daily)
+R93_INIT_ATR = 2.0               # initial stop: entry -/+ 2 x ATR14
+R93_TRAIL_ATR = 3.0              # chandelier lock: best daily close -/+ 3 x ATR14, never loosening
+R93_MAX_HOLD = 10                # sessions (entry day = 1), capped before the option expiry day
+R93_FUT_HALF = 0.0003            # crude futures half-spread (R93 FUT_HALF["crude"]) ...
+R93_STOP_SLIP = 0.0002           # ... + 0.02% extra on stop / lock exits (R93 STOP_SLIP)
 HOLD_MIN_TRADES = 10
 HOLD_P = 0.10
 

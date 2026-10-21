@@ -657,3 +657,78 @@ def test_round3_rules_registered():
     assert len(R.ORDER3) == 10 and all(r in R.RULES for r in R.ORDER3)
     assert R.RULES["R3A"].books == K.CRUDE and R.RULES["R3E"].n == 5
     assert all(R.RULES[r].edge if hasattr(R.RULES[r], "edge") else True for r in R.ORDER3)
+
+
+# ------------------------------------------------------------------------------------------------ R3K / R3L
+def _daily_atr(bk, atr=100.0):
+    bk.daily = pd.DataFrame(dict(date=bk.m.days - np.timedelta64(1, "D"), atr=np.full(len(bk.m.days), atr),
+                                 nr7=np.zeros(len(bk.m.days), bool)))
+    return bk
+
+
+def test_daily_chandelier_checks_closes_only_and_trails():
+    closes = {0: 5050.0, 1: 5400.0, 2: 5150.0}         # session closes (square-off minutes) of days 0, 1, 2
+    def path(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = (t.normalize() - t.normalize()[0]).days.values
+        return np.array([closes.get(int(x), 5100.0) for x in k])
+    bk = _daily_atr(make_book(days=4, path=path))
+    m = bk.m
+    i_in = m.at_or_after(m.days[0], 10 * 60)
+    i_end = E.sq_ix(m, m.days[3])
+    lv = E.daily_chandelier(bk, i_in, i_end, 1, 5000.0)
+    k = np.flatnonzero(np.isfinite(lv))
+    assert len(k) == 4                                  # one check per session close
+    assert lv[k[0]] == 4800.0                           # 5000 - 2 x 100
+    assert lv[k[1]] == 4800.0                           # best 5050 - 300 = 4750 < 4800: never loosens
+    assert lv[k[2]] == 5100.0                           # best 5400 - 300
+    assert lv[k[3]] == 5100.0
+
+
+def test_sim_future_lock_exit_and_costs():
+    def path(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = (t.normalize() - t.normalize()[0]).days.values
+        return np.select([k == 0, k == 1, k == 2], [5000.0, 5400.0, 5050.0], 5050.0)
+    bk = _daily_atr(make_book(days=6, path=path))
+    m = bk.m
+    i_sig = m.at_or_after(m.days[0], 10 * 60)
+    t = E.sim_future(bk, i_sig, 1, 10, None, i_sig + 1)
+    assert t["why"] == "lock" and t["exit"][0] == 5050.0           # day 2 closes 5050 <= 5400 - 300
+    assert t["gross"] == pytest.approx(50.0 * bk.units)
+    assert t["cost"] > 0 and t["net2"] < t["net"] and not t["model"]
+    t2 = E.sim_future(bk, i_sig, -1, 10, None, i_sig + 1)
+    assert t2["why"] == "stop"                                      # short: day 1 closes 5400 >= 5000 + 200
+
+
+def test_r3k_r3l_specs_and_history_trade():
+    def brk(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = (t.normalize() - t.normalize()[0]).days.values
+        return np.where((k == 1) & (t.hour * 60 + t.minute >= 10 * 60), 5100.0, 5000.0)
+    bk = _nr7_book(brk)
+    per = (date_(2025, 11, 1), date_(2025, 11, 30))
+    ck = R.RULES["R3K"].candidates(bk, per)[0]
+    cl = R.RULES["R3L"].candidates(bk, per)[0]
+    assert ck["r93"] and ck["no_ladder"] and not ck["edge"] and ck["n_sessions"] == 10 and ck["kind"] == "single"
+    assert cl["kind"] == "future" and cl["n_sessions"] == 10
+    assert S.simulate(bk, cl, None)["kind"] == "future"
+    tk = S.simulate(bk, ck, None)
+    assert tk is not None and tk["why"] != "edge"
+    assert R.RULES["R3K"].twin(bk, ck, bk.m.days[2])["r93"]
+    # daily history: an up break, a 2 ATR stop and a chandelier exit on closes
+    n = 30
+    c = np.full(n, 5000.0)
+    d = pd.DataFrame(dict(date=pd.bdate_range("2024-01-01", periods=n), open=c, high=c + 20, low=c - 20, close=c,
+                          oi=np.full(n, 1000.0)))
+    from research.hunt.r93_breadth_donchian_mcx import rules as R93
+    x = R.daily_ind(R93.daily_series(d))
+    i = 20
+    x.loc[i + 1, ["ah", "ac"]] = [5100.0, 5090.0]
+    x.loc[i + 2, "ac"] = 5300.0
+    x.loc[i + 3, "ac"] = 5000.0
+    assert float(x.atr.values[i]) == pytest.approx(40.0)
+    # entry 5020 (the NR level); stop 5020 - 80; closes 5090 (lock 4970), 5300 (lock 5180), 5000 <= 5180 -> out
+    assert H.trade_nr7_r93(x, i) == pytest.approx((5000.0 - 5020.0) / 5000.0 - H.COST)
+    x.loc[i + 2, "ac"] = 4930.0                          # below the 2 ATR stop / lock (4970) on the second close
+    assert H.trade_nr7_r93(x, i) == pytest.approx((4930.0 - 5020.0) / 5000.0 - H.COST)

@@ -483,14 +483,20 @@ class NR7Var(NR7):
     """Round 3 NR7 variants: a different flag column, a break window (first_tod..last_tod), an underlying trail
     instead of the premium ladder (R3C), or an entry at the US cash open after a morning break that still holds (R3G)."""
 
-    def __init__(self, rid, col="nr7", books=K.CRUDE, last_tod=22 * 60, trail=None, us_open=False, n=3):
-        super().__init__(rid, col=col, itm=1, edge=True, books=books)
+    def __init__(self, rid, col="nr7", books=K.CRUDE, last_tod=22 * 60, trail=None, us_open=False, n=3,
+                 r93=False, fut=False):
+        super().__init__(rid, col=col, itm=1, edge=not (r93 or fut), books=books)
         self.LAST_TOD, self.trail, self.us_open, self.n = last_tod, trail, us_open, n
+        self.r93, self.fut = r93 or fut, fut
+        if self.r93:
+            self.n = K.R93_MAX_HOLD
 
     def extra(self):
         e = dict(itm=self.itm, edge=self.edge, max_risk=self.max_risk)
         if self.trail is not None:
             e.update(trail=self.trail, no_ladder=True)
+        if self.r93:                    # R3K / R3L: R93's daily exits; no premium ladder, no edge take-profit
+            e.update(r93=True, no_ladder=True)
         return e
 
     @staticmethod
@@ -500,6 +506,8 @@ class NR7Var(NR7):
     def _finish(self, book, sp):
         if sp is not None and self.trail is not None:
             sp["atr"] = atr_before(book, sp["day"])
+        if sp is not None and self.fut:
+            sp["kind"] = "future"
         return sp
 
     def candidates(self, book, period):
@@ -763,5 +771,11 @@ RULES.update({
     "R3J": HighVolORB("R3J", books=K.CRUDE),
 })
 ORDER3 = ("R3A", "R3B", "R3C", "R3D", "R3E", "R3F", "R3G", "R3H", "R3I", "R3J")
-HISTORY_RULES.update({"R3A": "nr7", "R3B": "nr4", "R3C": "nr7", "R3D": "nr7_lowvol", "R3E": "wnr7", "R3F": "nr7",
+# Boss, 21 Oct (after round 3): "add trailing profit lock and trailing stoploss same as breadth donchian"
+RULES.update({
+    "R3K": NR7Var("R3K", books=K.CRUDE, r93=True),
+    "R3L": NR7Var("R3L", books=K.CRUDE, fut=True),
+})
+ORDER3B = ("R3K", "R3L")
+HISTORY_RULES.update({"R3K": "nr7_r93", "R3L": "nr7_r93", "R3A": "nr7", "R3B": "nr4", "R3C": "nr7", "R3D": "nr7_lowvol", "R3E": "wnr7", "R3F": "nr7",
                       "R3G": "nr7"})

@@ -69,3 +69,20 @@ folds, or twin p < 0.10.
   first half-hour momentum, TSMOM as a filter, gold Asian-hours drift, weekly reversal.
 - Session ends: the square-off uses the day's last bar when the session ends early (holidays are on the exchange
   calendar in advance).
+
+## 6. Addendum, R3K and R3L (Boss, 21 Oct, after the round-3 results: "add trailing profit lock and trailing stoploss same as breadth donchian")
+
+Written and committed **before any R3K / R3L statistic**. Two more ideas; BH now runs over **29** (every round-3 rule
+is re-scored with the larger family). Same design, folds, locked holdout, twins and gates.
+
+| id | signal (as R3A) | trade | exits (R93 `engine.sim_daily`, on the future) | books |
+|---|---|---|---|---|
+| **R3K** | NR7 break on the crude future, 09:15-22:00 | 1-ITM option | initial stop entry -/+ **2 x ATR14**; **chandelier lock** best session close -/+ **3 x ATR14**, never loosening; both checked at each session's close (its square-off minute, close - 15), check first then update; **-40% premium hard stop** kept; **no premium ladder and no edge take-profit** (so the trail can act; deep-ITM exits are then model-priced and flagged, gate 8 applies); out after **10 sessions** (entry day = 1) or the session before the option expiry | CRUDEOILM, CRUDEOIL |
+| **R3L** | as R3K | **the crude future itself** (1 lot: x10 / x100) | the same R93 exits; R93 futures costs (Zerodha MCX futures charges + 0.03% half-spread a side + 0.02% on stop / lock exits; 2x for the spread gate); filled at the minute close after the signal; the same expiry cap (the minute future switches contract at option expiry) | CRUDEOILM, CRUDEOIL |
+
+- ATR14 is the daily row before each day (known at that day's open), so the trail never peeks at the day it checks.
+- Long-history gate: the same NR7 entry with R93's daily exits on 2012 - Jul 2025 crude futures (history.trade_nr7_r93,
+  0.10% cost).
+- Known in advance: R3K's model-priced share will be high, because without the edge exit, winners sit outside the
+  stored ATM+/-3. R3L has no model prices, so it is the clean test of whether R93's trail improves the NR7 trade.
+  R3L trades futures, not options; it is reported as the reference (CLAUDE.md allows "or trades the future").

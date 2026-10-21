@@ -24,7 +24,9 @@ NAMES = {"S1": "squeeze release, ATM straddle", "S2": "squeeze release, 1-ITM di
          "R3G": "NR7 morning break still holding at the US open (energy)",
          "R3H": "EIA-day 11:00-11:30 ET momentum, 1-ITM (crude)",
          "R3I": "last-half-hour intraday momentum, 1-ITM (4 minis)",
-         "R3J": "US-open range breakout in a high-volatility regime (crude)"}
+         "R3J": "US-open range breakout in a high-volatility regime (crude)",
+         "R3K": "NR7 crude, 1-ITM option with R93's 2 ATR stop + 3 ATR chandelier, 10 sessions",
+         "R3L": "NR7 crude, the future itself with R93's 2 ATR stop + 3 ATR chandelier, 10 sessions"}
 
 
 def rs(x) -> str:

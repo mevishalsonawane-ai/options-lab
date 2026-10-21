@@ -57,6 +57,40 @@ def trade_nr7(d, i, n=3):
     return side * (d.ac.values[b] - e) / d.open.values[a] - COST
 
 
+def trade_nr7_r93(d, i):
+    """R3K / R3L on daily futures: N1's entry (at the NR7 level, or the open when it gapped through), then R93's daily
+    exits (research/hunt/r93_breadth_donchian_mcx engine.sim_daily): stop entry -/+ 2 x ATR(i), chandelier best close
+    -/+ 3 x ATR (that day's ATR), never loosening, checked on closes (check first, then update); out after 10 sessions or
+    at the close before a roll row."""
+    a = i + 1
+    if a >= len(d) or d.roll.values[a] or not np.isfinite(d.atr.values[i]):
+        return None
+    hi, lo = d.ah.values[i], d.al.values[i]
+    o, h, l = d.ao.values[a], d.ah.values[a], d.al.values[a]
+    up, dn = h > hi, l < lo
+    if (up and dn and not (o > hi or o < lo)) or not (up or dn):
+        return None
+    side = 1 if (o > hi or (up and not dn)) else -1
+    e = (max(o, hi) if side > 0 else min(o, lo))
+    c, atr, roll = d.ac.values, d.atr.values, d.roll.values
+    lvl = e - side * K.R93_INIT_ATR * atr[i]
+    best = e
+    last = min(a + K.R93_MAX_HOLD - 1, len(c) - 1)
+    b = last
+    for k in range(a, last + 1):
+        if side * (c[k] - lvl) <= 0:
+            b = k
+            break
+        if k + 1 < len(c) and roll[k + 1]:
+            b = k
+            break
+        best = max(best, c[k]) if side > 0 else min(best, c[k])
+        if np.isfinite(atr[k]):
+            nl = best - side * K.R93_TRAIL_ATR * atr[k]
+            lvl = max(lvl, nl) if side > 0 else min(lvl, nl)
+    return side * (c[b] - e) / d.open.values[a] - COST
+
+
 def trade_wnr7(d, w, r, n=5):
     """R3E on daily futures: week r is a weekly NR7; during week r + 1 the first session that trades through the week's
     high / low enters (at the level, or the open when it gapped through; a session crossing both without a gap is
@@ -118,7 +152,7 @@ def run_weekly(d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, seed: in
                 twin_mean=float(tot.mean() / len(rets)), p=float((np.sum(tot >= total) + 1) / (twins + 1)))
 
 
-NR_KINDS = ("nr7", "nr7_id", "nr4", "nr7_lowvol")
+NR_KINDS = ("nr7", "nr7_id", "nr4", "nr7_lowvol", "nr7_r93")
 
 
 def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, seed: int = K.SEED):
@@ -131,9 +165,11 @@ def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, s
     kind = R.HISTORY_RULES.get(rule_id, "dir")
     if kind == "wnr7":
         return run_weekly(d, period, twins, seed)
+    tr = trade_nr7_r93 if kind == "nr7_r93" else trade_nr7
+    col = "nr7" if kind == "nr7_r93" else kind
     if kind in NR_KINDS:
-        for i in np.flatnonzero(d[kind].values.astype(bool) & inp):
-            r = trade_nr7(d, i)
+        for i in np.flatnonzero(d[col].values.astype(bool) & inp):
+            r = tr(d, i)
             if r is not None:
                 rets.append(r)
                 tw_specs.append((i, None))
@@ -160,7 +196,7 @@ def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, s
                 if j == i:
                     continue
                 if kind in NR_KINDS:
-                    r = trade_nr7(d, j)
+                    r = tr(d, j)
                 else:
                     rule = R.RULES[rule_id]
                     r = trade_dir(d, j, side, rule.katr, rule.n)

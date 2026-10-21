@@ -63,6 +63,11 @@ RULE_TEXT = {
     "R3J": "previous 5-day Garman-Klass variance in the top third of its last-250 range; first minute close beyond the "
            "09:00-09:29 ET range between 09:30 and 11:00 ET -> 1-ITM; stop -40% / the range midpoint, lock ladder, edge, "
            "out at the square-off; CRUDEOILM, CRUDEOIL",
+    "R3K": "R3A's NR7 break on crude -> 1-ITM option; exits = R93's daily set on the future (stop entry -/+ 2 ATR14, "
+           "chandelier best session close -/+ 3 ATR14, never loosening, checked at each session's square-off minute) "
+           "+ -40% premium stop; no premium ladder, no edge take-profit (deep-ITM exits model-priced, flagged); out "
+           "after 10 sessions or before the option expiry; Boss's request",
+    "R3L": "as R3K, trading the crude future itself (CRUDEOILM x10, CRUDEOIL x100); R93 futures costs",
 }
 PREREG = {1: "research/hunt/r96_mcx_buy/PREREG_ROUND1.md", 2: "research/hunt/r96_mcx_buy/PREREG_ROUND2.md",
           3: "research/hunt/r96_mcx_buy/PREREG_ROUND3.md"}
