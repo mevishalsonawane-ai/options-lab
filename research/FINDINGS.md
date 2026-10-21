@@ -340,3 +340,8 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
   After a 1.5-straddle move the index hits +1 before -0.5 straddle 34.5% of the time vs 33.3% for a random walk, and
   the index-only trade has no edge. Hero-zero buying is closed; only new information (event calendar, order flow) or a
   forward paper test could reopen it.
+- R98d event days (PREREG_D; calendar events.csv with sources: RBI, Budget, election, Fed, US CPI): domestic
+  events add nothing (Budget / election straddles are priced 3-5x; RBI basket lost on all 27 tickets). The session
+  after a Fed decision or US CPI print: afternoon hero 14% vs 7%, 09:20 CE+PE basket +Rs 1,666 held / +Rs 3,354 with
+  a -20% stop per Rs 5,000, but BH q 0.29, every CI includes 0, negative without the 3 best days (16 Jun 2022,
+  12 Sep 2024). Best lead found; only a frozen forward paper test (10-20 days a year) can confirm it.

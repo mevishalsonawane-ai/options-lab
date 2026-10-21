@@ -435,6 +435,61 @@ Half-at-2× keeps Rs 44,591. The +30% lock keeps Rs 1,378.
   - **real bid/ask and order flow** at the strike (the lake has neither);
   - **a forward paper test** of a fixed rule from today, which is the only clean test left for anything above.
 
+## R98d (Boss, 21 Oct): the event-day study
+
+- **Pre-registered** in `hunt/r98/PREREG_D.md` (commit `15a1ede`).
+- **Calendar:** `hunt/r98/events.csv`, 143 events with their sources, built by `make_events.py` from:
+  - RBI's MPC schedules and change notices;
+  - federalreserve.gov;
+  - the BLS CPI archive;
+  - the Budget and election dates.
+- **Code and tables:** `events.py`, `results/events.md`.
+- **The event expiry-index-days:**
+  - RBI 18, Budget 3, election 2 (domestic: 23);
+  - the session after a Fed decision 61, the session after a US CPI release 52 (US: 112).
+- **What it compares:** hero rates, the realised against the priced move, ticket P&L, and one fixed trading rule (M6: a
+  CE + PE basket near Rs 5, bought just before the event, or at 09:20 for overnight US events).
+
+**Domestic events add nothing: the market prices them.**
+
+| event | days | hero day (event / normal) | afternoon hero | 11:00 straddle, % of spot | tickets held, per Rs 5,000 |
+|---|---|---|---|---|---|
+| RBI | 18 | 28% / 39% | 0% / 8% | 0.41 / 0.41 | −Rs 4,592 / −Rs 3,184 |
+| Budget | 3 | 67% / 38% | 0% / 8% | **1.29** / 0.41 | −Rs 4,821 |
+| Election | 2 | 0% / 39% | 0% / 8% | **2.07** / 0.41 | −Rs 4,967 |
+
+- On Budget and election days the straddle is 3-5× its usual size, so the big move is already paid for.
+- The basket bought just before RBI's 10:00 decision lost on all 27 tickets (−Rs 4,857 a ticket held, −Rs 1,162 with a
+  −20% stop).
+
+**US events (the Indian session after a Fed decision or a US CPI print): the best lead in R98, but not proven.**
+
+| group | days | hero day | afternoon hero | move at 13:00 ≥ 2.5 straddles | 09:20 basket, held | with −20% stop |
+|---|---|---|---|---|---|---|
+| after a Fed decision | 61 | 51% / 38% (p 0.04) | 15% / 7% (p 0.04) | 13% / 6% | +Rs 3,849 (95% −2,976 .. +13,144) | +Rs 6,013 (−625 .. +14,379) |
+| after US CPI | 52 | 31% / 39% | 13% / 7% (p 0.11) | 10% / 7% | −Rs 771 | +Rs 387 |
+| both (US) | 112 | 42% / 38% | 14% / 7% (p 0.01) | 12% / 6% | +Rs 1,666 (−2,451 .. +6,823) | +Rs 3,354 (−322 .. +8,296) |
+
+- **Not significant after correction.** The smallest BH q of the 24 pre-registered tests is 0.29, so no metric
+  passes. No M6 rule passes either: every bootstrap interval includes 0, every one is negative without its 3 best
+  days, and none is positive in every year (2-3 of 6).
+- **A few days carry the profit.** The basket's best tickets:
+  - 16 Jun 2022, the morning after the Fed's 0.75% hike: NIFTY 15600 PE and BANKNIFTY 32900 PE, 57×, about
+    +Rs 2.7 lakh each;
+  - 12 Sep 2024, the morning after US CPI: the famous NIFTY 25250 CE day; the basket's 25200 CE did 35×, +Rs 1.47
+    lakh;
+  - 15 Sep 2026, after US CPI: 26×.
+- **Why it is plausible, not proven.** A US surprise lands overnight, and the Indian market can keep re-pricing it
+  through the day. The 09:20 straddle prices the open, not necessarily the rest of the day.
+  - But 98 days with a handful of jackpots cannot separate that from luck.
+  - These days were not chosen for being heroes; the calendar is fixed by the US releases.
+
+**What would make it real: a forward test.**
+- Freeze the rule exactly (the CE + PE nearest Rs 5 at 09:20 on an index expiry that falls on the first Indian session
+  after a scheduled Fed decision or a US CPI release, Rs 5,000 a leg, −20% resting stop, out at 15:20).
+- Paper-trade it from now, and read it once at a fixed count of days. About 10-20 such expiry days come a year, so it
+  takes 2-3 years to learn much. That is the honest price of a lottery-shaped edge.
+
 ## Honest notes
 
 - **Prices.** No bid/ask in the lake. The 1-tick spread is a model; real Rs 1-3 strikes are often 1 tick wide, but
