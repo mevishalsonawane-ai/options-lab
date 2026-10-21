@@ -805,7 +805,10 @@ object Broker {
         it.optInt("overnight_quantity"), it.optDouble("multiplier", 1.0), it.optDouble("m2m", 0.0), it.optDouble("realised", 0.0),
         it.optDouble("unrealised", 0.0), it.optDouble("close_price", 0.0), it.optInt("buy_quantity"), it.optDouble("buy_price", 0.0),
         it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0),
-        if (it.has("day_buy_quantity")) it.optInt("day_buy_quantity") else null, if (it.has("day_sell_quantity")) it.optInt("day_sell_quantity") else null)
+        dayQty(it, "day_buy_quantity"), dayQty(it, "day_sell_quantity"))
+
+    /** 21 Oct, round 3: a day quantity Zerodha gave (a number); absent or null is "not known", never 0 (review). */
+    internal fun dayQty(o: JSONObject, k: String): Int? = if (o.has(k) && !o.isNull(k)) o.optInt(k) else null
 
     private fun rows(a: JSONArray?): List<JSONObject> = if (a == null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) }
 

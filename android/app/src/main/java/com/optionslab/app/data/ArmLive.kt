@@ -1053,11 +1053,14 @@ object ArmLive {
             cur = cur.copy(stopBooked = 0)
         }
         // The stop put back as it was when the sale does not go: re-rested when out, grown back when shrunk.
+        // 21 Oct, round 3 review: what Zerodha holds as the sale read it (null: not read); a stop grown back never covers more.
+        var heldSeen: Int? = null
         suspend fun back(x: Pos): Pos = when {
             x.stopOrderId == null -> if (ltp != null) restStop(x, x.stopTrigger, ltp) else x
             shrunk && (x.stopQty ?: x.qty) < x.qty -> {
                 val so = x.slId?.let { id -> runCatching { Broker.orders().firstOrNull { it.id == id } }.getOrNull() }
-                shrinkStop(x, so, x.qty, ltp) ?: x
+                val to = minOf(x.qty, heldSeen?.coerceAtLeast(0) ?: x.qty)
+                if (to > (x.stopQty ?: x.qty)) shrinkStop(x, so, to, ltp) ?: x else x
             }
             else -> x
         }
@@ -1071,6 +1074,7 @@ object ArmLive {
             // (an exit that filled a moment ago is never sold again while the positions catch up; [ExitCoordinator.held]).
             val held = runCatching { ExitCoordinator.held(cur.exchange, cur.symbol, cur.product, "arm ${p.label}", book) * cur.side }.getOrNull()
                 ?: return closed + back(cur)
+            heldSeen = held
             val sendable = ExitQty.sendable(held.coerceAtLeast(0), working.sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) }, minOf(toSell, cur.qty), p.lot)
             if (sendable <= 0) return closed + back(cur)
             val o = Kite.Order(p.symbol, exitSide, sendable, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG, multiplier = p.multiplier)

@@ -29,6 +29,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 object ExitDesk {
     /** How long a sent exit is looked for in the books before it is let go (a lost reply that never became an order). */
     const val KEEP_MS = 60_000L
+    /** 21 Oct, round 3: the positions-lag guard's reads again, waits and reads together, at most this long ([settleHeld]). */
+    const val LAG_BUDGET_MS = 1_200L
     /** The waits before each read again of a book that is missing an exit sent from here (about 1.8 s in all). */
     val REREAD_MS = longArrayOf(300, 600, 900)
 
@@ -98,15 +100,21 @@ object ExitDesk {
      * this round). On: still trailing after the last wait, the read stands with that much counted as already sold (the order
      * book's fill is Zerodha's own word; it only ever LOWERS what is sent, never refuses an exit of what is still held).
      * Returns the last read and the lag left in it (0 unless [Lag.SUBTRACTED]).
+     *
+     * Review: the reads again stop once [budgetMs] would be passed (waits and reads together, by [clock]), so a sender inside its
+     * contract's turn never holds it near [ExitTurns.WAIT_MS] (a waiting sender would then be let through beside it).
      */
     suspend fun <R> settleHeld(on: Boolean, read: suspend () -> R, lag: (R) -> Int, waits: LongArray = REREAD_MS,
+                               budgetMs: Long = LAG_BUDGET_MS, clock: () -> Long = System::currentTimeMillis,
                                note: (Lag, Int) -> Unit = { _, _ -> }): Pair<R, Int> {
         var r = read()
         var l = lag(r)
         if (l <= 0) { note(Lag.NONE, 0); return r to 0 }
         if (!on) { note(Lag.SHADOW, l); return r to 0 }
         val first = l
+        val t0 = clock()
         for (w in waits) {
+            if (clock() - t0 + w > budgetMs) break
             delay(w)
             r = read()
             l = lag(r)

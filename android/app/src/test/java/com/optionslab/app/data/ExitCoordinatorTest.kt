@@ -387,11 +387,11 @@ class ExitCoordinatorTest : RobolectricTest() {
     @Test fun onATrailingReadIsReadAgainUntilItShowsTheFill() {
         ExitCoordinator.resetForTest(lagOn = true)
         kite.position(ce, 75, 20.0)
-        kite.positionsTrailReads = 2
+        kite.positionsTrailReads = 1
         bossSells(75)
         kite.requests.clear()
         assertEquals(0, heldFor())
-        assertEquals("trailing twice, then whole", 3, positionReads())
+        assertEquals("trailing once, then whole", 2, positionReads())
         assertEquals(1, ExitCoordinator.countsForTest().lagReadAgain)
         assertEquals(0, ExitCoordinator.countsForTest().lagSubtracted)
     }
@@ -402,10 +402,9 @@ class ExitCoordinatorTest : RobolectricTest() {
         kite.positionsTrailReads = 50
         bossSells(75)
         kite.requests.clear()
-        val t0 = System.currentTimeMillis()
         assertEquals("150 shown, 75 of it sold: 75", 75, heldFor())
-        assertTrue("under two seconds", System.currentTimeMillis() - t0 < 2_500)
-        assertEquals(4, positionReads())
+        // The first read and one or two more, as the guard's budget allows (its own test pins the count on a fake clock).
+        assertTrue("${positionReads()}", positionReads() in 2..3)
         assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
     }
 
@@ -436,6 +435,45 @@ class ExitCoordinatorTest : RobolectricTest() {
         ExitCoordinator.held("NFO", ce, "NRML", "test", book)
         SecurePrefs.countedThread = null
         assertEquals(0L, SecurePrefs.readsForTest.get())
+    }
+
+    /** Review: the 15:05 expiry square-off is guarded too - its own pass's positions read first, then read again only when trailing. */
+    @Test fun theExpirySquareOffNeverSellsAFilledExitAgainWithTheGuardOn() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 75, 20.0)
+        kite.positionsTrailReads = 50
+        bossSells(75)                                              // filled; the positions still show 75 held
+        kite.requests.clear()
+        pass()
+        assertEquals("no second sell", 0, sells())
+        assertEquals(0, held())
+        assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
+    }
+
+    @Test fun inShadowTheExpirySquareOffGoesAsBeforeAndOnlyLogs() {
+        kite.position(ce, 75, 20.0)
+        kite.positionsTrailReads = 50
+        bossSells(75)
+        kite.requests.clear()
+        pass()
+        assertEquals("as before this round: the trailing read is sold", 75, sells())
+        assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
+    }
+
+    @Test fun anExpiryPassWithNoExitOfOursJustFilledReadsThePositionsOnce() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 75, 20.0)
+        kite.requests.clear()
+        pass()
+        assertEquals(1, positionReads())
+        assertEquals(75, sells())
+    }
+
+    @Test fun aDayQuantityThatIsNullOrAbsentIsNotKnownNeverZero() {
+        val o = org.json.JSONObject().put("day_sell_quantity", org.json.JSONObject.NULL).put("day_buy_quantity", 75)
+        assertEquals(null, Broker.dayQty(o, "day_sell_quantity"))
+        assertEquals(75, Broker.dayQty(o, "day_buy_quantity"))
+        assertEquals(null, Broker.dayQty(o, "nothing"))
     }
 
     @Test fun theLagSwitchIsSavedApartAndSaidPlainly() {

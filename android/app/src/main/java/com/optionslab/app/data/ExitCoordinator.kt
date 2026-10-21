@@ -85,7 +85,7 @@ object ExitCoordinator {
 
     /**
      * 21 Oct, enhancement round 3: Boss's switch for the positions-lag guard (Bot settings). On, a sender whose positions read
-     * trails an exit that filled a moment ago reads it again (under two seconds), and if it still trails, counts that fill as
+     * trails an exit that filled a moment ago reads it again (about a second at most), and if it still trails, counts that fill as
      * already sold: it only ever sends LESS (never more, never nothing of what is still held), and never refuses an exit.
      */
     fun setLagOn(on: Boolean): String {
@@ -95,7 +95,7 @@ object ExitCoordinator {
         runCatching { Diag.record("exits", "Positions-lag guard ${if (on) "on: a positions read trailing an exit's fill is read again, then the fill counted as sold" else "in shadow: logged only"} (by you)") }
         publish()
         return if (on) "Positions-lag guard on: an exit that filled is never sold a second time while Zerodha's positions catch up " +
-            "(read again for under two seconds; then the fill shown in the orders counts as sold)."
+            "(read again for about a second at most; then the fill shown in the orders counts as sold)."
         else "Positions-lag guard in shadow: what it would do is logged, nothing is read again."
     }
 
@@ -195,11 +195,14 @@ object ExitCoordinator {
      * 21 Oct, enhancement round 3 (idea 1): what Zerodha holds of [exchange]:[symbol] [product] (net, signed) for an exit sender,
      * from a positions read made AFTER its read of the orders ([orders], that whole read). An exit sent from here a moment ago
      * can show COMPLETE in the orders before the positions move ([ExitDesk.positionsLag]); then the sender would find nothing
-     * working and the old position, and sell it again. The guard on: the positions are read again (under two seconds), and if
+     * working and the old position, and sell it again. The guard on: the positions are read again (about a second at most, [ExitDesk.LAG_BUDGET_MS]), and if
      * they still trail, the fill counts as sold (only ever less is sent). Off (shadow): read once, logged. Throws when the
      * positions cannot be read (as the senders' own reads did). Memory and Zerodha's reads only (no disk, no settings).
+     * [first]: a positions read the caller already made after [orders] (a pass over many contracts): used as the first read,
+     * so a contract with no exit of ours just filled costs no read at all.
      */
-    suspend fun held(exchange: String, symbol: String, product: String, who: String, orders: List<Broker.OrderRow>): Int {
+    suspend fun held(exchange: String, symbol: String, product: String, who: String, orders: List<Broker.OrderRow>,
+                     first: Broker.Positions? = null): Int {
         val key = ExitDesk.key(exchange, symbol)
         val mine = runCatching { registry.recentIds(ExitRegistry.Kind.ORDER, key) }.getOrDefault(emptySet())
         val fills = orders.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }.map { ExitDesk.Fill(it.id, it.side, it.filled) }
@@ -210,8 +213,9 @@ object ExitCoordinator {
             val day = rs.map { if (net > 0) it.daySellQty else it.dayBuyQty }
             ExitDesk.positionsLag(net, if (rs.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }, fills, mine)
         }.getOrDefault(0)
-        if (mine.isEmpty()) return rows(Broker.positionBook()).sumOf { it.qty }
-        val (book, left) = ExitDesk.settleHeld(lagOn, { Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
+        if (mine.isEmpty()) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
+        var given = first
+        val (book, left) = ExitDesk.settleHeld(lagOn, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
         val net = rows(book).sumOf { it.qty }
         return ExitDesk.heldLess(net, left)
     }

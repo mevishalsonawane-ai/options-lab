@@ -105,7 +105,8 @@ object McxGuard {
             // two reads shows as still working and is only cancelled, never doubled), and only what is still open is closed.
             val read = Broker.orders()
             val working = read.filter { it.working }
-            val fresh = Broker.positionBook().net
+            val freshBook = Broker.positionBook()
+            val fresh = freshBook.net
             McxMarket.noteLive(fresh)
             val sendList = freshDue(dueList, fresh)
             for ((p, c, due) in sendList) {
@@ -119,8 +120,11 @@ object McxGuard {
                     val others = same.filter { it.tag != "iraalgoexpiry" }
                     if (others.isNotEmpty()) { others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }; continue }
                     val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+                    // 21 Oct, enhancement round 3 (idea 1, review): held, checked against the orders read's fills ([ExitCoordinator.held]).
+                    val heldNow = runCatching { ExitCoordinator.held(Mcx.EXCHANGE, p.symbol, p.product, "MCX expiry exit", read, freshBook) }.getOrNull() ?: continue
+                    if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) continue
                     // Zerodha keeps MCX positions and orders in lots: the whole open quantity, one lot at a time.
-                    val qty = com.optionslab.engine.risk.ExitQty.sendable(p.qty, pending, abs(p.qty), 1)
+                    val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), 1)
                     if (qty <= 0) continue
                     val o = Kite.Order(p.symbol, side, qty, 1, p.product, "MARKET", null, c.tick, Mcx.EXCHANGE, "iraalgoexpiry", multiplier = c.multiplier)
                     val bad = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = true)

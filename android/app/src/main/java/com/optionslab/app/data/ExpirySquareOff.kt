@@ -92,7 +92,8 @@ object ExpirySquareOff {
             // between the reads shows as still working (nothing more is sent) and the next pass sees the position gone.
             val read = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }
             val working = read.filter { it.working }
-            val book = Broker.positionBook().net.filter { it.qty != 0 }
+            val positions = Broker.positionBook()
+            val book = positions.net.filter { it.qty != 0 }
             // A derivative the app's contract list does not know (BFO, a stock option, a list not loaded yet): its
             // expiry cannot be told here, so the owner is told instead of it being held into settlement unseen.
             // SENSEX's list not read yet today: asked for now (in the background) and the notice waits for the next passes, until
@@ -145,7 +146,12 @@ object ExpirySquareOff {
                         continue
                     }
                     val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-                    val qty = com.optionslab.engine.risk.ExitQty.sendable(p.qty, pending, abs(p.qty), i.lotSize)
+                    // 21 Oct, enhancement round 3 (idea 1, review): what is held, checked against the orders read's fills: an exit sent
+                    // from here that filled a moment ago (an arm's, a protection's, Boss's own) is never sold again while the
+                    // positions catch up ([ExitCoordinator.held]; this pass's own read first, so nothing more is read otherwise).
+                    val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, "expiry square-off", read, positions) }.getOrNull() ?: continue
+                    if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) continue          // closed meanwhile: the next pass sees it
+                    val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), i.lotSize)
                     if (qty <= 0) continue                                      // still closing; checked again next pass
                     // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
                     val orders = Kite.slices(qty, i.lotSize, Kite.freezeQuantity(p.exchange, p.symbol))

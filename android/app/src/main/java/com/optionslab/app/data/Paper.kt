@@ -523,7 +523,7 @@ object Paper {
         // exit lane, which must never wait behind a paper write. Not loaded yet: not covered (the watch pass loads it).
         val b = cache ?: run { loadSoon(); return StreamCover(emptySet(), covered = false, any = false) }
         val syms = watched(b.state)
-        if (syms.isEmpty()) { follow(emptySet()); return StreamCover(emptySet(), covered = true, any = false) }
+        if (syms.isEmpty()) { follow(emptySet(), wait = false); return StreamCover(emptySet(), covered = true, any = false) }
         var covered = true
         val tokens = HashSet<Long>()
         for (s in syms) {
@@ -531,7 +531,7 @@ object Paper {
             if (tok == null) { covered = false } else { tokens += tok; if (KiteStream.tick(tok) == null) covered = false }
         }
         // 21 Oct, enhancement round 3 (idea 3): the tokens looked up here (after a restart, the first time) followed at once.
-        follow(tokens)
+        follow(tokens, wait = false)
         return StreamCover(tokens, covered, any = true)
     }
 
@@ -545,14 +545,19 @@ object Paper {
     const val STREAM_OWNER = "paper-positions"
     private var followedNow: Set<Long> = emptySet()
     /** Its own small lock (never this object's: [streamCover] must never wait on a paper write); held only for the stream's want. */
-    private val followLock = Any()
+    private val followLock = java.util.concurrent.locks.ReentrantLock()
 
-    private fun follow(tokens: Set<Long>) {
-        synchronized(followLock) {
+    /**
+     * [wait] false (review: [streamCover], on the fast path's exit lane): only when the lock is free at once; taken, a save is
+     * following the newest book right now, and the next look follows again (it heals within a look).
+     */
+    private fun follow(tokens: Set<Long>, wait: Boolean = true) {
+        if (wait) followLock.lock() else if (!followLock.tryLock()) return
+        try {
             if (tokens == followedNow) return
             followedNow = tokens
             runCatching { KiteStream.want(STREAM_OWNER, tokens) }
-        }
+        } finally { followLock.unlock() }
     }
 
     /** [b]'s open positions and working orders, by the tokens already looked up (memory only; the rest come with [streamCover]). */

@@ -79,6 +79,17 @@ class PositionsLagTest {
         assertEquals(listOf(ExitDesk.Lag.SUBTRACTED to 75), notes)
     }
 
+    @Test fun theReadsAgainStopAtTheBudgetSoTheTurnIsNeverHeldLong() = runBlocking {
+        var now = 0L
+        var reads = 0
+        // Each read takes 700 ms of the clock: after the first wait (300) and its read the next wait would pass the 1.2 s budget.
+        val (_, left) = ExitDesk.settleHeld(true, { reads++; now += 700; reads }, { 75 }, longArrayOf(300, 600, 900),
+            budgetMs = 1_200, clock = { now }) { _, _ -> }
+        assertEquals(2, reads)
+        assertEquals(75, left, "still trailing at the budget: counted as sold")
+        assertTrue(ExitDesk.LAG_BUDGET_MS + ExitDesk.REREAD_MS.sum() < ExitTurns.WAIT_MS, "both reads-again fit inside one turn's wait")
+    }
+
     @Test fun aReadThatDoesNotTrailIsTakenAtOnce() = runBlocking {
         var reads = 0
         val notes = ArrayList<ExitDesk.Lag>()

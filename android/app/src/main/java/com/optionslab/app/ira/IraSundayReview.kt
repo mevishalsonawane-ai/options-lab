@@ -5,6 +5,7 @@ import com.optionslab.app.data.Market
 import com.optionslab.ira.SundayReview
 import com.optionslab.ira.WeeklyReview
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
@@ -66,7 +67,8 @@ internal object IraSundayReview {
         if (!on() || !Automations.on(Automations.Auto.WEEK)) return false
         val today = Market.today()
         if (!SundayReview.due(today)) return false
-        return withContext(Dispatchers.IO) {
+        // 21 Oct, review: one review at a time with the catch-up ([catchUp] never makes it while this one is being made).
+        return making.withLock { withContext(Dispatchers.IO) {
             val p = com.optionslab.app.security.SecurePrefs
             if (runCatching { p.getString(ONCE_KEY) == today.toString() }.getOrDefault(false)) return@withContext true
             val said = compose(today)
@@ -77,7 +79,7 @@ internal object IraSundayReview {
             // No figure in the switch's "last did" line (it is shown in Settings).
             runCatching { Automations.acted(Automations.Auto.WEEK, "Sunday review " + if (how == Delivered.SPOKEN) "said" else "ready in the chat") }
             true
-        }
+        } }
     }
 
     /**
@@ -100,8 +102,11 @@ internal object IraSundayReview {
         return Delivered.SPOKEN
     }
 
-    /** One catch-up at a time (the unlock and the app coming on screen can arrive together). */
-    private val catching = java.util.concurrent.atomic.AtomicBoolean(false)
+    /**
+     * One review at a time: the 18:00 run ([sunday]) waits for it; a catch-up ([catchUp]) finding it taken goes away (the unlock
+     * and the app coming on screen can arrive together, or with the 18:00 run - review: the review was then said twice).
+     */
+    private val making = kotlinx.coroutines.sync.Mutex()
 
     /**
      * 21 Oct, enhancement round 3 (idea 7): the Sunday review said at the next unlocked moment that Sunday evening when it was not
@@ -114,7 +119,9 @@ internal object IraSundayReview {
     suspend fun catchUp(context: Context): Delivered? {
         if (!on() || !Automations.on(Automations.Auto.WEEK)) return null
         if (runCatching { JarvisVoice.lockedSafe() }.getOrDefault(true)) return null
-        if (!catching.compareAndSet(false, true)) return null
+        // Review: muted or quiet hours - nothing would be said, so nothing is read or made now (it stays due).
+        if (runCatching { JarvisVoice.muted || JarvisVoice.quietNow() }.getOrDefault(true)) return null
+        if (!making.tryLock()) return null
         try {
             return withContext(Dispatchers.IO) {
                 val now = Market.now().toLocalDateTime()
@@ -138,7 +145,7 @@ internal object IraSundayReview {
                 }
                 how
             }
-        } finally { catching.set(false) }
+        } finally { making.unlock() }
     }
 
     /** Boss asked ("Sunday review"): the review of the last week; on a locked phone ([locked]) only to unlock (it holds figures). */

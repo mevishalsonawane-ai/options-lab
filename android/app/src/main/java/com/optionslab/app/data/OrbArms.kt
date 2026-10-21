@@ -3510,7 +3510,10 @@ object OrbArms {
     }
 
     /** TEST ONLY: the book forgotten from memory (its file kept), as a new process starts. */
-    @Synchronized internal fun forgetMemoryForTest() { cache = null; writtenText = null; writtenStat = null }
+    @Synchronized internal fun forgetMemoryForTest() {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        cache = null; writtenText = null; writtenStat = null
+    }
 
     @Synchronized fun wipe() {
         cache = null; holdingHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
