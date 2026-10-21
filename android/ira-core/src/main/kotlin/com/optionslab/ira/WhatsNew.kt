@@ -62,6 +62,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 20 Oct (Boss: "run a loop for enhancement and adding new features in the application"): round 2.
+        Entry("2026-10-20-enhance-round-2", OCT20, "Exits take turns; MCX stops overnight; Sunday review",
+            "Two of the app's exits on one contract now take turns, so one contract is never sold twice. " +
+                "It only logs what it would do until you switch it on in Bot settings. " +
+                "It never changes a size, and every exit still goes within a few seconds. " +
+                "A carried MCX stop now rests at Zerodha overnight after MCX's late close. " +
+                "Your account stop rule now reads each day after its charges, as the arms do. " +
+                "The Candles page shows when it last read, with a chip for each instrument. " +
+                "Only 5 and 15 minute candles become lessons; 1 minute ones are explained only. " +
+                "On Sundays Jarvis reads you a short review of the week, paper and live apart, never on a locked phone.",
+            "Bot settings → One exit at a time; Research → Candles; Jarvis on Sunday evenings"),
         // 20 Oct (Boss: "...after that run a loop for enhancement and adding new features in the application"): round 1.
         Entry("2026-10-20-enhance-round-1", OCT20, "Stops held overnight, no double contracts",
             "A carried position's stop and target now rest at Zerodha overnight, so a dead phone misses nothing. " +
