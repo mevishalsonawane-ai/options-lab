@@ -1505,3 +1505,7 @@ NATGASMINI, GOLDM, SILVERM, hard stop + profit lock. Design 5 Aug 2025 - 14 Jul 
 - Lead: NR7 breakout -> 1-ITM for 3 sessions, design +Rs 1.84 lakh on 58 (twin p 0.006, q 0.054), positive vs twins on
   2012-25 daily futures (+0.58% vs +0.32% a trade, 1,436); but it fails folds (2 of 4), the -13k month and the drawdown,
   and 7 model-priced deep-ITM silver exits carry the profit (real-print exits lose on every book). Round 2 refines it.
+- Round 2 (R96, 21 Oct; `HUNT_R96_ROUND2.md`, prereg 38c1019a): 0 of 8 pass, holdout still unread, 17 ideas in the
+  ledger. Sold only at real prints (no model marks), the NR7 breakout makes -Rs 4,067 on 65 (round 1's profit was the
+  model-priced silver exits). Lead: NR7 on CRUDEOIL options +Rs 45,170 on 23 (with NATURALGAS +Rs 30,767 on 43, 3 of 4
+  folds, twin p 0.076). Wider strikes (a fresh Dhan token) would settle NR7 on every book.

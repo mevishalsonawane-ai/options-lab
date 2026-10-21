@@ -1,0 +1,36 @@
+id: r96-2-r2h
+title: 'R96 round 2 R2H: quiet-base (NR7 within 5 days) 20-day breakout, 1-ITM (MCX option buying)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R96_ROUND2.md
+hypothesis: 'Boss (21 Oct): find an MCX commodity option BUYING strategy. R2H earns after real MCX costs on design (5 Aug
+  2025 - 14 Jul 2026), beats random-session twins (p < 0.05, BH q <= 0.10 over the cumulative R96 ledger), in >= 3 of 4 walk-forward
+  folds, worst month > -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m MONTH books to 19 Oct 2026: near-future spot + ATM-3..+3
+  minutes with IV; fut_daily_continuous to 16 Oct 2026), copied 21 Oct'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; read once only for a design pass)
+instruments:
+- CRUDEOILM
+- GOLDM
+- NATGASMINI
+- SILVERM
+features:
+- 'signal source: the MCX future (near future minute closes; daily: the near-month daily continuous future, back-adjusted)'
+- ATM IV as a filter only (V1)
+model_or_rule: close beyond the previous 20 closes' high / low with an NR7 day in the previous 5 sessions -> 1-ITM, stop -40%
+  / 1 ATR14, lock ladder, 5 sessions, edge take-profit
+settings: research/hunt/r96_mcx_buy/cfg.py; PREREG_ROUND2.md
+prereg: research/hunt/r96_mcx_buy/PREREG_ROUND2.md
+variants_tried: 1
+results:
+  summary: 'Design: 56 trades, net Rs -108,449 (2x spread Rs -118,726), gross Rs -94,314, win 46%, worst month Rs -33,894,
+    max DD Rs -108,449, without top 3 Rs -115,523; folds F1 Rs -23,652 (14), F2 Rs -53,443 (21), F3 Rs -3,525 (12), F4 Rs
+    -27,829 (9); twin mean Rs -7,916, twin p 1.000, BH q 1.000 (cumulative ledger, 17 ideas); model-priced exits 11%, real-exit
+    net Rs -19,816. Gates failed: net, net2, twin_p, bh_q, folds, worst_month, max_dd, wo_top3, real_exits.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before (NATGASMINI 0.45% / 0.90%) each fill, 2x
+    on model-priced exits; gates also at 2x spreads
+holdout_read: false
+verdict: rejected
+notes: ''
