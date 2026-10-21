@@ -1,0 +1,24 @@
+id: r94-cal-c1
+title: 'R94 idea 1 C1: bullion calendar carry vs 6.5% fair, +/-3 points entry, 1 point exit, 3 more points stop'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R94_MCX_ADVANCED.md
+hypothesis: 'Pre-registered (research/hunt/r94_mcx_advanced/PREREG.md): R94 idea 1 C1: bullion calendar carry vs 6.5% fair, +/-3 points entry, 1 point exit, 3 more points stop; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: the two futures legs (implied carry).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 21 Oct 2026: fut_1m_live_mcx (contracts live on 19 Oct, 1-minute), fut_daily_continuous (near month, 2012 - 16 Oct 2026), options_rolling_1m MCX MONTH books (ATM-3..+3, 5 Aug 2025 - 19 Oct 2026); Dukascopy 1-minute BID CFDs (XAUUSD, XAGUSD, LIGHTCMDUSD, GASCMDUSD) for idea 5'
+period:
+  design: May - 31 Aug 2026 (per pair, from its first common print)
+  holdout: 1 Sep - 19 Oct 2026 (read once)
+instruments:
+- '6 bullion pairs (GOLDM x3, SILVERM x2, SILVER)'
+features:
+- 'signal source: the two futures legs (implied carry)'
+model_or_rule: 'R94 idea 1 C1: bullion calendar carry vs 6.5% fair, +/-3 points entry, 1 point exit, 3 more points stop'
+settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)
+prereg: research/hunt/r94_mcx_advanced/PREREG.md
+variants_tried: 6
+results:
+  summary: '6 cells (one BH family of 152 R94 cells). Design net after costs per cell, twin / bootstrap p and BH q, then the one holdout read: c-C1-GOLDM-2611-2612 21 tr -11,973 (p 0.031, q 0.70) -> holdout 2 tr -1,567; c-C1-GOLDM-2612-2701 10 tr -16,557 (p 0.721, q 1.00) -> holdout 3 tr -4,351; c-C1-GOLDM-2701-2702 12 tr -4,010 (p 0.026, q 0.70) -> holdout 8 tr -1,563; c-C1-SILVER-2612-2703 4 tr +30,951 (p 0.128, q 1.00) -> holdout 3 tr -366; c-C1-SILVERM-2611-2702 13 tr -15,535 (p 0.446, q 1.00) -> holdout 3 tr -3,611; c-C1-SILVERM-2702-2704 8 tr +13,078 (p 0.026, q 0.70) -> holdout 3 tr -1,590. Design passers 0, design + holdout passers 0.'
+  costs: 'Zerodha MCX charges on every leg (McxCosts.kt), half-spread on every fill (futures R53 rule, far month 3x; options R85 strict ATM rate x (1 + 0.5 |offset|), >= 1 tick); 1 lot; margins without spread benefit'
+holdout_read: true
+verdict: rejected
+notes: 'Cells: c-C1-GOLDM-2611-2612, c-C1-GOLDM-2612-2701, c-C1-GOLDM-2701-2702, c-C1-SILVER-2612-2703, c-C1-SILVERM-2611-2702, c-C1-SILVERM-2702-2704'

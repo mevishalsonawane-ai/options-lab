@@ -37,3 +37,9 @@ printed, saved or pickled (`holdout_all.json` and `holdout_trades.pkl` were neve
 cell was seen by anyone. Fix: `usgap.cells(part, locked=True)` skips its own lock when the orchestrator holds it; the
 aborted lock file is kept as `results/HOLDOUT_READ_aborted_2026-10-21T1200.json` and the read is run once more. That
 run is the one and only read whose numbers exist.
+
+## Pointers
+
+Per-idea implementation notes and amendments written by the idea-3 and idea-5 builds: `NOTES_idea3.md` (N3.1 choices
+before P&L; A3.1 / A3.2 valuation amendments written AFTER design numbers were seen; idea 3 later out of scope, N2) and
+`NOTES_idea5.md` (N5-1 choices before P&L; N5-2 data checks after the design run, nothing changed).

@@ -1,0 +1,2924 @@
+{
+ "c-C1-GOLDM-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 1,
+    "time": 1
+   },
+   "far_1.0x": -966.5680384864706,
+   "far_5.0x": -2168.0710913626854,
+   "first_obs": "2026-06-08 15:04:00",
+   "median_hold_obs": 344.0,
+   "observations": 1939,
+   "twin_mean": -2151.9849600275797
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.4515484515484515,
+  "summary": {
+   "avg": -783.6597824622891,
+   "cap_2pct_max": 243768.20465692584,
+   "cap_2pct_median": 240965.13980804596,
+   "days": 2,
+   "fit_2pct_1L": 0.0,
+   "gross": 850.0,
+   "margin_median": 273614.0,
+   "max_dd": -2789.340129320308,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -1567.3195649245781,
+   "net_wo_top5": 0.0,
+   "trades": 2,
+   "win_rate": 0.5,
+   "worst_day": -2789.340129320308,
+   "worst_month": -2789.340129320308,
+   "worst_month_name": "2026-10",
+   "worst_trade": -2789.340129320308
+  },
+  "tradable_1L": false
+ },
+ "c-C1-GOLDM-2612-2701": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 2,
+    "time": 1
+   },
+   "far_1.0x": -3423.9478973671357,
+   "far_5.0x": -5277.620763720801,
+   "first_obs": "2026-07-06 09:06:00",
+   "median_hold_obs": 21.0,
+   "observations": 1804,
+   "twin_mean": -3245.4054363501987
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.7462537462537463,
+  "summary": {
+   "avg": -1450.2614435147532,
+   "cap_2pct_max": 267612.6972901721,
+   "cap_2pct_median": 265890.58385933377,
+   "days": 3,
+   "fit_2pct_1L": 0.0,
+   "gross": -630.0,
+   "margin_median": 273614.0,
+   "max_dd": -4350.784330544259,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -4350.784330544259,
+   "net_wo_top5": 0.0,
+   "trades": 3,
+   "win_rate": 0.0,
+   "worst_day": -1871.7280226226355,
+   "worst_month": -2977.3512066586263,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1871.7280226226355
+  },
+  "tradable_1L": false
+ },
+ "c-C1-GOLDM-2701-2702": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 6,
+    "time": 2
+   },
+   "far_1.0x": 943.8219532702601,
+   "far_5.0x": -4069.5546624054505,
+   "first_obs": "2026-08-07 09:21:00",
+   "median_hold_obs": 15.5,
+   "observations": 1220,
+   "twin_mean": -9723.24096681084
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.015984015984015984,
+  "summary": {
+   "avg": -195.358294321004,
+   "cap_2pct_max": 267298.7964739264,
+   "cap_2pct_median": 262184.117568744,
+   "days": 8,
+   "fit_2pct_1L": 0.0,
+   "gross": 8490.0,
+   "margin_median": 273614.0,
+   "max_dd": -2871.1691750788214,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -1562.866354568032,
+   "net_wo_top5": -3249.752252666258,
+   "trades": 8,
+   "win_rate": 0.375,
+   "worst_day": -1808.0030527661995,
+   "worst_month": -1552.2138541226605,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1808.0030527661995
+  },
+  "tradable_1L": false
+ },
+ "c-C1-SILVER-2612-2703": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "time": 3
+   },
+   "far_1.0x": 3875.743378630034,
+   "far_5.0x": -4608.27850114511,
+   "first_obs": "2026-07-06 18:51:00",
+   "median_hold_obs": 373.0,
+   "observations": 1317,
+   "twin_mean": -10907.244345627338
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.21878121878121878,
+  "summary": {
+   "avg": -122.0891870859917,
+   "cap_2pct_max": 3051412.895773385,
+   "cap_2pct_median": 2936105.863273465,
+   "days": 3,
+   "fit_2pct_1L": 0.0,
+   "gross": 15540.0,
+   "margin_median": 1710270.0,
+   "max_dd": -8773.698635332306,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -366.2675612579751,
+   "net_wo_top5": 0.0,
+   "trades": 3,
+   "win_rate": 0.6666666666666666,
+   "worst_day": -8773.698635332306,
+   "worst_month": -530.9965508000114,
+   "worst_month_name": "2026-09",
+   "worst_trade": -8773.698635332306
+  },
+  "tradable_1L": false
+ },
+ "c-C1-SILVERM-2611-2702": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "time": 3
+   },
+   "far_1.0x": -2897.4320918284798,
+   "far_5.0x": -4324.213251406869,
+   "first_obs": "2026-04-29 19:26:00",
+   "median_hold_obs": 577.0,
+   "observations": 1937,
+   "twin_mean": -2004.9978630424798
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.8261738261738262,
+  "summary": {
+   "avg": -1203.6075572059156,
+   "cap_2pct_max": 501370.07300331834,
+   "cap_2pct_median": 482503.31323261897,
+   "days": 3,
+   "fit_2pct_1L": 0.0,
+   "gross": -700.0,
+   "margin_median": 287860.0,
+   "max_dd": -3610.822671617747,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -3610.822671617747,
+   "net_wo_top5": 0.0,
+   "trades": 3,
+   "win_rate": 0.0,
+   "worst_day": -1818.7698262962151,
+   "worst_month": -2636.3225192392943,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1818.7698262962151
+  },
+  "tradable_1L": false
+ },
+ "c-C1-SILVERM-2702-2704": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "time": 3
+   },
+   "far_1.0x": -860.5677985974494,
+   "far_5.0x": -2320.0736757831137,
+   "first_obs": "2026-05-29 17:29:00",
+   "median_hold_obs": 443.0,
+   "observations": 1499,
+   "twin_mean": -2040.3241622671262
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.4515484515484515,
+  "summary": {
+   "avg": -530.1069123967362,
+   "cap_2pct_max": 381111.15493148996,
+   "cap_2pct_median": 367295.6645037961,
+   "days": 3,
+   "fit_2pct_1L": 0.0,
+   "gross": 1385.0,
+   "margin_median": 287860.0,
+   "max_dd": -1631.3433919850677,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -1590.3207371902088,
+   "net_wo_top5": 0.0,
+   "trades": 3,
+   "win_rate": 0.3333333333333333,
+   "worst_day": -1421.0340745118847,
+   "worst_month": -1421.0340745118847,
+   "worst_month_name": "2026-10",
+   "worst_trade": -1421.0340745118847
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-CRUDEOIL-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 13,
+    "stop": 12,
+    "time": 3
+   },
+   "far_1.0x": -53687.202268,
+   "far_5.0x": -76086.30626800001,
+   "first_obs": "2026-07-20 11:58:00",
+   "median_hold_obs": 31.5,
+   "observations": 1891,
+   "twin_mean": -35288.384496260005
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.916083916083916,
+  "summary": {
+   "avg": -2317.3840809999997,
+   "cap_2pct_max": 637137.6375930784,
+   "cap_2pct_median": 290552.7601216158,
+   "days": 21,
+   "fit_2pct_1L": 0.0,
+   "gross": -31500.0,
+   "margin_median": 534580.0,
+   "max_dd": -64886.754268,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -64886.754268,
+   "net_wo_top5": -85083.36566,
+   "trades": 28,
+   "win_rate": 0.39285714285714285,
+   "worst_day": -9939.366832,
+   "worst_month": -56935.588284000005,
+   "worst_month_name": "2026-09",
+   "worst_trade": -8504.69246
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-CRUDEOIL-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 17,
+    "stop": 6,
+    "time": 3
+   },
+   "far_1.0x": -23825.809055999995,
+   "far_5.0x": -44624.977055999996,
+   "first_obs": "2026-08-17 15:29:00",
+   "median_hold_obs": 20.0,
+   "observations": 1332,
+   "twin_mean": -35780.096493116
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.46653346653346656,
+  "summary": {
+   "avg": -1316.3612713846155,
+   "cap_2pct_max": 542477.0979459677,
+   "cap_2pct_median": 242563.5237592297,
+   "days": 20,
+   "fit_2pct_1L": 0.0,
+   "gross": -3200.0,
+   "margin_median": 534580.0,
+   "max_dd": -35206.82967200001,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -34225.393056,
+   "net_wo_top5": -52082.34121600001,
+   "trades": 26,
+   "win_rate": 0.4230769230769231,
+   "worst_day": -9087.871876,
+   "worst_month": -32775.07614,
+   "worst_month_name": "2026-09",
+   "worst_trade": -9087.871876
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-CRUDEOILM-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 14,
+    "stop": 11,
+    "time": 2
+   },
+   "far_1.0x": -4502.3966188,
+   "far_5.0x": -6662.310218799998,
+   "first_obs": "2026-05-28 19:43:00",
+   "median_hold_obs": 28.0,
+   "observations": 1940,
+   "twin_mean": -5783.796980924
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.4645354645354645,
+  "summary": {
+   "avg": -206.75383032592595,
+   "cap_2pct_max": 53256.5054536522,
+   "cap_2pct_median": 31947.964314307814,
+   "days": 22,
+   "fit_2pct_1L": 1.0,
+   "gross": -70.0,
+   "margin_median": 53458.0,
+   "max_dd": -5582.3534188,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -5582.3534188,
+   "net_wo_top5": -7540.1657780000005,
+   "trades": 27,
+   "win_rate": 0.4074074074074074,
+   "worst_day": -775.2826372,
+   "worst_month": -4775.8874368,
+   "worst_month_name": "2026-09",
+   "worst_trade": -935.394862
+  },
+  "tradable_1L": true
+ },
+ "c-Z1-CRUDEOILM-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 27,
+    "stop": 11
+   },
+   "far_1.0x": -5778.7968044,
+   "far_5.0x": -8818.6752044,
+   "first_obs": "2026-08-05 09:04:00",
+   "median_hold_obs": 21.5,
+   "observations": 1905,
+   "twin_mean": -8425.257441915199
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.2707292707292707,
+  "summary": {
+   "avg": -192.0720001157895,
+   "cap_2pct_max": 51301.50231335291,
+   "cap_2pct_median": 25865.320305710724,
+   "days": 27,
+   "fit_2pct_1L": 1.0,
+   "gross": 450.0,
+   "margin_median": 53458.0,
+   "max_dd": -7357.378625200001,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -7298.736004400002,
+   "net_wo_top5": -9211.896216,
+   "trades": 38,
+   "win_rate": 0.2894736842105263,
+   "worst_day": -1327.8233544,
+   "worst_month": -5536.140451200001,
+   "worst_month_name": "2026-09",
+   "worst_trade": -873.910154
+  },
+  "tradable_1L": true
+ },
+ "c-Z1-CRUDEOILM-2612-2701": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 26,
+    "stop": 7,
+    "time": 1
+   },
+   "far_1.0x": -5183.3150068,
+   "far_5.0x": -7903.206206800001,
+   "first_obs": "2026-08-17 15:38:00",
+   "median_hold_obs": 16.5,
+   "observations": 1540,
+   "twin_mean": -8373.669810242802
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.17682317682317683,
+  "summary": {
+   "avg": -192.44884137647057,
+   "cap_2pct_max": 49199.56904697187,
+   "cap_2pct_median": 31154.50128595128,
+   "days": 23,
+   "fit_2pct_1L": 1.0,
+   "gross": 370.0,
+   "margin_median": 53458.0,
+   "max_dd": -6809.7337772,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -6543.2606068,
+   "net_wo_top5": -8536.061744,
+   "trades": 34,
+   "win_rate": 0.35294117647058826,
+   "worst_day": -2015.5281455999998,
+   "worst_month": -6026.6562552,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1111.8908092
+  },
+  "tradable_1L": true
+ },
+ "c-Z1-GOLDM-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 58,
+    "stop": 9,
+    "time": 1
+   },
+   "far_1.0x": -51424.52710801192,
+   "far_5.0x": -92873.3678556881,
+   "first_obs": "2026-06-08 15:04:00",
+   "median_hold_obs": 5.0,
+   "observations": 1939,
+   "twin_mean": -88507.87080054391
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.004995004995004995,
+  "summary": {
+   "avg": -1061.0139335566607,
+   "cap_2pct_max": 144673.658098247,
+   "cap_2pct_median": 114405.90837433915,
+   "days": 31,
+   "fit_2pct_1L": 0.17647058823529413,
+   "gross": 11170.0,
+   "margin_median": 273614.0,
+   "max_dd": -72941.76917031936,
+   "months": 2,
+   "months_below_stop": 2,
+   "net": -72148.94748185293,
+   "net_wo_top5": -74192.9369688455,
+   "trades": 68,
+   "win_rate": 0.1323529411764706,
+   "worst_day": -7510.119234280246,
+   "worst_month": -55807.52046813394,
+   "worst_month_name": "2026-09",
+   "worst_trade": -2815.2464285165584
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-GOLDM-2612-2701": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 55,
+    "stop": 12
+   },
+   "far_1.0x": -73566.58093833695,
+   "far_5.0x": -114499.47553505053,
+   "first_obs": "2026-07-06 09:06:00",
+   "median_hold_obs": 4.0,
+   "observations": 1804,
+   "twin_mean": -89272.09790645637
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.7562437562437563,
+  "summary": {
+   "avg": -1403.4780333835013,
+   "cap_2pct_max": 151100.0700127167,
+   "cap_2pct_median": 119281.14444087859,
+   "days": 27,
+   "fit_2pct_1L": 0.04477611940298507,
+   "gross": -11810.0,
+   "margin_median": 273614.0,
+   "max_dd": -94033.02823669459,
+   "months": 2,
+   "months_below_stop": 2,
+   "net": -94033.02823669459,
+   "net_wo_top5": -95402.23693077693,
+   "trades": 67,
+   "win_rate": 0.05970149253731343,
+   "worst_day": -9807.372037593817,
+   "worst_month": -62224.794169115616,
+   "worst_month_name": "2026-09",
+   "worst_trade": -3301.4344736030826
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-GOLDM-2701-2702": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 42,
+    "stop": 9
+   },
+   "far_1.0x": -54940.29008626447,
+   "far_5.0x": -86350.51364803889,
+   "first_obs": "2026-08-07 09:21:00",
+   "median_hold_obs": 3.0,
+   "observations": 1220,
+   "twin_mean": -69081.29726246432
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.5664335664335665,
+  "summary": {
+   "avg": -1385.2039581794472,
+   "cap_2pct_max": 193023.26566042428,
+   "cap_2pct_median": 140455.6846818441,
+   "days": 25,
+   "fit_2pct_1L": 0.0,
+   "gross": -7600.0,
+   "margin_median": 273614.0,
+   "max_dd": -71953.7046876626,
+   "months": 2,
+   "months_below_stop": 2,
+   "net": -70645.40186715181,
+   "net_wo_top5": -75707.25524364488,
+   "trades": 51,
+   "win_rate": 0.1568627450980392,
+   "worst_day": -8142.219163730591,
+   "worst_month": -39019.78318103388,
+   "worst_month_name": "2026-09",
+   "worst_trade": -3780.2681484836858
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-NATGASMINI-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 17,
+    "stop": 14,
+    "time": 4
+   },
+   "far_1.0x": -6233.135023000335,
+   "far_5.0x": -9732.995023000138,
+   "first_obs": "2026-05-29 12:13:00",
+   "median_hold_obs": 19.0,
+   "observations": 1939,
+   "twin_mean": -7705.392663865803
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.5454545454545454,
+  "summary": {
+   "avg": -228.08757208570674,
+   "cap_2pct_max": 53635.266332293984,
+   "cap_2pct_median": 30555.124169627034,
+   "days": 23,
+   "fit_2pct_1L": 1.0,
+   "gross": -224.99999999993724,
+   "margin_median": 25936.0,
+   "max_dd": -9041.502037999779,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -7983.065022999735,
+   "net_wo_top5": -10146.958851999787,
+   "trades": 35,
+   "win_rate": 0.2857142857142857,
+   "worst_day": -1292.835435999983,
+   "worst_month": -6449.477160999821,
+   "worst_month_name": "2026-09",
+   "worst_trade": -873.40299
+  },
+  "tradable_1L": true
+ },
+ "c-Z1-NATGASMINI-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 29,
+    "stop": 17,
+    "time": 1
+   },
+   "far_1.0x": -7214.249336000563,
+   "far_5.0x": -11914.061336000294,
+   "first_obs": "2026-06-26 21:46:00",
+   "median_hold_obs": 12.0,
+   "observations": 1875,
+   "twin_mean": -11208.709956920737
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.15784215784215785,
+  "summary": {
+   "avg": -203.49266672339917,
+   "cap_2pct_max": 53947.781170773655,
+   "cap_2pct_median": 25700.03959895147,
+   "days": 30,
+   "fit_2pct_1L": 1.0,
+   "gross": 999.9999999999715,
+   "margin_median": 25936.0,
+   "max_dd": -10066.206345999777,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -9564.155335999762,
+   "net_wo_top5": -11215.862844999796,
+   "trades": 47,
+   "win_rate": 0.2553191489361702,
+   "worst_day": -1277.9137229999915,
+   "worst_month": -5965.0117809998665,
+   "worst_month_name": "2026-09",
+   "worst_trade": -650.3052589999915
+  },
+  "tradable_1L": true
+ },
+ "c-Z1-NATGASMINI-2612-2701": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 21,
+    "stop": 10,
+    "time": 2
+   },
+   "far_1.0x": -3643.7955530003746,
+   "far_5.0x": -6943.663553000187,
+   "first_obs": "2026-08-04 17:17:00",
+   "median_hold_obs": 9.0,
+   "observations": 1285,
+   "twin_mean": -8178.630444772819
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.055944055944055944,
+  "summary": {
+   "avg": -160.4160470606004,
+   "cap_2pct_max": 45881.752077279125,
+   "cap_2pct_median": 25730.665034995014,
+   "days": 19,
+   "fit_2pct_1L": 1.0,
+   "gross": 2125.0000000000005,
+   "margin_median": 25936.0,
+   "max_dd": -5993.266828999829,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -5293.729552999813,
+   "net_wo_top5": -7268.092396999834,
+   "trades": 33,
+   "win_rate": 0.45454545454545453,
+   "worst_day": -1602.1590049999659,
+   "worst_month": -4294.890620999898,
+   "worst_month_name": "2026-10",
+   "worst_trade": -1324.7560519999886
+  },
+  "tradable_1L": true
+ },
+ "c-Z1-NATURALGAS-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 18,
+    "stop": 14,
+    "time": 3
+   },
+   "far_1.0x": -13694.558575002273,
+   "far_5.0x": -31193.85857500128,
+   "first_obs": "2026-07-09 22:02:00",
+   "median_hold_obs": 18.0,
+   "observations": 1926,
+   "twin_mean": -25633.064690563973
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.3826173826173826,
+  "summary": {
+   "avg": -641.2631021428369,
+   "cap_2pct_max": 280291.8884241783,
+   "cap_2pct_median": 136861.3563157554,
+   "days": 23,
+   "fit_2pct_1L": 0.05714285714285714,
+   "gross": 3124.999999999715,
+   "margin_median": 129684.0,
+   "max_dd": -30965.057009999306,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -22444.208574999295,
+   "net_wo_top5": -35027.83243499929,
+   "trades": 35,
+   "win_rate": 0.42857142857142855,
+   "worst_day": -5584.057394999886,
+   "worst_month": -21044.91513999946,
+   "worst_month_name": "2026-09",
+   "worst_trade": -3979.57253
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-NATURALGAS-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 21,
+    "stop": 16
+   },
+   "far_1.0x": -24239.763385001806,
+   "far_5.0x": -42739.02338500075,
+   "first_obs": "2026-07-22 19:20:00",
+   "median_hold_obs": 14.0,
+   "observations": 1743,
+   "twin_mean": -29261.729129533942
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.7362637362637363,
+  "summary": {
+   "avg": -905.1187401350986,
+   "cap_2pct_max": 252354.41804213487,
+   "cap_2pct_median": 111469.23121115538,
+   "days": 27,
+   "fit_2pct_1L": 0.24324324324324326,
+   "gross": -5874.9999999997,
+   "margin_median": 129684.0,
+   "max_dd": -35255.78952499867,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -33489.39338499865,
+   "net_wo_top5": -40508.10105499889,
+   "trades": 37,
+   "win_rate": 0.2702702702702703,
+   "worst_day": -4490.574499999915,
+   "worst_month": -21784.534114999176,
+   "worst_month_name": "2026-09",
+   "worst_trade": -3869.738724999972
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-SILVER-2612-2703": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 32,
+    "stop": 8
+   },
+   "far_1.0x": -99952.93171615264,
+   "far_5.0x": -212647.72362791284,
+   "first_obs": "2026-07-06 18:51:00",
+   "median_hold_obs": 4.0,
+   "observations": 1317,
+   "twin_mean": -244637.38210907465
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.01998001998001998,
+  "summary": {
+   "avg": -3907.508191800819,
+   "cap_2pct_max": 1070262.5654716315,
+   "cap_2pct_median": 784941.6579337422,
+   "days": 23,
+   "fit_2pct_1L": 0.0,
+   "gross": 54990.0,
+   "margin_median": 1710270.0,
+   "max_dd": -156300.32767203273,
+   "months": 2,
+   "months_below_stop": 2,
+   "net": -156300.32767203276,
+   "net_wo_top5": -205855.0696997344,
+   "trades": 40,
+   "win_rate": 0.325,
+   "worst_day": -30103.241648122075,
+   "worst_month": -84821.82125291858,
+   "worst_month_name": "2026-10",
+   "worst_trade": -20909.33196280942
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-SILVERM-2611-2702": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 54,
+    "stop": 14
+   },
+   "far_1.0x": -52926.163731499255,
+   "far_5.0x": -85195.40031606461,
+   "first_obs": "2026-04-29 19:26:00",
+   "median_hold_obs": 5.0,
+   "observations": 1937,
+   "twin_mean": -71394.52089200624
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.34465534465534464,
+  "summary": {
+   "avg": -1015.5997356438425,
+   "cap_2pct_max": 150107.77052520265,
+   "cap_2pct_median": 107350.2064199069,
+   "days": 29,
+   "fit_2pct_1L": 0.38235294117647056,
+   "gross": -3220.0,
+   "margin_median": 287860.0,
+   "max_dd": -69060.78202378127,
+   "months": 2,
+   "months_below_stop": 2,
+   "net": -69060.78202378128,
+   "net_wo_top5": -71447.1108490762,
+   "trades": 68,
+   "win_rate": 0.11764705882352941,
+   "worst_day": -11209.116912894446,
+   "worst_month": -40225.58554224055,
+   "worst_month_name": "2026-09",
+   "worst_trade": -2706.333996477769
+  },
+  "tradable_1L": false
+ },
+ "c-Z1-SILVERM-2702-2704": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 45,
+    "stop": 8
+   },
+   "far_1.0x": -43878.677888264676,
+   "far_5.0x": -69657.15581475395,
+   "first_obs": "2026-05-29 17:29:00",
+   "median_hold_obs": 4.0,
+   "observations": 1499,
+   "twin_mean": -60040.22245684249
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.36863136863136864,
+  "summary": {
+   "avg": -1071.092770783207,
+   "cap_2pct_max": 176588.6111874328,
+   "cap_2pct_median": 130663.84986483968,
+   "days": 29,
+   "fit_2pct_1L": 0.0,
+   "gross": -4215.0,
+   "margin_median": 287860.0,
+   "max_dd": -56767.91685150997,
+   "months": 2,
+   "months_below_stop": 2,
+   "net": -56767.91685150997,
+   "net_wo_top5": -63181.345144394814,
+   "trades": 53,
+   "win_rate": 0.11320754716981132,
+   "worst_day": -4990.567955498845,
+   "worst_month": -36643.445388811626,
+   "worst_month_name": "2026-09",
+   "worst_trade": -3094.7048036541537
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-CRUDEOIL-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 3,
+    "stop": 5
+   },
+   "far_1.0x": -20524.507159999997,
+   "far_5.0x": -26924.251160000003,
+   "first_obs": "2026-07-20 11:58:00",
+   "median_hold_obs": 114.0,
+   "observations": 1891,
+   "twin_mean": -10421.915222239999
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.7062937062937062,
+  "summary": {
+   "avg": -2965.5473949999996,
+   "cap_2pct_max": 520448.8953038788,
+   "cap_2pct_median": 469426.5549433734,
+   "days": 8,
+   "fit_2pct_1L": 0.0,
+   "gross": -14200.0,
+   "margin_median": 534580.0,
+   "max_dd": -23724.37916,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -23724.379159999997,
+   "net_wo_top5": -31883.632228000002,
+   "trades": 8,
+   "win_rate": 0.375,
+   "worst_day": -12203.951336,
+   "worst_month": -13235.703683999998,
+   "worst_month_name": "2026-09",
+   "worst_trade": -12203.951336
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-CRUDEOIL-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 2,
+    "time": 1
+   },
+   "far_1.0x": -14701.890452,
+   "far_5.0x": -17101.794452,
+   "first_obs": "2026-08-17 15:29:00",
+   "median_hold_obs": 122.0,
+   "observations": 1332,
+   "twin_mean": -3420.203986292
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.9210789210789211,
+  "summary": {
+   "avg": -5300.614150666667,
+   "cap_2pct_max": 526045.3250651546,
+   "cap_2pct_median": 188877.46111374855,
+   "days": 3,
+   "fit_2pct_1L": 0.0,
+   "gross": -12300.0,
+   "margin_median": 534580.0,
+   "max_dd": -15901.842452,
+   "months": 1,
+   "months_below_stop": 1,
+   "net": -15901.842452,
+   "net_wo_top5": 0.0,
+   "trades": 3,
+   "win_rate": 0.0,
+   "worst_day": -6986.74384,
+   "worst_month": -15901.842452,
+   "worst_month_name": "2026-10",
+   "worst_trade": -6986.74384
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-CRUDEOILM-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 3,
+    "stop": 5
+   },
+   "far_1.0x": -3501.46811,
+   "far_5.0x": -4141.44251,
+   "first_obs": "2026-05-28 19:43:00",
+   "median_hold_obs": 113.0,
+   "observations": 1940,
+   "twin_mean": -1615.8236689572
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.8251748251748252,
+  "summary": {
+   "avg": -477.68191375000004,
+   "cap_2pct_max": 56742.890231666526,
+   "cap_2pct_median": 42991.634801369866,
+   "days": 8,
+   "fit_2pct_1L": 1.0,
+   "gross": -2190.0,
+   "margin_median": 53458.0,
+   "max_dd": -3821.4553100000003,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -3821.4553100000003,
+   "net_wo_top5": -3422.9758276000002,
+   "trades": 8,
+   "win_rate": 0.375,
+   "worst_day": -1213.5028572,
+   "worst_month": -2607.9524528,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1213.5028572
+  },
+  "tradable_1L": true
+ },
+ "c-Z2-CRUDEOILM-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 6,
+    "stop": 6
+   },
+   "far_1.0x": -2937.6665419999995,
+   "far_5.0x": -3897.6281420000005,
+   "first_obs": "2026-08-05 09:04:00",
+   "median_hold_obs": 88.0,
+   "observations": 1905,
+   "twin_mean": -2405.4728429723996
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.7262737262737263,
+  "summary": {
+   "avg": -284.8039451666666,
+   "cap_2pct_max": 68382.7889273245,
+   "cap_2pct_median": 39134.16432166693,
+   "days": 10,
+   "fit_2pct_1L": 1.0,
+   "gross": -970.0,
+   "margin_median": 53458.0,
+   "max_dd": -3463.5471295999996,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -3417.6473419999993,
+   "net_wo_top5": -4867.6815368,
+   "trades": 12,
+   "win_rate": 0.4166666666666667,
+   "worst_day": -1003.5602544,
+   "worst_month": -1764.1556752,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1003.5602544
+  },
+  "tradable_1L": true
+ },
+ "c-Z2-CRUDEOILM-2612-2701": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 4,
+    "stop": 2
+   },
+   "far_1.0x": -1161.973692,
+   "far_5.0x": -1641.9544919999998,
+   "first_obs": "2026-08-17 15:38:00",
+   "median_hold_obs": 113.0,
+   "observations": 1540,
+   "twin_mean": -1369.5563320048
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.5044955044955045,
+  "summary": {
+   "avg": -233.66068199999998,
+   "cap_2pct_max": 85987.8847028518,
+   "cap_2pct_median": 54842.83962081209,
+   "days": 6,
+   "fit_2pct_1L": 1.0,
+   "gross": -180.0,
+   "margin_median": 53458.0,
+   "max_dd": -2038.4637392,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -1401.964092,
+   "net_wo_top5": -913.1142836,
+   "trades": 6,
+   "win_rate": 0.3333333333333333,
+   "worst_day": -913.1142836,
+   "worst_month": -1665.4035004,
+   "worst_month_name": "2026-10",
+   "worst_trade": -913.1142836
+  },
+  "tradable_1L": true
+ },
+ "c-Z2-GOLDM-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 18,
+    "stop": 5
+   },
+   "far_1.0x": -24279.321151906497,
+   "far_5.0x": -38342.99306819466,
+   "first_obs": "2026-06-08 15:04:00",
+   "median_hold_obs": 11.0,
+   "observations": 1939,
+   "twin_mean": -29202.520433071026
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.6893106893106893,
+  "summary": {
+   "avg": -1361.35465695874,
+   "cap_2pct_max": 197578.6706344799,
+   "cap_2pct_median": 118645.5845883786,
+   "days": 15,
+   "fit_2pct_1L": 0.0,
+   "gross": -3040.0,
+   "margin_median": 273614.0,
+   "max_dd": -31435.067854489705,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -31311.15711005102,
+   "net_wo_top5": -30145.943747304205,
+   "trades": 23,
+   "win_rate": 0.043478260869565216,
+   "worst_day": -5684.138143952612,
+   "worst_month": -27251.838132167188,
+   "worst_month_name": "2026-09",
+   "worst_trade": -2947.3516481171278
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-GOLDM-2612-2701": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 25,
+    "stop": 8
+   },
+   "far_1.0x": -35798.99750582583,
+   "far_5.0x": -55953.08785909746,
+   "first_obs": "2026-07-06 09:06:00",
+   "median_hold_obs": 7.0,
+   "observations": 1804,
+   "twin_mean": -44082.05325808367
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.6273726273726273,
+  "summary": {
+   "avg": -1390.1831115897555,
+   "cap_2pct_max": 207168.29037865385,
+   "cap_2pct_median": 134096.22303347816,
+   "days": 23,
+   "fit_2pct_1L": 0.0,
+   "gross": -5390.0,
+   "margin_median": 273614.0,
+   "max_dd": -45876.04268246194,
+   "months": 2,
+   "months_below_stop": 2,
+   "net": -45876.042682461935,
+   "net_wo_top5": -47350.51964913521,
+   "trades": 33,
+   "win_rate": 0.12121212121212122,
+   "worst_day": -6232.888723399001,
+   "worst_month": -26412.28844994337,
+   "worst_month_name": "2026-09",
+   "worst_trade": -3301.4344736030826
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-GOLDM-2701-2702": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 16,
+    "stop": 3
+   },
+   "far_1.0x": -16533.21175273926,
+   "far_5.0x": -28312.29844680932,
+   "first_obs": "2026-08-07 09:21:00",
+   "median_hold_obs": 8.0,
+   "observations": 1220,
+   "twin_mean": -25936.33587327469
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.27972027972027974,
+  "summary": {
+   "avg": -1180.1450052512782,
+   "cap_2pct_max": 209998.06505983984,
+   "cap_2pct_median": 174395.2206558257,
+   "days": 14,
+   "fit_2pct_1L": 0.0,
+   "gross": 1210.0,
+   "margin_median": 273614.0,
+   "max_dd": -22422.755099774287,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -22422.755099774287,
+   "net_wo_top5": -23956.47380804888,
+   "trades": 19,
+   "win_rate": 0.15789473684210525,
+   "worst_day": -5272.143545422063,
+   "worst_month": -14491.594100700908,
+   "worst_month_name": "2026-09",
+   "worst_trade": -4250.715133191307
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-NATGASMINI-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 4,
+    "stop": 1,
+    "time": 1
+   },
+   "far_1.0x": 544.2042249999206,
+   "far_5.0x": -55.771775000045295,
+   "first_obs": "2026-05-29 12:13:00",
+   "median_hold_obs": 169.5,
+   "observations": 1939,
+   "twin_mean": -1525.8872691689646
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.2047952047952048,
+  "summary": {
+   "avg": 40.702704166670436,
+   "cap_2pct_max": 102603.66155245385,
+   "cap_2pct_median": 60436.47597523329,
+   "days": 6,
+   "fit_2pct_1L": 0.8333333333333334,
+   "gross": 1574.9999999999886,
+   "margin_median": 25936.0,
+   "max_dd": -2164.269941999983,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": 244.21622500002263,
+   "net_wo_top5": -1196.5869789999886,
+   "trades": 6,
+   "win_rate": 0.6666666666666666,
+   "worst_day": -1196.5869789999886,
+   "worst_month": -1686.7426899999743,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1196.5869789999886
+  },
+  "tradable_1L": true
+ },
+ "c-Z2-NATGASMINI-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 7,
+    "stop": 3
+   },
+   "far_1.0x": 25.95217499989195,
+   "far_5.0x": -974.0078250000511,
+   "first_obs": "2026-06-26 21:46:00",
+   "median_hold_obs": 99.5,
+   "observations": 1875,
+   "twin_mean": -2378.644529720946
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.08891108891108891,
+  "summary": {
+   "avg": -47.40278249999375,
+   "cap_2pct_max": 51660.90645761589,
+   "cap_2pct_median": 38829.08967682042,
+   "days": 9,
+   "fit_2pct_1L": 1.0,
+   "gross": 1775.0000000000055,
+   "margin_median": 25936.0,
+   "max_dd": -1275.6962679999774,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -474.0278249999375,
+   "net_wo_top5": -1873.733869999986,
+   "trades": 10,
+   "win_rate": 0.5,
+   "worst_day": -600.1955109999943,
+   "worst_month": -424.4445399999829,
+   "worst_month_name": "2026-10",
+   "worst_trade": -701.3003950000028
+  },
+  "tradable_1L": true
+ },
+ "c-Z2-NATGASMINI-2612-2701": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 2,
+    "stop": 2
+   },
+   "far_1.0x": -676.691303000054,
+   "far_5.0x": -1076.6753030000314,
+   "first_obs": "2026-08-04 17:17:00",
+   "median_hold_obs": 74.0,
+   "observations": 1285,
+   "twin_mean": -898.6906836819792
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.4825174825174825,
+  "summary": {
+   "avg": -219.17082574999642,
+   "cap_2pct_max": 63576.10452342488,
+   "cap_2pct_median": 42291.61572365203,
+   "days": 4,
+   "fit_2pct_1L": 1.0,
+   "gross": 24.999999999991473,
+   "margin_median": 25936.0,
+   "max_dd": -1725.7417989999942,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -876.6833029999857,
+   "net_wo_top5": 0.0,
+   "trades": 4,
+   "win_rate": 0.5,
+   "worst_day": -875.1737659999858,
+   "worst_month": -1401.6082649999914,
+   "worst_month_name": "2026-10",
+   "worst_trade": -875.1737659999858
+  },
+  "tradable_1L": true
+ },
+ "c-Z2-NATURALGAS-2610-2611": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 5,
+    "time": 2
+   },
+   "far_1.0x": 10385.896379999675,
+   "far_5.0x": 6886.036379999872,
+   "first_obs": "2026-07-09 22:02:00",
+   "median_hold_obs": 151.0,
+   "observations": 1926,
+   "twin_mean": -6124.542923459804
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": true,
+   "pass": true
+  },
+  "idea": "idea1",
+  "p": 0.08691308691308691,
+  "summary": {
+   "avg": 1233.7094828571812,
+   "cap_2pct_max": 494187.5130681287,
+   "cap_2pct_median": 292045.2636846844,
+   "days": 7,
+   "fit_2pct_1L": 0.0,
+   "gross": 13750.00000000007,
+   "margin_median": 129684.0,
+   "max_dd": -7438.31735999983,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": 8635.966380000269,
+   "net_wo_top5": -8709.824229999887,
+   "trades": 7,
+   "win_rate": 0.7142857142857143,
+   "worst_day": -5605.356384999944,
+   "worst_month": -5298.174294999787,
+   "worst_month_name": "2026-09",
+   "worst_trade": -5605.356384999944
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-NATURALGAS-2611-2612": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 6,
+    "stop": 5
+   },
+   "far_1.0x": -3337.2418450004975,
+   "far_5.0x": -8837.021845000185,
+   "first_obs": "2026-07-22 19:20:00",
+   "median_hold_obs": 87.0,
+   "observations": 1743,
+   "twin_mean": -8906.620786114689
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.3276723276723277,
+  "summary": {
+   "avg": -553.3756222726873,
+   "cap_2pct_max": 281839.6887526636,
+   "cap_2pct_median": 171133.64361989056,
+   "days": 10,
+   "fit_2pct_1L": 0.0,
+   "gross": 2125.000000000128,
+   "margin_median": 129684.0,
+   "max_dd": -12480.443059999816,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -6087.131844999561,
+   "net_wo_top5": -14603.222204999785,
+   "trades": 11,
+   "win_rate": 0.36363636363636365,
+   "worst_day": -3490.724350000028,
+   "worst_month": -6478.581839999915,
+   "worst_month_name": "2026-10",
+   "worst_trade": -3490.724350000028
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-SILVER-2612-2703": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 21,
+    "stop": 1
+   },
+   "far_1.0x": -3533.523432001021,
+   "far_5.0x": -65613.24352905675,
+   "first_obs": "2026-07-06 18:51:00",
+   "median_hold_obs": 7.0,
+   "observations": 1317,
+   "twin_mean": -135507.5697952341
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.001998001998001998,
+  "summary": {
+   "avg": -1571.5174309331715,
+   "cap_2pct_max": 1415014.2229416585,
+   "cap_2pct_median": 951348.6014325793,
+   "days": 19,
+   "fit_2pct_1L": 0.0,
+   "gross": 81810.0,
+   "margin_median": 1710270.0,
+   "max_dd": -51288.896423073005,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -34573.383480529774,
+   "net_wo_top5": -74275.7200680596,
+   "trades": 22,
+   "win_rate": 0.5454545454545454,
+   "worst_day": -19570.6704434128,
+   "worst_month": -28259.5153792138,
+   "worst_month_name": "2026-10",
+   "worst_trade": -16529.29712851138
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-SILVERM-2611-2702": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 24,
+    "stop": 3
+   },
+   "far_1.0x": -14866.283034215363,
+   "far_5.0x": -27588.074362273066,
+   "first_obs": "2026-04-29 19:26:00",
+   "median_hold_obs": 13.0,
+   "observations": 1937,
+   "twin_mean": -28285.08215916478
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.029970029970029972,
+  "summary": {
+   "avg": -786.1918036386638,
+   "cap_2pct_max": 204638.06675168354,
+   "cap_2pct_median": 113649.87151423449,
+   "days": 20,
+   "fit_2pct_1L": 0.07407407407407407,
+   "gross": 4745.0,
+   "margin_median": 287860.0,
+   "max_dd": -21369.749601707295,
+   "months": 2,
+   "months_below_stop": 1,
+   "net": -21227.178698243923,
+   "net_wo_top5": -22664.9365400096,
+   "trades": 27,
+   "win_rate": 0.18518518518518517,
+   "worst_day": -3438.2170028402707,
+   "worst_month": -16671.58076050605,
+   "worst_month_name": "2026-10",
+   "worst_trade": -2871.867706571183
+  },
+  "tradable_1L": false
+ },
+ "c-Z2-SILVERM-2702-2704": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 26,
+    "stop": 3
+   },
+   "far_1.0x": -16669.421855185352,
+   "far_5.0x": -30610.625746138176,
+   "first_obs": "2026-05-29 17:29:00",
+   "median_hold_obs": 11.0,
+   "observations": 1499,
+   "twin_mean": -32594.23947621756
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea1",
+  "p": 0.07292707292707293,
+  "summary": {
+   "avg": -815.1732345055832,
+   "cap_2pct_max": 198844.39953313518,
+   "cap_2pct_median": 141659.58109815358,
+   "days": 21,
+   "fit_2pct_1L": 0.0,
+   "gross": 4810.0,
+   "margin_median": 287860.0,
+   "max_dd": -27734.497266943967,
+   "months": 2,
+   "months_below_stop": 0,
+   "net": -23640.02380066191,
+   "net_wo_top5": -29343.483206131055,
+   "trades": 29,
+   "win_rate": 0.20689655172413793,
+   "worst_day": -5726.011058713297,
+   "worst_month": -12942.23130891623,
+   "worst_month_name": "2026-10",
+   "worst_trade": -2891.8757552718926
+  },
+  "tradable_1L": false
+ },
+ "g-G1-CRUDEOILM": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.4174439218438233,
+   "corr_u_gap0900": 0.8619904991210307,
+   "longs": 5,
+   "n_e_rest": 135,
+   "n_u_gap0900": 135,
+   "stops": 1
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea5",
+  "p": 0.33466533466533466,
+  "summary": {
+   "avg": 632.3426824307692,
+   "cap_2pct_max": 186344.22982571428,
+   "cap_2pct_median": 104989.47053428572,
+   "days": 13,
+   "fit_2pct_1L": 0.46153846153846156,
+   "gross": 9290.0,
+   "margin_median": 26729.0,
+   "max_dd": -4364.869138800002,
+   "months": 7,
+   "months_below_stop": 0,
+   "net": 8220.454871599999,
+   "net_wo_top5": -5526.684632400001,
+   "trades": 13,
+   "win_rate": 0.46153846153846156,
+   "worst_day": -2624.2156744,
+   "worst_month": -2623.5316824,
+   "worst_month_name": "2026-07",
+   "worst_trade": -2624.2156744
+  },
+  "tradable_1L": false
+ },
+ "g-G1-GOLDM": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.14731989963552697,
+   "corr_u_gap0900": 0.7385672161734951,
+   "longs": 9,
+   "n_e_rest": 130,
+   "n_u_gap0900": 130,
+   "stops": 2
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea5",
+  "p": 0.19880119880119881,
+  "summary": {
+   "avg": 740.7204432566796,
+   "cap_2pct_max": 891254.7908799999,
+   "cap_2pct_median": 588473.0908449999,
+   "days": 23,
+   "fit_2pct_1L": 0.0,
+   "gross": 27530.0,
+   "margin_median": 136807.0,
+   "max_dd": -29061.819851551318,
+   "months": 7,
+   "months_below_stop": 0,
+   "net": 17036.57019490363,
+   "net_wo_top5": -34008.03708071178,
+   "trades": 23,
+   "win_rate": 0.5652173913043478,
+   "worst_day": -16650.12990768471,
+   "worst_month": -12919.84403948012,
+   "worst_month_name": "2026-10",
+   "worst_trade": -16650.12990768471
+  },
+  "tradable_1L": false
+ },
+ "g-G1-NATGASMINI": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.017048233588951498,
+   "corr_u_gap0900": 0.6306696483666416,
+   "longs": 6,
+   "n_e_rest": 135,
+   "n_u_gap0900": 135,
+   "stops": 1
+  },
+  "gate": {
+   "month_stop": true,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea5",
+  "p": 0.7052947052947053,
+  "summary": {
+   "avg": -181.35710600000604,
+   "cap_2pct_max": 84209.0117660714,
+   "cap_2pct_median": 68101.54799374995,
+   "days": 12,
+   "fit_2pct_1L": 1.0,
+   "gross": -1175.0000000000045,
+   "margin_median": 12968.0,
+   "max_dd": -2571.707337000051,
+   "months": 6,
+   "months_below_stop": 0,
+   "net": -2176.2852720000724,
+   "net_wo_top5": -3438.234095000062,
+   "trades": 12,
+   "win_rate": 0.4166666666666667,
+   "worst_day": -1433.288453000014,
+   "worst_month": -1165.2322770000253,
+   "worst_month_name": "2026-07",
+   "worst_trade": -1433.288453000014
+  },
+  "tradable_1L": true
+ },
+ "g-G1-SILVERM": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.13599254803044553,
+   "corr_u_gap0900": 0.8753731851981457,
+   "longs": 13,
+   "n_e_rest": 126,
+   "n_u_gap0900": 125,
+   "stops": 2
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea5",
+  "p": 0.4875124875124875,
+  "summary": {
+   "avg": -428.83801502247843,
+   "cap_2pct_max": 1453923.9907925,
+   "cap_2pct_median": 846787.2311974999,
+   "days": 21,
+   "fit_2pct_1L": 0.0,
+   "gross": -1180.0,
+   "margin_median": 143930.0,
+   "max_dd": -50214.3018648862,
+   "months": 6,
+   "months_below_stop": 2,
+   "net": -9005.598315472047,
+   "net_wo_top5": -90021.08146636674,
+   "trades": 21,
+   "win_rate": 0.42857142857142855,
+   "worst_day": -30838.315190385107,
+   "worst_month": -30834.798383319485,
+   "worst_month_name": "2026-05",
+   "worst_trade": -30838.315190385107
+  },
+  "tradable_1L": false
+ },
+ "g-G2-CRUDEOILM": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.4174439218438233,
+   "corr_u_gap0900": 0.8619904991210307,
+   "longs": 28,
+   "n_e_rest": 135,
+   "n_u_gap0900": 135,
+   "stops": 4
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea5",
+  "p": 0.2627372627372627,
+  "summary": {
+   "avg": 117.66634352982454,
+   "cap_2pct_max": 205650.74808642856,
+   "cap_2pct_median": 110666.99910071427,
+   "days": 57,
+   "fit_2pct_1L": 0.40350877192982454,
+   "gross": 11370.0,
+   "margin_median": 26729.0,
+   "max_dd": -8999.557794000002,
+   "months": 7,
+   "months_below_stop": 0,
+   "net": 6706.981581199999,
+   "net_wo_top5": -11953.2976304,
+   "trades": 57,
+   "win_rate": 0.47368421052631576,
+   "worst_day": -2624.2156744,
+   "worst_month": -7804.5144204,
+   "worst_month_name": "2026-05",
+   "worst_trade": -2624.2156744
+  },
+  "tradable_1L": false
+ },
+ "g-G2-GOLDM": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.14731989963552697,
+   "corr_u_gap0900": 0.7385672161734951,
+   "longs": 26,
+   "n_e_rest": 130,
+   "n_u_gap0900": 130,
+   "stops": 6
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea5",
+  "p": 0.38161838161838163,
+  "summary": {
+   "avg": -328.60737637694183,
+   "cap_2pct_max": 1484604.2230721426,
+   "cap_2pct_median": 698083.0888089285,
+   "days": 64,
+   "fit_2pct_1L": 0.0,
+   "gross": 7970.0,
+   "margin_median": 136807.0,
+   "max_dd": -99046.53910381085,
+   "months": 7,
+   "months_below_stop": 2,
+   "net": -21030.872088124277,
+   "net_wo_top5": -109158.4804396637,
+   "trades": 64,
+   "win_rate": 0.515625,
+   "worst_day": -18887.193578506114,
+   "worst_month": -40909.751286920015,
+   "worst_month_name": "2026-08",
+   "worst_trade": -18887.193578506114
+  },
+  "tradable_1L": false
+ },
+ "g-G2-NATGASMINI": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.017048233588951498,
+   "corr_u_gap0900": 0.6306696483666416,
+   "longs": 33,
+   "n_e_rest": 135,
+   "n_u_gap0900": 135,
+   "stops": 0
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": true,
+   "pass": true
+  },
+  "idea": "idea5",
+  "p": 0.012987012987012988,
+  "summary": {
+   "avg": 47.77605414705234,
+   "cap_2pct_max": 91320.30046071422,
+   "cap_2pct_median": 67479.63439999994,
+   "days": 68,
+   "fit_2pct_1L": 1.0,
+   "gross": 8949.999999999944,
+   "margin_median": 12968.0,
+   "max_dd": -4230.284232000136,
+   "months": 7,
+   "months_below_stop": 0,
+   "net": 3248.7716819995594,
+   "net_wo_top5": -2377.5057350004236,
+   "trades": 68,
+   "win_rate": 0.4852941176470588,
+   "worst_day": -1135.1928340000027,
+   "worst_month": -2962.5666420000853,
+   "worst_month_name": "2026-09",
+   "worst_trade": -1135.1928340000027
+  },
+  "tradable_1L": true
+ },
+ "g-G2-SILVERM": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "corr_e_0905_1400": 0.13599254803044553,
+   "corr_u_gap0900": 0.8753731851981457,
+   "longs": 29,
+   "n_e_rest": 126,
+   "n_u_gap0900": 125,
+   "stops": 4
+  },
+  "gate": {
+   "month_stop": false,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea5",
+  "p": 0.34965034965034963,
+  "summary": {
+   "avg": 72.04229633495932,
+   "cap_2pct_max": 1588902.974845,
+   "cap_2pct_median": 831991.7352617857,
+   "days": 62,
+   "fit_2pct_1L": 0.0,
+   "gross": 27575.0,
+   "margin_median": 143930.0,
+   "max_dd": -77427.56710896548,
+   "months": 7,
+   "months_below_stop": 2,
+   "net": 4466.622372767478,
+   "net_wo_top5": -102646.87831054417,
+   "trades": 62,
+   "win_rate": 0.5806451612903226,
+   "worst_day": -30838.315190385107,
+   "worst_month": -29817.765457832124,
+   "worst_month_name": "2026-06",
+   "worst_trade": -30838.315190385107
+  },
+  "tradable_1L": false
+ },
+ "p-CA-W120": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 3,
+    "stop": 2,
+    "time": 19
+   },
+   "label": "METLDEX proxy (fails liquidity rule)",
+   "liquid": false,
+   "rolls_paid": 41,
+   "rows": 1175,
+   "twin_mean": -32757.25715749223
+  },
+  "gate": {
+   "month_stop": false,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.26573426573426573,
+  "summary": {
+   "avg": 4338.586191411241,
+   "cap_2pct_max": 5947168.5633430695,
+   "cap_2pct_median": 2510227.946678105,
+   "days": 24,
+   "fit_2pct_1L": 0.0,
+   "gross": 150327.74859386974,
+   "margin_median": 185000.0,
+   "max_dd": -218056.1273122364,
+   "months": 23,
+   "months_below_stop": 9,
+   "net": 104126.06859386979,
+   "net_wo_top5": -195305.2035315676,
+   "trades": 24,
+   "win_rate": 0.5416666666666666,
+   "worst_day": -146667.16369266782,
+   "worst_month": -146667.16369266782,
+   "worst_month_name": "2026-01",
+   "worst_trade": -146667.16369266782
+  },
+  "tradable_1L": false
+ },
+ "p-CA-W60": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 10,
+    "stop": 12,
+    "time": 15
+   },
+   "label": "METLDEX proxy (fails liquidity rule)",
+   "liquid": false,
+   "rolls_paid": 44,
+   "rows": 1175,
+   "twin_mean": -81292.8361219979
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.4855144855144855,
+  "summary": {
+   "avg": -1728.3546597298694,
+   "cap_2pct_max": 3661589.08887452,
+   "cap_2pct_median": 1573286.740509595,
+   "days": 37,
+   "fit_2pct_1L": 0.0,
+   "gross": -2692.962410005144,
+   "margin_median": 185000.0,
+   "max_dd": -320689.5087753346,
+   "months": 31,
+   "months_below_stop": 14,
+   "net": -63949.12241000516,
+   "net_wo_top5": -417513.37794138276,
+   "trades": 37,
+   "win_rate": 0.4864864864864865,
+   "worst_day": -127009.46904506913,
+   "worst_month": -127009.46904506913,
+   "worst_month_name": "2026-04",
+   "worst_trade": -127009.46904506913
+  },
+  "tradable_1L": false
+ },
+ "p-CN-W120": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 4,
+    "stop": 2,
+    "time": 12
+   },
+   "label": "ENRGDEX proxy (not an economic pair)",
+   "liquid": true,
+   "rolls_paid": 23,
+   "rows": 1179,
+   "twin_mean": -49535.33816679406
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.5164835164835165,
+  "summary": {
+   "avg": -2653.011632892807,
+   "cap_2pct_max": 21703001.232142083,
+   "cap_2pct_median": 10772678.577707341,
+   "days": 18,
+   "fit_2pct_1L": 0.0,
+   "gross": -14826.152848981146,
+   "margin_median": 480000.0,
+   "max_dd": -822935.2678689889,
+   "months": 18,
+   "months_below_stop": 11,
+   "net": -47754.20939207052,
+   "net_wo_top5": -1328261.5375153471,
+   "trades": 18,
+   "win_rate": 0.3888888888888889,
+   "worst_day": -390936.1327282106,
+   "worst_month": -390936.1327282106,
+   "worst_month_name": "2023-01",
+   "worst_trade": -390936.1327282106
+  },
+  "tradable_1L": false
+ },
+ "p-CN-W60": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 9,
+    "stop": 2,
+    "time": 17
+   },
+   "label": "ENRGDEX proxy (not an economic pair)",
+   "liquid": true,
+   "rolls_paid": 33,
+   "rows": 1179,
+   "twin_mean": -94409.12978344849
+  },
+  "gate": {
+   "month_stop": false,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.1018981018981019,
+  "summary": {
+   "avg": 43118.945272646204,
+   "cap_2pct_max": 20162913.466866132,
+   "cap_2pct_median": 7689848.786871968,
+   "days": 28,
+   "fit_2pct_1L": 0.0,
+   "gross": 1255427.2709645557,
+   "margin_median": 480000.0,
+   "max_dd": -651836.7519892852,
+   "months": 25,
+   "months_below_stop": 10,
+   "net": 1207330.4676340937,
+   "net_wo_top5": -606132.4060287932,
+   "trades": 28,
+   "win_rate": 0.5714285714285714,
+   "worst_day": -390936.1327282106,
+   "worst_month": -390936.1327282106,
+   "worst_month_name": "2023-01",
+   "worst_trade": -390936.1327282106
+  },
+  "tradable_1L": false
+ },
+ "p-CZ-W120": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 2,
+    "stop": 6,
+    "time": 15
+   },
+   "label": "METLDEX proxy (fails liquidity rule)",
+   "liquid": false,
+   "rolls_paid": 26,
+   "rows": 1174,
+   "twin_mean": -34675.814795403865
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.6513486513486514,
+  "summary": {
+   "avg": -5511.396932243595,
+   "cap_2pct_max": 5715855.272463863,
+   "cap_2pct_median": 3618397.8538085828,
+   "days": 23,
+   "fit_2pct_1L": 0.0,
+   "gross": -89385.48944160267,
+   "margin_median": 186500.0,
+   "max_dd": -316482.835375591,
+   "months": 19,
+   "months_below_stop": 8,
+   "net": -126762.12944160268,
+   "net_wo_top5": -425484.8831766521,
+   "trades": 23,
+   "win_rate": 0.34782608695652173,
+   "worst_day": -128090.35409972828,
+   "worst_month": -137794.1114150974,
+   "worst_month_name": "2025-12",
+   "worst_trade": -128090.35409972828
+  },
+  "tradable_1L": false
+ },
+ "p-CZ-W60": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 8,
+    "stop": 4,
+    "time": 20
+   },
+   "label": "METLDEX proxy (fails liquidity rule)",
+   "liquid": false,
+   "rolls_paid": 48,
+   "rows": 1174,
+   "twin_mean": -57154.400943403736
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.7282717282717283,
+  "summary": {
+   "avg": -6810.053680302849,
+   "cap_2pct_max": 3981827.0798601494,
+   "cap_2pct_median": 2134917.009528588,
+   "days": 32,
+   "fit_2pct_1L": 0.0,
+   "gross": -159780.2777696912,
+   "margin_median": 186500.0,
+   "max_dd": -217921.71776969114,
+   "months": 31,
+   "months_below_stop": 14,
+   "net": -217921.71776969117,
+   "net_wo_top5": -508514.100453296,
+   "trades": 32,
+   "win_rate": 0.46875,
+   "worst_day": -101204.72132441678,
+   "worst_month": -109149.98222552892,
+   "worst_month_name": "2025-12",
+   "worst_trade": -101204.72132441678
+  },
+  "tradable_1L": false
+ },
+ "p-GS-W120": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 1,
+    "stop": 6,
+    "time": 14
+   },
+   "label": "BULLDEX proxy (liquid)",
+   "liquid": true,
+   "rolls_paid": 15,
+   "rows": 1186,
+   "twin_mean": -4212.141300723482
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.997002997002997,
+  "summary": {
+   "avg": -35243.618968745985,
+   "cap_2pct_max": 8103932.789131621,
+   "cap_2pct_median": 2908686.972242536,
+   "days": 21,
+   "fit_2pct_1L": 0.0,
+   "gross": -721926.1583436658,
+   "margin_median": 220000.0,
+   "max_dd": -850667.638553463,
+   "months": 17,
+   "months_below_stop": 6,
+   "net": -740115.9983436656,
+   "net_wo_top5": -964446.8444780937,
+   "trades": 21,
+   "win_rate": 0.38095238095238093,
+   "worst_day": -386390.6396077188,
+   "worst_month": -386390.6396077188,
+   "worst_month_name": "2026-01",
+   "worst_trade": -386390.6396077188
+  },
+  "tradable_1L": false
+ },
+ "p-GS-W60": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 7,
+    "stop": 7,
+    "time": 19
+   },
+   "label": "BULLDEX proxy (liquid)",
+   "liquid": true,
+   "rolls_paid": 20,
+   "rows": 1186,
+   "twin_mean": -21616.205402028812
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.6763236763236763,
+  "summary": {
+   "avg": -5114.862523422386,
+   "cap_2pct_max": 10606748.937372794,
+   "cap_2pct_median": 2009883.2469485954,
+   "days": 33,
+   "fit_2pct_1L": 0.0,
+   "gross": -141346.1432729388,
+   "margin_median": 220000.0,
+   "max_dd": -503798.29010517464,
+   "months": 28,
+   "months_below_stop": 11,
+   "net": -168790.46327293874,
+   "net_wo_top5": -621142.7226708864,
+   "trades": 33,
+   "win_rate": 0.45454545454545453,
+   "worst_day": -281059.1873119572,
+   "worst_month": -281059.1873119572,
+   "worst_month_name": "2026-01",
+   "worst_trade": -281059.1873119572
+  },
+  "tradable_1L": false
+ },
+ "p-ZA-W120": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 4,
+    "stop": 6,
+    "time": 17
+   },
+   "label": "METLDEX proxy (fails liquidity rule)",
+   "liquid": false,
+   "rolls_paid": 38,
+   "rows": 1174,
+   "twin_mean": -49438.112268203346
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.4645354645354645,
+  "summary": {
+   "avg": -858.9997175846416,
+   "cap_2pct_max": 6310243.774396882,
+   "cap_2pct_median": 2888345.7800270645,
+   "days": 27,
+   "fit_2pct_1L": 0.0,
+   "gross": 24566.047625214647,
+   "margin_median": 185500.0,
+   "max_dd": -224000.43694641706,
+   "months": 25,
+   "months_below_stop": 12,
+   "net": -23192.992374785325,
+   "net_wo_top5": -370529.6438436917,
+   "trades": 27,
+   "win_rate": 0.48148148148148145,
+   "worst_day": -112431.54119246118,
+   "worst_month": -104849.33255904191,
+   "worst_month_name": "2023-06",
+   "worst_trade": -112431.54119246118
+  },
+  "tradable_1L": false
+ },
+ "p-ZA-W60": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "signal": 12,
+    "stop": 6,
+    "time": 18
+   },
+   "label": "METLDEX proxy (fails liquidity rule)",
+   "liquid": false,
+   "rolls_paid": 45,
+   "rows": 1174,
+   "twin_mean": -73478.48116448283
+  },
+  "gate": {
+   "month_stop": false,
+   "net": false,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea2",
+  "p": 0.3996003996003996,
+  "summary": {
+   "avg": -254.7123786510468,
+   "cap_2pct_max": 4527997.700265416,
+   "cap_2pct_median": 1707375.4362164158,
+   "days": 36,
+   "fit_2pct_1L": 0.0,
+   "gross": 51567.39436856237,
+   "margin_median": 185500.0,
+   "max_dd": -242901.55289680167,
+   "months": 28,
+   "months_below_stop": 8,
+   "net": -9169.645631437685,
+   "net_wo_top5": -322308.2826131319,
+   "trades": 36,
+   "win_rate": 0.5,
+   "worst_day": -99574.52886191946,
+   "worst_month": -86874.61681222315,
+   "worst_month_name": "2023-05",
+   "worst_trade": -99574.52886191946
+  },
+  "tradable_1L": false
+ },
+ "s-AT-PRE-GOLD": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 1,
+    "time": 4
+   },
+   "per_event": {
+    "2022-05-03": -11449,
+    "2023-04-22": -5781,
+    "2024-05-10": 4029,
+    "2025-04-30": 20659,
+    "2026-04-19": 57168
+   },
+   "twin_mean": 29523.24716716491,
+   "twin_p90": 136412.84694319995
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea4",
+  "p": 0.3126873126873127,
+  "summary": {
+   "avg": 12925.040261371434,
+   "cap_2pct_max": 5793454.3809771435,
+   "cap_2pct_median": 1049899.126377143,
+   "days": 5,
+   "fit_2pct_1L": 0.0,
+   "gross": 66022.85714285717,
+   "margin_median": 65871.1,
+   "max_dd": -17230.579937142826,
+   "months": 5,
+   "months_below_stop": 0,
+   "net": 64625.20130685717,
+   "net_wo_top5": 0.0,
+   "trades": 5,
+   "win_rate": 0.6,
+   "worst_day": -11449.134818742827,
+   "worst_month": -11449.134818742827,
+   "worst_month_name": "2022-04",
+   "worst_trade": -11449.134818742827
+  },
+  "tradable_1L": false
+ },
+ "s-AT-PRE-SILVER": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 1,
+    "time": 4
+   },
+   "per_event": {
+    "2022-05-03": -12381,
+    "2023-04-22": 2837,
+    "2024-05-10": 8270,
+    "2025-04-30": 10054,
+    "2026-04-19": 131769
+   },
+   "twin_mean": 28707.41561707606,
+   "twin_p90": 193207.93696868
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea4",
+  "p": 0.14985014985014986,
+  "summary": {
+   "avg": 28109.74985476571,
+   "cap_2pct_max": 7885186.930822856,
+   "cap_2pct_median": 807461.218477143,
+   "days": 5,
+   "fit_2pct_1L": 0.0,
+   "gross": 141691.42857142855,
+   "margin_median": 51522.1125,
+   "max_dd": -12380.940709371449,
+   "months": 5,
+   "months_below_stop": 0,
+   "net": 140548.74927382855,
+   "net_wo_top5": 0.0,
+   "trades": 5,
+   "win_rate": 0.8,
+   "worst_day": -12380.940709371449,
+   "worst_month": -12380.940709371449,
+   "worst_month_name": "2022-04",
+   "worst_trade": -12380.940709371449
+  },
+  "tradable_1L": false
+ },
+ "s-DW-POST-GOLD": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 1,
+    "time": 3
+   },
+   "per_event": {
+    "2022-10-24": -4155,
+    "2023-11-12": -10161,
+    "2024-11-01": 45689,
+    "2025-10-21": 45874
+   },
+   "twin_mean": -26069.217355598852,
+   "twin_p90": 14296.703672765692
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": true,
+   "pass": true
+  },
+  "idea": "idea4",
+  "p": 0.005994005994005994,
+  "summary": {
+   "avg": 19311.99668265714,
+   "cap_2pct_max": 2773562.265365714,
+   "cap_2pct_median": 645134.24658,
+   "days": 4,
+   "fit_2pct_1L": 0.0,
+   "gross": 78291.42857142855,
+   "margin_median": 64447.525,
+   "max_dd": -14315.71356057145,
+   "months": 4,
+   "months_below_stop": 0,
+   "net": 77247.98673062856,
+   "net_wo_top5": 0.0,
+   "trades": 4,
+   "win_rate": 0.5,
+   "worst_day": -10161.11238457145,
+   "worst_month": -10161.11238457145,
+   "worst_month_name": "2023-11",
+   "worst_trade": -10161.11238457145
+  },
+  "tradable_1L": false
+ },
+ "s-DW-POST-SILVER": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 2,
+    "time": 2
+   },
+   "per_event": {
+    "2022-10-24": -15291,
+    "2023-11-12": -12314,
+    "2024-11-01": 31674,
+    "2025-10-21": 12332
+   },
+   "twin_mean": -19199.98717289,
+   "twin_p90": 26806.16551849143
+  },
+  "gate": {
+   "month_stop": false,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea4",
+  "p": 0.16183816183816183,
+  "summary": {
+   "avg": 4100.243531785706,
+   "cap_2pct_max": 3296278.182857143,
+   "cap_2pct_median": 1001008.8144042856,
+   "days": 4,
+   "fit_2pct_1L": 0.0,
+   "gross": 17097.142857142826,
+   "margin_median": 53369.90625,
+   "max_dd": -27604.527229257175,
+   "months": 4,
+   "months_below_stop": 1,
+   "net": 16400.974127142825,
+   "net_wo_top5": 0.0,
+   "trades": 4,
+   "win_rate": 0.5,
+   "worst_day": -15290.703304,
+   "worst_month": -15290.703304,
+   "worst_month_name": "2022-11",
+   "worst_trade": -15290.703304
+  },
+  "tradable_1L": false
+ },
+ "s-DW-PRE-GOLD": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 2,
+    "time": 2
+   },
+   "per_event": {
+    "2022-10-24": -11659,
+    "2023-11-12": -12604,
+    "2024-11-01": 11103,
+    "2025-10-21": 102366
+   },
+   "twin_mean": 26733.264450348455,
+   "twin_p90": 82977.66207448002
+  },
+  "gate": {
+   "month_stop": true,
+   "net": true,
+   "p": true,
+   "pass": true
+  },
+  "idea": "idea4",
+  "p": 0.07192807192807193,
+  "summary": {
+   "avg": 22301.212002142864,
+   "cap_2pct_max": 1470294.2145714287,
+   "cap_2pct_median": 680216.7176285714,
+   "days": 4,
+   "fit_2pct_1L": 0.0,
+   "gross": 90238.57142857145,
+   "margin_median": 64144.125,
+   "max_dd": -24263.31842662855,
+   "months": 4,
+   "months_below_stop": 0,
+   "net": 89204.84800857145,
+   "net_wo_top5": 0.0,
+   "trades": 4,
+   "win_rate": 0.5,
+   "worst_day": -12604.1480032,
+   "worst_month": -12604.1480032,
+   "worst_month_name": "2023-11",
+   "worst_trade": -12604.1480032
+  },
+  "tradable_1L": false
+ },
+ "s-DW-PRE-SILVER": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 1,
+    "time": 3
+   },
+   "per_event": {
+    "2022-10-24": -18062,
+    "2023-11-12": -9175,
+    "2024-11-01": 13008,
+    "2025-10-21": 52777
+   },
+   "twin_mean": 30981.8977292704,
+   "twin_p90": 115753.65396566286
+  },
+  "gate": {
+   "month_stop": false,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea4",
+  "p": 0.3546453546453546,
+  "summary": {
+   "avg": 9637.159395885716,
+   "cap_2pct_max": 1672593.3140742858,
+   "cap_2pct_median": 971562.0243357142,
+   "days": 4,
+   "fit_2pct_1L": 0.0,
+   "gross": 39242.14285714286,
+   "margin_median": 52222.0875,
+   "max_dd": -27236.50544725714,
+   "months": 4,
+   "months_below_stop": 1,
+   "net": 38548.63758354286,
+   "net_wo_top5": 0.0,
+   "trades": 4,
+   "win_rate": 0.5,
+   "worst_day": -18061.63314285714,
+   "worst_month": -18061.63314285714,
+   "worst_month_name": "2022-10",
+   "worst_trade": -18061.63314285714
+  },
+  "tradable_1L": false
+ },
+ "s-WED-GOLD": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 6,
+    "stop-gap": 1,
+    "time": 21
+   },
+   "per_event": {
+    "2022-01": -3138,
+    "2022-02": 28265,
+    "2022-04": 1806,
+    "2022-05": -12217,
+    "2022-11": 21106,
+    "2022-12": 14565,
+    "2023-01": 21703,
+    "2023-02": -1264,
+    "2023-04": 2729,
+    "2023-05": 3560,
+    "2023-11": 17177,
+    "2023-12": -11272,
+    "2024-01": -11661,
+    "2024-02": -10220,
+    "2024-04": 1616,
+    "2024-05": 14101,
+    "2024-11": -15142,
+    "2024-12": -20043,
+    "2025-01": 50904,
+    "2025-02": 9653,
+    "2025-04": -18987,
+    "2025-05": 11699,
+    "2025-11": 54103,
+    "2025-12": 54663,
+    "2026-01": 143125,
+    "2026-02": 170355,
+    "2026-04": 1744,
+    "2026-05": 54175
+   },
+   "twin_mean": 352237.8560323112,
+   "twin_p90": 559653.459810937
+  },
+  "gate": {
+   "month_stop": false,
+   "net": true,
+   "p": true,
+   "pass": false
+  },
+  "idea": "idea4",
+  "p": 0.0939060939060939,
+  "summary": {
+   "avg": 20468.065226914285,
+   "cap_2pct_max": 7048167.926011429,
+   "cap_2pct_median": 709264.2839028571,
+   "days": 28,
+   "fit_2pct_1L": 0.0,
+   "gross": 584030.0,
+   "margin_median": 61014.85,
+   "max_dd": -52621.26133154282,
+   "months": 28,
+   "months_below_stop": 3,
+   "net": 573105.8263536,
+   "net_wo_top5": 96685.92960800008,
+   "trades": 28,
+   "win_rate": 0.6785714285714286,
+   "worst_day": -20043.44330742855,
+   "worst_month": -20043.44330742855,
+   "worst_month_name": "2024-12",
+   "worst_trade": -20043.44330742855
+  },
+  "tradable_1L": false
+ },
+ "s-WED-SILVER": {
+  "both_pass": false,
+  "design_pass": false,
+  "extra": {
+   "exits": {
+    "stop": 12,
+    "time": 16
+   },
+   "per_event": {
+    "2022-01": -5777,
+    "2022-02": 18965,
+    "2022-04": -14381,
+    "2022-05": -13298,
+    "2022-11": 21274,
+    "2022-12": 19118,
+    "2023-01": -12917,
+    "2023-02": -11683,
+    "2023-04": 11155,
+    "2023-05": -13690,
+    "2023-11": 24401,
+    "2023-12": -14311,
+    "2024-01": -11667,
+    "2024-02": -8600,
+    "2024-04": 20140,
+    "2024-05": 49226,
+    "2024-11": -24889,
+    "2024-12": -18885,
+    "2025-01": 29974,
+    "2025-02": -494,
+    "2025-04": -19152,
+    "2025-05": 11279,
+    "2025-11": 113981,
+    "2025-12": 295433,
+    "2026-01": 279267,
+    "2026-02": -294772,
+    "2026-04": -3572,
+    "2026-05": 77818
+   },
+   "twin_mean": 210469.61555454208,
+   "twin_p90": 590725.1908691142
+  },
+  "gate": {
+   "month_stop": false,
+   "net": true,
+   "p": false,
+   "pass": false
+  },
+  "idea": "idea4",
+  "p": 0.16783216783216784,
+  "summary": {
+   "avg": 17997.945382671434,
+   "cap_2pct_max": 14738615.328622857,
+   "cap_2pct_median": 732894.7255557142,
+   "days": 28,
+   "fit_2pct_1L": 0.0,
+   "gross": 511089.99999999994,
+   "margin_median": 48448.725000000006,
+   "max_dd": -298344.8003896571,
+   "months": 28,
+   "months_below_stop": 8,
+   "net": 503942.4707148002,
+   "net_wo_top5": -311781.47554719995,
+   "trades": 28,
+   "win_rate": 0.4642857142857143,
+   "worst_day": -294772.3065724571,
+   "worst_month": -294772.3065724571,
+   "worst_month_name": "2026-02",
+   "worst_trade": -294772.3065724571
+  },
+  "tradable_1L": false
+ }
+}

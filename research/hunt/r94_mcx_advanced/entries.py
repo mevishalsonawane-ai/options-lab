@@ -90,7 +90,7 @@ def main():
         des, hol = PERIOD[prefix[0]]
         y = [f"id: {eid}", f"title: {_q(title)}", f"family: {fam}", "date: '2026-10-21'", f"doc: {DOC}",
              f"hypothesis: {_q('Pre-registered (' + PREREG + '): ' + title + '; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: ' + src + '.')}",
-             f"data_version: {_q(LAKE)}", "period:", f"  design: {des}", f"  holdout: {hol}" + (" (not read: out of scope)" if oos else (" (read once)" if H else " (not yet read)")),
+             f"data_version: {_q(LAKE)}", "period:", f"  design: {des}", f"  holdout: {hol}" + (" (not read, out of scope)" if oos else (" (read once)" if H else " (not yet read)")),
              "instruments:", f"- {_q(inst)}", "features:", f"- {_q('signal source: ' + src)}",
              f"model_or_rule: {_q(title)}", "settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)",
              f"prereg: {PREREG}", f"variants_tried: {len(cells)}", "results:", f"  summary: {_q(summ)}",
