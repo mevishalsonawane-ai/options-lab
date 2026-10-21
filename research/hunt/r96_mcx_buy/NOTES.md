@@ -29,3 +29,8 @@
   to the spike's extreme stops a flat, held spike on the fill minute (the engine stops on touching its level). The
   pre-registered intent is a close beyond the extreme, so the level is moved 1e-6 beyond it. R4C's exit minute is fixed
   (entry + 60 minutes, capped by the square-off) via `engine.sim_single(i_end_fixed=)`.
+- **N10 (21 Oct, round 5, before any round-5 rule was run): environment and data.** rclone missing again; installed from
+  downloads.rclone.org (v1.75.2) as in N6 / N8. The container's default Python is 3.13 (the pinned pyarrow 17 does not
+  build there), so every check ran in a Python 3.11 venv with research/brain/requirements.txt. `xauusd_1m/` on Drive
+  holds only README.md and us_events.csv (no minute pack), so the MCX-vs-COMEX lag idea is not testable. R5A reads the
+  ATR row strictly before the day (as every rule); R5E's exit minute must lie within 5 minutes before release - 5.

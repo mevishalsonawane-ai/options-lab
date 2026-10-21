@@ -1,36 +1,24 @@
-R96 round 4: LEADS (continue)
+R96 round 5: NOTHING (continue)
 
-Research only (no app or workflow change, nothing on paper or live). Pre-registered before any result (commit ed8697b);
-full write-up: research/HUNT_R96_ROUND4.md; numbers: research/hunt/r96_mcx_buy/results/report_round4.md.
+0 of 6 new ideas pass; all six lose money after real MCX costs on the design window (5 Aug 2025 - 14 Jul 2026). The
+locked holdout (15 Jul - 19 Oct 2026) was not read. Ideas tried in R96 so far: 42. Details: research/HUNT_R96_ROUND5.md.
 
-## For Boss, in plain English
+| rule (signal on the MCX future, then buy the option) | trades | net (1 lot) | twin p | verdict |
+|---|---|---|---|---|
+| R5A natural-gas storage day, 1-ITM call 17:00 -> close | 70 | -Rs 43,455 | 0.473 | dies |
+| R5B NR7 on gas + metals, cheap-IV days only | 36 | -Rs 36,585 | 0.677 | dies |
+| R5C crude NR7 -> straddle, cheap-IV days only | 26 | -Rs 28,728 | 0.762 | dies |
+| R5D EIA spike fade at 0.10 ATR (crude) | 15 | -Rs 368 | 0.162 | dies |
+| R5E straddle at 17:00, sold 5 min before the EIA release (crude + gas) | 164 | -Rs 93,324 | 0.283 | dies |
+| R5F gold/silver ratio breakout -> SILVERM option | 27 | -Rs 47,162 | 0.794 | dies |
 
-- I tested 7 more MCX option-buying ideas (36 in R96 so far). **None passed every check**, so the untouched test period
-  (15 Jul - 19 Oct 2026) stays locked and nothing goes to paper.
-- **The best result so far: crude oil NR7, but only on days when the options are cheap.** The rule: when crude's daily
-  range is the narrowest of the last 7 days, and the at-the-money options' implied volatility that day is below its
-  usual level (the median of the last 20 sessions), buy a 1-in-the-money call or put on the next session's break of
-  that day's high or low. The signal is on the crude future; the trade is the option. Stop -40% of the premium or the
-  future back through the other side of the NR7 day; lock profits as the premium rises; out within 3 sessions.
-  - Design period (Aug 2025 - mid-Jul 2026), 1 lot, after all charges: **+Rs 49,381 on 28 trades, 86% winners**;
-    worst month -Rs 4,030; random days made -Rs 5,700 on average and the rule beat 499 of 500 random copies.
-  - **Why it is not proven yet:** 28 trades are really 14 signal days (CRUDEOIL and CRUDEOILM trade the same days), one
-    big winner (22 Oct 2025, +Rs 18,128) is priced by a model because our data only stores 3 strikes each side, and
-    most of its trades are the same crude NR7 trades from round 3. Counted as one idea family (as it should be), it
-    misses the multiple-testing bar (0.124 vs 0.10). It also has fewer than the 30 trades the rules ask for.
-  - Real money at 2% risk per trade would need about Rs 6.0 lakh per CRUDEOIL lot (median stop risk Rs 11,923) or
-    about Rs 63,000 per CRUDEOILM lot (Rs 1,257).
-- What lost: entering the crude NR7 at the US open (no better than random days), adding a 12-month or 1-month trend
-  filter (too few trades), a deeper 2-in-the-money strike (-Rs 901), fading the EIA spike (only 2 trades in 11 months),
-  and gold/silver momentum after 17:00 (-Rs 1.10 lakh on 214 trades, lost before costs).
-- **What would settle it:** fresh data the rule has never seen. Round 5 proposes logging every crude NR7 signal from
-  20 Oct 2026 and reading the result once when 15 signal days exist (about 8 months), plus wider strikes in the data
-  lake (it still has 3 each side, although its status file says 5).
-- Your earlier rule stands: the crude NR7 lead is not read on the locked period unless you decide otherwise.
+In plain English, Boss: none of this round's ideas makes money. The best result is still crude NR7 on cheap-option
+days from round 4 (+Rs 49,381 on 28 trades, only 14 different days), and it still can't be called proven. The
+natural-gas "storage day" effect from a 2021 paper doesn't exist on MCX: Thursdays have lost money on MCX natural gas
+since 2012. The cheap-option filter only helped crude, so it isn't a general trick. Buying a straddle before the oil or
+gas report and selling it just before the release loses about Rs 570 a trade once spreads and time decay are paid.
 
-## Checks
-
-- R96 tests 60 passed (incl. look-ahead guards for the trend columns and the IV filter); research/brain tests passed;
-  `features catalog --check` up to date; `research.experiments.validate` ok; secret grep shows only CLAUDE.md's own
-  pattern lines (as on main); no raw data in git.
-- R97's gold ideas were not on main at pre-registration, so BH counts R96's 36 ideas only.
+What next: (1) test the same NR7 rule on COPPER and ZINC options, which this hunt has never touched (a fair fresh
+test); (2) the crude NR7 forward check: the app's "NR7 crude (record only)" switch must be ON for it to log; the rule is
+read once when 15 signal days have built up after 20 Oct 2026, or on 30 Jun 2027; (3) the gold MCX-vs-COMEX lag test
+needs the XAUUSD minute data uploaded to Drive (only its README is there). Nothing goes to paper or live.
