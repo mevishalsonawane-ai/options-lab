@@ -120,6 +120,8 @@ class FakeKite : Closeable {
     @Volatile var gttReadFailures = 0
     /** 21 Oct, enhancement round 4: the next this many GTTs placed are made, but their answers are lost. */
     @Volatile var gttRepliesLost = 0
+    /** ...and the next this many reads of the GTT list after such a lost answer fail (the sender cannot find it at once). */
+    @Volatile var gttLostHides = 0
     private var trailedPositions: JSONObject? = null
     private var trailedLeft = 0
     /** Positions reads answered so far. */
@@ -639,7 +641,7 @@ class FakeKite : Closeable {
         gtts[id] = JSONObject().put("id", id).put("type", f["type"]).put("status", "active").put("created_at", LocalDateTime.now(IST).format(TS))
             .put("condition", cond).put("orders", JSONArray(f["orders"] ?: "[]"))
         // 21 Oct, enhancement round 4: the GTT is made but its answer lost (Kite's 500 NetworkException).
-        if (gttRepliesLost > 0) { gttRepliesLost--; return error(500, "NetworkException", "Gateway timed out.") }
+        if (gttRepliesLost > 0) { gttRepliesLost--; gttReadFailures += gttLostHides; return error(500, "NetworkException", "Gateway timed out.") }
         return ok(JSONObject().put("trigger_id", id))
     }
 }

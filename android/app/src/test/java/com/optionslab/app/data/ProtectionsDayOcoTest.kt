@@ -444,7 +444,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
     @Test fun aLostAnswerPlacesNothingElseAndTheNextLookAdoptsTheGtt() {
         DayOco.resetForTest(on = true)
         kite.gttRepliesLost = 1
-        kite.gttReadFailures = 20                                  // and the look for it fails too
+        kite.gttLostHides = 20                                     // and the look for it fails too
         val said = protect()
         assertTrue(said, said.contains("answer to the GTT was lost"))
         assertTrue("no DAY orders beside a GTT that may exist", kite.placed.isEmpty())
@@ -467,7 +467,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         kite.orders.clear()
         session(9, 20, nth = 2)
         kite.gttRepliesLost = 1
-        kite.gttReadFailures = 20
+        kite.gttLostHides = 20
         kite.requests.clear()
         tick()
         assertTrue("no DAY orders beside it", kite.placed.isEmpty())
@@ -521,7 +521,8 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         kite.orders.remove(oid)                                    // the next session: yesterday's order is not in today's book
         session(10, 0, nth = 2)
         tick()
-        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertTrue("${runBlocking { Protections.active() }} ${com.optionslab.app.work.Alerts.queue.value.map { it.text }}",
+            runBlocking { Protections.active() }.isEmpty())
         assertTrue(alerted("did not fill"))
     }
 

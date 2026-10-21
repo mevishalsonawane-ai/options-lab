@@ -416,8 +416,11 @@ object Protections {
         val rows = runCatching { Broker.orders() }.getOrElse { return GttState.HELD }.filter { it.id in g.orderIds }
         rows.filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
         for (oid in g.orderIds) {
-            // Not in today's book (an earlier day's): over. Read failed or still working: not confirmed yet.
-            val st = runCatching { Broker.orderState(oid)?.status }.getOrElse { return GttState.HELD }
+            // Not in today's book (an earlier day's): over. Read failed or still working: not confirmed yet. 21 Oct, round 4 (found by
+            // its test): Zerodha answers an earlier session's order id with an InputException, never an empty history - that is over too.
+            val st = try { Broker.orderState(oid)?.status } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Broker.KiteError) { if (e.type == "InputException") null else return GttState.HELD
+            } catch (_: Exception) { return GttState.HELD }
             if (st != null && st !in GONE) return GttState.HELD
         }
         return GttState.FIRED
@@ -628,7 +631,13 @@ object Protections {
                 Alerts.post("${p.symbol}: its GTT fired; its ${p.exitSide.lowercase()} is on its way at Zerodha.", Alerts.Kind.ERROR, "Protection", throttle = true)
                 return p
             }
-            val states = g.orderIds.map { oid -> runCatching { Broker.orderState(oid) }.getOrElse { return p } }
+            // An order of an earlier session is not found at all (Kite's InputException): ended, nothing of it rests. Any other
+            // failure (the network): not known, asked again next pass.
+            val states = g.orderIds.map { oid ->
+                try { Broker.orderState(oid) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                } catch (e: Broker.KiteError) { if (e.type == "InputException") null else return p
+                } catch (_: Exception) { return p }
+            }
             if (states.any { it != null && it.status !in GONE }) {
                 Alerts.post("${p.symbol}: its GTT fired; its ${p.exitSide.lowercase()} rests at Zerodha unfilled. If the price runs away " +
                     "from it, close the position in Trade.", Alerts.Kind.ERROR, "Protection", throttle = true)
