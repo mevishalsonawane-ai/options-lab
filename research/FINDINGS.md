@@ -1495,3 +1495,11 @@ Breadth = 3 of 5 metals (GOLD, SILVER, COPPER, ZINC, ALUMINIUM; minis once) / 2 
   (twin p 0.51; -Rs 5.76 lakh without the top 5: the 2023-26 silver / copper rally); daily breadth -Rs 3.68 lakh (133).
 - Sample: long enough for the intraday answer (post-hoc 95% upper bound of gross a trade below cost in every option book; closest
   gold with breadth Rs 265 vs Rs 364). Keep Breadth Donchian on the indices only.
+
+## The "Mo3ty CCI Signals" indicator (R95, 21 Oct 2026) - pre-registered, NOT RUN yet (no win rate yet)
+Full study: `HUNT_R95_CCI_SIGNALS.md` (pre-registered `hunt/r95_cci_signals/PREREG.md`; notes N0). Signal on the underlying:
+CCI of hlc3 crossing back inside +-200 (BUY buys the 1-ITM call, SELL the put); 8 variants x 3m / 5m / 15m / 60m x 9
+instruments = 288 cells. The lake could not be copied in this session, so no statistic exists yet. From the formula alone:
++200 = 3 mean deviations above the 25-bar mean (about 2.4 standard deviations); a steady trend holds CCI(25) at +128, so the
+signal fires when an ACCELERATION stops, not when price turns; the divergence labels are known only 5 bars after the bar they
+are drawn on (the run measures that inflation). The app's Pine engine runs the indicator except the labels (accepted, not drawn).

@@ -1,0 +1,39 @@
+id: r95-xt
+title: 'R95 XT: Mo3ty CCI Signals (CCI of hlc3 crossing back inside the levels), as B, exit 10 bars after the signal'
+family: patterns-indicators
+date: '2026-10-21'
+doc: research/HUNT_R95_CCI_SIGNALS.md
+hypothesis: 'Pre-registered: buying the 1-ITM call on a CCI BUY (the put on a SELL), signal on the underlying (as B, exit
+  10 bars after the signal; entry at the next minute''s open, 09:30-14:45, stop beyond the stretch''s extreme +/- 1 tick,
+  flat 15:15 / 15:05 expiry), on 3m / 5m / 15m / 60m bars, beats 1000 after-trigger random-entry twins after real costs (p_emp
+  < 0.05, BH q < 0.10 over 288 cells), >= 40 trades, positive in 3 of 4 folds, without the top 5, worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m + options_rolling_1m WEEK via R89 stores to 19 Oct 2026; MCX
+  MONTH option books from Aug 2025) - NOT YET COPIED: the run is pending'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (locked, not read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart, no option-chain data'
+- CCI 25 of hlc3, levels +-200, pulse off, all signals, exit T
+model_or_rule: R95 XT
+settings: research/hunt/r95_cci_signals/cfg.py, rules.py, PREREG.md, NOTES.md
+prereg: research/hunt/r95_cci_signals/PREREG.md
+variants_tried: 8
+results:
+  summary: 'NOT RUN YET (21 Oct 2026): pre-registered with code and tests; the lake could not be copied in this session, so
+    no statistic exists. To be replaced by the design and holdout results.'
+  costs: 'planned: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges); MCX R53 charges + R85 strict half-spread;
+    1 lot in force'
+holdout_read: false
+verdict: inconclusive
+notes: One of 8 variants x 4 timeframes x 9 instruments (288 cells, one BH family). Pending run.
