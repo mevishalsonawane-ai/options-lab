@@ -84,7 +84,7 @@ def main():
              f"model_or_rule: {_q(f'{NAME[arm]} app rules sliced by {FAM[fam]}')}",
              "settings: research/hunt/r92_orb_time/r92cfg.py, r92engine.py (cells()), PREREG.md",
              "prereg: research/hunt/r92_orb_time/PREREG.md", f"variants_tried: {len(cs)}", "results:",
-             f"  summary: {_q('Design (1 lot, real prints, dated charges, R17 fills): ' + str(tot_tr) + ' trades over the cells. ' + '. '.join(parts) + '.')}",
+             f"  summary: {_q('Design (1 lot, real prints, dated charges, R17 fills): ' + str(tot_tr) + ' trades summed over the cells (cells overlap). ' + '. '.join(parts) + '.')}",
              "  costs: obuy/costs.py Costs(dated) (STT 0.1% to 31 Mar 2026, 0.15% after; BSE rates for SENSEX), R17 liq fills (+-5 bps + 1-4 ticks; stops 10 bps, double ticks), 1 lot of the day's contract",
              f"holdout_read: {'true' if H else 'false'}", f"verdict: {verdict}",
              f"notes: {_q('One idea of 20 (257 cells, one BH family m = 257). Per-cell numbers: research/hunt/r92_orb_time/results/report.md.')}"]

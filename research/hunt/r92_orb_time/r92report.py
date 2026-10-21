@@ -63,7 +63,7 @@ def main():
          "trades, G2 q <= 0.10, G3 twin p < 0.05, G4 >= 3 of 4 years and >= 3 of 5 indices > 0, G5 > 0 without the top "
          "5, G6 worst month on each index >= -Rs 13k.", ""]
     if Hj:
-        L += [f"Holdout 1 Apr - 19 Oct 2026 (read once, {Hj['written']}), sessions {Hj['sessions']}; 13-19 Oct 2026 "
+        L += [f"Holdout 1 Apr - 19 Oct 2026 (read once at {(K.HOLDOUT_FLAG.read_text().strip())}; results written {Hj['written']}), sessions {Hj['sessions']}; 13-19 Oct 2026 "
               f"(seen by no earlier ORB study) {Hj['unseen_sessions']}.", ""]
     for fam, title in (("T", "Family T: entry-time slots"), ("R", "Family R: opening-range length"),
                        ("D", "Family D: day type"), ("X", "Family X: exit time"),

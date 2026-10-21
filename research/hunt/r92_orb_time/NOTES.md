@@ -21,3 +21,17 @@
    of 1 Apr - 12 Oct 2026 would have to make about +Rs 15.8k, which the holdout read will show (descriptive line,
    BANKNIFTY + NIFTY, ATTR 12 h). Prediction written here before the read: R3's lead came mostly from Apr 2026 (R49:
    ORB made +Rs 23,944 in April 2026 alone).
+
+## N2 (21 Oct 2026, after the one holdout read at 03:59 UTC; descriptive, no gate)
+
+1. **Holdout: 0 passers** (no cell passed design, so none could pass). 54 of 257 cells are above zero in the holdout;
+   only one of them was also above zero in design (ORB FIRST 13:30-13:59: +Rs 5,475 on 19 trades, twin p 0.22, fails H2
+   and H3).
+2. **N1.4's prediction, checked:** app ORB trades with an entry at 12:00-12:59 on BANKNIFTY + NIFTY, 1 Apr - 12 Oct
+   2026: **35 trades, +Rs 12,391** (Rs +354 a trade). With the design years' 276 trades (Rs -7,081) that is 311 trades and
+   about +Rs 5.3k, close to R3's +Rs 8.7k (R3 used today's higher charges but the calendar lots, which were too big in
+   Dec 2024 - Jan 2025). So R3's 12 h lead is the Apr - Oct 2026 BANKNIFTY / NIFTY months; the part of N1.4 that said
+   "mostly April" is wrong: by month it is +837 (Apr), +3,740 (May), +4,272 (Jun), -1,325 (Jul), +1,114 (Aug), +1,278
+   (Sep), +2,475 (Oct). On FINNIFTY + MIDCPNIFTY + SENSEX the same months lost (-Rs 3,248 on 66).
+3. The 13-19 Oct 2026 block (5 sessions per index, seen by no earlier ORB study) was a good week for ORB (+Rs 12,897
+   on 18 trades for the app ORB). Too small to mean anything; reported only.
