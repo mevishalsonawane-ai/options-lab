@@ -213,32 +213,64 @@ object ExitCoordinator {
         fun rows(b: Broker.Positions) = b.net.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }
         // 21 Oct, enhancement round 5 (idea 3): every product's orders and rows on the contract too, so a fill whose quantity a
         // conversion moved to the other product's row is never read as the positions trailing it ([ExitDesk.positionsLagAcross]).
-        val allFills = orders.filter { it.symbol == symbol && it.exchange == exchange }
+        fun fillsOf(read: List<Broker.OrderRow>, oneProduct: Boolean) = read.filter { it.symbol == symbol && it.exchange == exchange && (!oneProduct || it.product == product) }
             .map { ExitDesk.Fill(it.id, it.side, it.filled, placedMs(it.updatedAt)) }
-        var converted = false
-        fun lag(b: Broker.Positions): Int = runCatching {
+        val allFills = fillsOf(orders, oneProduct = false)
+        /** This product's lag and the whole contract's (the smaller), for positions read [b] against orders read [own]/[all]. */
+        fun lags(b: Broker.Positions, own: List<ExitDesk.Fill>, all: List<ExitDesk.Fill>): Pair<Int, Int> {
             val rs = rows(b)
             val net = rs.sumOf { it.qty }
             fun exitDay(list: List<Broker.Position>): Int? {
                 val day = list.map { if (net > 0) it.daySellQty else it.dayBuyQty }
                 return if (list.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }
             }
-            val all = b.net.filter { it.symbol == symbol && it.exchange == exchange }
-            val one = ExitDesk.positionsLag(net, exitDay(rs), fills, mine, now)
-            val l = ExitDesk.positionsLagAcross(net, exitDay(rs), fills, mine, now, exitDay(all), allFills)
+            val every = b.net.filter { it.symbol == symbol && it.exchange == exchange }
+            return ExitDesk.positionsLag(net, exitDay(rs), own, mine, now) to
+                ExitDesk.positionsLagAcross(net, exitDay(rs), own, mine, now, exitDay(every), all)
+        }
+        var converted = false
+        fun lag(b: Broker.Positions): Int = runCatching {
+            val (one, l) = lags(b, fills, allFills)
             if (l < one) converted = true
             l
         }.getOrDefault(0)
         if (mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
         var given = first
-        val (book, left) = ExitDesk.settleHeld(lagOn, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
+        var (book, left) = ExitDesk.settleHeld(lagOn, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
         if (converted) {
-            count { it.copy(lagConversion = it.lagConversion + 1) }
-            record("$who $key: its $product exit's fill shows in the other product's positions row (a conversion today); not read as trailing")
+            // Review (round 5): the other product's row may show a fill that came AFTER the orders were read (Boss's MIS sell, an MIS
+            // stop): that is not a conversion, and taking it as one would hide a real lag. On, the orders are read again (they lead
+            // the positions, so any fill the positions show is in them now) and the lag judged on both fresh reads; that read failing,
+            // this product's own lag stands, as before this round. Off (shadow): logged only, nothing read.
+            val words = rowsWords(book, symbol, exchange)
+            if (lagOn) {
+                val fresh = runCatching { Broker.orders(fresh = true) }.getOrNull()
+                val again = runCatching {
+                    if (fresh == null) lags(book, fills, allFills).first
+                    else lags(book, fillsOf(fresh, oneProduct = true), fillsOf(fresh, oneProduct = false)).second
+                }.getOrDefault(0)
+                if (again > left) {
+                    left = again
+                    count { it.copy(lagSubtracted = it.lagSubtracted + 1) }
+                    record("$who $key: the other product's row moved after the orders were read (not a conversion)${if (fresh == null) " or the orders could not be read again" else ""}; " +
+                        "$again counted as sold [$words]")
+                } else {
+                    count { it.copy(lagConversion = it.lagConversion + 1) }
+                    record("$who $key: its $product exit's fill shows in the other product's positions row (a conversion today), confirmed on a fresh orders read; not read as trailing [$words]")
+                }
+            } else {
+                count { it.copy(lagConversion = it.lagConversion + 1) }
+                record("$who $key: its $product exit's fill shows in the other product's positions row (a conversion today?); not read as trailing [$words]")
+            }
         }
         val net = rows(book).sumOf { it.qty }
         return ExitDesk.heldLess(net, left)
     }
+
+    /** 21 Oct, round 5 (review): every product's row of a contract, for the diary (to check the conversion model against live logs). */
+    private fun rowsWords(b: Broker.Positions, symbol: String, exchange: String): String =
+        b.net.filter { it.symbol == symbol && it.exchange == exchange }
+            .joinToString("; ") { "${it.product} net ${it.qty} day buy ${it.dayBuyQty ?: "?"} day sell ${it.daySellQty ?: "?"}" }
 
     private fun noteLag(key: String, who: String, how: ExitDesk.Lag, n: Int) {
         when (how) {

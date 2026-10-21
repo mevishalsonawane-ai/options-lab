@@ -134,14 +134,16 @@ class PayoutLeftTest {
         val nan = PayoutDrawdown.recordBalance(emptyList(), d2, -1.0, 390_000.0)
         assertTrue(nan.single().opening.isNaN())
         var many = emptyList<PayoutDrawdown.Balance>()
-        for (i in 0L until 15L) many = PayoutDrawdown.recordBalance(many, d1.plusDays(i), 1.0, 1.0)
+        val n = PayoutDrawdown.KEEP_BALANCES + 5L
+        for (i in 0L until n) many = PayoutDrawdown.recordBalance(many, d1.plusDays(i), 1.0, 1.0)
         assertEquals(PayoutDrawdown.KEEP_BALANCES, many.size)
-        assertEquals(d1.plusDays(14), many.last().day)
+        assertEquals(d1.plusDays(n - 1), many.last().day)
+        assertTrue(PayoutDrawdown.KEEP_BALANCES >= PayoutDrawdown.KEEP, "kept at least as long as the payouts")
     }
 
     @Test fun aPayoutThatLeftIsConfirmed() {
-        val b = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 402_000.0), PayoutDrawdown.Balance(d2, 352_100.0, 352_100.0))
-        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 50_000.0), b))   // dropped 49,900 (charges, slack)
+        val b = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 402_000.0), PayoutDrawdown.Balance(d2, 351_900.0, 351_900.0))
+        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 50_000.0), b))   // dropped 50,100 (the payout and charges)
     }
 
     @Test fun aPayoutCancelledAfterItsDaysLastReadIsNotSeen() {
@@ -152,13 +154,11 @@ class PayoutLeftTest {
         assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 50_000.0), half))
     }
 
-    @Test fun theToleranceIsRs500OrFivePercent() {
-        val small = listOf(PayoutDrawdown.Balance(d1, 100_000.0, 100_000.0), PayoutDrawdown.Balance(d2, 98_500.0, 98_500.0))
-        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 2_000.0), small))        // 1,500 >= 2,000 - 500
-        assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 2_001.0), small))
-        val big = listOf(PayoutDrawdown.Balance(d1, 400_000.0, 400_000.0), PayoutDrawdown.Balance(d2, 305_000.0, 305_000.0))
-        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 100_000.0), big))       // 95,000 >= 100,000 - 5,000
-        assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 100_100.0), big))
+    @Test fun theWholePayoutMustShowLessOnlyRupeeRounding() {
+        val b = listOf(PayoutDrawdown.Balance(d1, 100_000.0, 100_000.0), PayoutDrawdown.Balance(d2, 98_000.0, 98_000.0))
+        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 2_000.0), b))
+        assertEquals(PayoutDrawdown.Left.CONFIRMED, PayoutDrawdown.left(pay(d1, 2_000.9), b))         // rounding
+        assertEquals(PayoutDrawdown.Left.NOT_SEEN, PayoutDrawdown.left(pay(d1, 2_002.0), b))           // Rs 2 short: not confirmed
     }
 
     @Test fun noReadOfItsDayOrOfALaterOpeningIsUnknown() {

@@ -99,14 +99,16 @@ object PayoutWatch {
     fun seen(amount: Double, opening: Double = Double.NaN, expectedNext: Double = Double.NaN) {
         val day = today()
         // 21 Oct, enhancement round 5 (idea 5): the day's balances, to confirm tomorrow that a payout really left ([PayoutDrawdown.left]).
-        if ((opening.isFinite() && opening > 0.0) || expectedNext.isFinite()) scope.launch {
+        // Review: only reads on a trading day after Zerodha's morning run (08:30 IST): a read past midnight or on a holiday can
+        // still show the day before's opening balance, which would never confirm a payout.
+        if (((opening.isFinite() && opening > 0.0) || expectedNext.isFinite()) && balanceReadCounts()) scope.launch {
             runCatching {
                 if (!loaded) load()
-                val text = synchronized(lock) {
+                synchronized(lock) {
                     balances = PayoutDrawdown.recordBalance(balances, day, opening, expectedNext)
-                    PayoutDrawdown.encodeBalances(balances)
+                    // Review: written under the lock, so two reads close together never save in reverse order.
+                    if (loaded) SecurePrefs.putAllSoon(mapOf(K_BAL to PayoutDrawdown.encodeBalances(balances)))
                 }
-                if (loaded) SecurePrefs.putAllSoon(mapOf(K_BAL to text))
             }
         }
         // Review: a 0 read is kept too when the day has a payout (a request cancelled the same day removes it).
@@ -130,12 +132,18 @@ object PayoutWatch {
      * The guard refused a live entry for a drawdown from the peak ([a], the limit [limitPct]). Memory only. Logged once a day when
      * payouts alone explain it; the words for the refusal when on (null otherwise, and in shadow).
      */
+    /** A margins read's balances count: a trading day, at or after 08:30 IST (after Zerodha's start-of-day run). */
+    private fun balanceReadCounts(): Boolean = runCatching {
+        val t = Market.now()
+        Market.isTradingDay(t.toLocalDate()) && t.toLocalTime() >= java.time.LocalTime.of(8, 30)
+    }.getOrDefault(false)
+
     fun drawdown(a: AccountGuard.Account, limitPct: Double): String? = runCatching {
         val d = today()
         // 21 Oct, enhancement round 5 (idea 5): only payouts the next day's opening balance shows leaving count (confirmed); those
         // not seen leaving, or not read yet, are said and never offered (a payout cancelled after its day's last read never left).
         val split = PayoutDrawdown.paidOutSplit(payouts, balances, a.peakEquity, d)
-        if (split.all <= 0.0) return@runCatching null
+        if (split.all <= 0.0) { lastWaiting = null; return@runCatching null }
         val j = PayoutDrawdown.judge(a.peakEquity, a.equity, split.confirmed, limitPct)
         lastSnap = Last(j, a.peakEquity, a.equity)
         val wait = PayoutDrawdown.waitingWords(PayoutDrawdown.judge(a.peakEquity, a.equity, split.all, limitPct), j, split, on)
@@ -165,7 +173,7 @@ object PayoutWatch {
             PayoutDrawdown.encode(payouts)
         }
         runCatching { SecurePrefs.putAllSoon(mapOf(K_LIST to text)) }
-        lastSnap = Last(null, Double.NaN, Double.NaN)
+        lastSnap = Last(null, Double.NaN, Double.NaN); lastWaiting = null
         runCatching { Diag.record("risk", "Drawdown peak lowered by payouts of Rs %,.0f: %,.0f to %,.0f (by you, with the PIN)".format(j.paidOut, peak, next)) }
         publish()
         return "The drawdown peak is now Rs %,.0f (lowered by payouts of Rs %,.0f). The kill switch is as it was: clear it yourself if you agree.".format(next, j.paidOut)

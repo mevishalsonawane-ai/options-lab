@@ -875,10 +875,14 @@ object Broker {
             it.optString("fill_timestamp", it.optString("exchange_timestamp", "")))
     }.sortedByDescending { it.at }
 
-    suspend fun orders(): List<OrderRow> {
+    /**
+     * [fresh]: 21 Oct, enhancement round 5 - never joins a read already on its way (one begun before the caller's last positions
+     * read could miss a fill the positions show): the positions-lag guard's check of a suspected conversion.
+     */
+    suspend fun orders(fresh: Boolean = false): List<OrderRow> {
         val gen = writes.get()
         // Workers asking at once share one read (10 Oct, [SHARE_MS]): never one begun before an order, change or cancel.
-        val r = ordersShared.run(shareKey(gen), SHARE_MS, shareContext()) {
+        val r = ordersShared.run(shareKey(gen), if (fresh) 0L else SHARE_MS, shareContext()) {
             rows(call("GET", "/orders") as JSONArray).map(::orderRow).sortedByDescending { it.placedAt }
         }
         val list = r.value

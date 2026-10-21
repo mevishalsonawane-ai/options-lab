@@ -58,6 +58,8 @@ object DayOco {
         runCatching {
             val saved = DayGttTally.decode(SecurePrefs.getString(K_TALLY))
             synchronized(tallyLock) { if (!tallyLoaded) { tally = DayGttTally.merge(saved, tally); tallyLoaded = true } }
+            // Review: counts seen before this read were not written (nothing is, until it): written now.
+            scope.launch { save() }
         }
         publish()
     }
@@ -77,8 +79,8 @@ object DayOco {
 
     private fun save() {
         runCatching {
-            val text = synchronized(tallyLock) { if (tallyLoaded) DayGttTally.encode(tally) else null } ?: return
-            SecurePrefs.putAllSoon(mapOf(K_TALLY to text))
+            // Review: written under the lock, so two notes close together never save in reverse order.
+            synchronized(tallyLock) { if (tallyLoaded) SecurePrefs.putAllSoon(mapOf(K_TALLY to DayGttTally.encode(tally))) }
         }
     }
 

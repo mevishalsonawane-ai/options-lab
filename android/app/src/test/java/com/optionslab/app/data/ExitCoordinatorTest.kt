@@ -610,5 +610,33 @@ class ExitCoordinatorTest : RobolectricTest() {
         assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
         assertEquals(0, ExitCoordinator.countsForTest().lagConversion)
     }
+
+    /**
+     * Review (round 5): NOT a conversion - our NRML exit filled and its row trails, and an MIS sell of the same contract filled AFTER
+     * the orders were read: its day sell in the MIS row would hide the NRML lag. The orders are read again and the lag stands.
+     */
+    @Test fun onAnotherProductsFillAfterTheOrdersReadNeverHidesARealLag() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        kite.position(ce, 75, 20.0, product = "MIS")
+        bossSells(75)                                              // NRML sell filled ...
+        kite.position(ce, 150, 20.0)                               // ... and the NRML row trails it
+        kite.daySold["NFO:$ce:NRML"] = 0
+        val book = runBlocking { Broker.orders() }                 // the sender's orders read
+        runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "MIS", "MARKET", null, 0.05, "NFO", ""), exit = true) }
+        kite.requests.clear()
+        val held = runBlocking { ExitCoordinator.held("NFO", ce, "NRML", "test", book) }
+        assertEquals("150 shown, 75 of it sold by our NRML exit: 75", 75, held)
+        assertEquals("the orders read again", 1, kite.requests.count { it.method == "GET" && it.path == "/orders" })
+        assertEquals(0, ExitCoordinator.countsForTest().lagConversion)
+        assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
+    }
+
+    @Test fun onAConversionIsConfirmedOnAFreshOrdersRead() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        soldThenConverted()
+        assertEquals(75, heldFor())
+        assertEquals("the sender's read and the confirming read", 2, kite.requests.count { it.method == "GET" && it.path == "/orders" })
+    }
 }
 

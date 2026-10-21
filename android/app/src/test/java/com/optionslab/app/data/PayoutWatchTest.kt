@@ -261,4 +261,18 @@ class PayoutWatchTest : RobolectricTest() {
         SecurePrefs.countedThread = null
         assertEquals(0L, SecurePrefs.readsForTest.get())
     }
+
+    /** Review: a read before Zerodha's morning run (here 07:00) may still show the day before's opening balance: not kept. */
+    @Test fun aMarginsReadBeforeTheMorningRunKeepsNoBalances() {
+        val was = Market.testClock
+        try {
+            val at = Market.today().atTime(7, 0).atZone(com.optionslab.engine.IST).toInstant()
+            Market.testClock = java.time.Clock.fixed(at, com.optionslab.engine.IST)
+            kite.payoutToday = 0.0
+            runBlocking { Broker.funds() }
+            Thread.sleep(300)
+            assertTrue(PayoutWatch.balancesForTest().isEmpty())
+        } finally { Market.testClock = was }
+    }
 }
+

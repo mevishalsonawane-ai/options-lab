@@ -90,8 +90,8 @@ object PayoutDrawdown {
      */
     data class Balance(val day: LocalDate, val opening: Double, val expectedNext: Double)
 
-    /** Days of balances kept. */
-    const val KEEP_BALANCES = 10
+    /** Days of balances kept (review: as long as the payouts, so a confirmed payout under a peak that stands for weeks stays confirmed). */
+    const val KEEP_BALANCES = KEEP + 10
 
     /** [list] with [day]'s read: its first opening balance kept, its expected next opening the latest. A bad figure changes nothing. */
     fun recordBalance(list: List<Balance>, day: LocalDate, opening: Double, expectedNext: Double): List<Balance> {
@@ -107,13 +107,13 @@ object PayoutDrawdown {
     /** What the balances say of one payout. */
     enum class Left { CONFIRMED, NOT_SEEN, UNKNOWN }
 
-    /** Slack for charges and rounding: Rs 500, or 5% of the payout if more. */
-    const val LEFT_TOLERANCE_RS = 500.0
-    const val LEFT_TOLERANCE_PCT = 5.0
+    /** Slack for rounding only (review: one-sided - charges make the drop bigger, never smaller). */
+    const val LEFT_TOLERANCE_RS = 1.0
 
     /**
      * Whether payout [p] really left the account: the first opening balance read AFTER its day is lower than its day's
-     * [Balance.expectedNext] by at least the payout (less [LEFT_TOLERANCE_RS] or [LEFT_TOLERANCE_PCT]). A payout cancelled or
+     * [Balance.expectedNext] by at least the whole payout (less [LEFT_TOLERANCE_RS] for rounding). A loss after the day's last read
+     * also lowers the next opening, so it can still confirm a payout that did not leave: the offer stays Boss's call, with the PIN. A payout cancelled or
      * rejected after its day's last read leaves the next opening where it was: [Left.NOT_SEEN]. No read of its day's balances or
      * of a later opening yet (today's payout, the app not opened since): [Left.UNKNOWN]. Money added the next morning before the
      * read, or a profit the realised figure missed, can hide a real payout (then it is NOT_SEEN: the offer waits, never the reverse).
@@ -123,8 +123,7 @@ object PayoutDrawdown {
         val n = balances.filter { it.day.isAfter(p.day) && it.opening.isFinite() && it.opening > 0.0 }.minByOrNull { it.day }
             ?: return Left.UNKNOWN
         val drop = d.expectedNext - n.opening
-        val tol = maxOf(LEFT_TOLERANCE_RS, p.amount * LEFT_TOLERANCE_PCT / 100)
-        return if (drop >= p.amount - tol) Left.CONFIRMED else Left.NOT_SEEN
+        return if (drop >= p.amount - LEFT_TOLERANCE_RS) Left.CONFIRMED else Left.NOT_SEEN
     }
 
     /** The payouts [paidOutSince] counts, split by [left]: (confirmed, not seen leaving, not known yet), in rupees. */

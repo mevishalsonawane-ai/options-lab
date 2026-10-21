@@ -49,7 +49,7 @@ class WhatsNewChangelogTest {
         assertTrue(sentences.size <= 8, "${sentences.size}")
         for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
         for (t in listOf(x.what, x.title, x.where)) assertFalse(Regex("[a-z][A-Z]").containsMatchIn(t), t)
-        for (w in listOf("counts what the one GTT did", "today and over the last week", "moved between intraday and carried",
+        for (w in listOf("counts what the one GTT did", "today and over the last week", "no longer mistakes a position you converted",
             "next morning's opening balance", "only logs until you switch it on"))
             assertTrue(w in x.what, w)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
