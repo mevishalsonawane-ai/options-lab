@@ -166,7 +166,7 @@ def build_daily_group(raw, out, group, name, keycol):
 
 
 def build_idx_1m(raw, out):
-    for d in sorted(glob.glob(f"{raw}/idx_1m/*")):
+    for d in sorted(d for d in glob.glob(f"{raw}/idx_1m/*") if os.path.isdir(d)):
         sym = os.path.basename(d)
         df = read_chunks(f"{d}/*.parquet")
         if not len(df):
@@ -175,6 +175,10 @@ def build_idx_1m(raw, out):
         df = df.drop(columns=[c for c in ("open_interest",) if c in df])
         df, dropped = clean(df, calendar(raw, sym), (9 * 60 + 15, 15 * 60 + 29))
         df, dup = dedupe(df, [])
+        if os.path.exists(f"{d}.seed_qa.json"):  # chunks seeded from published files (lake_fetch --only-missing)
+            sq = json.load(open(f"{d}.seed_qa.json"))
+            dropped = {k: dropped.get(k, 0) + sq["rows_dropped"].get(k, 0) for k in {*dropped, *sq["rows_dropped"]}}
+            dup = {k: dup.get(k, 0) + sq["duplicates_dropped"].get(k, 0) for k in {*dup, *sq["duplicates_dropped"]}}
         for y, g in df.groupby(df.ts.dt.year):
             g = g.reset_index(drop=True)
             q = qa(g, [], True, (9 * 60 + 15, 15 * 60 + 29))
@@ -248,6 +252,11 @@ def build_opt(raw, out, sub="opt"):
             df, dropped = clean(df, calendar(raw, "SENSEX" if und in ("SENSEX", "BANKEX") else "NIFTY"),
                                 (9 * 60 + 15, 15 * 60 + 29))
         df, dup = dedupe(df, ["offset", "side"])
+        sq = f"{os.path.dirname(d)}/seed_qa.json"  # chunks seeded from published files (lake_fetch --only-missing)
+        if os.path.exists(sq):
+            sq = json.load(open(sq))
+            dropped = {k: dropped.get(k, 0) + sq["rows_dropped"].get(k, 0) for k in {*dropped, *sq["rows_dropped"]}}
+            dup = {k: dup.get(k, 0) + sq["duplicates_dropped"].get(k, 0) for k in {*dup, *sq["duplicates_dropped"]}}
         groups = df.groupby(df.ts.dt.year) if sub == "opt" else [(None, df)]
         for y, g in groups:
             g = g.reset_index(drop=True)

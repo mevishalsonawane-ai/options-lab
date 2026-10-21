@@ -1,7 +1,7 @@
 # Data lake (Dhan API v2)
 
 Historical market data for IraAlgo research, downloaded from Dhan API v2 on 2026-10-13/14 (UTC; data up to
-2026-10-12). It is stored as Parquet (zstd) files on **Google Drive** (below; a GitHub Release with tag `data-20261014`
+2026-10-12), with index data appended on 2026-10-14/15 (to 13 or 14 Oct, see Known gaps). It is stored as Parquet (zstd) files on **Google Drive** (below; a GitHub Release with tag `data-20261014`
 is optional), **not** in git. This folder holds only code and metadata:
 
 | file | what |
@@ -13,10 +13,10 @@ is optional), **not** in git. This folder holds only code and metadata:
 | `publish_release.py` | create the release and upload the files (run where release creation is allowed) |
 | `publish_gdrive.py` | upload the built files to Google Drive with rclone, per dataset, then `rclone check` |
 | `dhan_client.py` | tiny Dhan v2 client: token from env, sent only as headers, redacted from logs, backoff on 429/5xx |
-| `lake_fetch.py` | resumable raw download (one small Parquet per request chunk, `.empty`/`.err` markers) |
+| `lake_fetch.py` | resumable raw download (one small Parquet per request chunk, `.empty`/`.err` markers); `--only-missing LAKE_DIR` turns published files back into raw chunks so only real gaps are requested; `--before`/`--since DATE` |
 | `lake_build.py` | raw chunks → release files, with cleaning rules below and per-file QA |
 | `bhav_fetch.py` | sample of NSE F&O bhavcopies, NSE all-index closes and Yahoo index history for validation |
-| `validate.py`, `make_catalog.py` | write `VALIDATION.md` and `CATALOG.json` |
+| `validate.py`, `make_catalog.py` | write `VALIDATION.md` and `CATALOG.json` (`make_catalog.py --restore-qa LAKE_DIR` rebuilds `_qa/` for files downloaded from Drive) |
 | `stkopt_coverage.py` | write `STOCK_OPTIONS_COVERAGE.json` from the raw stock-option chunks |
 
 ## Where the data lives: Google Drive `gdrive:IraAlgo-data-lake`
@@ -24,7 +24,7 @@ is optional), **not** in git. This folder holds only code and metadata:
 The lake is kept in the Google Drive folder **IraAlgo-data-lake**, one sub-folder per dataset
 (`index_1m/`, `options_rolling_1m/`, …, `nse_bhavcopy/`). The folder root holds `MANIFEST.txt` (path, rows, sha256,
 bytes of every file), `STATUS.txt` (what is there and what is missing), `CATALOG.json` and `VALIDATION.*`.
-**As of 2026-10-14 every file in `CATALOG.json` is on Drive** (187 Parquet files, 6.09 GB, 12 dataset folders
+**As of 2026-10-15 every file in `CATALOG.json` is on Drive** (187 Parquet files, 12 dataset folders
 including `nse_bhavcopy/`, all verified with `rclone check`). Stock options are partial (see Known gaps). The folders
 `brain_models/`, `derived/` and `participants/` on Drive were uploaded separately and are not described here.
 
@@ -87,20 +87,39 @@ expiry after expiry. `spot` is the underlying value at that minute, `oi` is open
 weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices follows the nearest available
 (monthly) expiry.
 
-## Known gaps in this download (2026-10-13/14)
+## Known gaps in this download (updated 2026-10-15)
 
-* **Stock options are incomplete.** Fetched share of the planned 30-day chunks: ATM 97% (58 of 59 stocks ≥90%),
-  ATM±1 over 99%, ATM±2 24%, ATM±3..±5 none (nearest strikes are fetched first). Per stock and offset:
-  `STOCK_OPTIONS_COVERAGE.json` (1.0 = complete). The download stopped because Dhan answered every
-  `/charts/rollingoption` call with HTTP 429 DH-904 from about 02:55 UTC on 14 Oct, and again minutes after a retry
-  at 04:16 (other data endpoints still answered; the token expires at 05:39 UTC on 14 Oct). About 57,000 chunks
-  remain.
+* **Index data, appended on 14/15 Oct.** Index daily (incl. INDIAVIX), index 1-minute (7 indices), continuous futures
+  daily, live index and MCX futures 1-minute: **complete to 14 Oct 2026**. Index options (rolling ATM±10):
+  NIFTY WEEK (incl. the **13 Oct expiry day**), NIFTY MONTH and BANKNIFTY WEEK to **14 Oct**; BANKNIFTY MONTH,
+  SENSEX, FINNIFTY and MIDCPNIFTY (WEEK and MONTH) and the six MCX option series only to **13 Oct**. Their last chunk
+  was fetched after 00:00 IST on 15 Oct, and Dhan's `/charts/rollingoption` returned no 14 Oct minutes at that hour; the
+  token expired (HTTP 401 DH-901) at about 04:20 UTC on 15 Oct before they could be asked again.
+  The 14 Oct minutes only enter a build once Dhan's daily series has 14 Oct (cleaning rule below); the daily candle
+  appeared between 18:35 UTC on 14 Oct and 04:15 UTC on 15 Oct.
+  Equity minutes/daily, stock futures and live stock futures were **not** refreshed (still to 12/13 Oct).
+* **Stock options are still incomplete.** Fetched share of the planned 30-day chunks (`STOCK_OPTIONS_COVERAGE.json`,
+  per stock and offset, 1.0 = complete): ATM 99.4% (every stock ≥94.5%; ADANIENT was 79%), ATM±1 100%,
+  ATM±2 23%, ATM±3..±5 none. About 57,000 chunks remain. Every stock-option file now runs to **14 Oct**: the newest
+  30-day window was fetched again for ATM and ATM±1 of every stock and for 51 of the 236 ATM±2 series; the other
+  ATM±2 series keep their published rows to 12 Oct (5 of them via stand-ins, see below).
+  Why: Dhan rate-limited the account (HTTP 429 DH-904) on every data endpoint for most of 14 Oct, even at one
+  request per second; when it lifted, stock-option windows often timed out (HTTP 504), so a night gave only about
+  3,500 chunks (most of them windows that were empty last time, asked again); then the token expired.
   Quality: index options match NSE bhavcopy contract-day high/low 86–98%, but stock options match only about 68%
   (median day exact, tails ±10%). Treat stock-option minutes with care (see VALIDATION.md section 3).
-  **To finish:** set a fresh token and run `python -I research/data/lake_fetch.py $RAW stkopt`, then
-  `lake_build.py ... stkopt`, `stkopt_coverage.py`, `validate.py`, `make_catalog.py` and `publish_gdrive.py`. The raw
-  chunks stayed on the build machine, so a fresh `$RAW` starts again from ATM (about 83,000 requests in all, more than the
-  stock-option rate limit allowed in one night).
+  **To finish (no refetch of what is on Drive):** download the lake from Drive to `$OUT`, then
+  `python -I research/data/make_catalog.py --restore-qa $OUT` and
+  `python -I research/data/lake_fetch.py $RAW --only-missing $OUT stkopt` (resumable; stops with exit 3 on DH-905 or
+  an expired token). Before building with newest windows still unfetched, write stand-ins from the published rows
+  (`lake_fetch.seed(RAW, OUT, "stkopt", upto_last=True)`) so the build keeps them. Then `lake_build.py $RAW $OUT stkopt`,
+  `stkopt_coverage.py`, `validate.py`, `make_catalog.py`, `publish_gdrive.py`.
+* QA counts of rebuilt option and index files add the published files' dropped-row counts to those of the
+  re-fetched newest window, so the window that was fetched twice is counted twice (for example NIFTY WEEK
+  `outside_session` 44,353 instead of about 40,993); the data rows themselves are not affected.
+* VALIDATION.md's Yahoo comparison of index daily closes dipped slightly (NIFTY 100% → 99.98%) because the saved Yahoo
+  history in `nse_bhavcopy/yahoo/` was taken during market hours on 13 Oct, so its 13 Oct "close" is an intraday
+  price (NIFTY 22,488 vs the real close 22,721.95). The lake's value is correct.
 * Every other dataset was fetched with no failed chunks left (the gaps of the 12 Oct download, in HINDUNILVR equity
   minutes, FINNIFTY options and live stock futures, are filled).
 
