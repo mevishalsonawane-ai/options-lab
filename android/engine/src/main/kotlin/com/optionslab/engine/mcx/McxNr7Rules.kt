@@ -138,9 +138,9 @@ object McxNr7Rules {
     /**
      * One finished minute of a held position: the option's minute [opt] (null: no print) and the future's close [future]
      * (NaN: none) with the listed strikes; the exit, or null and the updated state. The research's order: stop / lock on the
-     * low, the future's stop, the edge, then the lock update on the high.
+     * low, the future's stop, the edge (never on the fill minute: [edgeOk] false), then the lock update on the high.
      */
-    fun step(h: Held, opt: Minute?, future: Double, listed: Collection<Double>): Pair<Exit?, Held> {
+    fun step(h: Held, opt: Minute?, future: Double, listed: Collection<Double>, edgeOk: Boolean = true): Pair<Exit?, Held> {
         if (opt != null) {
             val stop = h.fill * (1 - PREM_STOP)
             val lvl = if (h.lock.isNaN()) stop else maxOf(stop, h.lock)
@@ -150,11 +150,14 @@ object McxNr7Rules {
             }
         }
         if (future.isFinite() && h.side * (future - h.futureStop) <= 0) return Exit("future_stop", opt?.close ?: Double.NaN) to h
-        if (opt != null && future.isFinite() && atEdge(listed, future, h.strike, h.side)) return Exit("edge", opt.close) to h
+        if (edgeOk && opt != null && future.isFinite() && atEdge(listed, future, h.strike, h.side)) return Exit("edge", opt.close) to h
         if (opt == null) return null to h
         val peak = maxOf(h.peak, opt.high)
         return null to h.copy(peak = peak, lock = lockAfter(h, peak))
     }
+
+    /** An exit decided on a minute with no option print: sold at the next print's open within this many minutes, else at the last print. */
+    const val NEXT_PRINT_MINUTES = 10
 
     /** The square-off minute (IST) of a session closing at [closeMinute]: the last minute before close - 15 (research sq_ix). */
     fun squareOff(closeMinute: Int): Int = closeMinute - SQ_BEFORE_CLOSE - 1

@@ -219,7 +219,7 @@ class McxArmsCardTest {
     }
 
     @Test fun theHiddenMcxArmsLeaveTheGroup() {
-        com.optionslab.app.data.HiddenArms.resetForTest(context)
+        com.optionslab.app.data.HiddenArms.resetForTest(androidx.test.core.app.ApplicationProvider.getApplicationContext())
         com.optionslab.app.data.HiddenArms.arms = emptyList()
         kotlinx.coroutines.runBlocking { com.optionslab.app.data.HiddenArms.passNow() }
         // A position-less read counts as holding (never switched off on a missing read): stand in "flat" for both MCX arms.
@@ -235,6 +235,6 @@ class McxArmsCardTest {
         compose.onNodeWithText(McxMorningRules.LABEL).assertDoesNotExist()
         compose.onNodeWithText(McxTrendRules.LABEL).assertDoesNotExist()
         assertEquals(2, compose.onAllNodes(isToggleable() and hasContentDescription("Paper only: switch", substring = true)).fetchSemanticsNodes().size)
-        com.optionslab.app.data.HiddenArms.resetForTest(context)
+        com.optionslab.app.data.HiddenArms.resetForTest(androidx.test.core.app.ApplicationProvider.getApplicationContext())
     }
 }

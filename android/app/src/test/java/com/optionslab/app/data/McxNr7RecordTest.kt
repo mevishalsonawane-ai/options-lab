@@ -173,6 +173,27 @@ class McxNr7RecordTest : RobolectricTest() {
         assertTrue(McxNr7Record.view.value.open.isEmpty())
     }
 
+    @Test fun anExitOnAMinuteWithNoOptionPrintSellsAtTheNextPrintsOpenEvenOnALaterPass() {
+        val fut = history()
+        fut += flat(today, LocalTime.of(10, 1), 5990.0)             // put break
+        fut += flat(today, LocalTime.of(10, 3), 6006.0)             // the future stop, with no option print that minute
+        fut += flat(today, LocalTime.of(10, 4), 6006.0)
+        feed.bars[futKey] = fut
+        val pe = mutableListOf(bar(today, LocalTime.of(10, 2), 80.0, 82.0, 79.0, 81.0))
+        feed.bars[peKey(6050)] = pe
+        runBlocking { McxNr7Record.setOn(true) }
+        at(LocalTime.of(10, 5)); tick()
+        // Decided, not yet priced: still open, waiting for the next print (kept in the file across passes).
+        val open = McxNr7Record.view.value.open.single()
+        assertEquals("future_stop", open.pendingWhy)
+        assertEquals(81.0, open.lastOpt, 1e-9)
+        McxNr7Record.resetCacheForTest()
+        pe += bar(today, LocalTime.of(10, 6), 70.0, 71.0, 69.0, 70.0)
+        at(LocalTime.of(10, 8)); tick()
+        val t = McxNr7Record.view.value.closed.single()
+        assertEquals("future_stop", t.why); assertEquals(70.0, t.exit!!, 1e-9)
+    }
+
     @Test fun itsCodeHasNoOrderPath() {
         val src = File("src/main/java/com/optionslab/app/data/McxNr7Record.kt").readLines()
             .filterNot { it.trim().startsWith("*") || it.trim().startsWith("//") || it.trim().startsWith("/**") }

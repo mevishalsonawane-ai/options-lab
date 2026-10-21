@@ -40,3 +40,18 @@ Two decisions only you can make:
 
 Details: `research/HUNT_R96_ROUND3.md`, every number in `research/hunt/r96_mcx_buy/results/report_round3.md`, all 29
 ideas in `research/hunt/r96_mcx_buy/LEDGER.md`.
+
+App changes (21 Oct, your requests):
+
+- **SILVERM morning call and MCX 12-month trend removed.** Both are switched off and hidden. Their code and trade records
+  are kept, and you can restore either in one tap from Home → Strategies → Hidden arms.
+  - If one still holds a position, it keeps its own exits until it is flat, and only then switches off.
+  - The trend arm opens no new legs.
+- **NR7 crude added as RECORD ONLY** ("NR7 crude (record only)" on the MCX card; off until you switch it on). It runs the
+  exact research rule:
+  - signal on the crude future, buy the 1-ITM call or put;
+  - −40% stop, the NR7 day's other extreme as the stop on the future, the 30/60/100 profit lock, take-profit at 3
+    strikes in the money, out after 3 sessions.
+  - It books would-be trades at real minute prices with real charges, and **never places an order**, on paper or live.
+  - This is the honest way past the failed gate: every day it records is new, unseen evidence. If its forward record
+    holds up, it can be put to the gates again for paper.

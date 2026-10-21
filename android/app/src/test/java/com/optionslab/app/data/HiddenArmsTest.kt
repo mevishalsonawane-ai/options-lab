@@ -121,7 +121,7 @@ class HiddenArmsTest : RobolectricTest() {
         assertEquals(listOf("off"), fake(ArmsCleanup.ORB).calls)
         assertFalse(HiddenArms.visible(ArmsCleanup.ORB))
         assertTrue(ArmsCleanup.listed(HiddenArms.state.value).any { it.key == ArmsCleanup.ORB })
-        assertTrue(HiddenArms.diagLine(), HiddenArms.diagLine().startsWith("Hidden arms: 12 hidden"))
+        assertTrue(HiddenArms.diagLine(), HiddenArms.diagLine().startsWith("Hidden arms: 14 hidden"))
     }
 
     @Test fun aReadThatFailsCountsAsHoldingSoNothingIsSwitchedOffOnIt() {
@@ -180,7 +180,7 @@ class HiddenArmsTest : RobolectricTest() {
         pass()
         assertTrue(HiddenArms.visible(ArmsCleanup.PINE))
         if (!Autopilot.enabled()) return
-        waitFor("each switch-off logged once, and the restore") { hides().count { it.change.target == "hide:pine_auto" } == 2 && hides().size == 13 }
+        waitFor("each switch-off logged once, and the restore") { hides().count { it.change.target == "hide:pine_auto" } == 2 && hides().size == 15 }
         val pine = hides().filter { it.change.target == "hide:pine_auto" }
         assertEquals(listOf(AutoChange.HIDDEN, AutoChange.RESTORED), pine.map { it.change.to })
         assertEquals(AutoChange.ON, pine[0].change.from)

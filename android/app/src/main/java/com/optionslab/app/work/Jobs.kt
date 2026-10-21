@@ -1103,13 +1103,14 @@ object Tasks {
             step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
             // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
             step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
-            step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
             if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
                 com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
                     ?.let { com.optionslab.app.data.McxMarket.noteLive(it.net) }
             }
             step("position cards") { PositionCards.refresh(context) }
+            // 21 Oct: NR7 crude, record only (no orders): after every step that guards a position (its reads are slow).
+            step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() }
             runCatching { Heartbeat.beat(context) }
         } } finally {
             com.optionslab.app.data.Broker.passEnd()

@@ -104,8 +104,8 @@ class CompactRowsTest {
         val restored = ArrayList<String>()
         compose.setContent { IraAlgoTheme("light") { Column { HiddenArmsContent(cleaned, said = null) { restored += it } } } }
         compose.waitForIdle()
-        assertTrue(shown("$HIDDEN_ARMS (12)"))
-        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 12").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        assertTrue(shown("$HIDDEN_ARMS (14)"))
+        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 14").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertTrue(shown(HIDDEN_NOTE))
         assertTrue(shown("was on · back on paper"))
         assertTrue(shown(keepNumbersWhole(ArmsCleanup.NIFTY_NOTE)))

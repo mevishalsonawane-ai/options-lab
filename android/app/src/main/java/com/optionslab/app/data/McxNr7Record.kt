@@ -12,6 +12,7 @@ import com.optionslab.engine.mcx.McxInstruments
 import com.optionslab.engine.mcx.McxNr7Rules
 import com.optionslab.engine.mcx.McxSession
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -41,6 +42,10 @@ object McxNr7Record {
         val futureStop: Double, val breakeven: Double, val lock: Double = Double.NaN, val peak: Double = fill,
         val lastEpoch: Long = 0L, val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null,
         val cost: Double = 0.0,
+        /** The option's last printed close seen (kept: a later pass with no print still has a price). */
+        val lastOpt: Double = fill,
+        /** An exit decided on a minute with no option print ([pendingWhy] at [pendingAt]): sold at the next print's open. */
+        val pendingWhy: String? = null, val pendingAt: Long = 0L,
     ) {
         val open: Boolean get() = exit == null
         /** Rupees after charges and spreads, once closed. */
@@ -103,7 +108,15 @@ object McxNr7Record {
 
     fun init(context: Context) {
         file = File(context.applicationContext.noBackupFilesDir, "mcx_nr7_record.vault")
+        // Read once in the background, so the MCX watch knows at once (after a restart) that it records ([onQuick]).
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch { runCatching { refresh() } }
     }
+
+    /** A pass's whole budget: the network reads never hold the MCX pass (and the steps after it) longer than this. */
+    private const val PASS_BUDGET_MS = 20_000L
+
+    /** When a history read last failed, per underlying (memory): tried again after half an hour, not every minute. */
+    private val historyTried = HashMap<String, Long>()
 
     private fun ready() = ::file.isInitialized
 
@@ -142,8 +155,6 @@ object McxNr7Record {
             if (on) "${McxNr7Rules.LABEL} on: it records what it would trade, and places no order." else "${McxNr7Rules.LABEL} off."
         }
         runCatching { Diag.record("mcx-nr7", said) }
-        // The MCX watch's plain hint: it runs while this records, even with every paper arm off.
-        runCatching { McxMarket.noteArmsArmed(on || McxPaperArms.armedNow().isNotEmpty()) }
         return said
     }
 
@@ -157,7 +168,8 @@ object McxNr7Record {
         val stamp = now.atZone(IST).toEpochSecond() / 60
         if (stamp == lastMinute) return
         runCatching {
-            lock.withLock {
+            kotlinx.coroutines.withTimeoutOrNull(PASS_BUDGET_MS) { lock.withLock {
+                if (stamp == lastMinute) return@withLock              // another caller ran this minute's pass meanwhile
                 val b = book()
                 if (!b.on && b.trades.none { it.open }) return@withLock
                 lastMinute = stamp
@@ -168,7 +180,7 @@ object McxNr7Record {
                 val closed = b.trades.count { !it.open }
                 if (closed > CLOSED_KEPT) { var drop = closed - CLOSED_KEPT; b.trades.removeAll { !it.open && drop-- > 0 }; changed = true }
                 if (changed) save(b)
-            }
+            } }
         }
     }
 
@@ -200,8 +212,12 @@ object McxNr7Record {
         val chain = McxInstruments.nearChain(all, u, today)
         if (chain.isEmpty()) return decide(b, u, key, "no option chain")
         val fut = McxInstruments.underlyingFuture(all, chain.first()) ?: return decide(b, u, key, "no future")
-        val lv = b.nr7[key] ?: (nr7Of(fut, today, now, cal, f) ?: return setStatus(b, u, "history not read yet"))
-            .also { b.nr7[key] = it; b.nr7.keys.sorted().dropLast(40).forEach { k -> b.nr7.remove(k) } }
+        val lv = b.nr7[key] ?: run {
+            val tried = historyTried[key]
+            if (tried != null && System.currentTimeMillis() - tried < 30 * 60_000L) return setStatus(b, u, "history not read yet (tried again shortly)")
+            (nr7Of(fut, today, now, cal, f) ?: run { historyTried[key] = System.currentTimeMillis(); return setStatus(b, u, "history not read yet") })
+                .also { b.nr7[key] = it; b.nr7.keys.sorted().dropLast(40).forEach { k -> b.nr7.remove(k) } }
+        }
         if (lv == "none") return decide(b, u, key, "the last session was not an NR7 day")
         val (hc, lc, d) = lv.split(',')
         val nr7 = McxNr7Rules.Day(LocalDate.parse(d), hc.toDouble(), lc.toDouble(), hc.toDouble(), lc.toDouble())
@@ -264,22 +280,31 @@ object McxNr7Record {
         val opt = f.bars(t.optionKey, from, to, now).filter { it.epochSecond > t.lastEpoch }.associateBy { it.epochSecond }
         val fut = f.bars(t.futureKey, from, to, now).filter { it.epochSecond > t.lastEpoch }.associateBy { it.epochSecond }
         val listed = f.contracts().filter { it.isOption && it.name == t.underlying && it.expiry == t.expiry }.map { it.strike }.distinct()
-        var lastClose = Double.NaN
+        val entryEpoch = t.entryTime.atZone(IST).toEpochSecond()
         for (e in (opt.keys + fut.keys).sorted()) {
             if (e > end) break
             val o = opt[e]?.let { mn(it) }
             val fc = fut[e]?.close ?: Double.NaN
-            if (o != null) lastClose = o.close
-            val (exit, held) = McxNr7Rules.step(t.held(), o, fc, listed)
-            t = t.copy(lock = held.lock, peak = held.peak, lastEpoch = e)
-            if (exit != null) {
-                val px = exit.price.takeIf { it.isFinite() && it > 0 } ?: lastClose.takeIf { it.isFinite() } ?: continue
-                b.trades[i] = close(b, t, px, e, exit.why); return true
+            // An exit decided on a minute with no print: the next print's open within 10 minutes, else the last print (research).
+            val why = t.pendingWhy
+            if (why != null) {
+                if (o != null && o.open > 0) { b.trades[i] = close(b, t.copy(lastEpoch = e), o.open, e, why); return true }
+                if (e - t.pendingAt >= McxNr7Rules.NEXT_PRINT_MINUTES * 60L) { b.trades[i] = close(b, t.copy(lastEpoch = e), t.lastOpt, e, why); return true }
+                t = t.copy(lastEpoch = e)
+                continue
             }
-            if (e == end) { if (lastClose.isFinite()) { b.trades[i] = close(b, t, lastClose, e, "time"); return true } }
+            val (exit, held) = McxNr7Rules.step(t.held(), o, fc, listed, edgeOk = e > entryEpoch)
+            t = t.copy(lock = held.lock, peak = held.peak, lastEpoch = e, lastOpt = o?.close?.takeIf { it > 0 } ?: t.lastOpt)
+            if (exit != null) {
+                val px = exit.price.takeIf { it.isFinite() && it > 0 }
+                if (px != null) { b.trades[i] = close(b, t, px, e, exit.why); return true }
+                t = t.copy(pendingWhy = exit.why, pendingAt = e)
+                continue
+            }
+            if (e == end) { b.trades[i] = close(b, t, t.lastOpt, e, "time"); return true }
         }
-        // Past the last minute with no print at it: out at the last known price.
-        if (now.atZone(IST).toEpochSecond() > end + 60 && lastClose.isFinite()) { b.trades[i] = close(b, t, lastClose, end, "time"); return true }
+        // Past the last minute (no print at it), or a pending exit at the close: out at the last print seen.
+        if (now.atZone(IST).toEpochSecond() > end + 60) { b.trades[i] = close(b, t, t.lastOpt, end, t.pendingWhy ?: "time"); return true }
         b.trades[i] = t
         val s = "holding ${t.symbol} (would-be) since %s, fill %.2f, lock %s".format(Locale.ENGLISH, t.entryTime.toLocalTime(), t.fill,
             if (t.lock.isNaN()) "none yet" else "%.2f".format(Locale.ENGLISH, t.lock))
@@ -292,7 +317,7 @@ object McxNr7Record {
         val minOut = at.hour * 60 + at.minute
         val cost = McxCosts.charge("BUY", t.fill * t.qty, true).toDouble() + McxCosts.charge("SELL", px * t.qty, true).toDouble() +
             McxNr7Rules.half(minIn) * t.fill * t.qty + McxNr7Rules.half(minOut) * px * t.qty
-        val done = t.copy(exit = px, exitTime = at, why = why, cost = cost)
+        val done = t.copy(exit = px, exitTime = at, why = why, cost = cost, pendingWhy = null)
         line(b, t.underlying, "would sell ${t.symbol} @ %.2f (%s): %s after charges · record only".format(Locale.ENGLISH, px, why, rs(done.net ?: 0.0)))
         return done
     }
@@ -319,13 +344,15 @@ object McxNr7Record {
             o.getString("okey"), o.getString("fkey"), o.getDouble("fill"), LocalDateTime.parse(o.getString("in")), LocalDate.parse(o.getString("nr7")),
             o.getDouble("fstop"), o.getDouble("be"), o.optDouble("lock", Double.NaN), o.optDouble("peak", o.getDouble("fill")),
             o.optLong("last", 0L), if (o.has("exit")) o.getDouble("exit") else null, o.optString("out").ifEmpty { null }?.let { LocalDateTime.parse(it) },
-            o.optString("why").ifEmpty { null }, o.optDouble("cost", 0.0))
+            o.optString("why").ifEmpty { null }, o.optDouble("cost", 0.0), o.optDouble("lastOpt", o.getDouble("fill")),
+            o.optString("pend").ifEmpty { null }, o.optLong("pendAt", 0L))
     }.getOrNull()
 
     private fun writeTrade(t: Trade): JSONObject = JSONObject().put("u", t.underlying).put("sym", t.symbol).put("side", t.side).put("strike", t.strike)
         .put("qty", t.qty).put("expiry", t.expiry.toString()).put("okey", t.optionKey).put("fkey", t.futureKey).put("fill", t.fill)
         .put("in", t.entryTime.toString()).put("nr7", t.nr7Day.toString()).put("fstop", t.futureStop).put("be", t.breakeven)
-        .put("peak", t.peak).put("last", t.lastEpoch).put("cost", t.cost)
+        .put("peak", t.peak).put("last", t.lastEpoch).put("cost", t.cost).put("lastOpt", t.lastOpt)
+        .put("pend", t.pendingWhy ?: "").put("pendAt", t.pendingAt)
         .apply {
             if (!t.lock.isNaN()) put("lock", t.lock)
             t.exit?.let { put("exit", it) }; t.exitTime?.let { put("out", it.toString()) }; t.why?.let { put("why", it) }
@@ -343,6 +370,8 @@ object McxNr7Record {
     }
 
     private fun publish(b: Book) {
+        // The MCX watch's plain hint (the main thread's): it runs while this records, even with every paper arm off.
+        runCatching { McxMarket.noteArmsArmed(b.on || McxPaperArms.view.value.armed.values.any { it }) }
         _view.value = View(b.on, b.status.toMap(), b.trades.filter { it.open }, b.trades.filter { !it.open }.takeLast(60), b.log.takeLast(40))
     }
 
@@ -358,7 +387,8 @@ object McxNr7Record {
 
     /** TEST ONLY: a fresh book in [context]'s file, with [f] as the feed. */
     internal fun resetForTest(context: Context, f: Feed) {
-        init(context)
+        file = File(context.applicationContext.noBackupFilesDir, "mcx_nr7_record.vault")
+        historyTried.clear()
         file.delete(); written.forget()
         cache = null; lastMinute = -1L; feed = f
         _view.value = View()
