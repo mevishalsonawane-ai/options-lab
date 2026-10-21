@@ -3598,6 +3598,19 @@ object IraHub {
             }
             return true
         }
+        // 20 Oct, enhancement round 2 (TODO I15): "Sunday review", "read me the weekly review" ([com.optionslab.ira.SundayReview]):
+        // the spoken Sunday review on demand - paper and live apart, best and worst arm, the biggest cost. It holds the figures,
+        // so a locked phone hears only to unlock. Reads only; nothing acts. Asked before the written review's own question.
+        val sundayAsk = if (!bundled && parsed.order == null && parsed.command == null && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.SundayReview.asked(q) }.getOrDefault(false) else false
+        if (sundayAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val sundayLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraSundayReview.answer(sundayLocked) }.getOrElse { "I could not put the Sunday review together just now, Boss." }, whole = true)
+            }
+            return true
+        }
         // "Weekly review", "is hafte ka review", "how did this week go", "last week's review" ([com.optionslab.ira.WeeklyReview]):
         // Jarvis's review of the week in three sentences - the paper P&L, each running strategy against its backtest and the
         // one line to watch - the whole of it on the Ira page's card ([IraWeekly]). Before the week's review is made, the week

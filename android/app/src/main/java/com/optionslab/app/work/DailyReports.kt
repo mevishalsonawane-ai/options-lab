@@ -30,8 +30,9 @@ import kotlin.math.abs
  *   09:10  login reminder  only if Zerodha is still not logged in
  *   15:45  day report      paper and Zerodha P&L, trades, the ORB arms, anything that went wrong
  *
- * and, for Jarvis, one on Sunday evening (18:00): the paper arms' week ([com.optionslab.ira.ArmWeek]) - said once, kept in
- * the chat, no notification; nothing acts - and one after each week's last session (15:47): Jarvis's weekly review
+ * and, for Jarvis, one on Sunday evening (18:00): the spoken Sunday review ([com.optionslab.app.ira.IraSundayReview], paper and
+ * live apart; a locked phone gets only a "ready" notice) and the paper arms' week ([com.optionslab.ira.ArmWeek]) - said once,
+ * kept in the chat; nothing acts - and one after each week's last session (15:47): Jarvis's weekly review
  * ([com.optionslab.ira.WeeklyReview]), kept for the Ira page's card with a "Weekly review ready" notice; nothing acts.
  *
  * They run in a worker (the contract list can take a while to download), from
@@ -486,9 +487,10 @@ object DailyReports {
      * Sunday 18:00: the paper arms' week ([com.optionslab.ira.ArmWeek]) - each arm's trades, wins and net beside its two-year
      * test, and which is on track to pass its paper test. Once a week (a retried run repeats nothing), under the weekly
      * review's own switch; the numbers in the chat, aloud plain words only (a locked phone hears only that it is in the chat).
-     * Reads only: nothing is armed, stopped, placed or closed.
+     * Reads only: nothing is armed, stopped, placed or closed. [aloud] false (20 Oct, enhancement round 2): the spoken Sunday
+     * review ([com.optionslab.app.ira.IraSundayReview]) was made, so this goes to the chat only - one voice at a time.
      */
-    suspend fun week() {
+    suspend fun week(aloud: Boolean = true) {
         if (!weekOn() || !com.optionslab.app.ira.Automations.on(com.optionslab.app.ira.Automations.Auto.WEEK)) return
         val today = Market.today()
         val onceKey = "jarvis.armWeek.last"
@@ -496,7 +498,7 @@ object DailyReports {
         val said = com.optionslab.app.ira.IraBots.armWeek(today) ?: return
         runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, today.toString()) }
         com.optionslab.app.ira.IraHub.note(said.chat, from = com.optionslab.app.ira.Automations.Auto.WEEK)
-        runCatching { com.optionslab.app.ira.JarvisVoice.announce(said.aloud) }
+        if (aloud) runCatching { com.optionslab.app.ira.JarvisVoice.announce(said.aloud) }
         runCatching { com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.WEEK, said.aloud) }
     }
 
@@ -529,8 +531,12 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                     if (!com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.app.data.HistoryKeeper.kick() }
                     DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
                 }
-                // Said and kept in the chat only: no notification.
-                DailyReports.Kind.WEEK -> DailyReports.week()
+                // Said and kept in the chat only: no notification. 20 Oct, enhancement round 2 (TODO I15): the spoken Sunday
+                // review first (a locked phone gets only a "ready" notice); when it was made, the arms' week is not said too.
+                DailyReports.Kind.WEEK -> {
+                    val reviewed = runCatching { com.optionslab.app.ira.IraSundayReview.sunday(applicationContext) }.getOrDefault(false)
+                    DailyReports.week(aloud = !reviewed)
+                }
                 // Kept for the Ira page, noted in the chat, "Weekly review ready" notified (no rupee figure in it).
                 DailyReports.Kind.WEEKLY -> com.optionslab.app.ira.IraWeekly.prepare(applicationContext)
                 // The danger meter again once BANKNIFTY's open is in: a chat note and the card, no notification.

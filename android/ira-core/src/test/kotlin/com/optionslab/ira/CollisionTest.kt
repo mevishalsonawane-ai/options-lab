@@ -128,6 +128,7 @@ class CollisionTest {
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
+        "SundayReview" to { q -> SundayReview.asked(q) },
         "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
         "LotsWhatIf" to { q -> LotsWhatIf.asked(q) != null },
         "LiquidityInsight" to { q -> LiquidityInsight.asked(q) != null },
@@ -938,6 +939,9 @@ class CollisionTest {
         "banknifty abhi volatile hai kya" to "BigMoveRisk", "is nifty volatile now" to "BigMoveRisk", "is the market volatile right now" to "BigMoveRisk",
         "how risky is the market now" to "BigMoveRisk", "market risky hai kya abhi" to "BigMoveRisk", "is a sharp move likely in sensex" to "BigMoveRisk",
         // ---- WeeklyReview: Jarvis's review of the week (money by strategy, live vs backtest, shadows, the market, next week) ----
+        // ---- SundayReview (20 Oct, round 2): the spoken one, taken before the written review that also hears "weekly review" ----
+        "jarvis sunday review" to "SundayReview", "speak the sunday review" to "SundayReview", "read out the weekly review" to "SundayReview",
+        "weekly review sunao" to "SundayReview",
         "weekly review" to "WeeklyReview", "jarvis weekly review" to "WeeklyReview", "show me the weekly review" to "WeeklyReview",
         "is hafte ka review" to "WeeklyReview", "hafte ka review" to "WeeklyReview", "week ka review" to "WeeklyReview",
         "how did this week go" to "WeeklyReview", "how did the week go" to "WeeklyReview", "how was this week" to "WeeklyReview",
@@ -1644,7 +1648,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "SelfTalk", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SignalTalk", "TrendTalk", "PassedArmsTalk", "SoloDay", "HeroTicketTalk", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "LiveCheck", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "GammaMorning", "OiWallBlast", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SignalTalk", "TrendTalk", "PassedArmsTalk", "SoloDay", "HeroTicketTalk", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "SundayReview", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "LiveCheck", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "GammaMorning", "OiWallBlast", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "CandleAgent", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve", "Knowledge")
 
