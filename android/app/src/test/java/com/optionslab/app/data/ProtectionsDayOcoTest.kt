@@ -129,9 +129,9 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
         assertTrue(kite.gtts.isEmpty())
         assertNull(one().gttId)
-    }
         assertEquals("round 5: counted as replaced by two orders", 1, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.REPLACED))
         assertEquals(0, DayOco.countForTest(com.optionslab.ira.DayGttTally.Event.PLACED))
+    }
 
     @Test fun nothingHeldYetFallsBackToTheTwoOrders() {
         DayOco.resetForTest(on = true)
