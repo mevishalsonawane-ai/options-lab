@@ -16,7 +16,17 @@ NAMES = {"S1": "squeeze release, ATM straddle", "S2": "squeeze release, 1-ITM di
          "R2A": "NR7 breakout, 1-ITM, edge take-profit (real fills)", "R2B": "NR7 breakout, 2-ITM, edge take-profit",
          "R2C": "Crabel inside-day NR7 breakout, 1-ITM", "R2D": "NR7 breakout on CRUDEOIL / NATURALGAS options",
          "R2E": "NR7 breakout with a Rs 6,500 stop-risk cap", "R2F": "relaxed squeeze release, ATM straddle, 6 books",
-         "R2G": "NR7 day -> ATM straddle", "R2H": "quiet-base (NR7 within 5 days) 20-day breakout, 1-ITM"}
+         "R2G": "NR7 day -> ATM straddle", "R2H": "quiet-base (NR7 within 5 days) 20-day breakout, 1-ITM",
+         "R3A": "NR7 breakout on crude only (CRUDEOILM + CRUDEOIL)", "R3B": "NR4 breakout on crude",
+         "R3C": "NR7 breakout, future trail instead of the premium ladder (energy)",
+         "R3D": "NR7 breakout in a low-volatility regime (energy)", "R3E": "weekly NR7 breakout, 5 sessions (energy)",
+         "R3F": "NR7 breakout in the first two hours only (energy)",
+         "R3G": "NR7 morning break still holding at the US open (energy)",
+         "R3H": "EIA-day 11:00-11:30 ET momentum, 1-ITM (crude)",
+         "R3I": "last-half-hour intraday momentum, 1-ITM (4 minis)",
+         "R3J": "US-open range breakout in a high-volatility regime (crude)",
+         "R3K": "NR7 crude, 1-ITM option with R93's 2 ATR stop + 3 ATR chandelier, 10 sessions",
+         "R3L": "NR7 crude, the future itself with R93's 2 ATR stop + 3 ATR chandelier, 10 sessions"}
 
 
 def rs(x) -> str:

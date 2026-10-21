@@ -184,11 +184,11 @@ object HiddenArms {
                         runCatching { Diag.record("arms", "$label: the cleanup could not switch it off now; it tries again") }
                         continue
                     }
-                    runCatching { Diag.record("arms", "$label: ${ArmsCleanup.HIDDEN_WORDS}" + if (st.first) "" else " (it had been switched on again)") }
+                    runCatching { Diag.record("arms", "$label: ${ArmsCleanup.hiddenWords(st.key)}" + if (st.first) "" else " (it had been switched on again)") }
                     if (st.first) runCatching { com.optionslab.app.ira.Autopilot.logArmHidden(st.key, label, wasOn = true) }
                 }
                 ArmsCleanup.Action.HIDE -> {
-                    runCatching { Diag.record("arms", "$label: hidden on your choice (15 Oct); it was off") }
+                    runCatching { Diag.record("arms", "$label: hidden on your choice (${if (st.key in ArmsCleanup.FIRST_15OCT) "15 Oct" else "21 Oct"}); it was off") }
                     runCatching { com.optionslab.app.ira.Autopilot.logArmHidden(st.key, label, wasOn = false) }
                 }
                 ArmsCleanup.Action.WAIT -> runCatching { Diag.record("arms", "$label: ${ArmsCleanup.WAITING}") }
@@ -246,6 +246,12 @@ object HiddenArms {
         off = { OrbArms.cleanupOff(src); emptyList() },
         on = { OrbArms.setArmed(src, true, automatic = OrbArms.autoOf(src), pinConfirmed = false) })
 
+    /** An MCX paper arm ([McxPaperArms]): its switch and whether it holds a position; off / on through its own setter (paper only). */
+    private fun mcxArm(src: String) = Arm(src,
+        now = { McxPaperArms.cleanupNow(src)?.let { (armed, open) -> ArmsCleanup.Now(src, armed, open) } },
+        off = { McxPaperArms.setArmed(src, false); emptyList() },
+        on = { McxPaperArms.setArmed(src, true) })
+
     private fun defaultArms(): List<Arm> = listOf(ArmsCleanup.ORB, ArmsCleanup.ORB_FRESH, ArmsCleanup.ORB_SWEEP, ArmsCleanup.RANGE_FADE, ArmsCleanup.HERO)
         .map { orbArm(it) } + listOf(
         Arm(ArmsCleanup.NIGHT,
@@ -299,6 +305,9 @@ object HiddenArms {
             on = { ids -> ids.mapNotNull { m -> m.substringBefore(':').toLongOrNull()?.let { it to (m.substringAfter(':', "auto") != "approve") } }
                 .mapNotNull { (id, automatic) -> Strategies.setArmed(id, true, com.optionslab.engine.strategy.RunMode.SANDBOX, automatic) }
                 .firstOrNull() ?: "its strategies start on their schedules again, on paper" }),
+        // 21 Oct (Boss: "Remove silverm monthly call, and mcx 12 month trend"): two MCX paper arms, through their own switch.
+        mcxArm(ArmsCleanup.MCX_SILVERM_AM),
+        mcxArm(ArmsCleanup.MCX_TREND),
         // Jarvis's own news and pattern trade ideas (asked, or taken on paper by himself): a gate ([blocks]); the news is still told.
         Arm(ArmsCleanup.JARVIS,
             now = { ArmsCleanup.Now(ArmsCleanup.JARVIS, !blocks(ArmsCleanup.JARVIS), com.optionslab.app.ira.IraNewsTrades.all().any { !it.closed }) },

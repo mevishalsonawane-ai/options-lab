@@ -1174,7 +1174,11 @@ internal object Autopilot {
      * it, and one tap undoes it (restored; back on paper only when it was on). One lane with the restores, in their order.
      */
     fun logArmHidden(key: String, label: String, wasOn: Boolean) {
-        logArmHide(AutoChange.armHidden(key, label, wasOn), "your 15 Oct cleanup; its code, settings and trades are kept")
+        // 21 Oct: the two MCX paper arms Boss asked to remove are hidden by the same cleanup, on that day's request.
+        val late = key !in com.optionslab.engine.orb.ArmsCleanup.FIRST_15OCT
+        val why = if (late) "your request (21 Oct)" else "your cleanup (15 Oct)"
+        logArmHide(AutoChange.armHidden(key, label, wasOn, why),
+            (if (late) "your 21 Oct request" else "your 15 Oct cleanup") + "; its code, settings and trades are kept")
     }
 
     /** Boss restored [key] ([label]) from the Hidden arms list: logged as his (kept), its Undo hides it again. */

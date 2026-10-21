@@ -254,7 +254,7 @@ object McxPaperArms {
 
     private fun publish(b: Book) {
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
-        runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
+        runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it } || McxNr7Record.onQuick()) }
         _view.value = View(b.armed.toMap(), b.status.shown({ _, x -> x == McxMorningPark.PARKED }), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
             b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } },
             b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) ->
@@ -321,6 +321,9 @@ object McxPaperArms {
     suspend fun setArmed(arm: String, on: Boolean): String {
         if (!ready()) return "The MCX paper arms are not ready yet."
         if (arm !in ARMS) return "No such MCX arm."
+        // 21 Oct (Boss: remove the SILVERM morning call and the 12-month trend): hidden by the cleanup ([HiddenArms]); only its
+        // Hidden arms list (a restore) lets it be switched on again. Off is always allowed (it only lowers risk).
+        if (on && !HiddenArms.mayArm(arm)) return HiddenArms.refusal(label(arm))
         return lock.withLock {
             val b = book()
             if ((b.armed[arm] == true) == on) return@withLock "${label(arm)} is already ${if (on) "on" else "off"} (paper only)."
@@ -336,6 +339,12 @@ object McxPaperArms {
             save(b)
             if (on) "${label(arm)} on, paper only. ${McxArmRules.NOT_PROVEN}. ${record(arm)}." else "${label(arm)} off."
         }
+    }
+
+    /** For the arms cleanup ([HiddenArms]): [arm]'s switch and whether it holds an open position, or null before the book is ready. */
+    suspend fun cleanupNow(arm: String): Pair<Boolean, Boolean>? {
+        if (!ready()) return null
+        return lock.withLock { val b = book(); (b.armed[arm] == true) to b.positions.any { it.arm == arm && it.open } }
     }
 
     /** True while [arm] is armed (read without the lock). */
@@ -367,7 +376,8 @@ object McxPaperArms {
      * ended at 16:30 with MCX open and three arms armed, and came back only at 17:01 (the arm booked its close then).
      */
     private fun windows(v: View): List<IntRange> =
-        if (ARMS.any { v.isArmed(it) } || v.open.isNotEmpty()) listOf(0..24 * 60) else emptyList()
+        // 21 Oct: the NR7 record ([McxNr7Record], no orders) needs the MCX session's minutes too while it records.
+        if (ARMS.any { v.isArmed(it) } || v.open.isNotEmpty() || McxNr7Record.onQuick()) listOf(0..24 * 60) else emptyList()
 
     /** Whether the MCX watch should run now for the arms: MCX open and an arm armed, or a position open in an arm's book. */
     fun wantsWatch(): Boolean = runCatching {
@@ -451,7 +461,8 @@ object McxPaperArms {
             if (McxMarket.isOpen()) {
                 if (b.armed[McxEveRules.SOURCE] == true)
                     changed = runCatching { eve(b, now, window) }.getOrElse { b.status[McxEveRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
-                if (b.armed[McxMorningRules.SOURCE] == true)
+                // 21 Oct: a hidden arm takes no new entry ([HiddenArms.blocks], memory only); what it holds keeps its own exits ([manage]).
+                if (b.armed[McxMorningRules.SOURCE] == true && !HiddenArms.blocks(McxMorningRules.SOURCE))
                     changed = runCatching { morning(b, now, cal, window) }.getOrElse { b.status[McxMorningRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
                 if (b.armed[McxTrendRules.SOURCE] == true)
                     changed = runCatching { trend(b, now, cal) }.getOrElse { b.status[McxTrendRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
@@ -793,6 +804,8 @@ object McxPaperArms {
                 if (done.open) { b.decided -= dayKey; continue }
             }
             if (step.open == 0) { notes += "$leg: ${step.why.removePrefix("trend_")}"; continue }
+            // 21 Oct: hidden (Boss's request) - its legs still close on their own signal, rolls and expiry exit; nothing new opens.
+            if (HiddenArms.blocks(arm)) { notes += "$leg: no new leg (hidden on your request, 21 Oct)"; continue }
             val fc = futures.firstOrNull { it.expiry == hold } ?: continue
             val pc = McxMarket.paperContract(fc)
             val bars = runCatching { minutes(fc.upstoxKey, now) }.getOrNull().orEmpty()

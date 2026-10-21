@@ -469,3 +469,266 @@ def test_gate8_real_exits():
     s["model_share"] = 0.2
     assert not S.gates(s, fl, 0.01, 0.05, None, round_no=2)["real_exits"]
     assert "real_exits" not in S.gates(s, fl, 0.01, 0.05, None, round_no=1)
+
+
+# ------------------------------------------------------------------------------------------------ round 3
+def test_trail_levels_breakeven_then_chandelier():
+    F = np.array([100, 104, 110, 120, 130, 125, 116, 114.0])
+    lv = E.trail_levels(F, 1, 90.0, 10.0, 1.0, 1.5)
+    assert lv[0] == lv[1] == 90.0                     # +4 < 1 ATR: the first stop stays
+    assert lv[2] == 100.0                             # +10 = 1 ATR: breakeven on the future (110 - 15 = 95 < 100)
+    assert lv[3] == 105.0 and lv[4] == 115.0          # chandelier: best close - 15
+    assert lv[5] == lv[6] == lv[7] == 115.0           # never moves back
+    sh = E.trail_levels(200 - F, -1, 110.0, 10.0, 1.0, 1.5)
+    assert sh[2] == 100.0 and sh[4] == 85.0
+    assert (E.trail_levels(F, 1, 90.0, float("nan")) == 90.0).all()   # no ATR: the fixed stop
+
+
+def test_walk_single_with_a_trailing_ustop_array():
+    o, h, l, c, mdl = rows([100, 100, 100, 100, 100, 100])
+    F = np.array([100, 110, 130, 120, 114, 113.0])
+    lv = E.trail_levels(F, 1, 90.0, 10.0)
+    k, why, px, md = E.walk_single(o, h, l, c, mdl, F, 1, 100.0, 101.0, lv, ladder=(), trail_from=float("inf"))
+    assert (k, why) == (4, "ustop")                   # 114 <= 130 - 15 = 115
+
+
+def test_nr_n_and_low_vol():
+    rng = np.array([10, 9, 8, 7, 6, 12, 3, 4.0])
+    assert list(R.nr_n(rng, 4)) == [False, False, False, True, True, False, True, False]
+    assert (R.nr_n(rng, 7) == (np.arange(8) == 6)).all()
+    d = pd.DataFrame(dict(atr=np.r_[np.linspace(10, 30, 10), [10.0]], close=np.full(11, 1000.0)))
+    lv = R.low_vol(d, win=5, frac=1 / 3)
+    assert not lv[:4].any() and lv[10] and not lv[9]
+
+
+def test_round3_indicators_and_guard():
+    base = daily_frame(n=420, seed=11)
+    full = R.daily_ind(base)
+    assert (full.nr7_lowvol <= full.nr7).all() and (full.nr7 <= full.nr4).all()
+    w_full = R.weekly_nr7(full)
+    for cut in (300, 380):
+        d = base.copy()
+        d.loc[cut + 1:, ["open", "high", "low", "close"]] *= 1.25
+        part = R.daily_ind(d)
+        for col in ("nr4", "lowvol", "nr7_lowvol"):
+            assert (full[col].values[:cut + 1] == part[col].values[:cut + 1]).all(), (cut, col)
+        w_part = R.weekly_nr7(part)
+        done = w_full["last"].values < cut - 6           # weeks that ended well before the cut
+        k = int(done.sum())
+        assert (w_full.wnr7.values[:k] == w_part.wnr7.values[:k]).all()
+
+
+def test_weekly_nr7_flags_the_narrow_week():
+    n = 60
+    dates = pd.bdate_range("2024-01-01", periods=n)
+    c = np.full(n, 5000.0)
+    h, l = c + 50, c - 50
+    wk = np.flatnonzero(pd.DatetimeIndex(dates).isocalendar().week.values == 9)
+    h[wk], l[wk] = c[wk] + 5, c[wk] - 5
+    from research.hunt.r93_breadth_donchian_mcx import rules as R93
+    d = R.daily_ind(R93.daily_series(pd.DataFrame(dict(date=dates, open=c, high=h, low=l, close=c,
+                                                       oi=np.full(n, 1000.0)))))
+    w = R.weekly_nr7(d)
+    assert w.wnr7.sum() == 1 and int(w["first"].values[np.flatnonzero(w.wnr7.values)[0]]) == int(wk[0])
+    r = int(np.flatnonzero(w.wnr7.values)[0])
+    d2 = d.copy()
+    a, z = int(w["first"].values[r + 1]), int(w["last"].values[r + 1])
+    d2.loc[a:z, ["ah", "al"]] = [5003.0, 4997.0]          # a quiet next week ...
+    d2.loc[a + 1, ["ah", "ac"]] = [5100.0, 5090.0]        # ... whose second session breaks up and closes high
+    assert H.trade_wnr7(d, w, r, n=1) is None             # a session through both levels without a gap: skipped
+    x = H.trade_wnr7(d2, w, r, n=1)
+    assert x == pytest.approx((5090.0 - 5005.0) / 5000.0 - H.COST)
+    assert H.trade_wnr7(d2, w, len(w) - 1) is None        # no next week
+
+
+def _nr7_book(path):
+    bk = make_book(days=6, path=path)
+    m = bk.m
+    bk.daily = pd.DataFrame(dict(date=m.days, nr7=[True] + [False] * 5, atr=np.full(6, 100.0)))
+    return bk
+
+
+def test_us_open_entry_needs_the_break_to_hold():
+    def hold(i, ts):
+        t = pd.DatetimeIndex(ts)
+        day1 = t.normalize() == t.normalize()[0] + pd.Timedelta(days=1)
+        return np.where(day1 & (t.hour * 60 + t.minute >= 10 * 60), 5100.0, 5000.0)
+    bk = _nr7_book(hold)
+    rule = R.NR7Var("T", us_open=True, books=("CRUDEOILM",))
+    c = rule.candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    assert len(c) == 1 and c[0]["side"] == 1
+    assert bk.m.tod[c[0]["i_sig"]] == 20 * 60 - 1          # 3 Nov 2025: US winter time, cash open 20:00 IST
+    assert c[0]["ustop"] == 5000.0
+
+    def fade(i, ts):
+        t = pd.DatetimeIndex(ts)
+        day1 = t.normalize() == t.normalize()[0] + pd.Timedelta(days=1)
+        tod = t.hour * 60 + t.minute
+        return np.where(day1 & (tod >= 10 * 60) & (tod < 15 * 60), 5100.0, 5000.0)
+    assert R.NR7Var("T", us_open=True, books=("CRUDEOILM",)).candidates(
+        _nr7_book(fade), (date_(2025, 11, 1), date_(2025, 11, 30))) == []
+
+
+def test_early_break_window_and_trail_spec():
+    def late(i, ts):
+        t = pd.DatetimeIndex(ts)
+        day1 = t.normalize() == t.normalize()[0] + pd.Timedelta(days=1)
+        return np.where(day1 & (t.hour * 60 + t.minute >= 12 * 60), 5100.0, 5000.0)
+    bk = _nr7_book(late)
+    per = (date_(2025, 11, 1), date_(2025, 11, 30))
+    assert R.NR7Var("T", last_tod=K.R3_EARLY_TOD, books=("CRUDEOILM",)).candidates(bk, per) == []
+    c = R.NR7Var("T", trail=K.R3_TRAIL, books=("CRUDEOILM",)).candidates(bk, per)
+    assert len(c) == 1 and c[0]["no_ladder"] and c[0]["atr"] == 100.0 and c[0]["trail"] == K.R3_TRAIL
+    t = S.simulate(bk, c[0], None)
+    assert t is not None and t["why"] in ("time", "ustop", "edge", "stop")
+
+
+def date_(y, mth, d):
+    from datetime import date
+    return date(y, mth, d)
+
+
+def _tod_path(fn):
+    def path(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = ((t.normalize() - t.normalize()[0]).days).values
+        return fn(k, (t.hour * 60 + t.minute).values)
+    return path
+
+
+def test_eia_momentum_spec_and_twin():
+    # 5 Nov 2025 (Wednesday, US winter time): 11:00 ET = 21:30 IST, 11:30 ET = 22:00 IST
+    bk = make_book(days=6, path=_tod_path(lambda k, tod: np.where((k == 2) & (tod >= 21 * 60 + 45), 5030.0, 5000.0)))
+    rule = R.EIAMomentum("T", books=("CRUDEOILM",))
+    day = bk.m.days[2]
+    sp = rule.spec(bk, day)
+    assert sp["side"] == 1 and bk.m.tod[sp["i_sig"]] == 22 * 60 and sp["ustop"] == 5000.0 and sp["edge"]
+    assert day in R.release_days(bk) and rule.twin(bk, sp, day) is None
+    assert rule.spec(bk, bk.m.days[1]) is None                       # flat: no move, no trade
+    c = rule.candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    assert [x["day"] for x in c] == [day]
+    t = S.simulate(bk, sp, None)
+    assert t["exit_ts"] <= pd.Timestamp(bk.m.ts[E.sq_ix(bk.m, day)])  # same-session square-off
+
+
+def test_last_half_hour_filter_is_causal(monkeypatch):
+    sizes = np.zeros(8)
+    sizes[[0, 1, 2, 3, 4, 7]] = [5, 1, 2, 30, 3, 40]           # calendar-day offsets of 3-7 and 10 Nov 2025
+    bk = make_book(days=6, path=_tod_path(lambda k, tod: 5000.0 + np.where(tod >= 22 * 60, sizes[k], 0.0)))
+    bk.daily = pd.DataFrame(dict(date=bk.m.days, atr=np.full(6, 100.0)))
+    monkeypatch.setattr(K, "R3_LH_PAST", 2)
+    rule = R.LastHalfHour("T", books=("CRUDEOILM",))
+    c = rule.candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    # the synthetic sessions end 23:29 (close 23:30), so the move is read at 22:44 against the previous last minute
+    days = [pd.Timestamp(x["day"]).day for x in c]
+    assert 6 in days and 10 in days and 4 not in days           # 30 and 40 are big against the earlier moves
+    sp = [x for x in c if pd.Timestamp(x["day"]).day == 6][0]
+    assert bk.m.tod[sp["i_sig"]] == 22 * 60 + 44
+    w = rule.window(bk, bk.m.days[3])
+    assert w is not None and np.isclose(w[1], 5030.0 / 5002.0 - 1.0)
+
+
+def test_high_vol_orb():
+    # 3 Nov 2025, US winter: 09:00-09:29 ET = 19:30-19:59 IST; the break must come 20:00-21:30 IST
+    bk = make_book(days=3, path=_tod_path(lambda k, tod: np.where(
+        (k == 0) & (tod >= 19 * 60 + 30) & (tod < 20 * 60), 5000.0 + (tod % 2) * 10,
+        np.where((k == 0) & (tod >= 20 * 60 + 30), 5025.0, 5005.0))))
+    bk.daily = pd.DataFrame(dict(date=bk.m.days - np.timedelta64(1, "D"), hivol=[True, False, True]))
+    rule = R.HighVolORB("T", books=("CRUDEOILM",))
+    sp = rule.spec(bk, bk.m.days[0])
+    assert sp["side"] == 1 and bk.m.tod[sp["i_sig"]] == 20 * 60 + 30 and sp["ustop"] == 5005.0
+    assert rule.spec(bk, bk.m.days[1]) is None                    # no break that day
+    assert R.flag_before(bk, bk.m.days[0], "hivol") and not R.flag_before(bk, bk.m.days[1], "hivol")
+    c = rule.candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    assert [x["day"] for x in c] == [bk.m.days[0]]
+
+
+def test_round3_hivol_guard():
+    base = daily_frame(n=420, seed=5)
+    full = R.daily_ind(base)
+    for cut in (300, 390):
+        d = base.copy()
+        d.loc[cut + 1:, ["open", "high", "low", "close"]] *= 1.4
+        part = R.daily_ind(d)
+        assert (full.hivol.values[:cut + 1] == part.hivol.values[:cut + 1]).all()
+
+
+def test_round3_rules_registered():
+    assert len(R.ORDER3) == 10 and all(r in R.RULES for r in R.ORDER3)
+    assert R.RULES["R3A"].books == K.CRUDE and R.RULES["R3E"].n == 5
+    assert all(R.RULES[r].edge if hasattr(R.RULES[r], "edge") else True for r in R.ORDER3)
+
+
+# ------------------------------------------------------------------------------------------------ R3K / R3L
+def _daily_atr(bk, atr=100.0):
+    bk.daily = pd.DataFrame(dict(date=bk.m.days - np.timedelta64(1, "D"), atr=np.full(len(bk.m.days), atr),
+                                 nr7=np.zeros(len(bk.m.days), bool)))
+    return bk
+
+
+def test_daily_chandelier_checks_closes_only_and_trails():
+    closes = {0: 5050.0, 1: 5400.0, 2: 5150.0}         # session closes (square-off minutes) of days 0, 1, 2
+    def path(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = (t.normalize() - t.normalize()[0]).days.values
+        return np.array([closes.get(int(x), 5100.0) for x in k])
+    bk = _daily_atr(make_book(days=4, path=path))
+    m = bk.m
+    i_in = m.at_or_after(m.days[0], 10 * 60)
+    i_end = E.sq_ix(m, m.days[3])
+    lv = E.daily_chandelier(bk, i_in, i_end, 1, 5000.0)
+    k = np.flatnonzero(np.isfinite(lv))
+    assert len(k) == 4                                  # one check per session close
+    assert lv[k[0]] == 4800.0                           # 5000 - 2 x 100
+    assert lv[k[1]] == 4800.0                           # best 5050 - 300 = 4750 < 4800: never loosens
+    assert lv[k[2]] == 5100.0                           # best 5400 - 300
+    assert lv[k[3]] == 5100.0
+
+
+def test_sim_future_lock_exit_and_costs():
+    def path(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = (t.normalize() - t.normalize()[0]).days.values
+        return np.select([k == 0, k == 1, k == 2], [5000.0, 5400.0, 5050.0], 5050.0)
+    bk = _daily_atr(make_book(days=6, path=path))
+    m = bk.m
+    i_sig = m.at_or_after(m.days[0], 10 * 60)
+    t = E.sim_future(bk, i_sig, 1, 10, None, i_sig + 1)
+    assert t["why"] == "lock" and t["exit"][0] == 5050.0           # day 2 closes 5050 <= 5400 - 300
+    assert t["gross"] == pytest.approx(50.0 * bk.units)
+    assert t["cost"] > 0 and t["net2"] < t["net"] and not t["model"]
+    t2 = E.sim_future(bk, i_sig, -1, 10, None, i_sig + 1)
+    assert t2["why"] == "stop"                                      # short: day 1 closes 5400 >= 5000 + 200
+
+
+def test_r3k_r3l_specs_and_history_trade():
+    def brk(i, ts):
+        t = pd.DatetimeIndex(ts)
+        k = (t.normalize() - t.normalize()[0]).days.values
+        return np.where((k == 1) & (t.hour * 60 + t.minute >= 10 * 60), 5100.0, 5000.0)
+    bk = _nr7_book(brk)
+    per = (date_(2025, 11, 1), date_(2025, 11, 30))
+    ck = R.RULES["R3K"].candidates(bk, per)[0]
+    cl = R.RULES["R3L"].candidates(bk, per)[0]
+    assert ck["r93"] and ck["no_ladder"] and not ck["edge"] and ck["n_sessions"] == 10 and ck["kind"] == "single"
+    assert cl["kind"] == "future" and cl["n_sessions"] == 10
+    assert S.simulate(bk, cl, None)["kind"] == "future"
+    tk = S.simulate(bk, ck, None)
+    assert tk is not None and tk["why"] != "edge"
+    assert R.RULES["R3K"].twin(bk, ck, bk.m.days[2])["r93"]
+    # daily history: an up break, a 2 ATR stop and a chandelier exit on closes
+    n = 30
+    c = np.full(n, 5000.0)
+    d = pd.DataFrame(dict(date=pd.bdate_range("2024-01-01", periods=n), open=c, high=c + 20, low=c - 20, close=c,
+                          oi=np.full(n, 1000.0)))
+    from research.hunt.r93_breadth_donchian_mcx import rules as R93
+    x = R.daily_ind(R93.daily_series(d))
+    i = 20
+    x.loc[i + 1, ["ah", "ac"]] = [5100.0, 5090.0]
+    x.loc[i + 2, "ac"] = 5300.0
+    x.loc[i + 3, "ac"] = 5000.0
+    assert float(x.atr.values[i]) == pytest.approx(40.0)
+    # entry 5020 (the NR level); stop 5020 - 80; closes 5090 (lock 4970), 5300 (lock 5180), 5000 <= 5180 -> out
+    assert H.trade_nr7_r93(x, i) == pytest.approx((5000.0 - 5020.0) / 5000.0 - H.COST)
+    x.loc[i + 2, "ac"] = 4930.0                          # below the 2 ATR stop / lock (4970) on the second close
+    assert H.trade_nr7_r93(x, i) == pytest.approx((4930.0 - 5020.0) / 5000.0 - H.COST)

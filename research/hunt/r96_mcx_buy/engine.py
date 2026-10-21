@@ -215,7 +215,8 @@ def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, st
             if lo <= lvl:
                 px = op if (np.isfinite(op) and op < lvl) else lvl
                 return k, ("lock" if lock > lvl_stop else "stop"), float(px), md
-        if ustop is not None and np.isfinite(ustop) and np.isfinite(F[k]) and side * (F[k] - ustop) <= 0:
+        u = ustop[k] if isinstance(ustop, np.ndarray) else ustop      # round 3: a per-minute (trailing) level
+        if u is not None and np.isfinite(u) and np.isfinite(F[k]) and side * (F[k] - u) <= 0:
             return k, "ustop", None, False
         if edge is not None and edge[k] and k > 0:
             if np.isfinite(c[k]):
@@ -226,6 +227,103 @@ def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, st
                 peak = hi
             lock = _lock_update(lock, peak, fill, be, ladder, trail_from, trail_gap)
     return n - 1, "time", None, False
+
+
+def trail_levels(F, side: int, ustop0: float, atr: float, be_atr: float = 1.0, gap_atr: float = 1.5) -> np.ndarray:
+    """Round 3 (PREREG_ROUND3 R3C): the underlying stop per relative minute, from the future's minute closes F (minute 0
+    = the fill minute). Starts at ustop0. Once the best close since the fill is >= be_atr x ATR in favour of F[0], the
+    stop is at least F[0] (breakeven on the future), and from then on at least the best close - gap_atr x ATR (a
+    chandelier). It never moves against the trade. The level at minute k uses closes up to k (known at k's close)."""
+    F = np.asarray(F, float)
+    out = np.full(len(F), float(ustop0))
+    if not (np.isfinite(atr) and atr > 0) or not len(F) or not np.isfinite(F[0]):
+        return out
+    f0 = F[0]
+    lvl = float(ustop0)
+    best = f0
+    on = False
+    for k in range(len(F)):
+        if np.isfinite(F[k]) and side * (F[k] - best) > 0:
+            best = F[k]
+        if not on and side * (best - f0) >= be_atr * atr - 1e-12:
+            on = True
+        if on:
+            cand = best - side * gap_atr * atr
+            for c_ in (f0, cand):
+                if side * (c_ - lvl) > 0:
+                    lvl = c_
+        out[k] = lvl
+    return out
+
+
+def daily_chandelier(book, i_in: int, i_end: int, side: int, f_entry: float, init_atr: float = K.R93_INIT_ATR,
+                     trail_atr: float = K.R93_TRAIL_ATR) -> np.ndarray:
+    """R3K / R3L: R93's daily exits on the future, per relative minute i_in..i_end. NaN except at each session's
+    "close" minute (its square-off minute, the last of the trade at i_end), where the value is the stop level to check
+    that close against: first entry -/+ init_atr x ATR14 (ATR known before the entry day), then after each close the
+    chandelier best close -/+ trail_atr x ATR14 (ATR known before that day; never loosens). Check first, then update
+    (R93 sim_daily order)."""
+    from research.hunt.r96_mcx_buy import rules as R
+    m = book.m
+    n = i_end - i_in + 1
+    out = np.full(n, np.nan)
+    a0 = R.atr_before(book, m.day[i_in])
+    if not (np.isfinite(a0) and a0 > 0):
+        return out
+    lvl = f_entry - side * init_atr * a0
+    best = f_entry
+    for d in np.unique(m.day[i_in:i_end + 1]):
+        k = min(sq_ix(m, d), i_end)
+        if k < i_in:
+            continue
+        out[k - i_in] = lvl
+        f = m.F[k]
+        if np.isfinite(f):
+            best = max(best, f) if side > 0 else min(best, f)
+        at = R.atr_before(book, d)
+        if np.isfinite(at):
+            nl = best - side * trail_atr * at
+            lvl = max(lvl, nl) if side > 0 else min(lvl, nl)
+    return out
+
+
+def sim_future(book, i_sig: int, side: int, n_sessions: int, last_day=None, i_from: int | None = None, **_):
+    """R3L: the same trade on the near future itself (1 lot = book.units per point). Filled at the minute close after
+    the signal (R53 convention); out at the first session close at or beyond R93's level, else at the time exit close.
+    Costs: R93 futures costs (charges + 0.03% half-spread a side + 0.02% on stop / lock exits); net2 doubles both."""
+    from research.hunt.r93_breadth_donchian_mcx import engine as E93
+    m = book.m
+    i_from = i_sig + 1 if i_from is None else i_from
+    if i_from >= len(m.ts) or m.day[i_from] != m.day[i_sig] or m.is_exp[i_from]:
+        return None
+    if sessions_to_expiry(book, i_from) < K.MIN_SESSIONS_TO_EXPIRY:
+        return None
+    i_in = i_from
+    entry = float(m.F[i_in])
+    i_end = last_exit_ix(book, i_in, n_sessions, last_day)
+    if i_end <= i_in or not np.isfinite(entry):
+        return None
+    lv = daily_chandelier(book, i_in, i_end, side, entry)
+    k_out, why = i_end - i_in, "time"
+    for k in np.flatnonzero(np.isfinite(lv)):
+        if np.isfinite(m.F[i_in + k]) and side * (m.F[i_in + k] - lv[k]) <= 0:
+            k_out, why = int(k), ("lock" if side * (lv[k] - entry) > 0 else "stop")
+            break
+    i_out = i_in + k_out
+    px = float(m.F[i_out])
+    u = book.units
+    gross = side * (px - entry) * u
+    buy, sell = (entry, px) if side > 0 else (px, entry)
+    st = why in ("stop", "lock")
+    c53 = C53.mcx_fut_charges(buy * u, sell * u)
+    cost = c53 + K.R93_FUT_HALF * (buy + sell) * u + (K.R93_STOP_SLIP * sell * u if st else 0.0)
+    cost2 = c53 + 2 * K.R93_FUT_HALF * (buy + sell) * u + (2 * K.R93_STOP_SLIP * sell * u if st else 0.0)
+    from research.hunt.r96_mcx_buy import rules as R
+    a0 = R.atr_before(book, m.day[i_in])
+    return dict(book=book.name, entry_ts=pd.Timestamp(m.ts[i_in]), exit_ts=pd.Timestamp(m.ts[i_out]),
+                day=pd.Timestamp(m.day[i_in]), side=int(side), kind="future", strike=[float("nan")], fill=[entry],
+                exit=[px], why=why, model=False, stale=False, gross=gross, cost=cost, net=gross - cost,
+                net2=gross - cost2, prem_rs=entry * u, risk_rs=K.R93_INIT_ATR * a0 * u + cost)
 
 
 def walk_straddle(legs, fill_v: float, be_v: float, stop_frac: float = K.STRAD_STOP, ladder=K.LADDER,
@@ -304,7 +402,7 @@ def _trade_dict(book, i_in, i_out, side, strikes, fills, exits, why, model, stal
 def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_day=None, i_from: int | None = None,
                offset: int | None = None, stop_frac: float = K.PREM_STOP, ladder=K.LADDER,
                trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, edge_exit: bool = False,
-               max_risk: float | None = None):
+               max_risk: float | None = None, utrail=None, r93_exit: bool = False):
     """Buy one contract: the strike from the future's close at grid index i_sig (the minute before entry), filled at
     the first print from i_from (default i_sig + 1). `offset` = steps in the money (default 1: 1-ITM). Returns a trade
     or None."""
@@ -334,6 +432,10 @@ def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_
     tod_in = int(m.tod[i_in])
     be = fill + opt_cost(book.ck, fill * book.units, fill * book.units, tod_in, tod_in) / book.units
     edge = edge_flags(book, cp, strike, i_in, i_end) if edge_exit else None
+    if utrail is not None:            # round 3 R3C: (ATR14, breakeven after, chandelier gap) in ATR units
+        ustop = trail_levels(m.F[i_in:i_end + 1], side, ustop, *utrail)
+    if r93_exit:                      # R3K: R93's daily stop / chandelier on the future replaces the NR7 stop
+        ustop = daily_chandelier(book, i_in, i_end, side, float(m.F[i_in]))
     k, why, px, md = walk_single(o, h, l, c, mdl, m.F[i_in:i_end + 1], side, fill, be, ustop, stop_frac, ladder,
                                  trail_from, trail_gap, edge)
     stale = False

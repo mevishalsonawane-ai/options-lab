@@ -406,7 +406,9 @@ object McxMarket {
     fun coverage(): com.optionslab.ira.SessionCoverage.Market {
         if (!isOpen()) return com.optionslab.ira.SessionCoverage.Market(NAME, false)
         // The arms' book read first (when nothing has read it yet), then its open positions from memory.
-        val armed = McxPaperArms.armedNow().map { McxPaperArms.label(it) }
+        // 21 Oct: the NR7 record (no orders) needs the watch too while it records ([McxPaperArms.wantsWatch] counts it).
+        val armed = McxPaperArms.armedNow().map { McxPaperArms.label(it) } +
+            (if (McxNr7Record.onQuick()) listOf(com.optionslab.engine.mcx.McxNr7Rules.LABEL) else emptyList())
         val held = exposure() || McxPaperArms.holdsNow()
         return com.optionslab.ira.SessionCoverage.Market(NAME, true, if (held) 1 else 0, armed)
     }

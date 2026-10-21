@@ -32,8 +32,17 @@ def simulate(book, sp: dict, last_day):
                                   trail_gap=K.EV_TRAIL_GAP, fill_wait=sp.get("fill_wait", K.FILL_WAIT))
         return E.sim_straddle(book, sp["i_sig"], sp["n_sessions"], last_day, sp["i_from"],
                               edge_exit=sp.get("edge", False))
+    if sp["kind"] == "future":         # R3L: the future itself
+        return E.sim_future(book, sp["i_sig"], sp["side"], sp["n_sessions"], last_day, sp["i_from"])
+    kw = {}
+    if sp.get("r93"):
+        kw["r93_exit"] = True
+    if sp.get("no_ladder"):            # round 3 R3C: no premium lock ladder; the future's trail is the profit lock
+        kw.update(ladder=(), trail_from=float("inf"))
+    if sp.get("trail") is not None:
+        kw["utrail"] = (sp.get("atr", float("nan")),) + tuple(sp["trail"])
     return E.sim_single(book, sp["i_sig"], sp["side"], sp["ustop"], sp["n_sessions"], last_day, sp["i_from"],
-                        offset=sp.get("itm"), edge_exit=sp.get("edge", False), max_risk=sp.get("max_risk"))
+                        offset=sp.get("itm"), edge_exit=sp.get("edge", False), max_risk=sp.get("max_risk"), **kw)
 
 
 def run_rule(rid: str, books: dict, period) -> list:
@@ -219,7 +228,7 @@ def design(round_no: int = 1, only=None):
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     res = {}
     all_df = []
-    for rid in (only or (R.ORDER if round_no == 1 else R.ORDER2)):
+    for rid in (only or {1: R.ORDER, 2: R.ORDER2}.get(round_no) or R.ORDER3):      # R3K / R3L: `design 3 R3K R3L`
         trades = run_rule(rid, books, K.DESIGN)
         df = frame(trades)
         all_df.append(df)
@@ -243,7 +252,15 @@ def design(round_no: int = 1, only=None):
                          p=r["twin_p"]))
     rows = save_ledger(rows)
     qmap = {(r["round"], r["id"]): r["q"] for r in rows}
-    for rid, r in res.items():
+    jp = K.RESULTS / f"design_round{round_no}.json"
+    if only and jp.exists():          # a partial run (e.g. `design 3 R3K R3L`) adds to the round's results
+        old = json.loads(jp.read_text())["rules"]
+        res = {**{k: v for k, v in old.items() if k not in res}, **res}
+        cp = K.RESULTS / f"trades_design_round{round_no}.csv"
+        if cp.exists():
+            prev = pd.read_csv(cp)
+            all_df = [prev[~prev.rule.isin(list(only))]] + all_df
+    for rid, r in res.items():          # every rule of the round is re-scored with the current cumulative BH q
         q = qmap[(round_no, rid)]
         h = r["history"]["pooled"] if r["history"] else None
         r["bh_q"] = q
@@ -252,7 +269,7 @@ def design(round_no: int = 1, only=None):
         r["lead"] = is_lead(r["summary"], r["folds"], r["twin_p"])
     out = dict(round=round_no, written=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                design=[str(x) for x in K.DESIGN], ideas_in_ledger=len(rows), rules=res)
-    (K.RESULTS / f"design_round{round_no}.json").write_text(json.dumps(out, indent=1, default=str))
+    jp.write_text(json.dumps(out, indent=1, default=str))
     pd.concat(all_df, ignore_index=True).to_csv(K.RESULTS / f"trades_design_round{round_no}.csv", index=False)
     return out
 

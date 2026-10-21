@@ -113,6 +113,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.SignalPaperArm.init(this)
         com.optionslab.app.data.TelegramCapture.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
+        com.optionslab.app.data.McxNr7Record.init(this)          // 21 Oct: NR7 crude, record only (no orders)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.ShadowArms.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)

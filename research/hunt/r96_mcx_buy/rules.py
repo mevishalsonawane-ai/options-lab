@@ -96,7 +96,7 @@ def daily_ind(d: pd.DataFrame) -> pd.DataFrame:
     d["gk"] = gk
     fc = har_forecast(pd.Series(gk).ffill().fillna(0.0).values)       # a missing day repeats the last one (causal)
     d["fc_vol"] = np.sqrt(252.0 * np.maximum(fc, 0.0))
-    return d
+    return r3_daily(d)
 
 
 # ================================================================================================ helpers
@@ -447,3 +447,335 @@ RULES.update({
 ORDER2 = ("R2A", "R2B", "R2C", "R2D", "R2E", "R2F", "R2G", "R2H")
 HISTORY_RULES = {"S2": "dir", "N1": "nr7", "W1": "dir", "P1": "dir", "R2A": "nr7", "R2B": "nr7", "R2C": "nr7_id",
                  "R2D": "nr7", "R2E": "nr7", "R2H": "dir"}
+
+
+# ---------------------------------------------------------------------------------------------- round 3 (PREREG_ROUND3)
+def nr_n(rng: np.ndarray, n: int) -> np.ndarray:
+    """NRn: today's range is narrower than each of the previous n - 1 ranges (Crabel). NR7 = nr_n(rng, 7)."""
+    prev = pd.Series(rng).shift(1).rolling(n - 1).min().values
+    return np.isfinite(prev) & (rng < prev)
+
+
+def low_vol(d: pd.DataFrame, win: int = K.R3_LOWVOL_WIN, frac: float = K.R3_LOWVOL_FRAC) -> np.ndarray:
+    """R3D: ATR14 / raw close at row t sits in the bottom `frac` of its min..max over rows t-win+1..t (causal)."""
+    x = pd.Series(d.atr.values / d.close.values)
+    lo, hi = x.rolling(win).min().values, x.rolling(win).max().values
+    with np.errstate(all="ignore"):
+        pos = (x.values - lo) / (hi - lo)
+    return np.isfinite(pos) & (pos <= frac + 1e-12)
+
+
+def weekly_nr7(d: pd.DataFrame) -> pd.DataFrame:
+    """R3E: one row per ISO week of the daily series: first / last row, range (back-adjusted high - low), roll_in (a
+    roll row inside the week), and wnr7 = the range is narrower than each of the previous 6 weeks' ranges. A week with
+    a roll is never itself a weekly NR7 (its range still counts in the later weeks' comparison window)."""
+    iso = pd.DatetimeIndex(d.date.values).isocalendar()
+    key = (iso.year.values.astype(int) * 100 + iso.week.values.astype(int))
+    g = pd.DataFrame(dict(key=key, i=np.arange(len(d)), ah=d.ah.values, al=d.al.values,
+                          roll=d.roll.values.astype(bool))).groupby("key", sort=True)
+    w = pd.DataFrame(dict(first=g.i.min(), last=g.i.max(), hi=g.ah.max(), lo=g.al.min(), roll_in=g.roll.any()))
+    w["rng"] = (w.hi - w.lo).values
+    w["wnr7"] = nr_n(w.rng.values.astype(float), 7) & ~w.roll_in.values
+    return w.reset_index()
+
+
+class NR7Var(NR7):
+    """Round 3 NR7 variants: a different flag column, a break window (first_tod..last_tod), an underlying trail
+    instead of the premium ladder (R3C), or an entry at the US cash open after a morning break that still holds (R3G)."""
+
+    def __init__(self, rid, col="nr7", books=K.CRUDE, last_tod=22 * 60, trail=None, us_open=False, n=3,
+                 r93=False, fut=False):
+        super().__init__(rid, col=col, itm=1, edge=not (r93 or fut), books=books)
+        self.LAST_TOD, self.trail, self.us_open, self.n = last_tod, trail, us_open, n
+        self.r93, self.fut = r93 or fut, fut
+        if self.r93:
+            self.n = K.R93_MAX_HOLD
+
+    def extra(self):
+        e = dict(itm=self.itm, edge=self.edge, max_risk=self.max_risk)
+        if self.trail is not None:
+            e.update(trail=self.trail, no_ladder=True)
+        if self.r93:                    # R3K / R3L: R93's daily exits; no premium ladder, no edge take-profit
+            e.update(r93=True, no_ladder=True)
+        return e
+
+    @staticmethod
+    def us_tod(day) -> int:
+        return USMomentum.us_open(day)
+
+    def _finish(self, book, sp):
+        if sp is not None and self.trail is not None:
+            sp["atr"] = atr_before(book, sp["day"])
+        if sp is not None and self.fut:
+            sp["kind"] = "future"
+        return sp
+
+    def candidates(self, book, period):
+        if not self.us_open:
+            return [self._finish(book, sp) for sp in super().candidates(book, period)]
+        m, d = book.m, book.daily
+        out = []
+        for t in d.date.values[d[self.col].values.astype(bool)]:
+            t = _day64(t)
+            if t not in book.day_pos:
+                continue
+            day = next_market_day(book, t)
+            if day is None or not in_p(day, period) or (day - t) > 7 * DAY:
+                continue
+            ix = m.day_ix(t)
+            hi, lo = float(np.nanmax(m.F[ix])), float(np.nanmin(m.F[ix]))
+            u = self.us_tod(day)
+            i_sig = m.at_or_before(day, u - 1)
+            if i_sig < 0 or m.tod[i_sig] < u - 5:
+                continue
+            jx = m.day_ix(day)
+            jx = jx[(m.tod[jx] >= K.ENTRY_TOD) & (m.tod[jx] <= u - 1)]
+            br = np.flatnonzero((m.F[jx] > hi) | (m.F[jx] < lo))
+            if not len(br):
+                continue
+            side = 1 if m.F[jx[br[0]]] > hi else -1
+            lvl = hi if side > 0 else lo
+            if side * (m.F[i_sig] - lvl) <= 0:            # the break no longer holds at the US open
+                continue
+            ust = lo if side > 0 else hi
+            atr = atr_before(book, day)
+            katr = abs(m.F[i_sig] - ust) / atr if np.isfinite(atr) and atr > 0 else None
+            out.append(dict(day=day, i_sig=int(i_sig), i_from=int(i_sig) + 1, side=side, ustop=float(ust),
+                            n_sessions=self.n, kind="single", i_end_fixed=None, katr=katr, tod=int(m.tod[i_sig]),
+                            **self.extra()))
+        return out
+
+    def twin(self, book, sp, day):
+        if self.us_open:
+            sp = dict(sp, tod=self.us_tod(day) - 1)
+        return self._finish(book, super().twin(book, sp, day))
+
+
+class WeeklyNR7(NR7Var):
+    """R3E: the narrowest week of 7 -> the first future minute close beyond that week's high / low (from the minute
+    future of the week's sessions) during the next ISO week's sessions, 09:15-22:00 -> 1-ITM, held 5 sessions, stop at
+    the week's opposite extreme. The NR week and the break must lie in the same option contract segment."""
+
+    def __init__(self, rid="R3E", books=K.ENERGY):
+        super().__init__(rid, books=books, n=5)
+
+    def candidates(self, book, period):
+        m, d = book.m, book.daily
+        w = weekly_nr7(d)
+        dates = d.date.values
+        out = []
+        for r in range(len(w) - 1):
+            if not w.wnr7.values[r]:
+                continue
+            wk_days = [_day64(x) for x in dates[int(w["first"].values[r]):int(w["last"].values[r]) + 1]]
+            wk_days = [x for x in wk_days if x in book.day_pos]
+            nx = w.iloc[r + 1]
+            nx_days = [_day64(x) for x in dates[int(nx["first"]):int(nx["last"]) + 1]]
+            nx_days = [x for x in nx_days if x in book.day_pos]
+            if not wk_days or not nx_days:
+                continue
+            ix = np.concatenate([m.day_ix(x) for x in wk_days])
+            seg = int(m.seg[ix[-1]])
+            if (m.seg[ix] != seg).any():
+                continue
+            hi, lo = float(np.nanmax(m.F[ix])), float(np.nanmin(m.F[ix]))
+            for day in nx_days:
+                if not in_p(day, period):
+                    continue
+                jx = m.day_ix(day)
+                jx = jx[(m.tod[jx] >= K.ENTRY_TOD) & (m.tod[jx] <= self.LAST_TOD)]
+                if not len(jx) or (m.seg[jx] != seg).any():
+                    break
+                br = np.flatnonzero((m.F[jx] > hi) | (m.F[jx] < lo))
+                if not len(br):
+                    continue
+                i_sig = int(jx[br[0]])
+                side = 1 if m.F[i_sig] > hi else -1
+                ust = lo if side > 0 else hi
+                atr = atr_before(book, day)
+                katr = abs(m.F[i_sig] - ust) / atr if np.isfinite(atr) and atr > 0 else None
+                out.append(dict(day=day, i_sig=i_sig, i_from=i_sig + 1, side=side, ustop=float(ust),
+                                n_sessions=self.n, kind="single", i_end_fixed=None, katr=katr,
+                                tod=int(m.tod[i_sig]), **self.extra()))
+                break
+        return out
+
+
+def r3_daily(d: pd.DataFrame) -> pd.DataFrame:
+    """Round 3 daily flags (added by daily_ind's caller when present; all causal)."""
+    d = d.copy()
+    d["nr4"] = nr_n(d.rng.values.astype(float), 4)
+    d["lowvol"] = low_vol(d)
+    d["nr7_lowvol"] = d.nr7.values & d.lowvol.values
+    v5 = pd.Series(d.gk.values).rolling(5).mean()
+    lo, hi = v5.rolling(K.R3_LOWVOL_WIN).min().values, v5.rolling(K.R3_LOWVOL_WIN).max().values
+    with np.errstate(all="ignore"):
+        pos = (v5.values - lo) / (hi - lo)
+    d["hivol"] = np.isfinite(pos) & (pos >= K.R3_HIVOL_FRAC - 1e-12)                       # R3J
+    return d
+
+
+def flag_before(book, day, col) -> bool:
+    """A daily flag of the last row strictly before `day` (known at that day's open)."""
+    d = book.daily
+    k = int(np.searchsorted(d.date.values, _day64(day), side="left")) - 1
+    return bool(d[col].values[k]) if k >= 0 else False
+
+
+def et(day, hh, mm) -> int:
+    from research.hunt.r83.common import et_to_ist_min
+    return et_to_ist_min(pd.Timestamp(day).date(), hh, mm)
+
+
+class EIAMomentum:
+    """R3H (Wen, Indriawan, Lien & Xu, Energy Journal 2023): on EIA crude days the future's 11:00-11:30 ET return ->
+    1-ITM that way at the next minute; stop -40% premium / the 11:00 ET price; out at the session square-off.
+    Twin: the same clock on a non-EIA session of the same month (its own sign)."""
+    kind = "single"
+
+    def __init__(self, rid="R3H", books=K.CRUDE):
+        self.rid, self.books = rid, books
+
+    def spec(self, book, day):
+        m = book.m
+        a, b = et(day, 11, 0), et(day, 11, 30)
+        i_a, i_b = m.at_or_before(day, a), m.at_or_before(day, b)
+        if i_a < 0 or i_b < 0 or m.tod[i_a] < a - 5 or m.tod[i_b] < b - 5:
+            return None
+        mv = m.F[i_b] - m.F[i_a]
+        if not np.isfinite(mv) or mv == 0:
+            return None
+        side = 1 if mv > 0 else -1
+        return dict(day=day, i_sig=i_b, i_from=i_b + 1, side=side, ustop=float(m.F[i_a]), n_sessions=None,
+                    kind="single", i_end_fixed=None, katr=None, edge=True, tod=int(m.tod[i_b]))
+
+    def candidates(self, book, period):
+        out = []
+        for day in sorted(release_days(book)):
+            if day in book.day_pos and in_p(day, period):
+                sp = self.spec(book, day)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        if day in release_days(book):
+            return None
+        return self.spec(book, day)
+
+
+class LastHalfHour:
+    """R3I (Baltussen, Da, Lammers & Martens, JFE 2021, market intraday momentum): at the session close - 45 min, the
+    future's move since the previous session's last minute; when |move| is at least the 67th percentile of the last 60
+    sessions' moves (>= 20 known), 1-ITM that way; stop -40% / 0.25 x ATR14 behind; out at the square-off (close - 15).
+    The previous session must be in the same option contract segment. Twin: a random session of the same month, its
+    own sign, no size filter."""
+    kind = "single"
+
+    def __init__(self, rid="R3I", books=K.BOOK_ORDER):
+        self.rid, self.books = rid, books
+
+    def window(self, book, day):
+        m = book.m
+        pos = book.day_pos.get(day)
+        if pos is None or pos == 0:
+            return None
+        prev = m.days[pos - 1]
+        i_p = m.day_last[prev]
+        t = m.session_end(day) - K.R3_LH_MIN
+        i_s = m.at_or_before(day, t - 1)
+        if i_s < 0 or m.tod[i_s] < t - 5 or m.seg[i_p] != m.seg[i_s]:
+            return None
+        mv = float(m.F[i_s] / m.F[i_p] - 1.0)
+        return (i_s, mv) if np.isfinite(mv) and mv != 0 else None
+
+    def spec(self, book, day, i_s, mv):
+        atr = atr_before(book, day)
+        if not np.isfinite(atr):
+            return None
+        side = 1 if mv > 0 else -1
+        return dict(day=day, i_sig=i_s, i_from=i_s + 1, side=side, ustop=float(book.m.F[i_s] - side * K.R3_LH_KATR * atr),
+                    n_sessions=None, kind="single", i_end_fixed=None, katr=K.R3_LH_KATR, edge=True,
+                    tod=int(book.m.tod[i_s]))
+
+    def candidates(self, book, period):
+        hist, out = [], []
+        for day in book.m.days:
+            w = self.window(book, day)
+            if w is None:
+                continue
+            past = [abs(x) for x in hist[-K.R3_LH_LOOK:]]
+            if in_p(day, period) and len(past) >= K.R3_LH_PAST and abs(w[1]) >= np.quantile(past, K.R3_LH_Q):
+                sp = self.spec(book, day, *w)
+                if sp:
+                    out.append(sp)
+            hist.append(w[1])
+        return out
+
+    def twin(self, book, sp, day):
+        w = self.window(book, day)
+        return None if w is None else self.spec(book, day, *w)
+
+
+class HighVolORB:
+    """R3J (Holmberg, Loennbark & Lundstroem, FRL 2013; Lundstroem WP 861: crude ORB returns depend on the volatility
+    state): only when the previous session's 5-day mean Garman-Klass variance is in the top third of its last-250
+    range; the opening range = the future's minute closes 09:00-09:29 ET; the first minute close beyond it from 09:30
+    to 11:00 ET -> 1-ITM that way; stop -40% / the range midpoint; out at the square-off. Twin: the same clock on a
+    random session of the same month without the volatility filter."""
+    kind = "single"
+
+    def __init__(self, rid="R3J", books=K.CRUDE):
+        self.rid, self.books = rid, books
+
+    def spec(self, book, day):
+        m = book.m
+        a, b, z = et(day, 9, 0), et(day, 9, 29), et(day, 11, 0)
+        ix = m.day_ix(day)
+        rx = ix[(m.tod[ix] >= a) & (m.tod[ix] <= b)]
+        if len(rx) < 20:
+            return None
+        hi, lo = float(np.nanmax(m.F[rx])), float(np.nanmin(m.F[rx]))
+        jx = ix[(m.tod[ix] > b) & (m.tod[ix] <= z)]
+        br = np.flatnonzero((m.F[jx] > hi) | (m.F[jx] < lo))
+        if not len(br):
+            return None
+        i_sig = int(jx[br[0]])
+        side = 1 if m.F[i_sig] > hi else -1
+        return dict(day=day, i_sig=i_sig, i_from=i_sig + 1, side=side, ustop=float((hi + lo) / 2), n_sessions=None,
+                    kind="single", i_end_fixed=None, katr=None, edge=True, tod=int(m.tod[i_sig]))
+
+    def candidates(self, book, period):
+        out = []
+        for day in book.m.days:
+            if in_p(day, period) and flag_before(book, day, "hivol"):
+                sp = self.spec(book, day)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        return self.spec(book, day)
+
+
+RULES.update({
+    "R3A": NR7Var("R3A", books=K.CRUDE),
+    "R3B": NR7Var("R3B", col="nr4", books=K.CRUDE),
+    "R3C": NR7Var("R3C", books=K.ENERGY, trail=K.R3_TRAIL),
+    "R3D": NR7Var("R3D", col="nr7_lowvol", books=K.ENERGY),
+    "R3E": WeeklyNR7("R3E", books=K.ENERGY),
+    "R3F": NR7Var("R3F", books=K.ENERGY, last_tod=K.R3_EARLY_TOD),
+    "R3G": NR7Var("R3G", books=K.ENERGY, us_open=True),
+    "R3H": EIAMomentum("R3H", books=K.CRUDE),
+    "R3I": LastHalfHour("R3I", books=K.BOOK_ORDER),
+    "R3J": HighVolORB("R3J", books=K.CRUDE),
+})
+ORDER3 = ("R3A", "R3B", "R3C", "R3D", "R3E", "R3F", "R3G", "R3H", "R3I", "R3J")
+# Boss, 21 Oct (after round 3): "add trailing profit lock and trailing stoploss same as breadth donchian"
+RULES.update({
+    "R3K": NR7Var("R3K", books=K.CRUDE, r93=True),
+    "R3L": NR7Var("R3L", books=K.CRUDE, fut=True),
+})
+ORDER3B = ("R3K", "R3L")
+HISTORY_RULES.update({"R3K": "nr7_r93", "R3L": "nr7_r93", "R3A": "nr7", "R3B": "nr4", "R3C": "nr7", "R3D": "nr7_lowvol", "R3E": "wnr7", "R3F": "nr7",
+                      "R3G": "nr7"})

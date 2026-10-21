@@ -45,6 +45,9 @@ object ArmsCleanup {
     const val SHADOW = "shadow_paper"
     const val BASKETS = "scheduled_baskets"
     const val JARVIS = "jarvis_trades"
+    /** 21 Oct (Boss: "Remove silverm monthly call, and mcx 12 month trend"): two MCX paper arms, keyed by their own sources. */
+    const val MCX_SILVERM_AM = com.optionslab.engine.mcx.McxMorningRules.SOURCE
+    const val MCX_TREND = com.optionslab.engine.mcx.McxTrendRules.SOURCE
 
     /** Every automatic trader switched off and hidden on 15 Oct, in the Hidden arms list's order. */
     val HIDDEN: List<Hidden> = listOf(
@@ -60,7 +63,16 @@ object ArmsCleanup {
         Hidden(SHADOW, "Shadows re-armed on paper", "android/app/.../data/ShadowArms.kt"),
         Hidden(BASKETS, "Scheduled strategies", "android/app/.../data/Strategies.kt"),
         Hidden(JARVIS, "Jarvis's trade ideas", "android/app/.../ira/IraHub.kt, ira/IraNewsTrades.kt"),
+        // 21 Oct, Boss's request: both MCX paper arms are switched off and hidden the same way (their code and trades kept).
+        Hidden(MCX_SILVERM_AM, "SILVERM morning call (MCX)", "android/app/.../data/McxPaperArms.kt, engine mcx/McxArmRules.kt"),
+        Hidden(MCX_TREND, "MCX 12-month trend", "android/app/.../data/McxPaperArms.kt, engine mcx/McxArmRules.kt"),
     )
+
+    /**
+     * The arms the 15 Oct cleanup took in. A phone that already ran it ([State.done]) never saw the arms added later
+     * ([HIDDEN] minus these); [pass] takes each of those in once ([State.seen]), so nothing Boss restored is hidden again.
+     */
+    val FIRST_15OCT: Set<String> = setOf(ORB, ORB_FRESH, ORB_SWEEP, RANGE_FADE, HERO, NIGHT, VIX_DIV, FORGE, PINE, SHADOW, BASKETS, JARVIS)
 
     /** What stays visible and running as today (Boss's 15 Oct choice). */
     val KEPT: List<Kept> = listOf(
@@ -72,7 +84,8 @@ object ArmsCleanup {
         Kept("R72 Breadth Donchian (16 Oct)", "android/app/.../data/PassedArmsHost.kt, engine orb/BreadthDonchianArm.kt"),
         Kept("Watchlist (shadow)", "android/app/.../data/WatchlistHost.kt, engine orb/Watchlist.kt"),
         Kept("Solo (midday)", "android/app/.../ira/IraSolo.kt, engine orb/SoloMidday.kt"),
-        Kept("MCX paper arms", "android/app/.../data/McxPaperArms.kt"),
+        Kept("MCX paper arms: NG evening breakout and US-night silver (21 Oct: the SILVERM morning call and the 12-month trend hidden)",
+            "android/app/.../data/McxPaperArms.kt"),
         Kept("Stock-option tools (chain, quotes, manual trading)", "android/app/.../ui/screens/TradeScreen.kt"),
         Kept("Pine editor, backtester and indicators", "android/app/.../ui/screens/PineScreen.kt"),
     )
@@ -85,6 +98,10 @@ object ArmsCleanup {
     /** Is [key] one of the arms the cleanup hides? */
     fun covers(key: String): Boolean = key in BY_KEY
 
+    /** The words a hidden arm's switch-off carries for the arms added on 21 Oct (Boss's request). */
+    fun hiddenWords(key: String): String = if (key in FIRST_15OCT) HIDDEN_WORDS
+        else "switched off and hidden on your request (21 Oct); its code, settings and trades are kept"
+
     /** What the list and the timeline say about NIFTY (no Liquidity book: it failed research). */
     const val NIFTY_NOTE = "Liquidity on NIFTY has no book: research H4 found no edge there (765 trades; +₹8 net in the holdout, " +
         "random-entry p 0.82), so under the paper rule it stays a note"
@@ -96,7 +113,7 @@ object ArmsCleanup {
     const val WAITING = "switching off after its exit (15 Oct cleanup): its open position keeps its own stop, target and square-off"
 
     /** What a refused switch-on of a hidden arm says (any path but the Hidden arms list). */
-    fun refusal(label: String): String = "$label is hidden (your 15 Oct cleanup). Restore it from Home → Strategies → Hidden arms first."
+    fun refusal(label: String): String = "$label is hidden (your cleanup). Restore it from Home → Strategies → Hidden arms first."
 
     /** One arm now: [armed] its switch (or its gate open), [open] it holds a position or has a working order. */
     data class Now(val key: String, val armed: Boolean, val open: Boolean)
@@ -104,11 +121,12 @@ object ArmsCleanup {
     /**
      * The cleanup's state, kept by the app: [done] the one-time change ran; [hidden] the arms it hides (an arm leaves it only by
      * a restore); [waiting] those still holding a position (visible, switched off after the exit); [wasOn] those that were on
-     * when switched off (a restore puts them back on, on paper); [logged] those whose switch-off or hiding is in the timeline.
+     * when switched off (a restore puts them back on, on paper); [logged] those whose switch-off or hiding is in the timeline;
+     * [seen] every arm the cleanup has ever taken in (an arm added to [HIDDEN] later is taken in once, when not seen).
      */
     data class State(
         val done: Boolean = false, val hidden: Set<String> = emptySet(), val waiting: Set<String> = emptySet(),
-        val wasOn: Set<String> = emptySet(), val logged: Set<String> = emptySet(),
+        val wasOn: Set<String> = emptySet(), val logged: Set<String> = emptySet(), val seen: Set<String> = emptySet(),
     )
 
     enum class Action { OFF, HIDE, WAIT }
@@ -118,12 +136,14 @@ object ArmsCleanup {
 
     /**
      * One pass over the arms' state [now] (a key missing from it counts as open: never switched off on a missing read). The first
-     * pass (not [State.done]) takes every [HIDDEN] arm in; each pass then switches off every hidden arm that is on and flat, hides
-     * every one that is off and flat, and leaves every one holding a position on (WAIT, said once). Never switches anything on.
+     * pass (not [State.done]) takes every [HIDDEN] arm in, and a later pass each arm added since ([State.seen], once); each pass
+     * then switches off every hidden arm that is on and flat, hides every one that is off and flat, and leaves every one holding
+     * a position on (WAIT, said once). Never switches anything on.
      */
     fun pass(s: State, now: List<Now>): Pair<State, List<Step>> {
         val by = now.associateBy { it.key }
-        val hidden = if (s.done) s.hidden else s.hidden + HIDDEN.map { it.key }
+        val all = HIDDEN.map { it.key }
+        val hidden = if (s.done) s.hidden + all.filter { it !in s.seen } else s.hidden + all
         val waiting = s.waiting.toMutableSet()
         val wasOn = s.wasOn.toMutableSet()
         val logged = s.logged.toMutableSet()
@@ -136,7 +156,7 @@ object ArmsCleanup {
                 else -> { if (k !in logged) steps += Step(k, Action.HIDE, true); waiting -= k; logged += k }
             }
         }
-        return State(true, hidden, waiting, wasOn, logged) to steps
+        return State(true, hidden, waiting, wasOn, logged, s.seen + all) to steps
     }
 
     /** Is [key]'s row shown? Every arm the cleanup does not hide, and a hidden one while it still holds a position. */
@@ -155,19 +175,24 @@ object ArmsCleanup {
         Restore(s.copy(hidden = s.hidden - key, waiting = s.waiting - key, wasOn = s.wasOn - key, logged = s.logged - key), key in s.wasOn)
 
     /** A restore undone (the timeline's Undo): [key] is hidden again, through the same pass (switched off once it is flat). */
-    fun hideAgain(s: State, key: String): State = if (covers(key)) s.copy(hidden = s.hidden + key, done = true) else s
+    fun hideAgain(s: State, key: String): State = if (covers(key)) s.copy(hidden = s.hidden + key, done = true, seen = s.seen + key) else s
 
     // ---- the state's file ---------------------------------------------------------------------------------------------------
 
     fun encode(s: State): String = "v1\ndone=${s.done}\nhidden=${s.hidden.sorted().joinToString(",")}\nwaiting=${s.waiting.sorted().joinToString(",")}\n" +
-        "wasOn=${s.wasOn.sorted().joinToString(",")}\nlogged=${s.logged.sorted().joinToString(",")}\n"
+        "wasOn=${s.wasOn.sorted().joinToString(",")}\nlogged=${s.logged.sorted().joinToString(",")}\nseen=${s.seen.sorted().joinToString(",")}\n"
 
-    /** [text] as saved by [encode]; null or unreadable: a fresh state (the cleanup has not run). Unknown keys are dropped. */
+    /**
+     * [text] as saved by [encode]; null or unreadable: a fresh state (the cleanup has not run). Unknown keys are dropped. A file
+     * saved before 21 Oct has no "seen": a cleanup that ran then saw exactly [FIRST_15OCT].
+     */
     fun decode(text: String?): State {
         if (text == null || !text.startsWith("v1")) return State()
         val m = text.lines().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()
         fun set(k: String) = m[k].orEmpty().split(',').filter { covers(it) }.toSet()
-        return State(m["done"] == "true", set("hidden"), set("waiting"), set("wasOn"), set("logged"))
+        val done = m["done"] == "true"
+        val seen = if ("seen" in m) set("seen") else if (done) FIRST_15OCT else emptySet()
+        return State(done, set("hidden"), set("waiting"), set("wasOn"), set("logged"), seen)
     }
 
     // ---- Liquidity 15+5 on its indices --------------------------------------------------------------------------------------

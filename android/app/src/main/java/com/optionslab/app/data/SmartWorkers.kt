@@ -299,6 +299,9 @@ object SmartWorkers {
     /** The safety-net interval now (15 s while anything is held, else Boss's 15-60 s, 30 by default). */
     fun safetyNetMs(anyOpen: Boolean): Long = WorkerWake.safetyNetMs(anyOpen, _settings.value.netFlatSec)
 
+    /** 21 Oct: NR7 crude, record only ([McxNr7Record]): MCX's hours, like the MCX paper arms (its step's name). */
+    const val NR7_RECORD = "NR7 crude (record only)"
+
     /** The arms the scheduler knows, with what wakes each (the names are the watch's own step names). */
     private val SPECS = listOf(
         // ORB, Liquidity and Hero decide on 5-, 15- and 30-minute bars, but a bar the feed has not finished is looked at again on
@@ -306,7 +309,7 @@ object SmartWorkers {
         WorkerWake.Spec("ORB arms", setOf(WorkerWake.Cause.CANDLE_1M, WorkerWake.Cause.CANDLE_5M, WorkerWake.Cause.ORDER_UPDATE,
             WorkerWake.Cause.POSITION_CHANGE, WorkerWake.Cause.SIGNAL_WINDOW, WorkerWake.Cause.NEWS, WorkerWake.Cause.NEAR_LEVEL),
             maxSleepMs = 60_000L, minIntervalMs = 10_000L),
-    ) + listOf("Night (R3)", "VIX divergence", "Pine scripts", "MCX paper arms", "Forge ideas", "strategies", "Jarvis's trades", "Solo").map {
+    ) + listOf("Night (R3)", "VIX divergence", "Pine scripts", "MCX paper arms", NR7_RECORD, "Forge ideas", "strategies", "Jarvis's trades", "Solo").map {
         WorkerWake.Spec(it, setOf(WorkerWake.Cause.CANDLE_1M, WorkerWake.Cause.ORDER_UPDATE, WorkerWake.Cause.POSITION_CHANGE,
             WorkerWake.Cause.NEWS), maxSleepMs = 60_000L, minIntervalMs = 10_000L)
     }
@@ -345,7 +348,7 @@ object SmartWorkers {
         val nse = inHours ?: runCatching { Market.isOpen() }.getOrDefault(true)
         val mcx = inHours ?: runCatching { McxMarket.isOpen() }.getOrDefault(true)
         return steps.filter { st ->
-            val pace = WorkerWake.Pace(inHours = if (st.name == "MCX paper arms") mcx || nse else nse, holding = holding,
+            val pace = WorkerWake.Pace(inHours = if (st.name == "MCX paper arms" || st.name == NR7_RECORD) mcx || nse else nse, holding = holding,
                 nearLevel = now < nearUntil, busy = ctx.anyBusy(), quiet = ctx.allQuiet(),
                 inWindow = st.name == "ORB arms" && heroWindow())
             val d = runCatching { sched.decide(st.name, pace, now) }.getOrNull() ?: WorkerWake.Decision(true, WorkerWake.Cause.FIRST)

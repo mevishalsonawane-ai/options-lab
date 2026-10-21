@@ -44,8 +44,33 @@ RULE_TEXT = {
     "R2G": "NR7 day -> ATM straddle next 09:15, stop -30%, lock ladder, 3 sessions, edge take-profit",
     "R2H": "close beyond the previous 20 closes' high / low with an NR7 day in the previous 5 sessions -> 1-ITM, stop "
            "-40% / 1 ATR14, lock ladder, 5 sessions, edge take-profit",
+    "R3A": "as R2A (NR7 break -> 1-ITM, edge take-profit, 3 sessions) on CRUDEOILM and CRUDEOIL; books chosen after "
+           "round 2",
+    "R3B": "as R3A with NR4 (the narrowest range of 4 sessions)",
+    "R3C": "as R2D (CRUDEOIL, NATURALGAS) without the premium lock ladder: the future's stop moves to the entry price "
+           "after +1 ATR14, then trails 1.5 ATR14 behind the best minute close; -40% premium stop and edge kept",
+    "R3D": "as R2D, only NR7 days whose ATR14 / close is in the bottom third of its last-250-session range",
+    "R3E": "weekly NR7 (narrowest of 7 ISO weeks) -> first future minute close beyond that week's high / low during the "
+           "next week -> 1-ITM, stop -40% / the week's opposite extreme, lock ladder, edge, 5 sessions; CRUDEOIL, "
+           "NATURALGAS",
+    "R3F": "as R2D, only breaks between 09:15 and 11:15",
+    "R3G": "as R2D, but a break before the US cash open (09:30 ET) that still holds at the minute before it enters at "
+           "the US open",
+    "R3H": "EIA crude days: the future's 11:00-11:30 ET return -> 1-ITM that way; stop -40% / the 11:00 ET price, lock "
+           "ladder, edge, out at the session square-off; CRUDEOILM, CRUDEOIL",
+    "R3I": "at the session close - 45 min, the future's move since the previous session's last minute, if >= the 67th "
+           "percentile of the last 60 sessions' moves -> 1-ITM that way; stop -40% / 0.25 ATR14, out at close - 15",
+    "R3J": "previous 5-day Garman-Klass variance in the top third of its last-250 range; first minute close beyond the "
+           "09:00-09:29 ET range between 09:30 and 11:00 ET -> 1-ITM; stop -40% / the range midpoint, lock ladder, edge, "
+           "out at the square-off; CRUDEOILM, CRUDEOIL",
+    "R3K": "R3A's NR7 break on crude -> 1-ITM option; exits = R93's daily set on the future (stop entry -/+ 2 ATR14, "
+           "chandelier best session close -/+ 3 ATR14, never loosening, checked at each session's square-off minute) "
+           "+ -40% premium stop; no premium ladder, no edge take-profit (deep-ITM exits model-priced, flagged); out "
+           "after 10 sessions or before the option expiry; Boss's request",
+    "R3L": "as R3K, trading the crude future itself (CRUDEOILM x10, CRUDEOIL x100); R93 futures costs",
 }
-PREREG = {1: "research/hunt/r96_mcx_buy/PREREG_ROUND1.md", 2: "research/hunt/r96_mcx_buy/PREREG_ROUND2.md"}
+PREREG = {1: "research/hunt/r96_mcx_buy/PREREG_ROUND1.md", 2: "research/hunt/r96_mcx_buy/PREREG_ROUND2.md",
+          3: "research/hunt/r96_mcx_buy/PREREG_ROUND3.md"}
 
 
 def main(round_no: int = 1):
@@ -91,7 +116,7 @@ def main(round_no: int = 1):
                                              "also at 2x spreads"),
             holdout_read=bool(hj is not None),
             verdict=("paper-only" if (hj and hj["pass_"]) else ("inconclusive" if r.get("lead") else "rejected")),
-            notes=("lead for round 2" if r.get("lead") and not r.get("pass") else ""))
+            notes=(f"lead for round {round_no + 1}" if r.get("lead") and not r.get("pass") else ""))
         if clash and not clash[0].read_text().startswith(f"id: {eid}"):
             raise SystemExit(f"id clash: {eid}")
         (OUT / f"{eid}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))

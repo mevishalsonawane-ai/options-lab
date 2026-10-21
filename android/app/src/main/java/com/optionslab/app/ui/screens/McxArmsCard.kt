@@ -54,6 +54,52 @@ internal fun McxArmRows(divider: Boolean = true) {
     var stopLine by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     LaunchedEffect(v) { stopLine = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.DayLockGuard.mcxLine() }.getOrNull() } }
     McxArmsGroup(v, divider, stopLine) { arm, on -> scope.launch(Dispatchers.IO) { runCatching { McxPaperArms.setArmed(arm, on) } } }
+    // 21 Oct: NR7 crude, record only (no orders, ever; [com.optionslab.app.data.McxNr7Record]).
+    val n by com.optionslab.app.data.McxNr7Record.view.collectAsState(Dispatchers.Main.immediate)
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.McxNr7Record.refresh() } } }
+    McxNr7Content(n) { on -> scope.launch(Dispatchers.IO) { runCatching { com.optionslab.app.data.McxNr7Record.setOn(on) } } }
+}
+
+/** What the NR7 record's state line says. */
+internal fun nr7State(v: com.optionslab.app.data.McxNr7Record.View): String =
+    if (v.on) "RECORDING · NO ORDERS" else "OFF · RECORD ONLY (NO ORDERS)"
+
+/** Its key numbers: the closed would-be trades and their net after charges and spreads. */
+internal fun nr7Numbers(v: com.optionslab.app.data.McxNr7Record.View): String {
+    val n = v.closed.size
+    val net = v.closedNet
+    return "Would-be: $n trade${if (n == 1) "" else "s"}, ${if (net < 0) "−₹" else "+₹"}${"%,.0f".format(Locale.ENGLISH, kotlin.math.abs(net))} · never traded"
+}
+
+/** The NR7 record's row from plain state ([v]) and its switch's callback. */
+@Composable
+internal fun McxNr7Content(v: com.optionslab.app.data.McxNr7Record.View, onSwitch: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Rule()
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            ExplainedName(com.optionslab.engine.mcx.McxNr7Rules.LABEL, listOfNotNull(
+                "Record only: it never places an order, on paper or live. Not proven: it failed one research gate.",
+                com.optionslab.engine.mcx.McxNr7Rules.RECORD,
+                com.optionslab.engine.mcx.McxNr7Rules.RULES,
+            ) + v.status.entries.sortedBy { it.key }.map { (u, s) -> "$u: $s" } + v.closed.takeLast(5).reversed().map { t ->
+                "%s %s %s: %s".format(Locale.ENGLISH, t.entryTime.toLocalDate(), t.symbol, t.why ?: "",
+                    (if ((t.net ?: 0.0) < 0) "−₹" else "+₹") + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(t.net ?: 0.0)))
+            })
+            Text(nr7State(v), style = Type.label.copy(color = if (v.on) p.verdigris else p.inkFaint, fontSize = 10.sp, fontWeight = FontWeight.Bold))
+            Text(keepNumbersWhole(nr7Numbers(v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+            v.open.forEach { o ->
+                Text(keepNumbersWhole("Would hold ${o.symbol} · ${o.qty} @ %.2f · record only".format(Locale.ENGLISH, o.fill)),
+                    style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+            }
+        }
+        Switch(
+            modifier = Modifier.semantics { contentDescription = "Record only, no orders: switch ${com.optionslab.engine.mcx.McxNr7Rules.LABEL}" },
+            checked = v.on,
+            onCheckedChange = onSwitch,
+            colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),
+        )
+    }
 }
 
 /** The group from plain state ([v]) and the switches' callback (arm, on); it sits in the Strategies card's column. */
@@ -65,7 +111,10 @@ internal fun McxArmsGroup(v: McxPaperArms.View, divider: Boolean = true, stopLin
     ExplainedName(MCX_GROUP, listOf(MCX_NOTE), Modifier.padding(top = if (divider) 4.dp else 0.dp), style = Type.title.copy(color = p.ink, fontSize = 15.sp))
     // 21 Oct: "Commodities day lock reached +Rs 8,000 at 18:05: no new MCX entries today", said plainly under the heading.
     stopLine?.let { Note(it, Modifier.padding(top = 2.dp)) }
-    McxPaperArms.ARMS.forEach { arm -> McxArmRow(arm, v, onArm) }
+    // 21 Oct (Boss's request): the SILVERM morning call and the 12-month trend are hidden ([com.optionslab.app.data.HiddenArms]);
+    // a hidden arm's row shows only while it still holds a position (it is restored from Home → Strategies → Hidden arms).
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(Dispatchers.Main.immediate)
+    McxPaperArms.ARMS.filter { com.optionslab.engine.orb.ArmsCleanup.visible(hidden, it) }.forEach { arm -> McxArmRow(arm, v, onArm) }
 }
 
 /** What the MCX group's name opens. */

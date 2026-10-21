@@ -561,9 +561,11 @@ object AutoChange {
     /**
      * Boss's 15 Oct cleanup switched [key] ([label]) off and hid it - only once it held nothing ([wasOn]: it was on, else it was
      * off already): "on → hidden" (or "off → hidden"), lowering risk. Its Undo restores it (back on, ON PAPER ONLY, when it was on).
+     * [why]: whose choice and when (21 Oct: Boss's request to remove two MCX paper arms).
      */
-    fun armHidden(key: String, label: String, wasOn: Boolean): Change = Change(Kind.ARM_HIDE, HIDE + key, if (wasOn) ON else SWITCHED_OFF, HIDDEN,
-        "your cleanup (15 Oct): $label switched off and hidden" + (if (wasOn) " once it held nothing" else "") +
+    fun armHidden(key: String, label: String, wasOn: Boolean, why: String = "your cleanup (15 Oct)"): Change =
+        Change(Kind.ARM_HIDE, HIDE + key, if (wasOn) ON else SWITCHED_OFF, HIDDEN,
+        "$why: $label switched off and hidden" + (if (wasOn) " once it held nothing" else "") +
             "; its code, settings and trades are kept, and the Hidden arms list restores it in one tap",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label (hidden arms)")
 

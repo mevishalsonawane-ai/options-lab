@@ -552,6 +552,7 @@ object Tasks {
             if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() },
             com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
         )
         val due = armsDue(true, all)
@@ -903,6 +904,7 @@ object Tasks {
         // exits), and - in Jarvis - his approved news trades and Solo (paper only, Boss's switch); they never go first.
         together("arms after the square-off", armsDue(lanes != null, listOfNotNull(
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() },
             com.optionslab.ira.Supervisor.Step("strategies") {
                 val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
                 com.optionslab.app.data.Strategies.tickAll(bad)
@@ -1114,6 +1116,8 @@ object Tasks {
                     ?.let { com.optionslab.app.data.McxMarket.noteLive(it.net) }
             }
             step("position cards") { PositionCards.refresh(context) }
+            // 21 Oct: NR7 crude, record only (no orders): after every step that guards a position (its reads are slow).
+            step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.tick() }
             runCatching { Heartbeat.beat(context) }
         } } finally {
             com.optionslab.app.data.Broker.passEnd()

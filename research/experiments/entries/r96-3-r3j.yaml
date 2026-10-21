@@ -1,0 +1,35 @@
+id: r96-3-r3j
+title: 'R96 round 3 R3J: US-open range breakout in a high-volatility regime (crude) (MCX option buying)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R96_ROUND3.md
+hypothesis: 'Boss (21 Oct): find an MCX commodity option BUYING strategy. R3J earns after real MCX costs on design (5 Aug
+  2025 - 14 Jul 2026), beats random-session twins (p < 0.05, BH q <= 0.10 over the cumulative R96 ledger), in >= 3 of 4 walk-forward
+  folds, worst month > -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m MONTH books to 19 Oct 2026: near-future spot + ATM-3..+3
+  minutes with IV; fut_daily_continuous to 16 Oct 2026), copied 21 Oct'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; read once only for a design pass)
+instruments:
+- CRUDEOIL
+- CRUDEOILM
+features:
+- 'signal source: the MCX future (near future minute closes; daily: the near-month daily continuous future, back-adjusted)'
+- ATM IV as a filter only (V1)
+model_or_rule: previous 5-day Garman-Klass variance in the top third of its last-250 range; first minute close beyond the
+  09:00-09:29 ET range between 09:30 and 11:00 ET -> 1-ITM; stop -40% / the range midpoint, lock ladder, edge, out at the
+  square-off; CRUDEOILM, CRUDEOIL
+settings: research/hunt/r96_mcx_buy/cfg.py; PREREG_ROUND3.md
+prereg: research/hunt/r96_mcx_buy/PREREG_ROUND3.md
+variants_tried: 1
+results:
+  summary: 'Design: 14 trades, net Rs 7,406 (2x spread Rs 4,135), gross Rs 12,168, win 64%, worst month Rs 7,406, max DD Rs
+    -9,711, without top 3 Rs -6,115; folds F1 Rs 0 (0), F2 Rs 0 (0), F3 Rs 7,406 (14), F4 Rs 0 (0); twin mean Rs -5,090, twin
+    p 0.126, BH q 0.521 (cumulative ledger, 29 ideas); model-priced exits 0%, real-exit net Rs 7,406. Gates failed: trades,
+    twin_p, bh_q, folds, wo_top3.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before (NATGASMINI 0.45% / 0.90%) each fill, 2x
+    on model-priced exits; gates also at 2x spreads
+holdout_read: false
+verdict: rejected
+notes: ''
