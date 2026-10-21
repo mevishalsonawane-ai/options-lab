@@ -17,6 +17,7 @@ import numpy as np
 from research.hunt.r94_mcx_advanced import common as C
 
 IDEAS = {"idea1": "calspread", "idea2": "pairs", "idea3": "options", "idea4": "seasonal", "idea5": "usgap"}
+OUT_OF_SCOPE = {"idea3"}       # NOTES N2 (Boss, 21 Oct): option selling: design only, counted in BH, holdout not read
 TITLE = {"idea1": "Calendar spreads", "idea2": "Sector-index pairing (proxies)", "idea3": "Option selling",
          "idea4": "Bullion seasonals", "idea5": "US overnight -> MCX open"}
 
@@ -46,6 +47,9 @@ def design() -> dict:
     for c, v in d.items():
         v["p_used"], v["q"] = pv[c], q[c]
         v["gate"] = C.design_gate(v["summary"], pv[c], q[c], v.get("folds") or [], min_trades(c))
+        if v["idea"] in OUT_OF_SCOPE:
+            v["gate"]["pass"] = False
+            v["gate"]["out_of_scope"] = True
         if v["gate"]["pass"]:
             passed.append(c)
     C.save("design_all.json", {"cells": d, "n_cells": len(d), "passed": passed,
@@ -62,11 +66,13 @@ def design() -> dict:
 def holdout() -> dict:
     """The ONE read. Locks every cell of every idea first; a second call raises before any number is computed."""
     d = json.loads((C.RESULTS / "design_all.json").read_text())["cells"]
-    by_idea = {i: [c for c, v in d.items() if v["idea"] == i] for i in IDEAS}
+    by_idea = {i: [c for c, v in d.items() if v["idea"] == i] for i in IDEAS if i not in OUT_OF_SCOPE}
     for i, cells in by_idea.items():                 # lock all, then compute
         C.open_holdout(i, cells)
     out, trades = {}, {}
     for i, mod in IDEAS.items():
+        if i in OUT_OF_SCOPE:
+            continue
         m = importlib.import_module(f"research.hunt.r94_mcx_advanced.{mod}")
         res = m.cells("holdout")
         for c, v in res.items():
@@ -108,7 +114,8 @@ def tables() -> str:
     h = json.loads(hp.read_text()) if hp.exists() else {}
     lines = []
     for i in IDEAS:
-        lines += [f"### {TITLE[i]} ({i})", "",
+        lines += [f"### {TITLE[i]} ({i})" + (" - OUT OF SCOPE (Boss, 21 Oct): design only, holdout not read"
+                                             if i in OUT_OF_SCOPE else ""), "",
                   "| cell | design n | win | net Rs | worst trade | worst day | worst month | max DD | p | q | "
                   "design gate | holdout n | holdout net | holdout worst month | holdout p | fits 2% @ Rs 1L | "
                   "capital for median trade at 2% |",

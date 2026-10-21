@@ -38,11 +38,14 @@ def test_design_bh_over_all_cells_and_gates(tmp_path, monkeypatch):
     assert d["c-a"]["q"] == pytest.approx(0.001 * 7 / 2)     # ranks over all 7 cells of all ideas
     assert d["c-a"]["gate"]["pass"]
     assert not d["p-a"]["gate"]["pass"] and not d["p-a"]["gate"]["net"]
-    assert d["o-x-CY-ALL"]["gate"]["pass"]                   # 12 trades are enough for a cycle cell
+    assert d["o-x-CY-ALL"]["gate"]["n"]                      # 12 trades are enough for a cycle cell ...
+    assert not d["o-x-CY-ALL"]["gate"]["pass"]               # ... but option selling is out of scope (NOTES N2)
+    assert d["o-x-CY-ALL"]["gate"]["out_of_scope"]
     assert not d["o-y-D1-ALL"]["gate"]["n"]                  # 30 are not for a D1 cell
     assert not d["g-a"]["gate"]["month_stop"]
     saved = json.loads((tmp_path / "design_all.json").read_text())
-    assert set(saved["passed"]) == {"c-a", "o-x-CY-ALL"}
+    assert set(saved["passed"]) == {"c-a"}
+    assert saved["n_cells"] == 7                             # out-of-scope cells still count in the BH family
 
 
 def test_design_refuses_missing_idea(tmp_path, monkeypatch):

@@ -83,15 +83,18 @@ def main():
         summ = (f"{len(cells)} cells (one BH family of {len(D)} R94 cells). Design net after costs per cell, twin / "
                 f"bootstrap p and BH q, then the one holdout read: " + "; ".join(parts) +
                 f". Design passers {sum(D[c]['gate']['pass'] for c in cells)}, design + holdout passers {len(both)}.")
-        verdict = "paper-only" if both else "rejected"
+        oos = prefix.startswith("o-")
+        verdict = "inconclusive" if oos else ("paper-only" if both else "rejected")
+        if oos:
+            summ = "OUT OF SCOPE (Boss, 21 Oct: option selling is out of scope); design only, holdout NOT read. " + summ
         des, hol = PERIOD[prefix[0]]
         y = [f"id: {eid}", f"title: {_q(title)}", f"family: {fam}", "date: '2026-10-21'", f"doc: {DOC}",
              f"hypothesis: {_q('Pre-registered (' + PREREG + '): ' + title + '; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: ' + src + '.')}",
-             f"data_version: {_q(LAKE)}", "period:", f"  design: {des}", f"  holdout: {hol}" + (" (read once)" if H else " (not yet read)"),
+             f"data_version: {_q(LAKE)}", "period:", f"  design: {des}", f"  holdout: {hol}" + (" (not read: out of scope)" if oos else (" (read once)" if H else " (not yet read)")),
              "instruments:", f"- {_q(inst)}", "features:", f"- {_q('signal source: ' + src)}",
              f"model_or_rule: {_q(title)}", "settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)",
              f"prereg: {PREREG}", f"variants_tried: {len(cells)}", "results:", f"  summary: {_q(summ)}",
-             f"  costs: {_q(COSTS)}", f"holdout_read: {'true' if H else 'false'}", f"verdict: {verdict}",
+             f"  costs: {_q(COSTS)}", f"holdout_read: {'true' if H and not oos else 'false'}", f"verdict: {verdict}",
              f"notes: {_q('Cells: ' + ', '.join(cells))}"]
         (ROOT / "research" / "experiments" / "entries" / f"{eid}.yaml").write_text("\n".join(y) + "\n")
         print("wrote", eid, len(cells), "cells")

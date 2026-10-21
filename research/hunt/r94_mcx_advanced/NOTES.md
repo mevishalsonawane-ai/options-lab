@@ -18,3 +18,12 @@
    holidays are ignored (at most a day early).
 4. **Idea 1 twins' valid entries:** observations where the rule itself could have entered (z or carry defined, entry
    allowed by the expiry rule, a next observation exists, in the window).
+
+## N2 (21 Oct 2026, before any holdout read): option selling is out of scope
+
+Boss, 21 Oct: "Option selling is out of scope." Idea 3 stops at the design run (`results/design_idea3.json`,
+`NOTES_idea3.md`): its holdout is NOT read, it gets no gate verdict, no APP_SPEC and no paper arm.
+- Its 88 design cells were tried, so they stay in the one Benjamini-Hochberg family (152 cells): dropping them after
+  their design p-values were seen (all >= 0.36) would lower every other idea's q. The stricter family is kept.
+- The idea-3 code and tests stay in the repo as the record of what was tried (CLAUDE.md: log every idea, failures
+  included); its experiment entries say "out of scope, design only, holdout not read".
