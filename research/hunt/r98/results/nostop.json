@@ -1,0 +1,556 @@
+{
+ "grid": [
+  {
+   "target": "1.1\u00d7",
+   "no stop: win": "55.7%",
+   "no stop: mean Rs": "-1,924",
+   "-20% stop: win": "41.4%",
+   "-20% stop: mean Rs": "-676",
+   "-50% stop: win": "52.6%",
+   "-50% stop: mean Rs": "-1,141",
+   "-80% stop: win": "55.3%",
+   "-80% stop: mean Rs": "-1,661"
+  },
+  {
+   "target": "1.2\u00d7",
+   "no stop: win": "42.0%",
+   "no stop: mean Rs": "-2,416",
+   "-20% stop: win": "28.2%",
+   "-20% stop: mean Rs": "-766",
+   "-50% stop: win": "38.5%",
+   "-50% stop: mean Rs": "-1,390",
+   "-80% stop: win": "41.6%",
+   "-80% stop: mean Rs": "-2,071"
+  },
+  {
+   "target": "1.5\u00d7",
+   "no stop: win": "23.8%",
+   "no stop: mean Rs": "-3,097",
+   "-20% stop: win": "13.1%",
+   "-20% stop: mean Rs": "-915",
+   "-50% stop: win": "20.3%",
+   "-50% stop: mean Rs": "-1,756",
+   "-80% stop: win": "23.3%",
+   "-80% stop: mean Rs": "-2,644"
+  },
+  {
+   "target": "2\u00d7",
+   "no stop: win": "14.4%",
+   "no stop: mean Rs": "-3,424",
+   "-20% stop: win": "6.8%",
+   "-20% stop: mean Rs": "-991",
+   "-50% stop: win": "11.5%",
+   "-50% stop: mean Rs": "-1,931",
+   "-80% stop: win": "13.9%",
+   "-80% stop: mean Rs": "-2,918"
+  },
+  {
+   "target": "3\u00d7",
+   "no stop: win": "8.8%",
+   "no stop: mean Rs": "-3,552",
+   "-20% stop: win": "3.7%",
+   "-20% stop: mean Rs": "-1,016",
+   "-50% stop: win": "6.7%",
+   "-50% stop: mean Rs": "-1,993",
+   "-80% stop: win": "8.4%",
+   "-80% stop: mean Rs": "-3,022"
+  },
+  {
+   "target": "5\u00d7",
+   "no stop: win": "5.7%",
+   "no stop: mean Rs": "-3,550",
+   "-20% stop: win": "2.2%",
+   "-20% stop: mean Rs": "-1,001",
+   "-50% stop: win": "4.1%",
+   "-50% stop: mean Rs": "-1,977",
+   "-80% stop: win": "5.3%",
+   "-80% stop: mean Rs": "-3,012"
+  },
+  {
+   "target": "10\u00d7",
+   "no stop: win": "3.8%",
+   "no stop: mean Rs": "-3,427",
+   "-20% stop: win": "1.3%",
+   "-20% stop: mean Rs": "-961",
+   "-50% stop: win": "2.6%",
+   "-50% stop: mean Rs": "-1,888",
+   "-80% stop: win": "3.5%",
+   "-80% stop: mean Rs": "-2,900"
+  },
+  {
+   "target": "20\u00d7",
+   "no stop: win": "3.2%",
+   "no stop: mean Rs": "-3,276",
+   "-20% stop: win": "1.0%",
+   "-20% stop: mean Rs": "-917",
+   "-50% stop: win": "2.1%",
+   "-50% stop: mean Rs": "-1,800",
+   "-80% stop: win": "2.9%",
+   "-80% stop: mean Rs": "-2,768"
+  },
+  {
+   "target": "hold to 15:20",
+   "no stop: win": "2.9%",
+   "no stop: mean Rs": "-3,213",
+   "-20% stop: win": "0.9%",
+   "-20% stop: mean Rs": "-889",
+   "-50% stop: win": "1.9%",
+   "-50% stop: mean Rs": "-1,745",
+   "-80% stop: win": "2.7%",
+   "-80% stop: mean Rs": "-2,726"
+  },
+  {
+   "target": "hold to expiry settlement",
+   "no stop: win": "2.3%",
+   "no stop: mean Rs": "-3,505",
+   "-20% stop: win": "-",
+   "-20% stop: mean Rs": "-",
+   "-50% stop: win": "-",
+   "-50% stop: mean Rs": "-",
+   "-80% stop: win": "-",
+   "-80% stop: mean Rs": "-"
+  }
+ ],
+ "shape": [
+  {
+   "exit": "no stop, hold to 15:20",
+   "win": "2.9%",
+   "mean Rs": "-3,213",
+   "median Rs": "-4,985",
+   "worst 5% (Rs)": "-5,026",
+   "lose >= 90% of the ticket": "88%"
+  },
+  {
+   "exit": "no stop, hold to settlement",
+   "win": "2.3%",
+   "mean Rs": "-3,505",
+   "median Rs": "-5,026",
+   "worst 5% (Rs)": "-5,026",
+   "lose >= 90% of the ticket": "97%"
+  },
+  {
+   "exit": "no stop, sell at 2\u00d7",
+   "win": "14.4%",
+   "mean Rs": "-3,424",
+   "median Rs": "-4,962",
+   "worst 5% (Rs)": "-5,026",
+   "lose >= 90% of the ticket": "78%"
+  },
+  {
+   "exit": "-20% stop, hold to 15:20",
+   "win": "0.9%",
+   "mean Rs": "-889",
+   "median Rs": "-1,336",
+   "worst 5% (Rs)": "-2,016",
+   "lose >= 90% of the ticket": "0%"
+  },
+  {
+   "exit": "-50% stop, hold to 15:20",
+   "win": "1.9%",
+   "mean Rs": "-1,745",
+   "median Rs": "-2,771",
+   "worst 5% (Rs)": "-3,279",
+   "lose >= 90% of the ticket": "0%"
+  },
+  {
+   "exit": "-80% stop, hold to 15:20",
+   "win": "2.7%",
+   "mean Rs": "-2,726",
+   "median Rs": "-4,218",
+   "worst 5% (Rs)": "-4,474",
+   "lose >= 90% of the ticket": "4%"
+  }
+ ],
+ "recovery": [
+  {
+   "target": "1.1\u00d7",
+   "stop": "-20% stop",
+   "win without stop": "55.7%",
+   "win with stop": "41.4%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "14.3%",
+   "mean Rs without stop": "-1,924",
+   "mean Rs with stop": "-676"
+  },
+  {
+   "target": "1.1\u00d7",
+   "stop": "-50% stop",
+   "win without stop": "55.7%",
+   "win with stop": "52.6%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "3.1%",
+   "mean Rs without stop": "-1,924",
+   "mean Rs with stop": "-1,141"
+  },
+  {
+   "target": "1.1\u00d7",
+   "stop": "-80% stop",
+   "win without stop": "55.7%",
+   "win with stop": "55.3%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "0.3%",
+   "mean Rs without stop": "-1,924",
+   "mean Rs with stop": "-1,661"
+  },
+  {
+   "target": "1.5\u00d7",
+   "stop": "-20% stop",
+   "win without stop": "23.8%",
+   "win with stop": "13.1%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "10.7%",
+   "mean Rs without stop": "-3,097",
+   "mean Rs with stop": "-915"
+  },
+  {
+   "target": "1.5\u00d7",
+   "stop": "-50% stop",
+   "win without stop": "23.8%",
+   "win with stop": "20.3%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "3.5%",
+   "mean Rs without stop": "-3,097",
+   "mean Rs with stop": "-1,756"
+  },
+  {
+   "target": "1.5\u00d7",
+   "stop": "-80% stop",
+   "win without stop": "23.8%",
+   "win with stop": "23.3%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "0.5%",
+   "mean Rs without stop": "-3,097",
+   "mean Rs with stop": "-2,644"
+  },
+  {
+   "target": "2\u00d7",
+   "stop": "-20% stop",
+   "win without stop": "14.4%",
+   "win with stop": "6.8%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "7.6%",
+   "mean Rs without stop": "-3,424",
+   "mean Rs with stop": "-991"
+  },
+  {
+   "target": "2\u00d7",
+   "stop": "-50% stop",
+   "win without stop": "14.4%",
+   "win with stop": "11.5%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "2.8%",
+   "mean Rs without stop": "-3,424",
+   "mean Rs with stop": "-1,931"
+  },
+  {
+   "target": "2\u00d7",
+   "stop": "-80% stop",
+   "win without stop": "14.4%",
+   "win with stop": "13.9%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "0.4%",
+   "mean Rs without stop": "-3,424",
+   "mean Rs with stop": "-2,918"
+  },
+  {
+   "target": "5\u00d7",
+   "stop": "-20% stop",
+   "win without stop": "5.7%",
+   "win with stop": "2.2%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "3.5%",
+   "mean Rs without stop": "-3,550",
+   "mean Rs with stop": "-1,001"
+  },
+  {
+   "target": "5\u00d7",
+   "stop": "-50% stop",
+   "win without stop": "5.7%",
+   "win with stop": "4.1%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "1.6%",
+   "mean Rs without stop": "-3,550",
+   "mean Rs with stop": "-1,977"
+  },
+  {
+   "target": "5\u00d7",
+   "stop": "-80% stop",
+   "win without stop": "5.7%",
+   "win with stop": "5.3%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "0.3%",
+   "mean Rs without stop": "-3,550",
+   "mean Rs with stop": "-3,012"
+  },
+  {
+   "target": "10\u00d7",
+   "stop": "-20% stop",
+   "win without stop": "3.8%",
+   "win with stop": "1.3%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "2.5%",
+   "mean Rs without stop": "-3,427",
+   "mean Rs with stop": "-961"
+  },
+  {
+   "target": "10\u00d7",
+   "stop": "-50% stop",
+   "win without stop": "3.8%",
+   "win with stop": "2.6%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "1.2%",
+   "mean Rs without stop": "-3,427",
+   "mean Rs with stop": "-1,888"
+  },
+  {
+   "target": "10\u00d7",
+   "stop": "-80% stop",
+   "win without stop": "3.8%",
+   "win with stop": "3.5%",
+   "tickets the stop 'killed' (fell through it, then hit the target)": "0.3%",
+   "mean Rs without stop": "-3,427",
+   "mean Rs with stop": "-2,900"
+  }
+ ],
+ "by_index": [
+  {
+   "index": "NIFTY",
+   "tickets": 117131,
+   "no stop, 15:20: win / mean": "4.0% / -3,041",
+   "no stop, settlement: win / mean": "3.1% / -3,358",
+   "no stop, 2\u00d7 target: win / mean": "16.7% / -3,232",
+   "-50% stop, 15:20: win / mean": "2.5% / -1,684",
+   "-20% stop, 15:20: win / mean": "1.2% / -798"
+  },
+  {
+   "index": "BANKNIFTY",
+   "tickets": 109028,
+   "no stop, 15:20: win / mean": "1.1% / -4,194",
+   "no stop, settlement: win / mean": "0.8% / -4,477",
+   "no stop, 2\u00d7 target: win / mean": "9.8% / -3,818",
+   "-50% stop, 15:20: win / mean": "0.8% / -2,347",
+   "-20% stop, 15:20: win / mean": "0.5% / -1,161"
+  },
+  {
+   "index": "FINNIFTY",
+   "tickets": 55653,
+   "no stop, 15:20: win / mean": "4.2% / -1,434",
+   "no stop, settlement: win / mean": "4.1% / -1,603",
+   "no stop, 2\u00d7 target: win / mean": "18.2% / -3,112",
+   "-50% stop, 15:20: win / mean": "2.5% / -596",
+   "-20% stop, 15:20: win / mean": "1.2% / -397"
+  },
+  {
+   "index": "MIDCPNIFTY",
+   "tickets": 37646,
+   "no stop, 15:20: win / mean": "5.3% / -1,907",
+   "no stop, settlement: win / mean": "5.1% / -1,944",
+   "no stop, 2\u00d7 target: win / mean": "19.7% / -2,984",
+   "-50% stop, 15:20: win / mean": "3.0% / -699",
+   "-20% stop, 15:20: win / mean": "1.4% / -422"
+  },
+  {
+   "index": "SENSEX",
+   "tickets": 75498,
+   "no stop, 15:20: win / mean": "2.0% / -4,025",
+   "no stop, settlement: win / mean": "0.7% / -4,511",
+   "no stop, 2\u00d7 target: win / mean": "11.9% / -3,600",
+   "-50% stop, 15:20: win / mean": "1.3% / -2,341",
+   "-20% stop, 15:20: win / mean": "0.6% / -1,234"
+  },
+  {
+   "index": "ALL",
+   "tickets": 394956,
+   "no stop, 15:20: win / mean": "2.9% / -3,213",
+   "no stop, settlement: win / mean": "2.3% / -3,505",
+   "no stop, 2\u00d7 target: win / mean": "14.4% / -3,424",
+   "-50% stop, 15:20: win / mean": "1.9% / -1,745",
+   "-20% stop, 15:20: win / mean": "0.9% / -889"
+  }
+ ],
+ "by_year": [
+  {
+   "year": 2021,
+   "tickets": 21064,
+   "no stop 15:20: mean": "-4,269",
+   "settlement: mean": "-4,509",
+   "-50% stop: mean": "-2,459",
+   "-20% stop: mean": "-1,206"
+  },
+  {
+   "year": 2022,
+   "tickets": 56824,
+   "no stop 15:20: mean": "-2,538",
+   "settlement: mean": "-2,770",
+   "-50% stop: mean": "-1,173",
+   "-20% stop: mean": "-657"
+  },
+  {
+   "year": 2023,
+   "tickets": 86390,
+   "no stop 15:20: mean": "-3,289",
+   "settlement: mean": "-3,564",
+   "-50% stop: mean": "-1,828",
+   "-20% stop: mean": "-919"
+  },
+  {
+   "year": 2024,
+   "tickets": 112556,
+   "no stop 15:20: mean": "-2,769",
+   "settlement: mean": "-2,962",
+   "-50% stop: mean": "-1,470",
+   "-20% stop: mean": "-775"
+  },
+  {
+   "year": 2025,
+   "tickets": 71439,
+   "no stop 15:20: mean": "-4,259",
+   "settlement: mean": "-4,444",
+   "-50% stop: mean": "-2,399",
+   "-20% stop: mean": "-1,170"
+  },
+  {
+   "year": 2026,
+   "tickets": 46683,
+   "no stop 15:20: mean": "-2,887",
+   "settlement: mean": "-3,713",
+   "-50% stop: mean": "-1,629",
+   "-20% stop: mean": "-822"
+  }
+ ],
+ "models": [
+  {
+   "tickets": "model's top 10% (2x model) (31708)",
+   "exit": "no stop, 15:20",
+   "win": "7.3%",
+   "mean Rs": "-1,531",
+   "mean without the 5 best days": "-2,469",
+   "years > 0 (of 4)": 1
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31708)",
+   "exit": "no stop, settlement",
+   "win": "6.6%",
+   "mean Rs": "-1,763",
+   "mean without the 5 best days": "-2,678",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31708)",
+   "exit": "-50% stop, 15:20",
+   "win": "4.5%",
+   "mean Rs": "-442",
+   "mean without the 5 best days": "-1,213",
+   "years > 0 (of 4)": 2
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31708)",
+   "exit": "-20% stop, 15:20",
+   "win": "2.1%",
+   "mean Rs": "-251",
+   "mean without the 5 best days": "-649",
+   "years > 0 (of 4)": 2
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31708)",
+   "exit": "no stop, 2\u00d7 target",
+   "win": "26.9%",
+   "mean Rs": "-2,274",
+   "mean without the 5 best days": "-2,333",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31708)",
+   "exit": "-50% stop, 2\u00d7 target",
+   "win": "21.1%",
+   "mean Rs": "-1,186",
+   "mean without the 5 best days": "-1,227",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "no stop, 15:20",
+   "win": "10.6%",
+   "mean Rs": "714",
+   "mean without the 5 best days": "-808",
+   "years > 0 (of 4)": 3
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "no stop, settlement",
+   "win": "9.9%",
+   "mean Rs": "467",
+   "mean without the 5 best days": "-1,038",
+   "years > 0 (of 4)": 3
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "-50% stop, 15:20",
+   "win": "7.7%",
+   "mean Rs": "1,718",
+   "mean without the 5 best days": "196",
+   "years > 0 (of 4)": 3
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "-20% stop, 15:20",
+   "win": "3.4%",
+   "mean Rs": "706",
+   "mean without the 5 best days": "-237",
+   "years > 0 (of 4)": 3
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "no stop, 2\u00d7 target",
+   "win": "32.3%",
+   "mean Rs": "-1,696",
+   "mean without the 5 best days": "-1,730",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "-50% stop, 2\u00d7 target",
+   "win": "25.1%",
+   "mean Rs": "-900",
+   "mean without the 5 best days": "-934",
+   "years > 0 (of 4)": 0
+  }
+ ],
+ "oct13": [
+  {
+   "option": "22650 CE",
+   "entry Rs": "4.15",
+   "no stop, 15:20": "84,357",
+   "no stop, settlement": "81,471",
+   "-50% stop, 15:20": "84,357"
+  },
+  {
+   "option": "22700 CE",
+   "entry Rs": "1.60",
+   "no stop, 15:20": "95,382",
+   "no stop, settlement": "63,413",
+   "-50% stop, 15:20": "95,382"
+  },
+  {
+   "option": "22250 PE",
+   "entry Rs": "1.30",
+   "no stop, 15:20": "-4,474",
+   "no stop, settlement": "-5,026",
+   "-50% stop, 15:20": "-2,938"
+  },
+  {
+   "option": "22300 PE",
+   "entry Rs": "1.90",
+   "no stop, 15:20": "-4,655",
+   "no stop, settlement": "-5,026",
+   "-50% stop, 15:20": "-2,686"
+  },
+  {
+   "option": "22350 PE",
+   "entry Rs": "2.80",
+   "no stop, 15:20": "-4,604",
+   "no stop, settlement": "-5,026",
+   "-50% stop, 15:20": "-2,732"
+  },
+  {
+   "option": "22400 PE",
+   "entry Rs": "5.00",
+   "no stop, 15:20": "-4,850",
+   "no stop, settlement": "-5,026",
+   "-50% stop, 15:20": "-2,604"
+  },
+  {
+   "option": "22450 PE",
+   "entry Rs": "9.40",
+   "no stop, 15:20": "-4,970",
+   "no stop, settlement": "-5,026",
+   "-50% stop, 15:20": "-2,873"
+  }
+ ]
+}

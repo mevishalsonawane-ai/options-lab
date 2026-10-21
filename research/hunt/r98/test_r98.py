@@ -85,3 +85,28 @@ def test_future_max_and_otm():
     fm = L.future_max(x)
     assert fm[10] == 9.0 and fm[20] != fm[20] and np.isnan(fm[R.N - 1])
     assert L.otm(100.0, "C", 99.0) and not L.otm(100.0, "P", 99.0)
+
+
+def test_profit_lock_ladder_fills_like_the_app():
+    import lock as K
+    e = 2.0
+    be = K.be_level("NIFTY", e)
+    assert be == pytest.approx(2.05)                     # Rs 2 + about Rs 0.04 of charges per unit, rounded up a tick
+    nan = np.nan
+    o = np.array([2.0, 2.1, 2.4, 2.3])
+    h = np.array([2.1, 2.7, 2.45, 2.3])                  # peak 2.7 = +35%: the first rung (lock breakeven) from minute 2
+    l = np.array([1.98, 2.5, 2.0, 2.2])
+    c = np.array([2.05, 2.6, 2.1, 2.25])
+    x = dict(zip(K.VARIANTS, K.simulate("NIFTY", e, o, h, l, c)))
+    assert x[("add30", 0.0)] == pytest.approx(L.net_pnl("NIFTY", e, be))      # stopped at breakeven in minute 2
+    assert x[("none", 0.0)] == pytest.approx(L.net_pnl("NIFTY", e, 2.25))     # no lock: out at the last close
+    # a gap below the lock fills at the open; the -50% stop alone is not touched
+    o2, h2, l2, c2 = np.array([2.0, 2.0, 1.2]), np.array([2.1, 2.9, 1.3]), np.array([1.9, 2.0, 1.1]), np.array([2.0, 2.8, 1.2])
+    y = dict(zip(K.VARIANTS, K.simulate("NIFTY", e, o2, h2, l2, c2)))
+    assert y[("add30", 0.0)] == pytest.approx(L.net_pnl("NIFTY", e, 1.2))     # peak 2.9 = +45%: lock 2.05, gapped to 1.2
+    assert y[("none", 0.5)] == pytest.approx(L.net_pnl("NIFTY", e, 1.2))      # no lock: the 1.2 close at the end
+    # +60% locks +30%; compounding x1.69 locks x1.3
+    lv = K.lock_levels("add30", e, be, np.array([2.0, 2.6, 3.2, 3.9]))
+    assert list(lv[1:]) == pytest.approx([2.05, 2.6, 3.2])
+    lc = K.lock_levels("cmp30", e, be, np.array([2.0, 2.6, 3.38, 4.4]))
+    assert list(lc[1:]) == pytest.approx([2.05, 2.6, 3.38])

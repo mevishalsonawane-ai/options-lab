@@ -274,6 +274,59 @@ NIFTY at 13:30:
 - **Only holding both sides on every expiry catches such a day**, and R25's lottery basket showed that loses 52-77% of
   what it stakes over time.
 
+## Follow-ups (Boss, 21 Oct): "what if we remove the stop-loss?" and "a profit lock after every +30%"
+
+Code: `hunt/r98/nostop.py` and `hunt/r98/lock.py`. Tables: `results/nostop.md` and `results/lock.md`. Same 394,956
+tickets, Rs 5,000 each. These are post-hoc questions, not pre-registered.
+
+**No stop-loss** (`nostop.md`):
+
+| exit | win | mean net | median | tickets losing ≥ 90% |
+|---|---|---|---|---|
+| no stop, hold to 15:20 | 2.9% | −Rs 3,213 | −Rs 4,985 | 88% |
+| no stop, hold to expiry settlement (official close) | 2.3% | −Rs 3,505 | −Rs 5,026 | 97% |
+| −50% stop, hold to 15:20 | 1.9% | −Rs 1,745 | −Rs 2,771 | 0% |
+| −20% stop, hold to 15:20 | 0.9% | −Rs 889 | −Rs 1,336 | 0% |
+
+- **The stop rarely kills a winner.** A −50% stop stopped out only 1-3.5% of tickets that later reached their target,
+  and a −80% stop 0.3-0.5%.
+- **Removing it mostly lets losers run to zero.** That nearly doubles the average loss, on every index and in every
+  year.
+- **Holding to settlement is worse still.** Late spikes fade into the official close, which is averaged over the last
+  half hour.
+- **The one exception does not hold up.** On the exploratory one-ticket-a-day pick (section 7), no stop gives +Rs 714
+  and a −50% stop +Rs 1,718, so the stop helped there too.
+
+**A profit lock every +30%** (`lock.md`):
+- **The ladder.** Breakeven after charges at +30%, +30% at +60%, +60% at +90%, and so on. Also a compounding version
+  (×1.3 steps).
+- **The fills.** As the app's `ProfitLock`: the best price is the minute highs, a rung counts from the next minute,
+  and the resting stop fills at its price, or at the open after a gap.
+- **The baseline.** The same fill rules without a lock.
+
+| exit | win | mean net | median | without the 5 best days | years > 0 |
+|---|---|---|---|---|---|
+| no lock, no stop | 2.9% | −Rs 3,213 | −Rs 4,985 | −Rs 3,544 | 0 of 6 |
+| **+30% lock, no stop** | **18.7%** | **−Rs 2,139** | −Rs 4,650 | −Rs 2,181 | 0 of 6 |
+| ×1.3 lock, no stop | 16.0% | −Rs 2,159 | −Rs 4,650 | −Rs 2,216 | 0 of 6 |
+| no lock, −20% stop | 0.7% | −Rs 757 | −Rs 1,140 | −Rs 836 | 0 of 6 |
+| **+30% lock, −20% stop** (least bad of everything tested) | 10.1% | **−Rs 594** | −Rs 1,119 | −Rs 607 | 0 of 6 |
+| +30% lock, −50% stop | 16.2% | −Rs 1,161 | −Rs 2,597 | −Rs 1,192 | 0 of 6 |
+
+- **What the lock does.** It raises the win rate from 3% to 19% and cuts the average loss by a third.
+  - 43% of tickets reach +30% at some point. The lock saves the ones that would otherwise have died: 94% of the
+    tickets it changes end better, by about Rs 6,000.
+  - It still loses in every year and on every index. FINNIFTY is slightly worse with it (−Rs 1,434 → −Rs 1,547).
+- **It kills the heroes.**
+  - The tickets that ran 10× or more averaged +Rs 43,742 without a lock and +Rs 4,977 with it.
+  - On 13 Oct the 22650 CE bought at 13:30 made +Rs 84,357 held, and +Rs 1,378 with the lock: an ordinary pullback
+    early in the run hit the lock.
+  - The 6% of changed tickets the lock made worse lost about Rs 53,000 each of upside.
+- **A lock and a lottery do not mix.** The only profit in hero tickets is the rare 20×+ runner, which the lock sells
+  early; the frequent small wins it books do not cover the 57% of tickets that never reach +30%. On the one-ticket-a-day
+  pick it turns +Rs 714 into −Rs 636.
+- **Highest win rate with any lock:** 19% on all tickets and 33% on the model's daily pick. Nowhere near 75%.
+
 ## Honest notes
 
 - **Prices.** No bid/ask in the lake. The 1-tick spread is a model; real Rs 1-3 strikes are often 1 tick wide, but

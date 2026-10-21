@@ -1,0 +1,426 @@
+{
+ "all": [
+  {
+   "ladder": "no lock",
+   "initial stop": "no stop",
+   "win": "2.9%",
+   "mean Rs": "-3,213",
+   "median Rs": "-4,985",
+   "worst 5% Rs": "-5,026",
+   "mean without the 5 best days": "-3,544",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "no lock",
+   "initial stop": "-20% stop",
+   "win": "0.7%",
+   "mean Rs": "-757",
+   "median Rs": "-1,140",
+   "worst 5% Rs": "-1,284",
+   "mean without the 5 best days": "-836",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "no lock",
+   "initial stop": "-50% stop",
+   "win": "1.7%",
+   "mean Rs": "-1,640",
+   "median Rs": "-2,636",
+   "worst 5% Rs": "-2,781",
+   "mean without the 5 best days": "-1,862",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "lock every +30% of entry",
+   "initial stop": "no stop",
+   "win": "18.7%",
+   "mean Rs": "-2,139",
+   "median Rs": "-4,650",
+   "worst 5% Rs": "-5,026",
+   "mean without the 5 best days": "-2,181",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "lock every +30% of entry",
+   "initial stop": "-20% stop",
+   "win": "10.1%",
+   "mean Rs": "-594",
+   "median Rs": "-1,119",
+   "worst 5% Rs": "-1,274",
+   "mean without the 5 best days": "-607",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "lock every +30% of entry",
+   "initial stop": "-50% stop",
+   "win": "16.2%",
+   "mean Rs": "-1,161",
+   "median Rs": "-2,597",
+   "worst 5% Rs": "-2,771",
+   "mean without the 5 best days": "-1,192",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "lock every x1.3 (compounding)",
+   "initial stop": "no stop",
+   "win": "16.0%",
+   "mean Rs": "-2,159",
+   "median Rs": "-4,650",
+   "worst 5% Rs": "-5,026",
+   "mean without the 5 best days": "-2,216",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "lock every x1.3 (compounding)",
+   "initial stop": "-20% stop",
+   "win": "8.5%",
+   "mean Rs": "-605",
+   "median Rs": "-1,119",
+   "worst 5% Rs": "-1,274",
+   "mean without the 5 best days": "-625",
+   "years > 0": "0 of 6"
+  },
+  {
+   "ladder": "lock every x1.3 (compounding)",
+   "initial stop": "-50% stop",
+   "win": "13.8%",
+   "mean Rs": "-1,178",
+   "median Rs": "-2,597",
+   "worst 5% Rs": "-2,771",
+   "mean without the 5 best days": "-1,219",
+   "years > 0": "0 of 6"
+  }
+ ],
+ "effect": [
+  {
+   "ladder": "lock every +30% of entry",
+   "initial stop": "no stop",
+   "tickets the lock changed": "43.2%",
+   "of those, better / worse": "94% / 6%",
+   "Rs saved on the better ones (mean)": "5,998",
+   "Rs given up on the worse ones (mean)": "-53,329",
+   "net effect per ticket": "1,074"
+  },
+  {
+   "ladder": "lock every +30% of entry",
+   "initial stop": "-20% stop",
+   "tickets the lock changed": "23.8%",
+   "of those, better / worse": "98% / 2%",
+   "Rs saved on the better ones (mean)": "2,335",
+   "Rs given up on the worse ones (mean)": "-68,244",
+   "net effect per ticket": "163"
+  },
+  {
+   "ladder": "lock every +30% of entry",
+   "initial stop": "-50% stop",
+   "tickets the lock changed": "37.6%",
+   "of those, better / worse": "96% / 4%",
+   "Rs saved on the better ones (mean)": "3,852",
+   "Rs given up on the worse ones (mean)": "-63,205",
+   "net effect per ticket": "479"
+  },
+  {
+   "ladder": "lock every x1.3 (compounding)",
+   "initial stop": "no stop",
+   "tickets the lock changed": "43.2%",
+   "of those, better / worse": "94% / 6%",
+   "Rs saved on the better ones (mean)": "5,915",
+   "Rs given up on the worse ones (mean)": "-52,793",
+   "net effect per ticket": "1,054"
+  },
+  {
+   "ladder": "lock every x1.3 (compounding)",
+   "initial stop": "-20% stop",
+   "tickets the lock changed": "23.8%",
+   "of those, better / worse": "98% / 2%",
+   "Rs saved on the better ones (mean)": "2,250",
+   "Rs given up on the worse ones (mean)": "-67,171",
+   "net effect per ticket": "152"
+  },
+  {
+   "ladder": "lock every x1.3 (compounding)",
+   "initial stop": "-50% stop",
+   "tickets the lock changed": "37.6%",
+   "of those, better / worse": "96% / 4%",
+   "Rs saved on the better ones (mean)": "3,769",
+   "Rs given up on the worse ones (mean)": "-62,752",
+   "net effect per ticket": "462"
+  }
+ ],
+ "by_index": [
+  {
+   "index": "NIFTY",
+   "tickets": 117131,
+   "no lock, no stop": "4% / -3,041",
+   "+30% lock, no stop": "19% / -2,198",
+   "x1.3 lock, no stop": "16% / -2,228",
+   "no lock, -20%": "1% / -713",
+   "+30% lock, -20%": "10% / -612",
+   "+30% lock, -50%": "16% / -1,176"
+  },
+  {
+   "index": "BANKNIFTY",
+   "tickets": 109028,
+   "no lock, no stop": "1% / -4,194",
+   "+30% lock, no stop": "15% / -2,584",
+   "x1.3 lock, no stop": "12% / -2,613",
+   "no lock, -20%": "0% / -992",
+   "+30% lock, -20%": "9% / -687",
+   "+30% lock, -50%": "13% / -1,419"
+  },
+  {
+   "index": "FINNIFTY",
+   "tickets": 55653,
+   "no lock, no stop": "4% / -1,434",
+   "+30% lock, no stop": "24% / -1,547",
+   "x1.3 lock, no stop": "21% / -1,579",
+   "no lock, -20%": "1% / -361",
+   "+30% lock, -20%": "12% / -490",
+   "+30% lock, -50%": "20% / -866"
+  },
+  {
+   "index": "MIDCPNIFTY",
+   "tickets": 37646,
+   "no lock, no stop": "5% / -1,907",
+   "+30% lock, no stop": "26% / -1,435",
+   "x1.3 lock, no stop": "22% / -1,429",
+   "no lock, -20%": "1% / -319",
+   "+30% lock, -20%": "13% / -392",
+   "+30% lock, -50%": "22% / -739"
+  },
+  {
+   "index": "SENSEX",
+   "tickets": 75498,
+   "no lock, no stop": "2% / -4,025",
+   "+30% lock, no stop": "17% / -2,190",
+   "x1.3 lock, no stop": "14% / -2,188",
+   "no lock, -20%": "0% / -994",
+   "+30% lock, -20%": "9% / -607",
+   "+30% lock, -50%": "15% / -1,193"
+  },
+  {
+   "index": "ALL",
+   "tickets": 394956,
+   "no lock, no stop": "3% / -3,213",
+   "+30% lock, no stop": "19% / -2,139",
+   "x1.3 lock, no stop": "16% / -2,159",
+   "no lock, -20%": "1% / -757",
+   "+30% lock, -20%": "10% / -594",
+   "+30% lock, -50%": "16% / -1,161"
+  }
+ ],
+ "by_year": [
+  {
+   "year": 2021,
+   "no lock, no stop": "-4,269",
+   "lock every +30, no stop": "-2,863",
+   "no lock, -20% stop": "-1,031",
+   "lock every +30, -20% stop": "-783",
+   "lock every +30, -50% stop": "-1,605"
+  },
+  {
+   "year": 2022,
+   "no lock, no stop": "-2,538",
+   "lock every +30, no stop": "-2,251",
+   "no lock, -20% stop": "-633",
+   "lock every +30, -20% stop": "-619",
+   "lock every +30, -50% stop": "-1,235"
+  },
+  {
+   "year": 2023,
+   "no lock, no stop": "-3,289",
+   "lock every +30, no stop": "-2,251",
+   "no lock, -20% stop": "-752",
+   "lock every +30, -20% stop": "-635",
+   "lock every +30, -50% stop": "-1,218"
+  },
+  {
+   "year": 2024,
+   "no lock, no stop": "-2,769",
+   "lock every +30, no stop": "-1,775",
+   "no lock, -20% stop": "-654",
+   "lock every +30, -20% stop": "-485",
+   "lock every +30, -50% stop": "-932"
+  },
+  {
+   "year": 2025,
+   "no lock, no stop": "-4,259",
+   "lock every +30, no stop": "-2,492",
+   "no lock, -20% stop": "-997",
+   "lock every +30, -20% stop": "-675",
+   "lock every +30, -50% stop": "-1,355"
+  },
+  {
+   "year": 2026,
+   "no lock, no stop": "-2,887",
+   "lock every +30, no stop": "-1,803",
+   "no lock, -20% stop": "-671",
+   "lock every +30, -20% stop": "-538",
+   "lock every +30, -50% stop": "-1,021"
+  }
+ ],
+ "models": [
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "no lock, no stop",
+   "win": "7.3%",
+   "mean Rs": "-1,531",
+   "without the 5 best days": "-2,469",
+   "years > 0 (of 4)": 1
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "no lock, -20% stop",
+   "win": "1.5%",
+   "mean Rs": "-195",
+   "without the 5 best days": "-529",
+   "years > 0 (of 4)": 2
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "no lock, -50% stop",
+   "win": "4.0%",
+   "mean Rs": "-375",
+   "without the 5 best days": "-1,117",
+   "years > 0 (of 4)": 2
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "lock every +30% of entry, no stop",
+   "win": "31.0%",
+   "mean Rs": "-825",
+   "without the 5 best days": "-888",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "lock every +30% of entry, -20% stop",
+   "win": "16.1%",
+   "mean Rs": "-234",
+   "without the 5 best days": "-261",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "lock every +30% of entry, -50% stop",
+   "win": "26.3%",
+   "mean Rs": "-380",
+   "without the 5 best days": "-424",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "lock every x1.3 (compounding), no stop",
+   "win": "26.9%",
+   "mean Rs": "-834",
+   "without the 5 best days": "-918",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "lock every x1.3 (compounding), -20% stop",
+   "win": "13.7%",
+   "mean Rs": "-240",
+   "without the 5 best days": "-278",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "model's top 10% (2x model) (31,708)",
+   "exit": "lock every x1.3 (compounding), -50% stop",
+   "win": "22.6%",
+   "mean Rs": "-384",
+   "without the 5 best days": "-454",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "no lock, no stop",
+   "win": "10.6%",
+   "mean Rs": "714",
+   "without the 5 best days": "-808",
+   "years > 0 (of 4)": 3
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "no lock, -20% stop",
+   "win": "2.0%",
+   "mean Rs": "325",
+   "without the 5 best days": "-578",
+   "years > 0 (of 4)": 4
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "no lock, -50% stop",
+   "win": "6.8%",
+   "mean Rs": "1,742",
+   "without the 5 best days": "220",
+   "years > 0 (of 4)": 3
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "lock every +30% of entry, no stop",
+   "win": "33.0%",
+   "mean Rs": "-636",
+   "without the 5 best days": "-784",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "lock every +30% of entry, -20% stop",
+   "win": "16.5%",
+   "mean Rs": "-179",
+   "without the 5 best days": "-277",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "lock every +30% of entry, -50% stop",
+   "win": "28.2%",
+   "mean Rs": "-243",
+   "without the 5 best days": "-357",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "lock every x1.3 (compounding), no stop",
+   "win": "28.8%",
+   "mean Rs": "-705",
+   "without the 5 best days": "-835",
+   "years > 0 (of 4)": 0
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "lock every x1.3 (compounding), -20% stop",
+   "win": "14.4%",
+   "mean Rs": "-187",
+   "without the 5 best days": "-292",
+   "years > 0 (of 4)": 1
+  },
+  {
+   "tickets": "one ticket per index-day (10x model) (716)",
+   "exit": "lock every x1.3 (compounding), -50% stop",
+   "win": "24.3%",
+   "mean Rs": "-295",
+   "without the 5 best days": "-416",
+   "years > 0 (of 4)": 0
+  }
+ ],
+ "oct13": [
+  {
+   "option": "22650 CE",
+   "entry Rs": "4.15",
+   "best (highs)": "22.9\u00d7",
+   "no lock, no stop": "84,357",
+   "+30% lock, no stop": "1,378",
+   "x1.3 lock, no stop": "1,378"
+  },
+  {
+   "option": "22700 CE",
+   "entry Rs": "1.60",
+   "best (highs)": "35.8\u00d7",
+   "no lock, no stop": "95,382",
+   "+30% lock, no stop": "1,282",
+   "x1.3 lock, no stop": "1,282"
+  }
+ ]
+}

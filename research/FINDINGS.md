@@ -326,3 +326,7 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
   (13 Oct: selling the 22700 CE at 13:30 for Rs 5,000 = about -Rs 95,000). Selling was not tested.
 - Exploratory lead only (not pre-registered): one top-scored ticket per index-day, held, +Rs 714 a ticket, but the 5
   best days are 213% of it and the 95% range spans 0. Paper-test forward if wanted; nothing goes in the app.
+- Follow-ups (21 Oct, post hoc): removing the stop nearly doubles the loss (-Rs 3,213 vs -Rs 1,745 with -50%, -Rs 889
+  with -20%; the -50% stop kills only 1-3.5% of later winners). A +30%-step profit lock (app ProfitLock fills) lifts
+  the win rate 3% -> 19% and the loss to -Rs 2,139 (-Rs 594 with a -20% stop, the least bad tested, 0 of 6 years > 0),
+  but cuts the 10x tickets from +Rs 43,742 to +Rs 4,977 (13 Oct 22650 CE: +Rs 84k held, +Rs 1.4k locked).
