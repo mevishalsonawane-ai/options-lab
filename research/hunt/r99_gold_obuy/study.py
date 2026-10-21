@@ -298,6 +298,8 @@ def design():
 
 
 def holdout():
+    if (HERE / "PREREG_ROUND2.md").exists():
+        sys.exit("R99 has a round 2: its one holdout read (rounds 1-2) is `study2.py holdout`")
     if LOCK.exists():
         sys.exit(f"the holdout was already read ({LOCK.read_text().strip()}); a second read is refused")
     from obuy.overfit import bh  # noqa: F401
