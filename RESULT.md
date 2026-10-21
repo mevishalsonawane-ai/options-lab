@@ -69,6 +69,10 @@ round 3). Payouts and the drawdown - shadow. Nothing new acts on a live trade un
   GTT that fired yesterday could leave its protection stuck "being removed" (the overnight GTT's code had the same gap).
 - Flaky once, not mine: PassedArmsHostTest reached Zerodha's real address after its fake closed (a background read finishing
   late); it passed alone (57 tests) and in the shard's re-run.
+- **CI on `81b38fc`:** everything green (engine, PC harness, Build APK, app shards 0, 2, 3) except app shard 1: BrokerScreensTest's
+  live check dated its fake candle by the wall clock while the check judges its age by the market clock, which the new rule pins
+  to noon; CI ran at 00:23 IST, so the candle looked 11 hours old. The test now dates it by the market clock. The whole app
+  suite was then run again locally past midnight IST (the same condition): 4,168 tests, 0 failures.
 - No test was skipped, disabled or loosened. One test's meaning was kept with one line: MarketTest's "no test clock reads the
   system clock" now clears the rule's fallback first (as in the app, where both are always empty).
 
