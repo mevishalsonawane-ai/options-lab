@@ -1511,3 +1511,20 @@ twins, the holdout read once (64 in-scope cells). Signal sources: the futures le
   bull market: random windows of the same years made most of it (twin p 0.09-0.36).
 - US overnight -> MCX open (Dukascopy proxies; a re-test of R2): the 09:00 gap prices the night (corr 0.71-0.87 gold,
   silver, crude); holdout pooled +Rs 7,467 on 320 trades. Gold / silver lots cannot fit a 2% stop at Rs 1 lakh.
+## When does the ORB family make money? By entry time, range length, day type and exit time (R92, 21 Oct 2026) - never; 0 of 257 pass
+
+HUNT_R92_ORB_TIME.md. Signal source: the index in every cell (R3's rebuild of ORB / ORB Fresh / ORB Sweep / Range
+Fade, 1 entry a side a day); ATM option of the 09:20 bar on real prints, dated charges, R17 fills, 1 lot. 257
+pre-registered cells, BH over all; design 1 Aug 2021 - 31 Mar 2026 (5 indices, 4,884 sessions), holdout 1 Apr - 19 Oct
+2026 read once.
+- Every entry hour loses for every arm (design Rs a trade): ORB -73 / -53 / -52 / -103 / -59 for 10-14 h (2,587-3,270
+  trades each); Fresh -47 to -97; Sweep -115 to -200; Fade -117 to -154. All 125 slot cells (hour, 30 and 15 minutes)
+  lose; range length 15-75 min, exit 13:30 / 14:30 / 15:10, weekday, days to expiry and month position all lose too.
+  Smallest money p 0.13, every q 1.00; nested walk-forward -Rs 27,595 on 186 trades.
+- R3's 12:00-12:59 ORB lead (+28 a trade) fails on the indices it never used (FINNIFTY + MIDCPNIFTY + SENSEX: -59 a
+  trade on 260, p 0.83) and on its own indices' older years (BANKNIFTY + NIFTY to Mar 2026: -26 on 276); it was 35
+  trades of Apr - Oct 2026 (+Rs 12,391).
+- Least bad: the day's FIRST ORB signal at 13:30-13:59, +Rs 10,176 on 114 (holdout +Rs 5,475 on 19), but q 1.00,
+  twin p 0.09, mostly FINNIFTY, negative without its top 5. No time filter goes to paper; the four arms stay paused.
+- Why: 70% of ORB trades leave on the ladder near breakeven; the index is on the right side on 64-72% of trades
+  (+3 to +16 points) yet the option loses Rs 33-110 a trade at every hour. The clock is not the problem.
