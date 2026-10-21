@@ -178,8 +178,9 @@ class SqueezeStraddle:
     """S1 (and round 2: R2F relaxed squeeze, R2G NR7 day): a daily flag at date t -> ATM straddle next session."""
     kind = "straddle"
 
-    def __init__(self, rid="S1", n=5, col="sq_release", edge=False, books=K.BOOK_ORDER):
+    def __init__(self, rid="S1", n=5, col="sq_release", edge=False, books=K.BOOK_ORDER, iv_cheap=False):
         self.rid, self.n, self.col, self.edge, self.books = rid, n, col, edge, books
+        self.iv_cheap = iv_cheap          # round 5 R5C: only when R4G's cheap-IV filter holds (the twin is not filtered)
 
     def spec(self, book, day):
         e = entry_ix(book, day, K.ENTRY_TOD)
@@ -194,6 +195,8 @@ class SqueezeStraddle:
         for t in d.date.values[d[self.col].values.astype(bool)]:
             day = next_market_day(book, t)
             if day is None or not in_p(day, period) or (day - _day64(t)) > 7 * DAY:
+                continue
+            if self.iv_cheap and not iv_cheap_before(book, day):
                 continue
             sp = self.spec(book, day)
             if sp:
@@ -855,8 +858,8 @@ class EIASpikeFade:
     Twin: the same clock and side on a non-EIA session of the same month, no size filter."""
     kind = "single"
 
-    def __init__(self, rid="R4C", books=K.CRUDE):
-        self.rid, self.books = rid, books
+    def __init__(self, rid="R4C", books=K.CRUDE, katr=K.R4_SPIKE_KATR):
+        self.rid, self.books, self.katr = rid, books, katr          # round 5 R5D: katr 0.10
 
     def spec(self, book, day, rel, side=None):
         m = book.m
@@ -868,7 +871,7 @@ class EIASpikeFade:
         seg = m.F[i_pre:i_post + 1]
         if side is None:
             atr = atr_before(book, day)
-            if not (np.isfinite(mv) and np.isfinite(atr) and atr > 0 and abs(mv) >= K.R4_SPIKE_KATR * atr):
+            if not (np.isfinite(mv) and np.isfinite(atr) and atr > 0 and abs(mv) >= self.katr * atr):
                 return None
             side = -1 if mv > 0 else 1
         ext = float(np.nanmax(seg)) if side < 0 else float(np.nanmin(seg))   # the spike's extreme, against the trade
@@ -945,3 +948,129 @@ ORDER4 = ("R4A", "R4B", "R4C", "R4D", "R4E", "R4F", "R4G")
 # the NR7-crude family: R3A and its round-4 variants share most trades; PREREG_ROUND4 s5 adds a collapsed-BH gate
 NR7_CRUDE_FAMILY = (("3", "R3A"), ("4", "R4A"), ("4", "R4B"), ("4", "R4E"), ("4", "R4F"), ("4", "R4G"))
 HISTORY_RULES.update({"R4A": "nr7", "R4B": "nr7_tsm12", "R4E": "nr7", "R4F": "nr7_tsm1"})
+
+
+# ---------------------------------------------------------------------------------------------- round 5 (PREREG_ROUND5)
+class StorageDayCall:
+    """R5A (Prokopczuk, Wese Simen & Wichmann, Energy Journal 2021: natural-gas futures earn most of their return on
+    EIA storage days): on storage days, the 1-ITM call at the first minute at or after 17:00 IST (within 15 minutes);
+    underlying stop = the signal minute's close - 1 x ATR14 (known before the day); -40% premium stop, lock ladder,
+    edge; out at the session square-off. Twin: the same clock and side on a non-storage session of the month."""
+    kind = "single"
+
+    def __init__(self, rid="R5A", books=K.GAS):
+        self.rid, self.books = rid, books
+
+    def spec(self, book, day):
+        m = book.m
+        i_from = m.at_or_after(day, K.R5_STORAGE_TOD, until=K.R5_STORAGE_TOD + K.FILL_WAIT)
+        if i_from <= 0 or m.day[i_from - 1] != m.day[i_from]:
+            return None
+        i_sig = i_from - 1
+        atr = atr_before(book, day)
+        if not (np.isfinite(atr) and atr > 0 and np.isfinite(m.F[i_sig])):
+            return None
+        return dict(day=day, i_sig=int(i_sig), i_from=int(i_from), side=1,
+                    ustop=float(m.F[i_sig] - K.R5_STORAGE_KATR * atr), n_sessions=None, kind="single",
+                    i_end_fixed=None, katr=K.R5_STORAGE_KATR, edge=True, tod=K.R5_STORAGE_TOD)
+
+    def candidates(self, book, period):
+        out = []
+        for day in sorted(release_days(book)):
+            if day in book.day_pos and in_p(day, period):
+                sp = self.spec(book, day)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        if day in release_days(book):
+            return None
+        return self.spec(book, day)
+
+
+class PreEventStraddle:
+    """R5E (pre-event IV run-up: Gao, Xing & Zhang, JFQA 2018; Horan, Peterson & Mahar 2004): on the book's release days
+    (EIA crude / EIA storage), the ATM straddle at the first prints at or after 17:00 IST (both within 15 minutes), out
+    at the last minute at or before the release - 5 (that minute within 5 minutes of it); stop -25%, short event
+    ladder. Twin: the same clock on a non-release session of the month."""
+    kind = "straddle"
+
+    def __init__(self, rid="R5E", books=K.CRUDE + K.GAS):
+        self.rid, self.books = rid, books
+
+    def spec(self, book, day, rel):
+        m = book.m
+        i_from = m.at_or_after(day, K.R5_PRE_TOD, until=K.R5_PRE_TOD + 2)
+        t_out = rel - K.R5_PRE_EXIT
+        i_end = m.at_or_before(day, t_out)
+        if i_from < 0 or i_end < 0 or i_end <= i_from or m.tod[i_end] < t_out - 5:
+            return None
+        i_sig = i_from - 1 if i_from > 0 and m.day[i_from - 1] == m.day[i_from] else i_from
+        return dict(day=day, i_sig=int(i_sig), i_from=int(i_from), side=0, ustop=None, n_sessions=None,
+                    kind="straddle", i_end_fixed=int(i_end), katr=None, rel=int(rel), fill_wait=K.FILL_WAIT)
+
+    def candidates(self, book, period):
+        out = []
+        for day, rel in sorted(release_days(book).items()):
+            if day in book.day_pos and in_p(day, period):
+                sp = self.spec(book, day, rel)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        if day in release_days(book):
+            return None
+        return self.spec(book, day, sp["rel"])
+
+
+def gs_ratio_sides(silver: pd.DataFrame, gold: pd.DataFrame, look: int = K.R5_GSR_LOOK) -> np.ndarray:
+    """R5F: per silver daily row, -1 (buy a silver put) when the gold-minus-silver return index is above the max of its
+    previous `look` values, +1 (call) when below their min, else 0. Daily return = diff of the back-adjusted close / the
+    previous raw close (unchanged by later rolls); the index is the running sum over the dates both series have. Causal:
+    the value at a date uses rows up to that date only."""
+    def ret(d):
+        r = pd.Series(np.r_[np.nan, np.diff(d.ac.values.astype(float))] / np.r_[np.nan, d.close.values[:-1]],
+                      index=pd.DatetimeIndex(d.date.values))
+        return r[~r.index.duplicated()]
+    j = pd.concat([ret(gold).rename("g"), ret(silver).rename("s")], axis=1, join="inner").dropna()
+    idx = (j.g - j.s).cumsum()
+    hi = idx.shift(1).rolling(look).max()
+    lo = idx.shift(1).rolling(look).min()
+    side = pd.Series(np.where(idx > hi, -1, np.where(idx < lo, 1, 0)), index=idx.index)
+    return side.reindex(pd.DatetimeIndex(silver.date.values)).fillna(0).astype(int).values
+
+
+class GSRatioDir(DailyDir):
+    """R5F: the gold / silver ratio breakout traded on SILVERM (gs_ratio_sides); next session 09:15, 1-ITM, stop -40% /
+    1.5 x ATR14, ladder, edge, 5 sessions. `gold` = GOLDM's daily frame (daily_ind; loaded from the lake on first use;
+    tests set it)."""
+
+    def __init__(self, rid="R5F", books=("SILVERM",), gold_sig="GOLDM"):
+        super().__init__(rid, None, K.R5_GSR_KATR, K.R5_GSR_N, edge=True, books=books)
+        self.gold, self.gold_sig = None, gold_sig
+
+    def gold_daily(self):
+        if self.gold is None:
+            from research.hunt.r96_mcx_buy import data as D
+            self.gold = daily_ind(D.load_daily(self.gold_sig))
+        return self.gold
+
+    def sides(self, d):
+        return gs_ratio_sides(d, self.gold_daily())
+
+
+RULES.update({
+    "R5A": StorageDayCall("R5A", books=K.GAS),
+    "R5B": NR7Var("R5B", books=K.R5_OTHER, iv_cheap=True),
+    "R5C": SqueezeStraddle("R5C", n=3, col="nr7", edge=True, books=K.CRUDE, iv_cheap=True),
+    "R5D": EIASpikeFade("R5D", books=K.CRUDE, katr=K.R5_SPIKE_KATR),
+    "R5E": PreEventStraddle("R5E", books=K.CRUDE + K.GAS),
+    "R5F": GSRatioDir("R5F"),
+})
+ORDER5 = ("R5A", "R5B", "R5C", "R5D", "R5E", "R5F")
+# PREREG_ROUND5 s5: gate 9 collapses every family of near-copies into one test
+EIA_FADE_FAMILY = (("4", "R4C"), ("5", "R5D"))
+FAMILIES = (NR7_CRUDE_FAMILY + (("5", "R5C"),), EIA_FADE_FAMILY)
+HISTORY_RULES.update({"R5A": "storage_long", "R5F": "dir"})

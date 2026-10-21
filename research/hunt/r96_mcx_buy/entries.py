@@ -80,9 +80,21 @@ RULE_TEXT = {
     "R4F": "as R3A, only breaks in the direction of the sign of the back-adjusted 20-session return at the NR7 day",
     "R4G": "as R3A, only when the NR7 day's median ATM IV (option-chain filter) is below the median of the previous 20 "
            "sessions' values",
+    "R5A": "EIA natural-gas storage days: 1-ITM call at the first minute at or after 17:00 IST; stop -40% / the future "
+           "1 ATR14 below the signal close, lock ladder, edge, out at the session square-off; NATGASMINI, NATURALGAS",
+    "R5B": "as R2A (NR7 break -> 1-ITM, edge, 3 sessions) on NATGASMINI, NATURALGAS, GOLDM, SILVERM, only when R4G's "
+           "cheap-IV filter (option-chain context) holds",
+    "R5C": "NR7 day -> ATM straddle next session 09:15, stop -30%, lock ladder, edge, 3 sessions (R2G) on crude, only "
+           "on R4G's cheap-IV days",
+    "R5D": "as R4C with |move| >= 0.10 ATR14",
+    "R5E": "EIA crude days (crude) / EIA storage days (gas): ATM straddle at 17:00 IST, out at the release - 5 min; "
+           "stop -25%, short event ladder",
+    "R5F": "gold-minus-silver daily return index above / below its previous 20 values' max / min -> 1-ITM SILVERM put / "
+           "call next session 09:15; stop -40% / 1.5 ATR14, lock ladder, edge, 5 sessions",
 }
 PREREG = {1: "research/hunt/r96_mcx_buy/PREREG_ROUND1.md", 2: "research/hunt/r96_mcx_buy/PREREG_ROUND2.md",
-          3: "research/hunt/r96_mcx_buy/PREREG_ROUND3.md", 4: "research/hunt/r96_mcx_buy/PREREG_ROUND4.md"}
+          3: "research/hunt/r96_mcx_buy/PREREG_ROUND3.md", 4: "research/hunt/r96_mcx_buy/PREREG_ROUND4.md",
+          5: "research/hunt/r96_mcx_buy/PREREG_ROUND5.md"}
 
 
 def main(round_no: int = 1):
@@ -119,12 +131,12 @@ def main(round_no: int = 1):
                         holdout="2026-07-15..2026-10-19 (locked; read once only for a design pass)"),
             instruments=sorted(r["summary"].get("by_book", {})) or ["CRUDEOILM", "NATGASMINI", "GOLDM", "SILVERM"],
             features=["signal source: the MCX future (near future minute closes; daily: the near-month daily "
-                      "continuous future, back-adjusted)", "ATM IV as a filter only (V1)"],
+                      "continuous future, back-adjusted)", "ATM IV as a filter only (V1, R4G, R5B, R5C)"],
             model_or_rule=RULE_TEXT[rid],
             settings=f"research/hunt/r96_mcx_buy/cfg.py; {PREREG[round_no].split('/')[-1]}",
             prereg=PREREG[round_no], variants_tried=1,
             results=dict(summary=summ, costs="Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before "
-                                             "(NATGASMINI 0.45% / 0.90%) each fill, 2x on model-priced exits; gates "
+                                             "(NATGASMINI / NATURALGAS 0.45% / 0.90%) each fill, 2x on model-priced exits; gates "
                                              "also at 2x spreads"),
             holdout_read=bool(hj is not None),
             verdict=("paper-only" if (hj and hj["pass_"]) else ("inconclusive" if r.get("lead") else "rejected")),

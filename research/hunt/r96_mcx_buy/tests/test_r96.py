@@ -889,3 +889,154 @@ def test_round4_history_side_filter():
     assert H.trade_nr7(x, i, side_col="tsm1") == pytest.approx(base)
     x["tsm1"] = -1
     assert H.trade_nr7(x, i, side_col="tsm1") is None
+
+
+# ------------------------------------------------------------------------------------------------ round 5
+def test_round5_rules_registered_and_families():
+    assert len(R.ORDER5) == 6 and all(r in R.RULES for r in R.ORDER5)
+    assert R.RULES["R5A"].books == K.GAS and R.RULES["R5B"].books == K.R5_OTHER
+    assert R.RULES["R5C"].books == K.CRUDE and R.RULES["R5C"].iv_cheap and R.RULES["R5C"].kind == "straddle"
+    assert R.RULES["R5D"].katr == K.R5_SPIKE_KATR and R.RULES["R4C"].katr == K.R4_SPIKE_KATR
+    assert R.RULES["R5E"].books == K.CRUDE + K.GAS and R.RULES["R5F"].books == ("SILVERM",)
+    fam = {b for f in R.FAMILIES for _, b in f}
+    assert {"R3A", "R4G", "R5C", "R4C", "R5D"} <= fam and not ({"R5A", "R5B", "R5E", "R5F"} & fam)
+
+
+def test_round5_family_qs_collapses_every_family():
+    rows = [dict(round=1, id="X", p=0.5), dict(round=3, id="R3A", p=0.01), dict(round=5, id="R5C", p=0.02),
+            dict(round=4, id="R4C", p=0.09), dict(round=5, id="R5D", p=0.04), dict(round=5, id="R5A", p=0.3)]
+    fams = ((("3", "R3A"), ("5", "R5C")), (("4", "R4C"), ("5", "R5D")))
+    q = S.family_qs(rows, fams)
+    ref = S.bh([0.5, 0.3, 0.02, 0.08])                                  # X, R5A, NR7 min 0.01 x 2, fade 0.04 x 2
+    assert q == pytest.approx([ref[2], ref[3]])
+    assert np.isnan(S.family_qs([dict(round=1, id="X", p=0.5)], fams)[0])
+
+
+def test_round5_cheap_iv_straddle_filter_and_unfiltered_twin():
+    per = (date_(2025, 11, 1), date_(2025, 11, 30))
+    bk = _nr7_book(None)
+    rule = R.RULES["R5C"]
+    assert rule.candidates(bk, per) == []                               # flat IV is never "cheap"
+    plain = R.SqueezeStraddle("T", n=3, col="nr7", edge=True, books=K.CRUDE)
+    c = plain.candidates(bk, per)
+    assert len(c) == 1 and rule.twin(bk, c[0], bk.m.days[3]) is not None  # the twin is not filtered
+    bk2 = make_book(days=16)
+    m = bk2.m
+    iv = np.full(len(m.ts), 30.0)
+    iv[m.day_ix(m.days[12])] = 20.0                                     # the NR7 day (session 12) is cheap
+    bk2.iv = {(0, 0): iv.copy(), (1, 0): iv.copy()}
+    bk2.daily = pd.DataFrame(dict(date=m.days, nr7=[k == 12 for k in range(16)], atr=np.full(16, 100.0)))
+    c2 = rule.candidates(bk2, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    assert [x["day"] for x in c2] == [m.days[13]] and c2[0]["kind"] == "straddle"
+
+
+def test_round5_storage_day_call_spec_twin_and_exit():
+    bk = _daily_atr(make_book(days=6))
+    bk.events = ("storage",)
+    rule = R.RULES["R5A"]
+    rel = R.release_days(bk)
+    thu = bk.m.days[3]                                                  # 6 Nov 2025, a Thursday
+    assert thu in rel and bk.m.days[2] not in rel
+    c = rule.candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    assert [x["day"] for x in c] == [thu]
+    sp = c[0]
+    m = bk.m
+    assert sp["side"] == 1 and m.tod[sp["i_from"]] == 17 * 60 and m.tod[sp["i_sig"]] == 17 * 60 - 1
+    assert sp["ustop"] == pytest.approx(5000.0 - 100.0)                 # 1 x ATR14 below the signal close
+    t = S.simulate(bk, sp, None)
+    assert t is not None and t["side"] == 1 and t["exit_ts"] <= pd.Timestamp(m.ts[E.sq_ix(m, thu)])
+    assert rule.twin(bk, sp, thu) is None                               # a storage day is never a twin
+    tw = rule.twin(bk, sp, bk.m.days[1])
+    assert tw is not None and tw["side"] == 1 and m.tod[tw["i_from"]] == 17 * 60
+
+
+def test_round5_storage_call_needs_atr_known_before_the_day():
+    bk = make_book(days=6)
+    bk.events = ("storage",)
+    bk.daily = pd.DataFrame(dict(date=bk.m.days, atr=np.full(6, 100.0)))  # ATR rows dated ON each day
+    sp = R.RULES["R5A"].spec(bk, bk.m.days[3])
+    assert sp["ustop"] == pytest.approx(4900.0)                         # reads the row before the day, not that day's
+    bk.daily = pd.DataFrame(dict(date=bk.m.days[3:], atr=np.full(3, 100.0)))
+    assert R.RULES["R5A"].spec(bk, bk.m.days[3]) is None                # no earlier ATR -> no trade
+
+
+def test_round5_pre_event_straddle_exits_before_the_release():
+    bk = make_book(days=6)                                              # crude book, EIA Wed 5 Nov 21:00 IST
+    rule = R.RULES["R5E"]
+    day = bk.m.days[2]
+    rel = R.release_days(bk)[day]
+    assert rel == 21 * 60
+    sp = rule.spec(bk, day, rel)
+    m = bk.m
+    assert m.tod[sp["i_from"]] == 17 * 60 and m.tod[sp["i_end_fixed"]] == 21 * 60 - K.R5_PRE_EXIT
+    t = S.simulate(bk, sp, None)
+    assert t is not None and t["kind"] == "straddle" and t["exit_ts"] <= pd.Timestamp(m.ts[sp["i_end_fixed"]])
+    assert rule.twin(bk, sp, day) is None and rule.twin(bk, sp, bk.m.days[1])["rel"] == rel
+    # the session ends before the release - 5: no trade
+    bk2 = make_book(days=6, minutes=(9 * 60, 20 * 60))
+    assert rule.spec(bk2, bk2.m.days[2], rel) is None
+
+
+def test_round5_eia_fade_threshold_0_10():
+    path = _tod_path(lambda k, tod: np.where((k == 2) & (tod >= 21 * 60 + 1), 5015.0, 5000.0))   # 0.15 ATR
+    bk = _daily_atr(make_book(days=6, path=path))
+    day = bk.m.days[2]
+    assert R.RULES["R4C"].spec(bk, day, 21 * 60) is None
+    sp = R.RULES["R5D"].spec(bk, day, 21 * 60)
+    assert sp is not None and sp["side"] == -1
+    path2 = _tod_path(lambda k, tod: np.where((k == 2) & (tod >= 21 * 60 + 1), 5008.0, 5000.0))  # 0.08 ATR
+    bk2 = _daily_atr(make_book(days=6, path=path2))
+    assert R.RULES["R5D"].spec(bk2, bk2.m.days[2], 21 * 60) is None
+
+
+def _gs_frames(n=120, seed=7):
+    from research.hunt.r93_breadth_donchian_mcx import rules as R93
+    out = []
+    for s in (seed, seed + 1):
+        out.append(R.daily_ind(R93.daily_series(daily_frame(n=n, seed=s)[["date", "open", "high", "low", "close", "oi"]])))
+    return out
+
+
+def test_round5_gs_ratio_sides_sign_and_lookahead_guard():
+    sil, gold = _gs_frames()
+    g = gold.copy()
+    g.loc[100, "ac"] = g.ac.values[99] + 2000.0                         # gold jumps: the index breaks up -> silver put
+    s = R.gs_ratio_sides(sil, g)
+    assert s[100] == -1
+    g.loc[100, "ac"] = g.ac.values[99] - 2000.0                         # gold drops: -> silver call
+    assert R.gs_ratio_sides(sil, g)[100] == 1
+    full = R.gs_ratio_sides(sil, gold)
+    assert (full[:R.K.R5_GSR_LOOK] == 0).all()
+    for cut in (60, 90):
+        for mode in ("perturb", "delete"):
+            s2, g2 = sil.copy(), gold.copy()
+            if mode == "perturb":
+                g2.loc[cut + 1:, ["ac", "close"]] *= 1.3
+                s2.loc[cut + 1:, ["ac", "close"]] *= 0.7
+            else:
+                s2, g2 = s2.iloc[:cut + 1], g2.iloc[:cut + 1]
+            part = R.gs_ratio_sides(s2, g2)
+            assert (full[:cut + 1] == part[:cut + 1]).all(), (mode, cut)
+
+
+def test_round5_gs_ratio_rule_uses_the_injected_gold_and_missing_dates():
+    sil, gold = _gs_frames()
+    rule = R.GSRatioDir("T")
+    rule.gold = gold.iloc[::2].reset_index(drop=True)                   # gold misses every other date
+    s = rule.sides(sil)
+    assert len(s) == len(sil) and (s[1::2] == 0).all()                  # silver rows without a gold row: no signal
+
+
+def test_round5_history_thursday_long():
+    n = 60
+    c = np.full(n, 5000.0)
+    d = pd.DataFrame(dict(date=pd.bdate_range("2014-01-06", periods=n), open=c, high=c + 30, low=c - 30, close=c,
+                          oi=np.full(n, 1000.0)))
+    from research.hunt.r93_breadth_donchian_mcx import rules as R93
+    x = R.daily_ind(R93.daily_series(d))
+    thu = pd.DatetimeIndex(x.date).weekday == 3
+    x.loc[thu, "ac"] = x.loc[thu, "ao"] + 50.0                          # every Thursday closes +1%
+    h = H.run("R5A", x)
+    assert h["n"] == int(thu.sum()) and h["mean"] == pytest.approx(0.01 - H.COST)
+    assert h["twin_mean"] == pytest.approx(-H.COST) and h["p"] < 0.01
+    assert H.trade_day_long(x.assign(roll=True), 3) is None

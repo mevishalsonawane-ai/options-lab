@@ -126,3 +126,13 @@ R4_SPIKE_MIN = 5                 # R4C: the future's move from the minute before
 R4_SPIKE_KATR = 0.20             # ... at least 0.20 x ATR14 (known before the day) -> fade it
 R4_FADE_HOLD = 60                # R4C: out 60 minutes after the entry minute (or the square-off, if earlier)
 R4_EVE_A, R4_EVE_B = 17 * 60, 17 * 60 + 30     # R4D: the future's 17:00 -> 17:30 IST move; entry from 17:31
+# round 5 (PREREG_ROUND5)
+GAS = ("NATGASMINI", "NATURALGAS")
+R5_OTHER = ("NATGASMINI", "NATURALGAS", "GOLDM", "SILVERM")     # R5B: R4G's IV filter on the books it was not chosen on
+R5_STORAGE_TOD = 17 * 60         # R5A: 1-ITM call at the first minute at or after 17:00 IST on EIA storage days
+R5_STORAGE_KATR = 1.0            # R5A: stop on the future 1 x ATR14 below the signal minute's close
+R5_SPIKE_KATR = 0.10             # R5D: R4C with |move| >= 0.10 x ATR14
+R5_PRE_TOD = 17 * 60             # R5E: ATM straddle from 17:00 IST ...
+R5_PRE_EXIT = 5                  # ... out at the release minute - 5
+R5_GSR_LOOK = 20                 # R5F: ratio index beyond the max / min of its previous 20 values
+R5_GSR_KATR, R5_GSR_N = 1.5, 5   # R5F: stop 1.5 x ATR14, 5 sessions
