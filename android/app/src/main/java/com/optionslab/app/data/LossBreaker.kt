@@ -124,7 +124,11 @@ object LossBreaker {
         // 16 Oct: waited 5 s at most - this runs before the arms' exits and entries in each pass, and one hung read of
         // Zerodha's positions held all of them for up to 105 s. Not read in time: this pass decides on paper's figure; the
         // next pass reads again.
-        val live = if (Broker.loggedIn) Broker.within(Broker.READ_BUDGET_MS) { Broker.positionBook().m2m } else null
+        val book = if (Broker.loggedIn) Broker.within(Broker.READ_BUDGET_MS) { Broker.positionBook() } else null
+        val live = book?.m2m
+        // 21 Oct (merge review): a live position still open (Paper mode or real orders off included) keeps the one shared paper
+        // limit, so its loss stop still sells it as before; a book not read in time counts as open (the safer side).
+        val liveOpen = if (book != null) book.net.any { it.open } else Broker.loggedIn
         // 20 Oct, enhancement round 1 (idea 4): the same read is today's figure for the account stop rule (memory; written later).
         // 20 Oct, enhancement round 2 (idea 6): less today's charges (Zerodha's exact figure when kept, else the estimate from the
         // day's kept trades; both from memory or the vault, never a network read here), so it reads the arms' net figure.
@@ -138,7 +142,7 @@ object LossBreaker {
         val (lockPaper, lockMcx) = com.optionslab.ira.SegmentLock.lockFigures(split, paper, parts)
         runCatching { DayLockGuard.update(context, lockPaper, live, lockMcx) }
         // 21 Oct (review): the loss limits split only while nothing can trade live; otherwise the one paper figure, as before.
-        val liveActive = (s.live && s.allowRealOrders) || runCatching { Strategies.anyLiveRunning() }.getOrDefault(true)
+        val liveActive = liveOpen || (s.live && s.allowRealOrders) || runCatching { Strategies.anyLiveRunning() }.getOrDefault(true)
         val lossSplit = com.optionslab.ira.SegmentLock.lossSplit(split, liveActive)
         val l = com.optionslab.ira.SegmentLock.losses(lossSplit, live, s.guardDailyLoss, paper, s.guardPaperDailyLoss, parts, s.mcxPaperDailyLoss)
         if (l.wholePaper && kept().whole != today) { SecurePrefs.put(K_WHOLE, today); kept = null }

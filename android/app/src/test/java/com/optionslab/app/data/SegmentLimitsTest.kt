@@ -260,6 +260,29 @@ class SegmentLimitsTest : RobolectricTest() {
         assertFalse("the commodities' own stop is not used then", LossBreaker.mcxTrippedToday())
     }
 
+    /**
+     * 21 Oct (merge review): a real position still open at Zerodha while the app is in Paper keeps the one paper figure, so a whole
+     * paper day past the limit still stops the bot (which sells that live position), as before the split.
+     */
+    @Test fun anOpenLivePositionInPaperModeKeepsOnePaperFigure() {
+        val kite = FakeKite()
+        try {
+            AutomationSupport.niftyOptions(kite)
+            kite.login()
+            val held = "NIFTY26OCT24000PE"
+            kite.instruments += FakeKite.Ins(12_300_000, held, "NIFTY", AutomationSupport.expiryAfter(9), 24_000.0, "PE", 75)
+            kite.position(held, 75, 100.0)
+            kite.quote("NFO:$held", 100.0)          // flat at Zerodha: its own limit is not what stops it
+            at(day, 13, 0)
+            paper(nse = -3_500.0, mcx = -3_500.0)   // each part under its 6,000 limit; the whole paper day past it
+            check()
+            assertTrue(LossBreaker.trippedToday())
+            assertEquals(SegmentLock.Trip.SHARED, LossBreaker.tripToday())
+            assertTrue(nseStopped())
+            assertTrue(mcxStopped())
+        } finally { kite.close() }
+    }
+
     /** Review: switching the split off never lifts a commodities lock reached today, nor does switching it on lift a shared stop. */
     @Test fun theSwitchNeverLiftsAStopMadeToday() {
         at(day, 18, 0)
