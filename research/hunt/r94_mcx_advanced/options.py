@@ -207,8 +207,11 @@ class Book:
                         miss += 1
                         continue
                     ke, pe = (k2, p2[0]) if k > avail[-1] else (k1, p1[0])
-                    lb = pe + (p2[0] - p1[0]) / (k2 - k1) * (k - ke)
-                    out[n] = max(out[n], lb, 0.0)
+                    slope = (p2[0] - p1[0]) / (k2 - k1)
+                    slope = min(0.0, max(-1.0, slope)) if cp == 0 else min(1.0, max(0.0, slope))     # A3.2 item 5
+                    lb = pe + slope * (k - ke)
+                    ub = pe + (max(0.0, ke - k) if cp == 0 else max(0.0, k - ke))   # the short-leg upper bound
+                    out[n] = min(max(out[n], lb, 0.0), max(ub, out[n]))
                 v[oow] = out
             else:
                 out = intr.copy()
@@ -302,12 +305,15 @@ def simulate(bk: Book, struct: str, di_in: int, di_out: int, valuation: str = "A
     credit = credit_pts * u
     vert = None
     if valuation == "A1" and struct in ("IC", "IF"):
+        wl = max(abs(legs[2][3] - legs[0][3]), abs(legs[3][3] - legs[1][3]))
+        if credit >= wl * u:
+            return None, "arb_credit"                     # A3.2 item 6: a quote no order could fill
         # A3.1: a vertical (short leg i, its wing i + 2) never costs more than its width (+ both half-spreads) to close
         vert = []
         close_cost = np.zeros(len(J))
         for a, b in ((0, 2), (1, 3)):
             w = abs(legs[b][3] - legs[a][3])
-            close_cost += np.minimum(marks[a] - marks[b], w + hss[a] + hss[b]) * u
+            close_cost += (np.clip(mids[a] - mids[b], 0.0, w) + hss[a] + hss[b]) * u      # A3.2 item 4
             vert.append((a, b, w))
         # ... and the whole IC / IF never more than its larger width (+ every half-spread): only one side pays at expiry
         wmax = max(w for _, _, w in vert)
@@ -359,7 +365,7 @@ def simulate(bk: Book, struct: str, di_in: int, di_out: int, valuation: str = "A
         est_ch += C.opt_leg_charges(p * u, p * u)
     if vert is not None:
         wmax = max(w for _, _, w in vert)
-        mid_close = min(sum(min(mids[a][x] - mids[b][x], w) for a, b, w in vert), wmax)
+        mid_close = min(sum(min(max(mids[a][x] - mids[b][x], 0.0), w) for a, b, w in vert), wmax)
         gross += (sum(legs[a][4] - legs[b][4] for a, b, _ in vert) - mid_close) * u
     if fut is not None:
         f_in, fhsJ = fut

@@ -68,3 +68,19 @@ and CC numbers were also seen (they use only the short-leg bound, which is the e
 These three are facts about option prices, not tuning; the stop, lock, take-profit, entry and every other rule are as
 pre-registered. The parent decides whether the amended or the as-registered numbers are primary in the write-up; the
 gate (q <= 0.10) is applied the same way to both.
+
+## A3.2 (21 Oct 2026, AFTER the second design run was seen; the same kind of artefact in the other direction)
+
+The A3.1 run showed IC / IF trades winning far MORE than their credit (CRUDEOILM IF D1: +Rs 1,05,555 on a Rs 836 credit;
+CRUDEOIL IC D1 +Rs 49,758 on Rs 7,977). A short-premium structure can never gain more than its credit. Cause: a long
+wing marked above the short leg next to it (a stale or non-synchronous print, or a convexity extension from two
+stale prints), so a vertical showed a negative value; and a few entries whose credit was larger than the wing width
+(prints minutes apart that no real order could have filled at). Fixes, all no-arbitrage facts, applied to both windows
+(the as-registered valuation stays reported in `extra.prereg_valuation`):
+4. Each IC / IF vertical's value is clipped to [0, width] before half-spreads (a vertical is worth between nothing and
+   its width); its close cost = that value + both legs' half-spreads; the whole structure is still capped at the larger
+   width + every half-spread.
+5. The convexity extension's slope is clipped to the no-arbitrage range (calls -1..0, puts 0..+1 per point of strike),
+   and a long leg out of window is never valued above the short-leg upper bound of the same strike.
+6. An IC / IF entry whose credit (after half-spreads) is >= its larger width x units is skipped as an untradable,
+   non-synchronous quote (counted as `skips.arb_credit`).

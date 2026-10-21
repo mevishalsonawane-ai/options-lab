@@ -1334,12 +1334,12 @@
  "o-IC-CRUDEOIL-CY-ALL": {
   "extra": {
    "attempts": 7,
-   "charges_mean": 316.8625575077143,
+   "charges_mean": 331.9271764265142,
    "credit_mean": 7812.495,
    "edge_missing": 81,
    "exit_reasons": {
-    "time": 6,
-    "tp": 1
+    "stop": 1,
+    "time": 6
    },
    "oow_min": 79307,
    "prereg_valuation": {
@@ -1362,75 +1362,75 @@
     "worst_month_name": "2026-03",
     "worst_trade": -47116.011261280306
    },
-   "return_on_median_margin": 9.280796429514272,
+   "return_on_median_margin": -4.049144335435038,
    "skips": {},
    "stale_min": 5,
    "tail_n": 1,
-   "tail_worst5pct_mean": -3137.2520361780043,
+   "tail_worst5pct_mean": -10290.875932619094,
    "trades_with_oow": 7,
    "wait_min_mean": 0.0
   },
   "folds": [
    -873.3132974620007,
-   -1287.3830738168922,
+   -1307.3830738168958,
    1967.2820689124007,
-   24269.656399812447
+   -10290.875932619094
   ],
   "min_trades": 10,
-  "p": 0.0001999600079984003,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 3439.463156777994,
+   "avg": -1500.6128907122272,
    "cap_2pct_max": 144441.51763999995,
    "cap_2pct_median": 142734.74096000005,
    "days": 7,
    "fit_2pct_1L": 0.14285714285714285,
-   "gross": 36779.99999999994,
+   "gross": 3979.9999999999927,
    "margin_median": 2594.2000000000035,
-   "max_dd": -4424.635109994897,
+   "max_dd": -12768.228973701594,
    "months": 7,
    "months_below_stop": 0,
-   "net": 24076.242097445956,
-   "net_wo_top5": -5231.643451593403,
+   "net": -10504.29023498559,
+   "net_wo_top5": -13428.127968797098,
    "trades": 7,
-   "win_rate": 0.5714285714285714,
-   "worst_day": -3137.2520361780043,
-   "worst_month": -3137.2520361780043,
-   "worst_month_name": "2025-10",
-   "worst_trade": -3137.2520361780043
+   "win_rate": 0.42857142857142855,
+   "worst_day": -10290.875932619094,
+   "worst_month": -10290.875932619094,
+   "worst_month_name": "2026-03",
+   "worst_trade": -10290.875932619094
   }
  },
  "o-IC-CRUDEOIL-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 426.2961891510334,
+   "charges_mean": 461.44696662823316,
    "credit_mean": 8263.896666666666,
    "edge_missing": 81,
    "exit_reasons": {
-    "time": 2,
-    "tp": 1
+    "stop": 1,
+    "time": 2
    },
    "low_descriptive": {
-    "avg": -429.1276912722974,
+    "avg": -435.7943579389653,
     "cap_2pct_max": 144441.51763999995,
     "cap_2pct_median": 142734.74096000005,
     "days": 3,
     "fit_2pct_1L": 0.0,
     "gross": 489.99999999999886,
     "margin_median": 2609.880000000001,
-    "max_dd": -2848.752232900697,
+    "max_dd": -2868.7522329007006,
     "months": 3,
     "months_below_stop": 0,
-    "net": -1287.3830738168922,
+    "net": -1307.3830738168958,
     "net_wo_top5": 0.0,
     "trades": 3,
     "win_rate": 0.3333333333333333,
-    "worst_day": -2094.391415415399,
-    "worst_month": -2094.391415415399,
+    "worst_day": -2104.391415415401,
+    "worst_month": -2104.391415415401,
     "worst_month_name": "2026-01",
-    "worst_trade": -2094.391415415399
+    "worst_trade": -2104.391415415401
    },
    "oow_min": 48618,
    "pool_with_pct": 6,
@@ -1454,11 +1454,11 @@
     "worst_month_name": "2026-03",
     "worst_trade": -47116.011261280306
    },
-   "return_on_median_margin": 12.582385201904742,
+   "return_on_median_margin": -6.242715816645855,
    "skips": {},
    "stale_min": 0,
    "tail_n": 1,
-   "tail_worst5pct_mean": -3137.2520361780043,
+   "tail_worst5pct_mean": -10290.875932619094,
    "trades_with_oow": 3,
    "wait_min_mean": 0.0
   },
@@ -1466,46 +1466,46 @@
    -3137.2520361780043,
    null,
    1967.2820689124007,
-   24269.656399812447
+   -10290.875932619094
   ],
   "min_trades": 10,
-  "p": 0.2937062937062937,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.2937062937062937
+   "bootstrap": 1.0,
+   "subset_twin": 0.8081918081918081
   },
   "summary": {
-   "avg": 7699.895477515615,
+   "avg": -3820.2819666282326,
    "cap_2pct_max": 142766.35804000017,
    "cap_2pct_median": 106280.0958999999,
    "days": 3,
    "fit_2pct_1L": 0.3333333333333333,
-   "gross": 33489.99999999995,
+   "gross": 689.9999999999952,
    "margin_median": 1835.8749999999982,
-   "max_dd": -3137.2520361780043,
+   "max_dd": -11460.845899884698,
    "months": 3,
    "months_below_stop": 0,
-   "net": 23099.686432546845,
+   "net": -11460.845899884698,
    "net_wo_top5": 0.0,
    "trades": 3,
-   "win_rate": 0.6666666666666666,
-   "worst_day": -3137.2520361780043,
-   "worst_month": -3137.2520361780043,
-   "worst_month_name": "2025-10",
-   "worst_trade": -3137.2520361780043
+   "win_rate": 0.3333333333333333,
+   "worst_day": -10290.875932619094,
+   "worst_month": -10290.875932619094,
+   "worst_month_name": "2026-03",
+   "worst_trade": -10290.875932619094
   }
  },
  "o-IC-CRUDEOIL-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 316.3915699532195,
+   "charges_mean": 316.3012678736907,
    "credit_mean": 7442.610939597314,
    "edge_missing": 81,
    "exit_reasons": {
-    "lock": 5,
-    "stop": 2,
-    "time": 136,
-    "tp": 6
+    "lock": 4,
+    "stop": 4,
+    "time": 140,
+    "tp": 1
    },
    "oow_min": 116148,
    "prereg_valuation": {
@@ -1528,79 +1528,78 @@
     "worst_month_name": "2026-03",
     "worst_trade": -105182.2462874101
    },
-   "return_on_median_margin": -54.5065970596114,
+   "return_on_median_margin": -103.27468709113246,
    "skips": {
     "no_minute": 2
    },
    "stale_min": 88,
    "tail_n": 8,
-   "tail_worst5pct_mean": -6166.864183246484,
+   "tail_worst5pct_mean": -6908.331971841783,
    "trades_with_oow": 148,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -61806.98040822548,
-   -12813.694203149593,
-   -60690.19697995724,
-   7089.5526683024855
+   -61500.281711588184,
+   -19651.067855336783,
+   -60710.19697995724,
+   -101081.82736629777
   ],
   "min_trades": 40,
-  "p": 0.9996000799840032,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.9996000799840032
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": -860.5457645840927,
+   "avg": -1630.4924423703355,
    "cap_2pct_max": 257415.43291999996,
    "cap_2pct_median": 132305.56440000076,
-   "days": 147,
+   "days": 148,
    "fit_2pct_1L": 0.040268456375838924,
-   "gross": 79799.99999999996,
+   "gross": -37440.0,
    "margin_median": 2352.3999999999996,
-   "max_dd": -158334.54031473416,
+   "max_dd": -242943.37391318002,
    "months": 9,
-   "months_below_stop": 5,
-   "net": -128221.31892302982,
-   "net_wo_top5": -221988.33656996902,
+   "months_below_stop": 7,
+   "net": -242943.37391318,
+   "net_wo_top5": -251703.36601032608,
    "trades": 149,
-   "win_rate": 0.087248322147651,
-   "worst_day": -9010.670287100238,
-   "worst_month": -30823.839491834617,
-   "worst_month_name": "2026-02",
-   "worst_trade": -9010.670287100238
+   "win_rate": 0.053691275167785234,
+   "worst_day": -9360.402406329918,
+   "worst_month": -101031.16698983942,
+   "worst_month_name": "2026-03",
+   "worst_trade": -9360.402406329918
   }
  },
  "o-IC-CRUDEOIL-D1-HIGH": {
   "extra": {
    "attempts": 113,
-   "charges_mean": 398.2000727029165,
+   "charges_mean": 397.96372993575676,
    "credit_mean": 7758.3277611940275,
    "edge_missing": 81,
    "exit_reasons": {
     "lock": 3,
-    "stop": 2,
-    "time": 58,
-    "tp": 4
+    "stop": 4,
+    "time": 60
    },
    "low_descriptive": {
-    "avg": -623.273252494498,
+    "avg": -771.9118101507412,
     "cap_2pct_max": 256908.68207999997,
     "cap_2pct_median": 146464.80902000002,
     "days": 46,
     "fit_2pct_1L": 0.0,
-    "gross": 2750.0000000000045,
+    "gross": -4039.9999999999955,
     "margin_median": 2681.5500000000006,
-    "max_dd": -28670.569614746895,
+    "max_dd": -35507.94326693411,
     "months": 5,
     "months_below_stop": 0,
-    "net": -28670.56961474691,
-    "net_wo_top5": -42736.11257558431,
+    "net": -35507.9432669341,
+    "net_wo_top5": -43492.8262377411,
     "trades": 46,
-    "win_rate": 0.10869565217391304,
-    "worst_day": -4103.173431397599,
-    "worst_month": -8301.361126809,
-    "worst_month_name": "2025-10",
-    "worst_trade": -4103.173431397599
+    "win_rate": 0.08695652173913043,
+    "worst_day": -4103.173431397601,
+    "worst_month": -12960.563113762606,
+    "worst_month_name": "2025-11",
+    "worst_trade": -4103.173431397601
    },
    "oow_min": 70052,
    "pool_with_pct": 113,
@@ -1624,57 +1623,57 @@
     "worst_month_name": "2026-03",
     "worst_trade": -105182.2462874101
    },
-   "return_on_median_margin": -29.867653283218797,
+   "return_on_median_margin": -83.03896013097037,
    "skips": {},
    "stale_min": 81,
    "tail_n": 4,
-   "tail_worst5pct_mean": -7143.820022528693,
+   "tail_worst5pct_mean": -8550.956382707369,
    "trades_with_oow": 67,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -13869.296235521906,
+   -13869.296235521902,
    -2389.229072191398,
-   -51604.832231684726,
-   7089.5526683024855
+   -51624.832231684726,
+   -101081.82736629777
   ],
   "min_trades": 40,
-  "p": 0.937612477504499,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.937612477504499,
-   "subset_twin": 0.5964035964035964
+   "bootstrap": 1.0,
+   "subset_twin": 1.0
   },
   "summary": {
-   "avg": -907.0717144939634,
+   "avg": -2521.868431428296,
    "cap_2pct_max": 234740.34295999998,
    "cap_2pct_median": 120110.0889,
-   "days": 65,
+   "days": 66,
    "fit_2pct_1L": 0.08955223880597014,
-   "gross": 88189.99999999993,
+   "gross": -22110.00000000001,
    "margin_median": 2034.770000000015,
-   "max_dd": -90887.02626279995,
+   "max_dd": -168965.18490569582,
    "months": 6,
-   "months_below_stop": 3,
-   "net": -60773.80487109555,
-   "net_wo_top5": -146245.71110774178,
+   "months_below_stop": 4,
+   "net": -168965.18490569582,
+   "net_wo_top5": -168078.0553822603,
    "trades": 67,
-   "win_rate": 0.07462686567164178,
-   "worst_day": -9010.670287100238,
-   "worst_month": -27303.082420906612,
-   "worst_month_name": "2026-02",
-   "worst_trade": -9010.670287100238
+   "win_rate": 0.014925373134328358,
+   "worst_day": -9360.402406329918,
+   "worst_month": -101031.16698983942,
+   "worst_month_name": "2026-03",
+   "worst_trade": -9360.402406329918
   }
  },
  "o-IC-CRUDEOILM-CY-ALL": {
   "extra": {
    "attempts": 7,
-   "charges_mean": 215.79072652067785,
+   "charges_mean": 203.48056804503926,
    "credit_mean": 774.5892857142856,
    "edge_missing": 125,
    "exit_reasons": {
-    "lock": 1,
-    "time": 4,
-    "tp": 2
+    "lock": 2,
+    "stop": 1,
+    "time": 4
    },
    "oow_min": 80778,
    "prereg_valuation": {
@@ -1697,75 +1696,75 @@
     "worst_month_name": "2026-03",
     "worst_trade": -4149.502972087027
    },
-   "return_on_median_margin": 347.1965632516772,
+   "return_on_median_margin": -10.902986302509438,
    "skips": {},
    "stale_min": 42,
    "tail_n": 1,
-   "tail_worst5pct_mean": -385.9329924541147,
+   "tail_worst5pct_mean": -1237.3590853563098,
    "trades_with_oow": 7,
    "wait_min_mean": 0.0
   },
   "folds": [
-   1339.5458843847396,
-   -692.8170721471201,
-   -349.88391553340523,
-   85325.21276765103
+   -406.72265327844025,
+   -694.8170721471199,
+   -349.8839155334051,
+   -1237.3590853563098
   ],
   "min_trades": 10,
-  "p": 0.0001999600079984003,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 12231.72252347932,
+   "avg": -384.11181804503934,
    "cap_2pct_max": 23269.54929800002,
    "cap_2pct_median": 22115.75780299999,
    "days": 7,
    "fit_2pct_1L": 1.0,
-   "gross": 89737.5,
+   "gross": 24.499999999999375,
    "margin_median": 246.60974999999985,
-   "max_dd": -1042.7009876805255,
+   "max_dd": -2754.05486396193,
    "months": 7,
    "months_below_stop": 0,
-   "net": 85622.05766435525,
-   "net_wo_top5": -735.8169079875199,
+   "net": -2688.7827263152753,
+   "net_wo_top5": -1709.3538762814048,
    "trades": 7,
-   "win_rate": 0.42857142857142855,
-   "worst_day": -385.9329924541147,
-   "worst_month": -385.9329924541147,
-   "worst_month_name": "2026-01",
-   "worst_trade": -385.9329924541147
+   "win_rate": 0.14285714285714285,
+   "worst_day": -1237.3590853563098,
+   "worst_month": -1237.3590853563098,
+   "worst_month_name": "2026-03",
+   "worst_trade": -1237.3590853563098
   }
  },
  "o-IC-CRUDEOILM-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 245.52830038142665,
+   "charges_mean": 216.80459727160334,
    "credit_mean": 812.4506666666665,
    "edge_missing": 125,
    "exit_reasons": {
-    "lock": 1,
-    "tp": 2
+    "lock": 2,
+    "stop": 1
    },
    "low_descriptive": {
-    "avg": -230.93902404904006,
+    "avg": -231.60569071570663,
     "cap_2pct_max": 23269.54929800002,
     "cap_2pct_median": 22760.038188999988,
     "days": 3,
     "fit_2pct_1L": 1.0,
     "gross": -2.9999999999998863,
     "margin_median": 260.7362499999998,
-    "max_dd": -692.8170721471201,
+    "max_dd": -694.8170721471199,
     "months": 3,
     "months_below_stop": 0,
-    "net": -692.8170721471201,
+    "net": -694.8170721471199,
     "net_wo_top5": 0.0,
     "trades": 3,
     "win_rate": 0.0,
-    "worst_day": -385.9329924541147,
-    "worst_month": -385.9329924541147,
+    "worst_day": -386.9329924541147,
+    "worst_month": -386.9329924541147,
     "worst_month_name": "2026-01",
-    "worst_trade": -385.9329924541147
+    "worst_trade": -386.9329924541147
    },
    "oow_min": 50241,
    "pool_with_pct": 6,
@@ -1789,58 +1788,57 @@
     "worst_month_name": "2026-03",
     "worst_trade": -4149.502972087027
    },
-   "return_on_median_margin": 494.3782632990831,
+   "return_on_median_margin": -11.803444567415909,
    "skips": {},
    "stale_min": 27,
    "tail_n": 1,
-   "tail_worst5pct_mean": -349.88391553340523,
+   "tail_worst5pct_mean": -1237.3590853563098,
    "trades_with_oow": 3,
    "wait_min_mean": 0.0
   },
   "folds": [
-   1274.2737467380848,
+   -471.994790925095,
    null,
-   -349.88391553340523,
-   85325.21276765103
+   -349.8839155334051,
+   -1237.3590853563098
   ],
   "min_trades": 10,
-  "p": 0.14485514485514486,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.14485514485514486
+   "bootstrap": 1.0,
+   "subset_twin": 0.9500499500499501
   },
   "summary": {
-   "avg": 28749.867532951903,
+   "avg": -686.4125972716033,
    "cap_2pct_max": 22471.772505,
    "cap_2pct_median": 18685.25266300002,
    "days": 3,
    "fit_2pct_1L": 1.0,
-   "gross": 89451.0,
+   "gross": -262.00000000000074,
    "margin_median": 174.46075000000042,
-   "max_dd": -349.88391553340523,
+   "max_dd": -2059.23779181481,
    "months": 3,
    "months_below_stop": 0,
-   "net": 86249.60259885571,
+   "net": -2059.23779181481,
    "net_wo_top5": 0.0,
    "trades": 3,
-   "win_rate": 0.6666666666666666,
-   "worst_day": -349.88391553340523,
-   "worst_month": -349.88391553340523,
-   "worst_month_name": "2026-02",
-   "worst_trade": -349.88391553340523
+   "win_rate": 0.0,
+   "worst_day": -1237.3590853563098,
+   "worst_month": -1237.3590853563098,
+   "worst_month_name": "2026-03",
+   "worst_trade": -1237.3590853563098
   }
  },
  "o-IC-CRUDEOILM-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 201.97210798474728,
+   "charges_mean": 201.80602355653883,
    "credit_mean": 749.52875,
    "edge_missing": 125,
    "exit_reasons": {
-    "lock": 3,
-    "stop": 2,
-    "time": 142,
-    "tp": 2
+    "stop": 4,
+    "time": 144,
+    "tp": 1
    },
    "oow_min": 116181,
    "prereg_valuation": {
@@ -1863,62 +1861,61 @@
     "worst_month_name": "2026-03",
     "worst_trade": -10708.548899267322
    },
-   "return_on_median_margin": -39.878199403210886,
+   "return_on_median_margin": -215.68974879833334,
    "skips": {
     "no_minute": 2
    },
    "stale_min": 226,
    "tail_n": 8,
-   "tail_worst5pct_mean": -780.279827446878,
+   "tail_worst5pct_mean": -865.0594762105598,
    "trades_with_oow": 148,
    "wait_min_mean": 0.20134228187919462
   },
   "folds": [
-   -10581.091089557262,
-   -9386.68527430169,
-   -12374.595403110918,
-   23132.8904272425
+   -14727.245034651562,
+   -9386.685274301692,
+   -12357.381948644514,
+   -13340.132252326537
   ],
   "min_trades": 40,
-  "p": 0.6370725854829035,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.6370725854829035
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": -61.80859959548575,
+   "avg": -334.3049967109014,
    "cap_2pct_max": 34006.648001999994,
    "cap_2pct_median": 21564.633947000006,
-   "days": 148,
+   "days": 149,
    "fit_2pct_1L": 1.0,
-   "gross": 37430.99999999999,
+   "gross": -3560.0000000000073,
    "margin_median": 230.94025,
-   "max_dd": -34201.1972792529,
+   "max_dd": -49811.44450992429,
    "months": 9,
-   "months_below_stop": 0,
-   "net": -9209.481339727377,
-   "net_wo_top5": -48713.96881679738,
+   "months_below_stop": 1,
+   "net": -49811.44450992431,
+   "net_wo_top5": -49868.28204521281,
    "trades": 149,
-   "win_rate": 0.013422818791946308,
-   "worst_day": -976.4210654116766,
-   "worst_month": -6128.858155342521,
-   "worst_month_name": "2026-02",
-   "worst_trade": -976.4210654116766
+   "win_rate": 0.006711409395973154,
+   "worst_day": -1167.3952570470212,
+   "worst_month": -13212.704288783872,
+   "worst_month_name": "2026-03",
+   "worst_trade": -1167.3952570470212
   }
  },
  "o-IC-CRUDEOILM-D1-HIGH": {
   "extra": {
    "attempts": 113,
-   "charges_mean": 210.33085029263873,
+   "charges_mean": 209.9614983552797,
    "credit_mean": 782.5177574626864,
    "edge_missing": 125,
    "exit_reasons": {
-    "lock": 3,
-    "stop": 2,
-    "time": 60,
-    "tp": 2
+    "stop": 4,
+    "time": 62,
+    "tp": 1
    },
    "low_descriptive": {
-    "avg": -270.88136657875384,
+    "avg": -270.8813665787539,
     "cap_2pct_max": 34006.648001999994,
     "cap_2pct_median": 22843.103878499995,
     "days": 46,
@@ -1928,14 +1925,14 @@
     "max_dd": -12460.542862622677,
     "months": 5,
     "months_below_stop": 0,
-    "net": -12460.542862622677,
-    "net_wo_top5": -11679.204145581916,
+    "net": -12460.542862622679,
+    "net_wo_top5": -11679.204145581918,
     "trades": 46,
     "win_rate": 0.0,
-    "worst_day": -575.8890087214148,
-    "worst_month": -4671.254806534671,
+    "worst_day": -575.889008721415,
+    "worst_month": -4671.254806534672,
     "worst_month_name": "2025-12",
-    "worst_trade": -575.8890087214148
+    "worst_trade": -575.889008721415
    },
    "oow_min": 69761,
    "pool_with_pct": 113,
@@ -1959,45 +1956,45 @@
     "worst_month_name": "2026-03",
     "worst_trade": -10708.548899267322
    },
-   "return_on_median_margin": 68.34786985247115,
+   "return_on_median_margin": -141.29775411101753,
    "skips": {},
    "stale_min": 69,
    "tail_n": 4,
-   "tail_worst5pct_mean": -877.9431855750776,
+   "tail_worst5pct_mean": -1034.6436003741965,
    "trades_with_oow": 67,
    "wait_min_mean": 0.05970149253731343
   },
   "folds": [
-   1165.3063969287246,
+   -2980.847548165576,
    -581.6721096709249,
-   -10479.626934107117,
-   23132.8904272425
+   -10462.413479640712,
+   -13340.132252326537
   ],
   "min_trades": 40,
-  "p": 0.38161838161838163,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.2965406918616277,
-   "subset_twin": 0.38161838161838163
+   "bootstrap": 1.0,
+   "subset_twin": 1.0
   },
   "summary": {
-   "avg": 197.56563851333112,
+   "avg": -408.4338117881157,
    "cap_2pct_max": 31614.547335999996,
    "cap_2pct_median": 19808.014119999974,
-   "days": 66,
+   "days": 67,
    "fit_2pct_1L": 1.0,
-   "gross": 39916.49999999999,
+   "gross": -1074.5000000000048,
    "margin_median": 193.6695000000003,
-   "max_dd": -13424.614204120262,
+   "max_dd": -27365.065389803753,
    "months": 6,
-   "months_below_stop": 0,
-   "net": 13236.897780393185,
-   "net_wo_top5": -26143.612940453317,
+   "months_below_stop": 1,
+   "net": -27365.065389803753,
+   "net_wo_top5": -27251.663290342032,
    "trades": 67,
-   "win_rate": 0.029850746268656716,
-   "worst_day": -976.4210654116766,
-   "worst_month": -5044.410583234136,
-   "worst_month_name": "2026-01",
-   "worst_trade": -976.4210654116766
+   "win_rate": 0.014925373134328358,
+   "worst_day": -1167.3952570470212,
+   "worst_month": -13212.704288783872,
+   "worst_month_name": "2026-03",
+   "worst_trade": -1167.3952570470212
   }
  },
  "o-IC-GOLDM-CY-ALL": {
@@ -2131,12 +2128,11 @@
  "o-IC-GOLDM-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 569.6643887253666,
+   "charges_mean": 558.5225923445,
    "credit_mean": 7684.135833333338,
    "edge_missing": 0,
    "exit_reasons": {
-    "lock": 2,
-    "tp": 1
+    "time": 3
    },
    "oow_min": 4650,
    "prereg_valuation": {
@@ -2159,14 +2155,14 @@
     "worst_month_name": "2026-03",
     "worst_trade": -67651.25889647906
    },
-   "return_on_median_margin": 5.280683961779907,
+   "return_on_median_margin": -5.500974920330167,
    "skips": {
     "no_minute": 2,
     "no_print": 146
    },
    "stale_min": 7,
    "tail_n": 1,
-   "tail_worst5pct_mean": 155.78702196500876,
+   "tail_worst5pct_mean": -4554.066364122641,
    "trades_with_oow": 3,
    "wait_min_mean": 0.6666666666666666
   },
@@ -2174,32 +2170,32 @@
    null,
    null,
    null,
-   11795.991833823915
+   -12288.077777033483
   ],
   "min_trades": 40,
-  "p": 0.0001999600079984003,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 3931.997277941305,
+   "avg": -4096.025925677827,
    "cap_2pct_max": 159801.58275999958,
    "cap_2pct_median": 140466.3520399996,
    "days": 3,
    "fit_2pct_1L": 0.0,
-   "gross": 22460.0,
+   "gross": -1900.0,
    "margin_median": 2233.799999999992,
-   "max_dd": -0.0,
-   "months": 1,
+   "max_dd": -12288.077777033483,
+   "months": 2,
    "months_below_stop": 0,
-   "net": 11795.991833823915,
+   "net": -12288.077777033483,
    "net_wo_top5": 0.0,
    "trades": 3,
-   "win_rate": 1.0,
-   "worst_day": 155.78702196500876,
-   "worst_month": 11795.991833823915,
+   "win_rate": 0.0,
+   "worst_day": -4554.066364122641,
+   "worst_month": -8386.118537812481,
    "worst_month_name": "2026-03",
-   "worst_trade": 155.78702196500876
+   "worst_trade": -4554.066364122641
   }
  },
  "o-IC-GOLDM-D1-HIGH": {
@@ -2278,13 +2274,12 @@
  "o-IC-NATGASMINI-CY-ALL": {
   "extra": {
    "attempts": 8,
-   "charges_mean": 214.19352926403127,
+   "charges_mean": 213.0267456783984,
    "credit_mean": 1966.316796875,
    "edge_missing": 0,
    "exit_reasons": {
     "lock": 1,
-    "time": 5,
-    "tp": 2
+    "time": 7
    },
    "oow_min": 133889,
    "prereg_valuation": {
@@ -2307,55 +2302,54 @@
     "worst_month_name": "2026-02",
     "worst_trade": -6094.6420421455
    },
-   "return_on_median_margin": 5.103486112087209,
+   "return_on_median_margin": -9.697118719562404,
    "skips": {},
    "stale_min": 79,
    "tail_n": 1,
-   "tail_worst5pct_mean": -905.8985931929378,
+   "tail_worst5pct_mean": -1211.2927407007508,
    "trades_with_oow": 8,
    "wait_min_mean": 0.0
   },
   "folds": [
-   112.56173432025025,
-   -966.8620393391241,
-   3388.96379922888,
+   -1998.0776816116866,
+   -979.3620393391238,
+   -2091.684391154126,
    87.24452167774865
   ],
   "min_trades": 10,
-  "p": 0.2001599680063987,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.2001599680063987
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 327.7385019859694,
+   "avg": -622.7349488033984,
    "cap_2pct_max": 43368.04324999998,
    "cap_2pct_median": 36391.381537500005,
    "days": 8,
    "fit_2pct_1L": 1.0,
-   "gross": 7412.500000000003,
+   "gross": -887.5000000000005,
    "margin_median": 513.7484375000001,
-   "max_dd": -1472.8114016279374,
+   "max_dd": -5069.124112104936,
    "months": 8,
    "months_below_stop": 0,
-   "net": 2621.908015887755,
-   "net_wo_top5": -2641.4023279883136,
+   "net": -4981.879590427187,
+   "net_wo_top5": -2997.5829843470638,
    "trades": 8,
-   "win_rate": 0.375,
-   "worst_day": -905.8985931929378,
-   "worst_month": -905.8985931929378,
-   "worst_month_name": "2025-12",
-   "worst_trade": -905.8985931929378
+   "win_rate": 0.125,
+   "worst_day": -1211.2927407007508,
+   "worst_month": -1211.2927407007508,
+   "worst_month_name": "2026-01",
+   "worst_trade": -1211.2927407007508
   }
  },
  "o-IC-NATGASMINI-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 220.32537774228123,
+   "charges_mean": 217.9918105710156,
    "credit_mean": 2000.2625,
    "edge_missing": 0,
    "exit_reasons": {
-    "time": 2,
-    "tp": 2
+    "time": 4
    },
    "low_descriptive": {
     "avg": -409.32703575759456,
@@ -2399,57 +2393,57 @@
     "worst_month_name": "2026-02",
     "worst_trade": -6094.6420421455
    },
-   "return_on_median_margin": 10.164099803088657,
+   "return_on_median_margin": -5.513835894038704,
    "skips": {},
    "stale_min": 5,
    "tail_n": 1,
-   "tail_worst5pct_mean": -880.3916504533753,
+   "tail_worst5pct_mean": -1211.2927407007508,
    "trades_with_oow": 4,
    "wait_min_mean": 0.0
   },
   "folds": [
-   1585.3731359481876,
-   -60.96344614618624,
-   3388.96379922888,
+   -500.26627998374966,
+   -73.46344614618602,
+   -2091.684391154126,
    null
   ],
   "min_trades": 10,
-  "p": 0.23176823176823177,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.23176823176823177
+   "bootstrap": 1.0,
+   "subset_twin": 0.7342657342657343
   },
   "summary": {
-   "avg": 1228.3433722577204,
+   "avg": -666.3535293210155,
    "cap_2pct_max": 38565.31992499998,
    "cap_2pct_median": 35157.465637499976,
    "days": 4,
    "fit_2pct_1L": 1.0,
-   "gross": 7937.500000000001,
+   "gross": -362.50000000000097,
    "margin_median": 483.4046874999998,
-   "max_dd": -880.3916504533754,
+   "max_dd": -2665.414117284062,
    "months": 4,
    "months_below_stop": 0,
-   "net": 4913.3734890308815,
+   "net": -2665.414117284062,
    "net_wo_top5": 0.0,
    "trades": 4,
-   "win_rate": 0.5,
-   "worst_day": -880.3916504533753,
-   "worst_month": -880.3916504533753,
-   "worst_month_name": "2026-02",
-   "worst_trade": -880.3916504533753
+   "win_rate": 0.0,
+   "worst_day": -1211.2927407007508,
+   "worst_month": -1211.2927407007508,
+   "worst_month_name": "2026-01",
+   "worst_trade": -1211.2927407007508
   }
  },
  "o-IC-NATGASMINI-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 210.4234541043596,
+   "charges_mean": 210.42845022869136,
    "credit_mean": 1888.9872431506847,
    "edge_missing": 284,
    "exit_reasons": {
     "lock": 1,
-    "time": 141,
-    "tp": 4
+    "time": 144,
+    "tp": 1
    },
    "oow_min": 123577,
    "prereg_valuation": {
@@ -2472,22 +2466,22 @@
     "worst_month_name": "2025-12",
     "worst_trade": -12454.776975877561
    },
-   "return_on_median_margin": -116.09164310439358,
+   "return_on_median_margin": -158.67197788199724,
    "skips": {
     "no_minute": 2,
     "no_print": 3
    },
    "stale_min": 199,
    "tail_n": 8,
-   "tail_worst5pct_mean": -1138.0436102762735,
+   "tail_worst5pct_mean": -1125.5274772774455,
    "trades_with_oow": 146,
    "wait_min_mean": 0.7397260273972602
   },
   "folds": [
-   -9460.977090407745,
-   -25876.898287973185,
-   -18548.21593338119,
-   -11154.251737474373
+   -26397.5742840928,
+   -25776.769223982566,
+   -23705.867256405436,
+   -13015.764843908124
   ],
   "min_trades": 40,
   "p": 1.0,
@@ -2495,54 +2489,54 @@
    "bootstrap": 1.0
   },
   "summary": {
-   "avg": -445.4818017070993,
+   "avg": -608.8765452629378,
    "cap_2pct_max": 69648.8405,
    "cap_2pct_median": 38421.709774999996,
    "days": 145,
    "fit_2pct_1L": 1.0,
-   "gross": 3700.000000000009,
+   "gross": -20674.999999999993,
    "margin_median": 560.2499999999999,
-   "max_dd": -65040.34304923648,
+   "max_dd": -88895.97560838888,
    "months": 9,
-   "months_below_stop": 1,
-   "net": -65040.3430492365,
-   "net_wo_top5": -87856.62277036262,
+   "months_below_stop": 2,
+   "net": -88895.97560838892,
+   "net_wo_top5": -89629.10346518163,
    "trades": 146,
-   "win_rate": 0.0273972602739726,
-   "worst_day": -1419.598600568124,
-   "worst_month": -15185.787551044627,
+   "win_rate": 0.00684931506849315,
+   "worst_day": -1432.0986005681245,
+   "worst_month": -15085.658487054005,
    "worst_month_name": "2025-12",
-   "worst_trade": -1419.598600568124
+   "worst_trade": -1432.0986005681245
   }
  },
  "o-IC-NATGASMINI-D1-HIGH": {
   "extra": {
    "attempts": 111,
-   "charges_mean": 213.8971295853847,
+   "charges_mean": 213.89547144260348,
    "credit_mean": 1931.5529633620695,
    "edge_missing": 284,
    "exit_reasons": {
     "lock": 1,
-    "time": 54,
-    "tp": 3
+    "time": 56,
+    "tp": 1
    },
    "low_descriptive": {
-    "avg": -625.5349635454646,
+    "avg": -661.129550459309,
     "cap_2pct_max": 55622.30327499999,
     "cap_2pct_median": 36728.42085000001,
     "days": 53,
     "fit_2pct_1L": 1.0,
-    "gross": -7412.499999999998,
+    "gross": -9262.499999999996,
     "margin_median": 527.575000000001,
-    "max_dd": -33153.35306790962,
+    "max_dd": -35039.86617434338,
     "months": 6,
-    "months_below_stop": 0,
-    "net": -33153.35306790962,
-    "net_wo_top5": -33390.23577411387,
+    "months_below_stop": 1,
+    "net": -35039.86617434338,
+    "net_wo_top5": -33441.130347762184,
     "trades": 53,
-    "win_rate": 0.018867924528301886,
+    "win_rate": 0.0,
     "worst_day": -1192.7815994774378,
-    "worst_month": -11263.81589464956,
+    "worst_month": -13125.329001083312,
     "worst_month_name": "2026-03",
     "worst_trade": -1192.7815994774378
    },
@@ -2568,57 +2562,56 @@
     "worst_month_name": "2026-01",
     "worst_trade": -12454.776975877561
    },
-   "return_on_median_margin": -30.870424830731643,
+   "return_on_median_margin": -73.89983445774071,
    "skips": {},
    "stale_min": 84,
    "tail_n": 3,
-   "tail_worst5pct_mean": -1228.503723447354,
+   "tail_worst5pct_mean": -1195.1273687838127,
    "trades_with_oow": 58,
    "wait_min_mean": 0.7931034482758621
   },
   "folds": [
-   11101.485112147444,
-   -13125.07446403375,
-   -13710.728539066002,
+   -5785.11208153762,
+   -13012.445400043125,
+   -18868.379862090253,
    null
   ],
   "min_trades": 40,
-  "p": 0.7860427914417116,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.7860427914417116,
-   "subset_twin": 0.12887112887112886
+   "bootstrap": 1.0,
+   "subset_twin": 0.4065934065934066
   },
   "summary": {
-   "avg": -271.28134294745354,
+   "avg": -649.4127128219136,
    "cap_2pct_max": 66033.63754999998,
    "cap_2pct_median": 36306.84102499998,
    "days": 57,
    "fit_2pct_1L": 1.0,
-   "gross": 14725.000000000002,
+   "gross": -7799.999999999998,
    "margin_median": 509.6890624999992,
-   "max_dd": -27388.206655717127,
+   "max_dd": -37665.937343670994,
    "months": 5,
    "months_below_stop": 0,
-   "net": -15734.317890952307,
-   "net_wo_top5": -36904.2330071453,
+   "net": -37665.93734367099,
+   "net_wo_top5": -38197.165752119,
    "trades": 58,
-   "win_rate": 0.05172413793103448,
-   "worst_day": -1419.598600568124,
-   "worst_month": -7861.059411994252,
-   "worst_month_name": "2026-02",
-   "worst_trade": -1419.598600568124
+   "win_rate": 0.017241379310344827,
+   "worst_day": -1432.0986005681245,
+   "worst_month": -12078.730401938501,
+   "worst_month_name": "2026-01",
+   "worst_trade": -1432.0986005681245
   }
  },
  "o-IC-NATURALGAS-CY-ALL": {
   "extra": {
    "attempts": 8,
-   "charges_mean": 324.7822608805078,
+   "charges_mean": 310.62589206539064,
    "credit_mean": 9695.986328125,
    "edge_missing": 0,
    "exit_reasons": {
     "lock": 1,
-    "time": 6,
-    "tp": 1
+    "time": 7
    },
    "oow_min": 135046,
    "prereg_valuation": {
@@ -2641,56 +2634,55 @@
     "worst_month_name": "2026-02",
     "worst_trade": -29567.048840001255
    },
-   "return_on_median_margin": 17.95739881145141,
+   "return_on_median_margin": -7.971953329183483,
    "skips": {},
    "stale_min": 17,
    "tail_n": 1,
-   "tail_worst5pct_mean": -4217.655320278433,
+   "tail_worst5pct_mean": -5352.467451690629,
    "trades_with_oow": 8,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -8752.16584396594,
+   -8877.165843965937,
    -4492.22052338249,
-   60330.38737449117,
+   -9107.189799987818,
    1089.6315308131268
   ],
   "min_trades": 10,
-  "p": 0.2001599680063987,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.2001599680063987
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 6021.954067244483,
+   "avg": -2673.36807956539,
    "cap_2pct_max": 182047.890625,
    "cap_2pct_median": 149803.54268749987,
    "days": 8,
    "fit_2pct_1L": 0.0,
-   "gross": 67937.49999999993,
+   "gross": -6687.499999999995,
    "margin_median": 2682.7734374999973,
-   "max_dd": -13244.38636734843,
+   "max_dd": -22476.576167336243,
    "months": 8,
    "months_below_stop": 0,
-   "net": 48175.63253795586,
-   "net_wo_top5": -11903.042250753748,
+   "net": -21386.94463652312,
+   "net_wo_top5": -13500.787354147189,
    "trades": 8,
-   "win_rate": 0.25,
-   "worst_day": -4217.655320278433,
-   "worst_month": -4217.655320278433,
-   "worst_month_name": "2025-12",
-   "worst_trade": -4217.655320278433
+   "win_rate": 0.125,
+   "worst_day": -5352.467451690629,
+   "worst_month": -5352.467451690629,
+   "worst_month_name": "2026-01",
+   "worst_trade": -5352.467451690629
   }
  },
  "o-IC-NATURALGAS-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 364.34101956289066,
+   "charges_mean": 336.0282819326562,
    "credit_mean": 9835.94140625,
    "edge_missing": 0,
    "exit_reasons": {
     "lock": 1,
-    "time": 2,
-    "tp": 1
+    "time": 3
    },
    "low_descriptive": {
     "avg": -1564.0118947326528,
@@ -2734,57 +2726,56 @@
     "worst_month_name": "2026-02",
     "worst_trade": -29567.048840001255
    },
-   "return_on_median_margin": 22.895188145595434,
+   "return_on_median_margin": -4.627636276965193,
    "skips": {},
    "stale_min": 1,
    "tail_n": 1,
-   "tail_worst5pct_mean": -3754.7223482971895,
+   "tail_worst5pct_mean": -5352.467451690629,
    "trades_with_oow": 4,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -2241.3581246387516,
+   -2303.85812463875,
    -274.56520310405705,
-   60330.38737449117,
+   -9107.189799987818,
    null
   ],
   "min_trades": 10,
-  "p": 0.34765234765234765,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.34765234765234765
+   "bootstrap": 1.0,
+   "subset_twin": 0.7342657342657343
   },
   "summary": {
-   "avg": 14453.61601168709,
+   "avg": -2921.4032819326562,
    "cap_2pct_max": 173661.55887500008,
    "cap_2pct_median": 143765.44868749994,
    "days": 4,
    "fit_2pct_1L": 0.0,
-   "gross": 71687.49999999993,
+   "gross": -2937.500000000002,
    "margin_median": 2525.179687499999,
-   "max_dd": -3754.7223482971895,
+   "max_dd": -11685.613127730625,
    "months": 4,
    "months_below_stop": 0,
-   "net": 57814.46404674836,
+   "net": -11685.613127730625,
    "net_wo_top5": 0.0,
    "trades": 4,
-   "win_rate": 0.25,
-   "worst_day": -3754.7223482971895,
-   "worst_month": -3754.7223482971895,
-   "worst_month_name": "2026-02",
-   "worst_trade": -3754.7223482971895
+   "win_rate": 0.0,
+   "worst_day": -5352.467451690629,
+   "worst_month": -5352.467451690629,
+   "worst_month_name": "2026-01",
+   "worst_trade": -5352.467451690629
   }
  },
  "o-IC-NATURALGAS-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 296.4979513281165,
+   "charges_mean": 295.9642952397959,
    "credit_mean": 9373.684736394558,
    "edge_missing": 6,
    "exit_reasons": {
-    "lock": 4,
-    "time": 141,
-    "tp": 2
+    "lock": 2,
+    "time": 145
    },
    "oow_min": 124804,
    "prereg_valuation": {
@@ -2807,22 +2798,22 @@
     "worst_month_name": "2025-12",
     "worst_trade": -54271.10874423345
    },
-   "return_on_median_margin": -106.28246711649886,
+   "return_on_median_margin": -123.6111283588205,
    "skips": {
     "no_minute": 2,
     "no_print": 2
    },
    "stale_min": 168,
    "tail_n": 8,
-   "tail_worst5pct_mean": -4864.261751385506,
+   "tail_worst5pct_mean": -4881.771045376443,
    "trades_with_oow": 147,
    "wait_min_mean": 0.2108843537414966
   },
   "folds": [
-   -105307.89760904624,
-   -103848.21770620902,
-   -54213.24343563594,
-   -39457.62134434186
+   -104800.38914871374,
+   -102630.37416095994,
+   -94306.47415823372,
+   -50463.701432342496
   ],
   "min_trades": 40,
   "p": 1.0,
@@ -2830,54 +2821,53 @@
    "bootstrap": 1.0
   },
   "summary": {
-   "avg": -2060.0474836410413,
+   "avg": -2395.9247544234686,
    "cap_2pct_max": 316743.69525,
    "cap_2pct_median": 156851.89287499982,
    "days": 147,
    "fit_2pct_1L": 0.0,
-   "gross": -67562.50000000001,
+   "gross": -122062.49999999999,
    "margin_median": 2849.265625,
-   "max_dd": -302826.980095233,
+   "max_dd": -352200.9389002499,
    "months": 9,
-   "months_below_stop": 7,
-   "net": -302826.98009523307,
-   "net_wo_top5": -348029.7252463181,
+   "months_below_stop": 8,
+   "net": -352200.9389002499,
+   "net_wo_top5": -352676.88555510587,
    "trades": 147,
-   "win_rate": 0.02040816326530612,
-   "worst_day": -6223.069730972497,
-   "worst_month": -60972.57239251532,
+   "win_rate": 0.006802721088435374,
+   "worst_day": -6285.569730972497,
+   "worst_month": -61035.07239251531,
    "worst_month_name": "2025-12",
-   "worst_trade": -6223.069730972497
+   "worst_trade": -6285.569730972497
   }
  },
  "o-IC-NATURALGAS-D1-HIGH": {
   "extra": {
    "attempts": 111,
-   "charges_mean": 317.73301271053884,
+   "charges_mean": 316.30353163463906,
    "credit_mean": 9619.606950431034,
    "edge_missing": 6,
    "exit_reasons": {
     "lock": 1,
-    "time": 56,
-    "tp": 1
+    "time": 57
    },
    "low_descriptive": {
-    "avg": -2377.765318249852,
+    "avg": -2563.628271886674,
     "cap_2pct_max": 246420.45887499998,
     "cap_2pct_median": 153789.73549999992,
     "days": 53,
     "fit_2pct_1L": 0.0,
-    "gross": -38312.49999999999,
+    "gross": -49562.5,
     "margin_median": 2745.875,
-    "max_dd": -126021.56186724213,
+    "max_dd": -135872.2984099937,
     "months": 6,
     "months_below_stop": 5,
-    "net": -126021.56186724216,
-    "net_wo_top5": -132839.0332949662,
+    "net": -135872.29840999373,
+    "net_wo_top5": -132575.84978811495,
     "trades": 53,
-    "win_rate": 0.03773584905660377,
+    "win_rate": 0.018867924528301886,
     "worst_day": -5450.264763889685,
-    "worst_month": -40260.64027999279,
+    "worst_month": -51266.720367993425,
     "worst_month_name": "2026-03",
     "worst_trade": -5450.264763889685
    },
@@ -2903,55 +2893,55 @@
     "worst_month_name": "2026-01",
     "worst_trade": -54271.10874423345
    },
-   "return_on_median_margin": -44.95535224313633,
+   "return_on_median_margin": -60.06098587239259,
    "skips": {},
    "stale_min": 149,
    "tail_n": 3,
-   "tail_worst5pct_mean": -5129.81921792937,
+   "tail_worst5pct_mean": -5150.652551262704,
    "trades_with_oow": 58,
    "wait_min_mean": 0.4827586206896552
   },
   "folds": [
-   -31317.946840790624,
-   -51488.68373215964,
-   -36699.446664260955,
+   -31380.446840790624,
+   -51488.683732159625,
+   -76792.67738685875,
    null
   ],
   "min_trades": 40,
   "p": 1.0,
   "p_detail": {
    "bootstrap": 1.0,
-   "subset_twin": 0.44655344655344653
+   "subset_twin": 0.7822177822177823
   },
   "summary": {
-   "avg": -2060.4496075381244,
+   "avg": -2752.7897924104996,
    "cap_2pct_max": 289259.4558749999,
    "cap_2pct_median": 149085.49193749996,
    "days": 58,
    "fit_2pct_1L": 0.0,
-   "gross": -9500.000000000031,
+   "gross": -53375.0,
    "margin_median": 2658.328125000002,
-   "max_dd": -119506.07723721121,
+   "max_dd": -159661.80795980894,
    "months": 5,
-   "months_below_stop": 4,
-   "net": -119506.07723721121,
-   "net_wo_top5": -153334.23044639616,
+   "months_below_stop": 5,
+   "net": -159661.80795980897,
+   "net_wo_top5": -157077.32009617647,
    "trades": 58,
-   "win_rate": 0.017241379310344827,
-   "worst_day": -6223.069730972497,
-   "worst_month": -32519.04945939719,
-   "worst_month_name": "2026-02",
-   "worst_trade": -6223.069730972497
+   "win_rate": 0.0,
+   "worst_day": -6285.569730972497,
+   "worst_month": -48964.553206435616,
+   "worst_month_name": "2026-01",
+   "worst_trade": -6285.569730972497
   }
  },
  "o-IC-SILVERM-CY-ALL": {
   "extra": {
    "attempts": 8,
-   "charges_mean": 319.1546051639,
+   "charges_mean": 302.444727076725,
    "credit_mean": 1763.3437500000014,
    "edge_missing": 8011,
    "exit_reasons": {
-    "tp": 1
+    "lock": 1
    },
    "oow_min": 30520,
    "prereg_valuation": {
@@ -2974,19 +2964,19 @@
     "worst_month_name": "2025-11",
     "worst_trade": -19022.28359959735
    },
-   "return_on_median_margin": 11.326348476424544,
+   "return_on_median_margin": -2.0148047031118335,
    "skips": {
     "no_print": 7
    },
    "stale_min": 8,
    "tail_n": 1,
-   "tail_worst5pct_mean": 8343.625394836103,
+   "tail_worst5pct_mean": -1484.218477076724,
    "trades_with_oow": 1,
    "wait_min_mean": 15.0
   },
   "folds": [
    null,
-   8343.625394836103,
+   -1484.218477076724,
    null,
    null
   ],
@@ -2996,34 +2986,34 @@
    "bootstrap": NaN
   },
   "summary": {
-   "avg": 8343.625394836103,
+   "avg": -1484.218477076724,
    "cap_2pct_max": 51999.78857499993,
    "cap_2pct_median": 51999.78857499993,
    "days": 1,
    "fit_2pct_1L": 1.0,
-   "gross": 9685.0,
+   "gross": -287.5,
    "margin_median": 736.6562499999986,
-   "max_dd": -0.0,
+   "max_dd": -1484.218477076724,
    "months": 1,
    "months_below_stop": 0,
-   "net": 8343.625394836103,
+   "net": -1484.218477076724,
    "net_wo_top5": 0.0,
    "trades": 1,
-   "win_rate": 1.0,
-   "worst_day": 8343.625394836103,
-   "worst_month": 8343.625394836103,
+   "win_rate": 0.0,
+   "worst_day": -1484.218477076724,
+   "worst_month": -1484.218477076724,
    "worst_month_name": "2025-11",
-   "worst_trade": 8343.625394836103
+   "worst_trade": -1484.218477076724
   }
  },
  "o-IC-SILVERM-CY-HIGH": {
   "extra": {
    "attempts": 1,
-   "charges_mean": 319.1546051639,
+   "charges_mean": 302.444727076725,
    "credit_mean": 1763.3437500000014,
    "edge_missing": 8011,
    "exit_reasons": {
-    "tp": 1
+    "lock": 1
    },
    "low_descriptive": {
     "avg": null,
@@ -3065,17 +3055,17 @@
     "worst_month_name": "2025-11",
     "worst_trade": -19022.28359959735
    },
-   "return_on_median_margin": 11.326348476424544,
+   "return_on_median_margin": -2.0148047031118335,
    "skips": {},
    "stale_min": 8,
    "tail_n": 1,
-   "tail_worst5pct_mean": 8343.625394836103,
+   "tail_worst5pct_mean": -1484.218477076724,
    "trades_with_oow": 1,
    "wait_min_mean": 15.0
   },
   "folds": [
    null,
-   8343.625394836103,
+   -1484.218477076724,
    null,
    null
   ],
@@ -3086,37 +3076,38 @@
    "subset_twin": 1.0
   },
   "summary": {
-   "avg": 8343.625394836103,
+   "avg": -1484.218477076724,
    "cap_2pct_max": 51999.78857499993,
    "cap_2pct_median": 51999.78857499993,
    "days": 1,
    "fit_2pct_1L": 1.0,
-   "gross": 9685.0,
+   "gross": -287.5,
    "margin_median": 736.6562499999986,
-   "max_dd": -0.0,
+   "max_dd": -1484.218477076724,
    "months": 1,
    "months_below_stop": 0,
-   "net": 8343.625394836103,
+   "net": -1484.218477076724,
    "net_wo_top5": 0.0,
    "trades": 1,
-   "win_rate": 1.0,
-   "worst_day": 8343.625394836103,
-   "worst_month": 8343.625394836103,
+   "win_rate": 0.0,
+   "worst_day": -1484.218477076724,
+   "worst_month": -1484.218477076724,
    "worst_month_name": "2025-11",
-   "worst_trade": 8343.625394836103
+   "worst_trade": -1484.218477076724
   }
  },
  "o-IC-SILVERM-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 264.3102742287739,
-   "credit_mean": 2089.651875,
+   "charges_mean": 256.52265649298926,
+   "credit_mean": 2067.25119047619,
    "edge_missing": 5947,
    "exit_reasons": {
-    "lock": 7,
-    "tp": 15
+    "lock": 13,
+    "time": 4,
+    "tp": 4
    },
-   "oow_min": 38133,
+   "oow_min": 36799,
    "prereg_valuation": {
     "avg": -11681.523729947103,
     "cap_2pct_max": 52443.447575000246,
@@ -3137,78 +3128,78 @@
     "worst_month_name": "2025-11",
     "worst_trade": -31385.86942108391
    },
-   "return_on_median_margin": 220.8166990663132,
+   "return_on_median_margin": -6.632330702173868,
    "skips": {
+    "arb_credit": 1,
     "no_minute": 4,
     "no_print": 125
    },
    "stale_min": 1529,
    "tail_n": 2,
-   "tail_worst5pct_mean": -947.8932024578016,
-   "trades_with_oow": 22,
-   "wait_min_mean": 7.909090909090909
+   "tail_worst5pct_mean": -1636.2559142780383,
+   "trades_with_oow": 21,
+   "wait_min_mean": 8.285714285714286
   },
   "folds": [
-   53897.35817075175,
-   30999.07204621523,
+   2568.0232255035935,
+   -5129.412761856374,
    null,
    null
   ],
   "min_trades": 40,
-  "p": 0.016796640671865627,
+  "p": 0.4999000199960008,
   "p_detail": {
-   "bootstrap": 0.016796640671865627
+   "bootstrap": 0.4999000199960008
   },
   "summary": {
-   "avg": 3858.928646225772,
+   "avg": -121.97093030251338,
    "cap_2pct_max": 52443.447575000246,
-   "cap_2pct_median": 30550.53487749999,
-   "days": 21,
+   "cap_2pct_median": 30833.34376999992,
+   "days": 20,
    "fit_2pct_1L": 1.0,
-   "gross": 103902.5,
-   "margin_median": 384.4656249999998,
-   "max_dd": -956.6582906165258,
+   "gross": 14942.5,
+   "margin_median": 386.1974999999984,
+   "max_dd": -9261.189143907653,
    "months": 5,
    "months_below_stop": 0,
-   "net": 84896.43021696698,
-   "net_wo_top5": 19496.955837316254,
-   "trades": 22,
-   "win_rate": 0.7727272727272727,
-   "worst_day": -956.6582906165266,
-   "worst_month": 6804.407241155476,
-   "worst_month_name": "2025-09",
-   "worst_trade": -956.6582906165266
+   "net": -2561.389536352781,
+   "net_wo_top5": -9727.70917166728,
+   "trades": 21,
+   "win_rate": 0.38095238095238093,
+   "worst_day": -1660.1717114156002,
+   "worst_month": -4183.841565538774,
+   "worst_month_name": "2025-11",
+   "worst_trade": -1660.1717114156002
   }
  },
  "o-IC-SILVERM-D1-HIGH": {
   "extra": {
    "attempts": 8,
-   "charges_mean": 312.0068374979,
+   "charges_mean": 304.8222233594791,
    "credit_mean": 1982.9768749999994,
    "edge_missing": 1208,
    "exit_reasons": {
-    "lock": 2,
-    "tp": 4
+    "lock": 6
    },
    "low_descriptive": {
-    "avg": 16981.596655769335,
+    "avg": -852.4684004174,
     "cap_2pct_max": 41948.30322500005,
     "cap_2pct_median": 32616.903939999986,
     "days": 2,
     "fit_2pct_1L": 1.0,
-    "gross": 36192.5,
+    "gross": 440.0,
     "margin_median": 375.7187499999998,
-    "max_dd": -0.0,
+    "max_dd": -1704.9368008348,
     "months": 2,
     "months_below_stop": 0,
-    "net": 33963.19331153867,
+    "net": -1704.9368008348,
     "net_wo_top5": 0.0,
     "trades": 2,
-    "win_rate": 1.0,
-    "worst_day": 4644.827399159748,
-    "worst_month": 4644.827399159748,
+    "win_rate": 0.0,
+    "worst_day": -1612.3401171404762,
+    "worst_month": -1612.3401171404762,
     "worst_month_name": "2025-11",
-    "worst_trade": 4644.827399159748
+    "worst_trade": -1612.3401171404762
    },
    "oow_min": 15158,
    "pool_with_pct": 8,
@@ -3232,57 +3223,56 @@
     "worst_month_name": "2025-12",
     "worst_trade": -31385.86942108391
    },
-   "return_on_median_margin": 50.89657838321342,
+   "return_on_median_margin": -6.582394027054525,
    "skips": {},
    "stale_min": 321,
    "tail_n": 1,
-   "tail_worst5pct_mean": -939.1281142990766,
+   "tail_worst5pct_mean": -1660.1717114156002,
    "trades_with_oow": 6,
    "wait_min_mean": 10.166666666666666
   },
   "folds": [
-   5428.441827957123,
-   26354.244647055482,
+   -593.3444454409799,
+   -3517.0726447158986,
    null,
    null
   ],
   "min_trades": 40,
-  "p": 0.8801198801198801,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.8801198801198801
+   "bootstrap": 1.0,
+   "subset_twin": 0.45254745254745254
   },
   "summary": {
-   "avg": 5297.114412502101,
+   "avg": -685.0695150261464,
    "cap_2pct_max": 52443.447575000246,
    "cap_2pct_median": 47631.630130000085,
    "days": 6,
    "fit_2pct_1L": 1.0,
-   "gross": 39450.0,
+   "gross": 3185.0,
    "margin_median": 624.4562500000018,
-   "max_dd": -939.1281142990774,
+   "max_dd": -4825.017605254879,
    "months": 3,
    "months_below_stop": 0,
-   "net": 31782.686475012608,
-   "net_wo_top5": -939.1281142990766,
+   "net": -4110.417090156879,
+   "net_wo_top5": -1660.1717114156002,
    "trades": 6,
-   "win_rate": 0.8333333333333334,
-   "worst_day": -939.1281142990766,
-   "worst_month": 5428.441827957123,
-   "worst_month_name": "2025-10",
-   "worst_trade": -939.1281142990766
+   "win_rate": 0.16666666666666666,
+   "worst_day": -1660.1717114156002,
+   "worst_month": -2571.5014483982986,
+   "worst_month_name": "2025-11",
+   "worst_trade": -1660.1717114156002
   }
  },
  "o-IF-CRUDEOIL-CY-ALL": {
   "extra": {
    "attempts": 7,
-   "charges_mean": 331.1364231118857,
+   "charges_mean": 370.41704359091426,
    "credit_mean": 8750.23,
    "edge_missing": 81,
    "exit_reasons": {
-    "lock": 1,
-    "time": 5,
-    "tp": 1
+    "stop": 1,
+    "time": 6
    },
    "oow_min": 63451,
    "prereg_valuation": {
@@ -3305,68 +3295,68 @@
     "worst_month_name": "2026-03",
     "worst_trade": -46650.07497856842
    },
-   "return_on_median_margin": 17.50796035577046,
+   "return_on_median_margin": -9.563459079638335,
    "skips": {},
    "stale_min": 6,
    "tail_n": 1,
-   "tail_worst5pct_mean": -1987.4371964254,
+   "tail_worst5pct_mean": -10515.312142911003,
    "trades_with_oow": 7,
    "wait_min_mean": 0.0
   },
   "folds": [
    -791.5601372596002,
-   -2148.7222848503993,
+   -2256.6298936359985,
    912.8628686702016,
-   25187.124591656546
+   -10515.312142911003
   ],
   "min_trades": 10,
-  "p": 0.0001999600079984003,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 3308.529291173821,
+   "avg": -1807.234186448057,
    "cap_2pct_max": 90418.65376000004,
    "cap_2pct_median": 79565.93616000007,
    "days": 7,
    "fit_2pct_1L": 1.0,
-   "gross": 34019.99999999995,
+   "gross": 1680.0000000000011,
    "margin_median": 1322.8100000000013,
-   "max_dd": -4025.149370063399,
+   "max_dd": -13735.5062530898,
    "months": 7,
    "months_below_stop": 0,
-   "net": 23159.705038216747,
-   "net_wo_top5": -3863.8642816384,
+   "net": -12650.6393051364,
+   "net_wo_top5": -12502.749339336404,
    "trades": 7,
-   "win_rate": 0.5714285714285714,
-   "worst_day": -1987.4371964254,
-   "worst_month": -1987.4371964254,
-   "worst_month_name": "2026-01",
-   "worst_trade": -1987.4371964254
+   "win_rate": 0.42857142857142855,
+   "worst_day": -10515.312142911003,
+   "worst_month": -10515.312142911003,
+   "worst_month_name": "2026-03",
+   "worst_trade": -10515.312142911003
   }
  },
  "o-IF-CRUDEOIL-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 439.6432082954,
+   "charges_mean": 535.6354531512667,
    "credit_mean": 8939.533333333331,
    "edge_missing": 81,
    "exit_reasons": {
-    "time": 2,
-    "tp": 1
+    "stop": 1,
+    "time": 2
    },
    "low_descriptive": {
-    "avg": -716.2407616167998,
+    "avg": -752.2099645453328,
     "cap_2pct_max": 90418.65376000004,
     "cap_2pct_median": 85727.77971999999,
     "days": 3,
     "fit_2pct_1L": 1.0,
-    "gross": -139.99999999999636,
+    "gross": -499.99999999999716,
     "margin_median": 1450.33,
-    "max_dd": -2693.7995812231993,
+    "max_dd": -2801.7071900087994,
     "months": 3,
     "months_below_stop": 0,
-    "net": -2148.7222848503993,
+    "net": -2256.6298936359985,
     "net_wo_top5": 0.0,
     "trades": 3,
     "win_rate": 0.3333333333333333,
@@ -3397,11 +3387,11 @@
     "worst_month_name": "2026-03",
     "worst_trade": -46650.07497856842
    },
-   "return_on_median_margin": 22.953105960215833,
+   "return_on_median_margin": -10.876843094190379,
    "skips": {},
    "stale_min": 0,
    "tail_n": 1,
-   "tail_worst5pct_mean": -1876.4270852129996,
+   "tail_worst5pct_mean": -10515.312142911003,
    "trades_with_oow": 3,
    "wait_min_mean": 0.0
   },
@@ -3409,45 +3399,46 @@
    -1876.4270852129996,
    null,
    912.8628686702016,
-   25187.124591656546
+   -10515.312142911003
   ],
   "min_trades": 10,
-  "p": 0.18681318681318682,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.18681318681318682
+   "bootstrap": 1.0,
+   "subset_twin": 0.7012987012987013
   },
   "summary": {
-   "avg": 8074.520125037915,
+   "avg": -3826.292119817934,
    "cap_2pct_max": 81062.80417999996,
    "cap_2pct_median": 67932.76737999993,
    "days": 3,
    "fit_2pct_1L": 1.0,
-   "gross": 32549.999999999945,
+   "gross": 569.9999999999959,
    "margin_median": 1055.3499999999985,
-   "max_dd": -1876.4270852129996,
+   "max_dd": -11478.876359453801,
    "months": 3,
    "months_below_stop": 0,
-   "net": 24223.560375113746,
+   "net": -11478.876359453801,
    "net_wo_top5": 0.0,
    "trades": 3,
-   "win_rate": 0.6666666666666666,
-   "worst_day": -1876.4270852129996,
-   "worst_month": -1876.4270852129996,
-   "worst_month_name": "2025-10",
-   "worst_trade": -1876.4270852129996
+   "win_rate": 0.3333333333333333,
+   "worst_day": -10515.312142911003,
+   "worst_month": -10515.312142911003,
+   "worst_month_name": "2026-03",
+   "worst_trade": -10515.312142911003
   }
  },
  "o-IF-CRUDEOIL-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 329.9161286698161,
+   "charges_mean": 330.43397782588727,
    "credit_mean": 8509.787248322149,
    "edge_missing": 81,
    "exit_reasons": {
-    "lock": 2,
-    "time": 139,
-    "tp": 8
+    "lock": 1,
+    "stop": 1,
+    "time": 146,
+    "tp": 1
    },
    "oow_min": 63019,
    "prereg_valuation": {
@@ -3470,75 +3461,77 @@
     "worst_month_name": "2026-03",
     "worst_trade": -103345.57373066258
    },
-   "return_on_median_margin": -32.11196179516059,
+   "return_on_median_margin": -131.92935799725177,
    "skips": {
     "no_minute": 2
    },
    "stale_min": 20,
    "tail_n": 8,
-   "tail_worst5pct_mean": -3947.0747070027287,
+   "tail_worst5pct_mean": -5172.4285127346975,
    "trades_with_oow": 111,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -42788.070193387,
-   -15621.659210705033,
-   -47283.75513896101,
-   61492.01137125036
+   -42570.72531417097,
+   -15308.03197120103,
+   -47293.75513896102,
+   -76425.61027172426
   ],
   "min_trades": 40,
-  "p": 0.734253149370126,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.734253149370126
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": -296.65418236109184,
+   "avg": -1218.7793469534047,
    "cap_2pct_max": 161718.68060000014,
    "cap_2pct_median": 82648.13166000007,
-   "days": 147,
+   "days": 149,
    "fit_2pct_1L": 0.7181208053691275,
-   "gross": 136100.0,
+   "gross": -5050.000000000016,
    "margin_median": 1376.4800000000014,
-   "max_dd": -115765.7893794465,
+   "max_dd": -181598.1226960573,
    "months": 9,
-   "months_below_stop": 4,
-   "net": -44201.47317180268,
-   "net_wo_top5": -135383.73773118586,
+   "months_below_stop": 5,
+   "net": -181598.12269605728,
+   "net_wo_top5": -190250.2134648515,
    "trades": 149,
-   "win_rate": 0.08053691275167785,
-   "worst_day": -4776.821967565773,
-   "worst_month": -23746.079344861813,
-   "worst_month_name": "2026-02",
-   "worst_trade": -4776.821967565773
+   "win_rate": 0.03355704697986577,
+   "worst_day": -9810.677771580587,
+   "worst_month": -74604.56032162347,
+   "worst_month_name": "2026-03",
+   "worst_trade": -9810.677771580587
   }
  },
  "o-IF-CRUDEOIL-D1-HIGH": {
   "extra": {
    "attempts": 113,
-   "charges_mean": 413.00333814009855,
+   "charges_mean": 414.17664624419706,
    "credit_mean": 8583.307462686567,
    "edge_missing": 81,
    "exit_reasons": {
-    "time": 59,
-    "tp": 8
+    "lock": 1,
+    "stop": 1,
+    "time": 64,
+    "tp": 1
    },
    "low_descriptive": {
-    "avg": -751.2207044058662,
+    "avg": -744.4027209383875,
     "cap_2pct_max": 161718.68060000014,
     "cap_2pct_median": 89891.73055000014,
     "days": 46,
     "fit_2pct_1L": 0.6521739130434783,
-    "gross": -4659.999999999998,
+    "gross": -4539.999999999998,
     "margin_median": 1539.1300000000028,
-    "max_dd": -34556.152402669846,
+    "max_dd": -34242.52516316583,
     "months": 5,
     "months_below_stop": 0,
-    "net": -34556.152402669846,
-    "net_wo_top5": -34605.66878309384,
+    "net": -34242.525163165825,
+    "net_wo_top5": -34292.041543589825,
     "trades": 46,
     "win_rate": 0.043478260869565216,
     "worst_day": -2424.4292859562015,
-    "worst_month": -11705.031122369812,
+    "worst_month": -11705.03112236981,
     "worst_month_name": "2025-11",
     "worst_trade": -2424.4292859562015
    },
@@ -3564,57 +3557,57 @@
     "worst_month_name": "2026-03",
     "worst_trade": -103345.57373066258
    },
-   "return_on_median_margin": 13.008460654462844,
+   "return_on_median_margin": -96.9124198458404,
    "skips": {},
    "stale_min": 13,
    "tail_n": 4,
-   "tail_worst5pct_mean": -4486.1821108221975,
+   "tail_worst5pct_mean": -6055.06237911084,
    "trades_with_oow": 58,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -10832.86034787322,
-   6923.836078207594,
-   -41260.10075697139,
-   61492.01137125036
+   -10832.860347873206,
+   6923.836078207596,
+   -41270.10075697142,
+   -76425.61027172426
   ],
   "min_trades": 40,
-  "p": 0.3639272145570886,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.3639272145570886,
-   "subset_twin": 0.17082917082917082
+   "bootstrap": 1.0,
+   "subset_twin": 1.0
   },
   "summary": {
-   "avg": 243.62516932258706,
+   "avg": -1814.996049229273,
    "cap_2pct_max": 160423.35769999868,
    "cap_2pct_median": 80203.93319999984,
-   "days": 65,
+   "days": 67,
    "fit_2pct_1L": 0.7014925373134329,
-   "gross": 141179.99999999997,
+   "gross": -230.00000000001864,
    "margin_median": 1254.7899999999918,
-   "max_dd": -55241.42986303044,
+   "max_dd": -121604.7352983613,
    "months": 6,
-   "months_below_stop": 2,
-   "net": 16322.886344613333,
-   "net_wo_top5": -74859.37821476985,
+   "months_below_stop": 3,
+   "net": -121604.7352983613,
+   "net_wo_top5": -128133.07478441448,
    "trades": 67,
-   "win_rate": 0.11940298507462686,
-   "worst_day": -4776.821967565773,
-   "worst_month": -21574.86368379741,
-   "worst_month_name": "2026-02",
-   "worst_trade": -4776.821967565773
+   "win_rate": 0.014925373134328358,
+   "worst_day": -9810.677771580587,
+   "worst_month": -74604.56032162347,
+   "worst_month_name": "2026-03",
+   "worst_trade": -9810.677771580587
   }
  },
  "o-IF-CRUDEOILM-CY-ALL": {
   "extra": {
    "attempts": 7,
-   "charges_mean": 217.6511699715143,
+   "charges_mean": 208.7442645617,
    "credit_mean": 877.4716428571429,
    "edge_missing": 125,
    "exit_reasons": {
     "lock": 3,
-    "time": 3,
-    "tp": 1
+    "stop": 1,
+    "time": 3
    },
    "oow_min": 64971,
    "prereg_valuation": {
@@ -3637,68 +3630,68 @@
     "worst_month_name": "2026-03",
     "worst_trade": -4362.561947871788
    },
-   "return_on_median_margin": 713.1248032362174,
+   "return_on_median_margin": -21.05176366836374,
    "skips": {},
    "stale_min": 70,
    "tail_n": 1,
-   "tail_worst5pct_mean": -369.55177725036003,
+   "tail_worst5pct_mean": -1331.8870131193298,
    "trades_with_oow": 7,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -305.15771214202965,
-   -683.9524321974808,
+   -236.6999328665295,
+   -683.9524321974809,
    -322.15447374856006,
-   88528.5674282875
+   -1331.8870131193298
   ],
   "min_trades": 10,
-  "p": 0.0001999600079984003,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 12459.614687171346,
+   "avg": -367.81340741884287,
    "cap_2pct_max": 17575.993853000004,
    "cap_2pct_median": 15962.768685000023,
    "days": 7,
    "fit_2pct_1L": 1.0,
-   "gross": 90875.5,
+   "gross": 250.99999999999955,
    "margin_median": 122.30300000000045,
-   "max_dd": -1311.2646180880706,
+   "max_dd": -2574.6938519319,
    "months": 7,
    "months_below_stop": 0,
-   "net": 87217.30281019943,
-   "net_wo_top5": -691.70625099892,
+   "net": -2574.6938519319,
+   "net_wo_top5": -1701.4387903696897,
    "trades": 7,
-   "win_rate": 0.14285714285714285,
-   "worst_day": -369.55177725036003,
-   "worst_month": -369.55177725036003,
-   "worst_month_name": "2026-01",
-   "worst_trade": -369.55177725036003
+   "win_rate": 0.0,
+   "worst_day": -1331.8870131193298,
+   "worst_month": -1331.8870131193298,
+   "worst_month_name": "2026-03",
+   "worst_trade": -1331.8870131193298
   }
  },
  "o-IF-CRUDEOILM-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 248.36895385652,
+   "charges_mean": 227.58617456695333,
    "credit_mean": 894.4476666666669,
    "edge_missing": 125,
    "exit_reasons": {
     "lock": 2,
-    "tp": 1
+    "stop": 1
    },
    "low_descriptive": {
-    "avg": -227.98414406582694,
+    "avg": -227.98414406582697,
     "cap_2pct_max": 17575.993853000004,
     "cap_2pct_median": 17066.461593000015,
     "days": 3,
     "fit_2pct_1L": 1.0,
     "gross": 9.500000000000028,
     "margin_median": 144.8720000000003,
-    "max_dd": -683.9524321974808,
+    "max_dd": -683.9524321974809,
     "months": 3,
     "months_below_stop": 0,
-    "net": -683.9524321974808,
+    "net": -683.9524321974809,
     "net_wo_top5": 0.0,
     "trades": 3,
     "win_rate": 0.0,
@@ -3729,59 +3722,59 @@
     "worst_month_name": "2026-03",
     "worst_trade": -4362.561947871788
    },
-   "return_on_median_margin": 781.8689855680146,
+   "return_on_median_margin": -16.296285477971704,
    "skips": {},
    "stale_min": 18,
    "tail_n": 1,
-   "tail_worst5pct_mean": -322.15447374856006,
+   "tail_worst5pct_mean": -1331.8870131193298,
    "trades_with_oow": 3,
    "wait_min_mean": 0.0
   },
   "folds": [
-   -247.71581610847,
+   -179.25803683296985,
    null,
    -322.15447374856006,
-   88528.5674282875
+   -1331.8870131193298
   ],
   "min_trades": 10,
-  "p": 0.32367632367632365,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.32367632367632365
+   "bootstrap": 1.0,
+   "subset_twin": 0.7912087912087912
   },
   "summary": {
-   "avg": 29319.565712810156,
+   "avg": -611.0998412336199,
    "cap_2pct_max": 16946.27585099999,
    "cap_2pct_median": 15653.526441999997,
    "days": 3,
    "fit_2pct_1L": 1.0,
-   "gross": 90700.5,
+   "gross": 75.99999999999937,
    "margin_median": 112.49799999999993,
-   "max_dd": -569.87028985703,
+   "max_dd": -1833.2995237008597,
    "months": 3,
    "months_below_stop": 0,
-   "net": 87958.69713843046,
+   "net": -1833.2995237008597,
    "net_wo_top5": 0.0,
    "trades": 3,
-   "win_rate": 0.3333333333333333,
-   "worst_day": -322.15447374856006,
-   "worst_month": -322.15447374856006,
-   "worst_month_name": "2026-02",
-   "worst_trade": -322.15447374856006
+   "win_rate": 0.0,
+   "worst_day": -1331.8870131193298,
+   "worst_month": -1331.8870131193298,
+   "worst_month_name": "2026-03",
+   "worst_trade": -1331.8870131193298
   }
  },
  "o-IF-CRUDEOILM-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 204.01718597536043,
-   "credit_mean": 857.8400906040267,
-   "edge_missing": 125,
+   "charges_mean": 202.7243818181988,
+   "credit_mean": 855.5749695945946,
+   "edge_missing": 0,
    "exit_reasons": {
-    "lock": 4,
-    "time": 140,
-    "tp": 5
+    "lock": 2,
+    "time": 145,
+    "tp": 1
    },
-   "oow_min": 63929,
+   "oow_min": 60882,
    "prereg_valuation": {
     "avg": -1704.5092490874204,
     "cap_2pct_max": 24126.162476999998,
@@ -3802,81 +3795,82 @@
     "worst_month_name": "2026-03",
     "worst_trade": -10607.05419293527
    },
-   "return_on_median_margin": 806.5495218365636,
+   "return_on_median_margin": -314.7369742014948,
    "skips": {
+    "arb_credit": 1,
     "no_minute": 2
    },
-   "stale_min": 114,
+   "stale_min": 100,
    "tail_n": 8,
-   "tail_worst5pct_mean": -580.3473310926452,
-   "trades_with_oow": 110,
-   "wait_min_mean": 0.053691275167785234
+   "tail_worst5pct_mean": -606.8153465295227,
+   "trades_with_oow": 109,
+   "wait_min_mean": 0.04054054054054054
   },
   "folds": [
-   -10782.320902880674,
-   -9024.993548230192,
-   -10816.131126434346,
-   138214.3288672165
+   -12640.846716650614,
+   -8987.185865856922,
+   -10817.131126434346,
+   -9774.204800151543
   ],
   "min_trades": 40,
-  "p": 0.22955408918216358,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.22955408918216358
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 722.086465031351,
+   "avg": -285.2660034398204,
    "cap_2pct_max": 24126.162476999998,
-   "cap_2pct_median": 16766.302552,
-   "days": 149,
+   "cap_2pct_median": 16775.413225,
+   "days": 148,
    "fit_2pct_1L": 1.0,
-   "gross": 152879.0,
-   "margin_median": 133.39650000000017,
-   "max_dd": -32249.79418987864,
+   "gross": -136.49999999999795,
+   "margin_median": 134.14175000000017,
+   "max_dd": -42219.36850909342,
    "months": 9,
    "months_below_stop": 0,
-   "net": 107590.8832896713,
-   "net_wo_top5": -40829.50715969705,
-   "trades": 149,
-   "win_rate": 0.03355704697986577,
-   "worst_day": -622.3921564552907,
-   "worst_month": -5357.25218309322,
-   "worst_month_name": "2026-01",
-   "worst_trade": -622.3921564552907
+   "net": -42219.368509093416,
+   "net_wo_top5": -42284.25608866637,
+   "trades": 148,
+   "win_rate": 0.006756756756756757,
+   "worst_day": -698.4326276246504,
+   "worst_month": -9595.117334758852,
+   "worst_month_name": "2026-03",
+   "worst_trade": -698.4326276246504
   }
  },
  "o-IF-CRUDEOILM-D1-HIGH": {
   "extra": {
-   "attempts": 113,
-   "charges_mean": 213.35546492267835,
-   "credit_mean": 869.4198134328358,
-   "edge_missing": 125,
+   "attempts": 112,
+   "charges_mean": 210.59965632102274,
+   "credit_mean": 864.5159015151515,
+   "edge_missing": 0,
    "exit_reasons": {
-    "lock": 1,
-    "time": 61,
-    "tp": 5
+    "lock": 2,
+    "time": 63,
+    "tp": 1
    },
    "low_descriptive": {
-    "avg": -249.26462513872522,
+    "avg": -248.4427190001759,
     "cap_2pct_max": 24126.162476999998,
     "cap_2pct_median": 17537.267864000016,
     "days": 46,
     "fit_2pct_1L": 1.0,
-    "gross": -509.4999999999998,
+    "gross": -516.4999999999999,
     "margin_median": 154.43925000000036,
-    "max_dd": -11466.172756381362,
+    "max_dd": -11428.36507400809,
     "months": 5,
     "months_below_stop": 0,
-    "net": -11466.17275638136,
-    "net_wo_top5": -10619.24106755156,
+    "net": -11428.365074008092,
+    "net_wo_top5": -10581.433385178292,
     "trades": 46,
     "win_rate": 0.0,
     "worst_day": -397.1168160953898,
-    "worst_month": -4546.446488969539,
+    "worst_month": -4508.63880659627,
     "worst_month_name": "2025-12",
     "worst_trade": -397.1168160953898
    },
-   "oow_min": 49264,
-   "pool_with_pct": 113,
+   "oow_min": 46217,
+   "pool_with_pct": 112,
    "prereg_valuation": {
     "avg": -3039.4287129853547,
     "cap_2pct_max": 23352.250918000005,
@@ -3897,45 +3891,45 @@
     "worst_month_name": "2026-03",
     "worst_trade": -10607.05419293527
    },
-   "return_on_median_margin": 1015.9109248030464,
+   "return_on_median_margin": -173.16523326188167,
    "skips": {},
-   "stale_min": 33,
+   "stale_min": 19,
    "tail_n": 4,
-   "tail_worst5pct_mean": -601.9600330352575,
-   "trades_with_oow": 55,
-   "wait_min_mean": 0.029850746268656716
+   "tail_worst5pct_mean": -634.3843062045077,
+   "trades_with_oow": 54,
+   "wait_min_mean": 0.0
   },
   "folds": [
-   -931.1682875392711,
+   -2551.1682875392708,
    -507.2480757074298,
-   -9270.964153789257,
-   138214.3288672165
+   -9271.964153789257,
+   -9774.204800151543
   ],
   "min_trades": 40,
-  "p": 0.21975604879024196,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.21975604879024196,
-   "subset_twin": 0.18281718281718282
+   "bootstrap": 1.0,
+   "subset_twin": 1.0
   },
   "summary": {
-   "avg": 1903.0589305997096,
+   "avg": -334.91795935132575,
    "cap_2pct_max": 23352.250918000005,
-   "cap_2pct_median": 16532.105989999964,
-   "days": 67,
+   "cap_2pct_median": 16561.251165999984,
+   "days": 66,
    "fit_2pct_1L": 1.0,
-   "gross": 153119.0,
-   "margin_median": 125.50799999999981,
-   "max_dd": -12335.72912936939,
+   "gross": 379.00000000000324,
+   "margin_median": 127.65024999999991,
+   "max_dd": -22104.585317187502,
    "months": 6,
    "months_below_stop": 0,
-   "net": 127504.94835018054,
-   "net_wo_top5": -20915.442099187796,
-   "trades": 67,
-   "win_rate": 0.07462686567164178,
-   "worst_day": -622.3921564552907,
-   "worst_month": -4485.37996775999,
-   "worst_month_name": "2026-01",
-   "worst_trade": -622.3921564552907
+   "net": -22104.5853171875,
+   "net_wo_top5": -21997.15695343707,
+   "trades": 66,
+   "win_rate": 0.015151515151515152,
+   "worst_day": -698.4326276246504,
+   "worst_month": -9595.117334758852,
+   "worst_month_name": "2026-03",
+   "worst_trade": -698.4326276246504
   }
  },
  "o-IF-GOLDM-CY-ALL": {
@@ -4069,12 +4063,12 @@
  "o-IF-GOLDM-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 494.374784343275,
+   "charges_mean": 493.88507224557503,
    "credit_mean": 7012.341250000001,
    "edge_missing": 1376,
    "exit_reasons": {
     "lock": 2,
-    "tp": 2
+    "time": 2
    },
    "oow_min": 7395,
    "prereg_valuation": {
@@ -4097,47 +4091,47 @@
     "worst_month_name": "2026-03",
     "worst_trade": -66963.80732820187
    },
-   "return_on_median_margin": 9.93436967850386,
+   "return_on_median_margin": -9.114551536579535,
    "skips": {
     "no_minute": 2,
     "no_print": 145
    },
    "stale_min": 7,
    "tail_n": 1,
-   "tail_worst5pct_mean": -2869.653121879,
+   "tail_worst5pct_mean": -2861.5443048501993,
    "trades_with_oow": 4,
    "wait_min_mean": 5.5
   },
   "folds": [
-   2377.3946634677004,
+   -1071.722566913701,
    null,
    null,
-   7694.541199159212
+   -8169.042722068595
   ],
   "min_trades": 40,
-  "p": 0.0001999600079984003,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 1.0
   },
   "summary": {
-   "avg": 2517.9839656567283,
+   "avg": -2310.191322245574,
    "cap_2pct_max": 92163.39377000001,
    "cap_2pct_median": 79692.37622999985,
-   "days": 4,
+   "days": 3,
    "fit_2pct_1L": 1.0,
-   "gross": 19210.0,
+   "gross": -125.0,
    "margin_median": 1013.8474999999971,
-   "max_dd": -2869.6531218790005,
-   "months": 2,
+   "max_dd": -9240.765288982297,
+   "months": 3,
    "months_below_stop": 0,
-   "net": 10071.935862626913,
+   "net": -9240.765288982297,
    "net_wo_top5": 0.0,
    "trades": 4,
-   "win_rate": 0.75,
-   "worst_day": -2869.653121879,
-   "worst_month": 2377.3946634677004,
-   "worst_month_name": "2025-09",
-   "worst_trade": -2869.653121879
+   "win_rate": 0.0,
+   "worst_day": -5307.498417218396,
+   "worst_month": -5307.498417218396,
+   "worst_month_name": "2026-03",
+   "worst_trade": -2861.5443048501993
   }
  },
  "o-IF-GOLDM-D1-HIGH": {
@@ -4216,12 +4210,12 @@
  "o-IF-NATGASMINI-CY-ALL": {
   "extra": {
    "attempts": 8,
-   "charges_mean": 217.39196564926561,
+   "charges_mean": 216.16363811326562,
    "credit_mean": 2180.0726562499995,
    "edge_missing": 0,
    "exit_reasons": {
-    "time": 6,
-    "tp": 2
+    "time": 7,
+    "tp": 1
    },
    "oow_min": 129256,
    "prereg_valuation": {
@@ -4244,68 +4238,67 @@
     "worst_month_name": "2026-02",
     "worst_trade": -6259.571414112626
    },
-   "return_on_median_margin": 14.486261728172446,
+   "return_on_median_margin": -6.54108310848408,
    "skips": {},
    "stale_min": 81,
    "tail_n": 1,
-   "tail_worst5pct_mean": -736.4223639252518,
+   "tail_worst5pct_mean": -955.0347101838772,
    "trades_with_oow": 8,
    "wait_min_mean": 0.0
   },
   "folds": [
-   913.9868494713746,
+   501.48684947137485,
    -834.3279481893753,
-   4572.816305602875,
-   -52.67968207900054
+   -1691.457074109129,
+   -52.67968207900009
   ],
   "min_trades": 10,
-  "p": 0.0001999600079984003,
+  "p": 0.551489702059588,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 0.551489702059588
   },
   "summary": {
-   "avg": 574.9744406007342,
+   "avg": -259.62223186326617,
    "cap_2pct_max": 28892.836100000077,
    "cap_2pct_median": 26767.373087500062,
    "days": 8,
    "fit_2pct_1L": 1.0,
-   "gross": 8887.500000000007,
+   "gross": 1674.9999999999993,
    "margin_median": 317.5281250000012,
-   "max_dd": -2007.1374170198749,
+   "max_dd": -3763.774173208004,
    "months": 8,
    "months_below_stop": 0,
-   "net": 4599.795524805873,
-   "net_wo_top5": -2044.8593380838777,
+   "net": -2076.9778549061293,
+   "net_wo_top5": -2408.68336591788,
    "trades": 8,
-   "win_rate": 0.25,
-   "worst_day": -736.4223639252518,
-   "worst_month": -736.4223639252518,
-   "worst_month_name": "2026-02",
-   "worst_trade": -736.4223639252518
+   "win_rate": 0.125,
+   "worst_day": -955.0347101838772,
+   "worst_month": -955.0347101838772,
+   "worst_month_name": "2026-01",
+   "worst_trade": -955.0347101838772
   }
  },
  "o-IF-NATGASMINI-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 223.82259681459374,
+   "charges_mean": 221.36594174259375,
    "credit_mean": 2183.515624999999,
    "edge_missing": 0,
    "exit_reasons": {
-    "time": 3,
-    "tp": 1
+    "time": 4
    },
    "low_descriptive": {
-    "avg": -384.95298694387566,
+    "avg": -384.95298694387543,
     "cap_2pct_max": 26673.81102500002,
     "cap_2pct_median": 25772.961837500032,
     "days": 2,
     "fit_2pct_1L": 1.0,
     "gross": 187.49999999999957,
     "margin_median": 296.69062500000064,
-    "max_dd": -769.9059738877513,
+    "max_dd": -769.9059738877509,
     "months": 2,
     "months_below_stop": 0,
-    "net": -769.9059738877513,
+    "net": -769.9059738877509,
     "net_wo_top5": 0.0,
     "trades": 2,
     "win_rate": 0.0,
@@ -4336,57 +4329,55 @@
     "worst_month_name": "2026-02",
     "worst_trade": -6259.571414112626
    },
-   "return_on_median_margin": 12.422014790353874,
+   "return_on_median_margin": -7.663831717740668,
    "skips": {},
    "stale_min": 43,
    "tail_n": 1,
-   "tail_worst5pct_mean": -736.4223639252518,
+   "tail_worst5pct_mean": -955.0347101838772,
    "trades_with_oow": 4,
    "wait_min_mean": 0.0
   },
   "folds": [
    -581.5987864806245,
    -117.10165638062446,
-   4572.816305602875,
+   -1691.457074109129,
    null
   ],
   "min_trades": 10,
-  "p": 0.4385614385614386,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.4385614385614386
+   "bootstrap": 1.0,
+   "subset_twin": 0.7882117882117882
   },
   "summary": {
-   "avg": 968.5289656854064,
+   "avg": -597.5393792425946,
    "cap_2pct_max": 28892.836100000077,
    "cap_2pct_median": 26421.115412500047,
    "days": 4,
    "fit_2pct_1L": 1.0,
-   "gross": 6512.500000000008,
+   "gross": -312.50000000000045,
    "margin_median": 311.8750000000009,
-   "max_dd": -736.4223639252518,
+   "max_dd": -2390.1575169703783,
    "months": 4,
    "months_below_stop": 0,
-   "net": 3874.1158627416257,
+   "net": -2390.1575169703783,
    "net_wo_top5": 0.0,
    "trades": 4,
-   "win_rate": 0.25,
-   "worst_day": -736.4223639252518,
-   "worst_month": -736.4223639252518,
-   "worst_month_name": "2026-02",
-   "worst_trade": -736.4223639252518
+   "win_rate": 0.0,
+   "worst_day": -955.0347101838772,
+   "worst_month": -955.0347101838772,
+   "worst_month_name": "2026-01",
+   "worst_trade": -955.0347101838772
   }
  },
  "o-IF-NATGASMINI-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 213.61913078563268,
+   "charges_mean": 213.59065275057105,
    "credit_mean": 2147.363613013699,
    "edge_missing": 180,
    "exit_reasons": {
-    "lock": 1,
-    "time": 143,
-    "tp": 2
+    "time": 146
    },
    "oow_min": 75075,
    "prereg_valuation": {
@@ -4409,22 +4400,22 @@
     "worst_month_name": "2025-12",
     "worst_trade": -14093.965189764249
    },
-   "return_on_median_margin": -201.58279445296685,
+   "return_on_median_margin": -216.21906951986261,
    "skips": {
     "no_minute": 2,
     "no_print": 3
    },
    "stale_min": 186,
    "tail_n": 8,
-   "tail_worst5pct_mean": -828.6081564027966,
+   "tail_worst5pct_mean": -840.3604807463903,
    "trades_with_oow": 116,
    "wait_min_mean": 0.02054794520547945
   },
   "folds": [
    -22647.297900056008,
-   -17818.158876553494,
-   -16261.690630406492,
-   -10150.464437686383
+   -20106.823084570624,
+   -18828.793629270374,
+   -10150.46443768638
   ],
   "min_trades": 40,
   "p": 1.0,
@@ -4432,54 +4423,52 @@
    "bootstrap": 1.0
   },
   "summary": {
-   "avg": -458.06583455275603,
+   "avg": -491.324514051941,
    "cap_2pct_max": 45379.21002499997,
    "cap_2pct_median": 27450.902474999963,
    "days": 146,
    "fit_2pct_1L": 1.0,
-   "gross": -3250.0000000000027,
+   "gross": -8775.00000000001,
    "margin_median": 331.7624999999998,
-   "max_dd": -66877.61184470235,
+   "max_dd": -71733.37905158338,
    "months": 9,
    "months_below_stop": 0,
-   "net": -66877.61184470238,
-   "net_wo_top5": -69586.65622396552,
+   "net": -71733.37905158338,
+   "net_wo_top5": -70910.89212492714,
    "trades": 146,
-   "win_rate": 0.0136986301369863,
+   "win_rate": 0.0,
    "worst_day": -949.3716758684993,
-   "worst_month": -10175.47524144813,
-   "worst_month_name": "2026-03",
+   "worst_month": -11156.296418154248,
+   "worst_month_name": "2025-12",
    "worst_trade": -949.3716758684993
   }
  },
  "o-IF-NATGASMINI-D1-HIGH": {
   "extra": {
    "attempts": 110,
-   "charges_mean": 217.18313995864696,
+   "charges_mean": 217.11019621971712,
    "credit_mean": 2165.396600877193,
    "edge_missing": 180,
    "exit_reasons": {
-    "lock": 1,
-    "time": 54,
-    "tp": 2
+    "time": 57
    },
    "low_descriptive": {
-    "avg": -511.4865652032408,
+    "avg": -511.7224142598444,
     "cap_2pct_max": 35570.96357500004,
     "cap_2pct_median": 26928.986600000077,
     "days": 53,
     "fit_2pct_1L": 1.0,
     "gross": -3375.000000000007,
     "margin_median": 314.85000000000036,
-    "max_dd": -27108.787955771764,
+    "max_dd": -27121.28795577175,
     "months": 6,
     "months_below_stop": 0,
-    "net": -27108.78795577176,
-    "net_wo_top5": -25852.981239814882,
+    "net": -27121.287955771753,
+    "net_wo_top5": -25865.48123981488,
     "trades": 53,
     "win_rate": 0.0,
     "worst_day": -804.4502241883747,
-    "worst_month": -10175.47524144813,
+    "worst_month": -10175.475241448126,
     "worst_month_name": "2026-03",
     "worst_trade": -804.4502241883747
    },
@@ -4505,43 +4494,43 @@
     "worst_month_name": "2026-01",
     "worst_trade": -14093.965189764249
    },
-   "return_on_median_margin": -81.98180602075354,
+   "return_on_median_margin": -97.22778762736726,
    "skips": {},
    "stale_min": 124,
    "tail_n": 3,
-   "tail_worst5pct_mean": -879.3777760846243,
+   "tail_worst5pct_mean": -895.1630388752911,
    "trades_with_oow": 51,
    "wait_min_mean": 0.05263157894736842
   },
   "folds": [
    -5287.615603710246,
-   -8028.3042827802465,
-   -12727.650341152368,
+   -10304.468490797375,
+   -15294.753340016248,
    null
   ],
   "min_trades": 40,
   "p": 1.0,
   "p_detail": {
    "bootstrap": 1.0,
-   "subset_twin": 0.23576423576423577
+   "subset_twin": 0.8291708291708292
   },
   "summary": {
-   "avg": -456.90474083583956,
+   "avg": -541.8743409565591,
    "cap_2pct_max": 42382.362149999986,
    "cap_2pct_median": 26947.924449999966,
    "days": 57,
    "fit_2pct_1L": 1.0,
-   "gross": 1262.5000000000077,
+   "gross": -4262.499999999998,
    "margin_median": 317.6749999999997,
-   "max_dd": -26043.570227642853,
+   "max_dd": -30886.83743452386,
    "months": 5,
    "months_below_stop": 0,
-   "net": -26043.570227642856,
-   "net_wo_top5": -28402.504358789374,
+   "net": -30886.83743452387,
+   "net_wo_top5": -29490.82393798637,
    "trades": 57,
-   "win_rate": 0.03508771929824561,
+   "win_rate": 0.0,
    "worst_day": -949.3716758684993,
-   "worst_month": -7145.601720113113,
+   "worst_month": -9712.704718976993,
    "worst_month_name": "2026-01",
    "worst_trade": -949.3716758684993
   }
@@ -4549,12 +4538,12 @@
  "o-IF-NATURALGAS-CY-ALL": {
   "extra": {
    "attempts": 8,
-   "charges_mean": 341.02368059335936,
+   "charges_mean": 326.1745482978125,
    "credit_mean": 10849.7890625,
    "edge_missing": 0,
    "exit_reasons": {
-    "time": 6,
-    "tp": 2
+    "time": 7,
+    "tp": 1
    },
    "oow_min": 130881,
    "prereg_valuation": {
@@ -4577,58 +4566,57 @@
     "worst_month_name": "2026-02",
     "worst_trade": -30143.997759450624
    },
-   "return_on_median_margin": 42.31503823516815,
+   "return_on_median_margin": -3.1153693804549314,
    "skips": {},
    "stale_min": 16,
    "tail_n": 1,
-   "tail_worst5pct_mean": -2995.5789809056214,
+   "tail_worst5pct_mean": -3823.48466600875,
    "trades_with_oow": 8,
    "wait_min_mean": 0.0
   },
   "folds": [
-   6838.701515121249,
+   4588.701515121249,
    -3697.9596649275018,
-   69066.87614956495,
-   256.223805494375
+   -6481.987042070627,
+   256.2238054943768
   ],
   "min_trades": 10,
-  "p": 0.0001999600079984003,
+  "p": 0.4331133773245351,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003
+   "bootstrap": 0.4331133773245351
   },
   "summary": {
-   "avg": 9057.980225656635,
+   "avg": -666.8776732978129,
    "cap_2pct_max": 110731.94487500026,
    "cap_2pct_median": 100904.63318750005,
    "days": 8,
    "fit_2pct_1L": 0.375,
-   "gross": 89312.49999999994,
+   "gross": 7437.500000000004,
    "margin_median": 1712.484375000001,
-   "max_dd": -8299.791363788132,
+   "max_dd": -14844.278405858757,
    "months": 8,
    "months_below_stop": 0,
-   "net": 72463.84180525308,
-   "net_wo_top5": -8055.154998752501,
+   "net": -5335.021386382503,
+   "net_wo_top5": -9477.566022976249,
    "trades": 8,
-   "win_rate": 0.375,
-   "worst_day": -2995.5789809056214,
-   "worst_month": -2995.5789809056214,
-   "worst_month_name": "2025-12",
-   "worst_trade": -2995.5789809056214
+   "win_rate": 0.25,
+   "worst_day": -3823.48466600875,
+   "worst_month": -3823.48466600875,
+   "worst_month_name": "2026-01",
+   "worst_trade": -3823.48466600875
   }
  },
  "o-IF-NATURALGAS-CY-HIGH": {
   "extra": {
    "attempts": 6,
-   "charges_mean": 380.4179815604688,
+   "charges_mean": 350.719716969375,
    "credit_mean": 10877.242187499998,
    "edge_missing": 0,
    "exit_reasons": {
-    "time": 3,
-    "tp": 1
+    "time": 4
    },
    "low_descriptive": {
-    "avg": -1369.6775877056232,
+    "avg": -1369.6775877056223,
     "cap_2pct_max": 101149.5941249999,
     "cap_2pct_median": 95660.73537499986,
     "days": 2,
@@ -4638,7 +4626,7 @@
     "max_dd": -2995.5789809056214,
     "months": 2,
     "months_below_stop": 0,
-    "net": -2739.3551754112464,
+    "net": -2739.3551754112445,
     "net_wo_top5": 0.0,
     "trades": 2,
     "win_rate": 0.5,
@@ -4669,57 +4657,56 @@
     "worst_month_name": "2026-02",
     "worst_trade": -30143.997759450624
    },
-   "return_on_median_margin": 41.32560981949674,
+   "return_on_median_margin": -6.005210144721403,
    "skips": {},
    "stale_min": 6,
    "tail_n": 1,
-   "tail_worst5pct_mean": -2658.502376061877,
+   "tail_worst5pct_mean": -3823.48466600875,
    "trades_with_oow": 4,
    "wait_min_mean": 0.0
   },
   "folds": [
    -2401.0736417850035,
    -702.3806840218804,
-   69066.87614956495,
+   -6481.987042070627,
    null
   ],
   "min_trades": 10,
-  "p": 0.46153846153846156,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.46153846153846156
+   "bootstrap": 1.0,
+   "subset_twin": 0.8001998001998002
   },
   "summary": {
-   "avg": 16490.855455939516,
+   "avg": -2396.3603419693777,
    "cap_2pct_max": 110731.94487500026,
    "cap_2pct_median": 96952.74162500013,
    "days": 4,
    "fit_2pct_1L": 0.5,
-   "gross": 77499.99999999994,
+   "gross": -2250.000000000001,
    "margin_median": 1596.1875000000027,
-   "max_dd": -3103.454325806884,
+   "max_dd": -9585.44136787751,
    "months": 4,
    "months_below_stop": 0,
-   "net": 65963.42182375806,
+   "net": -9585.44136787751,
    "net_wo_top5": 0.0,
    "trades": 4,
-   "win_rate": 0.25,
-   "worst_day": -2658.502376061877,
-   "worst_month": -2658.502376061877,
-   "worst_month_name": "2026-02",
-   "worst_trade": -2658.502376061877
+   "win_rate": 0.0,
+   "worst_day": -3823.48466600875,
+   "worst_month": -3823.48466600875,
+   "worst_month_name": "2026-01",
+   "worst_trade": -3823.48466600875
   }
  },
  "o-IF-NATURALGAS-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 312.665869199392,
+   "charges_mean": 312.1923208023937,
    "credit_mean": 10670.703231292517,
    "edge_missing": 6,
    "exit_reasons": {
-    "lock": 8,
-    "time": 138,
-    "tp": 1
+    "lock": 1,
+    "time": 146
    },
    "oow_min": 77587,
    "prereg_valuation": {
@@ -4742,22 +4729,22 @@
     "worst_month_name": "2025-12",
     "worst_trade": -69284.97750884875
    },
-   "return_on_median_margin": -120.18627843130635,
+   "return_on_median_margin": -143.8128797999833,
    "skips": {
     "no_minute": 2,
     "no_print": 2
    },
    "stale_min": 66,
    "tail_n": 8,
-   "tail_worst5pct_mean": -3562.465741747493,
+   "tail_worst5pct_mean": -3479.403481042964,
    "trades_with_oow": 123,
    "wait_min_mean": 0.1360544217687075
   },
   "folds": [
-   -77060.88951382249,
-   -75099.87640815249,
-   -22044.974528300605,
-   -35831.048572034946
+   -76485.08455591626,
+   -74674.80389807564,
+   -66031.1597518331,
+   -34135.44170212683
   ],
   "min_trades": 40,
   "p": 1.0,
@@ -4765,54 +4752,53 @@
    "bootstrap": 1.0
   },
   "summary": {
-   "avg": -1428.8216940293235,
+   "avg": -1709.704012979264,
    "cap_2pct_max": 189202.4993750001,
    "cap_2pct_median": 102979.90737500008,
    "days": 147,
    "fit_2pct_1L": 0.3945578231292517,
-   "gross": 1625.000000000011,
+   "gross": -45937.499999999956,
    "margin_median": 1747.5937499999982,
-   "max_dd": -210036.78902231052,
+   "max_dd": -251326.48990795182,
    "months": 9,
-   "months_below_stop": 7,
-   "net": -210036.78902231055,
-   "net_wo_top5": -251893.5021773349,
+   "months_below_stop": 8,
+   "net": -251326.4899079518,
+   "net_wo_top5": -250555.8313884068,
    "trades": 147,
-   "win_rate": 0.006802721088435374,
-   "worst_day": -4222.133679107484,
-   "worst_month": -43532.290220469346,
+   "win_rate": 0.0,
+   "worst_day": -3997.9338156612516,
+   "worst_month": -43033.144349066846,
    "worst_month_name": "2025-12",
-   "worst_trade": -4222.133679107484
+   "worst_trade": -3997.9338156612516
   }
  },
  "o-IF-NATURALGAS-D1-HIGH": {
   "extra": {
    "attempts": 111,
-   "charges_mean": 334.2527751486962,
+   "charges_mean": 332.7555202212177,
    "credit_mean": 10790.730603448275,
    "edge_missing": 6,
    "exit_reasons": {
-    "lock": 4,
-    "time": 53,
-    "tp": 1
+    "lock": 1,
+    "time": 57
    },
    "low_descriptive": {
-    "avg": -1847.1689228406003,
+    "avg": -1809.2025856583605,
     "cap_2pct_max": 143205.57875,
     "cap_2pct_median": 103227.55637499999,
     "days": 53,
     "fit_2pct_1L": 0.4528301886792453,
-    "gross": -19937.499999999978,
+    "gross": -19249.999999999975,
     "margin_median": 1744.65625,
-    "max_dd": -97899.95291055179,
+    "max_dd": -95887.73703989308,
     "months": 6,
     "months_below_stop": 2,
-    "net": -97899.95291055182,
-    "net_wo_top5": -93912.53539872805,
+    "net": -95887.73703989311,
+    "net_wo_top5": -91900.31952806935,
     "trades": 53,
     "win_rate": 0.0,
     "worst_day": -3325.69406821375,
-    "worst_month": -36145.85927552432,
+    "worst_month": -34450.252405616215,
     "worst_month_name": "2026-03",
     "worst_trade": -3325.69406821375
    },
@@ -4838,51 +4824,51 @@
     "worst_month_name": "2026-01",
     "worst_trade": -69284.97750884875
    },
-   "return_on_median_margin": -42.611869756927256,
+   "return_on_median_margin": -69.81969626653088,
    "skips": {},
    "stale_min": 19,
    "tail_n": 3,
-   "tail_worst5pct_mean": -3939.146952352701,
+   "tail_worst5pct_mean": -3717.647590473956,
    "trades_with_oow": 52,
    "wait_min_mean": 0.3448275862068966
   },
   "folds": [
-   -21145.023547020635,
-   -37836.27504514251,
-   -9738.331116461228,
+   -21145.023547020628,
+   -37348.70253506565,
+   -54103.62534074432,
    null
   ],
   "min_trades": 40,
-  "p": 0.9998000399920016,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.9998000399920016,
-   "subset_twin": 0.3916083916083916
+   "bootstrap": 1.0,
+   "subset_twin": 0.8041958041958042
   },
   "summary": {
-   "avg": -1184.8212018728343,
+   "avg": -1941.3336452212172,
    "cap_2pct_max": 171012.571625,
    "cap_2pct_median": 100205.90931249995,
    "days": 58,
    "fit_2pct_1L": 0.5,
-   "gross": 28999.99999999997,
+   "gross": -19499.999999999993,
    "margin_median": 1612.6874999999936,
-   "max_dd": -81147.04996776939,
+   "max_dd": -112597.3514228306,
    "months": 5,
-   "months_below_stop": 4,
-   "net": -68719.62970862439,
-   "net_wo_top5": -108614.12049986685,
+   "months_below_stop": 5,
+   "net": -112597.3514228306,
+   "net_wo_top5": -109476.46629606998,
    "trades": 58,
-   "win_rate": 0.017241379310344827,
-   "worst_day": -4222.133679107484,
-   "worst_month": -22746.67636168872,
-   "worst_month_name": "2026-02",
-   "worst_trade": -4222.133679107484
+   "win_rate": 0.0,
+   "worst_day": -3997.9338156612516,
+   "worst_month": -34501.46598925936,
+   "worst_month_name": "2026-01",
+   "worst_trade": -3997.9338156612516
   }
  },
  "o-IF-SILVERM-CY-ALL": {
   "extra": {
    "attempts": 8,
-   "charges_mean": 284.95450128155,
+   "charges_mean": 284.450426985425,
    "credit_mean": 1940.5749999999978,
    "edge_missing": 14932,
    "exit_reasons": {
@@ -4910,19 +4896,19 @@
     "worst_month_name": "2025-09",
     "worst_trade": -10591.690059020953
    },
-   "return_on_median_margin": 8.480736465901373,
+   "return_on_median_margin": 0.440928893111936,
    "skips": {
     "no_print": 6
    },
    "stale_min": 65,
    "tail_n": 1,
-   "tail_worst5pct_mean": -774.6746071442999,
+   "tail_worst5pct_mean": -1429.2668988610544,
    "trades_with_oow": 2,
    "wait_min_mean": 5.5
   },
   "folds": [
-   -774.6746071442999,
-   5519.0106045811945,
+   1675.9335448902002,
+   -1429.2668988610544,
    null,
    null
   ],
@@ -4932,34 +4918,34 @@
    "bootstrap": NaN
   },
   "summary": {
-   "avg": 2372.167998718447,
+   "avg": 123.3333230145729,
    "cap_2pct_max": 54599.33938500023,
    "cap_2pct_median": 42161.896737500116,
    "days": 2,
    "fit_2pct_1L": 1.0,
-   "gross": 6442.5,
+   "gross": 1937.5,
    "margin_median": 559.4250000000022,
-   "max_dd": -774.6746071442999,
+   "max_dd": -1429.2668988610544,
    "months": 2,
    "months_below_stop": 0,
-   "net": 4744.335997436894,
+   "net": 246.6666460291458,
    "net_wo_top5": 0.0,
    "trades": 2,
    "win_rate": 0.5,
-   "worst_day": -774.6746071442999,
-   "worst_month": -774.6746071442999,
-   "worst_month_name": "2025-09",
-   "worst_trade": -774.6746071442999
+   "worst_day": -1429.2668988610544,
+   "worst_month": -1429.2668988610544,
+   "worst_month_name": "2025-11",
+   "worst_trade": -1429.2668988610544
   }
  },
  "o-IF-SILVERM-CY-HIGH": {
   "extra": {
    "attempts": 1,
-   "charges_mean": 314.2743954188,
+   "charges_mean": 306.27939886105,
    "credit_mean": 1716.3724999999954,
    "edge_missing": 7983,
    "exit_reasons": {
-    "tp": 1
+    "lock": 1
    },
    "low_descriptive": {
     "avg": null,
@@ -5001,17 +4987,17 @@
     "worst_month_name": "2025-11",
     "worst_trade": -2040.149747187706
    },
-   "return_on_median_margin": 7.042900618701056,
+   "return_on_median_margin": -1.8239111042696257,
    "skips": {},
    "stale_min": 8,
    "tail_n": 1,
-   "tail_worst5pct_mean": 5519.0106045811945,
+   "tail_worst5pct_mean": -1429.2668988610544,
    "trades_with_oow": 1,
    "wait_min_mean": 11.0
   },
   "folds": [
    null,
-   5519.0106045811945,
+   -1429.2668988610544,
    null,
    null
   ],
@@ -5022,39 +5008,39 @@
    "subset_twin": 1.0
   },
   "summary": {
-   "avg": 5519.0106045811945,
+   "avg": -1429.2668988610544,
    "cap_2pct_max": 54599.33938500023,
    "cap_2pct_median": 54599.33938500023,
    "days": 1,
    "fit_2pct_1L": 1.0,
-   "gross": 6572.5,
+   "gross": -432.5,
    "margin_median": 783.6275000000046,
-   "max_dd": -0.0,
+   "max_dd": -1429.2668988610544,
    "months": 1,
    "months_below_stop": 0,
-   "net": 5519.0106045811945,
+   "net": -1429.2668988610544,
    "net_wo_top5": 0.0,
    "trades": 1,
-   "win_rate": 1.0,
-   "worst_day": 5519.0106045811945,
-   "worst_month": 5519.0106045811945,
+   "win_rate": 0.0,
+   "worst_day": -1429.2668988610544,
+   "worst_month": -1429.2668988610544,
    "worst_month_name": "2025-11",
-   "worst_trade": 5519.0106045811945
+   "worst_trade": -1429.2668988610544
   }
  },
  "o-IF-SILVERM-D1-ALL": {
   "extra": {
    "attempts": 151,
-   "charges_mean": 274.5416406994948,
-   "credit_mean": 2075.6378448275855,
-   "edge_missing": 10524,
+   "charges_mean": 267.0591032747615,
+   "credit_mean": 1929.0477884615377,
+   "edge_missing": 9476,
    "exit_reasons": {
-    "lock": 10,
+    "lock": 15,
     "stop": 2,
-    "time": 1,
-    "tp": 16
+    "time": 4,
+    "tp": 5
    },
-   "oow_min": 42133,
+   "oow_min": 39459,
    "prereg_valuation": {
     "avg": -9155.83339862167,
     "cap_2pct_max": 58904.35841500009,
@@ -5075,81 +5061,82 @@
     "worst_month_name": "2025-10",
     "worst_trade": -24083.605025606048
    },
-   "return_on_median_margin": 224.1751699443964,
+   "return_on_median_margin": -16.611480192674783,
    "skips": {
+    "arb_credit": 3,
     "no_minute": 4,
     "no_print": 118
    },
-   "stale_min": 1411,
+   "stale_min": 962,
    "tail_n": 2,
-   "tail_worst5pct_mean": -1532.6833408895445,
-   "trades_with_oow": 29,
-   "wait_min_mean": 10.068965517241379
+   "tail_worst5pct_mean": -2037.3518694002296,
+   "trades_with_oow": 26,
+   "wait_min_mean": 9.307692307692308
   },
   "folds": [
-   79908.76690531851,
-   19413.163014396127,
+   -1974.6753648181486,
+   -5771.216320325669,
    null,
    null
   ],
   "min_trades": 40,
-  "p": 0.009598080383923215,
+  "p": 0.9364127174565087,
   "p_detail": {
-   "bootstrap": 0.009598080383923215
+   "bootstrap": 0.9364127174565087
   },
   "summary": {
-   "avg": 3424.8941351625735,
+   "avg": -297.9189109670699,
    "cap_2pct_max": 58904.35841500009,
-   "cap_2pct_median": 35051.782935,
-   "days": 25,
+   "cap_2pct_median": 35760.626310000145,
+   "days": 24,
    "fit_2pct_1L": 1.0,
-   "gross": 122435.0,
-   "margin_median": 443.0550000000003,
-   "max_dd": -3975.235001728395,
+   "gross": 11532.5,
+   "margin_median": 466.29750000000286,
+   "max_dd": -9934.53853457677,
    "months": 5,
    "months_below_stop": 0,
-   "net": 99321.92991971463,
-   "net_wo_top5": 22230.460426018442,
-   "trades": 29,
-   "win_rate": 0.6206896551724138,
-   "worst_day": -1687.513946456504,
-   "worst_month": 1313.5459584600153,
-   "worst_month_name": "2025-09",
-   "worst_trade": -1687.513946456504
+   "net": -7745.891685143818,
+   "net_wo_top5": -15115.901041914818,
+   "trades": 26,
+   "win_rate": 0.38461538461538464,
+   "worst_day": -2580.0139464565036,
+   "worst_month": -3034.345617161757,
+   "worst_month_name": "2025-12",
+   "worst_trade": -2580.0139464565036
   }
  },
  "o-IF-SILVERM-D1-HIGH": {
   "extra": {
-   "attempts": 11,
-   "charges_mean": 309.6457054866556,
-   "credit_mean": 2110.6938888888853,
-   "edge_missing": 2338,
+   "attempts": 9,
+   "charges_mean": 295.8990988568286,
+   "credit_mean": 1764.0624999999968,
+   "edge_missing": 1322,
    "exit_reasons": {
-    "lock": 3,
-    "tp": 6
+    "lock": 6,
+    "tp": 1
    },
    "low_descriptive": {
-    "avg": 6302.7878071983505,
+    "avg": -270.8063938496515,
     "cap_2pct_max": 46826.96281500015,
     "cap_2pct_median": 34809.28434250007,
     "days": 2,
     "fit_2pct_1L": 1.0,
-    "gross": 14220.0,
+    "gross": 860.0,
     "margin_median": 427.3675000000014,
-    "max_dd": -0.0,
+    "max_dd": -593.50601929205,
     "months": 2,
     "months_below_stop": 0,
-    "net": 12605.575614396701,
+    "net": -541.612787699303,
     "net_wo_top5": 0.0,
     "trades": 2,
-    "win_rate": 1.0,
-    "worst_day": 1274.1185770962472,
-    "worst_month": 1274.1185770962472,
-    "worst_month_name": "2025-11",
-    "worst_trade": 1274.1185770962472
+    "win_rate": 0.5,
+    "worst_day": -593.50601929205,
+    "worst_month": -593.50601929205,
+    "worst_month_name": "2025-10",
+    "worst_trade": -593.50601929205
    },
-   "oow_min": 14367,
-   "pool_with_pct": 11,
+   "oow_min": 11752,
+   "pool_with_pct": 9,
    "prereg_valuation": {
     "avg": -12917.751131449804,
     "cap_2pct_max": 58904.35841500009,
@@ -5170,45 +5157,45 @@
     "worst_month_name": "2025-10",
     "worst_trade": -24083.605025606048
    },
-   "return_on_median_margin": 97.39279019974991,
+   "return_on_median_margin": -6.400536676297794,
    "skips": {},
-   "stale_min": 756,
+   "stale_min": 310,
    "tail_n": 1,
-   "tail_worst5pct_mean": -968.7918390905475,
-   "trades_with_oow": 9,
-   "wait_min_mean": 9.11111111111111
+   "tail_worst5pct_mean": -1494.6897923439553,
+   "trades_with_oow": 7,
+   "wait_min_mean": 8.857142857142858
   },
   "folds": [
-   54879.55526686368,
-   19826.558383756383,
+   -1678.77308653591,
+   -3243.0956054619123,
    null,
    null
   ],
   "min_trades": 40,
-  "p": 0.5224775224775224,
+  "p": 1.0,
   "p_detail": {
-   "bootstrap": 0.0001999600079984003,
-   "subset_twin": 0.5224775224775224
+   "bootstrap": 1.0,
+   "subset_twin": 0.7042957042957043
   },
   "summary": {
-   "avg": 8300.67929451334,
+   "avg": -703.1240988568318,
    "cap_2pct_max": 58904.35841500009,
-   "cap_2pct_median": 53998.41067499994,
-   "days": 9,
+   "cap_2pct_median": 54599.33938500023,
+   "days": 7,
    "fit_2pct_1L": 1.0,
-   "gross": 83892.5,
-   "margin_median": 767.059999999999,
-   "max_dd": -968.791839090547,
+   "gross": 1560.0,
+   "margin_median": 768.9775000000054,
+   "max_dd": -6112.046234130371,
    "months": 3,
    "months_below_stop": 0,
-   "net": 74706.11365062006,
-   "net_wo_top5": 3427.0905896431414,
-   "trades": 9,
-   "win_rate": 0.8888888888888888,
-   "worst_day": -968.7918390905475,
-   "worst_month": 3844.526231635845,
-   "worst_month_name": "2025-12",
-   "worst_trade": -968.7918390905475
+   "net": -4921.868691997823,
+   "net_wo_top5": -2948.223218483404,
+   "trades": 7,
+   "win_rate": 0.2857142857142857,
+   "worst_day": -1494.6897923439553,
+   "worst_month": -2788.7639347566587,
+   "worst_month_name": "2025-11",
+   "worst_trade": -1494.6897923439553
   }
  },
  "o-NS-CRUDEOIL-CY-ALL": {

@@ -255,3 +255,31 @@ def test_iron_condor_never_loses_more_than_max_loss():
     assert -t["net"] <= t["margin_rs"] + slack
     t0, _ = O.simulate(bk, "IC", 0, 1, valuation="prereg")
     assert t0 is not None
+
+
+def test_iron_condor_never_gains_more_than_credit():
+    # after entry the long wings print absurdly high (a bad, stale-looking print): the vertical value is clipped at 0
+    state = {}
+
+    def spot(di, m):
+        state["m"] = (di, m)
+        return 1000.0
+
+    def price(cp, k, f):
+        di, m = state["m"]
+        p = tv(cp, k, f)
+        if (di, m) > (0, 17 * 60 + 15) and k in (1030.0, 970.0):
+            p = 90.0
+        return p
+    bk = book(make_raw(DAYS[:2], spot, price_fn=price))
+    t, _ = O.simulate(bk, "IC", 0, 1)
+    mid_credit = 2 * (16.0 - 8.0) * C.OPT_UNITS[BOOK]                            # gross is at mid prices
+    assert t["net"] <= t["credit"] and t["gross"] <= mid_credit + 1e-9
+
+
+def test_arbitrage_credit_entry_skipped():
+    # wings quoted far below fair at entry: credit >= wing width x units, an untradable quote
+    bk = book(make_raw(DAYS[:2], lambda di, m: 1000.0, price_fn=lambda cp, k, f: 12.0 if k in (1010.0, 990.0) else 0.05))
+    t, why = O.simulate(bk, "IC", 0, 1)
+    assert t is None and why == "arb_credit"
+    assert O.simulate(bk, "IC", 0, 1, valuation="prereg")[0] is not None        # the as-registered run keeps it
