@@ -148,3 +148,48 @@ def test_hero2_time_stop_and_initial_stop():
     l2 = l.copy(); l2[5] = 1.5; o2 = o.copy()
     y = dict(zip(H.COLS, H.simulate("NIFTY", e, o2, h, l2, c, np.full(n, 100.0), 1.0, 5.0)))
     assert y["E1_half2x_s0.5"] == pytest.approx(H.net_legs("NIFTY", e, [(1.0, 2.0)]))    # -50% stop at 2.0 in minute 5
+
+
+def _synthetic_trend_day():
+    """NIFTY flat at 10,000 to 13:00, then +1 point a minute; every option = intrinsic + Rs 20, so EM13 = 40."""
+    n = R.N
+    t13 = R.minute(13, 0)
+    s = np.full(n, 10000.0)
+    s[t13:] = 10000.0 + np.arange(n - t13)
+    ix = np.stack([s, s + 0.5, s - 0.5, s], axis=1)
+    opts = {}
+    for k in np.arange(9800.0, 10300.0, 50.0):
+        for side in "CP":
+            v = (np.maximum(s - k, 0) if side == "C" else np.maximum(k - s, 0)) + 20.0
+            opts[(float(k), side)] = np.stack([v, v + 0.1, v - 0.1, v, np.full(n, 100.0), np.full(n, 1000.0), np.full(n, 15.0)], axis=1)
+    return R.Day(date(2026, 1, 6), "NIFTY", ix, opts, np.full(n, 14.0), 10000.0, 14.0, 100.0)
+
+
+def test_conf_trigger_and_index_exits():
+    import conf as F
+    day = _synthetic_trend_day()
+    opt, idx = F.day_trades(day)
+    a = {(r["k"], r["inst"]): r for r in opt}
+    r = a[(1.5, "ATM")]
+    assert r["t"] == R.minute(14, 0) and r["strike"] == 10050.0 and r["side"] == "C"     # 10,060 = 1.5 x 40 at 14:00
+    e = 10061.0 - 10050.0 + 20.0 + L.TICK                                                  # the 14:01 open + 1 tick
+    assert r["entry"] == pytest.approx(e)
+    # X4: target 1 straddle beyond the trigger level (10,100), reached at 14:40 -> the call's close then is 50 + 20
+    assert r["X4_stop0.5_tgt1"] == pytest.approx(F.net_legs("NIFTY", e, [(1.0, 70.0)]))
+    # X1 (and every stop, as the index never retraces): out at the 15:20 close, index 10,140 -> 90 + 20
+    for x in ("X1_hold", "X2_stop0.5", "X3_stop1", "X6_trail0.5"):
+        assert r[x] == pytest.approx(F.net_legs("NIFTY", e, [(1.0, 110.0)])), x
+    assert a[(2.0, "ATM")]["t"] == R.minute(14, 20)                                        # 10,080 = 2 x 40
+    assert a[(1.5, "ITM1")]["strike"] == 10000.0 and a[(1.5, "OTM1")]["strike"] == 10100.0
+    xi = {(r["k"], r["exit"]): r for r in idx}
+    assert xi[(1.5, "X1_hold")]["pnl_em"] == pytest.approx((10140 - 10061) / 40.0)
+
+
+def test_conf_stop_on_retrace():
+    import conf as F
+    ix = np.array([106.0, 107.0, 105.0, 104.0, 103.0])
+    # trigger level 106 (up), EM 4: the 0.5-straddle stop is at 104, first reached in minute 3
+    assert F.exit_minute("X2_stop0.5", ix, 1.0, 106.0, 4.0) == 3
+    assert F.exit_minute("X6_trail0.5", ix, 1.0, 106.0, 4.0) == 2                          # 2 below the 107 best
+    assert F.exit_minute("X3_stop1", ix, 1.0, 106.0, 4.0) == -1
+    assert F.option_exit_price(np.array([1.0, np.nan, np.nan, 2.0]), 1) == 2.0

@@ -334,4 +334,9 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
   index trail, time stop) x every ticket / daily basket / confirmation entries: 0 of 4 pass on the holdout. Several
   exits keep all of 13 Oct's Rs 84k, but every exit loses overall: break-even needs 6-8% of tickets to be 10x
   heroes, the base is 2.2% and the best model ~5%. Real pattern: after a 1.5-straddle move from 13:00 the index
-  reaches 2.5 straddles 30% of days (vs 6.9%); untested with ATM options, needs a forward paper test.
+  reaches 2.5 straddles 30% of days (vs 6.9%), but R98c shows that is distance, not momentum (next line).
+- R98c (PREREG_C, semi-clean holdout): buying ATM / ITM / OTM / Rs 5 options after a 1.5 / 2-straddle move with
+  index exits: the design pick lost on the holdout (-Rs 613 a ticket); 4 of 48 rules positive in both halves (chance).
+  After a 1.5-straddle move the index hits +1 before -0.5 straddle 34.5% of the time vs 33.3% for a random walk, and
+  the index-only trade has no edge. Hero-zero buying is closed; only new information (event calendar, order flow) or a
+  forward paper test could reopen it.

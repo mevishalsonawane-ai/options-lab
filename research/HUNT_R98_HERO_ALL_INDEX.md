@@ -386,8 +386,9 @@ Half-at-2× keeps Rs 44,591. The +30% lock keeps Rs 1,378.
   nothing tested here does reliably.
 
 **New patterns:**
-- **Continuation is real.** Once the index has moved 1.5 straddles from 13:00, it reaches 2.5 straddles the same way by
-  15:20 on 30% of days (28% design, 32% holdout), against 6.9% unconditionally. After 1 straddle it is 14%.
+- **Continuation (corrected by R98c below: this is distance, not momentum).** Once the index has moved 1.5 straddles
+  from 13:00, it reaches 2.5 straddles the same way by 15:20 on 30% of days (28% design, 32% holdout), against 6.9%
+  unconditionally. After 1 straddle it is 14%.
   - The Rs 5 option bought then does not pay enough to profit from it: the move left is about 1 straddle, so the
     option ends 2-3×, not 10×.
   - A nearer strike (ATM) bought after a 1.5-straddle move is the one untested idea with a measured basis. It needs its
@@ -396,6 +397,43 @@ Half-at-2× keeps Rs 44,591. The +30% lock keeps Rs 1,378.
   against 9.0%. That is small and not monotonic in the previous day's move, so it is noise, not a signal.
 - **A busy morning against the priced move does not help.** When the 09:15-13:00 range was ≥ 4 straddles, the
   afternoon hero rate was lower (6%, then 0% on 22 days).
+
+## R98c (Boss, 21 Oct): "Enhance it more": trading the continuation with nearer strikes and index exits
+
+- **Pre-registered** in `hunt/r98/PREREG_C.md` (commit `e964fbb`). The holdout is semi-clean: the continuation rate was
+  known there, but no P&L of these rules was.
+- **Code and tables:** `hunt/r98/conf.py`, `results/conf.md`.
+- **The trigger:** the first minute (13:15-14:45) the index is k ∈ {1.5, 2} straddles from its 13:00 level.
+- **The rules:** ATM / 1 ITM / 1 OTM / Rs 5 options, with 6 index-based exits (stops 0.5 / 1 straddle back,
+  +1-straddle target, a 0.5-straddle trail, or hold).
+- **An index-only check:** a futures-like trade with a 0.05% round-trip cost.
+
+**Result: fail.**
+- **The design pick** (k 1.5, 1 strike OTM, a 0.5-straddle stop and a +1-straddle target) made +Rs 1,063 a ticket on 75
+  design tickets, positive in only 1 of 3 years.
+- **On the holdout** it lost: −Rs 613 on 74 tickets, 95% range −1,915 .. +866, −Rs 1,646 without the 5 best days.
+- **Across all 48 rules:** 14 positive on design, 13 on the holdout, and 4 on both, which is what chance gives. All 4
+  turn negative without their 5 best days.
+
+**Why: the continuation is geometry, not momentum.**
+- After a 1.5-straddle move, the index hit +1 more straddle before giving back 0.5 straddle on 34.5% of the decided days
+  (152 triggers). A driftless random walk gives exactly 33.3%.
+- After 2 straddles it was 38.6%, on only 56 days, which cannot be told apart from 33%.
+- The index-only trade has no edge before costs (−0.20 to +0.17 straddles a trade, by exit and half) and every variant
+  loses after the 0.05% cost.
+- So the R98b "30% go on to 2.5" is only that a move already 1.5 straddles out is closer to 2.5. The option market
+  prices that correctly.
+- 13 Oct: the 1.5-straddle trigger fired at 14:39. The ATM 22650 CE (Rs 35.35) made +Rs 5,447 on Rs 5,000 (about 2×),
+  not the Rs 84k of the Rs 4 ticket at 13:30.
+
+**Where this leaves hero-zero.**
+- Seven rounds here (R21, R25, R43, R50, R54, R55, R98 a/b/c), covering entries, exits, models, filters and
+  confirmation, found no rule that survives unseen data.
+- More mining of the same minute bars will only find patterns that fit the past.
+- Questions that would need NEW information, not tested here:
+  - **event days** (RBI policy, Budget, election results, US data) as a known-in-advance prior;
+  - **real bid/ask and order flow** at the strike (the lake has neither);
+  - **a forward paper test** of a fixed rule from today, which is the only clean test left for anything above.
 
 ## Honest notes
 
