@@ -54,7 +54,23 @@ round 3). Payouts and the drawdown - shadow. Nothing new acts on a live trade un
 
 ## Tests
 
-TESTS_PLACEHOLDER
+- **Checks run locally (CLAUDE.md):** `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification`
+  green: engine 1,479 tests, ira-core 3,848, coverage gate passed.
+- **The whole app suite, as CI runs it** (4 shards, `-PtestsWithoutJarvis=true`, an Android SDK set up here): 4,168 tests, 0
+  failures (164 skipped by their own conditions, e.g. Jarvis-only or IraGoldAlgo-only). A first run without shards hit the
+  task's 20-minute limit; the shards each finish in 8-20 minutes.
+- New: ProtectionsDayOcoTest (34: switch and PIN, placing, the stop firing with the phone off, fired but unfilled, kept at the
+  open, a lost answer, trail, shrink and its refusal, switch off in and out of hours, the unread switch after a restart,
+  deleted on Kite's site, the stop move, the expiry square-off, a just-fired GTT at expiry), PayoutWatchTest (13),
+  LiquidityTwinDayTest (4), EnhanceRound4CardsTest (Compose, 4), MarketClockRuleTest (4), OrderFlowLive2Test (+1: your exit
+  counts the protection's GTT), ExitCoordinatorTest (+7: a resting stop's fresh fill, on and in shadow, and at expiry);
+  ira-core PositionsLagRestingTest (11), PayoutDrawdownTest (14), WhatsNewChangelogTest (+1; positions +1), BatteryRestTest.
+- Found by the new tests and fixed: Zerodha answers an earlier session's order id with an error, not an empty history, so a
+  GTT that fired yesterday could leave its protection stuck "being removed" (the overnight GTT's code had the same gap).
+- Flaky once, not mine: PassedArmsHostTest reached Zerodha's real address after its fake closed (a background read finishing
+  late); it passed alone (57 tests) and in the shard's re-run.
+- No test was skipped, disabled or loosened. One test's meaning was kept with one line: MarketTest's "no test clock reads the
+  system clock" now clears the rule's fallback first (as in the app, where both are always empty).
 
 ## Review
 
