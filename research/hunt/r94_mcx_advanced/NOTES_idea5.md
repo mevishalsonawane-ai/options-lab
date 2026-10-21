@@ -22,3 +22,18 @@ Implementation choices PREREG 3.5 leaves open, fixed in `usgap.py` and tested:
    before any computation); the holdout path loads everything and calls `open_holdout` first.
 8. Twins: per trade, the same day / entry / exit / stop rule with the opposite side is simulated once; each of the
    1,000 twin sets picks a side per trade at random (p = share of twin totals >= the rule's net).
+
+## N5-2 (21 Oct 2026, AFTER the design run; data-quality checks prompted by the numbers, nothing changed)
+
+1. **The 09:05 / 09:06 MCX prices are live, not stale.** Design sessions: the 09:05 and 09:06 closes equal the previous
+   session's close on 0-0.6% of days (GOLDM 151, SILVERM 132, CRUDEOIL 156, NATURALGAS 156 days), and the share of
+   unchanged minutes 09:01-09:06 (GOLDM 7%, SILVERM 6%, crude 25%, gas 22%) is BELOW the 10:00-12:00 share (12%, 8%,
+   33%, 26%). So crude's high corr(e, 09:05 -> 14:00) = 0.57 is not a stale-price artefact. Caveat: e and the
+   09:05 -> 14:00 move share the 09:05 minute close, so minute noise there adds some positive correlation by
+   construction; the traded entry is the NEXT minute (09:06), which does not share it.
+2. **Gas proxy is weak.** corr(US move to 08:59, MCX 09:00 gap) is 0.19 for GASCMDUSD -> NATURALGAS (151 days) against
+   0.71-0.87 for the other three. Dukascopy's Henry Hub CFD may follow a different contract month or trade thinly
+   overnight; idea-5 gas results lean on a poor proxy.
+3. **Stops fill at minute closes** (close-only series), so a stop can fill well beyond its level in a crash minute
+   (GOLDM 29 Jan 2026: stop 2,077 points away, filled 4,005 points away). That is kept: it is what a close-only
+   check pays.
