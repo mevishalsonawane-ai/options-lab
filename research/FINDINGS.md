@@ -1493,5 +1493,5 @@ Breadth = 3 of 5 metals (GOLD, SILVER, COPPER, ZINC, ALUMINIUM; minis once) / 2 
   (indices, R72: +Rs 183 vs -Rs 54); confirmed gross higher in 7 of 7 commodities, by tens of rupees. Costs decide on MCX.
 - Daily (2012-2022 design, 2023 - Oct 2026 holdout, futures): plain +Rs 7.26 lakh (367) but random entries made as much
   (twin p 0.51; -Rs 5.76 lakh without the top 5: the 2023-26 silver / copper rally); daily breadth -Rs 3.68 lakh (133).
-- Sample: long enough for the intraday answer (95% upper bound of gross a trade below cost in every option book; closest
+- Sample: long enough for the intraday answer (post-hoc 95% upper bound of gross a trade below cost in every option book; closest
   gold with breadth Rs 265 vs Rs 364). Keep Breadth Donchian on the indices only.

@@ -33,9 +33,10 @@ paper, so there is no APP_SPEC.**
    the same sides in the same years made as much (+Rs 7.45 lakh; twin p 0.51), and without its 5 best trades it lost
    -Rs 5.76 lakh. That is the 2023-26 silver and copper rally, not the breakout. Daily breadth lost in both periods.
 4. **The sample is long enough to know.** Intraday holdout: 1,957-3,365 trades per variant (142 sessions); even the
-   optimistic end of each book's estimate (the 95% upper bound of its gross a trade) is below its cost a trade, in every
-   book. The closest is gold with breadth (upper bound Rs 265 against Rs 364 of cost). Daily: 14 years. What is short
-   is the intraday history (14.5 months), so a regime change could still matter, but nothing here is close to passing.
+   optimistic end of each book's estimate (the 95% upper bound of its gross a trade; computed after the read) is below
+   its cost a trade, in every book. The closest is gold with breadth (upper bound Rs 265 against Rs 364 of cost).
+   Daily: 14 years. What is short is the intraday history (14.5 months), so a regime change could still matter, but
+   nothing here is close to passing.
 
 ## The results (1 lot, net after real MCX charges and slippage)
 

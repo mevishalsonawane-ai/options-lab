@@ -12,7 +12,7 @@ pass; nothing goes to paper, so there is no APP_SPEC.** Research only; no app or
 - **Daily (futures, 2012-2026):** plain Donchian +Rs 7.26 lakh in the holdout, but random entries made as much (the
   2023-26 metals rally); daily breadth lost.
 - **Sample:** long enough to know for the intraday rule (1,957-3,365 holdout trades per variant; even the optimistic
-  bound of each option book's gross is below its cost).
+  bound of each option book's gross, computed after the read, is below its cost).
 
 Details: `research/HUNT_R93_BREADTH_DONCHIAN_MCX.md`; code, tests and results: `research/hunt/r93_breadth_donchian_mcx/`;
 entries `research/experiments/entries/r93-*.yaml`; FINDINGS.md (R93).
