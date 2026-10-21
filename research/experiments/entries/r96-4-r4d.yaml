@@ -1,0 +1,34 @@
+id: r96-4-r4d
+title: 'R96 round 4 R4D: MCX 17:00-17:30 IST momentum, 1-ITM, same session (GOLDM, SILVERM) (MCX option buying)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R96_ROUND4.md
+hypothesis: 'Boss (21 Oct): find an MCX commodity option BUYING strategy. R4D earns after real MCX costs on design (5 Aug
+  2025 - 14 Jul 2026), beats random-session twins (p < 0.05, BH q <= 0.10 over the cumulative R96 ledger), in >= 3 of 4 walk-forward
+  folds, worst month > -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m MONTH books to 19 Oct 2026: near-future spot + ATM-3..+3
+  minutes with IV; fut_daily_continuous to 16 Oct 2026), copied 21 Oct'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; read once only for a design pass)
+instruments:
+- GOLDM
+- SILVERM
+features:
+- 'signal source: the MCX future (near future minute closes; daily: the near-month daily continuous future, back-adjusted)'
+- ATM IV as a filter only (V1)
+model_or_rule: 'GOLDM, SILVERM: the future''s 17:00 -> 17:30 IST move -> 1-ITM that way; stop -40% / the 17:00 price, lock
+  ladder, edge, out at the session square-off'
+settings: research/hunt/r96_mcx_buy/cfg.py; PREREG_ROUND4.md
+prereg: research/hunt/r96_mcx_buy/PREREG_ROUND4.md
+variants_tried: 1
+results:
+  summary: 'Design: 214 trades, net Rs -110,409 (2x spread Rs -155,372), gross Rs -44,042, win 24%, worst month Rs -36,953,
+    max DD Rs -110,409, without top 3 Rs -138,054; folds F1 Rs -9,172 (47), F2 Rs 3,383 (37), F3 Rs -68,097 (46), F4 Rs -36,523
+    (84); twin mean Rs -100,797, twin p 0.683, BH q 0.847 (cumulative ledger, 36 ideas); model-priced exits 1%, real-exit
+    net Rs -111,009. Gates failed: net, net2, twin_p, bh_q, folds, worst_month, max_dd, wo_top3, real_exits.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before (NATGASMINI 0.45% / 0.90%) each fill, 2x
+    on model-priced exits; gates also at 2x spreads
+holdout_read: false
+verdict: rejected
+notes: ''
