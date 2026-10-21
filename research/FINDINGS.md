@@ -309,3 +309,20 @@ Full study: `HUNT_R15_DAILY_FILTERS.md` (pre-registered `hunt/r15/PREREG.md`); s
   (expiryCode 1/2 = same as 0). Data APIs are capped at 100,000 requests/day; the stock-option download hit it, so
   stock options are partial (51 of 59 stocks, ATM 78%, ±1..5 ~23%; see data/README.md) and match NSE only ~69% at
   contract-day high/low (index options 87-98%). Use stock-option minutes with care.
+
+## Hero-zero candles on all five indices (R98, 21 Oct 2026) - why they happen, and why 75% accuracy is not reachable
+Full study: `HUNT_R98_HERO_ALL_INDEX.md` (code `hunt/r98/`, pre-registered `hunt/r98/PREREG.md`, commit `8f82415`).
+Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-Nov-2024 monthlies and 13 Oct 2026.
+- 911 expiries (NIFTY 273, BANKNIFTY 195, FINNIFTY 167, MIDCPNIFTY 100, SENSEX 176). On 38% some Rs 1-10 option
+  closed 10x by 15:20, among a median 21 cheap options a day; 3 of them per 10x day, usually neighbouring strikes.
+- Why: a hero needs the index to run a median 2.9 ATM straddles one way (the straddle is the market's own forecast);
+  the index ends a median 0.70 straddles away. Moves >= 2.5 straddles: about 10% of cases; then a 10x is 47-88% likely.
+- When: peaks are late (48% at 15:00-15:20); nothing in the morning flags the afternoon (base 7.7%; VIX, gap, range,
+  weekday, index give 0-19% in small cells).
+- 75%: no. Walk-forward models (AUC 0.64-0.69): best precision 29% (doubles), 9% (5x), 6% (10x); at 13:00 "will this
+  afternoon give a 10x" AUC 0.40-0.44. Best win rate of 60 exits 56% (72% on the model's top decile with a +10% target,
+  -Rs 1,119 a Rs 5,000 ticket); every exit loses. Held to 15:20 a cheap ticket loses -Rs 3,213 of Rs 5,000 on average.
+- High accuracy lives on the zero side: 97% end below their price (85% near zero), but 1% end >= 10x and the worst 178x
+  (13 Oct: selling the 22700 CE at 13:30 for Rs 5,000 = about -Rs 95,000). Selling was not tested.
+- Exploratory lead only (not pre-registered): one top-scored ticket per index-day, held, +Rs 714 a ticket, but the 5
+  best days are 213% of it and the 95% range spans 0. Paper-test forward if wanted; nothing goes in the app.
