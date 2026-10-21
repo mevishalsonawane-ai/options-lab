@@ -238,10 +238,11 @@ def descriptive(tab: pd.DataFrame, window) -> dict:
             "corr_e_0905_1400": float(b.e.corr(b.rest)) if len(b) > 2 else None, "n_e_rest": int(len(b))}
 
 
-def cells(part: str) -> dict:
-    """{cell_id: {trades, p, folds, extra}} for part 'design' (data before 1 Apr 2026 only) or 'holdout'."""
+def cells(part: str, locked: bool = False) -> dict:
+    """{cell_id: {trades, p, folds, extra}} for part 'design' (data before 1 Apr 2026 only) or 'holdout'.
+    locked: the caller (study.holdout) has already recorded the one holdout read (NOTES N3)."""
     window, end = (DESIGN, HOLDOUT[0]) if part == "design" else (HOLDOUT, None)
-    if part == "holdout":
+    if part == "holdout" and not locked:
         C.open_holdout("idea5", [f"g-{r}-{CELL_NAME[b]}" for b in PAIRS for r in RULES])
     res = {}
     for book in PAIRS:

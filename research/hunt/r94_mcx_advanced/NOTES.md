@@ -27,3 +27,13 @@ Boss, 21 Oct: "Option selling is out of scope." Idea 3 stops at the design run (
   their design p-values were seen (all >= 0.36) would lower every other idea's q. The stricter family is kept.
 - The idea-3 code and tests stay in the repo as the record of what was tried (CLAUDE.md: log every idea, failures
   included); its experiment entries say "out of scope, design only, holdout not read".
+
+## N3 (21 Oct 2026 12:0x UTC, before any holdout number was seen): an aborted first holdout call
+
+`study.py holdout` first recorded the read of every in-scope cell (ideas 1, 2, 4, 5) in `results/HOLDOUT_READ.json`,
+then called each idea's `cells("holdout")`. Ideas 1, 2 and 4 were computed in memory; then `usgap.cells("holdout")`
+tried to take the same lock itself and raised `HoldoutReadError`. The exception discarded everything: nothing was
+printed, saved or pickled (`holdout_all.json` and `holdout_trades.pkl` were never written), so no holdout number of any
+cell was seen by anyone. Fix: `usgap.cells(part, locked=True)` skips its own lock when the orchestrator holds it; the
+aborted lock file is kept as `results/HOLDOUT_READ_aborted_2026-10-21T1200.json` and the read is run once more. That
+run is the one and only read whose numbers exist.

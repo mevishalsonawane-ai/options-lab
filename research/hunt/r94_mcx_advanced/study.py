@@ -8,6 +8,7 @@ gates, then the ONE holdout read of every cell, the holdout gates and Boss's 2% 
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
 import pickle
 import sys
@@ -74,7 +75,9 @@ def holdout() -> dict:
         if i in OUT_OF_SCOPE:
             continue
         m = importlib.import_module(f"research.hunt.r94_mcx_advanced.{mod}")
-        res = m.cells("holdout")
+        # the lock was taken above for every idea; a module that locks by itself is told so (NOTES N3)
+        res = m.cells("holdout", locked=True) if "locked" in inspect.signature(m.cells).parameters \
+            else m.cells("holdout")
         for c, v in res.items():
             s = C.summary(v["trades"])
             p = v["p"] if v["trades"] else 1.0
