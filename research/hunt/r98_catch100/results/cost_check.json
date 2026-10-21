@@ -1,0 +1,144 @@
+{
+ "rates": {
+  "source": "https://zerodha.com/charges (read 21 Oct 2026)",
+  "commodity_futures": "CTT 0.01% sell (non-agri); MCX txn 0.0021%; brokerage 0.03% or Rs 20 an order; stamp 0.002% buy",
+  "commodity_options": "CTT 0.05% sell premium; MCX txn 0.0418%; Rs 20 an order; stamp 0.003% buy",
+  "index_futures": "STT 0.05% sell; NSE txn 0.00183%; 0.03% or Rs 20 an order; stamp 0.002% buy",
+  "index_options": "STT 0.15% sell premium; NSE txn 0.03553%; Rs 20 an order; stamp 0.003% buy",
+  "all": "GST 18% on brokerage + SEBI + txn; SEBI Rs 10 a crore"
+ },
+ "r97": {
+  "R97A": {
+   "trades": 75,
+   "gross": 631.3653558549086,
+   "charges": 7287.8038148162,
+   "charges_per_trade": 97.17071753088267,
+   "net_charges_only": -6656.438458961292,
+   "net_as_tested": -36739.121492877995
+  },
+  "R97B": {
+   "trades": 208,
+   "gross": -21593.910639693146,
+   "charges": 19776.3935886686,
+   "charges_per_trade": 95.0788153301375,
+   "net_charges_only": -41370.30422836175,
+   "net_as_tested": -108260.25500856094
+  },
+  "R97C": {
+   "trades": 87,
+   "gross": -17703.44590999012,
+   "charges": 8007.690866246001,
+   "charges_per_trade": 92.04242374995404,
+   "net_charges_only": -25711.136776236122,
+   "net_as_tested": -52029.117392666834
+  },
+  "R97D": {
+   "trades": 189,
+   "gross": -88005.4138701423,
+   "charges": 17485.684429894998,
+   "charges_per_trade": 92.51684883542327,
+   "net_charges_only": -105491.09830003731,
+   "net_as_tested": -174577.87348625454
+  },
+  "R97E": {
+   "trades": 355,
+   "gross": 18263.055553111568,
+   "charges": 36193.510243701996,
+   "charges_per_trade": 101.95354998225915,
+   "net_charges_only": -17930.454690590428,
+   "net_as_tested": -143244.73128028808
+  },
+  "R97F": {
+   "trades": 122,
+   "gross": -19850.60851951906,
+   "charges": 11384.0971369524,
+   "charges_per_trade": 93.31227161436394,
+   "net_charges_only": -31234.70565647146,
+   "net_as_tested": -72165.68817831282
+  },
+  "R97G": {
+   "trades": 137,
+   "gross": -47588.832771651236,
+   "charges": 13604.207399252598,
+   "charges_per_trade": 99.30078393615035,
+   "net_charges_only": -61193.040170903834,
+   "net_as_tested": -108003.3718725694
+  }
+ },
+ "r98": {
+  "R98A": {
+   "trades": 701,
+   "gross": -166600.0,
+   "charges": 202050.71111280003,
+   "charges_per_trade": 288.2321128570614,
+   "net_charges_only": -368650.71111280005,
+   "net_as_tested": -466898.4583816001
+  },
+  "R98B": {
+   "trades": 612,
+   "gross": -55540.0,
+   "charges": 176696.0899736,
+   "charges_per_trade": 288.7191012640523,
+   "net_charges_only": -232236.0899736,
+   "net_as_tested": -318206.0449352
+  },
+  "R98C": {
+   "trades": 382,
+   "gross": -113540.0,
+   "charges": 110430.08411200001,
+   "charges_per_trade": 289.0839898219896,
+   "net_charges_only": -223970.084112,
+   "net_as_tested": -277711.07813599997
+  },
+  "R98D": {
+   "trades": 542,
+   "gross": -182320.0,
+   "charges": 158787.7138136,
+   "charges_per_trade": 292.9662616487085,
+   "net_charges_only": -341107.7138136,
+   "net_as_tested": -418550.28432880004
+  },
+  "R98E": {
+   "trades": 548,
+   "gross": 11640.044236449787,
+   "charges": 54364.112614715996,
+   "charges_per_trade": 99.20458506335035,
+   "net_charges_only": -42724.06837826621,
+   "net_as_tested": -247171.1473687485
+  },
+  "R98F": {
+   "trades": 913,
+   "gross": -171230.0,
+   "charges": 259400.5513492,
+   "charges_per_trade": 284.11889523461116,
+   "net_charges_only": -430630.55134919996,
+   "net_as_tested": -556412.0562308
+  }
+ },
+ "goldm_option_spread_roll": {
+  "before_17_other": {
+   "pairs": 229984,
+   "median_premium": 2237.0,
+   "full_spread_pts": NaN,
+   "full_spread_pct": NaN
+  },
+  "before_17_near_atm": {
+   "pairs": 80525,
+   "median_premium": 2124.5,
+   "full_spread_pts": 20.320616709008515,
+   "full_spread_pct": 0.9564893720408809
+  },
+  "from_17_other": {
+   "pairs": 287882,
+   "median_premium": 2262.5,
+   "full_spread_pts": 22.22913910911846,
+   "full_spread_pct": 0.9825033860383849
+  },
+  "from_17_near_atm": {
+   "pairs": 91876,
+   "median_premium": 2121.5,
+   "full_spread_pts": 23.841873929261222,
+   "full_spread_pct": 1.1238215380278682
+  }
+ }
+}

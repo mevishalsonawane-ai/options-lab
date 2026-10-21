@@ -88,6 +88,38 @@ Every rule lost in every fold it traded and broke the -Rs 13k month limit. Exit 
 
 **The locked holdout (15 Jul - 19 Oct 2026) was NOT read**: nothing passed.
 
+## Cost check (added 21 Oct, Boss: "India commodities cost less than NIFTY")
+
+Boss is right on the **rates**: CTT on MCX futures is 0.01% of the sale vs STT 0.05% on NSE index futures, and 0.05%
+vs 0.15% on option premiums (zerodha.com/charges, read 21 Oct). Our model already used those MCX rates. What made the
+GOLDM option trades expensive is not the tax: it is the **bid-ask spread** of thinly traded GOLDM options, which the
+tests charged as a half-spread on each fill (0.60% of the premium before 17:00, 0.30% after).
+
+- **Charges alone** on one GOLDM option round trip: about **Rs 92-102** a lot. On a GOLDM futures lot (~Rs 14 lakh
+  of gold) about **Rs 285-295** (the 0.01% CTT on that size is most of it).
+- **The spread, measured** from real prints (Roll's estimator on consecutive printed minutes of the same contract,
+  design): near-ATM GOLDM options **~1.0% full spread before 17:00 and ~1.1% after** (20-24 points on a ~Rs 2,100
+  premium; 80,525 / 91,876 minute pairs). So the 0.60% half-spread before 17:00 was about right and the 0.30% after
+  17:00 was, if anything, too kind. NIFTY weekly options trade 1-2 ticks wide (~0.1%), which is why NIFTY's all-in
+  cost is much lower even though its tax rate is higher.
+- **Re-priced with charges only and NO spread** (an optimistic bound: a market order really pays the spread):
+
+| rule | trades | gross | charges only | net, no spread | net as tested |
+|---|---|---|---|---|---|
+| R98A | 701 | -Rs 166,600 | -Rs 202,051 (Rs 288 a trade) | -Rs 368,651 | -Rs 466,898 |
+| R98B | 612 | -Rs 55,540 | -Rs 176,696 (Rs 289 a trade) | -Rs 232,236 | -Rs 318,206 |
+| R98C | 382 | -Rs 113,540 | -Rs 110,430 (Rs 289 a trade) | -Rs 223,970 | -Rs 277,711 |
+| R98D | 542 | -Rs 182,320 | -Rs 158,788 (Rs 293 a trade) | -Rs 341,108 | -Rs 418,550 |
+| R98E | 548 | Rs 11,640 | -Rs 54,364 (Rs 99 a trade) | -Rs 42,724 | -Rs 247,171 |
+| R98F | 913 | -Rs 171,230 | -Rs 259,401 (Rs 284 a trade) | -Rs 430,631 | -Rs 556,412 |
+- **Hindsight ceiling (step 3)** with charges only: GOLDM ATM on swings that DID reach 300+ points, median **+Rs 179** a
+  lot (2,081; win 57%), 1-OTM +Rs 303 (1,721) - instead of -Rs 84 / +Rs 64 with the measured spread. Swings of 500+:
+  +Rs 936 (965).
+
+Conclusion unchanged: every rule is negative even with zero spread, because its GROSS (before any cost) is about zero
+or negative - the triggers cannot tell the big swings from the false starts. Numbers: `hunt/r98_catch100/results/
+cost_check.json` (`python -m research.hunt.r98_catch100.costcheck`).
+
 ## What this means
 
 - The pieces Boss sees are real: gold gives 100 points many times every session, and MCX does follow international

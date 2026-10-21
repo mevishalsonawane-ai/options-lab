@@ -103,3 +103,16 @@ def test_rule_masks_and_windows():
     assert list(R.RULES["R98F"].signals(df).i_sig) == [1, 3]
     assert list(R.RULES["R98C"].signals(df).i_sig) == [1, 3]
     assert R.RULES["R98E"].instrument == "option"
+
+
+def test_costcheck_reprice_charges_only(tmp_path):
+    from research.hunt.r53 import common as C53
+    from research.hunt.r98_catch100 import costcheck as CC
+    p = tmp_path / "t.csv"
+    pd.DataFrame(dict(rule=["A", "A", "B"], fill=["2000", "2100", "140000"], exit=["2050", "2000", "140100"],
+                      gross=[500.0, -1000.0, 1000.0], net=[100.0, -1400.0, 500.0])).to_csv(p, index=False)
+    out = CC.reprice(p, {"A"})
+    ch_a = C53.mcx_opt_charges(20000, 20500) + C53.mcx_opt_charges(21000, 20000)
+    assert out["A"]["charges"] == pytest.approx(ch_a) and out["A"]["net_charges_only"] == pytest.approx(-500 - ch_a)
+    assert out["B"]["charges"] == pytest.approx(C53.mcx_fut_charges(1400000, 1401000))
+    assert CC._first("2000,2100") == 2000.0 and CC._first(5) == 5.0

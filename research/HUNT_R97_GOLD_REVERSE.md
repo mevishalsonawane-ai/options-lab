@@ -27,7 +27,7 @@ future's quote (GOLD and GOLDM are both quoted per 10 g; 1 GOLDM lot = 10 x the 
 3. **Even with perfect foresight, a GOLDM option buyer keeps little of a 300-point swing.** Taking only swings that DID
    reach 300+ points (hindsight), buying the ATM option 100 points into the move and selling when it gave back 200, the
    **median result was -Rs 84 a lot after costs** (2,081 swings). The option moves about **0.45 x** the future (median
-   delta 0.41-0.47), the round trip costs about **Rs 360** a lot, and about half of the swings could not even be entered
+   delta 0.41-0.47), the round trip costs about **Rs 360** a lot (about Rs 95 of charges + the measured bid-ask spread; see Cost check), and about half of the swings could not even be entered
    because the option did not trade within 5 minutes. Only swings of **500+ points** pay a buyer (median +Rs 659 a
    lot, 965 swings) and **1,000+ points** pay well (+Rs 2,872, 186) - but those are 3-12 a day, and nobody knows in
    advance which start is the big one.
@@ -199,6 +199,39 @@ much (R97A twins -Rs 48,685 on average), i.e. the triggers were no better than e
 
 **The locked holdout (15 Jul - 19 Oct 2026) was NOT read**: no rule passed the design gates. (The Dukascopy tail for
 1-19 Oct missed 5 days; it would only have mattered for a holdout read of R97E.)
+
+## Cost check (added 21 Oct, Boss: "India commodities cost less than NIFTY")
+
+Boss is right on the **rates**: CTT on MCX futures is 0.01% of the sale vs STT 0.05% on NSE index futures, and 0.05%
+vs 0.15% on option premiums (zerodha.com/charges, read 21 Oct). Our model already used those MCX rates. What made the
+GOLDM option trades expensive is not the tax: it is the **bid-ask spread** of thinly traded GOLDM options, which the
+tests charged as a half-spread on each fill (0.60% of the premium before 17:00, 0.30% after).
+
+- **Charges alone** on one GOLDM option round trip: about **Rs 92-102** a lot. On a GOLDM futures lot (~Rs 14 lakh
+  of gold) about **Rs 285-295** (the 0.01% CTT on that size is most of it).
+- **The spread, measured** from real prints (Roll's estimator on consecutive printed minutes of the same contract,
+  design): near-ATM GOLDM options **~1.0% full spread before 17:00 and ~1.1% after** (20-24 points on a ~Rs 2,100
+  premium; 80,525 / 91,876 minute pairs). So the 0.60% half-spread before 17:00 was about right and the 0.30% after
+  17:00 was, if anything, too kind. NIFTY weekly options trade 1-2 ticks wide (~0.1%), which is why NIFTY's all-in
+  cost is much lower even though its tax rate is higher.
+- **Re-priced with charges only and NO spread** (an optimistic bound: a market order really pays the spread):
+
+| rule | trades | gross | charges only | net, no spread | net as tested |
+|---|---|---|---|---|---|
+| R97A | 75 | Rs 631 | -Rs 7,288 (Rs 97 a trade) | -Rs 6,656 | -Rs 36,739 |
+| R97B | 208 | -Rs 21,594 | -Rs 19,776 (Rs 95 a trade) | -Rs 41,370 | -Rs 108,260 |
+| R97C | 87 | -Rs 17,703 | -Rs 8,008 (Rs 92 a trade) | -Rs 25,711 | -Rs 52,029 |
+| R97D | 189 | -Rs 88,005 | -Rs 17,486 (Rs 93 a trade) | -Rs 105,491 | -Rs 174,578 |
+| R97E | 355 | Rs 18,263 | -Rs 36,194 (Rs 102 a trade) | -Rs 17,930 | -Rs 143,245 |
+| R97F | 122 | -Rs 19,851 | -Rs 11,384 (Rs 93 a trade) | -Rs 31,235 | -Rs 72,166 |
+| R97G | 137 | -Rs 47,589 | -Rs 13,604 (Rs 99 a trade) | -Rs 61,193 | -Rs 108,003 |
+- **Hindsight ceiling (step 3)** with charges only: GOLDM ATM on swings that DID reach 300+ points, median **+Rs 179** a
+  lot (2,081; win 57%), 1-OTM +Rs 303 (1,721) - instead of -Rs 84 / +Rs 64 with the measured spread. Swings of 500+:
+  +Rs 936 (965).
+
+Conclusion unchanged: every rule is negative even with zero spread, because its GROSS (before any cost) is about zero
+or negative - the triggers cannot tell the big swings from the false starts. Numbers: `hunt/r98_catch100/results/
+cost_check.json` (`python -m research.hunt.r98_catch100.costcheck`).
 
 ## What was learned
 
