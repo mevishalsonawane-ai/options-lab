@@ -1,19 +1,17 @@
-R97: NOTHING
+R98: NOTHING
 
-Gold's "200-300 point" daily moves were measured on the MCX gold future (design year 5 Aug 2025 - 14 Jul 2026,
-227 GOLDM sessions) and reverse-engineered into 7 pre-registered GOLDM option-buying rules. None made money after
-costs (0 of 7 pass; the locked holdout 15 Jul - 19 Oct 2026 was not opened).
+Boss asked to catch gold's 100+ point (Rs 100 per 10 g) move in any condition. R98 studied 73,432 moments on the MCX
+gold future (design year 5 Aug 2025 - 14 Jul 2026), 254 candle / indicator / market / clock conditions, a
+walk-forward machine-learning model, and 6 pre-registered rules on the GOLDM future and option. 0 of 6 pass; the
+locked holdout (15 Jul - 19 Oct 2026) was not opened.
 
-- The moves are real but small: gold is ~Rs 1.4 lakh per 10 g, so 200 points is 0.14%. A normal day ranges 1,786
-  points and holds ~32 separate 200+ point swings. They are the day's noise, not its trend.
-- In real time you cannot tell which swing will be big: waiting for the first 100 points and trailing 200 loses
-  16 points a trade on the future itself, before any charges (17,181 cases); only 22% of those starts reach 500.
-- Even with hindsight, a GOLDM ATM option bought into swings that DID reach 300+ points made a median -Rs 84 a lot
-  after costs (2,081 swings): the option moves ~0.45 x the future and costs ~Rs 360 a round trip. Only 500+ point
-  swings pay (median +Rs 659, 965 swings), and they look the same as false starts at the moment of entry.
-- Big swings start most often 09:00-12:00 and 18:00-21:00 IST, usually as V-turns after a fast move the other way.
-  CPI / NFP days were not bigger. MCX follows XAUUSD within the same minute, so there is no lag to trade.
-- The best rule before costs (morning trigger at a new session high / low) broke even gross (+Rs 631 on 75 trades)
-  and lost -Rs 36,739 after costs.
+- A 100-point move comes in most hours, but in a coin-flip direction (+100 first 46.8%, -100 first 46.8%).
+- Some conditions really tilt it: gold snaps back after a stretch, and MCX follows XAUUSD when international gold
+  runs ahead (the afternoon version beat random entries, p = 0.01, 612 trades).
+- The tilt is worth about Rs 120-170 a GOLDM lot per trade; Zerodha's statutory charges on one GOLDM futures round
+  trip are about Rs 290 (CTT and exchange fees on a ~Rs 14 lakh lot), before spread and stop slippage. Every rule
+  lost even if every stop and target were filled exactly at its level with zero spread.
+- Options are worse here: they keep under half of a 100-point move and cost about the same.
 
-Write-up: research/HUNT_R97_GOLD_REVERSE.md. Nothing goes to paper or live.
+Earlier the same day, R97 (gold's 200-300 point moves, 7 rules): also NOTHING.
+Write-ups: research/HUNT_R98_CATCH100.md, research/HUNT_R97_GOLD_REVERSE.md. Nothing goes to paper or live.

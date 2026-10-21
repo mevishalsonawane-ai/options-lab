@@ -68,7 +68,7 @@ def sim_future(book, i_sig: int, d: int, last_day=None):
     gross = pts * K.UNITS
     return dict(book=book.name, instrument="future", entry_ts=pd.Timestamp(m.ts[i_in]),
                 exit_ts=pd.Timestamp(m.ts[i_out]), day=pd.Timestamp(m.day[i_in]), side=int(d), why=why,
-                fill=e, exit=e + d * pts, gross=gross, cost=cost, net=gross - cost, net2=gross - cost2,
+                fill=[e], exit=[e + d * pts], gross=gross, cost=cost, net=gross - cost, net2=gross - cost2,
                 model=False, stale=False, prem_rs=0.0, risk_rs=STOP * K.UNITS + cost, kind="future",
                 strike=[np.nan])
 
@@ -122,8 +122,8 @@ def sim_option(book, i_sig: int, d: int, last_day=None):
     cost2 = E.opt_cost(book.ck, fill * u, px * u, tod_in, tod_out, 2.0, md)
     gross = (px - fill) * u
     return dict(book=book.name, instrument="option", entry_ts=pd.Timestamp(m.ts[i_in]),
-                exit_ts=pd.Timestamp(m.ts[i_out]), day=pd.Timestamp(m.day[i_in]), side=int(d), why=why, fill=fill,
-                exit=px, gross=gross, cost=cost, net=gross - cost, net2=gross - cost2, model=bool(md),
+                exit_ts=pd.Timestamp(m.ts[i_out]), day=pd.Timestamp(m.day[i_in]), side=int(d), why=why, fill=[fill],
+                exit=[px], gross=gross, cost=cost, net=gross - cost, net2=gross - cost2, model=bool(md),
                 stale=bool(stale), prem_rs=fill * u, risk_rs=fill * u * PREM_STOP + cost, kind="option",
                 strike=[k_])
 

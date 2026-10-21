@@ -41,7 +41,7 @@ def test_sim_future_fill_next_close_and_squareoff():
     m = bk.m
     i = m.at_or_after(m.days[0], 600)
     t = EN.sim_future(bk, i, 1)
-    assert t["fill"] == m.F[i + 1] and t["why"] == "target" and t["gross"] == pytest.approx(1000.0)
+    assert t["fill"] == [m.F[i + 1]] and t["why"] == "target" and t["gross"] == pytest.approx(1000.0)
     assert t["net"] == pytest.approx(t["gross"] - t["cost"]) and t["net2"] < t["net"]
     j = m.at_or_after(m.days[0], 23 * 60 + 20)       # after the square-off (23:15 here): no trade
     assert EN.sim_future(bk, j, 1) is None

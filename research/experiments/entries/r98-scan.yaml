@@ -1,0 +1,31 @@
+id: r98-scan
+title: 'R98 steps A-B: how often gold gives 100 points, and which candle / market conditions tilt it'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R98_CATCH100.md
+hypothesis: 'Descriptive (no rule): base rates of a +100 / -100 bracket on the GOLDM future and option, and 254 one-feature
+  buckets (candles, indicators, stretch, XAUUSD, silver, clock anchors) with day-clustered p and BH.'
+data_version: as r98-a
+period:
+  design: 2025-08-05..2026-07-14
+instruments:
+- GOLDM
+features:
+- future minute closes
+- 5-min / 15-min candles
+- XAUUSD
+- SILVER
+- option volume
+- clock anchors
+model_or_rule: bracket labels on a 5-minute grid, both sides; quintile scan
+settings: research/hunt/r98_catch100/dataset.py, scan.py
+prereg: null
+variants_tried: null
+results:
+  summary: '73,432 moments, 239 sessions: +100 before -100 46.8% vs -100 first 46.8% (gross 0.0); 34 of 254 buckets q <= 0.10
+    (mean reversion, XAUUSD lead), largest tilt +15 pts day-clustered; every option bucket negative. Close-based labels overstate
+    the tilt (NOTES N2).'
+  costs: futures ~43 pts, option bracket as R96
+holdout_read: null
+verdict: not-a-test
+notes: Inputs to the R98 pre-registration.
