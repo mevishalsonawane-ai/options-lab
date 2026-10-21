@@ -76,8 +76,8 @@ confirmed by the next opening balance.
     replaced on switch-off, gone, placed at the open).
 - **Targeted app run** (the changed classes plus the guard's, OrderFlowLive2Test and the trade layouts): 225 tests, 0 failures
   (12 skipped by their own conditions).
-- **Full app suite:** CI ran all four shards on the pushed code, all green (below). Locally, shard 0/4 also ran in full: 940 tests,
-  0 failures (51 skipped by their own conditions).
+- **Full app suite:** CI ran all four shards on the pushed code, all green (below). Locally, all four shards ran in full too: 4,224
+  tests, 0 failures (174 skipped by their own conditions, e.g. Jarvis-only or IraGoldAlgo-only).
 - **Local set-up note:** Maven Central refused this machine's downloads (HTTP 429), so a local Gradle init script (not committed)
   pointed Gradle and Robolectric at Google's mirror of Maven Central.
 
