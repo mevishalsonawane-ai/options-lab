@@ -7,20 +7,28 @@ ideas 1, 3, 7 and 6.
 ## Item 0: flaky clock-dependent tests
 
 **How they were found.** Not by reading alone: every test JVM was run with its wall clock forced (libfaketime under the
-test JVMs only, through a local Gradle init script; nothing committed) at these IST times, on a whole suite each:
+test JVMs only, through a local Gradle init script; nothing committed) at these IST times:
 
-| Clock (IST) | engine + ira-core | app |
-|---|---|---|
-| Sat 24 Oct 12:00 (weekend) | 0 failures | _see below_ |
-| Sun 25 Oct 18:00 (Sunday review hour) | 1 (a 2 s timeout under load; passes alone at the same time) | _see below_ |
-| Wed 21 Oct 00:05 (just after midnight) | 0 | _see below_ |
-| Wed 21 Oct 05:59 (Zerodha's token rolls over at 06:00) | 0 | _see below_ |
-| Wed 21 Oct 09:20 (just after the open) | 0 | _see below_ |
-| Wed 21 Oct 15:20 (after the 15:15 MIS cut-off) | 0 | _see below_ |
-| Wed 21 Oct 15:45 (after F&O's 15:40 close) | 2 (micro-benchmarks under load; pass alone at the same time) | _see below_ |
-| Wed 21 Oct 23:40 (after MCX's close) | 0 | _see below_ |
-| Tue 27 Oct 15:07 (NIFTY expiry, after the 15:05 square-off) | 0 | _see below_ |
-| Tue 10 Nov 11:00 (an NSE holiday) | 0 | _see below_ |
+| Clock (IST) | engine + ira-core (whole suites) |
+|---|---|
+| Sat 24 Oct 12:00 (weekend) | 0 failures |
+| Sun 25 Oct 18:00 (Sunday review hour) | 1 (a 2 s timeout under load; passes alone at the same time) |
+| Wed 21 Oct 00:05 (just after midnight) | 0 |
+| Thu 22 Oct 05:59 (Zerodha's token rolls over at 06:00) | 0 |
+| Wed 21 Oct 09:20 (just after the open) | 0 |
+| Wed 21 Oct 15:20 (after the 15:15 MIS cut-off) | 0 |
+| Wed 21 Oct 15:45 (after F&O's 15:40 close) | 2 (micro-benchmarks under load; pass alone at the same time) |
+| Wed 21 Oct 23:40 (after MCX's close) | 0 |
+| Tue 27 Oct 15:07 (NIFTY expiry, after the 15:05 square-off) | 0 |
+| Tue 10 Nov 11:00 (an NSE holiday) | 0 |
+
+The app suite is far slower under a forced clock (every clock read is intercepted, and Robolectric reads it all the time), so
+it was swept at the two times that matched the CI failures:
+- **05:59 IST:** 498 tests before the run hit its time limit; 1 failure (DailyPnlTest), which passes twice alone at 05:59.
+- **15:45 IST:** 12 failures in 8 classes, nearly all timing budgets (OrderLatencyTest, OrderPathRound2Test's 250-300 ms,
+  SmartWorkersTest's microseconds). The same 8 classes run alone pass at 15:45 IST and with the clock forced to the real time
+  (a control), so these were the forced clock's own cost plus load, not the time of day.
+- Not swept for the app (too slow under the forced clock): the other eight times; noted for round 4 (idea 5 below).
 
 The CI failures themselves (the test reports of the three failed runs) were read too.
 
@@ -35,9 +43,14 @@ The CI failures themselves (the test reports of the three failed runs) were read
    screenshot's look at the windows and the picture. It now waits for the dialog, then takes the screenshot.
 3. Already fixed before this round (20 Oct): ExposureSpeedTest and LiveSelfTestTest (pinned to noon IST).
 
-**Checked and not clock-dependent:** SupervisorTest, AutoChangeTest and SmartWorkersSpeedTest failed once each in the sweep,
-only while two builds ran at once (and the faked clock adds its own cost to every clock read); each passed alone at the
-same forced time. No test was skipped, disabled or quarantined.
+4. **TradeScreenTest.anEndedSessionShowsTheLoginAgain** (failed once in a local shard run, then 3 of 3 alone): not the clock
+   but a race - the account's six reads go at once, and the one that finds the session ended may be the positions read
+   ("Log in to Zerodha for today first") rather than the one that ended it. Both mean the session is over; the test accepts
+   either and still checks the screen's login line.
+
+**Checked and not clock-dependent:** SupervisorTest, AutoChangeTest, SmartWorkersSpeedTest, DailyPnlTest and LiveSelfTestTest
+each failed once under load (two builds at once, or the forced clock's cost); each passed alone at the same time. No test was
+skipped, disabled or quarantined.
 
 ## What was added (plain words for Boss)
 
@@ -85,7 +98,10 @@ and GTT moves for trailing stops. That changes how every live stop rests, so it 
   LiquidityPaperTestAppTest (+2: the trim keeps live rows), ControlScreensLayoutTest (the crash dialog waited for).
 - **Checks run locally:** `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification` green.
   App tests for everything touched green with CI's flags (about 400 in the targeted runs).
-- **CI:** _see below_.
+- **CI:** green on `5c48944` (app shard 3 timed out once on a slow runner before its tests could finish - compiling alone
+  took 20 minutes - and passed on its one re-run in 14 minutes) and green again on `63944d0`: every job, Build APK included.
+  One APK build failed on the way: one more line in the diagnostics report's function overflowed the compiler's stack again
+  (as in round 1); the line now rides in its own small function.
 
 ## Review
 
