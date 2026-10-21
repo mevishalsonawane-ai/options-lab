@@ -155,6 +155,46 @@ def run_weekly(d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, seed: in
                 twin_mean=float(tot.mean() / len(rets)), p=float((np.sum(tot >= total) + 1) / (twins + 1)))
 
 
+def trade_day_long(d, i):
+    """R5A on daily futures: long from the open to the close of row i, 0.10% round trip (None on a roll row)."""
+    if d.roll.values[i] or not (d.open.values[i] > 0):
+        return None
+    return (d.ac.values[i] - d.ao.values[i]) / d.open.values[i] - COST
+
+
+def run_thursday(d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, seed: int = K.SEED):
+    """R5A history: long open -> close on every Thursday (EIA storage proxy; holiday-moved weeks not removed) over
+    `period`; twins = the same trade on a random non-Thursday row of the same year."""
+    dates = pd.DatetimeIndex(d.date.values)
+    inp = (dates.date >= period[0]) & (dates.date <= period[1])
+    thu = dates.weekday == 3
+    rng = np.random.default_rng(seed)
+    idx, rets = [], []
+    for i in np.flatnonzero(thu & inp):
+        r = trade_day_long(d, i)
+        if r is not None:
+            idx.append(i)
+            rets.append(r)
+    rets = np.asarray(rets)
+    if not len(rets):
+        return dict(n=0, mean=float("nan"), total=0.0, twin_mean=float("nan"), p=float("nan"))
+    years = dates.year.values
+    pools = {y: np.flatnonzero((years == y) & inp & ~thu) for y in np.unique(years[inp])}
+    tot = np.zeros(twins)
+    for i in idx:
+        pool = pools[years[i]]
+        for t in range(twins):
+            r = None
+            for _ in range(20):
+                r = trade_day_long(d, int(pool[rng.integers(len(pool))]))
+                if r is not None:
+                    break
+            tot[t] += r if r is not None else 0.0
+    total = float(rets.sum())
+    return dict(n=int(len(rets)), mean=float(rets.mean()), total=total, win=float((rets > 0).mean()),
+                twin_mean=float(tot.mean() / len(rets)), p=float((np.sum(tot >= total) + 1) / (twins + 1)))
+
+
 NR_KINDS = ("nr7", "nr7_id", "nr4", "nr7_lowvol", "nr7_r93", "nr7_tsm12", "nr7_tsm1")
 SIDE_FILTER = {"nr7_tsm12": "tsm12", "nr7_tsm1": "tsm1"}      # round 4: NR7 breaks that agree with the momentum sign
 
@@ -169,6 +209,8 @@ def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, s
     kind = R.HISTORY_RULES.get(rule_id, "dir")
     if kind == "wnr7":
         return run_weekly(d, period, twins, seed)
+    if kind == "storage_long":
+        return run_thursday(d, period, twins, seed)
     if kind == "nr7_r93":
         tr = trade_nr7_r93
     elif kind in SIDE_FILTER:

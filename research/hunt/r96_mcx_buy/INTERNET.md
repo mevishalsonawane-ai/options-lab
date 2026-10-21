@@ -73,3 +73,19 @@ About 8 web searches; abstracts and summaries only.
 | crude variance risk premium is negative and time-varying; it predicts futures returns | Chevallier & Sevi (FEEM WP); Da Fonseca & Xu (USO, AUT); Trolle & Schwartz 2010 | R4G (cheap-IV filter) |
 | dealer-gamma regime pages (negative gamma favours breakouts) | vendor pages (optionsanalysissuite, SpotGamma), no track record | no (no MCX dealer data) |
 | MCX NR7 / inside-bar option backtests | none found (only tip pages) | - |
+
+## Round 5 scan (21 Oct 2026, before the round-5 pre-registration)
+
+About 12 web searches; abstracts and summaries only (two full texts could not be fetched: 404 / DNS failure).
+
+| idea | source | used |
+|---|---|---|
+| natural-gas futures earn > 50% of the annual return on EIA storage days, half before the release; "a simple strategy earns after costs" | Prokopczuk, Wese Simen & Wichmann, Energy Journal 42(2) 2021, https://journals.sagepub.com/doi/10.5547/01956574.42.2.mpro ; https://livrepository.liverpool.ac.uk/3083246/ | R5A |
+| crude IV drifts up into OPEC meetings and falls after; OptionMetrics (57 meetings since 2005): pre-meeting returns positive, IV falls slightly during meetings | Horan, Peterson & Mahar, Energy Journal 25(3) 2004, https://ideas.repec.org/a/aen/journl/2004v25-03-a06.html ; https://optionmetrics.com/blog/crude-oil-and-trading-opec/ | R5E (the run-up idea); OPEC itself not tested (monthly Sunday meetings, ~11 in design) |
+| equity straddles bought before earnings and sold before them earn (pre-event IV run-up) | Gao, Xing & Zhang, JFQA 2018 | R5E |
+| OPEC+ eight-country meeting dates (monthly, Sundays: 4 Jan, 1 Feb, 1 Mar, 5 Apr 2026 ...) | https://opec.org/pr-detail/1619593-1-march-2026.html ; https://www.opec.org/pr-detail/589-1-february-2026.html | sample-size check only |
+| crude and gas IV rise toward expiry and fall Friday -> Monday (1999-2006) | Univ. of Oklahoma dissertation (Ederington, adviser), https://shareok.org/handle/11244/319355 | no (MCX monthly options; weekly expiries don't exist on MCX) |
+| gold: overnight returns positive, day (US hours) negative | Blose, Gondhalekar & Kort 2018, https://ideas.repec.org/a/spr/jecfin/v42y2018i3d10.1007_s12197-017-9403-0.html | no (a few bp a day, under GOLDM spreads; R97-R99 territory) |
+| gold / silver ratio catch-up | practitioner pages only (WisdomTree, TradingView) | R5F used R94's "ratio trends" finding instead |
+| MCX vs NYMEX minute lead-lag | nothing quantitative found (broker pages only) | not testable (no XAUUSD / COMEX minutes on Drive) |
+| API Tuesday -> EIA Wednesday | news anecdotes only | no |

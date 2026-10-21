@@ -33,7 +33,13 @@ NAMES = {"S1": "squeeze release, ATM straddle", "S2": "squeeze release, 1-ITM di
          "R4D": "MCX 17:00-17:30 IST momentum, 1-ITM, same session (GOLDM, SILVERM)",
          "R4E": "NR7 crude, 2-ITM strike",
          "R4F": "NR7 crude, only breaks agreeing with the 1-month trend",
-         "R4G": "NR7 crude, only when the NR7 day's ATM IV is below its 20-session median"}
+         "R4G": "NR7 crude, only when the NR7 day's ATM IV is below its 20-session median",
+         "R5A": "natural-gas EIA storage day, 1-ITM call from 17:00 IST, same session",
+         "R5B": "NR7 breakout on gas and metals, only on cheap-IV days (R4G's filter)",
+         "R5C": "NR7 crude -> ATM straddle, only on cheap-IV days",
+         "R5D": "EIA spike fade at 0.10 ATR (crude)",
+         "R5E": "pre-event ATM straddle 17:00 IST -> release - 5 min (EIA crude, EIA storage)",
+         "R5F": "gold / silver ratio breakout -> 1-ITM SILVERM, 5 sessions"}
 
 
 def rs(x) -> str:

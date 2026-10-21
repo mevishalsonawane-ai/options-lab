@@ -208,6 +208,25 @@ def family_q(rows: list, family) -> float:
     return bh(others + [min(1.0, min(inside) * len(inside))])[-1]
 
 
+def family_qs(rows: list, families) -> list:
+    """PREREG_ROUND5 s5: BH over the ledger with EVERY family collapsed into one test each (its smallest p x its
+    size, capped at 1). Returns one q per family (NaN when no member is in the ledger)."""
+    keys = [{(str(r), i) for r, i in f} for f in families]
+    inany = set().union(*keys) if keys else set()
+    ps = [r.get("p") for r in rows if (str(r["round"]), r["id"]) not in inany]
+    pos = []
+    for fam in keys:
+        inside = [r.get("p") for r in rows if (str(r["round"]), r["id"]) in fam]
+        inside = [x for x in inside if x is not None and np.isfinite(x)]
+        if inside:
+            pos.append(len(ps))
+            ps.append(min(1.0, min(inside) * len(inside)))
+        else:
+            pos.append(None)
+    q = bh(ps)
+    return [float("nan") if k is None else q[k] for k in pos]
+
+
 def is_lead(s, fl, p) -> bool:
     return bool((s.get("net", 0) > 0 and sum(f["net"] > 0 for f in fl) >= 2) or (np.isfinite(p) and p < 0.10))
 
@@ -242,7 +261,7 @@ def design(round_no: int = 1, only=None):
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     res = {}
     all_df = []
-    for rid in (only or {1: R.ORDER, 2: R.ORDER2, 4: R.ORDER4}.get(round_no) or R.ORDER3):      # R3K / R3L: `design 3 R3K R3L`
+    for rid in (only or {1: R.ORDER, 2: R.ORDER2, 4: R.ORDER4, 5: R.ORDER5}.get(round_no) or R.ORDER3):      # R3K / R3L: `design 3 R3K R3L`
         trades = run_rule(rid, books, K.DESIGN)
         df = frame(trades)
         all_df.append(df)
@@ -267,6 +286,7 @@ def design(round_no: int = 1, only=None):
     rows = save_ledger(rows)
     qmap = {(r["round"], r["id"]): r["q"] for r in rows}
     fq = family_q(rows, R.NR7_CRUDE_FAMILY)
+    fqs = family_qs(rows, R.FAMILIES)
     fam = {(int(a), b) for a, b in R.NR7_CRUDE_FAMILY}
     jp = K.RESULTS / f"design_round{round_no}.json"
     if only and jp.exists():          # a partial run (e.g. `design 3 R3K R3L`) adds to the round's results
@@ -281,13 +301,20 @@ def design(round_no: int = 1, only=None):
         h = r["history"]["pooled"] if r["history"] else None
         r["bh_q"] = q
         r["gates"] = gates(r["summary"], r["folds"], r["twin_p"], q, h, round_no)
-        if round_no >= 4 and (round_no, rid) in fam:            # PREREG_ROUND4 s5: the collapsed-family BH gate
+        if round_no == 4 and (round_no, rid) in fam:            # PREREG_ROUND4 s5: the collapsed-family BH gate
             r["family_q"] = fq
             r["gates"]["bh_family"] = bool(np.isfinite(fq) and fq <= K.GATE_Q)
+        if round_no >= 5:                                        # PREREG_ROUND5 s5: every family collapsed at once
+            for f, fqx in zip(R.FAMILIES, fqs):
+                if (str(round_no), rid) in {(str(a), b) for a, b in f}:
+                    r["family_q"] = fqx
+                    r["gates"]["bh_family"] = bool(np.isfinite(fqx) and fqx <= K.GATE_Q)
         r["pass"] = bool(all(r["gates"].values()))
         r["lead"] = is_lead(r["summary"], r["folds"], r["twin_p"])
     out = dict(round=round_no, written=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                design=[str(x) for x in K.DESIGN], ideas_in_ledger=len(rows), rules=res)
+    if round_no >= 5:
+        out["family_q"] = {"nr7_crude": fqs[0], "eia_fade": fqs[1]}
     jp.write_text(json.dumps(out, indent=1, default=str))
     pd.concat(all_df, ignore_index=True).to_csv(K.RESULTS / f"trades_design_round{round_no}.csv", index=False)
     return out
