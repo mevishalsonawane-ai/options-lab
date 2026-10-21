@@ -243,8 +243,8 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { SignalPaperArm.diagLine() }.getOrElse { "Telegram calls (paper): could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { TelegramCapture.diagLine() }.getOrElse { "Telegram login: could not read" }).append('\n')
         // The MCX paper arms (9 Oct, paper only, not proven): on or off, what each holds, its last decision (the "[mcx-arms]" lines below).
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }).append('\n')
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { McxNr7Record.diagLine() }.getOrElse { "NR7 crude (record only): could not read" }).append('\n')
+        // 21 Oct: with NR7 crude's record line, in their own function (the report's one is near the compiler's limit).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(mcxArmLines())
         // The approved forge ideas on paper (S2, paper only): how many hosted, each one's record (the "[forge-paper]" lines below).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { GrammarArm.diagLine() }.getOrElse { "${GrammarArm.LABEL}: could not read" }).append('\n')
         // Speed, round 4 (Boss, 5 Oct: "Answer is taking a lot after question is asked"): where a question's wait goes,
@@ -363,6 +363,11 @@ object Diag {
     // report's (one more line there overflowed the compiler's stack in the APK build again).
     private fun round2Exits(): String = (runCatching { ExitCoordinator.line() }.getOrElse { "Exit coordinator: could not read" }) + "\n" + round3Lag()
     private fun round3Lag(): String = (runCatching { ExitCoordinator.lagLine() }.getOrElse { "Positions-lag guard: could not read" }) + "\n"
+
+    /** The MCX paper arms' line and NR7 crude's record-only line (21 Oct). Its own function: the report's one is near the compiler's limit. */
+    private fun mcxArmLines(): String =
+        (runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }) + "\n" +
+            (runCatching { McxNr7Record.diagLine() }.getOrElse { "NR7 crude (record only): could not read" }) + "\n"
 
     /** 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7). */
     private fun round1Watch(): String = buildString {
