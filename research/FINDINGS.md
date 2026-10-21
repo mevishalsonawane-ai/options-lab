@@ -1495,3 +1495,19 @@ Breadth = 3 of 5 metals (GOLD, SILVER, COPPER, ZINC, ALUMINIUM; minis once) / 2 
   (twin p 0.51; -Rs 5.76 lakh without the top 5: the 2023-26 silver / copper rally); daily breadth -Rs 3.68 lakh (133).
 - Sample: long enough for the intraday answer (post-hoc 95% upper bound of gross a trade below cost in every option book; closest
   gold with breadth Rs 265 vs Rs 364). Keep Breadth Donchian on the indices only.
+## Boss's five "advanced commodity" ideas on MCX (R94, 21 Oct 2026) - 0 of 152 pass; nothing goes to paper
+Full study: `HUNT_R94_MCX_ADVANCED.md` (pre-registered `hunt/r94_mcx_advanced/PREREG.md`, commit 8b6b326; notes N1-N3).
+Real MCX costs on every leg, a hard stop on every trade, 1 lot, Boss's 2%-of-Rs-1-lakh check, one BH family over 152 cells,
+twins, the holdout read once (64 in-scope cells). Signal sources: the futures legs / ratio / calendar / US CFD proxy.
+- Calendar spreads (16 pairs of contracts live on 19 Oct, May - Oct 2026): the spread earns about Rs 0 a trade BEFORE
+  costs (GOLDM +Rs 20 vs Rs 1,242 of costs on 505 trades); design -Rs 5.31 lakh (546), holdout -Rs 9.55 lakh (937).
+- Sector index vs constituents: BULLDEX / METLDEX have no point-in-time history and ~0 lots a day (no ENRGDEX future).
+  Proxies: GOLD/SILVER ratio reversion lost in both windows (W60 design -Rs 6.3 lakh, 68); base-metal pairs positive in
+  design (q 1.00, fail the liquidity rule) and negative in the holdout.
+- Option selling: out of scope (Boss, 21 Oct); design only, holdout not read, 0 of 88 at p <= 0.05; condors lose to
+  costs, naked strangles carry -Rs 1.5 lakh single-gap tails.
+- Bullion seasonals (2012-2026): no claim beats same-year random windows after BH (best: gold short 10 days after
+  Diwali, +Rs 44,734 on 10, p 0.037, q 0.70). The 2022-26 holdout gains (wedding-month gold +Rs 5.7 lakh on 28) are the
+  bull market: random windows of the same years made most of it (twin p 0.09-0.36).
+- US overnight -> MCX open (Dukascopy proxies; a re-test of R2): the 09:00 gap prices the night (corr 0.71-0.87 gold,
+  silver, crude); holdout pooled +Rs 7,467 on 320 trades. Gold / silver lots cannot fit a 2% stop at Rs 1 lakh.
