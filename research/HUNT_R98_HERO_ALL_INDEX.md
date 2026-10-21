@@ -490,6 +490,85 @@ Half-at-2× keeps Rs 44,591. The +30% lock keeps Rs 1,378.
 - Paper-trade it from now, and read it once at a fixed count of days. About 10-20 such expiry days come a year, so it
   takes 2-3 years to learn much. That is the honest price of a lottery-shaped edge.
 
+## R98e-g (Boss, 21 Oct): "do everything in your power to find it": new information, order flow, ignition
+
+Pre-registered: `hunt/r98/PREREG_E.md` (`2a7966c`), `PREREG_F.md` (`81866e6`), `PREREG_G.md` (`6083ef3`). Code:
+`features_e.py`, `model_e.py`, `search_e.py`, `orderflow.py`, `ignition.py`. Tables: `results/model_e.md`,
+`search_e.md`, `orderflow.md`, `ignition.md`.
+
+### R98e: 18 new features, a model, and an 8,280-variant search judged for luck
+
+**The new information** (point-in-time; the look-ahead test passes on NIFTY and BANKNIFTY days):
+- gamma exposure (GEX) and its changes;
+- the call / put walls and the pin strike;
+- the strike's demand (residual return, IV against ATM, volume share);
+- breadth of the NIFTY 50 / Bank NIFTY stocks;
+- the other indices' moves;
+- event flags.
+
+**The model** (walk-forward 2023-26):
+
+| label | R98 features | + new features |
+|---|---|---|
+| 10× AUC | 0.659 | 0.675 |
+| one pick a day, held | −Rs 311 a ticket | +Rs 1,282 (3/4 years > 0; **−Rs 774 without the 5 best days**) |
+
+- **IV against ATM IV (nearness) does almost all the work** (permutation AUC drop 0.079).
+- **Gamma exposure adds nothing:** every GEX feature has an importance of about 0, and the same holds for the walls,
+  the pin strike and the cross-index moves. Breadth adds about 0.005.
+
+**The search:** 8,280 rules (single conditions and pairs × 2 windows × 3 price buckets × 4 exits), one ticket per
+index-day, over 714 expiry dates.
+
+| test | result | needed |
+|---|---|---|
+| Hansen SPA | p = 0.96 | < 0.05 |
+| White Reality Check | p = 0.34 | < 0.05 |
+| PBO | 0.33 | < 0.25 |
+| walk-forward 2023-26 | −Rs 65,760, 1/4 years > 0 | > 0, ≥ 3/4 |
+
+- **Not found.** The best t of 2.61 is what 8,280 tries on lottery-shaped P&L produce by luck.
+- The test is not blind: on a noise check it found nothing (SPA p 0.26), and it found a planted edge at p 0.00.
+- **The near-misses share one theme:** a Rs 6-10 option within about 1.5 straddles, with IV near the ATM IV, bought
+  11:00-12:55. The best is +Rs 2,571 a ticket on 474 tickets (+3,232 in 2021-23, +1,802 in 2024-26).
+
+### R98f: order flow at the hero move
+
+| window | the clearest difference, hero against dud | AUC |
+|---|---|---|
+| 30 min before the start | volume +18% against −10% of the morning pace; OI +6.4% against +3.7% | ≤ 0.57 (no usable warning) |
+| first 10 min of the run | up-tick volume share 60% against 37% | 0.81, but circular: the start is the cheapest point, chosen with hindsight |
+
+- **Futures** (29 Jul – 19 Oct 2026, 9 hero days):
+  - futures volume is unusually LOW before the move, then surges;
+  - futures OI rose in all 9 runs, meaning fresh positions, not covering.
+- **13 Oct, minute by minute:**
+  - 13:00-14:00, quiet: futures flat, the 22650 CE drifts from Rs 6.55 to 4.10;
+  - 14:05-14:25, ignition: futures volume 2-7×, the CE's volume 2-3× and its OI rising from 23.3M to 25.7M;
+  - 14:35-15:25, the squeeze: futures volume about 10×, and the CE's OI collapsing from 26.8M to 10.3M as call writers
+    bought back, while the price went from Rs 31 to Rs 83.
+
+### R98g: trading the ignition on every year
+
+- **The rule:** on a cheap option, a 5-minute volume burst ≥ 3× / 5× its average since 11:00, a price ≥ 1.3× / 1.5×
+  its low, and ≥ 60% up-tick volume. One ticket per index-day, 4 exits.
+- **Result:** SPA p = 0.37, so **no pass**.
+- **The best** (5× burst, 1.5× lift-off, −20% stop): +Rs 998 a ticket on 405 tickets. Both halves are > 0 (+1,171 /
+  +912) and 4 of 6 years, but it is −Rs 684 without the 5 best days.
+- **13 Oct:**
+  - the 3× version bought the 22650 CE at Rs 9.65 at 14:07: +Rs 33,400 held, but the −20% stop was hit first;
+  - the 5× version bought the 22700 CE at 14:34: +Rs 8,398.
+
+### Where the search ends, and why
+
+- Across R98-R98g, about 9,000 pre-registered rules covered:
+  - entries, exits and models;
+  - events, gamma exposure, breadth, cross-index and order flow.
+- **Every profitable rule depends on a few jackpot days, and none beats luck after the search.** A hero-zero profit IS
+  a few jackpot days, and in this data nothing knows in advance which days they will be.
+- More combinations of the same signals would only fit the past. The only clean test left is forward: `FORWARD_TEST.md`
+  freezes the 4 near-misses for a paper test on new days.
+
 ## Honest notes
 
 - **Prices.** No bid/ask in the lake. The 1-tick spread is a model; real Rs 1-3 strikes are often 1 tick wide, but

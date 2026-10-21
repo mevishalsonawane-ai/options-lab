@@ -215,3 +215,22 @@ def test_new_features_do_not_look_ahead(und):
         for f in F.NEW:
             x, y = a[f], b[f]
             assert (x != x and y != y) or x == pytest.approx(y), (f, x, y)
+
+
+def test_ignition_trigger_on_the_synthetic_day():
+    import ignition as G
+    day = _synthetic_trend_day()
+    # a cheap 10100 CE: Rs 2 until the index passes 10,030 (13:30), then +0.1 a point; volume 10 a minute, with a burst
+    # of 200 a minute from 14:00
+    s = day.ix[:, 3]
+    c = 2.0 + 0.1 * np.maximum(s - 10030.0, 0)
+    a = day.opts[(10100.0, "C")]
+    a[:, R.O], a[:, R.H], a[:, R.L], a[:, R.C] = c, c + 0.05, c - 0.05, c
+    a[:, R.V] = 10.0
+    a[R.minute(14, 0):R.minute(14, 5), R.V] = 200.0
+    trg = G.triggers(day)
+    # 13:31-13:59 the price rises but the volume is flat (no burst); at 14:00 the 5-minute volume is 240 against a
+    # mean of about 55: burst 4.3 >= 3; at 14:01 it is 430 / 61 = 7.1 >= 5. Price 5 at 14:00 = 2.5x the low of 2.
+    assert trg[(3.0, 1.3)][:3] == (R.minute(14, 0), 10100.0, "C")
+    assert trg[(3.0, 1.5)][:3] == (R.minute(14, 0), 10100.0, "C")
+    assert trg[(5.0, 1.3)][0] == R.minute(14, 1)

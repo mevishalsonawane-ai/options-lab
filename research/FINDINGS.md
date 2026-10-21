@@ -345,3 +345,8 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
   after a Fed decision or US CPI print: afternoon hero 14% vs 7%, 09:20 CE+PE basket +Rs 1,666 held / +Rs 3,354 with
   a -20% stop per Rs 5,000, but BH q 0.29, every CI includes 0, negative without the 3 best days (16 Jun 2022,
   12 Sep 2024). Best lead found; only a frozen forward paper test (10-20 days a year) can confirm it.
+- R98e-g (pre-registered): 18 new features (gamma exposure / OI walls / strike demand / breadth / cross-index /
+  events): GEX adds no predictive value; 8,280-variant search SPA p 0.96, RC 0.34, PBO 0.33, walk-forward 1/4.
+  Order flow: no usable pre-move signal (AUC <= 0.57); 13 Oct = quiet -> ignition (volume + OI build) -> squeeze
+  (call OI collapse). Ignition entries: SPA p 0.37; best +Rs 998/ticket both halves but -Rs 684 w/o 5 best days.
+  Search closed; 4 near-misses frozen in hunt/r98/FORWARD_TEST.md for a forward paper test.
