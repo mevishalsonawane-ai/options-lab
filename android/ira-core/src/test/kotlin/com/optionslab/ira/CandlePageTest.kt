@@ -150,4 +150,16 @@ class CandlePageTest {
         // Whatever it counted, no 1-minute lesson.
         assertTrue(a.lessons(day).none { it.key.split(':')[1] == "1" })
     }
+
+    /** 20 Oct, review: a 1-minute candle lesson kept by an earlier pass is let go on the next pass; 5- and 15-minute ones stay. */
+    @Test fun anOldOneMinuteCandleLessonIsLetGoOnTheNextPass() {
+        val d = java.time.LocalDate.of(2026, 10, 20)
+        val old = AgentLessons.pass(AgentLessons.Book(), AgentLessons.Inputs(d, candles = listOf(
+            AgentLessons.CandleResult(d, "nifty:1:hammer", "Hammer on NIFTY 1m", 120, agrees = true),
+            AgentLessons.CandleResult(d, "nifty:5:hammer", "Hammer on NIFTY 5m", 120, agrees = true)))).book
+        assertTrue(old.lessons.any { it.id.contains(":1:") }, "the old book held a 1-minute lesson")
+        val next = AgentLessons.pass(old, AgentLessons.Inputs(d.plusDays(1))).book
+        assertTrue(next.lessons.none { it.id.startsWith("candle:") && it.id.contains(":1:") }, "${next.lessons.map { it.id }}")
+        assertTrue(next.lessons.any { it.id.startsWith("candle:") && it.id.contains(":5:") })
+    }
 }

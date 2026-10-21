@@ -44,7 +44,7 @@ internal object IraSundayReview {
      */
     internal suspend fun compose(today: LocalDate): SundayReview.Said = withContext(Dispatchers.IO) {
         val monday = SundayReview.weekFor(today)
-        val paper = runCatching { withTimeoutOrNull(BOOK_MS) { IraWeekly.trades(monday) } }.getOrNull()
+        val paper = runCatching { withTimeoutOrNull(BOOK_MS) { IraWeekly.trades(monday, whole = true) } }.getOrNull()
             ?.map { SundayReview.Trade(SundayReview.Book.PAPER, armOf(it), it.closed, it.net, it.charges) }
         val live = runCatching {
             val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
@@ -89,9 +89,10 @@ internal object IraSundayReview {
             return Delivered.NOTIFIED
         }
         if (!com.optionslab.app.BuildConfig.JARVIS) return Delivered.HELD
+        // Review: muted or quiet hours first (the listening voice would only pop it up there, and it was logged as said).
+        if (JarvisVoice.muted || JarvisVoice.quietNow()) return Delivered.HELD
         val n = SundayReview.sentences(text) + 1
         if (runCatching { JarvisVoice.announce(JarvisSpeaker.words(text, n), full = true, whole = true) }.getOrDefault(false)) return Delivered.SPOKEN
-        if (JarvisVoice.muted || JarvisVoice.quietNow()) return Delivered.HELD
         runCatching { JarvisSpeaker.speak(context, text, n) }
         return Delivered.SPOKEN
     }

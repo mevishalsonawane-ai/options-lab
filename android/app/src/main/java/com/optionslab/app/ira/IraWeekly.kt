@@ -165,15 +165,18 @@ internal object IraWeekly {
      * everything else from the paper trade book by who placed it ([com.optionslab.app.data.TradeBook.ownerOf]). Also the
      * spoken Sunday review's paper book ([IraSundayReview]; 20 Oct, enhancement round 2).
      */
-    internal suspend fun trades(monday: LocalDate): List<WeeklyReview.Trade> {
+    internal suspend fun trades(monday: LocalDate, whole: Boolean = false): List<WeeklyReview.Trade> {
+        // 20 Oct, enhancement round 2 (review): [whole] (the spoken Sunday review): a book that cannot be read throws (said as unread,
+        // never as "no trades"), and trades under Boss's opt-in paper trail count too (it is Boss's whole paper week).
+        fun <T> read(f: () -> List<T>): List<T> = if (whole) f() else runCatching(f).getOrDefault(emptyList())
         val from = monday.minusWeeks(1)
         val out = ArrayList<WeeklyReview.Trade>()
         val books = LiquidityRules.BOOKS.associateBy { it.source }
-        runCatching { com.optionslab.app.data.OrbArms.closedPaper() }.getOrDefault(emptyList()).forEach { p ->
+        (if (whole) com.optionslab.app.data.OrbArms.closedPaper() else runCatching { com.optionslab.app.data.OrbArms.closedPaper() }.getOrDefault(emptyList())).forEach { p ->
             val exit = p.exitTime?.toLocalDate() ?: return@forEach
             if (exit.isBefore(from)) return@forEach
             // Liquidity's plain-rules record only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) are left out of it.
-            if (p.trail != null) return@forEach
+            if (p.trail != null && !whole) return@forEach
             val net = (p.grossPnl ?: 0.0) - p.charges
             val book = books[p.arm]
             when {
@@ -186,7 +189,7 @@ internal object IraWeekly {
         }
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
         val pine = runCatching { com.optionslab.app.data.PineScripts.items.value.map { it.name }.toSet() }.getOrDefault(emptySet())
-        runCatching { com.optionslab.app.data.TradeBook.trips(false) }.getOrDefault(emptyList()).forEach { t ->
+        read { com.optionslab.app.data.TradeBook.trips(false) }.forEach { t ->
             if (t.day.isBefore(from)) return@forEach
             val owner = com.optionslab.app.data.TradeBook.ownerOf(t, owners)
             val g = WeeklyReview.groupOf(owner, pine)

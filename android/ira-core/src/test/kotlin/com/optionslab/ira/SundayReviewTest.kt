@@ -262,7 +262,9 @@ class SundayReviewTest {
         for (q in listOf("Sunday review", "jarvis, sunday summary please", "read me the weekly review", "say the week's review aloud",
                 "weekly review aloud", "speak the sunday review", "weekly review sunao"))
             assertTrue(SundayReview.asked(q), q)
-        for (q in listOf("weekly review", "how did this week go", "what is the review of sunday's news", "review my trades", "sunday"))
+        // 20 Oct, review: Boss's own week, an index's, a strategy's or the bots' record keep their own answers.
+        for (q in listOf("weekly review", "how did this week go", "what is the review of sunday's news", "review my trades", "sunday",
+                "read me my weekly review", "sunday report on banknifty", "read the weekly review for liquidity", "sunday summary of the arms"))
             assertFalse(SundayReview.asked(q), q)
         // The written weekly review's own question is not taken from it.
         assertTrue(WeeklyReview.asked("weekly review") != null)

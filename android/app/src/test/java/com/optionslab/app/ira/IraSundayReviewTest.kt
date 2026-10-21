@@ -18,7 +18,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -97,9 +96,12 @@ class IraSundayReviewTest : RobolectricTest() {
 
     @Test fun anUnlockedPhoneHearsItWholeWithNoNotice() {
         assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
-        assumeFalse("quiet hours: kept in the chat", JarvisVoice.quietNow())
-        assertFalse(JarvisVoice.lockedSafe())
-        assertEquals(IraSundayReview.Delivered.SPOKEN, IraSundayReview.deliver(context, text))
+        // Review: quiet hours switched off for the test (they follow the wall clock), and back on after.
+        JarvisVoice.quietHours = false
+        try {
+            assertFalse(JarvisVoice.lockedSafe())
+            assertEquals(IraSundayReview.Delivered.SPOKEN, IraSundayReview.deliver(context, text))
+        } finally { JarvisVoice.quietHours = true }
         val said = JarvisSpeaker.lastAloud!!
         assertTrue(said, said.contains("2,000") && said.contains("rupees"))
         // Every sentence said: the last one too, never cut to "the rest is in the chat".

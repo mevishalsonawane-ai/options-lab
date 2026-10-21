@@ -919,12 +919,18 @@ object AgentLessons {
      * moved on, the proposals the strong lessons imply (at most [MAX_PROPOSALS], only [safe] ones), the evening's line and the
      * finding's words.
      */
+    /** A 1-minute candle lesson's id ("candle:<instrument>:1:<shape>"). */
+    private val ONE_MINUTE_CANDLE = Regex("candle:[^:]+:1:.+")
+
     fun pass(book: Book, inputs: Inputs): Pass {
         val day = inputs.day
         val regimes = HashMap(book.regimes)
         inputs.regimeToday?.lowercase(Locale.ENGLISH)?.takeIf { it in setOf("busy", "quiet", "normal") }?.let { regimes[day] = it }
         val keptRegimes = if (regimes.size > REGIME_DAYS) regimes.entries.sortedByDescending { it.key }.take(REGIME_DAYS).associate { it.key to it.value } else regimes
         val byId = merge(book.lessons).associateBy { it.id }.toMutableMap()
+        // 20 Oct, enhancement round 2 (review): only 5- and 15-minute candles are lessons now; a 1-minute candle lesson an earlier
+        // pass kept is let go here, so Jarvis never cites one again.
+        byId.keys.removeAll { ONE_MINUTE_CANDLE.matches(it) }
         val changes = ArrayList<Change>()
         val accs = samples(inputs, keptRegimes).sortedBy { it.id }
         // Each lesson's days brought up to date first, so that tonight's p-values are adjusted together (Benjamini-Hochberg

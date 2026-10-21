@@ -216,5 +216,13 @@ object SundayReview {
         " (weekly|week s|weeks) (review|summary|recap) (aloud|out loud|bolo|suna do|sunao) ")
 
     /** Is the spoken Sunday review asked ("Sunday review", "read me the weekly review", "weekly review aloud")? */
-    fun asked(text: String): Boolean = ASK.containsMatchIn(Spaced.joined(text))
+    fun asked(text: String): Boolean = Spaced.joined(text).let { t -> ASK.containsMatchIn(t) && !NOT.containsMatchIn(t) }
+
+    /**
+     * 20 Oct, review: Boss's own week ("read me my weekly review"), an index's, a strategy's or the bots' own record, the month's or
+     * the week ahead keep their own answers, as the written weekly review leaves them ([WeeklyReview]'s own list).
+     */
+    private val NOT = Regex(" (my|mine|mera|meri|mere|i|our|nifty|banknifty|bank|sensex|finnifty|fin|vix|gold|midcap|bot|bots|strategy|strategies|arm|arms|" +
+        "orb|liquidity|solo|hero|shadow|shadows|pine|script|scripts|month|monthly|mahina|mahine|next|coming|upcoming|agle|agla|aane|ahead|" +
+        "look like|looking|plan|calendar|expiry|expiries|holiday|holidays|news|stock|stocks|market) ")
 }
