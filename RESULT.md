@@ -73,7 +73,10 @@ contract), then ideas 3, 12, 6, 8 and 10.
   (3,800+ tests). App tests for everything touched green with CI's flags (433 in one run: every exit sender, the order and
   tick path guards, OrderPathRound2Test, LiveOrderPathsE2ETest, the watch and job tests), and the Sunday review's in the
   Jarvis build too. (This container needed the Android SDK installed and Google's mirror of Maven Central; not committed.)
-- **CI:** see below.
+- **CI:** green on `0c68330` (the last code commit): all four app test shards, Build APK, engine parity, the PC harness.
+  The run before it (`674972f`, the What's New entry) failed in two app test shards; its logs did not name the tests, the
+  next commit (the third review's fixes, including the Sunday review's clock-dependent test) went green, and shard 0 also
+  passes locally on it. The commits after it change RESULT.md only.
 
 ## Review
 
