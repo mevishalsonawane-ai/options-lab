@@ -12,7 +12,7 @@ Boss, in plain English:
   - It won 76% of trades and was positive in all four quarters.
   - Worst month -Rs 9,718, worst drawdown -Rs 11,854, so it stayed inside your -Rs 13k month stop.
   - It beat random-day copies of itself (p 0.014).
-  - It fails one gate: after correcting for all 27 ideas tried so far, its score is 0.126 against the 0.10 limit.
+  - It fails one gate: after correcting for all 29 ideas tried so far, its score is 0.135 against the 0.10 limit.
   - Caveat: I chose crude because round 2 pointed there, so its numbers are flattering. Almost all of the profit is on
     the big CRUDEOIL lot (23 trades), whose median risk a trade is about Rs 9,100, so 2% risk needs about Rs 4.6 lakh.
   - One CRUDEOIL winner (22 Oct 2025, +Rs 16,532) was priced by the model, not a real print; on real prints only
@@ -23,6 +23,11 @@ Boss, in plain English:
   - high-volatility opening-range breaks (14 trades).
   The moves are smaller than the option spread.
 - **Natural gas spoils most crude results.** The signal works on gas futures, but gas options cost too much to trade.
+- **The breadth-Donchian trailing stop and profit lock (your request) make the crude NR7 option trade worse.**
+  - With a 2x ATR stop, a 3x ATR chandelier and up to 10 sessions, the option lost -Rs 45,115 on 36 trades.
+    26 of them hit the -40% premium stop before the trail on the future could act.
+  - On the crude future itself the same exits made +Rs 1.31 lakh on 32 trades. But random days made +Rs 85,773 too,
+    and one month was -Rs 97,916. That profit is crude's swings, not the NR7 signal.
 
 Two decisions only you can make:
 
@@ -33,5 +38,5 @@ Two decisions only you can make:
    multiple-testing gate. Reading it now would be a rule change. That is your call, and it would be logged as such.
    Until then, round 4 continues with the pre-registered list in `research/HUNT_R96_ROUND3.md`.
 
-Details: `research/HUNT_R96_ROUND3.md`, every number in `research/hunt/r96_mcx_buy/results/report_round3.md`, all 27
+Details: `research/HUNT_R96_ROUND3.md`, every number in `research/hunt/r96_mcx_buy/results/report_round3.md`, all 29
 ideas in `research/hunt/r96_mcx_buy/LEDGER.md`.

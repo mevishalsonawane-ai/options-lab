@@ -11,25 +11,28 @@ Boss, 21 Oct: *"Run until we found something, commodities options buying strateg
 - **Signal source of every rule: the MCX future.** The trade is always a 1-ITM option buy with a hard stop (-40% of the
   premium and a stop on the future) and a profit lock; every exit is at a real print where one exists (edge take-profit).
 - **Locked holdout (15 Jul - 19 Oct 2026): still NOT read** (nothing passed every design gate).
-- **Ideas tried so far in R96: 27** (9 + 8 + 10). BH runs over all 27.
+- **Ideas tried so far in R96: 29** (9 + 8 + 10 + R3K / R3L added at Boss's request). BH runs over all 29; the q values
+  below are over 29 (they were over 27 before R3K / R3L were added).
 
 ## The answer for round 3
 
 **LEADS (continue), nothing found. 0 of 10 pass. The crude NR7 breakout (R3A) passes every design gate except the
-multiple-testing gate (BH q 0.126 > 0.10 over 27 ideas).** None of the three literature ideas survives MCX costs.
+multiple-testing gate (BH q 0.135 > 0.10 over 29 ideas).** None of the three literature ideas survives MCX costs.
 
-| rule (signal on the future) | design trades | net (1 lot) | twin p (BH q, 27) | folds + | worst month | real-exit net | verdict |
+| rule (signal on the future) | design trades | net (1 lot) | twin p (BH q, 29) | folds + | worst month | real-exit net | verdict |
 |---|---|---|---|---|---|---|---|
-| **R3A** NR7 break, crude only (CRUDEOILM + CRUDEOIL) | 46 | **+Rs 48,875** | **0.014 (0.126)** | **4 of 4** | -Rs 9,718 | +Rs 30,747 | **lead: fails BH only** |
-| R3B NR4 break, crude | 77 | -Rs 886 | 0.226 (0.524) | 2 of 4 | -Rs 30,883 | -Rs 17,418 | dies |
-| R3C NR7, trail on the future instead of the premium ladder (energy) | 43 | +Rs 35,048 | 0.066 (0.341) | 3 of 4 | -Rs 19,847 | +Rs 35,492 | lead (fails p, BH, month) |
-| R3D NR7 in a low-volatility regime (energy) | 27 | +Rs 16,991 | 0.178 (0.512) | 3 of 4 | -Rs 8,475 | +Rs 459 | weak lead (27 trades) |
-| R3E weekly NR7, 5 sessions (energy) | 10 | -Rs 6,173 | 0.535 (0.831) | 2 of 4 | -Rs 15,275 | -Rs 19,866 | dies (too rare) |
-| R3F NR7, breaks 09:15-11:15 only (energy) | 23 | +Rs 5,353 | 0.309 (0.557) | 2 of 4 | -Rs 22,200 | +Rs 22,330 | weak lead |
-| R3G NR7 morning break still holding at the US open (energy) | 32 | +Rs 43,065 | 0.190 (0.512) | 3 of 4 | -Rs 21,647 | +Rs 26,583 | lead (fails p, BH, month) |
-| R3H EIA-day 11:00-11:30 ET momentum (crude) | 90 | -Rs 10,239 | 0.585 (0.831) | 2 of 4 | -Rs 8,018 | -Rs 10,239 | dies |
-| R3I last-half-hour intraday momentum (4 minis) | 223 | -Rs 79,100 | 0.639 (0.862) | 0 of 4 | -Rs 38,431 | -Rs 17,719 | dies (lost before costs) |
-| R3J US-open range break in a high-vol regime (crude) | 14 | +Rs 7,406 | 0.126 (0.485) | 1 of 4 | +Rs 7,406 | +Rs 7,406 | dies (14 trades, one quarter) |
+| **R3A** NR7 break, crude only (CRUDEOILM + CRUDEOIL) | 46 | **+Rs 48,875** | **0.014 (0.135)** | **4 of 4** | -Rs 9,718 | +Rs 30,747 | **lead: fails BH only** |
+| R3B NR4 break, crude | 77 | -Rs 886 | 0.226 (0.562) | 2 of 4 | -Rs 30,883 | -Rs 17,418 | dies |
+| R3C NR7, trail on the future instead of the premium ladder (energy) | 43 | +Rs 35,048 | 0.066 (0.367) | 3 of 4 | -Rs 19,847 | +Rs 35,492 | lead (fails p, BH, month) |
+| R3D NR7 in a low-volatility regime (energy) | 27 | +Rs 16,991 | 0.178 (0.550) | 3 of 4 | -Rs 8,475 | +Rs 459 | weak lead (27 trades) |
+| R3E weekly NR7, 5 sessions (energy) | 10 | -Rs 6,173 | 0.535 (0.808) | 2 of 4 | -Rs 15,275 | -Rs 19,866 | dies (too rare) |
+| R3F NR7, breaks 09:15-11:15 only (energy) | 23 | +Rs 5,353 | 0.309 (0.598) | 2 of 4 | -Rs 22,200 | +Rs 22,330 | weak lead |
+| R3G NR7 morning break still holding at the US open (energy) | 32 | +Rs 43,065 | 0.190 (0.550) | 3 of 4 | -Rs 21,647 | +Rs 26,583 | lead (fails p, BH, month) |
+| R3H EIA-day 11:00-11:30 ET momentum (crude) | 90 | -Rs 10,239 | 0.585 (0.808) | 2 of 4 | -Rs 8,018 | -Rs 10,239 | dies |
+| R3I last-half-hour intraday momentum (4 minis) | 223 | -Rs 79,100 | 0.639 (0.842) | 0 of 4 | -Rs 38,431 | -Rs 17,719 | dies (lost before costs) |
+| R3J US-open range break in a high-vol regime (crude) | 14 | +Rs 7,406 | 0.126 (0.521) | 1 of 4 | +Rs 7,406 | +Rs 7,406 | dies (14 trades, one quarter) |
+| R3K NR7 crude, option, R93 trail (2 ATR stop, 3 ATR chandelier, 10 sessions) | 36 | -Rs 45,115 | 0.571 (0.808) | 1 of 4 | -Rs 47,537 | -Rs 1.47 lakh | dies (26 of 36 hit the -40% premium stop) |
+| R3L NR7 crude, the future itself, R93 trail | 32 | +Rs 1.31 lakh | 0.401 (0.684) | 2 of 4 | -Rs 97,916 | +Rs 1.31 lakh | reference only: random days made +Rs 85,773 |
 
 Design 5 Aug 2025 - 14 Jul 2026, 1 lot, net after Zerodha MCX charges and half-spreads; full table with gross, costs,
 2x spread, drawdown, without-top-3, by book and the 2012-25 futures check: `results/report_round3.md`.
@@ -41,7 +44,7 @@ Design 5 Aug 2025 - 14 Jul 2026, 1 lot, net after Zerodha MCX charges and half-s
    month -Rs 9,718, max drawdown -Rs 11,854, +Rs 23,093 without its best 3 trades, 4% model-priced exits. Twin mean
    -Rs 7,067, twin p 0.014. 2012-25 crude futures: +0.58% a trade vs +0.41% for twins (329 trades, p 0.26).
    Why it is not a pass:
-   - BH q 0.126 over 27 ideas (the gate is 0.10).
+   - BH q 0.135 over 29 ideas (the gate is 0.10).
    - **The books were chosen after seeing round 2.** CRUDEOIL's half is the same 23 trades as R2D (+Rs 45,170). The
      CRUDEOILM half (+Rs 3,705) trades the same signal days at a tenth of the size, so it is not an independent check.
    - The rupee result is almost all one book: CRUDEOIL, 23 trades. Its median 1-lot stop risk is about Rs 9,149, so
@@ -67,6 +70,27 @@ Design 5 Aug 2025 - 14 Jul 2026, 1 lot, net after Zerodha MCX charges and half-s
    This repeats round 1. Intraday commodity effects are a few basis points of the future, and a 0.30% half-spread on
    the option is larger.
 
+## Addendum: R93's trailing stop and profit lock on the crude NR7 (Boss's request, 21 Oct)
+
+Boss asked to add the breadth-Donchian (R93) trailing stop-loss and profit lock. R93's daily exits were pre-registered
+as R3K (the option) and R3L (the future) in PREREG_ROUND3 s6 (commit b0c019e), then run once. They are: stop 2 x ATR14
+from entry, then a chandelier 3 x ATR14 behind the best session close (never loosening), up to 10 sessions.
+
+- **On the option it fails badly (R3K: 36 trades, -Rs 45,115, 22% win, 1 of 4 folds, a -Rs 47,537 month).**
+  - 26 of 36 trades hit the -40% premium stop (-Rs 2.14 lakh) before the future reached its 2 ATR stop or the 3 ATR
+    trail. A 1-ITM option loses 40% on a move of well under 2 ATR, plus several days of time decay.
+  - The other 10 trades ran to the time exit (+Rs 1.69 lakh); 8 of 36 trades won. 14 of 36 exits (39%) were
+    model-priced because the strike left the stored window; on real prints only, R3K lost -Rs 1.47 lakh.
+  - R93's trail was built for futures and short option holds. On a multi-day option buy, the premium's own -40% stop
+    hits first, so the trail never gets to work.
+- **On the future (R3L: 32 trades, +Rs 1.31 lakh)** the profit is real but not from timing.
+  - Random-session copies made +Rs 85,773 (p 0.40), so this is crude's 2025-26 swings, mostly June 2026
+    (+Rs 2.59 lakh).
+  - The worst month was -Rs 97,916 and the worst drawdown -Rs 1.86 lakh, with a median risk of Rs 18,159 a lot.
+  - 2012-25 futures with these exits: +1.09% a trade vs +0.61% for twins (329 trades, p 0.14).
+- **Verdict:** keep R3A's short exits (premium stop, ladder lock, take-profit). The trailing version does not help the
+  option trade.
+
 ## Which ideas died and why
 
 | idea | why |
@@ -88,7 +112,7 @@ Design 5 Aug 2025 - 14 Jul 2026, 1 lot, net after Zerodha MCX charges and half-s
 
 ## Round 4: pre-registered list
 
-Same periods, locked holdout, costs, twins and gates (incl. gate 8); BH over 27 + these. Round 4 writes PREREG_ROUND4.md
+Same periods, locked holdout, costs, twins and gates (incl. gate 8); BH over 29 + these. Round 4 writes PREREG_ROUND4.md
 with exact numbers before running anything.
 
 | # | idea | why (evidence) | rule sketch (signal on the future) |

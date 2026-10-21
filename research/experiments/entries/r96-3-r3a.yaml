@@ -25,7 +25,7 @@ variants_tried: 1
 results:
   summary: 'Design: 46 trades, net Rs 48,875 (2x spread Rs 38,655), gross Rs 62,779, win 76%, worst month Rs -9,718, max DD
     Rs -11,854, without top 3 Rs 23,093; folds F1 Rs 12,721 (14), F2 Rs 4,353 (10), F3 Rs 13,445 (10), F4 Rs 18,356 (12);
-    twin mean Rs -7,067, twin p 0.014, BH q 0.126 (cumulative ledger, 27 ideas); model-priced exits 4%, real-exit net Rs 30,747.
+    twin mean Rs -7,067, twin p 0.014, BH q 0.135 (cumulative ledger, 29 ideas); model-priced exits 4%, real-exit net Rs 30,747.
     Gates failed: bh_q.'
   costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before (NATGASMINI 0.45% / 0.90%) each fill, 2x
     on model-priced exits; gates also at 2x spreads

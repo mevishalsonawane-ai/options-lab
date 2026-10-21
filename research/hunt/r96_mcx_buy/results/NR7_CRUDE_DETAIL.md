@@ -1,6 +1,6 @@
 # NR7 breakout on crude (R96 R3A): full design results (21 Oct 2026)
 
-Research only. **This rule has NOT passed the gates** (it fails the multiple-testing gate: BH q 0.126 > 0.10 over 27
+Research only. **This rule has NOT passed the gates** (it fails the multiple-testing gate: BH q 0.135 > 0.10 over 29
 ideas), so under CLAUDE.md it stays a note: it is not on paper or live. The locked holdout (15 Jul - 19 Oct 2026) is
 unread. Signal source: **the crude future** (MCX near-month CRUDEOIL future, minute closes); the trade buys an option.
 
@@ -87,14 +87,25 @@ The premium paid changed a lot with crude's price and volatility: Rs 12,000-25,0
 1,04,000 in Mar-May 2026 (the crude spike; one lot then risked up to Rs 42,930 at the -40% stop), Rs 21,000-44,000
 in Jun-Jul. The 14 CRUDEOIL trades with a premium under Rs 30,000 made +Rs 20,686.
 
-## 5. What limits this test
+## 5. With R93's trailing stop and profit lock instead (R3K, R3L)
+
+| exits | trades | net | win | worst month | twin p |
+|---|---|---|---|---|---|
+| these exits (R3A) | 46 | +Rs 48,875 | 76% | -Rs 9,718 | 0.014 |
+| R93 trail on the option (R3K) | 36 | -Rs 45,115 | 22% | -Rs 47,537 | 0.571 |
+| R93 trail on the future (R3L) | 32 | +Rs 1.31 lakh | 50% | -Rs 97,916 | 0.401 |
+
+R3K: 26 of 36 option trades hit the -40% premium stop before the 2 ATR stop / 3 ATR trail on the future acted.
+R3L's profit is matched by random days (+Rs 85,773). Details: research/HUNT_R96_ROUND3.md, addendum.
+
+## 6. What limits this test
 
 - The lake stores only ATM+/-3 strikes, so winners are sold when the strike reaches the edge of that window (17 of 23).
   Real winners could run further, or give it back; we can't see it. A fresh Dhan token (ATM+/-10) would fix this.
 - 11.3 months, near-month options only, assumed spreads (no bid/ask data).
 - Crude was picked after round 2, so the twin p is optimistic; only the locked holdout can confirm.
 
-## 6. Every trade
+## 7. Every trade
 
 Prices are option premiums per unit; net is 1 lot after all costs. "(model)" = exit priced by Black-76.
 
