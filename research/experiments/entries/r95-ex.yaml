@@ -1,0 +1,49 @@
+id: r95-ex
+title: 'R95 EX (amendment A1): the CCI cross back inside +-200 as an early exit for the Liquidity and Breadth Donchian arms'
+family: trade-management
+date: '2026-10-21'
+doc: research/HUNT_R95_CCI_SIGNALS.md
+hypothesis: 'Pre-registered (A1, before any data): selling an open arm trade''s option at the next minute''s open after the
+  indicator''s signal against it (CCI 25 of hlc3 on the underlying, 5m or 15m bars: a SELL for a call, a BUY for a put), when
+  that is before the arm''s own exit, adds net after costs vs the arm''s own exit (same pricer), beats 1000 random-early-exit
+  twins (p_emp < 0.05, BH q < 0.10 over 328 cells), >= 40 changed trades, 3 of 4 folds, without the top 5 changed trades,
+  worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader via
+  R89 stores, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market,
+  close-only near future)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the underlying (index spot 1m OHLC); exit-only overlay on the arms'' own trades'
+- Liquidity (BANKNIFTY 15+5, FINNIFTY 30+5) and Breadth Donchian (C1, breadth 4, XL) trades; CCI 25 +-200 on 5m / 15m
+model_or_rule: R95 EX
+settings: research/hunt/r95_cci_signals/overlay.py, cfg.py, PREREG.md section 10.2
+prereg: research/hunt/r95_cci_signals/PREREG.md
+variants_tried: 4
+results:
+  summary: 'design breadth_donchian 15m: 110 changed of 3071, net change Rs -15,795 (twins Rs +26,556, p 1.0, q 1.0); arm
+    as is Rs +530,181 win 47%, with EX Rs +514,386 win 47% | design breadth_donchian 5m: 1368 changed of 3071, net change
+    Rs -139,342 (twins Rs -88,574, p 0.94805, q 1.0); arm as is Rs +530,181 win 47%, with EX Rs +390,839 win 44% | design
+    liquidity 15m: 62 changed of 585, net change Rs -26,010 (twins Rs -10,096, p 0.88511, q 1.0); arm as is Rs +189,966 win
+    43%, with EX Rs +163,957 win 44% | design liquidity 5m: 171 changed of 585, net change Rs -70,223 (twins Rs -12,214, p
+    1.0, q 1.0); arm as is Rs +189,966 win 43%, with EX Rs +119,743 win 44% | holdout breadth_donchian 15m: 51 changed of
+    1225, net change Rs -588 (twins Rs +18,265, p 1.0, q 1.0); arm as is Rs +271,362 win 46%, with EX Rs +270,775 win 47%
+    | holdout breadth_donchian 5m: 589 changed of 1225, net change Rs -180,328 (twins Rs -160,924, p 0.82418, q 1.0); arm
+    as is Rs +271,362 win 46%, with EX Rs +91,034 win 43% | holdout liquidity 15m: 23 changed of 238, net change Rs +1,247
+    (twins Rs -208, p 0.3976, q 1.0); arm as is Rs +17,258 win 36%, with EX Rs +18,505 win 37% | holdout liquidity 5m: 62
+    changed of 238, net change Rs -1,899 (twins Rs +8,908, p 0.88911, q 1.0); arm as is Rs +17,258 win 36%, with EX Rs +15,360
+    win 39%'
+  costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges), flat 15:15 / 15:05 expiry; MCX R53 charges + R85
+    strict half-spread; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Idea 1 of amendment A1: 2 arms x 2 timeframes (4 cells) in the 328-cell BH family. Risk-lowering only. 0 of 4 pass:
+  the early exit cut the arms'' big winners more than it saved on losers. Risk-lowering in form, but it lowers profit; the
+  arms keep their own exits.'
