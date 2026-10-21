@@ -39,7 +39,8 @@ def trade_dir(d, i, side, katr, n):
     return side * (d.ac.values[b] - e) / d.open.values[a] - COST
 
 
-def trade_nr7(d, i, n=3):
+def trade_nr7(d, i, n=3, side_col=None):
+    """side_col (round 4 R4B / R4F): keep only breaks whose side equals that daily column at the NR7 row i."""
     a = i + 1
     if a >= len(d) or d.roll.values[a]:
         return None
@@ -51,6 +52,8 @@ def trade_nr7(d, i, n=3):
     if not (up or dn):
         return None
     side = 1 if (o > hi or (up and not dn)) else -1
+    if side_col is not None and int(d[side_col].values[i]) != side:
+        return None
     e = (max(o, hi) if side > 0 else min(o, lo))
     lvl = lo if side > 0 else hi
     b = _exit(d, a, side, lvl, n)
@@ -152,7 +155,8 @@ def run_weekly(d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, seed: in
                 twin_mean=float(tot.mean() / len(rets)), p=float((np.sum(tot >= total) + 1) / (twins + 1)))
 
 
-NR_KINDS = ("nr7", "nr7_id", "nr4", "nr7_lowvol", "nr7_r93")
+NR_KINDS = ("nr7", "nr7_id", "nr4", "nr7_lowvol", "nr7_r93", "nr7_tsm12", "nr7_tsm1")
+SIDE_FILTER = {"nr7_tsm12": "tsm12", "nr7_tsm1": "tsm1"}      # round 4: NR7 breaks that agree with the momentum sign
 
 
 def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, seed: int = K.SEED):
@@ -165,8 +169,14 @@ def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, s
     kind = R.HISTORY_RULES.get(rule_id, "dir")
     if kind == "wnr7":
         return run_weekly(d, period, twins, seed)
-    tr = trade_nr7_r93 if kind == "nr7_r93" else trade_nr7
-    col = "nr7" if kind == "nr7_r93" else kind
+    if kind == "nr7_r93":
+        tr = trade_nr7_r93
+    elif kind in SIDE_FILTER:
+        def tr(dd, i, _c=SIDE_FILTER[kind]):
+            return trade_nr7(dd, i, side_col=_c)
+    else:
+        tr = trade_nr7
+    col = "nr7" if kind in ("nr7_r93",) + tuple(SIDE_FILTER) else kind
     if kind in NR_KINDS:
         for i in np.flatnonzero(d[col].values.astype(bool) & inp):
             r = tr(d, i)
