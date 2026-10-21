@@ -337,16 +337,22 @@ class McxPaperArmsTest : RobolectricTest() {
 
     /**
      * The US feed: COMEX silver [siPrev] at the previous MCX close (Wed 7 Oct 23:30 IST, US summer time) and [siNow] at 08:30
-     * today; USD/INR flat at 88 (its close bar left out with [noFxClose]). Every URL the arm asked for is kept in [asked].
+     * today; USD/INR flat at 88 (its close bar left out of the 5-minute bars with [noFxClose], as Yahoo's night series is; 21 Oct:
+     * its 1-hour bars hold the close unless [noFxHourly]; [noFx]: the USD/INR feed does not answer; [noSiClose]: silver's close
+     * bar missing). Every URL the arm asked for is kept in [asked].
      */
-    private fun usFeed(siPrev: Double, siNow: Double, noFxClose: Boolean = false, asked: MutableList<String> = ArrayList()) {
+    private fun usFeed(siPrev: Double, siNow: Double, noFxClose: Boolean = false, asked: MutableList<String> = ArrayList(),
+                       noFxHourly: Boolean = noFxClose, noFx: Boolean = false, noSiClose: Boolean = false) {
         val prev = LocalDate.of(2026, 10, 7).atTime(23, 30)
         val ref = day.atTime(8, 30)
         UsCues.resetForTest()
         UsCues.testFetch = { url ->
             asked += url
             when {
-                "SI%3DF" in url -> chart(listOf(prev to siPrev, ref to siNow))
+                "SI%3DF" in url -> chart(if (noSiClose) listOf(ref to siNow) else listOf(prev to siPrev, ref to siNow))
+                "INR%3DX" in url && noFx -> throw java.io.IOException("test: the feed did not answer")
+                "INR%3DX" in url && "interval=1h" in url ->
+                    chart(if (noFxHourly) listOf(day.atTime(8, 0) to 88.0) else listOf(prev.withMinute(0) to 88.0, prev to 88.0, day.atTime(8, 0) to 88.0))
                 "INR%3DX" in url -> chart(if (noFxClose) listOf(ref to 88.0) else listOf(prev to 88.0, ref to 88.0))
                 else -> throw AssertionError(url)
             }
@@ -423,16 +429,48 @@ class McxPaperArmsTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
-    @Test fun usNightSilverSkipsTheDayWhenAUsPriceIsMissing() {
+    /**
+     * 21 Oct (Boss's diagnostics, every day: "USD/INR at the 23:30 close not read"): Yahoo's 5-minute USD/INR is empty at night;
+     * its 1-hour bars (the research's own) hold the close, so the arm trades when the rule fires.
+     */
+    @Test fun usNightSilverReadsUsdInrAtTheCloseFromItsHourlyBars() {
         mcxList(silver = true)
-        usFeed(siPrev = 30.0, siNow = 30.6, noFxClose = true)
+        val asked = ArrayList<String>()
+        usFeed(siPrev = 30.0, siNow = 30.6, noFxClose = true, noFxHourly = false, asked = asked)
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5))
+        val pos = McxPaperArms.view.value.open.single()
+        assertEquals(1, pos.side)
+        assertTrue(asked.any { "INR%3DX" in it && "interval=1h" in it })
+        val log = McxPaperArms.view.value.log.last { McxUsSilverRules.LABEL in it }
+        assertTrue(log, log.contains("USD/INR 88.0000 to 88.0000"))
+        assertNothingAtZerodha()
+    }
+
+    /** No USD/INR from either feed: counted as no rupee move, as the research did (cand.py), and said plainly in the log. */
+    @Test fun usNightSilverWithoutUsdInrTradesOnSilverAloneAndSaysSo() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 29.4, noFx = true)
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5))
+        assertEquals(-1, McxPaperArms.view.value.open.single().side)
+        val log = McxPaperArms.view.value.log.last { McxUsSilverRules.LABEL in it }
+        assertTrue(log, log.contains("USD/INR not read (the feed did not answer): counted as no move, as the research did"))
+        assertNothingAtZerodha()
+    }
+
+    @Test fun usNightSilverSkipsTheDayWhenASilverPriceIsMissing() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 30.6, noSiClose = true)
         silverMinutes(LocalTime.of(9, 5))
         runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
         val orders = Paper.state.orders.size
         tick(LocalTime.of(9, 5))
         assertEquals(orders, Paper.state.orders.size)
         val s = McxPaperArms.view.value.status[McxUsSilverRules.SOURCE].orEmpty()
-        assertTrue(s, s.startsWith("silver_no_us_price: USD/INR at the 23:30 close not read"))
+        assertTrue(s, s.startsWith("silver_no_us_price: COMEX silver at the 23:30 close not read (not in the feed's history)"))
         assertTrue(McxPaperArms.view.value.log.any { "silver_no_us_price" in it })
         // Decided for the day: a later pass in the window does not try again.
         usFeed(siPrev = 30.0, siNow = 30.6)

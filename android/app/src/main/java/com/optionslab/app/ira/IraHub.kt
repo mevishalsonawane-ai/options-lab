@@ -33,6 +33,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -385,8 +386,12 @@ object IraHub {
     /** When the last [refresh] began its reads (monotonic ms, [System.nanoTime]; 0: none yet). Battery, round 10. */
     @Volatile private var refreshBeganAt = 0L
 
-    /** Re-reads the candles, learns from the new ones and rebuilds the snapshots. Never throws. */
-    suspend fun refresh() = withContext(Dispatchers.Default) {
+    /**
+     * Re-reads the candles, learns from the new ones and rebuilds the snapshots. Never throws (but a cancel goes through: 21 Oct).
+     * [labInline] false (the words round's checks, 21 Oct): Jarvis's pattern lab runs on its own background job ([autoLabSoon]),
+     * never inside the caller - it backtests two years a pattern and once held the words worker 6 min 44 s.
+     */
+    suspend fun refresh(labInline: Boolean = true) = withContext(Dispatchers.Default) {
         awaitLoaded()           // the pattern book read at the start is the one taught (and saved)
         lock.withLock {
             refreshBeganAt = (System.nanoTime() / 1_000_000L).coerceAtLeast(1L)
@@ -432,10 +437,25 @@ object IraHub {
                 if (news != null && com.optionslab.app.BuildConfig.JARVIS) runCatching { judgeNews(news.first) }
                 nightlyIfDue()
             }.onFailure {
+                // 21 Oct: a cancel (the worker's time limit) is passed on, never kept: the step ends instead of running on unseen,
+                // and it is no data error (the last problem said stays).
+                if (it is kotlinx.coroutines.CancellationException) { _state.update { s -> s.copy(loading = false) }; throw it }
                 _state.update { s -> s.copy(loading = false, problem = "Could not read the market data") }
             }
         }
-        if (!GOLD_ONLY_TALK) autoLab()
+        if (!GOLD_ONLY_TALK) { if (labInline) autoLab() else autoLabSoon() }
+    }
+
+    /** The pattern lab's own job (21 Oct): one at a time, off the words round, bounded by [LAB_BUDGET_MS]. */
+    @Volatile private var labJob: kotlinx.coroutines.Job? = null
+
+    /** TEST SEAM: waits for the background pattern lab, if one is running. */
+    internal suspend fun awaitLabForTest() { labJob?.join() }
+
+    /** The pattern lab started in the background unless one is running (21 Oct: never inside the words worker's round). */
+    private fun autoLabSoon() {
+        if (labJob?.isActive == true) return
+        labJob = scope.launch { kotlinx.coroutines.withTimeoutOrNull(LAB_BUDGET_MS) { runCatching { autoLab() } } }
     }
 
     /**
@@ -453,6 +473,8 @@ object IraHub {
             val fresh = synchronized(tested) { tested.add(key) }
             if (!fresh) continue
             tried = true
+            // 21 Oct: a cancel (its budget) is honoured between two backtests; one already running finishes (it cannot be cut).
+            kotlin.coroutines.coroutineContext.ensureActive()
             val r = lab(p.kind, m, p.minutes) ?: continue
             if (!r.recommended) continue
             val prop = propose(r, "I found a ${p.kind.label} on ${m.label} ${chartWord(p.minutes)} at ${Brain.when_(p.at, m, p.at.toLocalDate())} and backtested it as a strategy. ")
@@ -707,7 +729,7 @@ object IraHub {
         if (!IraMarket.NIFTY.trading(now.atZone(IST).toLocalDateTime())) return
         if (lastBackground?.let { now.isBefore(it.plusSeconds(BACKGROUND_MINUTES * 60)) } == true) return
         lastBackground = now
-        refresh()
+        refresh(labInline = false)
         runCatching { watchAlerts() }
         // Battery (round 6): one read of each chain for both (the OI watch first, its reads then kept for the record).
         val chains = IraAccount.ChainPass()
@@ -1353,7 +1375,7 @@ object IraHub {
         if (edges.none { it.held }) return
         val c = app ?: return
         if (synchronized(actions) { newsAsks.isNotEmpty() }) return
-        refresh()
+        refresh(labInline = false)
         val level = runCatching { tradeCheck().level }.getOrNull()
         expertIdea(t, edges, level, IraStudy.MARKETS, every = true)?.let { (idea, key) ->
             if (synchronized(suggested) { suggested.add(key) })
@@ -1468,6 +1490,8 @@ object IraHub {
         }
     }
     const val BACKGROUND_MINUTES = 15L
+    /** The background pattern lab's whole budget (21 Oct): no new backtest starts after it. */
+    const val LAB_BUDGET_MS = 3 * 60_000L
     /**
      * A strategy proposal's notification ids (18 Oct, review): 9600 + the proposal's id folded into [NOTIFY_SLOTS]. The
      * ids were 7300 + the id, which grows without end: they ran into the trend watch's (7300-7499), the pop-ups'

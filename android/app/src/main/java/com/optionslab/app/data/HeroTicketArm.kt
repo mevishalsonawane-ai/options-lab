@@ -96,7 +96,8 @@ object HeroTicketArm {
         val positions: MutableList<Pos> = ArrayList(),
         /** "day|index" (not an expiry day, the window missed) and "day|index|CE" / "|PE" (each side's ticket decided). */
         val decided: MutableSet<String> = HashSet(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
         val migrated: MutableSet<String> = HashSet(),
         /** "day|index|side" -> an entry order a cancel could not take out (settled on the next pass, never a second BUY beside it). */
@@ -138,7 +139,7 @@ object HeroTicketArm {
             b.trailStart = HeroTicketRules.TrailStart.of(o.optString("trailStart").ifEmpty { null })
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { b.pending[it] = m.getString(it) } }
@@ -181,6 +182,7 @@ object HeroTicketArm {
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(60).forEach { put(it) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         o.put("migrated", JSONArray().apply { b.migrated.sorted().forEach { put(it) } })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k, v) } })
@@ -192,7 +194,7 @@ object HeroTicketArm {
         decidedNow = b.decided.toSet()
         val closed = b.positions.filter { !it.open }
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
-        _view.value = View(b.armed, b.target, b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(20),
+        _view.value = View(b.armed, b.target, b.status.shown(), b.positions.filter { it.open }, closed.takeLast(20),
             b.positions.filter { it.day == today }, b.log.takeLast(30), closed.map { it.net ?: 0.0 }, b.marks.toMap(), b.trailStart)
     }
 
@@ -355,7 +357,7 @@ object HeroTicketArm {
     /** Sets [u]'s status; true when it changed (the book is then saved). [final] also logs it once. */
     private fun say(b: Book, u: String, why: String, final: Boolean = false): Boolean {
         if (final) note(b, "$u: $why")
-        if (b.status[u] == why) return final
+        if (b.status.sameToday(u, why)) return final
         b.status[u] = why
         return true
     }
@@ -641,7 +643,7 @@ object HeroTicketArm {
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, if (limit != null) "unfilled_limit" else "unfilled_market") } }
-            if (b.status[p.index] != "exit_retry") { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
+            if (!b.status.sameToday(p.index, "exit_retry")) { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
             return p
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${HeroTicketRules.OWNER} · exit") } }

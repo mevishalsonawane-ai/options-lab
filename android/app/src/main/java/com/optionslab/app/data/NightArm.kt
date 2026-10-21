@@ -72,7 +72,8 @@ object NightArm {
         val history: MutableMap<String, MutableList<Double>> = HashMap(),
         /** "day|index" already decided (and recorded). */
         val decided: MutableSet<String> = HashSet(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
     )
 
@@ -108,7 +109,7 @@ object NightArm {
             }
             o.optJSONObject("history")?.let { h -> h.keys().forEach { k -> val a = h.getJSONArray(k); b.history[k] = (0 until a.length()).map { a.getDouble(it) }.toMutableList() } }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
         cache = b
@@ -133,13 +134,14 @@ object NightArm {
         // Only the last few days' decisions are needed (one a day per index).
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(40).forEach { put(it) } })
         o.put("status", JSONObject(b.status as Map<*, *>))
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
     }
 
     private fun publish(b: Book) {
-        _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(20),
+        _view.value = View(b.armed, b.status.shown(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(20),
             b.log.takeLast(30))
         // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own 09:16 sale stays the exit.
         runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }, owner = "night") }
@@ -250,7 +252,7 @@ object NightArm {
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
-                if (b.status[p.index] != "night_exit_retry") { b.status[p.index] = "night_exit_retry"; note(b, "${p.symbol}: the 09:16 sale did not fill (${r.message}); tried again"); changed = true }
+                if (!b.status.sameToday(p.index, "night_exit_retry")) { b.status[p.index] = "night_exit_retry"; note(b, "${p.symbol}: the 09:16 sale did not fill (${r.message}); tried again"); changed = true }
                 continue
             }
             r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NightRules.LABEL} · exit") } }

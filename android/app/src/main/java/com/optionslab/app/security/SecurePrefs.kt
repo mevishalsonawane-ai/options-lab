@@ -75,7 +75,10 @@ object SecurePrefs {
     }
 
     /** The settings the entry door keeps in memory for the bots' entries (the loss limit's day, the day lock). */
-    private val GUARD = setOf("breaker.day", "breaker.daylock.paper", "breaker.daylock.live", "g.dayLock")
+    private val GUARD = setOf("breaker.day", "breaker.daylock.paper", "breaker.daylock.live", "g.dayLock",
+        // 21 Oct: commodities' own paper day lock and loss limit, and Boss's stop kept apart for them.
+        "breaker.daylock.mcx", "breaker.mcx.day", "breaker.day.kind", "breaker.paper.whole", "breaker.bossstop",
+        "g.mcxOwn", "g.mcxDayLock", "g.mcxPLoss")
 
     fun init(context: Context) {
         synchronized(ioLock) { synchronized(this) { generation++; generationHint++; pending = false; lazyDirty = false; lazyTask = 0L; writtenSeq = seq } }

@@ -90,7 +90,8 @@ object SignalPaperArm {
         /** Calls decided (bought, not triggered, refused): never looked at again. */
         val decided: MutableSet<String> = HashSet(),
         /** Each chat's last word ("bought ...", "not triggered", "paused for today"). */
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
         /** callId -> an entry order a cancel could not take out (settled on the next pass, never a second BUY beside it). */
         val pending: MutableMap<String, String> = HashMap(),
@@ -148,7 +149,7 @@ object SignalPaperArm {
             }
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += posOf(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { f.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { b.pending[it] = m.getString(it) } }
             o.optJSONObject("since")?.let { m -> m.keys().forEach { k -> runCatching { b.since[k] = LocalDate.parse(m.getString(k)) } } }
@@ -171,12 +172,13 @@ object SignalPaperArm {
             .put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } }).put("log", JSONArray(b.log.takeLast(200)))
             .put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k, v) } })
             .put("since", JSONObject().apply { b.since.forEach { (k, v) -> put(k, v.toString()) } }).put("monthTold", JSONArray(b.monthTold.sorted()))
+        b.status.writeTo(o)
         file?.let { f -> runCatching { written.write(f, o.toString().toByteArray(Charsets.UTF_8)) } }
         publish(b)
     }
 
     private fun publish(b: Book) {
-        _view.value = View(b.on.toMap(), b.settings, b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(100), b.status.toMap(), b.log.takeLast(30),
+        _view.value = View(b.on.toMap(), b.settings, b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(100), b.status.shown(), b.log.takeLast(30),
             b.decided.toSet(), b.since.toMap())
     }
 
@@ -302,7 +304,7 @@ object SignalPaperArm {
 
     private fun say(b: Book, chat: String, why: String, final: Boolean = false): Boolean {
         if (final) note(b, "chat $chat: $why")
-        if (b.status[chat] == why) return final
+        if (b.status.sameToday(chat, why)) return final
         b.status[chat] = why
         return true
     }

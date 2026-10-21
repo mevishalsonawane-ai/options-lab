@@ -221,7 +221,8 @@ object PassedArmsHost {
         val positions: MutableList<Pos> = ArrayList(),
         /** Decisions made, so each is made once: "day|arm|..." */
         val decided: MutableSet<String> = HashSet(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
         val migrated: MutableSet<String> = HashSet(),
         /** R51 / R52: closed trades when Boss switched it back on after its bar switched it off (the bar is not judged again). */
@@ -249,7 +250,7 @@ object PassedArmsHost {
         val recordOnly: MutableSet<String> = HashSet(),
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
-        fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), HashMap(status), ArrayList(log), HashSet(migrated), HashMap(base),
+        fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), status.copyMap(), ArrayList(log), HashSet(migrated), HashMap(base),
             soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly))
 
         /** [source]'s entries run this pass: on, or record only. */
@@ -331,7 +332,7 @@ object PassedArmsHost {
             o.optJSONObject("armed")?.let { m -> m.keys().forEach { b.armed[it] = m.getBoolean(it) } }
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
             o.optJSONObject("base")?.let { m -> m.keys().forEach { b.base[it] = m.getInt(it) } }
@@ -468,6 +469,7 @@ object PassedArmsHost {
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(600).forEach { put(it) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         o.put("migrated", JSONArray().apply { b.migrated.sorted().forEach { put(it) } })
         o.put("base", JSONObject().apply { b.base.forEach { (k, v) -> put(k, v) } })
@@ -521,7 +523,7 @@ object PassedArmsHost {
     private fun publish(b: Book) {
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         val closed = b.positions.filter { !it.open }
-        _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
+        _view.value = View(b.armed.toMap(), b.status.shown({ k, _ -> k == ST_UNJUDGED_KEY }), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet())
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
@@ -910,7 +912,7 @@ object PassedArmsHost {
             // 19 Oct (order speed): this bar's due Donchian options priced side by side first, not one after another inside each
             // index's entry (each a network wait when the stream does not have the option yet). Memory and reads only.
             runCatching { prewarm(work, now, reads) }
-            val st0 = HashMap(work.status)
+            val st0 = HashMap<String, String>(work.status)
             var changed = false
             if (work.active(DonchianArm.SOURCE)) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(OovArm.SOURCE)) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
@@ -924,7 +926,8 @@ object PassedArmsHost {
                 b.positions += added
                 added.forEach { p -> work.marks[p.symbol]?.let { b.marks[p.symbol] = it } }
                 b.decided += work.decided
-                work.status.forEach { (k, x) -> if (st0[k] != x) b.status[k] = x }
+                // 21 Oct: a line written again this pass (same words, a new day) carries its day over too.
+                work.status.forEach { (k, x) -> if (st0[k] != x || work.status.days[k] != b.status.days[k]) b.status[k] = x }
                 b.log += work.log.drop(log0)
                 b.scores += work.scores.drop(sc0)
                 save(b)
@@ -998,7 +1001,7 @@ object PassedArmsHost {
 
     private fun say(b: Book, key: String, why: String, final: Boolean = false): Boolean {
         if (final) note(b, "${label(key.substringBefore('|'))} ${key.substringAfter('|', "")}: $why")
-        if (b.status[key] == why) return final
+        if (b.status.sameToday(key, why)) return final
         b.status[key] = why
         return true
     }
@@ -1472,7 +1475,7 @@ object PassedArmsHost {
             } catch (e: Throwable) {
                 val k = "${p.arm}|exit"
                 val w = "exit check failed on ${p.symbol}: ${e.javaClass.simpleName}; tried again next look"
-                if (b.status[k] != w) { b.status[k] = w; note(b, w); changed = true }
+                if (!b.status.sameToday(k, w)) { b.status[k] = w; note(b, w); changed = true }
             }
         }
         return changed
@@ -1582,7 +1585,7 @@ object PassedArmsHost {
             } catch (e: Throwable) {
                 val w = "closed-elsewhere check failed on $symbol: ${e.javaClass.simpleName}; tried again next look"
                 val k = "${rows.first().value.arm}|exit"
-                if (b.status[k] != w) { b.status[k] = w; note(b, w); changed = true }
+                if (!b.status.sameToday(k, w)) { b.status[k] = w; note(b, w); changed = true }
             }
         }
         return changed
@@ -1599,7 +1602,7 @@ object PassedArmsHost {
         if (fill == null) {
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             val k = "${p.arm}|exit"
-            if (b.status[k] != "exit_retry ${p.symbol}") { b.status[k] = "exit_retry ${p.symbol}"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
+            if (!b.status.sameToday(k, "exit_retry ${p.symbol}")) { b.status[k] = "exit_retry ${p.symbol}"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
             return p
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(p.arm)} · exit") } }

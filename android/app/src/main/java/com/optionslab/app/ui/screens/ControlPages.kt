@@ -765,9 +765,18 @@ private fun GuardCard(model: AppModel) {
         ParamTokens("Day lock: no new automatic entries once the day is up by", dayLocks.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.dayLock) }) { i ->
             loosen(looser(s.dayLock, dayLocks[i]), askLimit) { model.update { it.copy(dayLock = dayLocks[i]) } }
         }
-        val dayLockNow = remember(s) { com.optionslab.app.data.DayLockGuard.statusLine() }
+        // 21 Oct (review): read off the main thread (it reads the kept stops, the vault on a first read).
+        val dayLockNow by androidx.compose.runtime.produceState<String?>(null, s) {
+            this.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.DayLockGuard.statusLine() }.getOrNull() }
+        }
         Note(dayLockNow ?: "Paper and Zerodha are locked separately (the paper day after charges). Bots, Pine, Solo and Jarvis's trades " +
             "start nothing new once it is reached; open positions keep their own exits, and your own orders are never stopped by it.")
+        // 21 Oct: the commodities' own paper limits; loosening any of them takes the PIN, as the day lock does.
+        val askMcx = "Enter your app PIN to loosen the commodities' paper limits."
+        CommoditiesLimits(s, ::rupees, onOwn = { on ->
+            loosen(on, askMcx) { model.update { it.copy(mcxOwnLimits = on) }; com.optionslab.app.ira.Autopilot.logSegmentSplit(on) }
+        }, onLock = { v -> loosen(looser(s.mcxDayLock, v), askMcx) { model.update { it.copy(mcxDayLock = v) } } },
+            onLoss = { v -> loosen(looser(s.mcxPaperDailyLoss, v), askMcx) { model.update { it.copy(mcxPaperDailyLoss = v) } } })
         Text("Paper account", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(top = 12.dp))
         Note("Paper is practice: the limits above and the kill switch apply to Zerodha only. On paper your own orders and the bots (ORB, Pine, strategies) all go through, side by side; \"Stop for today\" still stops the bots.")
         Note("Hitting the Zerodha drawdown limit also turns the kill switch on, as the desktop does.")
@@ -1018,4 +1027,24 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                     }
         })
     }
+}
+
+
+/**
+ * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms' own day lock and daily loss limit, on the MCX
+ * paper day alone, and the switch that puts them back on the shared paper figure. Paper only: Zerodha's stay one account.
+ * Its own small function (the guard card is already long).
+ */
+@Composable
+internal fun CommoditiesLimits(s: com.optionslab.app.data.AppSettings, rupees: (Double) -> String, onOwn: (Boolean) -> Unit,
+                               onLock: (Double) -> Unit, onLoss: (Double) -> Unit) {
+    ToggleRow("Commodities keep their own paper limits", if (s.mcxOwnLimits) "On: MCX paper results never stop NSE arms, and NSE results never stop MCX arms"
+        else "Off: one paper figure stops both NSE and MCX arms", s.mcxOwnLimits, keepSub = true) { on -> onOwn(on) }
+    if (!s.mcxOwnLimits) return
+    val locks = com.optionslab.engine.risk.DayLock.CHOICES
+    ParamTokens("Commodities day lock (paper)", locks.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.mcxDayLock) }) { i -> onLock(locks[i]) }
+    val loss = listOf(2_000.0, 4_000.0, 6_000.0, 10_000.0, 0.0)
+    ParamTokens("Commodities daily loss limit (paper)", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.mcxPaperDailyLoss) }) { i -> onLoss(loss[i]) }
+    Note(com.optionslab.ira.SegmentLock.idleLine(true, s.mcxDayLock, s.mcxPaperDailyLoss) +
+        " Your stop for today, the kill switch, Zerodha's loss limit and the account stop rule still stop both.")
 }

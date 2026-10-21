@@ -161,7 +161,8 @@ object Broker {
         // Live, "AI trades go live", its arm's Trade live and its Shadow asked again at the last moment - memory only.
         if (o.tag == com.optionslab.engine.orb.LiveMirror.TAG) ArmLive.doorRefusal(arm)?.let { return it }
         if (o.tag in BOT_TAGS) {
-            if (LossBreaker.trippedToday()) return "refused: the daily loss limit was reached today"
+            // 21 Oct: either paper segment's loss stop, or the whole paper day past the paper limit, refuses too: never weaker than one paper figure.
+            if (LossBreaker.liveDoorTripped()) return "refused: the daily loss limit was reached today"
             if (Strategies.stopHint() != null) return "stopped_for_today"
             DayLockGuard.refusal(true)?.let { return it }
             // Smart workers (10 Oct): a news window paused ON, unreliable data, the relay down - memory only, lower risk only.

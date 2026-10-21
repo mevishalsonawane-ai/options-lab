@@ -22,12 +22,16 @@ object UsCues {
 
     internal fun resetForTest() = synchronized(cache) { cache.clear() }
 
-    /** The chart URL for [symbol] ("SI=F" -> ".../chart/SI%3DF?interval=5m&range=5d"). */
-    fun url(symbol: String): String = BASE + java.net.URLEncoder.encode(symbol, "UTF-8") + "?interval=5m&range=5d"
+    /** The chart URL for [symbol] ("SI=F" -> ".../chart/SI%3DF?interval=5m&range=5d"); [interval] "1h" for hourly bars (21 Oct). */
+    fun url(symbol: String, interval: String = "5m"): String =
+        BASE + java.net.URLEncoder.encode(symbol, "UTF-8") + "?interval=$interval&range=5d"
 
-    /** [symbol]'s 5-minute bars of the last five days, oldest first (epoch-second starts); empty when the feed did not answer. */
-    suspend fun bars(symbol: String): List<Upstox.Bar> {
-        val url = url(symbol)
+    /**
+     * [symbol]'s bars of the last five days ([interval]: 5-minute by default, "1h" hourly), oldest first (epoch-second starts);
+     * empty when the feed did not answer.
+     */
+    suspend fun bars(symbol: String, interval: String = "5m"): List<Upstox.Bar> {
+        val url = url(symbol, interval)
         val now = System.currentTimeMillis()
         synchronized(cache) { cache[url]?.takeIf { now - it.first in 0 until KEEP_MS }?.let { return it.second } }
         val got = runCatching {

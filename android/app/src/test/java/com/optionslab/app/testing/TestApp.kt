@@ -143,6 +143,7 @@ class TestApp : Application() {
         com.optionslab.app.data.MarketRecorder.wipe()
         com.optionslab.app.data.McxMarket.wipe()
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
+        com.optionslab.app.data.LossBreaker.testPaperDay = null
         com.optionslab.app.data.VixDivArm.wipe()
         com.optionslab.app.data.HeroTicketArm.wipe()
         // 15 Oct: the earlier sessions' history is empty unless a test gives its own - the watch's Watchlist step starts its

@@ -100,7 +100,11 @@ internal object Autopilot {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
+        if (enabled()) scope.launch {
+            com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() }
+            // 21 Oct: commodities on their own paper limits by Boss's choice, shown once in the timeline (off the main thread).
+            runCatching { if (com.optionslab.app.data.AppSettings.load().mcxOwnLimits) logSegmentSplitOnce() }
+        }
     }
 
     private fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }
@@ -344,6 +348,12 @@ internal object Autopilot {
             }
             // Boss's own Liquidity paper trail switch ([logBossTrail]): only its Undo applies here - the switch flipped back,
             // without logging the flip again (log = false: the Undo marks this entry undone, nothing new is recorded). Paper only.
+            // 21 Oct (Boss's choice, [logSegmentSplit]): only its Undo applies here - commodities back on the shared paper lock and
+            // loss limit (lowers paper risk). Never switched on from here: that is Bot settings' switch, with the PIN. Paper only.
+            AutoChange.Kind.SEGMENT_SPLIT -> {
+                if (c.target != AutoChange.SPLIT_TARGET || c.to != AutoChange.SWITCHED_OFF) return null
+                com.optionslab.app.data.DayLockGuard.setSplit(false)
+            }
             AutoChange.Kind.LIQ_TRAIL -> {
                 if (c.target != AutoChange.TRAIL_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 com.optionslab.app.data.LiquidityTest.setTrail(c.to == AutoChange.ON, log = false)
@@ -810,6 +820,37 @@ internal object Autopilot {
         val mp = com.optionslab.engine.mcx.McxMorningPark
         val c = AutoChange.mcxArmPark(source, label, mp.REASON, mp.WALK_FORWARD_TRADES, mp.WALK_FORWARD_RS.toDouble())
         logBossOwnOnce(c, "your OK, 14 Oct (research R42); paper only" + (if (holding) "; its open position still closes by its own exit" else ""))
+    }
+
+    /**
+     * 21 Oct (Boss: "Yes, give commodities their own day lock"): commodities on their own PAPER day lock and loss limit by this
+     * update ([AutoChange.segmentSplit]), logged once as Boss's choice (kept, not on probation) so the timeline shows it and one
+     * tap puts the shared lock back. Never logged twice (a restart, an undone entry): Bot settings' switch logs later flips.
+     */
+    private fun logSegmentSplitOnce() = logBossOwnOnce(AutoChange.segmentSplit(), "your choice, 21 Oct; paper only, never live")
+
+    /**
+     * Bot settings' "Commodities keep their own paper limits" switch flipped by Boss (21 Oct): on is logged as a new entry (its Undo
+     * puts the shared lock back); off closes the newest kept entry as undone, so no Undo is left that would do nothing.
+     */
+    fun logSegmentSplit(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.segmentSplit(), AutoChange.Status.KEPT, System.currentTimeMillis(),
+                        today, by = "your choice", note = "your choice in Bot settings; paper only, never live").first
+                    else {
+                        val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.SEGMENT_SPLIT && it.status == AutoChange.Status.KEPT } ?: return@runCatching
+                        _book.value = AutoChange.undone(_book.value, e.id, today)
+                    }
+                    save()
+                }
+            }
+        }
     }
 
     /**

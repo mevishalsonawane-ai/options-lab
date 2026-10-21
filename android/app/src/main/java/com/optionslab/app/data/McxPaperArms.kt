@@ -119,7 +119,8 @@ object McxPaperArms {
         val decided: MutableSet<String> = HashSet(),
         /** "yyyy-MM|LEG" -> the month's trend signal. */
         val signals: MutableMap<String, Int> = HashMap(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
         /** Small facts kept between days ("silver_near": the near SILVERMIC expiry the US-night silver arm last saw). */
         val marks: MutableMap<String, String> = HashMap(),
@@ -176,7 +177,7 @@ object McxPaperArms {
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
             o.optJSONObject("signals")?.let { m -> m.keys().forEach { b.signals[it] = m.getInt(it) } }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
             o.optJSONObject("marks")?.let { m -> m.keys().forEach { b.marks[it] = m.getString(it) } }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
@@ -244,6 +245,7 @@ object McxPaperArms {
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(200).forEach { put(it) } })
         o.put("signals", JSONObject().apply { b.signals.keys.sorted().takeLast(60).forEach { put(it, b.signals.getValue(it)) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         o.put("marks", JSONObject().apply { b.marks.forEach { (k, v) -> put(k, v) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
@@ -253,7 +255,7 @@ object McxPaperArms {
     private fun publish(b: Book) {
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
-        _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
+        _view.value = View(b.armed.toMap(), b.status.shown({ _, x -> x == McxMorningPark.PARKED }), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
             b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } },
             b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) ->
                 l.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) } },
@@ -469,19 +471,28 @@ object McxPaperArms {
 
     // ---- guards -----------------------------------------------------------------------------------------------------------
 
-    /** Whether the bot is stopped for today (Boss's stop, or the daily loss limit). Unknown counts as stopped. */
-    private suspend fun stoppedToday(): Boolean =
-        runCatching { Strategies.stoppedToday() }.getOrDefault(true) || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+    /**
+     * Whether the bot is stopped for today for these arms (Boss's stop, the tile, Zerodha's loss limit; 21 Oct: with commodities on
+     * their own limits, their own loss limit and not the NSE paper one, [LossBreaker.mcxStopped]). Unknown counts as stopped.
+     */
+    private suspend fun stoppedToday(): Boolean = runCatching {
+        LossBreaker.mcxStopped(Strategies.stoppedWhy())
+    }.getOrDefault(true)
+
+    /** The MCX arms' refusal words while their own loss stop holds (else the bot's stop for today). */
+    private fun stoppedWords(): String? = if (runCatching { LossBreaker.mcxTrippedToday() }.getOrDefault(false))
+        com.optionslab.ira.SegmentLock.MCX_LOSS_REFUSAL else null
 
     /** Why a new entry in [c] ([buy]: a buy) may not go now, or null ([fresh]: the deciding price is under a minute old). */
     private suspend fun refusal(c: Paper.Contract, buy: Boolean, fresh: Boolean): String? = McxArmRules.entryRefusal(
         sessionOpen = McxMarket.isOpen(),
         kill = runCatching { AppSettings.load().guardKill }.getOrDefault(true),
         stoppedToday = stoppedToday(),
-        dayLock = runCatching { DayLockGuard.refusal(false) }.getOrNull(),
+        // 21 Oct: the commodities' own day lock while they keep their own (NSE's never stops them), else the shared paper lock.
+        dayLock = runCatching { DayLockGuard.mcxRefusal() }.getOrElse { "the day lock could not be checked" },
         expiry = McxGuard.entryRefusal(c, buy),
         freshPrice = fresh,
-    )
+    )?.let { r -> if (r == "stopped_for_today") stoppedWords()?.let { "$r: $it" } ?: r else r }
 
     private fun nowSec(): Long = Market.now().toEpochSecond()
 
@@ -591,7 +602,7 @@ object McxPaperArms {
         }
         val (fill, r) = paperOrder(c, if (p.side > 0) "SELL" else "BUY", "${label(p.arm)} · exit")
         if (fill == null) {
-            if (b.status[p.arm] != "exit_retry") { b.status[p.arm] = "exit_retry"; note(b, p.arm, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
+            if (!b.status.sameToday(p.arm, "exit_retry")) { b.status[p.arm] = "exit_retry"; note(b, p.arm, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
             return p.copy(stopOrderId = null)
         }
         val done = p.copy(exit = fill.price, exitTime = McxMarket.now().withNano(0), why = why, stopOrderId = null, charges = p.charges + chargesOf(r.orderId))
@@ -635,7 +646,7 @@ object McxPaperArms {
         val minute = minuteOf(now)
         if (minute < McxEveRules.RANGE_TO) {
             val s = "waiting for the 17:00-19:00 range"
-            if (b.status[arm] != s) { b.status[arm] = s; return true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; return true }
             return false
         }
         val flatBy = McxEveRules.flatBy(window)
@@ -649,7 +660,7 @@ object McxPaperArms {
         if (sig == null) {
             if (minute > McxEveRules.ENTRY_UNTIL + 1) { decide(b, arm, key, "eve_no_break (range %.2f-%.2f)".format(Locale.ENGLISH, range.low, range.high)); return true }
             val s = "range %.2f-%.2f · watching for a break to 22:00".format(Locale.ENGLISH, range.low, range.high)
-            if (b.status[arm] != s) { b.status[arm] = s; return true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; return true }
             return false
         }
         val facts = "break %s at %s close %.2f, range %.2f-%.2f".format(Locale.ENGLISH, if (sig.side > 0) "up" else "down", hhmm(sig.minute), sig.close, range.low, range.high)
@@ -800,7 +811,7 @@ object McxPaperArms {
         }
         if (notes.isNotEmpty()) {
             val s = notes.joinToString(" · ")
-            if (b.status[arm] != s) { b.status[arm] = s; changed = true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; changed = true }
         }
         return changed
     }
@@ -835,7 +846,7 @@ object McxPaperArms {
         val minute = minuteOf(now)
         if (minute < McxUsSilverRules.ENTRY) {
             val s = "waiting for 09:05"
-            if (b.status[arm] != s) { b.status[arm] = s; return true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; return true }
             return false
         }
         val near = McxInstruments.futures(McxMarket.contracts(), McxUsSilverRules.UNDERLYING, today, 2).firstOrNull()
@@ -853,21 +864,26 @@ object McxPaperArms {
         val prev = McxUsSilverRules.prevClose(today, cal) ?: run { decide(b, arm, key, "silver_no_previous_session"); return true }
         val ref = McxUsSilverRules.refAt(today)
         val si = UsCues.bars(McxUsSilverRules.US_SYMBOL)
+        // 21 Oct: USD/INR from its 5-minute bars, else its 1-hour ones (the research's own; the 5-minute series is empty at night).
         val fx = UsCues.bars(McxUsSilverRules.FX_SYMBOL)
+        val fxHourly = UsCues.bars(McxUsSilverRules.FX_SYMBOL, McxUsSilverRules.FX_HOURLY)
         val siNow = McxUsSilverRules.priceAt(si, McxUsSilverRules.epoch(ref))
         val siPrev = McxUsSilverRules.priceAt(si, McxUsSilverRules.epoch(prev))
-        val fxNow = McxUsSilverRules.priceAt(fx, McxUsSilverRules.epoch(ref))
-        val fxPrev = McxUsSilverRules.priceAt(fx, McxUsSilverRules.epoch(prev))
-        val missing = listOfNotNull(
-            "COMEX silver at 08:30".takeIf { siNow == null }, "COMEX silver at the ${hhmm(prev.hour * 60 + prev.minute)} close".takeIf { siPrev == null },
-            "USD/INR at 08:30".takeIf { fxNow == null }, "USD/INR at the ${hhmm(prev.hour * 60 + prev.minute)} close".takeIf { fxPrev == null })
-        val s = McxUsSilverRules.signal(siNow, siPrev, fxNow, fxPrev)
-        if (s == null) {
-            val why = if (si.isEmpty() || fx.isEmpty()) "the US price feed did not answer" else "not in the feed's history"
+        val fxNow = McxUsSilverRules.fxAt(fx, fxHourly, McxUsSilverRules.epoch(ref))
+        val fxPrev = McxUsSilverRules.fxAt(fx, fxHourly, McxUsSilverRules.epoch(prev))
+        val closeAt = hhmm(prev.hour * 60 + prev.minute)
+        val sig = McxUsSilverRules.researchSignal(siNow, siPrev, fxNow, fxPrev)
+        if (sig == null) {
+            val missing = listOfNotNull("COMEX silver at 08:30".takeIf { siNow == null }, "COMEX silver at the $closeAt close".takeIf { siPrev == null })
+            val why = if (si.isEmpty()) "the US price feed did not answer" else "not in the feed's history"
             decide(b, arm, key, "silver_no_us_price: ${missing.joinToString(", ").ifEmpty { "a price" }} not read ($why); no trade today"); return true
         }
-        val facts = "s %+.4f: COMEX silver %.3f to %.3f, USD/INR %.4f to %.4f since %s".format(Locale.ENGLISH, s, siPrev, siNow, fxPrev, fxNow,
-            prev.toLocalDate().toString() + " " + hhmm(prev.hour * 60 + prev.minute))
+        val s = sig.first
+        // USD/INR not read at all (both feeds): counted as no rupee move, as the research did - said plainly, never silently.
+        val fxWords = if (sig.second) "USD/INR not read (${if (fx.isEmpty() && fxHourly.isEmpty()) "the feed did not answer" else "not in the feed's history"}): " +
+            "counted as no move, as the research did" else "USD/INR %.4f to %.4f".format(Locale.ENGLISH, fxPrev, fxNow)
+        val facts = "s %+.4f: COMEX silver %.3f to %.3f, %s since %s".format(Locale.ENGLISH, s, siPrev, siNow, fxWords,
+            prev.toLocalDate().toString() + " " + closeAt)
         val side = McxUsSilverRules.side(s)
         if (side == 0) { decide(b, arm, key, "silver_flat ($facts)"); return true }
         val pc = McxMarket.paperContract(near)
