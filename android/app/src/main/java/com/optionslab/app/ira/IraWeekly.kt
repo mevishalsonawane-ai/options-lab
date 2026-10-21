@@ -162,9 +162,10 @@ internal object IraWeekly {
 
     /**
      * The paper round trips closed this week and last: Liquidity 15+5 per book and Hero from the arms' own book ([OrbArms]),
-     * everything else from the paper trade book by who placed it ([com.optionslab.app.data.TradeBook.ownerOf]).
+     * everything else from the paper trade book by who placed it ([com.optionslab.app.data.TradeBook.ownerOf]). Also the
+     * spoken Sunday review's paper book ([IraSundayReview]; 20 Oct, enhancement round 2).
      */
-    private suspend fun trades(monday: LocalDate): List<WeeklyReview.Trade> {
+    internal suspend fun trades(monday: LocalDate): List<WeeklyReview.Trade> {
         val from = monday.minusWeeks(1)
         val out = ArrayList<WeeklyReview.Trade>()
         val books = LiquidityRules.BOOKS.associateBy { it.source }
