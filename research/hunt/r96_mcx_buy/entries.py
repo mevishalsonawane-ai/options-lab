@@ -6,13 +6,11 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 
 import yaml
 
 from research.hunt.r96_mcx_buy import cfg as K
 from research.hunt.r96_mcx_buy import report as REP
-from research.hunt.r96_mcx_buy import rules as R
 
 ROOT = K.HERE.parents[2]
 OUT = ROOT / "research" / "experiments" / "entries"
@@ -35,7 +33,19 @@ RULE_TEXT = {
           "ladder, square-off the same session",
     "U1": "the future's first US half-hour (09:30-10:00 ET) >= 1.5x its 20-session median size -> 1-ITM that way; stop "
           "-40% / the 09:30 ET price, lock ladder, square-off the same session",
+    "R2A": "N1's NR7 break -> 1-ITM, stop -40% / the NR7 opposite extreme, lock ladder, 3 sessions, plus the edge "
+           "take-profit (sold at a real print once the strike is the deepest stored ITM strike)",
+    "R2B": "as R2A with the 2-ITM strike",
+    "R2C": "as R2A on NR7 days that are also inside days (Crabel ID/NR7)",
+    "R2D": "as R2A on the CRUDEOIL and NATURALGAS option books",
+    "R2E": "as R2A, skipping trades whose 1-lot stop risk (40% of the premium + Rs 100) is above Rs 6,500",
+    "R2F": "squeeze release (on >= 3 of the previous 5 sessions) -> ATM straddle, stop -30%, lock ladder, 5 sessions, "
+           "edge take-profit; 4 minis + CRUDEOIL, NATURALGAS",
+    "R2G": "NR7 day -> ATM straddle next 09:15, stop -30%, lock ladder, 3 sessions, edge take-profit",
+    "R2H": "close beyond the previous 20 closes' high / low with an NR7 day in the previous 5 sessions -> 1-ITM, stop "
+           "-40% / 1 ATR14, lock ladder, 5 sessions, edge take-profit",
 }
+PREREG = {1: "research/hunt/r96_mcx_buy/PREREG_ROUND1.md", 2: "research/hunt/r96_mcx_buy/PREREG_ROUND2.md"}
 
 
 def main(round_no: int = 1):
@@ -53,7 +63,8 @@ def main(round_no: int = 1):
                 f"gross Rs {s.get('gross', 0):,.0f}, win {s.get('win', 0):.0%}, worst month Rs "
                 f"{s.get('worst_month', 0):,.0f}, max DD Rs {s.get('max_dd', 0):,.0f}, without top 3 Rs "
                 f"{s.get('wo_top3', 0):,.0f}; folds {fl}; twin mean Rs {r['twin_mean']:,.0f}, twin p {r['twin_p']:.3f}, "
-                f"BH q {r['bh_q']:.3f} (cumulative ledger, {dj['ideas_in_ledger']} ideas). "
+                f"BH q {r['bh_q']:.3f} (cumulative ledger, {dj['ideas_in_ledger']} ideas); model-priced exits "
+                f"{s.get('model_share', 0):.0%}, real-exit net Rs {s.get('real_exit_net', 0):,.0f}. "
                 f"Gates failed: {', '.join(k for k, v in r['gates'].items() if not v) or 'none'}.")
         if hj:
             hs = hj["summary"]
@@ -69,12 +80,12 @@ def main(round_no: int = 1):
                          "spot + ATM-3..+3 minutes with IV; fut_daily_continuous to 16 Oct 2026), copied 21 Oct",
             period=dict(design="2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)",
                         holdout="2026-07-15..2026-10-19 (locked; read once only for a design pass)"),
-            instruments=["CRUDEOILM", "NATGASMINI", "GOLDM", "SILVERM"],
+            instruments=sorted(r["summary"].get("by_book", {})) or ["CRUDEOILM", "NATGASMINI", "GOLDM", "SILVERM"],
             features=["signal source: the MCX future (near future minute closes; daily: the near-month daily "
                       "continuous future, back-adjusted)", "ATM IV as a filter only (V1)"],
             model_or_rule=RULE_TEXT[rid],
-            settings="research/hunt/r96_mcx_buy/cfg.py; PREREG_ROUND1.md s3-6",
-            prereg="research/hunt/r96_mcx_buy/PREREG_ROUND1.md", variants_tried=1,
+            settings=f"research/hunt/r96_mcx_buy/cfg.py; {PREREG[round_no].split('/')[-1]}",
+            prereg=PREREG[round_no], variants_tried=1,
             results=dict(summary=summ, costs="Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before "
                                              "(NATGASMINI 0.45% / 0.90%) each fill, 2x on model-priced exits; gates "
                                              "also at 2x spreads"),

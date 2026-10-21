@@ -1,7 +1,7 @@
 """R96 study (PREREG_ROUND1.md). Commands:
 
-    python -m research.hunt.r96_mcx_buy.study design            # every round-1 rule on the design period
-    python -m research.hunt.r96_mcx_buy.study holdout <rule>    # the LOCKED holdout, once per passing rule
+    python -m research.hunt.r96_mcx_buy.study design [round]            # every rule of that round on the design period
+    python -m research.hunt.r96_mcx_buy.study holdout <rule> [round]    # the LOCKED holdout, once per passing rule
 
 Environment: IRAALGO_LAKE (the Drive lake copy), IRAALGO_CACHE (R53 markets, R96 books). Results: small JSON / CSV /
 markdown in results/. The holdout refuses to run for a rule that did not pass every design gate, and refuses a second
@@ -30,15 +30,17 @@ def simulate(book, sp: dict, last_day):
             return E.sim_straddle(book, sp["i_sig"], None, last_day, sp["i_from"], sp["i_end_fixed"],
                                   stop_frac=K.EV_STOP, ladder=K.EV_LADDER, trail_from=K.EV_TRAIL_FROM,
                                   trail_gap=K.EV_TRAIL_GAP, fill_wait=sp.get("fill_wait", K.FILL_WAIT))
-        return E.sim_straddle(book, sp["i_sig"], sp["n_sessions"], last_day, sp["i_from"])
-    return E.sim_single(book, sp["i_sig"], sp["side"], sp["ustop"], sp["n_sessions"], last_day, sp["i_from"])
+        return E.sim_straddle(book, sp["i_sig"], sp["n_sessions"], last_day, sp["i_from"],
+                              edge_exit=sp.get("edge", False))
+    return E.sim_single(book, sp["i_sig"], sp["side"], sp["ustop"], sp["n_sessions"], last_day, sp["i_from"],
+                        offset=sp.get("itm"), edge_exit=sp.get("edge", False), max_risk=sp.get("max_risk"))
 
 
 def run_rule(rid: str, books: dict, period) -> list:
     """All trades of rule rid over `period`, one position per book at a time (a signal while one is open is skipped)."""
     rule = R.RULES[rid]
     out = []
-    for name in K.BOOK_ORDER:
+    for name in getattr(rule, "books", K.BOOK_ORDER):
         b = books[name]
         busy_until = None
         for sp in sorted(rule.candidates(b, period), key=lambda s: s["i_from"]):
@@ -129,6 +131,7 @@ def summarize(df: pd.DataFrame) -> dict:
         worst_month=float(month.min()), months_below_stop=int((month < K.STOP_MONTH).sum()), months=int(len(month)),
         max_dd=dd, wo_top3=float(srt[K.GATE_WO_TOP:].sum()),
         model_share=float(df.model.mean()), stale_share=float(df.stale.mean()),
+        real_exit_trades=int((~df.model.astype(bool)).sum()), real_exit_net=float(df.net[~df.model.astype(bool)].sum()),
         why={k: int(v) for k, v in df.why.value_counts().items()},
         risk_median=float(np.median(risk)), cap2_median=float(np.median(risk) / 0.02),
         cap1_median=float(np.median(risk) / 0.01), cap2_max=float(risk.max() / 0.02),
@@ -163,7 +166,7 @@ def bh(ps: list) -> list:
     return [float(x) for x in q]
 
 
-def gates(s: dict, fl: list, p: float, q: float, hist: dict | None) -> dict:
+def gates(s: dict, fl: list, p: float, q: float, hist: dict | None, round_no: int = 1) -> dict:
     g = dict(
         trades=s["trades"] >= K.GATE_MIN_TRADES,
         net=s.get("net", 0) > 0,
@@ -175,6 +178,8 @@ def gates(s: dict, fl: list, p: float, q: float, hist: dict | None) -> dict:
         max_dd=s.get("max_dd", -np.inf) > K.STOP_DD if s["trades"] else False,
         wo_top3=s.get("wo_top3", 0) > 0,
     )
+    if round_no >= 2:              # PREREG_ROUND2 s2 gate 8
+        g["real_exits"] = bool(s["trades"] and s["model_share"] <= K.GATE_MODEL_SHARE and s["real_exit_net"] > 0)
     if hist is not None:
         g["history"] = bool(np.isfinite(hist.get("mean", np.nan)) and hist["mean"] > 0)
     return g
@@ -205,7 +210,7 @@ def save_ledger(rows: list):
 # ================================================================================================ commands
 def load_books():
     from research.hunt.r96_mcx_buy import data as D
-    return {n: D.load_book(n) for n in K.BOOK_ORDER}
+    return {n: D.load_book(n) for n in K.ALL_BOOKS}
 
 
 def design(round_no: int = 1, only=None):
@@ -214,7 +219,7 @@ def design(round_no: int = 1, only=None):
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     res = {}
     all_df = []
-    for rid in (only or R.ORDER):
+    for rid in (only or (R.ORDER if round_no == 1 else R.ORDER2)):
         trades = run_rule(rid, books, K.DESIGN)
         df = frame(trades)
         all_df.append(df)
@@ -223,9 +228,9 @@ def design(round_no: int = 1, only=None):
         tw = twins(rid, trades, books, K.DESIGN) if trades else np.zeros(K.TWINS)
         p = float((np.sum(tw >= s.get("net", 0)) + 1) / (K.TWINS + 1)) if trades else float("nan")
         hist = None
-        if rid in R.DIRECTIONAL_DAILY:
+        if rid in R.HISTORY_RULES:
             hist = {}
-            for name in K.BOOK_ORDER:
+            for name in getattr(R.RULES[rid], "books", K.BOOK_ORDER):
                 hist[name] = H.run(rid, books[name].daily)
             rr = [h for h in hist.values() if h["n"]]
             n = sum(h["n"] for h in rr)
@@ -242,7 +247,7 @@ def design(round_no: int = 1, only=None):
         q = qmap[(round_no, rid)]
         h = r["history"]["pooled"] if r["history"] else None
         r["bh_q"] = q
-        r["gates"] = gates(r["summary"], r["folds"], r["twin_p"], q, h)
+        r["gates"] = gates(r["summary"], r["folds"], r["twin_p"], q, h, round_no)
         r["pass"] = bool(all(r["gates"].values()))
         r["lead"] = is_lead(r["summary"], r["folds"], r["twin_p"])
     out = dict(round=round_no, written=datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -278,9 +283,11 @@ def holdout(rid: str, round_no: int = 1):
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "design"
-    if cmd == "design":
-        design(only=sys.argv[2:] or None)
-    elif cmd == "holdout":
-        print(json.dumps(holdout(sys.argv[2]), indent=1, default=str))
+    if cmd == "design":                      # design [round] [rule ...]
+        args = sys.argv[2:]
+        rnd = int(args.pop(0)) if args and args[0].isdigit() else 1
+        design(rnd, only=args or None)
+    elif cmd == "holdout":                   # holdout <rule> [round]
+        print(json.dumps(holdout(sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 1), indent=1, default=str))
     else:
         raise SystemExit(__doc__)

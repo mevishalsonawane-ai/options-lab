@@ -62,11 +62,22 @@ def daily_ind(d: pd.DataFrame) -> pd.DataFrame:
     d["sq"] = sq
     prev6 = pd.Series(sq.astype(float)).shift(1).rolling(6).sum().values
     d["sq_release"] = (~sq) & np.r_[False, sq[:-1]] & (prev6 >= 5)
+    prev5 = pd.Series(sq.astype(float)).shift(1).rolling(5).sum().values
+    d["sq_release3"] = (~sq) & np.r_[False, sq[:-1]] & (prev5 >= 3)          # round 2 R2F (relaxed)
     d["sq_side"] = np.nan_to_num(np.sign(ac - d.sma20.values)).astype(int)
     rng = (d.high - d.low).values
     d["rng"] = rng
     prev_min6 = pd.Series(rng).shift(1).rolling(6).min().values
     d["nr7"] = np.isfinite(prev_min6) & (rng < prev_min6)
+    hp, lp = np.r_[np.nan, d.high.values[:-1]], np.r_[np.nan, d.low.values[:-1]]
+    roll_today = d.roll.values.astype(bool)
+    d["inside"] = (d.high.values < hp) & (d.low.values > lp) & ~roll_today             # raw prices; not on a roll day
+    d["nr7_id"] = d.nr7.values & d.inside.values                                         # round 2 R2C (Crabel ID/NR7)
+    hi20 = c.shift(1).rolling(20).max().values
+    lo20 = c.shift(1).rolling(20).min().values
+    nr7_recent = pd.Series(d.nr7.values.astype(float)).shift(1).rolling(5).max().values >= 1
+    dc = np.where(ac > hi20, 1, np.where(ac < lo20, -1, 0))
+    d["qb_side"] = np.where(nr7_recent & np.isfinite(hi20), dc, 0).astype(int)          # round 2 R2H
     atr_prev = np.r_[np.nan, d.atr.values[:-1]]
     loc = np.where(rng > 0, (d.close.values - d.low.values) / np.where(rng > 0, rng, 1), 0.5)
     wide = np.isfinite(atr_prev) & (rng >= 1.8 * atr_prev)
@@ -126,9 +137,9 @@ def in_p(day, period) -> bool:
 class DailyDir:
     """S2, W1, P1: a daily signal at date t -> 1-ITM next session 09:15, stop katr x ATR14(t), n sessions."""
 
-    def __init__(self, rid, col, katr, n, mask_col=None):
+    def __init__(self, rid, col, katr, n, mask_col=None, edge=False, books=K.BOOK_ORDER):
         self.rid, self.col, self.katr, self.n, self.mask_col = rid, col, katr, n, mask_col
-        self.kind = "single"
+        self.kind, self.edge, self.books = "single", edge, books
 
     def sides(self, d):
         s = d[self.col].values.astype(int)
@@ -143,7 +154,7 @@ class DailyDir:
         i_sig, i_from = e
         ust = book.m.F[i_sig] - side * self.katr * atr
         return dict(day=day, i_sig=i_sig, i_from=i_from, side=int(side), ustop=float(ust), n_sessions=self.n,
-                    kind="single", i_end_fixed=None, katr=self.katr)
+                    kind="single", i_end_fixed=None, katr=self.katr, edge=self.edge)
 
     def candidates(self, book, period):
         d = book.daily
@@ -164,22 +175,23 @@ class DailyDir:
 
 
 class SqueezeStraddle:
-    rid, kind = "S1", "straddle"
+    """S1 (and round 2: R2F relaxed squeeze, R2G NR7 day): a daily flag at date t -> ATM straddle next session."""
+    kind = "straddle"
 
-    def __init__(self, n=5):
-        self.n = n
+    def __init__(self, rid="S1", n=5, col="sq_release", edge=False, books=K.BOOK_ORDER):
+        self.rid, self.n, self.col, self.edge, self.books = rid, n, col, edge, books
 
     def spec(self, book, day):
         e = entry_ix(book, day, K.ENTRY_TOD)
         if e is None:
             return None
         return dict(day=day, i_sig=e[0], i_from=e[1], side=0, ustop=None, n_sessions=self.n, kind="straddle",
-                    i_end_fixed=None, katr=None)
+                    i_end_fixed=None, katr=None, edge=self.edge)
 
     def candidates(self, book, period):
         d = book.daily
         out = []
-        for t in d.date.values[d.sq_release.values]:
+        for t in d.date.values[d[self.col].values.astype(bool)]:
             day = next_market_day(book, t)
             if day is None or not in_p(day, period) or (day - _day64(t)) > 7 * DAY:
                 continue
@@ -193,14 +205,21 @@ class SqueezeStraddle:
 
 
 class NR7:
-    rid, kind = "N1", "single"
+    """N1 (and round 2: R2A-R2E with edge exits, 2-ITM, inside day, big books, a risk cap)."""
+    kind = "single"
     n = 3
     LAST_TOD = 22 * 60
+
+    def __init__(self, rid="N1", col="nr7", itm=1, edge=False, max_risk=None, books=K.BOOK_ORDER):
+        self.rid, self.col, self.itm, self.edge, self.max_risk, self.books = rid, col, itm, edge, max_risk, books
+
+    def extra(self):
+        return dict(itm=self.itm, edge=self.edge, max_risk=self.max_risk)
 
     def candidates(self, book, period):
         m, d = book.m, book.daily
         out = []
-        for t in d.date.values[d.nr7.values]:
+        for t in d.date.values[d[self.col].values.astype(bool)]:
             t = _day64(t)
             if t not in book.day_pos:
                 continue
@@ -220,7 +239,7 @@ class NR7:
             atr = atr_before(book, day)
             katr = abs(m.F[i_sig] - ust) / atr if np.isfinite(atr) and atr > 0 else None
             out.append(dict(day=day, i_sig=i_sig, i_from=i_sig + 1, side=side, ustop=float(ust), n_sessions=self.n,
-                            kind="single", i_end_fixed=None, katr=katr, tod=int(m.tod[i_sig])))
+                            kind="single", i_end_fixed=None, katr=katr, tod=int(m.tod[i_sig]), **self.extra()))
         return out
 
     def twin(self, book, sp, day):
@@ -234,7 +253,7 @@ class NR7:
         katr = round(sp["katr"] * 4) / 4                      # cache-friendly: quarter-ATR steps
         ust = m.F[i_sig] - sp["side"] * katr * atr
         return dict(day=day, i_sig=i_sig, i_from=i_sig + 1, side=sp["side"], ustop=float(ust), n_sessions=self.n,
-                    kind="single", i_end_fixed=None, katr=katr, tod=sp["tod"])
+                    kind="single", i_end_fixed=None, katr=katr, tod=sp["tod"], **self.extra())
 
 
 class VRP:
@@ -413,3 +432,18 @@ RULES = {
 }
 ORDER = ("S1", "S2", "N1", "W1", "P1", "V1", "E1", "E2", "U1")
 DIRECTIONAL_DAILY = ("S2", "N1", "W1", "P1")
+
+# ---------------------------------------------------------------------------------------------- round 2 (PREREG_ROUND2)
+RULES.update({
+    "R2A": NR7("R2A", edge=True),
+    "R2B": NR7("R2B", itm=2, edge=True),
+    "R2C": NR7("R2C", col="nr7_id", edge=True),
+    "R2D": NR7("R2D", edge=True, books=K.BIG_ENERGY),
+    "R2E": NR7("R2E", edge=True, max_risk=K.R2_MAX_RISK),
+    "R2F": SqueezeStraddle("R2F", n=5, col="sq_release3", edge=True, books=K.ALL_BOOKS),
+    "R2G": SqueezeStraddle("R2G", n=3, col="nr7", edge=True),
+    "R2H": DailyDir("R2H", "qb_side", 1.0, 5, edge=True),
+})
+ORDER2 = ("R2A", "R2B", "R2C", "R2D", "R2E", "R2F", "R2G", "R2H")
+HISTORY_RULES = {"S2": "dir", "N1": "nr7", "W1": "dir", "P1": "dir", "R2A": "nr7", "R2B": "nr7", "R2C": "nr7_id",
+                 "R2D": "nr7", "R2E": "nr7", "R2H": "dir"}

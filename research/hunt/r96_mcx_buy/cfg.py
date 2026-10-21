@@ -36,6 +36,11 @@ BOOKS = {
     "SILVERM": ("SILVERM", "silver", 5.0, ("cpi", "nfp")),
 }
 BOOK_ORDER = ("CRUDEOILM", "NATGASMINI", "GOLDM", "SILVERM")
+# round 2 (PREREG_ROUND2 s3): the big energy books for R2D / R2F
+BOOKS["CRUDEOIL"] = ("CRUDEOIL", "crude", 100.0, ("eia",))
+BOOKS["NATURALGAS"] = ("NATURALGAS", "natgas", 1250.0, ("storage",))
+BIG_ENERGY = ("CRUDEOIL", "NATURALGAS")
+ALL_BOOKS = BOOK_ORDER + BIG_ENERGY
 
 # ---------------------------------------------------------------------------------------------- costs (PREREG s5)
 OPT_HALF = {"gold": (0.0030, 0.0060), "silver": (0.0030, 0.0060), "crude": (0.0030, 0.0060),
@@ -71,6 +76,10 @@ GATE_FOLDS_POS = 3               # of 4
 STOP_MONTH = -13000.0
 STOP_DD = -40000.0
 GATE_WO_TOP = 3
+GATE_MODEL_SHARE = 0.10          # round 2 gate 8: model-priced exits <= 10% of trades ...
+                                 # ... and the net of the real-print-exit trades > 0
+R2_MAX_RISK = 6500.0             # R2E: skip a trade whose 1-lot stop risk (40% of the premium + Rs 100) is above this
+R2_RISK_COST = 100.0
 HOLD_MIN_TRADES = 10
 HOLD_P = 0.10
 

@@ -8,12 +8,15 @@ import json
 import sys
 
 from research.hunt.r96_mcx_buy import cfg as K
-from research.hunt.r96_mcx_buy import rules as R
 
 NAMES = {"S1": "squeeze release, ATM straddle", "S2": "squeeze release, 1-ITM direction",
          "N1": "NR7 breakout, 1-ITM", "W1": "wide-range continuation, 1-ITM", "P1": "pullback in trend, 1-ITM",
          "V1": "IV below HAR forecast, ATM straddle", "E1": "event straddle (EIA / storage / CPI / NFP)",
-         "E2": "event follow, 1-ITM", "U1": "US-session momentum (big first half-hour), 1-ITM"}
+         "E2": "event follow, 1-ITM", "U1": "US-session momentum (big first half-hour), 1-ITM",
+         "R2A": "NR7 breakout, 1-ITM, edge take-profit (real fills)", "R2B": "NR7 breakout, 2-ITM, edge take-profit",
+         "R2C": "Crabel inside-day NR7 breakout, 1-ITM", "R2D": "NR7 breakout on CRUDEOIL / NATURALGAS options",
+         "R2E": "NR7 breakout with a Rs 6,500 stop-risk cap", "R2F": "relaxed squeeze release, ATM straddle, 6 books",
+         "R2G": "NR7 day -> ATM straddle", "R2H": "quiet-base (NR7 within 5 days) 20-day breakout, 1-ITM"}
 
 
 def rs(x) -> str:
@@ -41,7 +44,8 @@ def main(round_no: int = 1):
              "worst month (below -13k) | max DD | w/o top 3 | twin mean | twin p | BH q | model / stale exits | "
              "median stop risk -> capital at 2% | verdict |")
     L.append("|" + "---|" * 18)
-    for rid in R.ORDER:
+    order = list(dj["rules"])
+    for rid in order:
         r = dj["rules"].get(rid)
         if r is None:
             continue
@@ -56,39 +60,40 @@ def main(round_no: int = 1):
                  f"{rs(s['gross'])} | {rs(s['cost'])} | **{rs(s['net'])}** | {rs(s['net2'])} | {nf} of 4: {fs} | "
                  f"{rs(s['worst_month'])} ({s['months_below_stop']} of {s['months']}) | {rs(s['max_dd'])} | "
                  f"{rs(s['wo_top3'])} | {rs(r['twin_mean'])} | {r['twin_p']:.3f} | {r['bh_q']:.3f} | "
-                 f"{s['model_share']:.0%} / {s['stale_share']:.0%} | {rs(s['risk_median'])} -> {rs(s['cap2_median'])} | "
+                 f"{s['model_share']:.0%} / {s['stale_share']:.0%} (real-exit net {rs(s.get('real_exit_net'))}) | "
+                 f"{rs(s['risk_median'])} -> {rs(s['cap2_median'])} | "
                  f"{verdict(r)} |")
     L.append("\n## Gates per rule\n")
-    for rid in R.ORDER:
+    for rid in order:
         r = dj["rules"].get(rid)
         if r is None:
             continue
         failed = [k for k, v in r.get("gates", {}).items() if not v]
         L.append(f"- {rid}: failed {', '.join(failed) if failed else 'none'}")
     L.append("\n## By book (design)\n")
-    L.append("| rule | " + " | ".join(K.BOOK_ORDER) + " |")
-    L.append("|---|" + "---|" * len(K.BOOK_ORDER))
-    for rid in R.ORDER:
+    L.append("| rule | " + " | ".join(K.ALL_BOOKS) + " |")
+    L.append("|---|" + "---|" * len(K.ALL_BOOKS))
+    for rid in order:
         r = dj["rules"].get(rid)
         if r is None or not r["summary"].get("trades"):
             continue
         bb = r["summary"]["by_book"]
         cells = []
-        for b in K.BOOK_ORDER:
+        for b in K.ALL_BOOKS:
             x = bb.get(b)
             cells.append("-" if x is None else f"{x['trades']}: gross {rs(x['gross'])}, net {rs(x['net'])}, "
                                                f"win {x['win']:.0%}")
         L.append(f"| {rid} | " + " | ".join(cells) + " |")
     L.append("\n## Long-history check of the directional daily signals (futures, 2012 - Jul 2025, 0.10% cost)\n")
-    L.append("| rule | " + " | ".join(K.BOOK_ORDER) + " | pooled |")
-    L.append("|---|" + "---|" * (len(K.BOOK_ORDER) + 1))
-    for rid in R.DIRECTIONAL_DAILY:
+    L.append("| rule | " + " | ".join(K.ALL_BOOKS) + " | pooled |")
+    L.append("|---|" + "---|" * (len(K.ALL_BOOKS) + 1))
+    for rid in order:
         r = dj["rules"].get(rid)
         if r is None or not r.get("history"):
             continue
         h = r["history"]
         cells = [f"{h[b]['n']}: {h[b]['mean'] * 100:+.2f}% (twin {h[b]['twin_mean'] * 100:+.2f}%, p {h[b]['p']:.2f})"
-                 if h[b]["n"] else "-" for b in K.BOOK_ORDER]
+                 if b in h and h[b]["n"] else "-" for b in K.ALL_BOOKS]
         L.append(f"| {rid} | " + " | ".join(cells) + f" | {h['pooled']['n']}: {h['pooled']['mean'] * 100:+.2f}% |")
     (K.RESULTS / f"report_round{round_no}.md").write_text("\n".join(L) + "\n")
     ledger(round_no)

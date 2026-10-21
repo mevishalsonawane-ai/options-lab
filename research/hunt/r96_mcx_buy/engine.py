@@ -145,6 +145,18 @@ def contract_marks(book, cp: int, strike: float, i0: int, i1: int):
     return o, h, l, c, mdl
 
 
+def edge_flags(book, cp: int, strike: float, i0: int, i1: int) -> np.ndarray:
+    """Round 2 (PREREG_ROUND2 s2): per grid minute i0..i1, True when the held strike is the deepest in-the-money
+    strike stored at that minute or beyond it (call: <= the lowest stored strike; put: >= the highest)."""
+    m = book.m
+    S = np.vstack([m.k_at.get((cp, k), np.full(len(m.ts), np.nan))[i0:i1 + 1] for k in OFFSETS])
+    with np.errstate(all="ignore"):
+        smax = np.nanmax(np.where(np.isfinite(S), S, -np.inf), axis=0)
+        smin = np.nanmin(np.where(np.isfinite(S), S, np.inf), axis=0)
+    have = np.isfinite(smax) & np.isfinite(smin)
+    return have & ((strike <= smin + 1e-9) if cp == 0 else (strike >= smax - 1e-9))
+
+
 def exit_price(o, c, mdl, day, k: int):
     """(price, model?, stale?) for an exit decided at relative minute k."""
     if np.isfinite(c[k]):
@@ -178,14 +190,18 @@ def _lock_update(lock, peak, base, be, ladder, trail_from, trail_gap):
 
 
 def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, stop_frac: float = K.PREM_STOP,
-                ladder=K.LADDER, trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP):
+                ladder=K.LADDER, trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, edge=None):
     """Relative minute 0 = the fill minute. Returns (k, why, price or None, model?) where price None means 'use
-    exit_price at k'."""
+    exit_price at k'. edge (round 2): per-minute 'at the edge' flags; at the first edge minute with a print the position
+    is sold at that print's close; past the edge without a print, at the open of the contract's next print."""
     lvl_stop = fill * (1 - stop_frac)
     lock = -np.inf
     peak = fill
     n = len(c)
+    pending = False
     for k in range(n):
+        if pending and np.isfinite(o[k]) and k > 0:
+            return k, "edge", float(o[k]), False
         if np.isfinite(l[k]):
             op, hi, lo, md = o[k], h[k], l[k], False
         elif np.isfinite(mdl[k]):
@@ -201,6 +217,10 @@ def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, st
                 return k, ("lock" if lock > lvl_stop else "stop"), float(px), md
         if ustop is not None and np.isfinite(ustop) and np.isfinite(F[k]) and side * (F[k] - ustop) <= 0:
             return k, "ustop", None, False
+        if edge is not None and edge[k] and k > 0:
+            if np.isfinite(c[k]):
+                return k, "edge", float(c[k]), False
+            pending = True
         if np.isfinite(hi):
             if hi > peak:
                 peak = hi
@@ -209,15 +229,24 @@ def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, st
 
 
 def walk_straddle(legs, fill_v: float, be_v: float, stop_frac: float = K.STRAD_STOP, ladder=K.LADDER,
-                  trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP):
+                  trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, edges=None):
     """legs: [(o, h, l, c, mdl), (o, h, l, c, mdl)] from the fill minute; checks the combined value on closes / marks.
-    Returns (k, why)."""
+    edges (round 2): per-leg edge flags; the first minute where a leg is at the edge and printed (or, past the edge,
+    prints again) ends the trade (both legs sold at their exit prices). Returns (k, why)."""
     n = len(legs[0][3])
     last = [np.nan, np.nan]
     lvl_stop = fill_v * (1 - stop_frac)
     lock = -np.inf
     peak = fill_v
+    pending = [False, False]
     for k in range(n):
+        if edges is not None and k > 0:
+            for j in (0, 1):
+                pr = np.isfinite(legs[j][3][k])
+                if (edges[j][k] or pending[j]) and pr:
+                    return k, "edge"
+                if edges[j][k]:
+                    pending[j] = True
         for j in (0, 1):
             c, mdl = legs[j][3], legs[j][4]
             if np.isfinite(c[k]):
@@ -274,7 +303,8 @@ def _trade_dict(book, i_in, i_out, side, strikes, fills, exits, why, model, stal
 
 def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_day=None, i_from: int | None = None,
                offset: int | None = None, stop_frac: float = K.PREM_STOP, ladder=K.LADDER,
-               trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP):
+               trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, edge_exit: bool = False,
+               max_risk: float | None = None):
     """Buy one contract: the strike from the future's close at grid index i_sig (the minute before entry), filled at
     the first print from i_from (default i_sig + 1). `offset` = steps in the money (default 1: 1-ITM). Returns a trade
     or None."""
@@ -294,6 +324,8 @@ def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_
     if fp is None:
         return None
     i_in, fill = fp
+    if max_risk is not None and stop_frac * fill * book.units + K.R2_RISK_COST > max_risk:
+        return None                   # round 2 R2E: the 1-lot stop risk is above the cap -> skip
     i_end = last_exit_ix(book, i_in, n_sessions, last_day)
     if i_end <= i_in:
         return None
@@ -301,8 +333,9 @@ def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_
     o[0] = fill                       # the fill minute is entered at its open
     tod_in = int(m.tod[i_in])
     be = fill + opt_cost(book.ck, fill * book.units, fill * book.units, tod_in, tod_in) / book.units
+    edge = edge_flags(book, cp, strike, i_in, i_end) if edge_exit else None
     k, why, px, md = walk_single(o, h, l, c, mdl, m.F[i_in:i_end + 1], side, fill, be, ustop, stop_frac, ladder,
-                                 trail_from, trail_gap)
+                                 trail_from, trail_gap, edge)
     stale = False
     if px is None:
         px, md, stale = exit_price(o, c, mdl, m.day[i_in:i_end + 1], k)
@@ -320,7 +353,8 @@ def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_
 
 def sim_straddle(book, i_sig: int, n_sessions: int | None, last_day=None, i_from: int | None = None,
                  i_end_fixed: int | None = None, stop_frac: float = K.STRAD_STOP, ladder=K.LADDER,
-                 trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, fill_wait: int = K.FILL_WAIT):
+                 trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, fill_wait: int = K.FILL_WAIT,
+                 edge_exit: bool = False):
     """Buy the ATM call and put (strikes at grid index i_sig); both must print within fill_wait minutes of i_from."""
     m = book.m
     i_from = i_sig + 1 if i_from is None else i_from
@@ -354,7 +388,8 @@ def sim_straddle(book, i_sig: int, n_sessions: int | None, last_day=None, i_from
     tod_in = int(m.tod[i_in])
     fv = sum(fills)
     be = fv + opt_cost(book.ck, fv * book.units, fv * book.units, tod_in, tod_in) / book.units + 40.0 / book.units
-    k, why = walk_straddle(legs, fv, be, stop_frac, ladder, trail_from, trail_gap)
+    edges = [edge_flags(book, cp, ks[cp], i_in, i_end) for cp in (0, 1)] if edge_exit else None
+    k, why = walk_straddle(legs, fv, be, stop_frac, ladder, trail_from, trail_gap, edges)
     dd = m.day[i_in:i_end + 1]
     exits, mds, sts = [], [], []
     for cp in (0, 1):

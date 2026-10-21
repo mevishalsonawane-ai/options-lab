@@ -64,8 +64,9 @@ def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, s
     inp = (dates.date >= period[0]) & (dates.date <= period[1])
     rng = np.random.default_rng(seed)
     rets, tw_specs = [], []
-    if rule_id == "N1":
-        for i in np.flatnonzero(d.nr7.values & inp):
+    kind = R.HISTORY_RULES.get(rule_id, "dir")
+    if kind in ("nr7", "nr7_id"):
+        for i in np.flatnonzero(d[kind].values.astype(bool) & inp):
             r = trade_nr7(d, i)
             if r is not None:
                 rets.append(r)
@@ -92,7 +93,7 @@ def run(rule_id: str, d: pd.DataFrame, period=K.HISTORY, twins: int = K.TWINS, s
                 j = int(pool[rng.integers(len(pool))])
                 if j == i:
                     continue
-                if rule_id == "N1":
+                if kind in ("nr7", "nr7_id"):
                     r = trade_nr7(d, j)
                 else:
                     rule = R.RULES[rule_id]

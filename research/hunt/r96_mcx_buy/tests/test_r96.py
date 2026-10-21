@@ -401,3 +401,71 @@ def test_periods_are_disjoint():
     assert K.DESIGN[1] < K.HOLDOUT[0]
     assert K.FOLDS[0][0] == K.DESIGN[0] and K.FOLDS[-1][1] == K.DESIGN[1]
     assert all(a[1] < b[0] for a, b in zip(K.FOLDS[:-1], K.FOLDS[1:]))
+
+
+# ------------------------------------------------------------------------------------------------ round 2
+def test_edge_flags_and_edge_exit_on_a_real_print():
+    def up(i, ts):
+        return 5000.0 + 1.0 * i                       # the future rises a point a minute
+    bk = make_book(days=2, path=up)
+    m = bk.m
+    i0 = 10
+    ed = E.edge_flags(bk, 0, 5000.0, i0, i0 + 400)
+    o, h, l, c, mdl = E.contract_marks(bk, 0, 5000.0, i0, i0 + 400)
+    first = int(np.flatnonzero(ed)[0])
+    assert np.isfinite(c[first])                      # at the edge the strike is still stored and prints
+    assert not ed[:first].any() and np.isnan(mdl[:first]).all()
+    k, why, px, md = E.walk_single(o, h, l, c, mdl, m.F[i0:i0 + 401], 1, float(o[0]), float(o[0]) + 1, None,
+                                   stop_frac=0.99, edge=ed)
+    assert why == "edge" and k == first and px == c[first] and not md
+
+
+def test_edge_past_the_window_waits_for_the_next_print():
+    nan = np.nan
+    o = np.array([100, 110, nan, nan, 130, 120.0])
+    edge = np.array([False, False, True, True, True, False])
+    mdl = np.array([nan, nan, 125, 128, nan, nan])
+    k, why, px, md = E.walk_single(o, o, o, o, mdl, np.full(6, 1.0), 1, 100.0, 101.0, None, edge=edge)
+    assert (k, why, px, md) == (4, "edge", 130.0, False)
+
+
+def test_sim_single_edge_exit_is_real_and_cap_skips():
+    def up(i, ts):
+        return 5000.0 + 0.5 * i
+    bk = make_book(days=6, path=up)                   # enough sessions before the (synthetic) expiry
+    m = bk.m
+    i_sig, i_from = R.entry_ix(bk, m.days[0], K.ENTRY_TOD)
+    t = E.sim_single(bk, i_sig, 1, None, 2, None, i_from, edge_exit=True)
+    assert t["why"] == "edge" and not t["model"]
+    t2 = E.sim_single(bk, i_sig, 1, None, 2, None, i_from, edge_exit=False, stop_frac=0.99)
+    assert t2["why"] != "edge"
+    assert E.sim_single(bk, i_sig, 1, None, 2, None, i_from, edge_exit=True, max_risk=10.0) is None
+
+
+def test_two_itm_strike():
+    bk = make_book(days=1)
+    assert E.pick_strike(bk.m, 0, 50, 2) == 4900.0 and E.pick_strike(bk.m, 1, 50, 2) == 5100.0
+
+
+def test_round2_indicators_and_guard():
+    base = daily_frame(n=320, seed=7)
+    full = R.daily_ind(base)
+    for col in ("inside", "nr7_id", "qb_side", "sq_release3"):
+        assert col in full
+    assert (full.nr7_id <= full.nr7).all()
+    for cut in (150, 250):
+        d = base.copy()
+        d.loc[cut + 1:, ["open", "high", "low", "close"]] *= 1.25
+        part = R.daily_ind(d)
+        for col in ("inside", "nr7_id", "qb_side", "sq_release3"):
+            assert (full[col].values[:cut + 1] == part[col].values[:cut + 1]).all(), (cut, col)
+
+
+def test_gate8_real_exits():
+    s = dict(trades=40, net=1000.0, net2=500.0, worst_month=-100.0, max_dd=-100.0, wo_top3=10.0,
+             model_share=0.05, real_exit_net=200.0)
+    fl = [dict(net=1.0)] * 4
+    assert S.gates(s, fl, 0.01, 0.05, None, round_no=2)["real_exits"]
+    s["model_share"] = 0.2
+    assert not S.gates(s, fl, 0.01, 0.05, None, round_no=2)["real_exits"]
+    assert "real_exits" not in S.gates(s, fl, 0.01, 0.05, None, round_no=1)
