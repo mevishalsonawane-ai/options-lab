@@ -438,4 +438,133 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertTrue(runBlocking { Protections.dayGttsOut("NFO", sym, "test") })
         assertTrue(kite.requests.none { it.path.startsWith("/gtt/") })
     }
+    // ---- the review's findings (21 Oct) -----------------------------------------------------------------------------------------
+
+    /** A lost answer: the GTT may exist, so nothing else is placed; the next look finds it and keeps it (never a second one). */
+    @Test fun aLostAnswerPlacesNothingElseAndTheNextLookAdoptsTheGtt() {
+        DayOco.resetForTest(on = true)
+        kite.gttRepliesLost = 1
+        kite.gttReadFailures = 20                                  // and the look for it fails too
+        val said = protect()
+        assertTrue(said, said.contains("answer to the GTT was lost"))
+        assertTrue("no DAY orders beside a GTT that may exist", kite.placed.isEmpty())
+        assertEquals("the GTT was made at Zerodha", 1, kite.gtts.size)
+        val p = one()
+        assertNull(p.gttId); assertEquals(Protections.DAY_GTT, p.note)
+        kite.gttReadFailures = 0
+        session(10, 3)
+        kite.requests.clear()
+        tick()
+        assertTrue("adopted, none placed", gttPosts.isEmpty())
+        assertEquals(kite.gtts.keys.single(), one().gttId)
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    @Test fun aLostAnswerAtTheOpenPlacesNothingElse() {
+        protect()
+        theClose()                                                // the phone was off at the close: no overnight GTT
+        DayOco.resetForTest(on = true)
+        kite.orders.clear()
+        session(9, 20, nth = 2)
+        kite.gttRepliesLost = 1
+        kite.gttReadFailures = 20
+        kite.requests.clear()
+        tick()
+        assertTrue("no DAY orders beside it", kite.placed.isEmpty())
+        assertEquals(1, kite.gtts.size)
+        assertEquals(Protections.DAY_GTT, one().note)
+        kite.gttReadFailures = 0
+        session(9, 22, nth = 2)
+        tick()
+        assertEquals(kite.gtts.keys.single(), one().gttId)
+        assertEquals(1, gttPosts.size)
+    }
+
+    /** After a restart the switch reads off until the settings are read: a day GTT is never taken out for that. */
+    @Test fun theUnreadSwitchAfterARestartNeverTakesTheGttOut() {
+        DayOco.resetForTest(on = true)
+        protect()
+        DayOco.resetForTest(on = false, loaded = false)
+        session(10, 3)
+        kite.requests.clear()
+        tick()
+        assertTrue(writes().isEmpty())
+        assertEquals(Protections.DAY_GTT, one().note)
+        assertNotNull(one().gttId)
+    }
+
+    /** A part closed by hand with the price at the stop: the GTT cannot be reduced, so it goes (confirmed) for two orders sized to what is held. */
+    @Test fun aGttThatCannotBeReducedIsReplacedByTwoOrdersForWhatIsHeld() {
+        DayOco.resetForTest(on = true)
+        kite.position(sym, 150, 100.0)
+        protect(qty = 150)
+        session(10, 3)
+        kite.position(sym, 75, 100.0)
+        kite.quote("NFO:$sym", 90.1, 90.05, 90.15)                 // within 0.25% of the stop: Zerodha refuses the reduced GTT
+        kite.requests.clear()
+        tick()
+        val w = writes()
+        assertEquals("the GTT out first: $w", "DELETE", w.first { it.method != "PUT" }.method)
+        assertTrue(kite.gtts.isEmpty())
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertTrue(kite.placed.all { it.form["quantity"] == "75" })
+        assertEquals(75, one().qty)
+    }
+
+    /** Fired in an earlier session, its order not in today's book: nothing rests, said plainly, finished (never "rests unfilled" forever). */
+    @Test fun aFiredGttWhoseOrderEndedWithItsSessionIsSaidPlainly() {
+        DayOco.resetForTest(on = true)
+        protect()
+        val id = one().gttId!!
+        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        val oid = kite.triggerGtt(id, leg = 0)
+        kite.orders.remove(oid)                                    // the next session: yesterday's order is not in today's book
+        session(10, 0, nth = 2)
+        tick()
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertTrue(alerted("did not fill"))
+    }
+
+    @Test fun aFiredGttThatLeftAShortIsSaidPlainlyNotAsClosed() {
+        DayOco.resetForTest(on = true)
+        protect()
+        val id = one().gttId!!
+        kite.quote("NFO:$sym", 88.0, 87.95, 88.05)
+        kite.triggerGtt(id, leg = 0)
+        kite.position(sym, -75, 88.0)                              // another sell filled beside it
+        session(10, 5)
+        tick()
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertTrue(alerted("other way round"))
+        assertFalse(alerted("the position is closed"))
+    }
+
+    @Test fun aFiredGttThatSoldPartIsSaidAsPartLeft() {
+        DayOco.resetForTest(on = true)
+        kite.position(sym, 150, 100.0)
+        protect(qty = 150)
+        val id = one().gttId!!
+        // Another exit covered half since: the GTT covers 150 but its sell filled only 75 before Zerodha cancelled the rest.
+        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        val oid = kite.triggerGtt(id, leg = 0)
+        kite.fillPart(oid, 75, 85.5)
+        kite.order(oid).status = "CANCELLED"
+        session(10, 5)
+        tick()
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertTrue(alerted("its GTT fired and sold 75"))
+    }
+
+    /** The expiry exits: a GTT that fired a moment before (its sell working, not in the pass's read) is cancelled first. */
+    @Test fun theExpiryExitsCancelAJustFiredGttsWorkingSellFirst() {
+        DayOco.resetForTest(on = true)
+        protect()
+        val id = one().gttId!!
+        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        val oid = kite.triggerGtt(id, leg = 0)
+        assertEquals("OPEN", kite.order(oid).status)
+        assertFalse("the exit waits for its next pass", runBlocking { Protections.dayGttsOut("NFO", sym, "test") })
+        assertEquals("CANCELLED", kite.order(oid).status)
+        assertTrue(runBlocking { Protections.dayGttsOut("NFO", sym, "test") })
+    }
 }

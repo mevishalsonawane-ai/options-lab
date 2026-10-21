@@ -23,15 +23,16 @@ object PayoutDrawdown {
     const val KEEP = 60
 
     /**
-     * [list] with [day]'s payout read as [amount] (Kite's figure for the day: it only grows, so the largest read is kept). [peak]:
-     * the drawdown peak now (kept from the day's first reading; a later reading never moves it). Nothing for a non-positive or
-     * unknown amount.
+     * [list] with [day]'s payout read as [amount] (Kite's figure for the day, as last read: review - a payout requested and then
+     * cancelled the same day reads back as 0, and that removes the day, so money that never left is never counted). [peak]: the
+     * drawdown peak now (kept from the day's first reading; a later reading never moves it). An unknown amount changes nothing.
      */
     fun record(list: List<Payout>, day: LocalDate, amount: Double, peak: Double): List<Payout> {
-        if (!amount.isFinite() || amount <= 0.0) return list
+        if (!amount.isFinite()) return list
+        if (amount <= 0.0) return list.filter { it.day != day }
         val old = list.firstOrNull { it.day == day }
         val next = if (old == null) Payout(day, amount, peak)
-            else old.copy(amount = maxOf(old.amount, amount), peak = if (old.peak.isFinite()) old.peak else peak)
+            else old.copy(amount = amount, peak = if (old.peak.isFinite()) old.peak else peak)
         return (list.filter { it.day != day } + next).sortedBy { it.day }.takeLast(KEEP)
     }
 

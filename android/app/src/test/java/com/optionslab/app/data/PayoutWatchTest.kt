@@ -130,6 +130,21 @@ class PayoutWatchTest : RobolectricTest() {
         assertEquals(peak, p.peak, 0.0)
     }
 
+    /** Review: a payout requested and then cancelled the same day reads back as 0 and is no longer counted. */
+    @Test fun aPayoutCancelledTheSameDayIsDropped() {
+        kite.payoutToday = 25_000.0
+        runBlocking { Broker.funds() }
+        val deadline = System.currentTimeMillis() + 5_000
+        while (PayoutWatch.payoutsForTest().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(1, PayoutWatch.payoutsForTest().size)
+        kite.payoutToday = 0.0
+        Thread.sleep(Broker.SHARE_MS + 300)                         // past the shared margins read
+        runBlocking { Broker.funds() }
+        val end = System.currentTimeMillis() + 5_000
+        while (PayoutWatch.payoutsForTest().isNotEmpty() && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertTrue(PayoutWatch.payoutsForTest().isEmpty())
+    }
+
     @Test fun noPayoutKeepsNothing() {
         kite.payoutToday = 0.0
         runBlocking { Broker.funds() }

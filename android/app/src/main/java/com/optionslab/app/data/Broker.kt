@@ -1641,6 +1641,25 @@ object Broker {
         }
     }
 
+    /** 21 Oct, enhancement round 4 (review): a GTT's placing as [placeGttSure] tells it - placed (its id), refused, or not known. */
+    sealed class GttSent { class Placed(val id: Long) : GttSent(); object Refused : GttSent(); object Unknown : GttSent() }
+
+    /**
+     * 21 Oct, enhancement round 4 (review): [placeGttOnce], telling a definite refusal (nothing at Zerodha: the caller may rest its
+     * exits another way) from a lost reply not found in the GTT list (it may exist: the caller places nothing else this look).
+     */
+    suspend fun placeGttSure(g: Kite.Gtt, known: Set<Long>): GttSent {
+        return try { GttSent.Placed(placeGtt(g)) } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (definite(e)) return GttSent.Refused
+            val q = g.orders.firstOrNull()?.quantity ?: return GttSent.Unknown
+            runCatching {
+                gtts().firstOrNull { r -> r.active && r.id !in known && r.symbol == g.tradingSymbol && r.exchange == g.exchange &&
+                    r.legQtys.firstOrNull() == q && r.triggers.zip(g.triggers).all { (a, b) -> kotlin.math.abs(a - b) < 1e-6 } && r.triggers.size == g.triggers.size }?.id
+            }.getOrNull()?.let { GttSent.Placed(it) } ?: GttSent.Unknown
+        }
+    }
+
     suspend fun placeGtt(g: Kite.Gtt): Long {
         // 20 Oct, enhancement round 2: noted by the exit coordinator until a read of the GTT list shows it ([ExitCoordinator]).
         val ticket = ExitCoordinator.sendingGtt(g)

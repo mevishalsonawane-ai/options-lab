@@ -32,10 +32,11 @@ object PayoutWatch {
     @Volatile private var loaded = false
     @Volatile private var switched = false
     @Volatile private var payouts: List<PayoutDrawdown.Payout> = emptyList()
-    /** The last drawdown judged with payouts, and the day it was said (once a day in the diary). */
-    @Volatile private var last: PayoutDrawdown.Judged? = null
-    @Volatile private var lastPeak = Double.NaN
-    @Volatile private var lastEquity = Double.NaN
+    /** The last drawdown judged with payouts, with its peak and equity (review: one snapshot, never pieces of two calls). */
+    private data class Last(val j: PayoutDrawdown.Judged?, val peak: Double, val equity: Double)
+    @Volatile private var lastSnap = Last(null, Double.NaN, Double.NaN)
+    private val last: PayoutDrawdown.Judged? get() = lastSnap.j
+    /** The day it was said (once a day in the diary). */
     @Volatile private var saidDay: java.time.LocalDate? = null
     private val lock = Any()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -86,7 +87,9 @@ object PayoutWatch {
      * now, and written, on a worker thread (this may run on the send path).
      */
     fun seen(amount: Double) {
-        if (!amount.isFinite() || amount <= 0.0) return
+        // Review: a 0 read is kept too when the day has a payout (a request cancelled the same day removes it).
+        if (!amount.isFinite() || amount < 0.0) return
+        if (amount == 0.0 && payouts.none { it.day == today() }) return
         val day = today()
         scope.launch {
             runCatching {
@@ -111,7 +114,7 @@ object PayoutWatch {
         val paid = PayoutDrawdown.paidOutSince(payouts, a.peakEquity, d)
         if (paid <= 0.0) return@runCatching null
         val j = PayoutDrawdown.judge(a.peakEquity, a.equity, paid, limitPct)
-        last = j; lastPeak = a.peakEquity; lastEquity = a.equity
+        lastSnap = Last(j, a.peakEquity, a.equity)
         val w = PayoutDrawdown.words(j, on) ?: return@runCatching null
         if (saidDay != d) { saidDay = d; runCatching { Diag.record("risk", "Payout-aware drawdown: $w") } }
         publish()
@@ -125,17 +128,18 @@ object PayoutWatch {
     fun lowerPeak(pinConfirmed: Boolean): String {
         if (!pinConfirmed) return "Enter your PIN to lower the drawdown peak."
         if (!on) return "Switch the payout-aware drawdown on first."
-        val j = last?.takeIf { it.explained } ?: return "No drawdown explained by payouts to count."
+        val snap = lastSnap
+        val j = snap.j?.takeIf { it.explained } ?: return "No drawdown explained by payouts to count."
         val peak = SecurePrefs.getDouble(K_PEAK, Double.NaN)
-        if (!peak.isFinite() || kotlin.math.abs(peak - lastPeak) >= 0.5) return "The peak has changed since; nothing was lowered."
-        val next = PayoutDrawdown.lowered(peak, j.paidOut, lastEquity)
+        if (!peak.isFinite() || kotlin.math.abs(peak - snap.peak) >= 0.5) return "The peak has changed since; nothing was lowered."
+        val next = PayoutDrawdown.lowered(peak, j.paidOut, snap.equity)
         Guard.setPeak(live = true, next)
         val text = synchronized(lock) {
             payouts = PayoutDrawdown.used(payouts, peak, today())
             PayoutDrawdown.encode(payouts)
         }
         runCatching { SecurePrefs.putAllSoon(mapOf(K_LIST to text)) }
-        last = null
+        lastSnap = Last(null, Double.NaN, Double.NaN)
         runCatching { Diag.record("risk", "Drawdown peak lowered by payouts of Rs %,.0f: %,.0f to %,.0f (by you, with the PIN)".format(j.paidOut, peak, next)) }
         publish()
         return "The drawdown peak is now Rs %,.0f (lowered by payouts of Rs %,.0f). The kill switch is as it was: clear it yourself if you agree.".format(next, j.paidOut)
@@ -160,7 +164,7 @@ object PayoutWatch {
     internal fun resetForTest(on: Boolean = false) {
         this.on = on; loaded = true; switched = false
         synchronized(lock) { payouts = emptyList() }
-        last = null; lastPeak = Double.NaN; lastEquity = Double.NaN; saidDay = null
+        lastSnap = Last(null, Double.NaN, Double.NaN); saidDay = null
         _view.value = View(on)
     }
 

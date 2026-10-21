@@ -1030,9 +1030,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val orders = async { b.orders().filter { it.working } }
             Triple(net.await(), held.await(), orders.await())
         }
+        // 21 Oct, enhancement round 4 (review): a protection's stop and target resting as one GTT (Bot settings) counts as an exit
+        // already resting, as its two orders did: read only for a contract that has one.
+        val protGtts = com.optionslab.app.data.Protections.dayGttHint.filterKeys { k -> legs.any { "${it.exchange}:${it.tradingSymbol}" == k } }.values.flatten().toSet()
+        val gttRows = if (protGtts.isEmpty()) emptyList() else b.gtts().filter { it.id in protGtts }
         // Units already on their way out of this instrument and product on this side, whoever placed them.
         fun busy(o: com.optionslab.engine.Kite.Order): Int = orders.filter { it.symbol == o.tradingSymbol && it.exchange == o.exchange &&
-            it.product == o.product && it.side == o.side.name }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            it.product == o.product && it.side == o.side.name }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
+            gttRows.filter { it.symbol == o.tradingSymbol && it.exchange == o.exchange }.sumOf { it.covers(o.side.name, o.product) }
         for (o in legs) {
             if (o.product == "CNC") {
                 val h = held.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange }

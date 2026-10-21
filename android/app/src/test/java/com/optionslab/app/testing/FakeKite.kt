@@ -118,6 +118,8 @@ class FakeKite : Closeable {
     @Volatile var positionsTrailReads = 0
     /** 21 Oct, enhancement round 4: the next this many reads of the GTT list fail (500 GeneralException). */
     @Volatile var gttReadFailures = 0
+    /** 21 Oct, enhancement round 4: the next this many GTTs placed are made, but their answers are lost. */
+    @Volatile var gttRepliesLost = 0
     private var trailedPositions: JSONObject? = null
     private var trailedLeft = 0
     /** Positions reads answered so far. */
@@ -636,6 +638,8 @@ class FakeKite : Closeable {
         val cond = JSONObject(f["condition"] ?: "{}")
         gtts[id] = JSONObject().put("id", id).put("type", f["type"]).put("status", "active").put("created_at", LocalDateTime.now(IST).format(TS))
             .put("condition", cond).put("orders", JSONArray(f["orders"] ?: "[]"))
+        // 21 Oct, enhancement round 4: the GTT is made but its answer lost (Kite's 500 NetworkException).
+        if (gttRepliesLost > 0) { gttRepliesLost--; return error(500, "NetworkException", "Gateway timed out.") }
         return ok(JSONObject().put("trigger_id", id))
     }
 }

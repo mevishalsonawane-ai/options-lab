@@ -14,11 +14,19 @@ class PayoutDrawdownTest {
     private val d2 = LocalDate.of(2026, 10, 20)
     private val d3 = LocalDate.of(2026, 10, 21)
 
-    @Test fun aDaysPayoutKeepsTheLargestReadAndTheFirstPeak() {
+    @Test fun aDaysPayoutKeepsTheLatestReadAndTheFirstPeak() {
         var l = PayoutDrawdown.record(emptyList(), d1, 50_000.0, 500_000.0)
-        l = PayoutDrawdown.record(l, d1, 30_000.0, 510_000.0)
         l = PayoutDrawdown.record(l, d1, 80_000.0, 520_000.0)
-        assertEquals(listOf(PayoutDrawdown.Payout(d1, 80_000.0, 500_000.0)), l)
+        l = PayoutDrawdown.record(l, d1, 30_000.0, 510_000.0)          // part of the request cancelled
+        assertEquals(listOf(PayoutDrawdown.Payout(d1, 30_000.0, 500_000.0)), l)
+    }
+
+    @Test fun aPayoutCancelledTheSameDayIsRemoved() {
+        var l = PayoutDrawdown.record(emptyList(), d1, 50_000.0, 500_000.0)
+        l = PayoutDrawdown.record(l, d2, 20_000.0, 500_000.0)
+        l = PayoutDrawdown.record(l, d1, 0.0, 500_000.0)
+        assertEquals(listOf(d2), l.map { it.day })
+        assertEquals(l, PayoutDrawdown.record(l, d2, Double.NaN, 1.0), "an unknown read changes nothing")
     }
 
     @Test fun anUnknownPeakIsFilledByALaterRead() {

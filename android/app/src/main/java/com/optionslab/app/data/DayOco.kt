@@ -51,6 +51,12 @@ object DayOco {
 
     fun isOn(): Boolean = on
 
+    /**
+     * Off as read from the settings (review: until the start's read lands the switch reads off, and a first look after a restart
+     * must never take a day GTT out for that): what turns a resting day GTT back into two orders.
+     */
+    fun isKnownOff(): Boolean = loaded && !on
+
     /** Read once if the start's read has not landed (a worker thread only: Bot settings' card). */
     fun refresh() { if (!loaded) load() else _view.value = View(on) }
 
@@ -73,5 +79,5 @@ object DayOco {
     }
 
     /** TEST ONLY: the switch as given, nothing saved. */
-    internal fun resetForTest(on: Boolean = false) { this.on = on; loaded = true; switched = false; _view.value = View(on) }
+    internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) { this.on = on; this.loaded = loaded; switched = false; _view.value = View(on) }
 }
