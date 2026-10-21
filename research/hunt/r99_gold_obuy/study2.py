@@ -339,4 +339,5 @@ def holdout():
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, str(R1.HERE.parents[1]))      # research/ on the path for obuy.overfit
     {"design": design, "holdout": holdout}[sys.argv[1]]()
