@@ -44,3 +44,20 @@ IRAALGO_LAKE=~/lake python -m research.hunt.r95_cci_signals.study final        #
   rule, its summary and gates, and its cell loop with a fake arm and pricer; the look-ahead guard now covers MO).
 - The overlay's arm loaders (`fam_liq`, R72 / R71 `rule_trades`) and the pricer need the stores, so they are tested
   only through fakes until the run.
+
+## N1, 21 Oct 2026: second run attempt, still blocked (no lake file opened, no statistic)
+
+- This container has no `rclone` on the PATH. It does carry an environment-provided build at
+  `/opt/rclone/rclone-filestore` and the `RCLONE_CONFIG_GDRIVE_*` variables (names checked only; no value printed).
+  Running that build (version, backends, `listremotes`) was refused by the session's permission check as
+  credential exploration.
+- Installing the official rclone release and running it with the same Drive credentials would be the same action by
+  another route, so it was NOT tried. Nothing was worked around.
+- So the plan is unchanged and still unrun: no counts, no design cells, no walk-forward, no BH, no twins, and the
+  holdout is still unread (`results/FINAL_READ` does not exist).
+- Checks run in this session (Python 3.11 venv with the pinned `research/brain/requirements.txt`, plus numba):
+  R95 tests 49 passed; `research/brain/tests` 183 passed; `features catalog --check` up to date;
+  `research.experiments.validate` OK.
+- To unblock: Boss allows the Drive copy in a session (a permission rule for the rclone call, e.g. for
+  `rclone copy gdrive:IraAlgo-data-lake/...`), or a session starts with the lake already in `~/lake` / `~/lakeflat`.
+  Then follow the run order above unchanged.
