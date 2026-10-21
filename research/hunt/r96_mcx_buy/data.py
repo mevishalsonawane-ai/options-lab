@@ -3,8 +3,8 @@
 - m      the R53 Market (near-future minute closes F, printed option legs by (day, cp, strike), strikes by offset,
          expiry days); built from the Drive lake, cached by R53 outside git.
 - iv     {(cp, offset): IV % per grid minute}, forward-filled within the day (Dhan's own IV per stored strike).
-- daily  the signal series: the book's near-month daily continuous future, back-adjusted at causal rolls (R93), with
-         raw OHLC kept (raw_*) for the realised-vol estimate, plus the indicators the rules read (rules.daily_ind).
+- daily  the signal series: the book's near-month daily continuous future (raw OHLC, causal roll flag, ATR14; R93),
+         plus the back-adjusted closes and indicators the rules read (rules.daily_ind, recomputed on every load).
 """
 from __future__ import annotations
 
@@ -61,7 +61,9 @@ def load_book(name: str, rebuild: bool = False) -> Book:
     p = K.CACHE / f"book_{name}.pkl"
     if p.exists() and not rebuild:
         with open(p, "rb") as f:
-            return pickle.load(f)
+            b = pickle.load(f)
+        b.daily = R.daily_ind(load_daily(K.BOOKS[name][0]))       # indicators always from the current code
+        return b
     sig, ck, units, ev = K.BOOKS[name]
     m = D53.load_market(name)
     raw = D53.lake_options(name)
