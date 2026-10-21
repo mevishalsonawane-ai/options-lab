@@ -80,6 +80,17 @@ GATE_MODEL_SHARE = 0.10          # round 2 gate 8: model-priced exits <= 10% of 
                                  # ... and the net of the real-print-exit trades > 0
 R2_MAX_RISK = 6500.0             # R2E: skip a trade whose 1-lot stop risk (40% of the premium + Rs 100) is above this
 R2_RISK_COST = 100.0
+# round 3 (PREREG_ROUND3): book sets
+CRUDE = ("CRUDEOILM", "CRUDEOIL")
+ENERGY = BIG_ENERGY                                         # CRUDEOIL, NATURALGAS (R2D's books)
+R3_LOWVOL_WIN = 250              # R3D: ATR14 / close in the bottom third of its range over the last 250 sessions
+R3_LOWVOL_FRAC = 1.0 / 3.0
+R3_TRAIL = (1.0, 1.5)            # R3C: breakeven on the future after +1 ATR14, then a 1.5 x ATR14 chandelier
+R3_EARLY_TOD = 11 * 60 + 15      # R3F: breaks between 09:15 and 11:15 only
+R3_HIVOL_FRAC = 2.0 / 3.0        # R3J: 5-day mean Garman-Klass variance in the top third of its last-250 range
+R3_LH_MIN = 45                   # R3I: signal at session close - 45 min, out at the square-off (close - 15)
+R3_LH_LOOK, R3_LH_PAST, R3_LH_Q = 60, 20, 2.0 / 3.0      # R3I: |move| >= the 67th pct of the last 60 sessions' moves
+R3_LH_KATR = 0.25                # R3I: underlying stop 0.25 x ATR14 behind the signal price
 HOLD_MIN_TRADES = 10
 HOLD_P = 0.10
 

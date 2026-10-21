@@ -15,3 +15,10 @@
   contract's next printed minute (the first real price available).
 - **N5 (21 Oct, round 2, before any run): edge strikes come from the held side's stored strikes** (as the round-1
   window check), and the edge check runs after the stop / lock and underlying-stop checks of the same minute.
+- **N6 (21 Oct, round 3, before any round-3 rule was run): environment.** The rclone program was not installed in this
+  container (the Drive remote is configured by the environment); it was installed from downloads.rclone.org (v1.75.2)
+  and the lake copied with plain `rclone copy gdrive:IraAlgo-data-lake/<folder> ~/lake/<folder> --include ...`. No
+  credential or config was printed or read. Lake check: offsets -3..+3 only on every book (no wider strikes yet).
+- **N7 (21 Oct, round 3, before any run): R3G / R3I clocks.** R3G's twin enters at the twin day's own US open (US
+  summer and winter time differ by an hour). R3I reads the move at the last minute at or before close - 46 and needs
+  that minute within 5 minutes of it; R3H and R3J need their clock minutes within 5 minutes too.

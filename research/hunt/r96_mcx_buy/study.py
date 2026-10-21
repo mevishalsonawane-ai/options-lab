@@ -32,8 +32,13 @@ def simulate(book, sp: dict, last_day):
                                   trail_gap=K.EV_TRAIL_GAP, fill_wait=sp.get("fill_wait", K.FILL_WAIT))
         return E.sim_straddle(book, sp["i_sig"], sp["n_sessions"], last_day, sp["i_from"],
                               edge_exit=sp.get("edge", False))
+    kw = {}
+    if sp.get("no_ladder"):            # round 3 R3C: no premium lock ladder; the future's trail is the profit lock
+        kw.update(ladder=(), trail_from=float("inf"))
+    if sp.get("trail") is not None:
+        kw["utrail"] = (sp.get("atr", float("nan")),) + tuple(sp["trail"])
     return E.sim_single(book, sp["i_sig"], sp["side"], sp["ustop"], sp["n_sessions"], last_day, sp["i_from"],
-                        offset=sp.get("itm"), edge_exit=sp.get("edge", False), max_risk=sp.get("max_risk"))
+                        offset=sp.get("itm"), edge_exit=sp.get("edge", False), max_risk=sp.get("max_risk"), **kw)
 
 
 def run_rule(rid: str, books: dict, period) -> list:
@@ -219,7 +224,7 @@ def design(round_no: int = 1, only=None):
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     res = {}
     all_df = []
-    for rid in (only or (R.ORDER if round_no == 1 else R.ORDER2)):
+    for rid in (only or {1: R.ORDER, 2: R.ORDER2}.get(round_no) or R.ORDER3):
         trades = run_rule(rid, books, K.DESIGN)
         df = frame(trades)
         all_df.append(df)

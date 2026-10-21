@@ -45,3 +45,18 @@ rules to pre-register.
    pullback-in-trend go in, with the signal checked on 2012 - Jul 2025 daily futures as well.
 5. Not repeated (already tested here): COMEX overnight lead, seasonality, gold/silver ratio, ORB, calendar spreads,
    option selling (out of scope).
+
+## Round 3 scan (21 Oct 2026, before the round-3 pre-registration)
+
+Effect sizes below are from abstracts or summaries where marked; none were verified on full texts.
+
+| idea | source | used |
+|---|---|---|
+| EIA-day intraday momentum: on EIA days the 11:00-11:30 ET half-hour predicts the last half-hour | Wen, Indriawan, Lien & Xu, Energy Journal 44(5) 2023, https://ideas.repec.org/a/sae/enejou/v44y2023i5p149-172.html | R3H |
+| market intraday momentum (prior close -> last 30 min predicts the last 30 min; dealer gamma hedging) across 60 futures 1974-2020 | Baltussen, Da, Lammers & Martens, JFE 142 (2021), https://www3.nd.edu/~zda/intramom.pdf | R3I |
+| opening-range breakout on crude futures earns > 0; returns differ strongly by volatility state | Holmberg, Loennbark & Lundstroem, FRL 10(1) 2013, https://ideas.repec.org/p/hhs/umnees/0845.html; Lundstroem WP 861, https://swopec.hhs.se/umnees/abs/umnees0861.htm | R3J |
+| EIA spike reverts within ~25 minutes / over-reaction partly reversed in hours | Li & Geman, J. Energy Markets 2018, https://ideas.repec.org/a/rsk/journ2/5728636.html; Rousse & Sevi, Energy Journal 40(2) | round 4 (conflicts with R3H) |
+| night-session first half-hour momentum in Chinese metal futures; "night effect" momentum and reversal | Bouri, Ma, Xu & Zhou (AUT working paper); Ma et al., Global Finance Journal 64 (2025), https://ideas.repec.org/a/eee/glofin/v64y2025ics1044028325000110.html | round 4 |
+| time-series momentum (12-month sign) in commodities | Moskowitz, Ooi & Pedersen, JFE 2012 | round 4 (as a filter only) |
+| gold rises in Asian hours, falls in US hours | CBS master's thesis; FXStreet commentary (Jul 2026), descriptive only | round 4 (futures check first) |
+| dropped: pre-FOMC drift in gold (Lucca & Moench find it in stocks only), drift after NFP / CPI in gold (retail write-ups), API Tuesday (no study), storage direction (vendor test: none) | - | no |

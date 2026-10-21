@@ -215,7 +215,8 @@ def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, st
             if lo <= lvl:
                 px = op if (np.isfinite(op) and op < lvl) else lvl
                 return k, ("lock" if lock > lvl_stop else "stop"), float(px), md
-        if ustop is not None and np.isfinite(ustop) and np.isfinite(F[k]) and side * (F[k] - ustop) <= 0:
+        u = ustop[k] if isinstance(ustop, np.ndarray) else ustop      # round 3: a per-minute (trailing) level
+        if u is not None and np.isfinite(u) and np.isfinite(F[k]) and side * (F[k] - u) <= 0:
             return k, "ustop", None, False
         if edge is not None and edge[k] and k > 0:
             if np.isfinite(c[k]):
@@ -226,6 +227,33 @@ def walk_single(o, h, l, c, mdl, F, side: int, fill: float, be: float, ustop, st
                 peak = hi
             lock = _lock_update(lock, peak, fill, be, ladder, trail_from, trail_gap)
     return n - 1, "time", None, False
+
+
+def trail_levels(F, side: int, ustop0: float, atr: float, be_atr: float = 1.0, gap_atr: float = 1.5) -> np.ndarray:
+    """Round 3 (PREREG_ROUND3 R3C): the underlying stop per relative minute, from the future's minute closes F (minute 0
+    = the fill minute). Starts at ustop0. Once the best close since the fill is >= be_atr x ATR in favour of F[0], the
+    stop is at least F[0] (breakeven on the future), and from then on at least the best close - gap_atr x ATR (a
+    chandelier). It never moves against the trade. The level at minute k uses closes up to k (known at k's close)."""
+    F = np.asarray(F, float)
+    out = np.full(len(F), float(ustop0))
+    if not (np.isfinite(atr) and atr > 0) or not len(F) or not np.isfinite(F[0]):
+        return out
+    f0 = F[0]
+    lvl = float(ustop0)
+    best = f0
+    on = False
+    for k in range(len(F)):
+        if np.isfinite(F[k]) and side * (F[k] - best) > 0:
+            best = F[k]
+        if not on and side * (best - f0) >= be_atr * atr - 1e-12:
+            on = True
+        if on:
+            cand = best - side * gap_atr * atr
+            for c_ in (f0, cand):
+                if side * (c_ - lvl) > 0:
+                    lvl = c_
+        out[k] = lvl
+    return out
 
 
 def walk_straddle(legs, fill_v: float, be_v: float, stop_frac: float = K.STRAD_STOP, ladder=K.LADDER,
@@ -304,7 +332,7 @@ def _trade_dict(book, i_in, i_out, side, strikes, fills, exits, why, model, stal
 def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_day=None, i_from: int | None = None,
                offset: int | None = None, stop_frac: float = K.PREM_STOP, ladder=K.LADDER,
                trail_from: float = K.TRAIL_FROM, trail_gap: float = K.TRAIL_GAP, edge_exit: bool = False,
-               max_risk: float | None = None):
+               max_risk: float | None = None, utrail=None):
     """Buy one contract: the strike from the future's close at grid index i_sig (the minute before entry), filled at
     the first print from i_from (default i_sig + 1). `offset` = steps in the money (default 1: 1-ITM). Returns a trade
     or None."""
@@ -334,6 +362,8 @@ def sim_single(book, i_sig: int, side: int, ustop, n_sessions: int | None, last_
     tod_in = int(m.tod[i_in])
     be = fill + opt_cost(book.ck, fill * book.units, fill * book.units, tod_in, tod_in) / book.units
     edge = edge_flags(book, cp, strike, i_in, i_end) if edge_exit else None
+    if utrail is not None:            # round 3 R3C: (ATR14, breakeven after, chandelier gap) in ATR units
+        ustop = trail_levels(m.F[i_in:i_end + 1], side, ustop, *utrail)
     k, why, px, md = walk_single(o, h, l, c, mdl, m.F[i_in:i_end + 1], side, fill, be, ustop, stop_frac, ladder,
                                  trail_from, trail_gap, edge)
     stale = False
