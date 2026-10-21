@@ -1,0 +1,31 @@
+id: r99-a
+title: 'R99 R99A: NIFTY walk-forward model for the +100-premium-point ATM option trade'
+family: ml
+date: '2026-10-21'
+doc: research/HUNT_R99_NIFTY100.md
+hypothesis: 'A gradient-boosting model on causal NIFTY index features picks moments where buying the ATM weekly option for
+  +100 premium points (stop -40, else square-off) pays: net > 0, twins p < 0.05, BH q <= 0.10 over 3, >= 3 of 4 quarters positive.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK for NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY;
+  India VIX), copied 21 Oct; R51 stores with lakeclean (R51_CLEAN=1, R51_STALE=1) and R57 stores
+period:
+  design: 2024-11-21..2026-03-31 (R51 quarters Apr-Jun, Jul-Sep, Oct-Dec 2025, Jan-Mar 2026)
+  holdout: '2026-04-01..2026-10-13 (not read: nothing passed; not fresh for index options)'
+instruments:
+- NIFTY
+features:
+- 'signal source: the NIFTY index (1-minute)'
+- India VIX
+- sessions to expiry
+- candles / indicators (R98)
+model_or_rule: HistGradientBoostingRegressor on net_100, quarterly walk-forward; first moment a session with prediction >=
+  Rs 300; ATM option, +100 / -40 / square-off
+settings: research/hunt/r99_nifty100/r99study.py; PREREG.md
+prereg: research/hunt/r99_nifty100/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design walk-forward: 238 trades, net -Rs 43,085 (2x fills -Rs 47,094), win 36%, worst month -Rs 33,791, max DD
+    -Rs 62,288; quarters -Rs 20,149, -Rs 23,301, -Rs 6,272, Rs 6,638; twin mean -Rs 37,475, twin p 0.571, BH q 0.856. Gates
+    failed: net, net2, twin_p, bh_q, quarters, worst_month, max_dd.'
+  costs: 'R51 engine: dated Zerodha charges + R17 fills (1-4 ticks + 5 bps), 2x fills reported'
+holdout_read: false
+verdict: rejected

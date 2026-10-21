@@ -1,0 +1,34 @@
+id: r97-d
+title: 'R97 R97D: first morning trigger (GOLDM option buying, gold moves reverse-engineered)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R97_GOLD_REVERSE.md
+hypothesis: 'Boss (21 Oct): gold moves 200-300 every day; reverse-engineer a rule from the moves. R97D earns after real MCX
+  costs on design (5 Aug 2025 - 14 Jul 2026), beats random-entry twins (p < 0.05, BH q <= 0.10 over R96''s 27 + R97''s 7 ideas),
+  >= 3 of 4 walk-forward folds positive, worst month > -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m GOLDM / GOLD MONTH books to 19 Oct 2026: near-future
+  spot + ATM-3..+3 minutes with IV; fut_daily_continuous), copied 21 Oct; XAUUSD Dukascopy BID minutes (research-data release
+  xauusd_m1_bid.csv.gz + Dukascopy tail)'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: '2026-07-15..2026-10-19 (locked; not read: nothing passed)'
+instruments:
+- GOLDM
+features:
+- 'signal source: the MCX gold future (GOLDM near future, minute closes)'
+model_or_rule: the first trigger 100 of 09:15-11:30, either side; 1 a day; ATM call / put, fill at the first print within
+  5 min; hard premium stop -15%, profit lock +60 pts -> breakeven, +120 -> +60, then peak - 80; underlying stop at the pivot
+  (R97E 150 pts), underlying trail 300 (not R97E); out by the square-off
+settings: research/hunt/r97_gold_reverse/rules.py; PREREG.md s2-6
+prereg: research/hunt/r97_gold_reverse/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 189 trades, net -Rs 174,578 (2x spread -Rs 243,665), gross -Rs 88,005, costs Rs 86,572, win 12%, worst
+    month -Rs 40,163, max DD -Rs 174,785; folds F1 -Rs 51,215 (32), F2 -Rs 55,060 (52), F3 -Rs 48,512 (56), F4 -Rs 19,792
+    (49); twin mean -Rs 141,775, twin p 0.914, BH q 0.971 (34 ideas). Gates failed: net, net2, twin_p, bh_q, folds, worst_month,
+    max_dd, wo_top3, real_exits.'
+  costs: Zerodha MCX option charges + half-spread 0.60% before 17:00 / 0.30% from 17:00 each fill, 2x on model-priced exits;
+    gates also at 2x spreads
+holdout_read: false
+verdict: rejected
+notes: ''

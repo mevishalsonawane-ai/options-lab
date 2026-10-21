@@ -1,0 +1,29 @@
+id: r99-scan
+title: 'R99 step A-B: NIFTY +100 premium points, base rates and 218 one-feature buckets'
+family: diagnosis
+date: '2026-10-21'
+doc: research/HUNT_R99_NIFTY100.md
+hypothesis: 'Descriptive (no rule): how often buying the ATM NIFTY weekly option for +100 premium points pays, and which index
+  conditions change it.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK for NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY;
+  India VIX), copied 21 Oct; R51 stores with lakeclean (R51_CLEAN=1, R51_STALE=1) and R57 stores
+period:
+  design: 2024-11-21..2026-03-31 (R51 quarters Apr-Jun, Jul-Sep, Oct-Dec 2025, Jan-Mar 2026)
+instruments:
+- NIFTY
+features:
+- NIFTY index 1-minute
+- India VIX
+- candles / indicators
+- sessions to expiry
+model_or_rule: 5-minute grid 09:20-14:30, call and put, R51 engine; quintile scan, pooled net with day-clustered p, BH
+settings: research/hunt/r99_nifty100/r99dataset.py, r99scan.py
+prereg: null
+variants_tried: null
+results:
+  summary: '42,334 moments, 336 sessions: target +100 9.2%, stop -40 29.3%, square-off 61.5%; -Rs 161 a trade (calls -Rs 274,
+    puts -Rs 48). 0 of 218 buckets positive at q <= 0.10; best +Rs 115 (gap >= 64.5 with the trade), p 0.54.'
+  costs: R51 engine
+holdout_read: null
+verdict: not-a-test
+notes: Inputs to the R99 pre-registration.

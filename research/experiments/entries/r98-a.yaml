@@ -1,0 +1,34 @@
+id: r98-a
+title: 'R98 R98A: XAUUSD ahead of the future >= 10 bp, future not yet moved (GOLDM future)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R98_CATCH100.md
+hypothesis: 'Boss (21 Oct): catch the 100+ point gold move in any condition. R98A''s +100 / -100 bracket (lock +70 -> +20,
+  60 min) earns after real MCX costs on design, beats random-entry twins (p < 0.05, BH q <= 0.10 over 40 ideas: R96 27 + R97
+  7 + R98 6), >= 3 of 4 folds positive, worst month > -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m GOLDM MONTH books: near-future spot minutes, ATM-3..+3
+  prints), copied 21 Oct; XAUUSD Dukascopy BID minutes (research-data release + Dukascopy tail)'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: '2026-07-15..2026-10-19 (locked; not read: nothing passed)'
+instruments:
+- GOLDM
+features:
+- 'signal source: the MCX gold future (GOLDM near future, minute closes)'
+- XAUUSD 15-min move vs the future (filter)
+model_or_rule: XAUUSD ahead of the future >= 10 bp, future not yet moved (GOLDM future); signals on a 5-minute grid 09:15-22:30;
+  future fill at the next minute close; stop -100 at the close, target +100 limit, lock +70 -> +20, out after 60 min or at
+  the square-off; max 4 a day
+settings: research/hunt/r98_catch100/rules.py, model.py, engine.py; PREREG.md
+prereg: research/hunt/r98_catch100/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 701 trades, net -Rs 466,898 (2x spread -Rs 565,175), gross -Rs 166,600, costs Rs 300,298, win 50%, worst
+    month -Rs 111,138, max DD -Rs 469,781; folds F1 -Rs 60,801 (138), F2 -Rs 160,595 (169), F3 -Rs 172,166 (229), F4 -Rs 73,336
+    (165); twin mean -Rs 478,189, twin p 0.385, BH q 0.670. Gates failed: net, net2, twin_p, bh_q, folds, worst_month, max_dd,
+    wo_top3, real_exits.'
+  costs: 'future: Zerodha MCX futures charges + R53 half-spread each fill (~43 pts a round trip); option: R96 costs; gates
+    also at 2x spreads'
+holdout_read: false
+verdict: rejected
+notes: 'NOTES N2: even with fills exactly at the levels and no spread, gross < charges.'
