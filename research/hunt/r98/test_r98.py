@@ -193,3 +193,25 @@ def test_conf_stop_on_retrace():
     assert F.exit_minute("X6_trail0.5", ix, 1.0, 106.0, 4.0) == 2                          # 2 below the 107 best
     assert F.exit_minute("X3_stop1", ix, 1.0, 106.0, 4.0) == -1
     assert F.option_exit_price(np.array([1.0, np.nan, np.nan, 2.0]), 1) == 2.0
+
+
+@pytest.mark.skipif(not HAVE_LAKE, reason="needs the built R98 day pickles")
+@pytest.mark.parametrize("und", ["NIFTY", "BANKNIFTY"])
+def test_new_features_do_not_look_ahead(und):
+    import features_e as F
+    days = R.load(und)
+    day = days[len(days) // 3]
+    t = R.minute(13, 30)
+    rs_ = [(t, k, s) for (k, s), a in day.opts.items() if not np.isnan(a[t, R.C]) and 1 <= a[t, R.C] <= 10][:6]
+    assert rs_
+    bu, bv = np.linspace(0.2, 0.8, R.N), np.linspace(0.3, 0.6, R.N)
+    oth = {"X": np.linspace(100, 101, R.N)}
+    full = F.day_features(day, rs_, bu, bv, oth, False, True)
+    m = masked(day, t, 1e6)
+    bu2, bv2 = bu.copy(), bv.copy(); bu2[t + 1:] = 99; bv2[t + 1:] = 99
+    oth2 = {"X": oth["X"].copy()}; oth2["X"][t + 1:] = 1e6
+    part = F.day_features(m, rs_, bu2, bv2, oth2, False, True)
+    for a, b in zip(full, part):
+        for f in F.NEW:
+            x, y = a[f], b[f]
+            assert (x != x and y != y) or x == pytest.approx(y), (f, x, y)
