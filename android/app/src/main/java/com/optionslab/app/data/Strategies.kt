@@ -564,9 +564,9 @@ object Strategies {
                         // nothing working, and this exit doubled it. In this order such a fill shows as still working: nothing more sent.
                         val working = runCatching { ExitCoordinator.orders(ref.exchange, kiteSym, "strategy ${def.name}") }.getOrNull()
                             ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
-                        val net = runCatching { Broker.positionBook().net }.getOrNull()
+                        // 21 Oct, enhancement round 3 (idea 1): held, checked against that orders read's fills ([ExitCoordinator.held]).
+                        val held = runCatching { ExitCoordinator.held(ref.exchange, kiteSym, order.product, "strategy ${def.name}", working) }.getOrNull()
                             ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
-                        val held = net.filter { it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product }.sumOf { it.qty }
                         val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
                         if (!closes) return@runBlocking StrategyHost.Placed.Refused(
                             "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} would not close it; not sent")

@@ -249,7 +249,12 @@ internal fun ExitCoordinatorCard() {
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ExitCoordinator.refresh() } } }
-    ExitCoordinatorCardContent(view, said) { on ->
+    ExitCoordinatorCardContent(view, said, onLagSwitch = { on ->
+        scope.launch(Dispatchers.IO) {
+            val m = runCatching { com.optionslab.app.data.ExitCoordinator.setLagOn(on) }.getOrElse { "Could not save that." }
+            withContext(Dispatchers.Main) { said = m }
+        }
+    }) { on ->
         scope.launch(Dispatchers.IO) {
             val m = runCatching { com.optionslab.app.data.ExitCoordinator.setOn(on) }.getOrElse { "Could not save that." }
             withContext(Dispatchers.Main) { said = m }
@@ -259,12 +264,19 @@ internal fun ExitCoordinatorCard() {
 
 /** The card from plain state (tests drive it). */
 @Composable
-internal fun ExitCoordinatorCardContent(view: com.optionslab.app.data.ExitCoordinator.View, said: String?, onSwitch: (Boolean) -> Unit) {
+internal fun ExitCoordinatorCardContent(view: com.optionslab.app.data.ExitCoordinator.View, said: String?, onLagSwitch: (Boolean) -> Unit = {},
+                                        onSwitch: (Boolean) -> Unit) {
     LedgerCard(title = "One exit at a time") {
         Note("When two of the app's exits (an arm, a stop, the expiry square-off, a strategy) want to sell the same contract at once, " +
             "each waits its turn and reads Zerodha's books again, so one contract is never sold twice. Your own exits never wait.")
         ToggleRow("Make exits take turns", if (view.on) "On: one exit at a time per contract" else "Off: only logs what it would do", view.on, keepSub = true, onChange = onSwitch)
         if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        // 21 Oct, enhancement round 3 (idea 1): the positions-lag guard, its own switch (off: logged only).
+        ToggleRow("Never sell a filled exit twice", if (view.lagOn) "On: a positions read behind an exit's fill is read again"
+            else "Off: only logs what it would do", view.lagOn, keepSub = true, onChange = onLagSwitch)
+        Note("Zerodha's positions can trail an exit that already filled by a moment. On, the next exit reads them again, and " +
+            "counts the fill as sold if they still trail; it only ever sends less.", Modifier.padding(top = 2.dp))
+        if (view.lagLine.isNotEmpty()) Note(view.lagLine, Modifier.padding(top = 4.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
 }

@@ -11,6 +11,7 @@ import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.security.SessionLock
 import com.optionslab.app.work.Jobs
 import com.optionslab.app.work.Notifier
+import kotlinx.coroutines.launch
 
 class IraAlgoApp : Application() {
     companion object {
@@ -191,10 +192,26 @@ class IraAlgoApp : Application() {
         // The restore-disarm above is done: a watch started by the positions-first thread may tick now.
         com.optionslab.app.data.PositionsFirst.appReady()
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
+        // 21 Oct, enhancement round 3 (idea 7): the phone unlocked - a Sunday review not said at 18:00 is said now (Sunday
+        // evening only, once; IraSundayReview.catchUp). A receiver of this process only (Android delivers the unlock to running apps).
+        if (com.optionslab.app.BuildConfig.JARVIS) runCatching {
+            androidx.core.content.ContextCompat.registerReceiver(this, UnlockReceiver,
+                android.content.IntentFilter(android.content.Intent.ACTION_USER_PRESENT), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
         // Keystore work stays off the main thread.
         Thread { runCatching { Jobs.scheduleAll(this) } }.start()
         com.optionslab.app.data.Speed.startMs = android.os.SystemClock.uptimeMillis() - startAt
         com.optionslab.app.data.Speed.startSlowest = slowest?.let { (n, ms) -> "$n $ms ms" }
+    }
+
+    /** 21 Oct, enhancement round 3 (idea 7): the phone was unlocked; the Sunday review's catch-up, off the main thread. */
+    internal object UnlockReceiver : android.content.BroadcastReceiver() {
+        private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+            if (intent.action != android.content.Intent.ACTION_USER_PRESENT) return
+            val app = context.applicationContext
+            scope.launch { runCatching { com.optionslab.app.ira.IraSundayReview.catchUp(app) } }
+        }
     }
 
     /** Android asks for memory back: counted in the app's health, and the caches that are safe to drop are dropped. */

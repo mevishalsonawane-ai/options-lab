@@ -131,7 +131,7 @@ fun DiagnosticsPage() {
                 BrassButton("Copy diagnostics", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) {
                     scope.launch {
                         val text = withContext(Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
-                        ctx.getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
+                        com.optionslab.app.ui.SensitiveClip.copy(ctx, "IraAlgo diagnostics", text)
                         com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
                     }
                 }

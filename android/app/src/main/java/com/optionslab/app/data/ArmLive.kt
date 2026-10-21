@@ -851,13 +851,17 @@ object ArmLive {
     private suspend fun restStopInTurn(p: Pos, trigger: Double, ltp: Double, spec: LiveMirror.Spec, exitSide: Kite.Side): Pos {
         // Every exit already resting on the contract: working orders and active GTTs (review: a GTT left out here let a second one
         // rest beside it, and the two could fire together into a short).
+        var book: List<Broker.OrderRow> = emptyList()
         val covered = runCatching {
-            ExitCoordinator.orders(p.exchange, p.symbol, "arm ${p.label} stop").filter { it.working && it.symbol == p.symbol && it.side == exitSide.name && it.product == p.product }
+            book = ExitCoordinator.orders(p.exchange, p.symbol, "arm ${p.label} stop")
+            book.filter { it.working && it.symbol == p.symbol && it.side == exitSide.name && it.product == p.product }
                 .sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) } +
                 ExitCoordinator.gtts(p.exchange, p.symbol, "arm ${p.label} stop").filter { it.symbol == p.symbol && it.exchange == p.exchange }.sumOf { it.covers(exitSide.name, p.product) }
         }.getOrNull()
-        val heldNow = runCatching {
-            Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty } * p.side
+        // 21 Oct, enhancement round 3 (idea 1): held, checked against that orders read's fills ([ExitCoordinator.held]): a stop is
+        // never rested again for lots an exit sold a moment ago (it would open a short when it triggered).
+        val heldNow = if (covered == null) null else runCatching {
+            ExitCoordinator.held(p.exchange, p.symbol, p.product, "arm ${p.label} stop", book) * p.side
         }.getOrNull()
         if (covered == null || heldNow == null) { stopFailed(p, trigger, "Zerodha's books could not be read"); return p.copy(stopTrigger = trigger) }
         val room = ((heldNow - covered).coerceAtLeast(0) / p.lot.coerceAtLeast(1)) * p.lot.coerceAtLeast(1)
@@ -1049,11 +1053,14 @@ object ArmLive {
             cur = cur.copy(stopBooked = 0)
         }
         // The stop put back as it was when the sale does not go: re-rested when out, grown back when shrunk.
+        // 21 Oct, round 3 review: what Zerodha holds as the sale read it (null: not read); a stop grown back never covers more.
+        var heldSeen: Int? = null
         suspend fun back(x: Pos): Pos = when {
             x.stopOrderId == null -> if (ltp != null) restStop(x, x.stopTrigger, ltp) else x
             shrunk && (x.stopQty ?: x.qty) < x.qty -> {
                 val so = x.slId?.let { id -> runCatching { Broker.orders().firstOrNull { it.id == id } }.getOrNull() }
-                shrinkStop(x, so, x.qty, ltp) ?: x
+                val to = minOf(x.qty, heldSeen?.coerceAtLeast(0) ?: x.qty)
+                if (to > (x.stopQty ?: x.qty)) shrinkStop(x, so, to, ltp) ?: x else x
             }
             else -> x
         }
@@ -1061,8 +1068,13 @@ object ArmLive {
         // 20 Oct, enhancement round 2: read and sent in the contract's one exit turn, from a read that shows every exit sent from
         // here ([ExitCoordinator]): another sender's exit sent a moment ago is subtracted, never sold again.
         val id = ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label}") {
-            val working = runCatching { mineOf(ExitCoordinator.orders(p.exchange, p.symbol, "arm ${p.label}"), emptySet()) }.getOrNull() ?: return closed + back(cur)
-            val held = runCatching { heldNow(cur) }.getOrNull() ?: return closed + back(cur)
+            val book = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "arm ${p.label}") }.getOrNull() ?: return closed + back(cur)
+            val working = mineOf(book, emptySet())
+            // 21 Oct, enhancement round 3 (idea 1): what is held, read after that orders read and checked against its fills
+            // (an exit that filled a moment ago is never sold again while the positions catch up; [ExitCoordinator.held]).
+            val held = runCatching { ExitCoordinator.held(cur.exchange, cur.symbol, cur.product, "arm ${p.label}", book) * cur.side }.getOrNull()
+                ?: return closed + back(cur)
+            heldSeen = held
             val sendable = ExitQty.sendable(held.coerceAtLeast(0), working.sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) }, minOf(toSell, cur.qty), p.lot)
             if (sendable <= 0) return closed + back(cur)
             val o = Kite.Order(p.symbol, exitSide, sendable, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG, multiplier = p.multiplier)

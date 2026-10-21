@@ -93,6 +93,8 @@ class MainActivity : FragmentActivity() {
             val ctx = applicationContext
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
                 runCatching { com.optionslab.app.data.AppHealth.tick(ctx) }
+                // 21 Oct, enhancement round 3 (idea 7): a Sunday review not said at 18:00 is said now (Sunday evening only, once).
+                if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraSundayReview.catchUp(ctx) }
                 runCatching { com.optionslab.app.ira.SelfGrowth.tick(ctx) }
             }
         }

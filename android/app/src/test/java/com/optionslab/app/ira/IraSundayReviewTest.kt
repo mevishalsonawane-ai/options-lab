@@ -175,4 +175,82 @@ class IraSundayReviewTest : RobolectricTest() {
         assertNull("no service started", shadowOf(app).nextStartedService)
         assertNull("no service stopped", shadowOf(app).nextStoppedService)
     }
+
+    // ---- 21 Oct, enhancement round 3 (idea 7): the catch-up at the next unlocked moment that Sunday evening ----
+
+    private fun catchUp() = runBlocking { IraSundayReview.catchUp(context) }
+
+    @Test fun withoutJarvisOrItsSwitchTheCatchUpDoesNothing() {
+        Background.at(sun, 19, 0)
+        Automations.set(Automations.Auto.WEEK, false)
+        assertNull(catchUp())
+        assertEquals(0, reviews())
+        assertNull(SecurePrefs.getString(IraSundayReview.SPOKEN_KEY))
+    }
+
+    @Test fun aLockedPhoneHearsNothingAndTheCatchUpStaysDue() {
+        assumeTrue(com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+        Automations.set(Automations.Auto.WEEK, true)
+        Background.at(sun, 19, 0)
+        km.setKeyguardLocked(true)
+        assertNull(catchUp())
+        assertNull(JarvisSpeaker.lastAloud)
+        assertEquals("nothing made on a locked phone", 0, reviews())
+        assertNull(SecurePrefs.getString(IraSundayReview.SPOKEN_KEY))
+    }
+
+    @Test fun thePhoneOffAt18TheReviewIsMadeAndSaidAtTheNextUnlockOnce() {
+        assumeTrue(com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+        Automations.set(Automations.Auto.WEEK, true)
+        JarvisVoice.quietHours = false
+        try {
+            Background.at(sun, 19, 40)                            // the 18:00 alarm never ran (the phone was off)
+            assertEquals(IraSundayReview.Delivered.SPOKEN, catchUp())
+            assertNotNull(JarvisSpeaker.lastAloud)
+            assertEquals("made once, kept in the chat", 1, reviews())
+            assertEquals(sun.toString(), SecurePrefs.getString(IraSundayReview.ONCE_KEY))
+            assertEquals(sun.toString(), SecurePrefs.getString(IraSundayReview.SPOKEN_KEY))
+            JarvisSpeaker.lastAloud = null
+            assertNull("never twice", catchUp())
+            assertNull(JarvisSpeaker.lastAloud)
+            assertEquals(1, reviews())
+            // And the alarm running late after that says nothing again.
+            assertTrue(runBlocking { IraSundayReview.sunday(context) })
+            assertEquals(1, reviews())
+        } finally { JarvisVoice.quietHours = true }
+    }
+
+    @Test fun lockedAt18ItIsSaidAtTheNextUnlockAndTheReadyNoticeGoes() {
+        assumeTrue(com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+        Automations.set(Automations.Auto.WEEK, true)
+        JarvisVoice.quietHours = false
+        try {
+            Background.at(sun, 18, 0)
+            km.setKeyguardLocked(true)
+            assertTrue(runBlocking { IraSundayReview.sunday(context) })
+            assertNotNull(Background.notifications(context).getNotification(IraSundayReview.NOTIFY_ID))
+            assertNull(JarvisSpeaker.lastAloud)
+            Background.at(sun, 20, 15)
+            km.setKeyguardLocked(false)
+            assertEquals(IraSundayReview.Delivered.SPOKEN, catchUp())
+            assertEquals("not made twice", 1, reviews())
+            assertNull("the ready notice gone", Background.notifications(context).getNotification(IraSundayReview.NOTIFY_ID))
+        } finally { JarvisVoice.quietHours = true }
+    }
+
+    @Test fun neverBefore18OrOnMondayOrAfterBossAskedForIt() {
+        assumeTrue(com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+        Automations.set(Automations.Auto.WEEK, true)
+        JarvisVoice.quietHours = false
+        try {
+            Background.at(sun, 17, 59)
+            assertNull(catchUp())
+            Background.at(sun.plusDays(1), 0, 5)
+            assertNull("Monday: missed for good", catchUp())
+            Background.at(sun, 19, 0)
+            runBlocking { IraSundayReview.answer(locked = false) }    // Boss asked for it on the unlocked phone
+            assertNull("asked already: not said again", catchUp())
+            assertNull(JarvisSpeaker.lastAloud)
+        } finally { JarvisVoice.quietHours = true }
+    }
 }

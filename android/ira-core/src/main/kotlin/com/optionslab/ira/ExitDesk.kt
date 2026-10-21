@@ -29,6 +29,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 object ExitDesk {
     /** How long a sent exit is looked for in the books before it is let go (a lost reply that never became an order). */
     const val KEEP_MS = 60_000L
+    /** 21 Oct, round 3: the positions-lag guard's reads again, waits and reads together, at most this long ([settleHeld]). */
+    const val LAG_BUDGET_MS = 1_200L
     /** The waits before each read again of a book that is missing an exit sent from here (about 1.8 s in all). */
     val REREAD_MS = longArrayOf(300, 600, 900)
 
@@ -60,6 +62,68 @@ object ExitDesk {
         return r
     }
 
+    // ---- 21 Oct, enhancement round 3 (idea 1): the positions-lag guard ---------------------------------------------------------
+
+    /** One order of a read of the order book on a contract (this product), as the lag guard needs it. */
+    data class Fill(val id: String, val side: String, val filled: Int)
+
+    /**
+     * How much of what Zerodha's ORDER book shows filled on the exit side of a held [net] the POSITIONS read does not show yet
+     * (0 when it shows all of it, or when this cannot be told).
+     *
+     * An exit that filled shows COMPLETE in the orders a moment before the positions move; in that moment a second sender reads
+     * the old position, finds nothing working (the first exit is done, not working) and sells all of it again: a short. The
+     * day's fills are compared, both from today's books: [fills] (today's orders on the contract and product) against the
+     * positions' own day quantity on the exit side ([dayExitQty]: Kite's day_sell_quantity for a long, day_buy_quantity for a
+     * short; null when the read did not give it: never guessed). Only when one of the exits sent from here a moment ago
+     * ([mine], their order ids) has filled: the guard looks after this phone's own recent fills, as round 2's idea said.
+     * At most |[net]| (it never turns the position round).
+     */
+    fun positionsLag(net: Int, dayExitQty: Int?, fills: List<Fill>, mine: Set<String>): Int {
+        if (net == 0 || dayExitQty == null) return 0
+        val exitSide = if (net > 0) "SELL" else "BUY"
+        val exits = fills.filter { it.side.equals(exitSide, ignoreCase = true) && it.filled > 0 }
+        if (exits.none { it.id in mine }) return 0
+        val lag = exits.sumOf { it.filled } - dayExitQty.coerceAtLeast(0)
+        return lag.coerceIn(0, kotlin.math.abs(net))
+    }
+
+    /** [net] less [lag] toward zero: what is held once the fills the positions trail are counted. */
+    fun heldLess(net: Int, lag: Int): Int = if (net > 0) (net - lag).coerceAtLeast(0) else if (net < 0) (net + lag).coerceAtMost(0) else 0
+
+    /** What [settleHeld] did with one positions read. */
+    enum class Lag { NONE, SHADOW, READ_AGAIN, SUBTRACTED }
+
+    /**
+     * The positions read for a sender, with what it still trails ([lag] of each read): read again after each of [waits] while it
+     * trails a fill (switch [on]). Off (shadow): read once, and a trailing read is only noted (the sender goes on it, as before
+     * this round). On: still trailing after the last wait, the read stands with that much counted as already sold (the order
+     * book's fill is Zerodha's own word; it only ever LOWERS what is sent, never refuses an exit of what is still held).
+     * Returns the last read and the lag left in it (0 unless [Lag.SUBTRACTED]).
+     *
+     * Review: the reads again stop once [budgetMs] would be passed (waits and reads together, by [clock]), so a sender inside its
+     * contract's turn never holds it near [ExitTurns.WAIT_MS] (a waiting sender would then be let through beside it).
+     */
+    suspend fun <R> settleHeld(on: Boolean, read: suspend () -> R, lag: (R) -> Int, waits: LongArray = REREAD_MS,
+                               budgetMs: Long = LAG_BUDGET_MS, clock: () -> Long = System::currentTimeMillis,
+                               note: (Lag, Int) -> Unit = { _, _ -> }): Pair<R, Int> {
+        var r = read()
+        var l = lag(r)
+        if (l <= 0) { note(Lag.NONE, 0); return r to 0 }
+        if (!on) { note(Lag.SHADOW, l); return r to 0 }
+        val first = l
+        val t0 = clock()
+        for (w in waits) {
+            if (clock() - t0 + w > budgetMs) break
+            delay(w)
+            r = read()
+            l = lag(r)
+            if (l <= 0) { note(Lag.READ_AGAIN, first); return r to 0 }
+        }
+        note(Lag.SUBTRACTED, l)
+        return r to l
+    }
+
     /** One day's counts, for the diagnostics. */
     data class Counts(
         val day: String = "",
@@ -71,7 +135,17 @@ object ExitDesk {
         val readAgain: Int = 0,
         val letThrough: Int = 0,
         val turnLetThrough: Int = 0,
+        /** 21 Oct, round 3: positions reads that trailed an exit's fill (shadow: noted only), read again until they showed it,
+         *  and those still trailing after the last read (the fill counted as sold). */
+        val lagShadow: Int = 0,
+        val lagReadAgain: Int = 0,
+        val lagSubtracted: Int = 0,
     ) {
+        /** 21 Oct, round 3: the positions-lag guard's part of the line ([lagOn]: its own switch). */
+        fun lagLine(lagOn: Boolean): String =
+            if (lagOn) "Positions-lag guard: on; positions read again until an exit's fill showed $lagReadAgain; fill counted as sold $lagSubtracted"
+            else "Positions-lag guard: shadow (logged only); a positions read trailing an exit's fill $lagShadow (on, it would read again)"
+
         fun line(on: Boolean): String = buildString {
             append("Exit coordinator: ").append(if (on) "on" else "shadow (logged only)").append("; exits sent today $sent")
             if (on) {
@@ -182,6 +256,12 @@ class ExitRegistry(private val keepMs: Long = ExitDesk.KEEP_MS, private val cloc
     fun unseen(kind: Kind, key: String): List<Sent> = synchronized(lock) {
         prune()
         sent.values.filter { it.kind == kind && it.key == key && !it.seen }
+    }
+
+    /** 21 Oct, round 3: the ids Zerodha gave the exits of [kind] on [key] sent in the last [keepMs] (shown or not yet). */
+    fun recentIds(kind: Kind, key: String): Set<String> = synchronized(lock) {
+        prune()
+        sent.values.filter { it.kind == kind && it.key == key }.mapNotNullTo(HashSet()) { it.id }
     }
 
     /** All no read has shown yet (any contract). */

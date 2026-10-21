@@ -356,7 +356,10 @@ object Diag {
     }
 
     /** 20 Oct, enhancement round 2 (idea 1): the exit coordinator's day. Its own function (the report's one is near the compiler's limit). */
-    private fun round2Exits(): String = (runCatching { ExitCoordinator.line() }.getOrElse { "Exit coordinator: could not read" }) + "\n"
+    // 21 Oct, enhancement round 3: the positions-lag guard's day ([round3Lag]) rides in this function, never as its own line in the
+    // report's (one more line there overflowed the compiler's stack in the APK build again).
+    private fun round2Exits(): String = (runCatching { ExitCoordinator.line() }.getOrElse { "Exit coordinator: could not read" }) + "\n" + round3Lag()
+    private fun round3Lag(): String = (runCatching { ExitCoordinator.lagLine() }.getOrElse { "Positions-lag guard: could not read" }) + "\n"
 
     /** 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7). */
     private fun round1Watch(): String = buildString {

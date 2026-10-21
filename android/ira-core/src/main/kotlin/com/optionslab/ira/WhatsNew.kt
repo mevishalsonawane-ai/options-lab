@@ -58,10 +58,21 @@ object WhatsNew {
     private val OCT18: LocalDate = LocalDate.of(2026, 10, 18)
     private val OCT19: LocalDate = LocalDate.of(2026, 10, 19)
     private val OCT20: LocalDate = LocalDate.of(2026, 10, 20)
+    private val OCT21: LocalDate = LocalDate.of(2026, 10, 21)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 3.
+        Entry("2026-10-21-enhance-round-3", OCT21, "No filled exit sold twice; Sunday review catch-up",
+            "Zerodha's positions can trail an exit that already filled, so a second exit could sell it again. " +
+                "A new guard reads them again and never sells a filled exit twice. " +
+                "It only logs what it would do until you switch it on in Bot settings. " +
+                "Open paper positions now stay on the live price stream until they close. " +
+                "If your phone was off or locked at 18:00, Jarvis says the Sunday review when you unlock it that evening. " +
+                "Copied diagnostics are marked private, so the phone hides their preview. " +
+                "Liquidity BANKNIFTY's live stop rule now keeps every live trade, so it never forgets its best day.",
+            "Bot settings → One exit at a time; Jarvis on Sunday evenings"),
         // 20 Oct (Boss: "run a loop for enhancement and adding new features in the application"): round 2.
         Entry("2026-10-20-enhance-round-2", OCT20, "Exits take turns; MCX stops overnight; Sunday review",
             "Two of the app's exits on one contract now take turns, so one contract is never sold twice. " +

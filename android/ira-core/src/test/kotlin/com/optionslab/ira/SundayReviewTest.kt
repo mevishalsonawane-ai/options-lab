@@ -269,4 +269,18 @@ class SundayReviewTest {
         // The written weekly review's own question is not taken from it.
         assertTrue(WeeklyReview.asked("weekly review") != null)
     }
+
+    // ---- 21 Oct, enhancement round 3 (idea 7): the catch-up ----
+
+    @Test fun theCatchUpIsDueOnASundayEveningFrom18UntilMidnightOnce() {
+        val sun = LocalDate.of(2026, 10, 25)
+        assertTrue(SundayReview.catchUpDue(sun.atTime(18, 0), null))
+        assertTrue(SundayReview.catchUpDue(sun.atTime(21, 30), "2026-10-18"), "said last Sunday: due again this one")
+        assertTrue(SundayReview.catchUpDue(sun.atTime(23, 59), null))
+        assertFalse(SundayReview.catchUpDue(sun.atTime(17, 59), null), "before the review's hour")
+        assertFalse(SundayReview.catchUpDue(sun.atTime(19, 0), sun.toString()), "said already tonight")
+        assertFalse(SundayReview.catchUpDue(sun.plusDays(1).atTime(0, 5), null), "Monday: missed for good, never said late")
+        assertFalse(SundayReview.catchUpDue(sun.minusDays(1).atTime(19, 0), null), "Saturday")
+        assertFalse(SundayReview.catchUpDue(LocalDate.of(2026, 11, 10).atTime(19, 0), null), "a holiday weekday is not Sunday")
+    }
 }

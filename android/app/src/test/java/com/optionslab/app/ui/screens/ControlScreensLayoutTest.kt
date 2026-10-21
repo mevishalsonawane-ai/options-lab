@@ -141,7 +141,16 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         if (!onSix()) return
         Vault.writeFile(File(app.filesDir, IraAlgoApp.CRASH_FILE),
             IraAlgoApp.crashReport(Thread.currentThread(), IllegalStateException("not shown", RuntimeException("not shown"))).toByteArray())
-        checkScreen("crash-report") { CrashReport(app.filesDir) }
+        // 21 Oct (CI flaked once, 21 Oct 00:05Z: "Unable to find the image of the target root component"): the report is read from
+        // its file in the background, so its dialog could open between the screenshot's look at the windows and the picture.
+        // Shown first, the dialog waited for, then the screenshot.
+        show { CrashReport(app.filesDir) }
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(androidx.compose.ui.test.hasText("closed unexpectedly", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.waitForIdle()
+        capture("crash-report")
+        lint("crash-report")
     }
 
     @Test fun vaultUnreadable() {

@@ -1087,8 +1087,7 @@ internal fun SelfTestCard() {
         androidx.compose.material3.TextButton({
             scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                 val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
-                val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
-                cm?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
+                com.optionslab.app.ui.SensitiveClip.copy(ctx, "IraAlgo diagnostics", text)
                 com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
             }
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }

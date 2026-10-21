@@ -405,8 +405,7 @@ private fun GoldSettings(model: AppModel) {
                     com.optionslab.app.ui.components.TextButton({
                         scope.launch(Dispatchers.Main) {
                             val text = withContext(Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
-                            ctx.getSystemService(android.content.ClipboardManager::class.java)
-                                ?.setPrimaryClip(android.content.ClipData.newPlainText("IraGoldAlgo diagnostics", text))
+                            com.optionslab.app.ui.SensitiveClip.copy(ctx, "IraGoldAlgo diagnostics", text)
                             com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
                         }
                     }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }

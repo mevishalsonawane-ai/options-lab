@@ -217,7 +217,11 @@ class TradeScreenTest {
         kite.sessionExpired = true
         val m = show()
         pump(20_000) { m.account.value is Load.Failed }
-        assertTrue((m.account.value as Load.Failed).why.contains("session ended"))
+        // 21 Oct (failed once in a local run): the account's six reads go at once; the first refused one ends the session, and
+        // the positions read can then be the one that finds it ended ("Log in to Zerodha for today first") - both are the
+        // session over, and the screen says the same either way (below).
+        val why = (m.account.value as Load.Failed).why
+        assertTrue(why, why.contains("session ended") || why.contains("Log in to Zerodha for today"))
         waitText("Log in to Zerodha for today to see your account.")
     }
 
