@@ -1496,12 +1496,25 @@ Breadth = 3 of 5 metals (GOLD, SILVER, COPPER, ZINC, ALUMINIUM; minis once) / 2 
 - Sample: long enough for the intraday answer (post-hoc 95% upper bound of gross a trade below cost in every option book; closest
   gold with breadth Rs 265 vs Rs 364). Keep Breadth Donchian on the indices only.
 
-## The "Mo3ty CCI Signals" indicator (R95, 21 Oct 2026) - pre-registered, NOT RUN yet (no win rate yet)
-Full study: `HUNT_R95_CCI_SIGNALS.md` (pre-registered `hunt/r95_cci_signals/PREREG.md`; notes N0). Signal on the underlying:
-CCI of hlc3 crossing back inside +-200 (BUY buys the 1-ITM call, SELL the put); 8 variants x 3m / 5m / 15m / 60m x 9
-instruments = 288 cells. The lake could not be copied in this session, so no statistic exists yet. From the formula alone:
-+200 = 3 mean deviations above the 25-bar mean (about 2.4 standard deviations); a steady trend holds CCI(25) at +128, so the
-signal fires when an ACCELERATION stops, not when price turns; the divergence labels are known only 5 bars after the bar they
-are drawn on (the run measures that inflation). The app's Pine engine runs the indicator except the labels (accepted, not drawn).
-Amendment A1 (before any data) adds two ideas from that: MO, buying WITH the acceleration (CCI crossing out through +-200;
-36 cells), and EX, the cross back inside as an early exit for the Liquidity and Breadth Donchian arms (4 cells): 328 cells in all.
+## The "Mo3ty CCI Signals" indicator (R95, 21 Oct 2026) - 0 of 288 for the indicator as given; 2 of 328 survive (FINNIFTY MO, thin)
+Full study: `HUNT_R95_CCI_SIGNALS.md` (pre-registered `hunt/r95_cci_signals/PREREG.md` + amendment A1; notes N0-N5).
+Signal source: the underlying in every rule (CCI 25 of hlc3 on index spot / MCX near future, 3m / 5m / 15m / 60m); the
+1-ITM call / put bought on real prints, real costs, 1 lot; after-trigger twins, BH over 328 cells; design 20 Nov 2024 -
+31 Mar 2026 (MCX from 5 Aug 2025), holdout 1 Apr - 19 Oct 2026 read once.
+- What it measures: +200 = 3 mean deviations (about 2.4 SD, about 3 ATR14) above the 25-candle mean; MD / SD 0.77-0.79 in
+  every cell. A steady trend holds +128, so the cross back inside marks an acceleration stopping, not a turn. Forward
+  win rates after BUY / SELL signals (15 candles) are 38-54% against 48-52% for any candle: no direction edge.
+- The indicator as given (B), pooled: underlying win 33-44% before costs (payoff about 1.8-2.7); option after costs
+  28-47% win on indices, 11-39% on MCX (single cells). Indices 3m -Rs 7.01 lakh (4,072 trades) / holdout -Rs 2.01 lakh
+  (1,618); 5m -Rs 4.73 lakh (2,766) / -Rs 1.40 lakh (1,122); 15m and 60m flip sign between periods; MCX loses on every
+  timeframe. None of the 8 fade variants (2R, 10 candles, pulse, divergence-only, CCI 20 / 50, +-100) passes.
+- Divergence labels repaint: entered at the label candle the index trades show +Rs 12.0 lakh (1,687, 60% win); entered
+  when known, 5 candles later, -Rs 3.4 lakh (1,778, 43%). Holdout +Rs 4.75 lakh (674) vs -Rs 37,156 (691). Never judge it
+  by the chart.
+- MO (buy WITH the acceleration, exit back inside the level): FINNIFTY 5m (design 407 trades +Rs 59,212; holdout 158
+  +Rs 23,387, p 0.002) and 15m (216 +Rs 1,13,428; holdout 76 +Rs 14,980, p 0.018) pass every pre-registered gate. Thin:
+  both negative without their 5 best holdout trades, one instrument, q 0.12 / 0.40 over all 328 holdout cells. Paper
+  candidates for Boss's decision; nothing switched on. BANKNIFTY 60m B / XT passed the design (48 trades) and failed the
+  holdout (17 trades, -Rs 1,014 / +Rs 4,916, p 0.41 / 0.15).
+- EX (the cross as an early exit): lowered the Liquidity arm (5m -Rs 70,223 on 171 changed trades) and Breadth Donchian
+  (5m -Rs 1.39 lakh on 1,368) in the design; 0 of 4 pass. The arms keep their own exits.
