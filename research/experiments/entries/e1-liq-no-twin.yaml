@@ -2,7 +2,7 @@ id: e1-liq-no-twin
 title: 'Liquidity no-twin rule: one book only per option (paper risk control)'
 family: liquidity
 date: '2026-10-20'
-doc: RESULT.md
+doc: research/E1_LIQ_NO_TWIN.md
 hypothesis: When both Liquidity books (15m and 5m) would hold the SAME option, the second entry only doubles one bet
   (19 Oct, 09:30, both BANKNIFTY books held one put and were stopped together); skipping it lowers risk without changing
   either book's own signals. Not yet tested on history - logged before any test.
