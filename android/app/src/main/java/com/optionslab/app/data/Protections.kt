@@ -381,7 +381,7 @@ object Protections {
         val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
         val gtts = runCatching { ExitCoordinator.gtts(p.exchange, p.symbol, "protection") }.getOrNull() ?: return p
         val orders = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "protection") }.getOrNull() ?: return p
-        val net = heldAgain(p) ?: return p
+        val net = heldAgain(p, orders) ?: return p
         if (net == 0 || net.sign() != net0.sign()) return p                // closed meanwhile: the next look ends it
         // Review: a GTT of this protection's own that went through but was never recorded (a lost reply, a save that did not land)
         // is adopted, never counted as "another exit": counted busy, the open would place the day's orders beside it.
@@ -445,14 +445,16 @@ object Protections {
         // Second review: an exit already resting on it (Boss's own after-market order, another owner's) is subtracted first, so
         // the two together never sell more than is held. All of it covered: nothing placed, and said. 20 Oct, enhancement round 1:
         // an active GTT on it (an arm's own, or one of ours not recorded) counts too, against all that is held ([net]).
+        var book: List<Broker.OrderRow> = emptyList()
         val busy = runCatching {
-            ExitCoordinator.orders(p00.exchange, p00.symbol, "protection").filter { it.working && it.symbol == p00.symbol && it.exchange == p00.exchange && it.product == p00.product &&
+            book = ExitCoordinator.orders(p00.exchange, p00.symbol, "protection")
+            book.filter { it.working && it.symbol == p00.symbol && it.exchange == p00.exchange && it.product == p00.product &&
                 it.side == side.name && it.id !in known }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
                 ExitCoordinator.gtts(p00.exchange, p00.symbol, "protection").filter { it.symbol == p00.symbol && it.exchange == p00.exchange }.sumOf { it.covers(side.name, p00.product) }
         }.getOrNull() ?: return p00                                       // the books not read: asked again next look
         // 20 Oct, enhancement round 2: what is held read again AFTER the books (an exit that filled since the caller's read shows
         // here, not as still held with nothing on its way out); never more than the caller saw.
-        val again = heldAgain(p00) ?: return p00
+        val again = heldAgain(p00, book) ?: return p00
         if (again == 0 || again.sign() != net0.sign()) return p00         // closed meanwhile: the next look ends it
         val net = if (abs(again) < abs(net0)) again else net0
         val p0 = if (abs(p00.qty) > abs(net)) p00.copy(qty = net.sign() * abs(net)) else p00
@@ -492,9 +494,13 @@ object Protections {
         return next
     }
 
-    /** 20 Oct, enhancement round 2: [p]'s contract as Zerodha holds it now (net, this product); null when it could not be read. */
-    private suspend fun heldAgain(p: Item): Int? = runCatching {
-        Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
+    /**
+     * 20 Oct, enhancement round 2: [p]'s contract as Zerodha holds it now (net, this product); null when it could not be read.
+     * 21 Oct, enhancement round 3 (idea 1): checked against the fills of [orders], the orders read just before it
+     * ([ExitCoordinator.held]: an exit that filled a moment ago is never covered again while the positions catch up).
+     */
+    private suspend fun heldAgain(p: Item, orders: List<Broker.OrderRow>): Int? = runCatching {
+        ExitCoordinator.held(p.exchange, p.symbol, p.product, "protection", orders)
     }.getOrNull()
 
     /**

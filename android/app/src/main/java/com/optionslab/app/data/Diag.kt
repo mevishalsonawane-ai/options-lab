@@ -218,6 +218,8 @@ object Diag {
             append(round1Watch())
             // 20 Oct, enhancement round 2: the exit coordinator's day ([round2Exits]).
             append(round2Exits())
+            // 21 Oct, enhancement round 3: the positions-lag guard's day ([round3Lag]).
+            append(round3Lag())
             append(runCatching { Broker.sharingLine() }.getOrElse { "Zerodha requests: could not read" }).append('\n')
             append(runCatching { AppState.line() }.getOrElse { "Shared state: could not read" }).append('\n')
             append("One-index claims standing: ").append(runCatching { AutoExposure.claims().ifEmpty { listOf("none") }.joinToString("; ") }.getOrElse { "could not read" }).append('\n')
@@ -357,6 +359,7 @@ object Diag {
 
     /** 20 Oct, enhancement round 2 (idea 1): the exit coordinator's day. Its own function (the report's one is near the compiler's limit). */
     private fun round2Exits(): String = (runCatching { ExitCoordinator.line() }.getOrElse { "Exit coordinator: could not read" }) + "\n"
+    private fun round3Lag(): String = (runCatching { ExitCoordinator.lagLine() }.getOrElse { "Positions-lag guard: could not read" }) + "\n"
 
     /** 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7). */
     private fun round1Watch(): String = buildString {

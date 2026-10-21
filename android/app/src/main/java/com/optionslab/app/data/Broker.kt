@@ -670,6 +670,8 @@ object Broker {
         val exchange: String = "NFO", val token: Long = 0L, val overnight: Int = 0, val multiplier: Double = 1.0,
         val m2m: Double = 0.0, val realised: Double = 0.0, val unrealised: Double = 0.0, val close: Double = 0.0,
         val buyQty: Int = 0, val buyAvg: Double = 0.0, val sellQty: Int = 0, val sellAvg: Double = 0.0,
+        /** 21 Oct, round 3: Kite's day_buy_quantity / day_sell_quantity (today's only); null when the read did not give them. */
+        val dayBuyQty: Int? = null, val daySellQty: Int? = null,
     ) {
         val open: Boolean get() = qty != 0
     }
@@ -802,7 +804,8 @@ object Broker {
         it.optDouble("last_price", 0.0), it.optDouble("pnl", 0.0), it.optString("exchange", "NFO"), it.optLong("instrument_token"),
         it.optInt("overnight_quantity"), it.optDouble("multiplier", 1.0), it.optDouble("m2m", 0.0), it.optDouble("realised", 0.0),
         it.optDouble("unrealised", 0.0), it.optDouble("close_price", 0.0), it.optInt("buy_quantity"), it.optDouble("buy_price", 0.0),
-        it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0))
+        it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0),
+        if (it.has("day_buy_quantity")) it.optInt("day_buy_quantity") else null, if (it.has("day_sell_quantity")) it.optInt("day_sell_quantity") else null)
 
     private fun rows(a: JSONArray?): List<JSONObject> = if (a == null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) }
 

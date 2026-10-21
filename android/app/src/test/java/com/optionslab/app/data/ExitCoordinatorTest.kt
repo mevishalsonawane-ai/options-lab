@@ -367,4 +367,87 @@ class ExitCoordinatorTest : RobolectricTest() {
         ExitCoordinator.load()
         assertTrue(!ExitCoordinator.isOn())
     }
+
+    // ---- 21 Oct, enhancement round 3 (idea 1): the positions-lag guard ([ExitCoordinator.held]) ---------------------------------
+
+    private fun positionReads() = kite.requests.count { it.method == "GET" && it.path == "/portfolio/positions" }
+    private fun heldFor(): Int = runBlocking { ExitCoordinator.held("NFO", ce, "NRML", "test", Broker.orders()) }
+
+    @Test fun inShadowAPositionsReadTrailingAFillIsReadOnceAndOnlyLogged() {
+        kite.position(ce, 75, 20.0)
+        kite.positionsTrailReads = 10
+        bossSells(75)                                              // filled: the order book says COMPLETE, the positions trail
+        kite.requests.clear()
+        assertEquals("as before this round: the read as it came", 75, heldFor())
+        assertEquals(1, positionReads())
+        assertEquals(1, ExitCoordinator.countsForTest().lagShadow)
+        assertTrue(ExitCoordinator.lagLine(), ExitCoordinator.lagLine().contains("shadow") && ExitCoordinator.lagLine().contains("fill 1"))
+    }
+
+    @Test fun onATrailingReadIsReadAgainUntilItShowsTheFill() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 75, 20.0)
+        kite.positionsTrailReads = 2
+        bossSells(75)
+        kite.requests.clear()
+        assertEquals(0, heldFor())
+        assertEquals("trailing twice, then whole", 3, positionReads())
+        assertEquals(1, ExitCoordinator.countsForTest().lagReadAgain)
+        assertEquals(0, ExitCoordinator.countsForTest().lagSubtracted)
+    }
+
+    @Test fun onAReadStillTrailingAfterTheReadsAgainCountsTheFillAsSold() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        kite.positionsTrailReads = 50
+        bossSells(75)
+        kite.requests.clear()
+        val t0 = System.currentTimeMillis()
+        assertEquals("150 shown, 75 of it sold: 75", 75, heldFor())
+        assertTrue("under two seconds", System.currentTimeMillis() - t0 < 2_500)
+        assertEquals(4, positionReads())
+        assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
+    }
+
+    @Test fun withoutAnExitSentFromHereTheGuardReadsOnce() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 75, 20.0)
+        kite.requests.clear()
+        assertEquals(75, heldFor())
+        assertEquals(1, positionReads())
+        // An exit sent from here that has not filled yet (still working): nothing trails it either.
+        kite.nextPlace(outcome = Outcome.OPEN)
+        runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "LIMIT", 30.0, 0.05, "NFO", "iraprotect"), exit = true) }
+        kite.requests.clear()
+        assertEquals(75, heldFor())
+        assertEquals(1, positionReads())
+        assertEquals(0, ExitCoordinator.countsForTest().let { it.lagShadow + it.lagReadAgain + it.lagSubtracted })
+    }
+
+    @Test fun theGuardReadsNothingFromTheSettingsVault() = runBlocking {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        bossSells(75)                                              // warm the session
+        kite.positionsTrailReads = 1
+        bossSells(75)
+        val book = Broker.orders()
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        ExitCoordinator.held("NFO", ce, "NRML", "test", book)
+        SecurePrefs.countedThread = null
+        assertEquals(0L, SecurePrefs.readsForTest.get())
+    }
+
+    @Test fun theLagSwitchIsSavedApartAndSaidPlainly() {
+        assertTrue(ExitCoordinator.setLagOn(true).startsWith("Positions-lag guard on"))
+        assertTrue(ExitCoordinator.isLagOn())
+        assertTrue("the coordinator's own switch is untouched", !ExitCoordinator.isOn())
+        ExitCoordinator.resetForTest()
+        ExitCoordinator.load()
+        assertTrue("read back from the settings", ExitCoordinator.isLagOn())
+        assertTrue(!ExitCoordinator.isOn())
+        assertTrue(ExitCoordinator.setLagOn(false).contains("shadow"))
+        ExitCoordinator.load()
+        assertTrue(!ExitCoordinator.isLagOn())
+    }
 }

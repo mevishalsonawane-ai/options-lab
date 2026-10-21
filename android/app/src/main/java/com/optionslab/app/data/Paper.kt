@@ -178,6 +178,7 @@ object Paper {
         val b = loaded ?: fresh(SandboxConfig().startingCapital, emptyMap())
         cache = b
         runCatching { mcxExposureIfLoaded()?.let { McxMarket.notePaperExposure(it) } }
+        followKnown(b)
         return b
     }
 
@@ -254,6 +255,8 @@ object Paper {
         val ordersMoved = cache.let { was -> was == null || was.state.orders != b.state.orders || was.state.trades != b.state.trades }
         cache = b
         savedAtMs = System.currentTimeMillis()
+        // 21 Oct, enhancement round 3 (idea 3): the open positions and working orders followed on the stream as their own owner.
+        followKnown(b)
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         runCatching { mcxExposureIfLoaded()?.let { McxMarket.notePaperExposure(it) } }
         if (ordersMoved) runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
@@ -520,14 +523,46 @@ object Paper {
         // exit lane, which must never wait behind a paper write. Not loaded yet: not covered (the watch pass loads it).
         val b = cache ?: run { loadSoon(); return StreamCover(emptySet(), covered = false, any = false) }
         val syms = watched(b.state)
-        if (syms.isEmpty()) return StreamCover(emptySet(), covered = true, any = false)
+        if (syms.isEmpty()) { follow(emptySet()); return StreamCover(emptySet(), covered = true, any = false) }
         var covered = true
         val tokens = HashSet<Long>()
         for (s in syms) {
             val tok = b.contracts[s]?.let { runCatching { kiteToken(it) }.getOrNull() }
             if (tok == null) { covered = false } else { tokens += tok; if (KiteStream.tick(tok) == null) covered = false }
         }
+        // 21 Oct, enhancement round 3 (idea 3): the tokens looked up here (after a restart, the first time) followed at once.
+        follow(tokens)
         return StreamCover(tokens, covered, any = true)
+    }
+
+    /**
+     * 21 Oct, enhancement round 3 (idea 3): the stream's owner for the paper book's open positions and working orders. Until now
+     * they stayed on Zerodha's stream only by being priced (each price read "touched" them for three minutes), so a pass that
+     * paused for longer let the stream drop them, and the stream's cap could leave them out. Now they are followed for as long as
+     * they are open, first among the stream's instruments with the live positions (CLAUDE.md: open positions come first), and
+     * let go when they close. Memory only, never the instruments file or the vault: [save] is on the order path.
+     */
+    const val STREAM_OWNER = "paper-positions"
+    private var followedNow: Set<Long> = emptySet()
+    /** Its own small lock (never this object's: [streamCover] must never wait on a paper write); held only for the stream's want. */
+    private val followLock = Any()
+
+    private fun follow(tokens: Set<Long>) {
+        synchronized(followLock) {
+            if (tokens == followedNow) return
+            followedNow = tokens
+            runCatching { KiteStream.want(STREAM_OWNER, tokens) }
+        }
+    }
+
+    /** [b]'s open positions and working orders, by the tokens already looked up (memory only; the rest come with [streamCover]). */
+    private fun followKnown(b: Book) {
+        runCatching {
+            val syms = watched(b.state)
+            if (syms.isEmpty()) { follow(emptySet()); return }
+            // Those not looked up yet come with [streamCover], which looks them up and follows the whole set.
+            follow(syms.mapNotNull { s -> kiteTokens[s]?.takeIf { it > 0 } }.toSet())
+        }
     }
 
     private val loading = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -1187,7 +1222,7 @@ object Paper {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
 
     /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
-    internal fun forgetForTest() { awaitWrites(); synchronized(this) { cache = null; savedAtMs = 0L } }
+    internal fun forgetForTest() { awaitWrites(); synchronized(this) { cache = null; savedAtMs = 0L }; follow(emptySet()) }
 
     fun wipe() {
         // The write lock first (as [flush] takes it): a write on its way never puts the file back after the delete.
@@ -1195,5 +1230,6 @@ object Paper {
             pending = null; cache = null; savedAtMs = 0L; file.delete()
         } }
         lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear()
+        follow(emptySet())
     }
 }

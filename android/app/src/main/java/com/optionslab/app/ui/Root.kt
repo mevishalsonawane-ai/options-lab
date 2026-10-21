@@ -701,7 +701,8 @@ internal fun CrashReport(dir: java.io.File) {
         }
     }
     crash?.let { text ->
-        val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+        // 21 Oct, enhancement round 3 (idea 6): copied marked sensitive, as the diagnostics are ([com.optionslab.app.ui.SensitiveClip]).
+        val clipCtx = androidx.compose.ui.platform.LocalContext.current
         com.optionslab.app.ui.components.AlertDialog(
             onDismissRequest = {},
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -715,7 +716,7 @@ internal fun CrashReport(dir: java.io.File) {
                     }
                 }
             },
-            confirmButton = { com.optionslab.app.ui.components.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
+            confirmButton = { com.optionslab.app.ui.components.TextButton({ com.optionslab.app.ui.SensitiveClip.copy(clipCtx, "IraAlgo crash report", text) }) { Text("Copy") } },
             dismissButton = { com.optionslab.app.ui.components.TextButton({
                 crash = null
                 scope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() } }

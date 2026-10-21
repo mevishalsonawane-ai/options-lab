@@ -32,18 +32,22 @@ import kotlinx.coroutines.launch
  */
 object ExitCoordinator {
     private const val K_ON = "g.exitCoordinator.on"
+    /** 21 Oct, enhancement round 3 (idea 1): the positions-lag guard's own switch (off: shadow). */
+    private const val K_LAG_ON = "g.positionsLag.on"
 
     @Volatile private var on = false
     @Volatile private var loaded = false
     /** Boss changed the switch in this process (the start's late read never overrides it). */
     @Volatile private var switched = false
+    @Volatile private var lagOn = false
+    @Volatile private var lagSwitched = false
     private val registry = ExitRegistry()
     @Volatile private var turns = ExitTurns()
     private val lock = Any()
     private var counts = ExitDesk.Counts()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    data class View(val on: Boolean = false, val line: String = "")
+    data class View(val on: Boolean = false, val line: String = "", val lagOn: Boolean = false, val lagLine: String = "")
     private val _view = MutableStateFlow(View())
     /** Bot settings' card. */
     val view: StateFlow<View> = _view
@@ -53,7 +57,13 @@ object ExitCoordinator {
     /** The switch from the settings vault (a worker thread). Until read it is off: the shadow, as before this round. */
     internal fun load() {
         // Review: a switch Boss changed before this read landed is kept (the read never puts the old value back).
-        runCatching { val saved = SecurePrefs.getBoolean(K_ON, false); if (!switched) on = saved; loaded = true }
+        runCatching {
+            val saved = SecurePrefs.getBoolean(K_ON, false)
+            val savedLag = SecurePrefs.getBoolean(K_LAG_ON, false)
+            if (!switched) on = saved
+            if (!lagSwitched) lagOn = savedLag
+            loaded = true
+        }
         publish()
     }
 
@@ -69,6 +79,24 @@ object ExitCoordinator {
         return if (on) "Exit coordinator on: two exits on one contract never read the books at once, and a read missing an exit just sent " +
             "is read again (a few seconds at most; past that the exit goes, as before)."
         else "Exit coordinator in shadow: what it would do is logged, nothing waits."
+    }
+
+    fun isLagOn(): Boolean = lagOn
+
+    /**
+     * 21 Oct, enhancement round 3: Boss's switch for the positions-lag guard (Bot settings). On, a sender whose positions read
+     * trails an exit that filled a moment ago reads it again (under two seconds), and if it still trails, counts that fill as
+     * already sold: it only ever sends LESS (never more, never nothing of what is still held), and never refuses an exit.
+     */
+    fun setLagOn(on: Boolean): String {
+        lagOn = on
+        lagSwitched = true
+        runCatching { SecurePrefs.putAllSoon(mapOf(K_LAG_ON to on)) }
+        runCatching { Diag.record("exits", "Positions-lag guard ${if (on) "on: a positions read trailing an exit's fill is read again, then the fill counted as sold" else "in shadow: logged only"} (by you)") }
+        publish()
+        return if (on) "Positions-lag guard on: an exit that filled is never sold a second time while Zerodha's positions catch up " +
+            "(read again for under two seconds; then the fill shown in the orders counts as sold)."
+        else "Positions-lag guard in shadow: what it would do is logged, nothing is read again."
     }
 
     // ---- the order door's notes (memory only; never throws) -----------------------------------------------------------------
@@ -163,6 +191,43 @@ object ExitCoordinator {
         true
     }.getOrDefault(false)
 
+    /**
+     * 21 Oct, enhancement round 3 (idea 1): what Zerodha holds of [exchange]:[symbol] [product] (net, signed) for an exit sender,
+     * from a positions read made AFTER its read of the orders ([orders], that whole read). An exit sent from here a moment ago
+     * can show COMPLETE in the orders before the positions move ([ExitDesk.positionsLag]); then the sender would find nothing
+     * working and the old position, and sell it again. The guard on: the positions are read again (under two seconds), and if
+     * they still trail, the fill counts as sold (only ever less is sent). Off (shadow): read once, logged. Throws when the
+     * positions cannot be read (as the senders' own reads did). Memory and Zerodha's reads only (no disk, no settings).
+     */
+    suspend fun held(exchange: String, symbol: String, product: String, who: String, orders: List<Broker.OrderRow>): Int {
+        val key = ExitDesk.key(exchange, symbol)
+        val mine = runCatching { registry.recentIds(ExitRegistry.Kind.ORDER, key) }.getOrDefault(emptySet())
+        val fills = orders.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }.map { ExitDesk.Fill(it.id, it.side, it.filled) }
+        fun rows(b: Broker.Positions) = b.net.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }
+        fun lag(b: Broker.Positions): Int = runCatching {
+            val rs = rows(b)
+            val net = rs.sumOf { it.qty }
+            val day = rs.map { if (net > 0) it.daySellQty else it.dayBuyQty }
+            ExitDesk.positionsLag(net, if (rs.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }, fills, mine)
+        }.getOrDefault(0)
+        if (mine.isEmpty()) return rows(Broker.positionBook()).sumOf { it.qty }
+        val (book, left) = ExitDesk.settleHeld(lagOn, { Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
+        val net = rows(book).sumOf { it.qty }
+        return ExitDesk.heldLess(net, left)
+    }
+
+    private fun noteLag(key: String, who: String, how: ExitDesk.Lag, n: Int) {
+        when (how) {
+            ExitDesk.Lag.NONE -> Unit
+            ExitDesk.Lag.SHADOW -> { count { it.copy(lagShadow = it.lagShadow + 1) }
+                record("$who $key: its positions read did not show $n already filled by an exit sent a moment ago (shadow: on, it would read again)") }
+            ExitDesk.Lag.READ_AGAIN -> { count { it.copy(lagReadAgain = it.lagReadAgain + 1) }
+                record("$who $key: its positions read trailed $n filled by an exit sent a moment ago; read again until it showed") }
+            ExitDesk.Lag.SUBTRACTED -> { count { it.copy(lagSubtracted = it.lagSubtracted + 1) }
+                record("$who $key: the positions still did not show $n filled by an exit sent a moment ago after reading again; counted as sold") }
+        }
+    }
+
     // ---- notes ------------------------------------------------------------------------------------------------------------
 
     private fun noteTurn(key: String, who: String, took: ExitTurns.Took, other: String?, ms: Long) {
@@ -214,17 +279,23 @@ object ExitCoordinator {
         return c.line(on)
     }
 
+    /** 21 Oct, round 3: the positions-lag guard's diagnostics line (today's counts). */
+    fun lagLine(): String {
+        val c = synchronized(lock) { if (counts.day == today()) counts else ExitDesk.Counts() }
+        return c.lagLine(lagOn)
+    }
+
     fun refresh() { if (!loaded) load() else publish() }
 
-    private fun publish() { runCatching { _view.value = View(on, line()) } }
+    private fun publish() { runCatching { _view.value = View(on, line(), lagOn, lagLine()) } }
 
     /** TEST ONLY: shadow, nothing noted. */
-    internal fun resetForTest(on: Boolean = false) {
-        this.on = on; loaded = true; switched = false
+    internal fun resetForTest(on: Boolean = false, lagOn: Boolean = false) {
+        this.on = on; this.lagOn = lagOn; loaded = true; switched = false; lagSwitched = false
         registry.clear()
         turns = ExitTurns()
         synchronized(lock) { counts = ExitDesk.Counts() }
-        _view.value = View(on)
+        _view.value = View(on, lagOn = lagOn)
     }
 
     /** TEST ONLY: the longest wait for a turn. */

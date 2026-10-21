@@ -477,7 +477,8 @@ object KiteStream {
     private fun resubscribe() {
         val ws = socket ?: return
         if (_status.value != Status.LIVE) return
-        val first = (wants["index"].orEmpty() + wants["positions"].orEmpty() + wants["live-exits"].orEmpty())
+        // 21 Oct, enhancement round 3 (idea 3): the paper book's open positions first too (open positions come first, paper or live).
+        val first = (wants["index"].orEmpty() + wants["positions"].orEmpty() + wants["live-exits"].orEmpty() + wants[Paper.STREAM_OWNER].orEmpty())
         val want = StreamHealth.cap(wanted(), first)
         synchronized(subscribed) {
             val add = want - subscribed
@@ -596,6 +597,12 @@ object KiteStream {
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF
+    }
+
+    /** TEST ONLY: the instruments [owner] follows now (21 Oct). Throws unless BuildConfig.DEBUG. */
+    internal fun wantsForTest(owner: String): Set<Long> {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        return wants[owner].orEmpty()
     }
 
     /** TEST ONLY: the instruments a price read keeps the stream awake for now (Battery, 14 Oct). Throws unless BuildConfig.DEBUG. */

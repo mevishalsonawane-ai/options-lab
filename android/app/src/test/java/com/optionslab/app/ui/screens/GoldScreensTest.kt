@@ -203,6 +203,11 @@ class GoldScreensTest {
         // Diagnostics show the build.
         compose.reveal("Copy diagnostics")
         assertTrue(compose.has("This app: build", substring = true))
+        // 21 Oct, enhancement round 3 (idea 6): the copy is marked sensitive (Android 13+ hides its preview).
+        val cm = app.getSystemService(android.content.ClipboardManager::class.java)
+        tap("Copy diagnostics")
+        compose.until(20_000, "the diagnostics copied") { cm.primaryClip != null }
+        assertTrue(cm.primaryClip!!.description.extras!!.getBoolean(com.optionslab.app.ui.SensitiveClip.EXTRA))
     }
 
     @Test fun securityOpensWithoutIraAlgosZerodhaPartsAndComesBack() {

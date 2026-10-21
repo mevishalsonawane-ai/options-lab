@@ -949,4 +949,42 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(said.single().contains(LiveMirror.spec(donchian)!!.label))
         assertEquals("nothing sold", 1, view().openReal.size)
     }
+
+    // ---- 21 Oct, enhancement round 3 (idea 1): the positions-lag guard on a real exit ---------------------------------------
+
+    /** Boss sells the 30 from the Trade screen; it fills, but Zerodha's positions still show it held for [trail] reads. */
+    private fun bossSoldWhileThePositionsTrail(ref: String, trail: Int) {
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, ref))
+        watch()                                                    // seen open on paper
+        kite.positionsTrailReads = trail
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", ""), exit = true) }
+        assertEquals("Boss's sell filled", 0, held())
+        kite.requests.clear()
+        legs[ref] = legs.getValue(ref).first to 0                 // and the paper trade exits now
+    }
+
+    @Test fun withTheLagGuardOnAnExitThatFilledIsNeverSoldAgainWhileThePositionsTrail() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        try {
+            bossSoldWhileThePositionsTrail("lag-on", 50)
+            watch()
+            assertEquals("no second market sell", 0, kite.placed.count { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" })
+            assertEquals("flat, never short", 0, held())
+            assertTrue("no stop rested again on lots already sold",
+                kite.placed.none { it.form["order_type"] == "SL" && it.form["transaction_type"] == "SELL" })
+            assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
+        } finally { ExitCoordinator.resetForTest() }
+    }
+
+    @Test fun inShadowTheLagGuardOnlyLogsAndTheExitGoesAsBefore() {
+        ExitCoordinator.resetForTest(lagOn = false)
+        try {
+            bossSoldWhileThePositionsTrail("lag-shadow", 50)
+            watch()
+            // As before this round (the hole the guard closes once Boss switches it on): the trailing read is sold again.
+            assertEquals(1, kite.placed.count { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" })
+            assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
+            assertEquals(0, ExitCoordinator.countsForTest().lagSubtracted)
+        } finally { ExitCoordinator.resetForTest() }
+    }
 }

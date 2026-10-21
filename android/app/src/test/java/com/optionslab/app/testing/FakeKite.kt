@@ -106,6 +106,18 @@ class FakeKite : Closeable {
     val holdings = ArrayList<Holding>()
     /** Overnight quantities by "EXCHANGE:SYMBOL:PRODUCT" ([overnight]): the day book shows only what moved today. */
     val carry = LinkedHashMap<String, Int>()
+    /** 21 Oct, round 3: today's filled buys and sells by "EXCHANGE:SYMBOL:PRODUCT" (Kite's day_buy_quantity / day_sell_quantity). */
+    val dayBought = LinkedHashMap<String, Int>()
+    val daySold = LinkedHashMap<String, Int>()
+    /**
+     * 21 Oct, enhancement round 3: after the next fill, GET /portfolio/positions answers as it stood BEFORE that fill for this many
+     * reads (Zerodha's positions can trail an order that shows COMPLETE in the order book by a moment).
+     */
+    @Volatile var positionsTrailReads = 0
+    private var trailedPositions: JSONObject? = null
+    private var trailedLeft = 0
+    /** Positions reads answered so far. */
+    @Volatile var positionReads = 0
     var cash = 500_000.0
     var marginPerOrder = 40_000.0
     /** What the contract note (POST /charges/orders) says each order cost, all in; [down] += "/charges/orders" fails it. */
@@ -248,7 +260,15 @@ class FakeKite : Closeable {
     }
 
     /** No positions any more (the latency tests start every run flat). */
-    fun flat() = synchronized(lock) { positions.clear() }
+    fun flat() = synchronized(lock) { positions.clear(); dayBought.clear(); daySold.clear() }
+
+    /** The positions as before the last fill while [positionsTrailReads] lasts, else null. */
+    private fun trailed(): JSONObject? {
+        val t = trailedPositions ?: return null
+        if (trailedLeft <= 0) { trailedPositions = null; return null }
+        trailedLeft--
+        return t
+    }
 
     // ---- server -------------------------------------------------------------------------------
 
@@ -274,8 +294,20 @@ class FakeKite : Closeable {
     /** A logged-in Kite session for today (made-up key and token), and Live mode with real orders allowed when [live]. */
     fun login(live: Boolean = true) {
         SecurePrefs.putAll(mapOf("kite.apiKey" to "testkey", "kite.accessToken" to "test-token-not-real",
-            "kite.loginAt" to System.currentTimeMillis(), "kite.userId" to "AB1234", "kite.userName" to "Test User"))
+            "kite.loginAt" to loginAt(System.currentTimeMillis()), "kite.userId" to "AB1234", "kite.userName" to "Test User"))
         if (live) SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true))
+    }
+
+    companion object {
+        /**
+         * 21 Oct (CI failed OrderLatencyTest at 05:59 IST: "Log in to Zerodha for today first"): Kite's token dies at the next
+         * 06:00 IST, so a made-up login just before it lasted only moments and a test running across 06:00 was logged out.
+         * Within two hours of 06:00 the login is dated just after it (its token then lasts to the next day's 06:00).
+         */
+        fun loginAt(nowMs: Long): Long {
+            val exp = com.optionslab.engine.Kite.expiresAt(java.time.Instant.ofEpochMilli(nowMs).atZone(com.optionslab.engine.IST)).toInstant().toEpochMilli()
+            return if (exp - nowMs < 2 * 3_600_000L) exp + 1_000L else nowMs
+        }
     }
 
     // ---- replies --------------------------------------------------------------------------------
@@ -331,7 +363,7 @@ class FakeKite : Closeable {
             m == "DELETE" && path == "/session/token" -> ok(true)
             m == "GET" && path == "/user/profile" -> ok(JSONObject().put("user_id", "AB1234").put("user_name", "Test User"))
             m == "GET" && path == "/user/margins" -> ok(funds())
-            m == "GET" && path == "/portfolio/positions" -> ok(positionsJson())
+            m == "GET" && path == "/portfolio/positions" -> { positionReads++; ok(trailed() ?: positionsJson()) }
             m == "GET" && path == "/portfolio/holdings" -> ok(holdingsJson())
             m == "GET" && path == "/trades" -> ok(tradesJson())
             m == "GET" && path == "/orders" -> ok(JSONArray().apply { orders.values.filter { o -> shownInBook(o.id) }.forEach { put(orderJson(it)) } })
@@ -382,7 +414,8 @@ class FakeKite : Closeable {
                 .put("average_price", v.second).put("last_price", last).put("pnl", (last - v.second) * v.first)
                 .put("m2m", (last - v.second) * v.first).put("unrealised", (last - v.second) * v.first).put("realised", 0)
                 .put("multiplier", 1).put("instrument_token", instruments.firstOrNull { it.symbol == sym }?.token ?: 0)
-                .put("overnight_quantity", carry[k] ?: 0))
+                .put("overnight_quantity", carry[k] ?: 0)
+                .put("day_buy_quantity", dayBought[k] ?: 0).put("day_sell_quantity", daySold[k] ?: 0))
         }
         // The day book: what moved today (an overnight position is in it only once it moved, by that much).
         val day = JSONArray()
@@ -414,6 +447,8 @@ class FakeKite : Closeable {
     private fun move(o: Order, qty: Int) {
         if (qty == 0) return
         val k = "${o.exchange}:${o.symbol}:${o.product}"
+        if (positionsTrailReads > 0 && trailedPositions == null) { trailedPositions = positionsJson(); trailedLeft = positionsTrailReads; positionsTrailReads = 0 }
+        if (o.side == "BUY") dayBought[k] = (dayBought[k] ?: 0) + qty else daySold[k] = (daySold[k] ?: 0) + qty
         val (cur, avg) = positions[k] ?: (0 to 0.0)
         val signed = if (o.side == "BUY") qty else -qty
         val next = cur + signed

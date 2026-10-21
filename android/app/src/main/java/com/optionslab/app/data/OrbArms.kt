@@ -827,6 +827,19 @@ object OrbArms {
     /** Liquidity 15+5's size in [b]: lots a new entry buys. */
     private fun lotsOf(b: Book): Int = b.liqLots ?: LiquidityLots.DEFAULT
 
+    /**
+     * The positions a save keeps: the last [KEEP_POSITIONS], and every LIVE row before them. 21 Oct, enhancement round 3 (idea 6,
+     * round 1's idea 14): Liquidity BANKNIFTY's live stop rule (-Rs 40,000 from its best, -Rs 13,000 a month) walks its live record
+     * from this book; trimmed to the last 2,000 rows of every arm, a busy paper month pushed the oldest live trades - and the
+     * rule's best point - out at the next restart, and the drawdown read smaller than it was. Live rows are few (real money), so
+     * all of them are kept, oldest first, in the book's own encrypted file.
+     */
+    internal fun keptPositions(all: List<Position>): List<Position> {
+        if (all.size <= KEEP_POSITIONS) return all
+        return all.dropLast(KEEP_POSITIONS).filter { it.live } + all.takeLast(KEEP_POSITIONS)
+    }
+    internal const val KEEP_POSITIONS = 2000
+
     private fun save(b: Book) {
         val o = JSONObject()
         o.put("armed", JSONObject(b.armed as Map<*, *>))
@@ -840,7 +853,7 @@ object OrbArms {
         o.put("decided", JSONObject().apply { b.decided.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, JSONArray(v.toList())) } })
         o.put("watched", JSONObject().apply { b.watched.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, v) } })
         o.put("positions", JSONArray().apply {
-            b.positions.takeLast(2000).forEach { p ->
+            keptPositions(b.positions).forEach { p ->
                 put(JSONObject().put("arm", p.arm).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty).put("entry", p.entry)
                     .put("entryTime", p.entryTime.toString()).put("signalBar", p.signalBar.toString())
                     .put("entryOrderId", p.entryOrderId ?: "").put("stopOrderId", p.stopOrderId ?: "")
@@ -2437,10 +2450,6 @@ object OrbArms {
         runCatching { Strategies.owners().keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") } }.getOrDefault(emptyList()) +
             b.positions.flatMap { listOfNotNull(it.entryOrderId, it.stopOrderId) }
 
-    private suspend fun heldAtZerodha(sym: String): Int? = runCatching {
-        Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
-    }.getOrNull()
-
     /**
      * The resting SL SELL 40 below a live fill. Its trigger, and its order id or null when it could not be
      * placed (the app then watches the stop itself). A lost reply is looked for before it counts as unplaced.
@@ -2789,9 +2798,10 @@ object OrbArms {
         // 20 Oct, enhancement round 2: read and sent in the contract's one exit turn, from a read that shows every exit sent from
         // here ([ExitCoordinator]): another sender's exit sent a moment ago is subtracted, never sold again.
         val id = ExitCoordinator.turn("NFO", sym, label) {
-            val working = runCatching { ExitCoordinator.orders("NFO", sym, label).filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull()
-                ?: return p.copy(stopOrderId = null) to null
-            val still = heldAtZerodha(sym) ?: return p.copy(stopOrderId = null) to null
+            val book = runCatching { ExitCoordinator.orders("NFO", sym, label) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
+            val working = book.filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" }
+            // 21 Oct, enhancement round 3 (idea 1): held, checked against that read's fills ([ExitCoordinator.held]).
+            val still = runCatching { ExitCoordinator.held("NFO", sym, "MIS", label, book) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
             val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
                 p.qty, spec.lotSize)
@@ -3498,6 +3508,9 @@ object OrbArms {
         com.optionslab.ira.AutoSide.refused(s) -> "$s. " + com.optionslab.ira.AutoSide.describe(s)
         else -> s
     }
+
+    /** TEST ONLY: the book forgotten from memory (its file kept), as a new process starts. */
+    @Synchronized internal fun forgetMemoryForTest() { cache = null; writtenText = null; writtenStat = null }
 
     @Synchronized fun wipe() {
         cache = null; holdingHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null

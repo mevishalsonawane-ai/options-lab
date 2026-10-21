@@ -49,6 +49,17 @@ object SundayReview {
     /** The review is made on Sundays. */
     fun due(today: LocalDate): Boolean = today.dayOfWeek == DayOfWeek.SUNDAY
 
+    /** 21 Oct, enhancement round 3 (idea 7): the Sunday review's hour; a catch-up is due from then to midnight. */
+    val AT: java.time.LocalTime = java.time.LocalTime.of(18, 0)
+
+    /**
+     * 21 Oct, enhancement round 3 (idea 7): the Sunday review not said aloud yet this Sunday evening (the phone was off or locked
+     * at 18:00): said at the next unlocked moment that evening, from 18:00 to midnight, once. [spokenOn]: the day it was last said
+     * aloud (null: never). Never on another day, never before 18:00, never twice.
+     */
+    fun catchUpDue(now: java.time.LocalDateTime, spokenOn: String?): Boolean =
+        due(now.toLocalDate()) && !now.toLocalTime().isBefore(AT) && spokenOn != now.toLocalDate().toString()
+
     /**
      * The Monday of the week reviewed on [today]: on a Saturday or Sunday the week just ending; on a weekday (Boss asked
      * mid-week) the last whole week, before this one.
