@@ -29,6 +29,8 @@ import org.robolectric.annotation.Config
 @Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class ProblemsCardTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @After fun noNetwork() { assertEquals("no host may be reached", emptyList<String>(), NetworkGuard.blocked.toList()) }

@@ -9,6 +9,8 @@ import org.junit.Test
  * sized from a fresh read ([McxGuard.freshDue]): a resting stop that filled since never turns the exit into a new position.
  */
 class McxGuardFreshTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     private fun pos(symbol: String, qty: Int, product: String = "NRML", exchange: String = "MCX") =
         Broker.Position(symbol, product, qty, 100.0, 100.0, 0.0, exchange = exchange)
 

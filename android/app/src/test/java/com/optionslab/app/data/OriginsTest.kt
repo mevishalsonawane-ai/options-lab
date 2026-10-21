@@ -7,6 +7,8 @@ import org.junit.Test
 
 /** Who placed an order, and who opened a position, in words ([Origins]). */
 class OriginsTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     private val owners = mapOf(
         "paper:1" to "ORB · entry",
         "paper:2" to Origins.manual("Chart"),

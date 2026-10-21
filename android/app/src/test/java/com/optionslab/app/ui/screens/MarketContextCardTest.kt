@@ -15,6 +15,8 @@ import org.junit.runner.RunWith
 /** Home's Market context card (13 Oct review): opened on an event day, it says how far the US CPI dates are listed. */
 @RunWith(AndroidJUnit4::class)
 class MarketContextCardTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
 

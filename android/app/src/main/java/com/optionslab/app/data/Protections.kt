@@ -64,6 +64,12 @@ object Protections {
     private const val REMOVING = "removing"
     /** A carried position's exits ended with the session: placed again at the next open. */
     private const val WAITING = "waiting for the next session"
+    /**
+     * 21 Oct, enhancement round 4 (idea 1): a carried position's stop and target resting all day as ONE two-leg GTT ([DayOco] on):
+     * [Item.gttId] is it, and there are no DAY orders. A null [Item.gttId] with this note: its GTT (or, off, its two orders) is
+     * placed on the next look.
+     */
+    internal const val DAY_GTT = "resting as one GTT at Zerodha (OCO)"
     private val GONE = setOf("CANCELLED", "REJECTED", "COMPLETE")
 
     fun init(context: Context) {
@@ -113,6 +119,42 @@ object Protections {
             (it.stop != null || it.target != null) && (gttTries[it.id] ?: 0) < GTT_TRIES }
         mcxOvernightHint = list.any { it.active && it.live && it.product != "MIS" && it.exchange == "MCX" && it.gttId == null && it.note != REMOVING &&
             (it.stop != null || it.target != null) && (gttTries[it.id] ?: 0) < GTT_TRIES }
+        // Review: every active live protection's GTT (a day one, an overnight one, one being removed), not only those noted DAY_GTT.
+        dayGttHint = list.filter { it.active && it.live && it.gttId != null }
+            .groupBy { "${it.exchange}:${it.symbol}" }.mapValues { e -> e.value.mapNotNull { it.gttId } }
+        freshDayGtts = emptyMap()
+    }
+
+    /** 21 Oct, enhancement round 4 (idea 1): "EXCHANGE:SYMBOL" to the GTT ids of the active live protections. Memory only. */
+    @Volatile var dayGttHint: Map<String, List<Long>> = emptyMap()
+        private set
+
+    /** Review: a day GTT placed in its exit turn, before the list holding it is saved (the expiry exits see it at once). */
+    @Volatile private var freshDayGtts: Map<String, List<Long>> = emptyMap()
+
+    /**
+     * 21 Oct, enhancement round 4 (idea 1), for the expiry exits ([ExpirySquareOff], [McxGuard]): the protections' day GTTs on
+     * [exchange]:[symbol] deleted and confirmed gone, so none can fire after the exit has sold the position (a short on expiry day).
+     * True: none active (the exit goes on); false: one could not be confirmed gone (the exit waits for its next pass). Inside the
+     * caller's exit turn; never takes this object's lock (the watch takes the turns inside it). No read at all without one.
+     */
+    suspend fun dayGttsOut(exchange: String, symbol: String, who: String): Boolean {
+        val key = "$exchange:$symbol"
+        val ids = (dayGttHint[key].orEmpty() + freshDayGtts[key].orEmpty()).toSet()
+        if (ids.isEmpty()) return true
+        val rows = (runCatching { ExitCoordinator.gtts(exchange, symbol, who) }.getOrNull() ?: return false).filter { it.id in ids }
+        // Review: one that fired since the pass read the orders has a sell working that the pass did not see: cancelled, and the
+        // exit waits for the next pass (which reads both books again).
+        val fired = rows.filter { !it.active && it.status.lowercase() !in GTT_GONE }.flatMap { it.orderIds }
+        if (fired.isNotEmpty()) {
+            val working = (runCatching { Broker.orders() }.getOrNull() ?: return false).filter { it.id in fired && it.working }
+            if (working.isNotEmpty()) { working.forEach { runCatching { Broker.cancel(it.id, it.variety) } }; return false }
+        }
+        val live = rows.filter { it.active }
+        if (live.isEmpty()) return true
+        live.forEach { runCatching { Broker.deleteGtt(it.id) } }
+        val after = runCatching { Broker.gtts() }.getOrNull() ?: return false
+        return after.none { it.id in ids && it.active }
     }
 
     /**
@@ -226,6 +268,25 @@ object Protections {
             val side = if (qty > 0) Kite.Side.SELL else Kite.Side.BUY
             var stopId: String? = null; var targetId: String? = null
             var partly = ""
+            // 21 Oct, enhancement round 4 (idea 1): a carried position's stop and target as ONE two-leg GTT ([DayOco] on): whichever
+            // fires, Zerodha cancels the other, even with the phone off. Not placed (refused, not yet held, the books not read): the
+            // two DAY orders as before, said.
+            val fresh = Item(nowMs(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail, target, price, null, null)
+            if (dayOco(fresh)) when (val r = restDayGtt(fresh, qty)) {
+                is DayGtt.Placed -> {
+                    list += r.item; save(list)
+                    return@withLock "Protected $symbol at Zerodha as one GTT (whichever fires, Zerodha cancels the other): ${r.item.describe()}"
+                }
+                // Review: Zerodha's answer lost - the GTT may exist. Nothing else is placed beside it: the watch's next look finds it
+                // (and keeps it) or rests it then.
+                DayGtt.Unknown -> {
+                    val item = fresh.copy(note = DAY_GTT)
+                    list += item; save(list)
+                    return@withLock "$symbol: Zerodha's answer to the GTT was lost. The app looks for it and rests the stop and target on " +
+                        "its next look (within a minute); check Orders → GTT."
+                }
+                DayGtt.Refused -> partly = " (It could not rest as one GTT just now, so the stop and target rest as two orders today.)"
+            }
             // SL (with a limit), not SL-M: Zerodha refuses SL-M on options.
             if (s0 != null) stopId = try {
                 placeTracked(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "SL", stopLimit(s0, side, spec.tickSize),
@@ -355,8 +416,11 @@ object Protections {
         val rows = runCatching { Broker.orders() }.getOrElse { return GttState.HELD }.filter { it.id in g.orderIds }
         rows.filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
         for (oid in g.orderIds) {
-            // Not in today's book (an earlier day's): over. Read failed or still working: not confirmed yet.
-            val st = runCatching { Broker.orderState(oid)?.status }.getOrElse { return GttState.HELD }
+            // Not in today's book (an earlier day's): over. Read failed or still working: not confirmed yet. 21 Oct, round 4 (found by
+            // its test): Zerodha answers an earlier session's order id with an InputException, never an empty history - that is over too.
+            val st = try { Broker.orderState(oid)?.status } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Broker.KiteError) { if (e.type == "InputException") null else return GttState.HELD
+            } catch (_: Exception) { return GttState.HELD }
             if (st != null && st !in GONE) return GttState.HELD
         }
         return GttState.FIRED
@@ -431,15 +495,244 @@ object Protections {
         return p.copy(gttId = id)
     }
 
+    // ---- 21 Oct, enhancement round 4 (idea 1): a carried position's stop and target as ONE GTT in the day too ([DayOco]) --------
+
+    /** Whether [p] rests as one two-leg GTT in the day: [DayOco] on, live, carried (not MIS), with both a stop and a target. */
+    private fun dayOco(p: Item): Boolean = DayOco.isOn() && p.live && p.product != "MIS" && p.stop != null && p.target != null
+
+    /** Zerodha's last price for [p]'s contract (its quote; a stream look's fresh tick first), or null. */
+    private suspend fun lastPrice(p: Item, stream: Boolean): Double? {
+        val key = "${p.exchange}:${p.symbol}"
+        if (stream) return runCatching { Broker.tokenOf(key)?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } }.getOrNull()
+        return runCatching { Broker.stopQuotes(listOf(key))[key]?.last?.takeIf { it > 0 } }.getOrNull()
+    }
+
+    /**
+     * At the open, [p]'s overnight GTT ([Item.gttId]) kept for the day when it has both legs, is active, and covers no more than is
+     * held ([net]) or than [p] covers: [p] as a day GTT under today's id. Null: not kept (the caller deletes it, as before).
+     */
+    private suspend fun keepDayGtt(p: Item, net: Int): Item? {
+        val id = p.gttId ?: return null
+        val g = runCatching { Broker.gtts().firstOrNull { it.id == id } }.getOrNull() ?: return null
+        val q = g.legQtys.firstOrNull() ?: return null
+        if (!g.active || g.triggers.size != 2 || q <= 0 || q > minOf(abs(net), abs(p.qty))) return null
+        Alerts.post("${p.symbol}: its stop and target stay at Zerodha as one GTT today (${p.describe()}): whichever fires, Zerodha " +
+            "cancels the other, even with the phone off.", Alerts.Kind.SUCCESS, "Protection")
+        return p.copy(id = nowMs(), qty = p.qty.sign() * q, stopOrderId = null, targetOrderId = null, note = DAY_GTT)
+    }
+
+    /**
+     * [p]'s stop and target as ONE two-leg GTT for what it covers - never more than is held less every other exit resting on the
+     * contract (an order or a GTT, an arm's own) - in the contract's one exit turn ([ExitCoordinator]), from reads that show every
+     * exit sent from here. [p] as a day GTT under a new id; null when it was not placed (the books or the price not read, nothing
+     * left to cover, Zerodha refused it): the caller places the two DAY orders instead.
+     */
+    private suspend fun restDayGtt(p: Item, net0: Int): DayGtt =
+        ExitCoordinator.turn(p.exchange, p.symbol, "protection") { restDayGttInTurn(p, net0) }
+
+    /**
+     * [restDayGtt]'s outcome. [Refused]: nothing was sent, or Zerodha said no (the caller may rest the two DAY orders). [Unknown]:
+     * the books not read, or the GTT's answer lost and not found in the list (it may exist): the caller places NOTHING else this look.
+     */
+    private sealed class DayGtt { class Placed(val item: Item) : DayGtt(); object Refused : DayGtt(); object Unknown : DayGtt() }
+
+    private suspend fun restDayGttInTurn(p: Item, net0: Int): DayGtt {
+        val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        val gtts = runCatching { ExitCoordinator.gtts(p.exchange, p.symbol, "protection") }.getOrNull() ?: return DayGtt.Unknown
+        val orders = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "protection") }.getOrNull() ?: return DayGtt.Unknown
+        val net = heldAgain(p, orders) ?: return DayGtt.Unknown
+        if (net == 0 || net.sign() != net0.sign()) return DayGtt.Refused
+        // Review: a two-leg GTT of this protection's own that went through but was never recorded (a lost reply) is adopted, as
+        // [restOvernightInTurn] does - never one another protection already records.
+        val recorded = cache.orEmpty().mapNotNull { it.gttId }.toSet()
+        val want = listOfNotNull(p.stop, p.target).map { Math.round(Math.round(it / p.tick) * p.tick * 100) / 100.0 }.sorted()
+        gtts.firstOrNull { g -> g.active && g.id !in recorded && g.symbol == p.symbol && g.exchange == p.exchange && g.legSides.firstOrNull() == side.name &&
+            g.legProducts.firstOrNull() == p.product && (g.legQtys.firstOrNull() ?: 0) in 1..minOf(abs(net), abs(p.qty)) && g.triggers.size == 2 &&
+            want.size == 2 && g.triggers.sorted().zip(want).all { (a, b) -> abs(a - b) < p.tick / 2 + 1e-9 } }?.let { mine ->
+            gttTries.remove(p.id)
+            noteFresh(p, mine.id)
+            return DayGtt.Placed(p.copy(id = nowMs(), qty = p.qty.sign() * (mine.legQtys.firstOrNull() ?: abs(p.qty)), stopOrderId = null,
+                targetOrderId = null, gttId = mine.id, note = DAY_GTT))
+        }
+        val busy = orders.filter { it.working && it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product && it.side == side.name }
+            .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
+            gtts.filter { it.symbol == p.symbol && it.exchange == p.exchange }.sumOf { it.covers(side.name, p.product) }
+        val qty = com.optionslab.engine.risk.ExitQty.sendable(abs(net), busy, abs(p.qty), p.lotSize)
+        if (qty <= 0) return DayGtt.Refused
+        val last = lastPrice(p, stream = false) ?: return DayGtt.Refused
+        val (g, why) = Kite.protect(Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, p.tick), p.product, p.qty.sign() * qty, last, p.stop, p.target)
+        if (g == null || g.triggers.size != 2) {
+            runCatching { Diag.record("protection", "${p.symbol}: its stop and target could not rest as one GTT (${why.joinToString("; ")}); two orders instead") }
+            return DayGtt.Refused
+        }
+        val id = when (val sent = Broker.placeGttSure(g, gtts.map { it.id }.toSet())) {
+            is Broker.GttSent.Placed -> sent.id
+            Broker.GttSent.Refused -> return DayGtt.Refused
+            Broker.GttSent.Unknown -> {
+                runCatching { Diag.record("protection", "${p.symbol}: the day GTT's answer was lost and it is not in the list yet; nothing else placed, looked for again") }
+                return DayGtt.Unknown
+            }
+        }
+        gttTries.remove(p.id)
+        noteFresh(p, id)
+        Alerts.post("${p.symbol}: its stop and target rest at Zerodha as one GTT for $qty (${p.describe()}): whichever fires, Zerodha " +
+            "cancels the other, even with the phone off.", Alerts.Kind.SUCCESS, "Protection")
+        return DayGtt.Placed(p.copy(id = nowMs(), qty = p.qty.sign() * qty, stopOrderId = null, targetOrderId = null, gttId = id, note = DAY_GTT))
+    }
+
+    /** A day GTT placed or adopted in its turn: the expiry exits see it at once ([dayGttsOut]), before the list is saved. */
+    private fun noteFresh(p: Item, id: Long) {
+        val key = "${p.exchange}:${p.symbol}"
+        val cur = freshDayGtts
+        freshDayGtts = cur + (key to (cur[key].orEmpty() + id))
+    }
+
+    /**
+     * One look at a protection resting as one GTT ([DAY_GTT]). A stream look ([stream]) only trails it (a modify from the fresh
+     * tick; no GTT read). A regular look reads the GTT and what is held:
+     *  - fired and the position closed: finished (the caller confirms nothing of the GTT still works); fired, its order still
+     *    working: said, kept; fired and its order ended unfilled: said plainly (NOT protected), finished;
+     *  - gone at Zerodha (deleted on Kite's site, expired): said plainly while the position is held, finished;
+     *  - active: the position closed or turned round - finished (the caller deletes the GTT, confirmed); less held than it covers -
+     *    shrunk (a modify); a trailing stop - moved up (a modify, never deleted and placed again); [DayOco] switched off in market
+     *    hours - the GTT out first, confirmed, then the day's two orders.
+     * A positions read that failed, or a protection's first minute, never ends or changes it.
+     */
+    private suspend fun tickDayGtt(p: Item, stream: Boolean): Item {
+        val gid = p.gttId
+        if (stream) {
+            if (gid == null) return p
+            return trailDayGtt(p, gid, lastPrice(p, stream = true) ?: return p)
+        }
+        suspend fun netNow(): Int? = runCatching {
+            Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
+        }.getOrNull()
+        val net = if (nowMs() - p.id < 60_000) null else netNow()
+        val closed = net != null && (net == 0 || net.sign() != p.qty.sign())
+        if (gid == null) return placeDayExits(p, net ?: return p)
+        val g = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrElse { return p }
+        if (g == null || g.status.lowercase() in GTT_GONE) {
+            if (net == null) return p
+            if (!closed) unprotected("${p.symbol}: its stop and target's GTT is no longer at Zerodha (${g?.status ?: "not listed"}). " +
+                "The position is NOT protected: set the protection again.")
+            return p.copy(active = false, gttId = null, note = if (closed) "position closed" else "GTT no longer at Zerodha")
+        }
+        if (!g.active) {
+            // Fired: Zerodha placed one leg's order and cancelled the other leg itself.
+            if (net == null) return p
+            if (closed) {
+                // Review: turned round (a fill beside another exit) is said plainly, never as closed.
+                if (net != 0) unprotected("${p.symbol}: its GTT fired and Zerodha now shows ${p.product} net $net: a position the other way round. Close it in Trade.")
+                else Alerts.post("${p.symbol}: its GTT fired at Zerodha and the position is closed.", Alerts.Kind.INFO, "Protection")
+                return p.copy(active = false, note = "GTT fired")
+            }
+            // Its order's state, each id read on its own (review: an order of an earlier session is not in today's book: ended).
+            if (g.orderIds.isEmpty()) {
+                Alerts.post("${p.symbol}: its GTT fired; its ${p.exitSide.lowercase()} is on its way at Zerodha.", Alerts.Kind.ERROR, "Protection", throttle = true)
+                return p
+            }
+            // An order of an earlier session is not found at all (Kite's InputException): ended, nothing of it rests. Any other
+            // failure (the network): not known, asked again next pass.
+            val states = g.orderIds.map { oid ->
+                try { Broker.orderState(oid) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                } catch (e: Broker.KiteError) { if (e.type == "InputException") null else return p
+                } catch (_: Exception) { return p }
+            }
+            if (states.any { it != null && it.status !in GONE }) {
+                Alerts.post("${p.symbol}: its GTT fired; its ${p.exitSide.lowercase()} rests at Zerodha unfilled. If the price runs away " +
+                    "from it, close the position in Trade.", Alerts.Kind.ERROR, "Protection", throttle = true)
+                return p
+            }
+            val filled = states.sumOf { it?.filled ?: 0 }
+            unprotected(if (filled > 0) "${p.symbol}: its GTT fired and sold $filled; Zerodha still shows ${p.product} net $net. That part is NOT protected: set the protection again."
+                else "${p.symbol}: its GTT fired but its order did not fill (${states.firstOrNull()?.status?.lowercase() ?: "it ended with its session"}); " +
+                    "Zerodha shows ${p.product} net $net. The position is NOT protected: set the protection again.")
+            return p.copy(active = false, note = if (filled > 0) "GTT fired, part left" else "GTT fired, its order did not fill")
+        }
+        if (net == null) return p
+        if (closed) return p.copy(active = false, note = "position closed")
+        // Switched off (as read from the settings, never the unread default after a restart): in market hours, the GTT out first
+        // (confirmed), then the day's two orders (never both resting).
+        if (DayOco.isKnownOff() && marketOpen(p.exchange)) {
+            return when (gttState(p, cancelFired = false)) {
+                GttState.HELD, GttState.FIRED -> p                       // asked again next pass (a fired one is read as fired)
+                GttState.GONE -> placeDayExits(p.copy(gttId = null), net)
+            }
+        }
+        // Less held than it covers (part closed by hand): shrunk to what is held, in whole lots.
+        val covers = g.legQtys.firstOrNull() ?: abs(p.qty)
+        var cur = p
+        val last = lastPrice(p, stream = false)
+        if (abs(net) < covers && last != null) {
+            val n = (abs(net) / p.lotSize.coerceAtLeast(1)) * p.lotSize.coerceAtLeast(1)
+            if (n > 0) {
+                val (gtt, why) = Kite.protect(Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, p.tick), p.product, p.qty.sign() * n, last, p.stop, p.target)
+                val r = runCatching { Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") }) }
+                if (r.isSuccess) cur = p.copy(qty = p.qty.sign() * n)
+                else {
+                    // Review: it cannot be reduced (the price within 0.25% of a leg: just when it may fire), so it would sell more
+                    // than is held. Taken out first (confirmed), then the two DAY orders for what is held, which resize freely.
+                    Alerts.post("${p.symbol}: its GTT covers more than is held ($net) and could not be reduced (${r.exceptionOrNull()?.message}); " +
+                        "it is replaced by two orders for what is held.", Alerts.Kind.ERROR, "Protection", throttle = true)
+                    return when (gttState(p, cancelFired = false)) {
+                        GttState.HELD, GttState.FIRED -> p
+                        GttState.GONE -> placeDayExits(p.copy(gttId = null, qty = p.qty.sign() * n), net, ordersNow = true)
+                    }
+                }
+            }
+        } else if (abs(cur.qty) != covers && covers in 1..abs(net)) cur = p.copy(qty = p.qty.sign() * covers)
+        return trailDayGtt(cur, gid, last ?: return cur)
+    }
+
+    /** [p]'s trailing stop moved up (a long; down for a short) at [last]: the GTT modified in place, the target leg kept. */
+    private suspend fun trailDayGtt(p: Item, gid: Long, last: Double): Item {
+        if (p.trail == null) return p
+        val n = Protection.next(p.spec(), last)
+        val ns = n.stop ?: return p.copy(best = n.best)
+        if (ns == p.stop || abs(ns - (p.stop ?: 0.0)) < p.tick - 1e-9) return p.copy(best = n.best)
+        // Too near the price or the target for Zerodha (0.25%): the GTT stays where it is, tried again on a later look.
+        val (gtt, _) = Kite.protect(Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, p.tick), p.product, p.qty, last, ns, p.target)
+        if (gtt == null) return p.copy(best = n.best)
+        if (runCatching { Broker.modifyGtt(gid, gtt) }.isFailure) return p.copy(best = n.best)
+        return p.copy(best = n.best, stop = ns)
+    }
+
+    /**
+     * A day-GTT protection with nothing resting yet ([net] held). [DayOco] on (and not [ordersNow]): one GTT; Zerodha refusing it
+     * (or nothing to send), the day's two orders at once in market hours; its answer lost (it may exist), nothing else this look -
+     * looked for and tried again on the next, at most [GTT_TRIES] looks, then the two orders. Off: the two orders ([restAgain]) in
+     * market hours. Out of hours with nothing placed: kept, and tried again on the next look.
+     */
+    private suspend fun placeDayExits(p: Item, net: Int, ordersNow: Boolean = false): Item {
+        if (net == 0 || net.sign() != p.qty.sign()) return p.copy(active = false, note = "position closed")
+        val cover = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)))
+        if (!ordersNow && dayOco(cover) && (gttTries[p.id] ?: 0) < GTT_TRIES) {
+            when (val r = restDayGtt(cover, net)) {
+                is DayGtt.Placed -> return r.item
+                DayGtt.Unknown -> { gttTries[p.id] = (gttTries[p.id] ?: 0) + 1; return p.copy(qty = cover.qty) }
+                DayGtt.Refused -> gttTries[p.id] = GTT_TRIES
+            }
+        }
+        if (!marketOpen(p.exchange)) return p.copy(qty = cover.qty)
+        val next = restAgain(cover.copy(note = ""), net, said = "its stop and target rest at Zerodha as two orders again")
+            ?: run {
+                unprotected("${p.symbol}: its stop could not be placed at Zerodha. The position is NOT protected: set the protection again.")
+                return p.copy(active = false, note = "stop not placed")
+            }
+        // Not placed this look (the books not read, or closed meanwhile): kept as it is, asked again on the next look.
+        return if (next.active && next.stopOrderId == null && next.targetOrderId == null) p else next
+    }
+
     /**
      * [p]'s stop and target placed again at their levels (an earlier day's DAY orders ended): the protection carried on under
      * a new id (today's: [cancelOrders] knows its orders are today's). Null when the stop could not be placed (the caller says so).
      */
-    private suspend fun restAgain(p0: Item, net0: Int = p0.qty): Item? =
+    private suspend fun restAgain(p0: Item, net0: Int = p0.qty, said: String? = null): Item? =
         // 20 Oct, enhancement round 2: read and placed in the contract's one exit turn ([ExitCoordinator]), as [restOvernight].
-        ExitCoordinator.turn(p0.exchange, p0.symbol, "protection") { restAgainInTurn(p0, net0) }
+        ExitCoordinator.turn(p0.exchange, p0.symbol, "protection") { restAgainInTurn(p0, net0, said) }
 
-    private suspend fun restAgainInTurn(p00: Item, net0: Int): Item? {
+    /** [said]: what the owner is told once they are placed (21 Oct, round 4: the day GTT switched off); null: the next session's words. */
+    private suspend fun restAgainInTurn(p00: Item, net0: Int, said: String? = null): Item? {
         val side = if (p00.qty > 0) Kite.Side.SELL else Kite.Side.BUY
         val known = listOfNotNull(p00.stopOrderId, p00.targetOrderId)
         // Second review: an exit already resting on it (Boss's own after-market order, another owner's) is subtracted first, so
@@ -489,7 +782,8 @@ object Protections {
         targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
         val next = p.copy(id = nowMs(), stopOrderId = stopId, targetOrderId = targetId,
             target = p.target.takeIf { targetId != null }, note = "placed again for today")
-        Alerts.post("${p.symbol}: its stop and target ended with yesterday's session and were placed again at Zerodha (${next.describe()}).",
+        Alerts.post(said?.let { "${p.symbol}: $it (${next.describe()})." }
+            ?: "${p.symbol}: its stop and target ended with yesterday's session and were placed again at Zerodha (${next.describe()}).",
             Alerts.Kind.SUCCESS, "Protection")
         return next
     }
@@ -630,7 +924,8 @@ object Protections {
     private suspend fun tickLive(p: Item): Item {
         // A fast look from the stream ([FastPath]) never reads or deletes a GTT: the overnight GTT exists only while the session's
         // orders are gone, and the watch's regular look (every 15 s while held) does that work.
-        if (p.gttId != null && streamLook) return p
+        // 21 Oct, enhancement round 4 (idea 1): a day GTT ([DAY_GTT]) is trailed from the stream too (a modify, no GTT read).
+        if (p.gttId != null && streamLook && p.note != DAY_GTT) return p
         val next = tickLiveOnce(p)
         if (next.active || next.gttId == null) return next
         return if (gttGone(next, cancelFired = true)) next.copy(gttId = null) else next.copy(active = true, note = REMOVING)
@@ -639,6 +934,8 @@ object Protections {
     private suspend fun tickLiveOnce(p: Item): Item {
         if (!Broker.loggedIn) return p
         if (p.note == REMOVING) return if (cancelOrders(p)) p.copy(active = false, note = "removed") else p
+        // 21 Oct, enhancement round 4 (idea 1): resting all day as one GTT: its own look.
+        if (p.note == DAY_GTT) return tickDayGtt(p, streamLook)
         // A stream look (round 2): Zerodha's books as last read (re-read after any change), the price from the fresh tick.
         val stream = streamLook
         val rows = (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id }
@@ -709,6 +1006,9 @@ object Protections {
                 // Before the open: kept until then (Zerodha would refuse it now). 20 Oct, enhancement round 1: its stop rests as a
                 // GTT meanwhile, when it was not placed at the close (the app was not running then).
                 if (!marketOpen(p.exchange)) return restOvernight(p, net)
+                // 21 Oct, enhancement round 4 (idea 1): [DayOco] on, an overnight GTT with both legs, active and covering no more than
+                // is held, simply stays for the day (nothing deleted, nothing placed).
+                if (p.gttId != null && dayOco(p)) keepDayGtt(p, net)?.let { return it }
                 // At the open the GTT goes first, confirmed (or kept, and asked again next pass): the day's orders and a GTT never
                 // rest together. One that fired overnight or at the open is an exit already working: [restAgain] counts it.
                 if (p.gttId != null) when (gttState(p, cancelFired = false)) {
@@ -720,7 +1020,15 @@ object Protections {
                 }
                 // Never more than this protection covered: lots added since, or another owner's lots (an arm's trade with its own
                 // GTT), are not this protection's to sell (second review).
-                restAgain(p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)), gttId = null), net)?.let { return it }
+                val again = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)), gttId = null)
+                // 21 Oct, enhancement round 4 (idea 1): [DayOco] on, as one GTT; not placed, the day's two orders as before.
+                if (dayOco(again)) when (val r = restDayGtt(again, net)) {
+                    is DayGtt.Placed -> return r.item
+                    // Review: its answer lost (it may exist): nothing else placed; the next look finds it or rests it.
+                    DayGtt.Unknown -> return again.copy(stopOrderId = null, targetOrderId = null, note = DAY_GTT)
+                    DayGtt.Refused -> Unit
+                }
+                restAgain(again, net)?.let { return it }
             }
             if (net != 0) unprotected("${p.symbol}: its stop and target are no longer working at Zerodha (orders last only the day they are placed). " +
                 "The position is NOT protected any more: set the protection again.")
@@ -785,13 +1093,32 @@ object Protections {
         val p = list[i]
         fun no(why: String, standing: Double? = p.stop) = StopMove(why, standing)
         if (p.note == REMOVING) return@withLock no("That protection is being removed.")
-        val orderId = p.stopOrderId ?: return@withLock no("It has no resting stop order to move.")
         val tick = if (p.tick > 0) p.tick else 0.05
         // On the tick, rounded away from the price (down for a long's stop, up for a short's), never toward it.
         val ns = Protection.onTick(newStop, tick, down = p.qty > 0)
         fun looser(than: Double?) = than != null && than > 0 && (if (p.qty > 0) ns <= than + 1e-9 else ns >= than - 1e-9)
         if (tightenOnly && looser(p.stop))
             return@withLock no("The stop is already at ${"%.2f".format(java.util.Locale.ENGLISH, p.stop)}; an automatic move only tightens it.")
+        // 21 Oct, enhancement round 4 (idea 1): resting as one GTT - the GTT's stop leg moved in place (its target leg kept).
+        if (p.live && p.note == DAY_GTT) {
+            val gid = p.gttId ?: return@withLock no("Its stop and target are being placed at Zerodha; try again in a moment.")
+            if (!Broker.loggedIn) return@withLock no("Not logged in to Zerodha.")
+            val g = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrNull() ?: return@withLock no("The GTT was not found at Zerodha.")
+            if (!g.active) return@withLock no("The GTT is no longer active at Zerodha.")
+            val resting = if (p.qty > 0) g.triggers.minOrNull() else g.triggers.maxOrNull()
+            if (tightenOnly && looser(resting))
+                return@withLock no("The stop at Zerodha is already at ${"%.2f".format(java.util.Locale.ENGLISH, resting)}; an automatic move only tightens it.", resting)
+            val last = lastPrice(p, stream = false) ?: return@withLock no("Zerodha's price could not be read.", resting ?: p.stop)
+            val (gtt, why) = Kite.protect(Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, tick), p.product, p.qty.sign() * (g.legQtys.firstOrNull() ?: abs(p.qty)),
+                last, ns, p.target)
+            if (gtt == null) return@withLock no("Zerodha would refuse that GTT: ${why.joinToString("; ")}.", resting ?: p.stop)
+            val r = runCatching { Broker.modifyGtt(gid, gtt) }
+            if (r.isFailure) return@withLock no("Zerodha did not move it: ${r.exceptionOrNull()?.message ?: "an error"}.", resting ?: p.stop)
+            list[i] = p.copy(stop = ns)
+            save(list)
+            return@withLock StopMove(null, ns)
+        }
+        val orderId = p.stopOrderId ?: return@withLock no("It has no resting stop order to move.")
         if (p.live) {
             if (!Broker.loggedIn) return@withLock no("Not logged in to Zerodha.")
             val so = runCatching { Broker.orders().firstOrNull { it.id == orderId } }.getOrNull()
@@ -822,7 +1149,7 @@ object Protections {
     /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */
     suspend fun resetPaper(): Unit = lock.withLock { save(load().filter { it.live }) }
 
-    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; gttTries.clear(); if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap(); gttTries.clear(); if (::file.isInitialized) file.delete() }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */
     internal fun forgetMemoryForTest() { cache = null; gttTries.clear() }

@@ -663,7 +663,9 @@ object Broker {
 
     data class Funds(val available: Double, val used: Double, val net: Double,
                      val openingBalance: Double = 0.0, val collateral: Double = 0.0, val span: Double = 0.0,
-                     val exposure: Double = 0.0, val optionPremium: Double = 0.0, val realised: Double = 0.0, val m2m: Double = 0.0)
+                     val exposure: Double = 0.0, val optionPremium: Double = 0.0, val realised: Double = 0.0, val m2m: Double = 0.0,
+                     /** 21 Oct, enhancement round 4 (idea 3): the day's payout (money taken out; Kite's utilised.payout). */
+                     val payout: Double = 0.0)
 
     /** One row of GET /portfolio/positions (net or day book). */
     data class Position(
@@ -687,7 +689,9 @@ object Broker {
     data class OrderRow(val id: String, val symbol: String, val side: String, val qty: Int, val filled: Int, val price: Double,
                         val avg: Double, val status: String, val message: String, val placedAt: String,
                         val exchange: String = "NFO", val product: String = "", val type: String = "LIMIT", val trigger: Double = 0.0,
-                        val variety: String = "regular", val pending: Int = 0, val tag: String = "") {
+                        val variety: String = "regular", val pending: Int = 0, val tag: String = "",
+                        /** 21 Oct, enhancement round 4 (idea 2): when the exchange last changed it (Kite's exchange_update_timestamp; "" when not given). */
+                        val updatedAt: String = "") {
         /** Still working at the exchange: can be modified or cancelled. */
         val working: Boolean get() = status in WORKING
     }
@@ -712,9 +716,12 @@ object Broker {
             val u = eq.optJSONObject("utilised") ?: JSONObject()
             Funds(a.optDouble("live_balance", a.optDouble("cash", 0.0)), u.optDouble("debits", 0.0), eq.optDouble("net", 0.0),
                 a.optDouble("opening_balance", 0.0), a.optDouble("collateral", 0.0), u.optDouble("span", 0.0), u.optDouble("exposure", 0.0),
-                u.optDouble("option_premium", 0.0), u.optDouble("m2m_realised", 0.0), u.optDouble("m2m_unrealised", 0.0))
+                u.optDouble("option_premium", 0.0), u.optDouble("m2m_realised", 0.0), u.optDouble("m2m_unrealised", 0.0),
+                u.optDouble("payout", 0.0))
         }
         fundsKept = r.startedAt to r.value
+        // 21 Oct, enhancement round 4 (idea 3): the day's payout kept for the payout-aware drawdown (recorded on a worker thread).
+        runCatching { PayoutWatch.seen(r.value.payout) }
         runCatching { AppState.publishFunds(r.value, r.startedAt) }
         return r.value
     }
@@ -881,7 +888,8 @@ object Broker {
         o.optInt("quantity"), o.optInt("filled_quantity"), o.optDouble("price", 0.0), o.optDouble("average_price", 0.0),
         o.optString("status"), o.optString("status_message", "").let { if (it == "null") "" else it }, o.optString("order_timestamp", ""),
         o.optString("exchange", "NFO"), o.optString("product"), o.optString("order_type", "LIMIT"), o.optDouble("trigger_price", 0.0),
-        o.optString("variety", "regular"), o.optInt("pending_quantity"), o.optString("tag", "").let { if (it == "null") "" else it })
+        o.optString("variety", "regular"), o.optInt("pending_quantity"), o.optString("tag", "").let { if (it == "null") "" else it },
+        o.optString("exchange_update_timestamp", "").let { if (it == "null") "" else it })
 
     // ---- market data ----------------------------------------------------------------
 
@@ -1631,6 +1639,25 @@ object Broker {
                 gtts().firstOrNull { r -> r.active && r.id !in known && r.symbol == g.tradingSymbol && r.exchange == g.exchange &&
                     r.legQtys.firstOrNull() == q && r.triggers.zip(g.triggers).all { (a, b) -> kotlin.math.abs(a - b) < 1e-6 } && r.triggers.size == g.triggers.size }?.id
             }.getOrNull()
+        }
+    }
+
+    /** 21 Oct, enhancement round 4 (review): a GTT's placing as [placeGttSure] tells it - placed (its id), refused, or not known. */
+    sealed class GttSent { class Placed(val id: Long) : GttSent(); object Refused : GttSent(); object Unknown : GttSent() }
+
+    /**
+     * 21 Oct, enhancement round 4 (review): [placeGttOnce], telling a definite refusal (nothing at Zerodha: the caller may rest its
+     * exits another way) from a lost reply not found in the GTT list (it may exist: the caller places nothing else this look).
+     */
+    suspend fun placeGttSure(g: Kite.Gtt, known: Set<Long>): GttSent {
+        return try { GttSent.Placed(placeGtt(g)) } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (definite(e)) return GttSent.Refused
+            val q = g.orders.firstOrNull()?.quantity ?: return GttSent.Unknown
+            runCatching {
+                gtts().firstOrNull { r -> r.active && r.id !in known && r.symbol == g.tradingSymbol && r.exchange == g.exchange &&
+                    r.legQtys.firstOrNull() == q && r.triggers.zip(g.triggers).all { (a, b) -> kotlin.math.abs(a - b) < 1e-6 } && r.triggers.size == g.triggers.size }?.id
+            }.getOrNull()?.let { GttSent.Placed(it) } ?: GttSent.Unknown
         }
     }
 

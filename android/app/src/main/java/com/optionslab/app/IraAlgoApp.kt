@@ -97,6 +97,10 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.AccountStopHost.init(this)
         // 20 Oct, enhancement round 2 (idea 1): the exit coordinator's switch (in shadow by default), read in the background.
         com.optionslab.app.data.ExitCoordinator.init(this)
+        // 21 Oct, enhancement round 4 (idea 1): stop and target as one GTT in the day too (off by default), read in the background.
+        com.optionslab.app.data.DayOco.init(this)
+        // 21 Oct, enhancement round 4 (idea 3): the payout-aware drawdown (in shadow by default), read in the background.
+        com.optionslab.app.data.PayoutWatch.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
         // 18 Oct (Boss: every paper strategy present for live too): the paper strategies' live path, before the arms register with it.

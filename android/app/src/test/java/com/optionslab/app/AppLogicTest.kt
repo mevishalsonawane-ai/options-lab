@@ -9,6 +9,8 @@ import kotlin.test.assertEquals
 
 /** The app's own pure logic, on the JVM (no device). */
 class AppLogicTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @Test fun alertColours() {
         assertEquals(Alerts.Kind.ERROR, Alerts.classify("Not placed (account guard): the kill switch is on"))
         assertEquals(Alerts.Kind.ERROR, Alerts.classify("Paper order failed: no quote"))

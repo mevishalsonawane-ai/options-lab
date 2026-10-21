@@ -281,6 +281,76 @@ internal fun ExitCoordinatorCardContent(view: com.optionslab.app.data.ExitCoordi
     }
 }
 
+/**
+ * 21 Oct, enhancement round 4 (idea 1): Bot settings' "Stop and target as one GTT". Off by default; switching it on takes the PIN
+ * (a GTT's stop sends a limit order, which can miss in a gap); off never does. On, a carried (NRML) position's stop and target
+ * rest at Zerodha all day as one two-leg GTT, so a dead phone never leaves the target resting after the stop filled.
+ */
+@Composable
+internal fun DayOcoCard(model: com.optionslab.app.ui.AppModel) {
+    val view by com.optionslab.app.data.DayOco.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    var askPin by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.DayOco.refresh() } } }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
+    DayOcoCardContent(view, said) { on -> if (on) askPin = true else save { com.optionslab.app.data.DayOco.setOn(false) } }
+    if (askPin) Reauth(model, onOk = { askPin = false; save { com.optionslab.app.data.DayOco.setOn(true, pinConfirmed = true) } },
+        onCancel = { askPin = false }, why = "Enter your app PIN to rest a carried position's stop and target as one GTT at Zerodha.")
+}
+
+/** The card from plain state (tests drive it). */
+@Composable
+internal fun DayOcoCardContent(view: com.optionslab.app.data.DayOco.View, said: String?, onSwitch: (Boolean) -> Unit) {
+    LedgerCard(title = "Stop and target as one GTT") {
+        Note("A carried (NRML) position's stop and target rest at Zerodha as two orders in the day; the app cancels one when the " +
+            "other fills. With the phone off, both would stay. On, they rest all day as one GTT: whichever fires, Zerodha cancels " +
+            "the other itself. Intraday trades are unchanged.")
+        ToggleRow("Stop and target as one GTT in the day", if (view.on) "On: one GTT, all day and overnight" else "Off: two orders in the day (as before)",
+            view.on, keepSub = true, onChange = onSwitch)
+        Note("The trade-off: a GTT's stop is checked by Zerodha's server and then sends a limit order, which can miss in a sharp gap. " +
+            "Switching it on takes your PIN.", Modifier.padding(top = 2.dp))
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
+/**
+ * 21 Oct, enhancement round 4 (idea 3): Bot settings' payout-aware drawdown. Off by default (shadow: what it would say is logged).
+ * On, when a drawdown from the peak stops live entries and the payouts since that peak alone explain it, the card offers to lower
+ * the peak by them, with the PIN. It never clears the kill switch: Boss does that.
+ */
+@Composable
+internal fun PayoutDrawdownCard(model: com.optionslab.app.ui.AppModel) {
+    val view by com.optionslab.app.data.PayoutWatch.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    var askPin by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.PayoutWatch.refresh() } } }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
+    PayoutDrawdownCardContent(view, said, onSwitch = { on -> save { com.optionslab.app.data.PayoutWatch.setOn(on) } }, onLower = { askPin = true })
+    if (askPin) Reauth(model, onOk = { askPin = false; save { com.optionslab.app.data.PayoutWatch.lowerPeak(pinConfirmed = true) } },
+        onCancel = { askPin = false }, why = "Enter your app PIN to lower the Zerodha drawdown peak by the money taken out.")
+}
+
+/** The offer's button: "Lower the peak by Rs N (PIN)". */
+internal fun payoutLowerLabel(rs: Double): String = "Lower the peak by Rs %,.0f (PIN)".format(java.util.Locale.ENGLISH, rs)
+
+/** The card from plain state (tests drive it). */
+@Composable
+internal fun PayoutDrawdownCardContent(view: com.optionslab.app.data.PayoutWatch.View, said: String?, onSwitch: (Boolean) -> Unit, onLower: () -> Unit) {
+    LedgerCard(title = "Payouts and the drawdown") {
+        Note("Money taken out of Zerodha lowers the next day's opening balance, which reads as a drawdown from the peak and can turn " +
+            "the kill switch on. The app keeps each day's payout and counts those made since the peak.")
+        ToggleRow("Count payouts in the drawdown", if (view.on) "On: said beside the refusal, and offered to you" else "Off: only logs what it would say",
+            view.on, keepSub = true, onChange = onSwitch)
+        Note("It never clears the kill switch or keeps it off by itself: on, it offers to lower the peak by the payouts, with your PIN.",
+            Modifier.padding(top = 2.dp))
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        view.offer?.let { rs -> BrassButton(payoutLowerLabel(rs), Modifier.fillMaxWidth().padding(top = 4.dp)) { onLower() } }
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
 /** Bot settings: the market history kept on the phone, its use and its cap (TODO S5). */
 @Composable
 internal fun HistoryVaultCard() {

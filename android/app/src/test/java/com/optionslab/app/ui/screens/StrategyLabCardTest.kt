@@ -43,6 +43,8 @@ import java.time.LocalDate
 @Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class StrategyLabCardTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = AreaEWatchdog()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 

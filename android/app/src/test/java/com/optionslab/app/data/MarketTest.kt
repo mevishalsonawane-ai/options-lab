@@ -101,6 +101,9 @@ class MarketTest : RobolectricTest() {
 
     @Test fun theClockSeamIsDebugOnlyAndDefaultsToTheSystemClock() {
         assertNull(Market.testClock)
+        // 21 Oct, enhancement round 4: the app tests' rule pins a fallback clock ([MarketClockRule]); the app never sets either
+        // seam, so with both null [Market.now] must read the system clock.
+        Market.testDefaultClock = null
         val before = java.time.ZonedDateTime.now(com.optionslab.engine.IST).minusSeconds(5)
         assertTrue(Market.now().isAfter(before))
         assertEquals(com.optionslab.engine.IST, Market.now().zone)

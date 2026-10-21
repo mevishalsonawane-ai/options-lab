@@ -50,6 +50,8 @@ import org.robolectric.annotation.ConscryptMode
 @RunWith(AndroidJUnit4::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class OneSwitchTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val compose = createComposeRule()
 
     private val app: Application get() = ApplicationProvider.getApplicationContext()

@@ -22,6 +22,8 @@ import java.time.LocalDate
 /** A closed Liquidity 15+5 paper trade's replay: the card (chart, words, lesson) and the detail's tap that opens it. */
 @RunWith(AndroidJUnit4::class)
 class LiquidityReplayCardTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
 

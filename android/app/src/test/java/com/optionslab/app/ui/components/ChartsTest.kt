@@ -43,6 +43,8 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ChartsTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val compose = createComposeRule()
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     @get:Rule val testName = org.junit.rules.TestName()

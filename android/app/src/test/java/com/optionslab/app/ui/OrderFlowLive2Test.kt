@@ -227,6 +227,24 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals("only the resting target was ever placed", listOf(target), kite.orders.keys.toList())
     }
 
+    /** 21 Oct, enhancement round 4 (review): a protection resting as one GTT counts as an exit resting, as its two orders did. */
+    @Test fun aProtectionsDayGttIsSubtractedLikeItsOrders() {
+        kite.position(ce, 75, 90.0)
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            val said = runBlocking { com.optionslab.app.data.Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            assertTrue(said, said.contains("as one GTT"))
+            assertTrue("no orders, one GTT", kite.placed.isEmpty() && kite.gtts.size == 1)
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            m.sendPlan()
+            assertEquals("Not sent: $ce changed since the review (open now 75, 75 already in working exit orders such as a protection's stop: " +
+                "cancel them first or wait); review the exit again", refused(m))
+            assertTrue("nothing sold beside the GTT", kite.placed.isEmpty())
+        } finally { com.optionslab.app.data.DayOco.resetForTest() }
+    }
+
     @Test fun anOrderOnTheOtherSideDoesNotBlockTheExit() {
         kite.position(ce, 75, 90.0)
         resting(leg(ce, Kite.Side.BUY, price = 50.0))                      // a buy far below: adds, never closes
@@ -410,6 +428,8 @@ class OrderFlowLive2Test : RobolectricTest() {
 @RunWith(AndroidJUnit4::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class OrderReviewLiveGateTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = com.optionslab.app.testing.Watchdog()
     @get:Rule val compose = createComposeRule()
     private lateinit var kite: FakeKite

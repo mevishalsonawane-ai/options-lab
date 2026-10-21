@@ -64,8 +64,27 @@ object ExitDesk {
 
     // ---- 21 Oct, enhancement round 3 (idea 1): the positions-lag guard ---------------------------------------------------------
 
-    /** One order of a read of the order book on a contract (this product), as the lag guard needs it. */
-    data class Fill(val id: String, val side: String, val filled: Int)
+    /**
+     * One order of a read of the order book on a contract (this product), as the lag guard needs it. 21 Oct, enhancement round 4
+     * (idea 2): [updatedAt], when the exchange last changed the order (Kite's exchange_update_timestamp, epoch ms; null: not given).
+     */
+    data class Fill(val id: String, val side: String, val filled: Int, val updatedAt: Long? = null)
+
+    /**
+     * 21 Oct, enhancement round 4 (idea 2): an exit fill counts as "a moment ago" when the exchange last changed its order no more than
+     * this long ago (the registry's [KEEP_MS]), plus [ExitRegistry.SKEW_MS] for the exchange's clock against the phone's.
+     */
+    const val RECENT_FILL_MS = KEEP_MS
+
+    /**
+     * 21 Oct, enhancement round 4 (idea 2): whether [f] filled something and its order was last changed at the exchange within
+     * [RECENT_FILL_MS] (plus the clocks' skew) of [now]: a resting stop or target that filled a moment ago, though it was sent
+     * hours earlier. An update time ahead of [now] (the exchange's clock ahead) is recent too.
+     */
+    fun filledRecently(f: Fill, now: Long): Boolean {
+        val at = f.updatedAt ?: return false
+        return f.filled > 0 && now - at <= RECENT_FILL_MS + ExitRegistry.SKEW_MS
+    }
 
     /**
      * How much of what Zerodha's ORDER book shows filled on the exit side of a held [net] the POSITIONS read does not show yet
@@ -77,13 +96,15 @@ object ExitDesk {
      * positions' own day quantity on the exit side ([dayExitQty]: Kite's day_sell_quantity for a long, day_buy_quantity for a
      * short; null when the read did not give it: never guessed). Only when one of the exits sent from here a moment ago
      * ([mine], their order ids) has filled: the guard looks after this phone's own recent fills, as round 2's idea said.
-     * At most |[net]| (it never turns the position round).
+     * 21 Oct, enhancement round 4 (idea 2): or, with [now] given, when an exit order filled at the exchange a moment ago
+     * ([filledRecently], by its exchange update time): a stop or target resting since the morning fills the same way, and the
+     * positions trail it just the same. At most |[net]| (it never turns the position round).
      */
-    fun positionsLag(net: Int, dayExitQty: Int?, fills: List<Fill>, mine: Set<String>): Int {
+    fun positionsLag(net: Int, dayExitQty: Int?, fills: List<Fill>, mine: Set<String>, now: Long? = null): Int {
         if (net == 0 || dayExitQty == null) return 0
         val exitSide = if (net > 0) "SELL" else "BUY"
         val exits = fills.filter { it.side.equals(exitSide, ignoreCase = true) && it.filled > 0 }
-        if (exits.none { it.id in mine }) return 0
+        if (exits.none { it.id in mine || (now != null && filledRecently(it, now)) }) return 0
         val lag = exits.sumOf { it.filled } - dayExitQty.coerceAtLeast(0)
         return lag.coerceIn(0, kotlin.math.abs(net))
     }

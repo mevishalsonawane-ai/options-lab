@@ -5,6 +5,8 @@ import org.junit.Test
 
 /** Pure JVM: the money and number formats every screen uses (always English digits and grouping). */
 class FormatTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @Test fun rupeesRoundToWholeRupeesWithGrouping() {
         assertEquals("Rs 1,234,567", rs(1_234_567.0))
         assertEquals("Rs -2,500", rs(-2_500.0))

@@ -65,6 +65,8 @@ internal object PickerFixtures {
 
 /** [ChartSymbols]: what the picker lists, search, recent (pure; no Android). */
 class ChartSymbolsTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     private val today = LocalDate.of(2026, 10, 11)
     private val f = PickerFixtures
 
@@ -147,6 +149,8 @@ class ChartSymbolsTest {
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class ChartSymbolPickerTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()

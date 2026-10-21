@@ -90,6 +90,8 @@ import java.time.LocalDate
 @RunWith(AndroidJUnit4::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class BrokerScreensTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @get:Rule val watchdog = com.optionslab.app.testing.Watchdog()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
@@ -910,7 +912,8 @@ class BrokerScreensTest {
     @Test fun theLiveCheckOnLivePricesPassesEverything() {
         liveCheckReady()
         val src = com.optionslab.app.testing.FakeLiveSources(open = true).apply {
-            val bar = System.currentTimeMillis() / 60_000 * 60 - 60
+            // 21 Oct, round 4: from the market clock the check judges the candle's age by (the tests' rule pins it to noon).
+            val bar = com.optionslab.app.data.Market.now().toEpochSecond() / 60 * 60 - 60
             upstox = listOf(com.optionslab.engine.Upstox.Bar(bar, 1.0, 1.0, 1.0, 1.0, 0, 0))
             kite.candles = org.json.JSONArray().put(org.json.JSONArray().put(java.time.Instant.ofEpochSecond(bar).atZone(com.optionslab.engine.IST).toOffsetDateTime().toString())
                 .put(1.0).put(1.0).put(1.0).put(1.0).put(0).put(0))

@@ -20,6 +20,8 @@ import org.junit.Test
 
 /** The R17 shadow log (TODO I3 / I5) and the danger meter's switch (I4): memory only, Liquidity never, the switch off by default. */
 class PreTradeShadowTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     private val day = LocalDate.of(2031, 3, 4)          // a Tuesday no other test writes
     private val ce = Paper.Contract("BANKNIFTY31MAR57000CE", "BANKNIFTY", day.plusDays(2), 57_000.0, Right.CE, 30, "k")
     private val weekdays: (LocalDate) -> Boolean = { it.dayOfWeek != DayOfWeek.SATURDAY && it.dayOfWeek != DayOfWeek.SUNDAY }

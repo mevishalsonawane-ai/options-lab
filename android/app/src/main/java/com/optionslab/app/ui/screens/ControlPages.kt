@@ -689,8 +689,12 @@ fun RiskPage(model: AppModel) {
             item { SameDirectionCapCard() }
             // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
             item { AccountStopCard(model) }
+            // 21 Oct, enhancement round 4: payouts counted in the drawdown (in shadow until switched on; acts only on Boss's PIN).
+            item { PayoutDrawdownCard(model) }
             // 20 Oct, enhancement round 2: one exit at a time per contract (in shadow until switched on).
             item { ExitCoordinatorCard() }
+            // 21 Oct, enhancement round 4: a carried position's stop and target as one GTT in the day too (off until switched on).
+            item { DayOcoCard(model) }
             item { EventCalendarCard() }
             // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
             item { EventShieldSwitchCard() }

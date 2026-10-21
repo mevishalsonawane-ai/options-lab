@@ -14,6 +14,8 @@ import org.robolectric.RobolectricTestRunner
 /** IraGoldAlgo's chart candles: which Yahoo request each chart interval makes, folding, parsing and the time window. */
 @RunWith(RobolectricTestRunner::class)
 class GoldChartTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @org.junit.Before fun up() = GoldChart.resetForTest()
     @After fun down() { GoldChart.testFetch = null; GoldChart.resetForTest() }
 

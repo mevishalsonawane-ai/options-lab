@@ -9,6 +9,8 @@ import kotlin.math.roundToLong
 
 /** Pure JVM: the limit price of a stop exit, and how a protection describes itself. */
 class ProtectionsLogicTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @Test fun stopLimitGivesTenPercentRoomPastTheTrigger() {
         assertEquals(90.0, Protections.stopLimit(100.0, Kite.Side.SELL, 0.05), 1e-9)
         assertEquals(110.0, Protections.stopLimit(100.0, Kite.Side.BUY, 0.05), 1e-9)

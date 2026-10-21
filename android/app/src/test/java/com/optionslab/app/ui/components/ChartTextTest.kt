@@ -10,6 +10,8 @@ import java.time.LocalDateTime
 
 /** The pure parts of chart text: axis font cap, label thinning, time-axis labels, and the lint's broken-number rule. */
 class ChartTextTest {
+    // 21 Oct, enhancement round 4: the market clock at noon IST on a trading day unless the test sets its own.
+    @get:org.junit.Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
     @Test fun axisLabelsGrowWithTheFontOnlyUpToTheCap() {
         assertEquals(10f, axisFontSize(10.sp, 1.0f).value, 1e-4f)
         assertEquals(10f, axisFontSize(10.sp, 1.3f).value, 1e-4f)

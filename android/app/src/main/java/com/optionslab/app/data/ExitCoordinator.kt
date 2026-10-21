@@ -141,7 +141,7 @@ object ExitCoordinator {
         it.legSides.firstOrNull() ?: "", it.legQtys.firstOrNull() ?: 0, "GTT", placedMs(it.created)) }
 
     private val PLACED = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-    private fun placedMs(s: String): Long? = runCatching { java.time.LocalDateTime.parse(s, PLACED).atZone(IST).toInstant().toEpochMilli() }.getOrNull()
+    private fun placedMs(s: String): Long? = if (s.isBlank()) null else runCatching { java.time.LocalDateTime.parse(s, PLACED).atZone(IST).toInstant().toEpochMilli() }.getOrNull()
 
     // ---- for the exit senders -------------------------------------------------------------------------------------------------
 
@@ -205,15 +205,19 @@ object ExitCoordinator {
                      first: Broker.Positions? = null): Int {
         val key = ExitDesk.key(exchange, symbol)
         val mine = runCatching { registry.recentIds(ExitRegistry.Kind.ORDER, key) }.getOrDefault(emptySet())
-        val fills = orders.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }.map { ExitDesk.Fill(it.id, it.side, it.filled) }
+        // 21 Oct, enhancement round 4 (idea 2): each order's exchange update time too, so a stop or target resting since the morning
+        // that filled a moment ago wakes the guard as an exit sent from here does (both behind the same switch; off: logged only).
+        val fills = orders.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }
+            .map { ExitDesk.Fill(it.id, it.side, it.filled, placedMs(it.updatedAt)) }
+        val now = System.currentTimeMillis()
         fun rows(b: Broker.Positions) = b.net.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }
         fun lag(b: Broker.Positions): Int = runCatching {
             val rs = rows(b)
             val net = rs.sumOf { it.qty }
             val day = rs.map { if (net > 0) it.daySellQty else it.dayBuyQty }
-            ExitDesk.positionsLag(net, if (rs.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }, fills, mine)
+            ExitDesk.positionsLag(net, if (rs.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }, fills, mine, now)
         }.getOrDefault(0)
-        if (mine.isEmpty()) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
+        if (mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
         var given = first
         val (book, left) = ExitDesk.settleHeld(lagOn, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
         val net = rows(book).sumOf { it.qty }
@@ -224,11 +228,11 @@ object ExitCoordinator {
         when (how) {
             ExitDesk.Lag.NONE -> Unit
             ExitDesk.Lag.SHADOW -> { count { it.copy(lagShadow = it.lagShadow + 1) }
-                record("$who $key: its positions read did not show $n already filled by an exit sent a moment ago (shadow: on, it would read again)") }
+                record("$who $key: its positions read did not show $n already filled by an exit a moment ago (shadow: on, it would read again)") }
             ExitDesk.Lag.READ_AGAIN -> { count { it.copy(lagReadAgain = it.lagReadAgain + 1) }
-                record("$who $key: its positions read trailed $n filled by an exit sent a moment ago; read again until it showed") }
+                record("$who $key: its positions read trailed $n filled by an exit a moment ago; read again until it showed") }
             ExitDesk.Lag.SUBTRACTED -> { count { it.copy(lagSubtracted = it.lagSubtracted + 1) }
-                record("$who $key: the positions still did not show $n filled by an exit sent a moment ago after reading again; counted as sold") }
+                record("$who $key: the positions still did not show $n filled by an exit a moment ago after reading again; counted as sold") }
         }
     }
 
