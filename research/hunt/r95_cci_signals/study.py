@@ -237,6 +237,16 @@ def _save(name: str, obj):
     (K.RESULTS / name).write_text(json.dumps(obj, indent=1, default=str))
 
 
+def _save_split(stem: str, out: dict):
+    """Writes <stem>.json without the descriptive block and <stem>_describe.json with it (N4, 21 Oct 2026: one file
+    was 1.7 MB; each results file must stay under 1 MB). Nothing else changes."""
+    out = dict(out)
+    desc = out.pop("describe", None)
+    out["describe_file"] = f"{stem}_describe.json"
+    _save(f"{stem}.json", out)
+    _save(f"{stem}_describe.json", dict(written=out.get("written"), describe=desc))
+
+
 def _trades_path(tag: str, inst: str, tf: int, v: str):
     p = K.OUT / "trades" / tag
     p.mkdir(parents=True, exist_ok=True)
@@ -321,7 +331,7 @@ def run_design(insts=K.INSTRUMENTS):
     out = dict(written=datetime.now(timezone.utc).isoformat(timespec="seconds"), n_cells=len(cells),
                cells=_cells_out(cells, keys), selection_wf=selection_wf(cells, trades), pooled=pool(cells, trades),
                describe=desc, passers=["|".join(map(str, k)) for k in keys if cells[k]["gates"]["pass"]])
-    _save("design.json", out)
+    _save_split("design", out)
     return out
 
 
@@ -351,7 +361,7 @@ def run_final():
         verdict["|".join(map(str, k))] = dict(q=round(float(qq), 5), paper_candidate=bool(ok))
     out = dict(written=datetime.now(timezone.utc).isoformat(timespec="seconds"), cells=_cells_out(cells, keys),
                design_passers=sorted(passers), verdict=verdict, pooled=pool(cells, trades), describe=desc)
-    _save("final.json", out)
+    _save_split("final", out)
 
 
 if __name__ == "__main__":

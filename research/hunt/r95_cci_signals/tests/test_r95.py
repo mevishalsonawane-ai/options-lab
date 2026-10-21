@@ -625,3 +625,17 @@ def test_overlay_run_cell_with_fake_arm_and_pricer(monkeypatch):
     assert len(twin_draws) == int(F.changed.sum())
     for a in twin_draws:
         assert a.min() >= 21 and a.max() <= 299
+
+
+def test_save_split_keeps_every_key_and_moves_only_the_descriptive_block(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setattr(K, "RESULTS", tmp_path)
+    out = dict(written="2026-10-21T00:00:00+00:00", n_cells=328, cells=[{"inst": "NIFTY"}], passers=["A|5|B"],
+               describe={"NIFTY": {"sessions": 3}})
+    S._save_split("design", out)
+    main = json.loads((tmp_path / "design.json").read_text())
+    desc = json.loads((tmp_path / "design_describe.json").read_text())
+    assert "describe" not in main and main["describe_file"] == "design_describe.json"
+    assert main["n_cells"] == 328 and main["passers"] == ["A|5|B"] and main["cells"] == [{"inst": "NIFTY"}]
+    assert desc == dict(written=out["written"], describe={"NIFTY": {"sessions": 3}})
+    assert "describe" in out                          # the caller's dict is not changed

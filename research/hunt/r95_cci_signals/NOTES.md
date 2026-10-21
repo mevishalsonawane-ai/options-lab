@@ -72,3 +72,61 @@ IRAALGO_LAKE=~/lake python -m research.hunt.r95_cci_signals.study final        #
   requirements + numba): R95 tests 49 passed; brain tests 183 passed; catalog check up to date; validator OK.
 - To unblock: put rclone with the `gdrive:` remote on the PATH (e.g. the cloud environment's setup script), then
   follow the run order above unchanged.
+
+## N3, 21 Oct 2026: the lake copied, stores built, signal counts (no outcome yet)
+
+- This session had a working `rclone` (`/usr/local/bin/rclone`) with the `gdrive:` remote set up by the environment, and
+  the copy of `gdrive:IraAlgo-data-lake` was authorised for it. Only plain `rclone lsf` / `lsl` / `copy` were used, with
+  `--include` filters; no credential or config was looked at.
+- Copied, only what the loaders read: `index_1m_{NIFTY,BANKNIFTY,SENSEX,FINNIFTY,MIDCPNIFTY}_{2024,2025,2026}`;
+  `opt_{index}_WEEK_{2024,2025,2026}` (R51 loader); `opt_{GOLDM,SILVERM,CRUDEOILM,NATGASMINI}_MONTH_{2025,2026}` (R53
+  loader). Nothing raw is committed; every raw file was deleted once its store was built.
+- **Disk.** The container had about 1.1 GB free. FINNIFTY's R89 / R51 day store alone is 165 MB as a plain pickle (NIFTY's and SENSEX's about 2.5x that), so the five
+  would not fit. Each store was built with the unchanged `store.py build` (R51 loader, Amendment A clean + stale step,
+  window to 19 Oct 2026), then kept gzip-compressed on disk (about 5x smaller; 34-92 MB each), and the R53 MCX market
+  pickles likewise. The run used a small runner kept outside git (scratchpad) that only swaps the pickle readers
+  (`store.load`, `r51data.load`, `D53.load_market`) for gzip readers and then calls `study.run_counts / run_design /
+  run_final`. The bytes read are identical; no study code, rule, window or setting changed.
+- Store build (sessions 1 Sep 2024 - 19 Oct 2026: 528; with options from 21 Nov 2024: 474 for every index; expiry days
+  NIFTY 100, SENSEX 98, the others 23): cleaning removed foreign rows FINNIFTY 115,698 / BANKNIFTY 440 / others 0 of
+  6.6-7.5 million rows; stray opens 11,594-58,907; stale runs 18-5,132.
+- Checks before the run: R95 tests 49 passed (venv: Python with the pinned `research/brain/requirements.txt`, scikit-learn
+  1.5.2, numba 0.68, scipy 1.14).
+- **Counts (design, `results/counts_design.json`; signal and trade counts only, no price outcome).** Trades per cell
+  (index / MCX, min-max over the instruments):
+  - B: 3m 806-840 / 577-589; 5m 531-575 / 527-557; 15m 226-240 / 222-264; 60m 40-60 / 42-56. Totals 8,277 index and
+    5,720 MCX trades over the 36 B cells. MCX 3m and 5m sit near the cap of 4 a day on most sessions.
+  - DV is thin: 0-52 trades a cell (26 of 36 cells under the 40-trade gate G1; every 60m DV cell has 0-2).
+  - PU and L50 have 9 cells each under 40 trades (all 60m); every other variant and MO has at least 40 in every cell.
+  - Most signals fall outside the entry window or on skipped days (the funnel's `day_off` / `window` counts: warm-up
+    and holdout sessions, the 09:15-09:30 open, after 14:45).
+- Next: `study.py design` (328 cells), then the one holdout read. No amendment.
+
+## N4, 21 Oct 2026: design read (328 cells), before the one holdout read
+
+- `study.py design` ran once over all 328 cells (324 entry cells + 4 EX cells), 1000 twins each, seed 95.
+- **Output files only (no rule change):** `design.json` came out at 1.7 MB, over the 1 MB limit for results files.
+  `study._save_split` now writes the descriptive block to `<stem>_describe.json` and the rest to `<stem>.json`, for both
+  `design` and `final` (test `test_save_split_keeps_every_key_and_moves_only_the_descriptive_block`; R95 tests now 50).
+  The design file already written was split with the same function, unchanged in content (`design.json` 0.71 MB,
+  `design_describe.json` 0.97 MB). `run_final` reads only `n_cells` and `passers` from `design.json`, both kept.
+- **Design passers (all 7 gates): 4 of 328.**
+  - FINNIFTY 15m MO: 216 trades, net +Rs 1,13,428, option win 47.2%, payoff 2.06, twin mean -Rs 29,070, p_emp 0.001,
+    q 0.00016, without the top 5 +Rs 55,053, folds +30,750 / +44,441 / +4,341 / +19,740, worst month -Rs 4,931.
+  - FINNIFTY 5m MO: 407 trades, +Rs 59,212, win 43.5%, payoff 1.84, p_emp 0.001, q 0.00016, without top 5 +Rs 29,432,
+    folds all positive, worst month -Rs 6,456.
+  - BANKNIFTY 60m B: 48 trades, +Rs 51,359, win 43.8%, payoff 3.21, p_emp 0.004, q 0.081, without top 5 +Rs 3,640,
+    worst month -Rs 7,945. 30 of the 48 exits are the session flat (the CCI-zero exit rarely comes within the day).
+  - BANKNIFTY 60m XT: the same 48 entries, +Rs 35,651, p_emp 0.005, q 0.082 (34 flat exits). Not an independent
+    second passer.
+  - Near miss: BANKNIFTY 5m MO (441 trades, +Rs 30,695, q 0.0005) fails G6 only (-Rs 5,187 without its top 5).
+- Everything else fails. Pooled design books (1 lot, after costs): indices B 3m -Rs 7.01 lakh (4,072 trades), 5m
+  -Rs 4.73 lakh (2,766), 15m -Rs 71,491 (1,156), 60m +Rs 61,524 (244); MCX B lost on every timeframe (-Rs 93k to
+  -Rs 4.83 lakh). MO pooled indices: 3m -Rs 2.66 lakh, 5m -Rs 58, 15m +Rs 1.73 lakh (1,068), 60m -Rs 79,765.
+- EX overlay (4 cells): the early exit LOWERED net in every cell (Liquidity 5m -Rs 70,223 over 171 changed trades,
+  15m -Rs 26,010 / 62; Breadth Donchian 5m -Rs 1.39 lakh / 1,368, 15m -Rs 15,795 / 110); p_emp 0.89-1.0. 0 of 4 pass.
+- Walk-forward selection (descriptive): summed over the 36 instrument x timeframe pairs, picking the best variant so
+  far gave -Rs 16.4 lakh against B's -Rs 21.3 lakh; it picked a different variant almost every fold.
+- The holdout rule is unchanged (PREREG section 7): a design passer is a PAPER candidate only if in 1 Apr - 19 Oct 2026
+  it has net > 0, >= 20 trades, p_emp < 0.10, BH q < 0.10 among the 4 design passers, worst month >= -Rs 13,000.
+  Next: `study.py final`, once.
