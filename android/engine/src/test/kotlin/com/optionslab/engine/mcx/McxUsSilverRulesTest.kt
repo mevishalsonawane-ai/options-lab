@@ -130,4 +130,33 @@ class McxUsSilverRulesTest {
         assertEquals("close_10_min", McxUsSilverRules.exit(1, 100.0, day, m(9, 5), emptyList(), day.plusDays(1), m(9, 0), exitAt))
         assertEquals(LocalTime.of(23, 30), McxSession.close(day))
     }
+
+    /** 21 Oct: USD/INR from the 5-minute bars, else the 1-hour ones (Yahoo's 5-minute series is empty at night). */
+    @Test fun usdInrFallsBackToItsHourlyBars() {
+        val close = d("2026-10-20").atTime(23, 30)
+        val five = listOf(bar(close.minusHours(3), 94.0))                    // the newest 5-minute bar 3 hours before: too old
+        val hourly = listOf(bar(close.minusMinutes(30), 94.9, 95.05), bar(close, 95.05))
+        assertEquals(95.05, McxUsSilverRules.fxAt(five, hourly, at(close)))
+        assertNull(McxUsSilverRules.priceAt(five, at(close)), "the 5-minute bars alone have none")
+        // The 5-minute price first when it is there.
+        assertEquals(95.2, McxUsSilverRules.fxAt(listOf(bar(close.minusMinutes(5), 95.1, 95.2)), hourly, at(close)))
+        assertNull(McxUsSilverRules.fxAt(emptyList(), emptyList(), at(close)))
+        // Never a later bar (no look-ahead).
+        assertNull(McxUsSilverRules.fxAt(emptyList(), listOf(bar(close.plusHours(1), 95.0)), at(close)))
+        assertEquals("1h", McxUsSilverRules.FX_HOURLY)
+    }
+
+    /** The research's own signal (cand.py): USD/INR missing counts as no rupee move; silver missing is no trade. */
+    @Test fun theResearchSignalCountsAMissingRupeeAsNoMove() {
+        val (s, flat) = McxUsSilverRules.researchSignal(30.6, 30.0, 88.2, 88.0)!!
+        assertEquals(ln(30.6 / 30.0) + ln(88.2 / 88.0), s, 1e-12)
+        assertFalse(flat)
+        val (s2, flat2) = McxUsSilverRules.researchSignal(30.6, 30.0, null, 88.0)!!
+        assertEquals(ln(30.6 / 30.0), s2, 1e-12)
+        assertTrue(flat2)
+        assertTrue(McxUsSilverRules.researchSignal(29.4, 30.0, 0.0, Double.NaN)!!.let { it.first < 0 && it.second })
+        assertNull(McxUsSilverRules.researchSignal(null, 30.0, 88.0, 88.0))
+        assertNull(McxUsSilverRules.researchSignal(30.6, 0.0, 88.0, 88.0))
+        assertNull(McxUsSilverRules.researchSignal(Double.NaN, 30.0, 88.0, 88.0))
+    }
 }

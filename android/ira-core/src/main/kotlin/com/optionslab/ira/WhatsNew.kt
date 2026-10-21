@@ -63,6 +63,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 21 Oct (Boss: "Yes, give commodities their own day lock"), with fixes from his 21 Oct diagnostics.
+        Entry("2026-10-21-commodities-own-lock", OCT21, "Commodities get their own paper day lock",
+            "MCX paper bots now have their own day lock and daily loss limit on paper. " +
+                "An NSE win or loss no longer stops the MCX evening bots, and MCX results never stop NSE bots. " +
+                "Your stop for today, the kill switch and every Zerodha limit still stop both. " +
+                "Home and the diagnostics now say plainly when a day lock is reached, with the amount and time. " +
+                "US-night silver now reads the rupee from hourly prices, so it can trade again. " +
+                "The candle agent no longer calls a live one minute chart stale. " +
+                "Jarvis's slow pattern check now runs on its own and never holds his other checks. " +
+                "Notes from an earlier day on the paper bots now show their date.",
+            "Bot settings → Commodities day lock (paper); Home → MCX card; Autopilot → change timeline"),
         // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 3.
         Entry("2026-10-21-enhance-round-3", OCT21, "No filled exit sold twice; Sunday review catch-up",
             "Zerodha's positions can trail an exit that already filled, so a second exit could sell it again. " +

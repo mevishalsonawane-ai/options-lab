@@ -75,7 +75,8 @@ object VixDivArm {
         val positions: MutableList<Pos> = ArrayList(),
         /** "day|index" decided (one decision a day per index). */
         val decided: MutableSet<String> = HashSet(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
     )
 
@@ -105,7 +106,7 @@ object VixDivArm {
             b.armed = o.optBoolean("armed", false)
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
         cache = b
@@ -134,6 +135,7 @@ object VixDivArm {
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(40).forEach { put(it) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
@@ -141,7 +143,7 @@ object VixDivArm {
 
     private fun publish(b: Book) {
         val closed = b.positions.filter { !it.open }
-        _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(20), b.log.takeLast(30),
+        _view.value = View(b.armed, b.status.shown(), b.positions.filter { it.open }, closed.takeLast(20), b.log.takeLast(30),
             closed.map { it.net ?: 0.0 }, closed.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) })
         // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own exits stay authoritative.
         runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
@@ -223,7 +225,7 @@ object VixDivArm {
                         b.status[u] = d.why
                         note(b, "$u ${now.toLocalTime()}: ${d.why}")
                         changed = true
-                    } else if (b.status[u] != d.why) { b.status[u] = d.why; changed = true }
+                    } else if (!b.status.sameToday(u, d.why)) { b.status[u] = d.why; changed = true }
                 }
             }
             // Closed trades beyond what is kept are dropped (oldest first); open ones always stay.
@@ -397,7 +399,7 @@ object VixDivArm {
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
-            if (b.status[p.index] != "exit_retry") { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
+            if (!b.status.sameToday(p.index, "exit_retry")) { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
             return p.copy(stopOrderId = null)
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · exit") } }

@@ -84,6 +84,29 @@ object McxUsSilverRules {
         return ln(silverNow!! / silverPrev!!) + ln(fxNow!! / fxPrev!!)
     }
 
+    /**
+     * 21 Oct (Boss's diagnostics: "USD/INR at the 23:30 close not read" every day): Yahoo's USD/INR 5-minute series is nearly
+     * empty from about 15:30 to 08:30 IST, so a bar within 2 hours of the 23:30 close was rarely there. The research read
+     * USD/INR as 1-hour bars (research/hunt/r2/fetch_yahoo.sh, PREREG.md "inr_on likewise (Yahoo 1h)"), whose 18:00 UTC bar is
+     * there. Both are fetched: the 5-minute price first (the finer one), else the 1-hour one. Both are before the 09:05 entry.
+     */
+    const val FX_HOURLY = "1h"
+
+    /** USD/INR at [atSec]: from the 5-minute bars ([fiveMin]) when there, else the 1-hour ones ([hourly]); null without either. */
+    fun fxAt(fiveMin: List<Upstox.Bar>, hourly: List<Upstox.Bar>, atSec: Long): Double? = priceAt(fiveMin, atSec) ?: priceAt(hourly, atSec)
+
+    /**
+     * The research's own signal (research/hunt/r2/cand.py: `us_on + (inr_on if finite else 0)`): s from COMEX silver, plus the
+     * USD/INR move when both its prices were read, else no rupee move. Null when a silver price is missing (no trade that day).
+     * The second value: true when USD/INR was not read and counted as no move (said in the arm's log).
+     */
+    fun researchSignal(silverNow: Double?, silverPrev: Double?, fxNow: Double?, fxPrev: Double?): Pair<Double, Boolean>? {
+        if (listOf(silverNow, silverPrev).any { it == null || !it.isFinite() || it <= 0 }) return null
+        val us = ln(silverNow!! / silverPrev!!)
+        val fxOk = listOf(fxNow, fxPrev).all { it != null && it.isFinite() && it > 0 }
+        return if (fxOk) (us + ln(fxNow!! / fxPrev!!)) to false else us to true
+    }
+
     /** +1 buy, -1 sell, 0 nothing (s exactly 0). */
     fun side(s: Double): Int = when { s > 0 -> 1; s < 0 -> -1; else -> 0 }
 

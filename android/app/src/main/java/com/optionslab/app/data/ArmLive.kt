@@ -596,7 +596,7 @@ object ArmLive {
         // Final review F3: a check that cannot be read refuses the entry (an entry never goes on a guess), as the day stop does.
         val g = first.copy(paperOnly = if (shadow) null else PaperOnly.entryRefusal(), kill = s.guardKill,
             stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(true),
-            lossLimit = runCatching { LossBreaker.trippedToday() }.getOrDefault(true))
+            lossLimit = runCatching { LossBreaker.liveDoorTripped() }.getOrDefault(true))
         if (LiveMirror.refusal(g) != null) return g
         val g2 = g.copy(dayLock = runCatching { DayLockGuard.refusal(true) }.getOrElse { "the day lock could not be checked" },
             accountStop = if (shadow) null else accountStop(), loggedIn = Broker.loggedIn)

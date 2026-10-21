@@ -353,6 +353,8 @@ object Diag {
         append(runCatching { ExposureCapHost.onlyLoggedLine() }.getOrElse { "Same-direction cap, only logged: could not read" }).append('\n')
         append(runCatching { LiquidityTest.twinLine() }.getOrElse { "Liquidity no-twin rule: could not read" }).append('\n')
         append(runCatching { AccountStopHost.line() }.getOrElse { "Account stop rule: could not read" }).append('\n')
+        // 21 Oct: each segment's day lock and the commodities' own loss stop, said plainly with the amount and the time.
+        append(runCatching { DayLockGuard.diagLine() }.getOrElse { "Day lock: could not read" }).append('\n')
     }
 
     /** 20 Oct, enhancement round 2 (idea 1): the exit coordinator's day. Its own function (the report's one is near the compiler's limit). */

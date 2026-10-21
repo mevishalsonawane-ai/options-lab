@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,16 +50,21 @@ internal fun McxArmRows(divider: Boolean = true) {
     val v by McxPaperArms.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { McxPaperArms.refresh() } } }
-    McxArmsGroup(v, divider) { arm, on -> scope.launch(Dispatchers.IO) { runCatching { McxPaperArms.setArmed(arm, on) } } }
+    // 21 Oct: the commodities' own day lock or loss stop, read off the main thread each time the arms' view changes.
+    var stopLine by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    LaunchedEffect(v) { stopLine = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.DayLockGuard.mcxLine() }.getOrNull() } }
+    McxArmsGroup(v, divider, stopLine) { arm, on -> scope.launch(Dispatchers.IO) { runCatching { McxPaperArms.setArmed(arm, on) } } }
 }
 
 /** The group from plain state ([v]) and the switches' callback (arm, on); it sits in the Strategies card's column. */
 @Composable
-internal fun McxArmsGroup(v: McxPaperArms.View, divider: Boolean = true, onArm: (String, Boolean) -> Unit) {
+internal fun McxArmsGroup(v: McxPaperArms.View, divider: Boolean = true, stopLine: String? = null, onArm: (String, Boolean) -> Unit) {
     val p = LocalPalette.current
     if (divider) Rule()
     // COMPACT (15 Oct): the group's note is in its name's dialog.
     ExplainedName(MCX_GROUP, listOf(MCX_NOTE), Modifier.padding(top = if (divider) 4.dp else 0.dp), style = Type.title.copy(color = p.ink, fontSize = 15.sp))
+    // 21 Oct: "Commodities day lock reached +Rs 8,000 at 18:05: no new MCX entries today", said plainly under the heading.
+    stopLine?.let { Note(it, Modifier.padding(top = 2.dp)) }
     McxPaperArms.ARMS.forEach { arm -> McxArmRow(arm, v, onArm) }
 }
 

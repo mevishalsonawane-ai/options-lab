@@ -161,6 +161,26 @@ class IraHubTest : RobolectricTest() {
         assertEquals(ps.size, ps.map { it.result.name }.toSet().size)
     }
 
+    /**
+     * 21 Oct (Boss's diagnostics: the words worker's pattern check took up to 6 min 44 s): from the words round's checks the
+     * two-year pattern lab runs on its own background job - the refresh returns without it, and its offers still come.
+     */
+    @Test fun theWordsRoundsRefreshLeavesThePatternLabToItsOwnJob() = runBlocking {
+        IraHub.testAutoLab = true
+        IraHub.testHistories = { sixty }
+        IraHub.testLabBars = { _, _ -> twoYears }
+        IraHub.refresh(labInline = false)
+        IraHub.awaitLabForTest()
+        val ps = IraHub.state.value.proposals
+        assertTrue(ps.all { it.result.recommended })
+        // Its patterns were tried by that job: an inline refresh now tries none again (each once a day).
+        IraHub.refresh()
+        assertEquals(ps.size, IraHub.state.value.proposals.size)
+        assertTrue("its two slow steps are bounded well inside the worker's 5 minutes",
+            com.optionslab.app.work.Tasks.WORD_SLOW_STEP_MS * 3 <= 5 * 60_000L)
+        assertTrue(IraHub.LAB_BUDGET_MS <= 5 * 60_000L)
+    }
+
     @Test fun learnsBuildsSnapshotsAndAnswers() = runBlocking {
         IraHub.testHistories = { histories }
         IraHub.refresh()

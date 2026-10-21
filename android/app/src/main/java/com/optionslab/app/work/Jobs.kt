@@ -706,6 +706,12 @@ object Tasks {
     @Volatile private var wordsRoundAt = 0L
 
     /**
+     * 21 Oct: the most the words round's two slowest steps (the pattern check, the candle expert) may take each, so the round
+     * (5 minutes in all) never times out on them. Words only: the position watch never waits on the words worker.
+     */
+    internal const val WORD_SLOW_STEP_MS = 90_000L
+
+    /**
      * The words worker's pace (10 Oct): a round a minute in NSE's session (two with the battery saver on), as the pass gave
      * it; null (asleep) outside it.
      */
@@ -775,11 +781,12 @@ object Tasks {
         // paper is asked, once (never done by itself).
         word("shadow promotion") { com.optionslab.app.ira.IraBots.shadowPromotions() }
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
-        word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
+        // 21 Oct (Boss's diagnostics: max 6 min 44 s, the worker timed out): bounded here, and its two-year lab is now its own job.
+        word("pattern check") { kotlinx.coroutines.withTimeoutOrNull(WORD_SLOW_STEP_MS) { com.optionslab.app.ira.IraHub.backgroundCheck() } }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.
         if (newsDue) word("news") { com.optionslab.app.ira.IraHub.newsWatch() }
         // Jarvis: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
-        word("candle expert") { com.optionslab.app.ira.IraHub.expertWatch() }
+        word("candle expert") { kotlinx.coroutines.withTimeoutOrNull(WORD_SLOW_STEP_MS) { com.optionslab.app.ira.IraHub.expertWatch() } }
         word("ORB coach") { com.optionslab.app.ira.IraCoach.orbWatch() }
         word("moments") { com.optionslab.app.ira.IraCoach.momentsWatch() }
         // Jarvis: the price nearing a Liquidity 15+5 entry level with room (09:20-14:00, the arm armed): one line a level a day.

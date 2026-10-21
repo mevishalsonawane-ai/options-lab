@@ -145,6 +145,12 @@ object AutoChange {
          * PIN; on is free. Never proposed or applied by Autopilot.
          */
         ARM_SHADOW("strategies", "an arm's own shadow switch"),
+        /**
+         * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms on their own PAPER day lock and loss limit
+         * ([segmentSplit], [SegmentLock]) - Boss's own change, logged so the timeline shows it and one tap undoes it (back to the
+         * shared paper lock). Paper only, never live: no PIN either way. Never proposed or applied by Autopilot.
+         */
+        SEGMENT_SPLIT("risk guards", "commodities' own paper limits"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -315,6 +321,8 @@ object AutoChange {
             Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // 18 Oct: an arm's Shadow on sends nothing live (lowers risk); off lets its real live entries go (adds live risk).
             Kind.ARM_SHADOW -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // 21 Oct: on, MCX paper arms are no longer stopped by NSE's paper results (more paper trades); off puts the shared lock back.
+            Kind.SEGMENT_SPLIT -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -355,7 +363,7 @@ object AutoChange {
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
         k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER || k == Kind.ARM_LIVE ||
-        k == Kind.ARM_SHADOW
+        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -426,6 +434,20 @@ object AutoChange {
         else "your choice: new Liquidity paper trades are back on plain rules",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "Liquidity's ₹500 trail (paper)")
+
+    /** The target of the commodities' own paper limits ([Kind.SEGMENT_SPLIT]; no safety word in it, so its Undo is never held). */
+    const val SPLIT_TARGET = "split:mcx_paper"
+
+    /**
+     * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms on their own paper day lock and daily loss
+     * limit, on the MCX paper day alone - "off → on" on paper, logged as Boss's (kept, never Autopilot's). One tap undoes it:
+     * back to one shared paper figure. Paper only: Zerodha's lock and limit stay one account, so neither way needs the PIN.
+     */
+    fun segmentSplit(): Change = Change(Kind.SEGMENT_SPLIT, SPLIT_TARGET, SWITCHED_OFF, ON,
+        "your choice (21 Oct): commodities keep their own paper day lock and daily loss limit, on the MCX paper day alone - NSE " +
+            "results no longer stop the MCX arms and MCX results no longer stop the NSE arms; your stop, the kill switch and every live " +
+            "guard still stop both. Paper only, never live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Commodities' own paper limits")
 
     /** The target of Boss's Hero ₹1,000 ticket switch ([Kind.PAPER_ARM_ON]). */
     const val TICKET_TARGET = "paperarm:hero_ticket"
@@ -1074,7 +1096,7 @@ object AutoChange {
         // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
         // switch flipped since is the one to undo.
         if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
-                Kind.ARM_SHADOW)) return false
+                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

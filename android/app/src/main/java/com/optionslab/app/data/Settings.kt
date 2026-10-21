@@ -113,6 +113,16 @@ data class AppSettings(
      * ever stops entries. Set in Bot settings only: never by voice, never from a backup (a "g." setting stays on the phone).
      */
     val dayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
+    /**
+     * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms keep their own PAPER day lock and daily loss
+     * limit, on the MCX paper day alone, and the NSE paper ones read the rest ([com.optionslab.ira.SegmentLock]). On by Boss's
+     * choice, logged in the Autopilot change timeline (one tap back to the shared lock). Paper only: Zerodha stays one account.
+     */
+    val mcxOwnLimits: Boolean = true,
+    /** The commodities' own paper day lock, rupees (0 = off); unset, the paper day lock's amount. Bot settings only. */
+    val mcxDayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
+    /** The commodities' own paper daily loss limit, rupees (0 = off); unset, the paper daily loss limit. Bot settings only. */
+    val mcxPaperDailyLoss: Double = 6_000.0,
     /** Home's paper running total counts from this day (ISO date; Boss's 08 Oct wish, [com.optionslab.engine.risk.PaperSince]). Words only. */
     val paperSince: String = com.optionslab.engine.risk.PaperSince.DEFAULT_START.toString(),
 ) {
@@ -213,6 +223,10 @@ data class AppSettings(
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
                 dayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.dayLock", d.dayLock)),
+                mcxOwnLimits = p.getBoolean("g.mcxOwn", d.mcxOwnLimits),
+                // Unset: the same amounts as the paper ones (Boss, 21 Oct).
+                mcxDayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.mcxDayLock", p.getDouble("g.dayLock", d.dayLock))),
+                mcxPaperDailyLoss = p.getDouble("g.mcxPLoss", p.getDouble("g.pLoss", d.guardPaperDailyLoss)).let { if (it.isFinite() && it >= 0) it else d.mcxPaperDailyLoss },
                 paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
             )
         }
@@ -290,6 +304,7 @@ data class AppSettings(
                 "g.pLoss" to s.guardPaperDailyLoss, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
                 "g.mcxExit" to s.mcxExpiryExit, "g.mcxOptAt" to s.mcxOptionExitMinute, "g.mcxFutDays5" to s.mcxFutureExitDays,
                 "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
+                "g.mcxOwn" to s.mcxOwnLimits, "g.mcxDayLock" to com.optionslab.engine.risk.DayLock.clean(s.mcxDayLock), "g.mcxPLoss" to s.mcxPaperDailyLoss,
                 "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
             )
 

@@ -697,6 +697,9 @@ object Strategies {
             save(b)
             b.defs.filter { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }.map { it.id to it.name }
         }
+        // 21 Oct: Boss's (or the tile's) stop kept apart too, so the MCX paper arms, which keep their own loss limit, still stop on it
+        // even when a loss stop was made first today (that one stays the day's kept reason).
+        if (why != com.optionslab.ira.DayStop.Why.LOSS) runCatching { LossBreaker.noteBossStop(true) }
         if (!stopRunning || running.isEmpty()) return "Bot stopped for today: armed strategies will not start." +
             if (running.isNotEmpty()) " ${running.size} running strategy(ies) keep managing their exits." else ""
         val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised) }.getOrElse { e -> "${e.message}" } }
@@ -713,9 +716,17 @@ object Strategies {
             val b = book()
             val today = Market.today().toString()
             if (loss || (b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS)) {
+                // 21 Oct (review): only the NSE paper limit stopped the bot: Boss's own stop made since is lifted for the MCX
+                // paper arms, which keep their own limit (their own loss stop, if any, still holds).
+                if (runCatching { LossBreaker.tripToday() == com.optionslab.ira.SegmentLock.Trip.PAPER && LossBreaker.bossStoppedToday() }.getOrDefault(false)) {
+                    runCatching { LossBreaker.noteBossStop(false) }
+                    return@withLock "Not started: the NSE paper daily loss limit stopped the NSE bots today, so they stay stopped until tomorrow. " +
+                        "The MCX paper bots trade again under their own limit."
+                }
                 return@withLock "Not started: the daily loss limit stopped the bot today, so it stays stopped until tomorrow."
             }
             b.stoppedDay = null; b.stoppedWhy = null; save(b)
+            runCatching { LossBreaker.noteBossStop(false) }
             "Bot running: armed strategies start at their times."
         }
     }
@@ -834,6 +845,13 @@ object Strategies {
                             if (acct != null) {
                                 record(b, def.name, Event("start_refused", "Scheduled start refused: $acct", "warn"), true)
                                 notes += "${def.name}: $acct"
+                                continue
+                            }
+                            // 21 Oct: either paper segment's loss stop, or the whole paper day past the paper limit, refuses an automatic
+                            // live start too (memory only): never weaker than one paper figure.
+                            if (d.mode == RunMode.LIVE && runCatching { LossBreaker.liveDoorTripped() }.getOrDefault(true)) {
+                                record(b, def.name, Event("start_refused", "Scheduled start refused: the daily loss limit was reached today", "warn"), true)
+                                notes += "${def.name}: the daily loss limit was reached today"
                                 continue
                             }
                             val v = venueFor(d.mode)
@@ -1115,6 +1133,9 @@ object Strategies {
 
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }
+
+    /** A LIVE run is running now (21 Oct: the loss limits then keep one paper figure, [LossBreaker.check]). */
+    suspend fun anyLiveRunning(): Boolean = all().any { it.running && it.run?.mode == RunMode.LIVE }
 
     fun wipe() {
         synchronized(ioLock) { synchronized(writeOrder) { ownersPending = null; saveSeq++ } }

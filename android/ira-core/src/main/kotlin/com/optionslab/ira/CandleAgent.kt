@@ -108,6 +108,20 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
         const val HEARD_MS = 30 * 60_000L
         /** No candle newer than this many candle lengths while the market is open: the data is stale. */
         const val STALE_CANDLES = 4
+        /**
+         * 21 Oct (Boss's 11:09 diagnostics, stream LIVE): never less than this many minutes, whatever the candle. Four 1-minute
+         * candles were 5 minutes: the batch runs every 5 minutes on MCX data kept 10, and the newest running minute is never
+         * trusted, so a healthy live 1-minute series read as stale every other batch. 5- and 15-minute candles are unchanged
+         * (20 and 60 minutes are already above it). Only this alarm changed: unfinished candles are still never read.
+         */
+        const val STALE_MIN_MINUTES = 15
+
+        /**
+         * Whether a series whose newest closed candle started at [newest] ([tf] minutes) is stale at [now]: only while [open],
+         * when that candle ended more than max(4 candles, [STALE_MIN_MINUTES]) minutes ago.
+         */
+        fun stale(newest: LocalDateTime, tf: Int, now: LocalDateTime, open: Boolean): Boolean =
+            open && newest.plusMinutes(tf.toLong() + maxOf(STALE_CANDLES * tf, STALE_MIN_MINUTES)).isBefore(now)
 
         /** The kinds of the other agents' posts it reads (its own aside). */
         val HEARS: Set<Findings.Kind> = Findings.Kind.entries.toSet() - Findings.Kind.CANDLE
@@ -163,7 +177,7 @@ class CandleAgent(val seed: CandleBook.Seed, stats: CandleBook.Stats = CandleBoo
             val sk = "${s.inst.uppercase(Locale.ENGLISH)}|${s.tf}"
             val qk = if (s.deep) "$sk|deep" else sk
             val newest = bars.last().t
-            val stale = marketOpen && s.open && newest.plusMinutes((STALE_CANDLES * s.tf).toLong()).isBefore(now.minusMinutes(s.tf.toLong()))
+            val stale = stale(newest, s.tf, now, marketOpen && s.open)
             if (stale) anyStale = true
             // The big players' posts during each candle (a sweep, absorption, pulled orders, a stop hunt) become context words too.
             val fresh = CandleRead.readAll(s.inst.uppercase(Locale.ENGLISH), s.tf, bars, if (s.deep) null else readTo[sk], s.sessionOpenMin, s.around).map { r ->
